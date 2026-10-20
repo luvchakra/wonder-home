@@ -254,9 +254,14 @@ export const helpZh: AreaCatalog<typeof helpEn> = {
   "help.guide.home-upkeep.title": "家居维护",
   "help.guide.home-upkeep.summary": "维护、服务、洗衣和宠物——只显示需要人来处理的事。",
   "help.guide.home-upkeep.body.1": "“家居维护”把维护、服务请求、洗衣和宠物照顾放在一起，只显示需要有人处理的事。没有需要处理的事时，它会直说。",
-  "help.guide.home-upkeep.body.2": "家里的电器由管理员登记；任何成年人都可以提出服务请求。",
+  "help.guide.home-upkeep.body.2":
+    "家居维护有三个标签页。概览先显示需要有人处理的事，然后是未来 60 天内的事——到期的保养、即将结束的保修或维保合同。物品列出每一件电器、设施和车辆；请求列出每一个维修请求。",
   "help.guide.home-upkeep.body.3": "天气只在会改变某个决定时才开口——比如今天晾在外面的衣服干不了——从不播报天气预报。它使用管理员选定的区域，位置只保留到大约一公里的精度。",
   "help.guide.home-upkeep.body.4": "只有在你的 WonderHome 开启了天气功能时才会使用天气；“设置 → 已连接的账户”会显示是否已开启。",
+  "help.guide.home-upkeep.body.5":
+    "管理员通过“添加物品”添加物品。管理员或负责该物品的成员可以修改它、记录一次保养（下次保养从那天算起），或停用它。停用后不再提醒，记录仍会保留。",
+  "help.guide.home-upkeep.body.6":
+    "任何成年人都可以提交维修请求、推进它——已预约、处理中、等待配件、已完成——修改由谁何时处理，或取消它。已完成或已取消的请求会保留记录，不会重新打开。",
 
   "help.guide.household-and-roles.title": "成员、角色以及每个人能看到什么",
   "help.guide.household-and-roles.summary": "一个家，多种身份，每个人一个不同的视图。",

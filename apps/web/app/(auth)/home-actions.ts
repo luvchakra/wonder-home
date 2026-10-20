@@ -5,7 +5,18 @@ import { z } from "zod";
 
 import { toErrorBody } from "@wonderhome/core/api/errors";
 import { ASSET_CATEGORIES } from "@wonderhome/core/home/assets";
-import { createAsset, createPet, createServiceRequest, setPetActive, updatePet } from "@wonderhome/core/home/repository";
+import {
+  createAsset,
+  createPet,
+  createServiceRequest,
+  recordAssetService,
+  setAssetStatus,
+  setPetActive,
+  updateAsset,
+  updatePet,
+  updateServiceRequest,
+} from "@wonderhome/core/home/repository";
+import { SERVICE_STATUSES } from "@wonderhome/core/home/services";
 import { createClient } from "@wonderhome/core/db/server";
 import { requireHouseholdAdmin, requireMembership } from "@wonderhome/core/identity/households";
 import { GENDER_MAX_LENGTH } from "@wonderhome/core/identity/member-details";
@@ -29,17 +40,26 @@ const assetSchema = z.object({
   location: z.string().trim().max(80).optional(),
   serviceIntervalDays: z.union([z.coerce.number().int().min(1).max(3650), z.literal("")]).optional(),
   lastServicedOn: z.union([isoDate, z.literal("")]).optional(),
+  warrantyExpiresOn: z.union([isoDate, z.literal("")]).optional(),
+  amcExpiresOn: z.union([isoDate, z.literal("")]).optional(),
 });
 
-export async function createAssetAction(_previous: ActionState, formData: FormData): Promise<ActionState> {
-  const parsed = assetSchema.safeParse({
+/** The asset form's fields, read the same way for adding and for changing one. */
+function readAssetForm(formData: FormData) {
+  return assetSchema.safeParse({
     householdId: formData.get("householdId"),
     name: formData.get("name"),
     category: formData.get("category") || undefined,
     location: formData.get("location") || undefined,
     serviceIntervalDays: formData.get("serviceIntervalDays") || undefined,
     lastServicedOn: formData.get("lastServicedOn") || undefined,
+    warrantyExpiresOn: formData.get("warrantyExpiresOn") || undefined,
+    amcExpiresOn: formData.get("amcExpiresOn") || undefined,
   });
+}
+
+export async function createAssetAction(_previous: ActionState, formData: FormData): Promise<ActionState> {
+  const parsed = readAssetForm(formData);
   if (!parsed.success) {
     return { error: parsed.error.issues[0]?.message ?? "Please check the details above." };
   }
@@ -55,6 +75,8 @@ export async function createAssetAction(_previous: ActionState, formData: FormDa
       location: parsed.data.location || null,
       serviceIntervalDays: parsed.data.serviceIntervalDays === "" ? null : parsed.data.serviceIntervalDays,
       lastServicedOn: parsed.data.lastServicedOn || null,
+      warrantyExpiresOn: parsed.data.warrantyExpiresOn || null,
+      amcExpiresOn: parsed.data.amcExpiresOn || null,
     });
 
     revalidatePath("/household/home");
@@ -97,6 +119,110 @@ export async function createServiceRequestAction(_previous: ActionState, formDat
 
     revalidatePath("/household/home");
     return { notice: "Raised. It’ll show under Service requests until it’s booked." };
+  } catch (thrown) {
+    return { error: toErrorBody(thrown, "home").body.error.message };
+  }
+}
+
+/** Changing what was said about a thing in the house: every field the add form has (rule 12). */
+export async function updateAssetAction(_previous: ActionState, formData: FormData): Promise<ActionState> {
+  const assetId = z.uuid().safeParse(formData.get("assetId"));
+  const parsed = readAssetForm(formData);
+  if (!assetId.success || !parsed.success) {
+    return { error: parsed.success ? "Please try again." : (parsed.error.issues[0]?.message ?? "Please check the details above.") };
+  }
+  try {
+    const supabase = await createClient();
+    await requireMembership(supabase, parsed.data.householdId);
+    await updateAsset(supabase, parsed.data.householdId, assetId.data, {
+      name: parsed.data.name,
+      category: parsed.data.category,
+      location: parsed.data.location || null,
+      serviceIntervalDays: parsed.data.serviceIntervalDays === "" || parsed.data.serviceIntervalDays === undefined ? null : parsed.data.serviceIntervalDays,
+      lastServicedOn: parsed.data.lastServicedOn || null,
+      warrantyExpiresOn: parsed.data.warrantyExpiresOn || null,
+      amcExpiresOn: parsed.data.amcExpiresOn || null,
+    });
+    revalidatePath("/household/home");
+    return { notice: "Saved." };
+  } catch (thrown) {
+    return { error: toErrorBody(thrown, "home").body.error.message };
+  }
+}
+
+/** Retiring a thing (sold, replaced, gone) or bringing it back — never a delete. */
+export async function setAssetStatusAction(_previous: ActionState, formData: FormData): Promise<ActionState> {
+  const parsed = z
+    .object({ householdId: z.uuid(), assetId: z.uuid(), status: z.enum(["active", "retired"]) })
+    .safeParse(Object.fromEntries(formData));
+  if (!parsed.success) return { error: "Please try again." };
+  try {
+    const supabase = await createClient();
+    await requireMembership(supabase, parsed.data.householdId);
+    await setAssetStatus(supabase, parsed.data.householdId, parsed.data.assetId, parsed.data.status);
+    revalidatePath("/household/home");
+    return { notice: parsed.data.status === "retired" ? "Retired. Its history stays on record." : "Back in use." };
+  } catch (thrown) {
+    return { error: toErrorBody(thrown, "home").body.error.message };
+  }
+}
+
+/** "Serviced": a visit on a day (today unless another is picked), counted into the next service date. */
+export async function markAssetServicedAction(_previous: ActionState, formData: FormData): Promise<ActionState> {
+  const parsed = z
+    .object({ householdId: z.uuid(), assetId: z.uuid(), occurredOn: isoDate, kind: z.enum(["service", "repair", "inspection", "replacement"]).optional() })
+    .safeParse({ ...Object.fromEntries(formData), kind: formData.get("kind") || undefined });
+  if (!parsed.success) return { error: parsed.error.issues[0]?.message ?? "Please try again." };
+  try {
+    const supabase = await createClient();
+    await requireMembership(supabase, parsed.data.householdId);
+    await recordAssetService(supabase, { householdId: parsed.data.householdId, assetId: parsed.data.assetId, occurredOn: parsed.data.occurredOn, kind: parsed.data.kind });
+    revalidatePath("/household/home");
+    return { notice: "Recorded. The next service counts from that day." };
+  } catch (thrown) {
+    return { error: toErrorBody(thrown, "home").body.error.message };
+  }
+}
+
+/** Moving a service request on, or correcting it; cancelling is how one is taken back. */
+export async function updateServiceRequestAction(_previous: ActionState, formData: FormData): Promise<ActionState> {
+  const parsed = z
+    .object({
+      householdId: z.uuid(),
+      requestId: z.uuid(),
+      status: z.enum(SERVICE_STATUSES).optional(),
+      subject: z.string().trim().min(1, { error: "What does it need?" }).max(160).optional(),
+      providerName: z.string().trim().max(120).optional(),
+      providerContact: z.string().trim().max(120).optional(),
+      scheduledOn: z.union([isoDate, z.literal("")]).optional(),
+      nextAction: z.string().trim().max(200).optional(),
+    })
+    .safeParse({
+      householdId: formData.get("householdId"),
+      requestId: formData.get("requestId"),
+      status: formData.get("status") || undefined,
+      subject: formData.has("subject") ? formData.get("subject") : undefined,
+      providerName: formData.has("providerName") ? formData.get("providerName") : undefined,
+      providerContact: formData.has("providerContact") ? formData.get("providerContact") : undefined,
+      scheduledOn: formData.has("scheduledOn") ? formData.get("scheduledOn") : undefined,
+      nextAction: formData.has("nextAction") ? formData.get("nextAction") : undefined,
+    });
+  if (!parsed.success) return { error: parsed.error.issues[0]?.message ?? "Please try again." };
+  try {
+    const supabase = await createClient();
+    await requireMembership(supabase, parsed.data.householdId);
+    const { scheduledOn } = parsed.data;
+    await updateServiceRequest(supabase, parsed.data.householdId, parsed.data.requestId, {
+      status: parsed.data.status,
+      subject: parsed.data.subject,
+      providerName: parsed.data.providerName === undefined ? undefined : parsed.data.providerName || null,
+      providerContact: parsed.data.providerContact === undefined ? undefined : parsed.data.providerContact || null,
+      // A day picked for the visit; noon UTC keeps it on that day on any clock.
+      scheduledFor: scheduledOn === undefined ? undefined : scheduledOn ? new Date(`${scheduledOn}T12:00:00Z`) : null,
+      nextAction: parsed.data.nextAction === undefined ? undefined : parsed.data.nextAction || null,
+    });
+    revalidatePath("/household/home");
+    return { notice: "Saved." };
   } catch (thrown) {
     return { error: toErrorBody(thrown, "home").body.error.message };
   }

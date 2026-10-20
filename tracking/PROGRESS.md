@@ -326,4 +326,5 @@ disagree again.)
 | 2026-10-20 | 04 | 04-028 | Done | Stop a reply (and a 45 s self-stop); a long reply heard as a short summary in-app and over Alexa/Gemini; speech and gateway tests, eval gates pass; browser QA at 360px. |
 | 2026-10-20 | 11 | 11-013 | Done | Monthly spend as line charts, all bills and each bill, with axes, dots, tap-for-amount and a table view; browser QA at 360px and 1280px. |
 | 2026-10-20 | 13 | 13-009 | In Progress | Pet likes and favourites: table, RLS (3/3), Family UI, HomeBrain fact, words, help; migration `20261020232000` waiting to reach the live project. |
+| 2026-10-21 | 13 | 13-010 | Done | Home & Upkeep redesign: Overview / Things / Requests tabs with counts, Coming up, edit/record service/retire for things, move on/edit/cancel for requests; words and help in eight languages. |
 | 2026-10-20 | 08 | 08-022 | Done | Confetti and balloons on I did it!; waiting button wraps; tab rows size to their content and scroll to the top on a tap; browser QA at 320/360/412px. |

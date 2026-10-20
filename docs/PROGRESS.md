@@ -11,11 +11,11 @@ in `docs/progress/`; for the running log of what changed when, `tracking/PROGRES
 
 ## The whole picture
 
-**328 of 351 stories done — 93.4%**
+**329 of 352 stories done — 93.5%**
 
 | Status | Stories |
 |---|---:|
-| Done | 328 |
+| Done | 329 |
 | In Progress | 7 |
 | Blocked | 1 |
 | Not Started | 11 |
@@ -38,7 +38,7 @@ in `docs/progress/`; for the running log of what changed when, `tracking/PROGRES
 | 10 Meals & Cooking | `██████████` | 11 | 11 | — |
 | 11 Bills, Fees & Finance | `█████████░` | 12 | 13 | 1 not started |
 | 12 Family Time & Social Activities | `██████████` | 8 | 8 | — |
-| 13 Maintenance, Laundry & Pet Care | `████████░░` | 8 | 9 | 1 in progress |
+| 13 Maintenance, Laundry & Pet Care | `█████████░` | 9 | 10 | 1 in progress |
 | 14 AI Orchestration & Learning | `████████░░` | 29 | 34 | 2 in progress, 3 deferred |
 | 15 Privacy, Security & Governance | `██████████` | 8 | 8 | — |
 | 16 Platform Admin & Operations | `██████████` | 8 | 8 | — |
@@ -338,7 +338,7 @@ in `docs/progress/`; for the running log of what changed when, `tracking/PROGRES
 
 ### 13 — Maintenance, Laundry & Pet Care
 
-8 of 9 done `████████░░`
+9 of 10 done `█████████░`
 
 | Story | Priority | Status | Notes |
 |---|---|---|---|
@@ -351,6 +351,7 @@ in `docs/progress/`; for the running log of what changed when, `tracking/PROGRES
 | `13-007` Pet care outcomes | P1 | Done | outcome-based; medication never looks like grooming |
 | `13-008` Smart-home signals | P2 | Done | optional signals, server-ingested only; members cannot write evidence |
 | `13-009` A pet's likes, dislikes, favourites, fears and allergies | P1 | In Progress | The owner, 2026-10-20 ("add like, dislikes, favourite food, favourite places etc for pets"). `pet_preferences` (migration `20261020232000`): kind (like, dislike, favourite food, treat, place, toy, fear, allergy, or one the household names — picked with its own Add new, rule 20), what, an optional note; every member reads, an Admin adds, changes and removes (RLS, `test-pet-preferences-rls.mjs` 3/3); HomeBrain is told on every change. Each pet's details in Family list them under **Likes & favourites** grouped by kind, change and remove as icons (rule 11). `listPets` reads them in the same wave; the pet's HomeBrain fact carries them (`petPreferenceSentence`: "Bruno likes chicken; favourite place: the park; dislikes baths."), so HomeTalk answers "what does Bruno like?" from the record. Tests 3. Words and help (Family ¶4) in all eight languages. **Waiting on:** the migration reaching the live project; until then the list reads empty. |
+| `13-010` Home & Upkeep laid out like the other modules: Overview, Things, Requests | P1 | Done | The owner, 2026-10-21 ("design and develop this page based on other modules"). `/household/home` now has a greeting header, the add/raise actions always reachable (rule 12) and three tabs with counts: **Overview** (the four metric cards, weather when it changes a plan, what needs a person, then **Coming up** — services due and warranty/AMC ends in the next 60 days, never repeating a thing already flagged; `home/upkeep-view.ts`, 4 golden tests); **Things** (every asset in use, then Retired, each an `ExpandableRow` with category, place and its next dated fact; open it for servicing interval, last and next service, cover, the last three visits; an Admin or the member responsible records a service, changes every field — now including warranty and AMC dates — or retires/brings back; never a delete); **Requests** (open, then done and cancelled; status moved on through the same `transition` rules the agents use, picked from only the steps that can follow, cancelling is the take-back; subject, provider, contact, visit day and next step editable). New writes `updateAsset`, `setAssetStatus`, `recordAssetService`, `updateServiceRequest` (all `invalidatesContext`); `homeAgenda` now carries the rows it assessed so the page reads them once. No migration: the existing policies already allow these writes. Words and help (Home and upkeep ¶2, ¶5, ¶6) in all eight languages. |
 
 ### 14 — AI Orchestration & Learning
 
