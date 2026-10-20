@@ -21,6 +21,10 @@ export type AssistantLabels = {
   /** Shown in the viewer's language; each sends its English sentence, which the rules read on every path. */
   suggestions: Record<SuggestionKey, string>;
   confirm: string;
+  /** A child's or helper's Confirm: the request goes to a grown-up. */
+  askAdult: string;
+  /** `{name}` is the adult it waits on. */
+  waitingFor: string;
   change: string;
   cancel: string;
   alreadyOnRecord: string;
@@ -79,6 +83,8 @@ export function assistantLabels(t: Translate, time: Pick<MessageTimeStyle, "loca
     suggestionsHeading: t("hometalk.ui.suggestionsHeading"),
     suggestions: Object.fromEntries(SUGGESTION_KEYS.map((name) => [name, t(key(`hometalk.ui.suggestion.${name}`))])) as Record<SuggestionKey, string>,
     confirm: t("hometalk.ui.confirm"),
+    askAdult: t("hometalk.ui.askAdult"),
+    waitingFor: t("hometalk.ui.waitingFor", { name: "{name}" }),
     change: t("hometalk.ui.change"),
     cancel: t("hometalk.ui.cancel"),
     alreadyOnRecord: t("hometalk.ui.alreadyOnRecord"),

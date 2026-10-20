@@ -46,7 +46,7 @@ export type AssistantMessage = {
   role: "member" | "assistant";
   text: string;
   pending?: boolean;
-  action?: { id: string; status: ActionState; preview: ActionPreviewShape | null; unchanged?: boolean; fingerprint?: string | null } | null;
+  action?: { id: string; status: ActionState; preview: ActionPreviewShape | null; unchanged?: boolean; fingerprint?: string | null; awaitingAdult?: string | null } | null;
   /** A preview WonderHome showed without recording an action (e.g. prepared). */
   preview?: ActionPreviewShape | null;
   proposal?: string;
@@ -84,6 +84,7 @@ export function Assistant({
   liveEngine = "wonderhome",
   geminiLive = { available: false },
   kids = [],
+  needsAdult = false,
   canAddChild = false,
   timeZone = "Asia/Kolkata",
   labels,
@@ -108,6 +109,8 @@ export function Assistant({
   geminiLive?: { available: boolean; reason?: string; fix?: { href: string; label: string } };
   /** For HomeSend's school-item confirm step ("who is this for"). */
   kids?: { id: string; displayName: string }[];
+  /** A child or helper: their "go ahead" sends the request to a grown-up for the final OK. */
+  needsAdult?: boolean;
   /** Whether the viewer may add a child from a school notice (story 08-009). */
   canAddChild?: boolean;
   /** The household's own zone, which every message time and date divider is shown in. */
@@ -400,7 +403,7 @@ export function Assistant({
         setMessages((current) =>
           current
             .map((message) =>
-              message.action?.id === actionId ? { ...message, action: { ...message.action, status: payload.reply.action?.status ?? decision } } : message,
+              message.action?.id === actionId ? { ...message, action: { ...message.action, status: payload.reply.action?.status ?? decision, awaitingAdult: payload.reply.action?.awaitingAdult ?? message.action.awaitingAdult ?? null } } : message,
             )
             .concat({ id: payload.reply.id, role: "assistant", text: payload.reply.text, at: new Date().toISOString() }),
         );
@@ -494,11 +497,16 @@ export function Assistant({
                     plan={message.action?.unchanged ? [labels.alreadyOnRecord] : (message.action?.preview ?? message.preview)!.changes}
                     impact={(message.action?.preview ?? message.preview)!.because}
                     reversible={(message.action?.preview ?? message.preview)!.reversible}
+                    stateLabel={message.action?.status === "proposed" && message.action.awaitingAdult ? labels.waitingFor.replace("{name}", message.action.awaitingAdult) : undefined}
                     controls={
-                      message.action?.status === "proposed" ? (
+                      message.action?.status === "proposed" && message.action.awaitingAdult ? (
+                        <Pill type="button" tone="quiet" onClick={() => void decide(message.action!.id, "rejected")} disabled={busy}>
+                          {labels.cancel}
+                        </Pill>
+                      ) : message.action?.status === "proposed" ? (
                         <>
                           <Button onClick={() => void decide(message.action!.id, "approved", message.action!.fingerprint ?? null)} disabled={busy}>
-                            {labels.confirm}
+                            {needsAdult ? labels.askAdult : labels.confirm}
                           </Button>
                           <Pill type="button" tone="quiet" onClick={() => void send("Actually, let me change that.", "text")} disabled={busy}>
                             {labels.change}

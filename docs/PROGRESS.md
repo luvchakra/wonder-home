@@ -11,11 +11,11 @@ in `docs/progress/`; for the running log of what changed when, `tracking/PROGRES
 
 ## The whole picture
 
-**313 of 332 stories done — 94.3%**
+**314 of 333 stories done — 94.3%**
 
 | Status | Stories |
 |---|---:|
-| Done | 313 |
+| Done | 314 |
 | In Progress | 4 |
 | Blocked | 1 |
 | Not Started | 10 |
@@ -29,7 +29,7 @@ in `docs/progress/`; for the running log of what changed when, `tracking/PROGRES
 | 01 Identity & Family Accounts | `██████████` | 13 | 13 | — |
 | 02 Household Configuration & Playbook | `██████████` | 9 | 9 | — |
 | 03 Outcome & Routine Engine | `██████████` | 8 | 8 | — |
-| 04 Conversation, Voice & Text | `█████████░` | 23 | 25 | 1 in progress, 1 not started |
+| 04 Conversation, Voice & Text | `█████████░` | 24 | 26 | 1 in progress, 1 not started |
 | 05 Household Certification & Understanding | `██████████` | 11 | 11 | — |
 | 06 Actionable Notification Engine | `██████████` | 8 | 8 | — |
 | 07 Househelper & Home Operations | `██████████` | 10 | 10 | — |
@@ -152,7 +152,7 @@ in `docs/progress/`; for the running log of what changed when, `tracking/PROGRES
 
 ### 04 — Conversation, Voice & Text
 
-23 of 25 done `█████████░`
+24 of 26 done `█████████░`
 
 | Story | Priority | Status | Notes |
 |---|---|---|---|
@@ -181,6 +181,7 @@ in `docs/progress/`; for the running log of what changed when, `tracking/PROGRES
 | `04-023` The chat shows what was really said in Gemini Live | P0 | Done | The owner's report, 2026-10-18 (PR #234): Gemini heard them clearly and answered well, but the chat line had different, misspelt words. The line came from the Live API's `inputTranscription`, a light side transcriber that guesses the language unaided; the conversation model's own understanding is never exposed as text, and the documented transcription hints (`languageCodes`, `customVocabulary`) are for Google's separate transcribe model, so they were not put into the locked session. Now the page keeps each turn's microphone audio (the same audio already sent; at most a minute) and, once the person's line is shown, `POST /voice/gemini/transcribe` writes it down word for word with a full Gemini model (`voicelink/live-transcribe.ts`), told the member's listening language and the household's names; the chat line, and the floating window, are replaced with it. Same gate as the session (flag, plan, Google key, data-use agreement), its own rate limit (`voice.transcribe`), nothing stored; on any failure Gemini's line stands. Help Voice ¶2 in eight languages. Checked: unit tests for the WAV header, vocabulary, instruction and cleaning; the route refuses without Gemini voice (403), a bad body (400) and signed out (401). A real Gemini Live run needs the owner's phone |
 | `04-024` Gemini's voice plays through the floating window, so leaving the app floats it | P1 | Done | The owner's yes, 2026-10-18 (PR #237): Chrome floats on its own only media that is audibly playing, and the armed window was a silent picture, so it never floated by itself. Gemini's voice now passes through one node (`use-gemini-live.tsx`, `voiceStream`/`releaseVoice`) that plays into the armed video's stream instead of the speaker (`live-talk.tsx`, `attachVoice`), heard once either way; where sound may not play, the video stays muted and the voice returns to the speaker. Checked in Chromium: an audio track added to the playing picture after a tap plays unmuted. A real-phone check of the automatic float is the owner's |
 | `04-025` Leaving the app floats Gemini's voice on a real phone | P1 | Not Started | The owner, 2026-10-19, after 04-024: "doesnt work yet". On their phone, switching apps during Gemini Live still does not float the window on its own (Chromium in the cloud plays the voice through the armed video, but a real phone's automatic picture-in-picture needs checking: Chrome's auto-PiP rules for installed PWAs, the media session, and whether the voice track is audible to the browser's heuristic). Needs a real Android phone to diagnose |
+| `04-026` A child's or helper's request goes to an adult for the final OK | P0 | Done | The owner, 2026-10-20: "such queries are fine but results should go to adult for final approval before adding to WonderHome db". HomeTalk still understands and previews a child's or helper's request, but it never writes on its own whatever the outcome's autonomy (`proposal.ts`), and their Confirm reads "Ask a grown-up". That sends the exact proposal (its fingerprint) to their guardian, else an Admin (`conversation/referral.ts`, the existing `approvals` table, one notification). The adult answers under "Asking for your OK" on Notifications: Approve carries it out through the same executor on their session (`answerReferral`), Decline leaves it; a changed or lapsed proposal (48 h) is refused. Only a guardian of the requester or an Admin may answer, checked on the server. The requester is told in their own conversation. Test in `consent.test.ts`; help ¶15 of Talk to WonderHome in all eight languages |
 
 ### 05 — Household Certification & Understanding
 

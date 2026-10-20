@@ -11,6 +11,7 @@ decision that shapes later work each earns a note, written before moving on.
 
 | Date | Note |
 |---|---|
+| 2026-10-20 | [A child's or helper's request goes to an adult for the final OK](2026-10-20-child-requests-adult-ok.md) |
 | 2026-10-20 | [The cart, and a child's goals in a brighter WonderHome](2026-10-20-cart-and-child-goals.md) |
 | 2026-10-20 | [Pickers above the keyboard, picked-item details, Bills' three counts, integration-test fixes](2026-10-20-pickers-bills-row-and-test-fixes.md) |
 | 2026-10-20 | [Integration test run 1: CORE, FAM, HH, OUT, and the child Home tabs](2026-10-20-integration-tests-run-1.md) |

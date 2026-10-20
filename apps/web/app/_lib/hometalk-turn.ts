@@ -15,6 +15,7 @@ import { canExecute, executeIntent, notYetDoable, undoExecuted, zonedTimeToUtcIs
 import { isUndo } from "@wonderhome/core/conversation/consent";
 import { loadConfirmRequested } from "@wonderhome/core/conversation/consent-repository";
 import { approvalRefusal } from "@wonderhome/core/conversation/approval";
+import { referToAdult } from "@wonderhome/core/conversation/referral";
 import { applyCorrection, describeCorrection, readCorrection, TARGET_KIND_FOR_ACTION, type CorrectableAction } from "@wonderhome/core/conversation/corrections";
 import { heldBecause, leansOnEarlier, partialSummary, splitRequest, type PartOutcome } from "@wonderhome/core/conversation/decompose";
 import { confidenceLead, groundIntent, type GroundingEnv, type SchoolItemRef } from "@wonderhome/core/conversation/grounding";
@@ -247,6 +248,14 @@ async function turnInEnglish(input: HomeTalkInput, speaking: Speaking) {
   };
 
   if ("actionId" in body) {
+    if (body.decision === "approved" && membership.memberType !== "adult") {
+      const waiting = await loadAction(admin, { householdId, actionId: body.actionId });
+      if (!waiting || waiting.status !== "proposed") throw ApiError.notFound("That proposal is no longer waiting for a decision.");
+      const sessionId = await openSession(admin, { householdId, memberId: membership.memberId, channel: "text" });
+      const asked = await referInstead(admin, householdId, membership, { id: body.actionId, actionType: waiting.actionType, status: "proposed", preview: waiting.preview ?? null, createdAt: new Date() });
+      const messageId = await recordMessage(admin, { householdId, sessionId, role: "assistant", content: asked.text, metadata: { referredActionId: body.actionId } });
+      return { reply: { id: messageId, text: asked.text, action: asked.action } };
+    }
     const action = await decideAction(admin, { householdId, actionId: body.actionId, memberId: membership.memberId, decision: body.decision, seen: body.fingerprint ?? null });
     if (!action) throw ApiError.notFound("That proposal is no longer waiting for a decision.");
 
@@ -569,6 +578,12 @@ async function turnInEnglish(input: HomeTalkInput, speaking: Speaking) {
         if (await blockedOnChannel(entry.id)) {
           const id = await recordMessage(admin, { householdId, sessionId, role: "assistant", content: notByVoice, metadata: { proposal: "refused", mode: "answer" } });
           replies.push({ id, text: notByVoice, action: null, preview: null, proposal: "refused", mode: "answer" as BrainMode });
+          continue;
+        }
+        if (approve && membership.memberType !== "adult") {
+          const asked = await referInstead(admin, householdId, membership, { id: entry.id, actionType: "request", status: "proposed", preview: { summary: entry.summary } as ConversationAction["preview"], createdAt: new Date() });
+          const id = await recordMessage(admin, { householdId, sessionId, role: "assistant", content: asked.text, metadata: { referredActionId: entry.id } });
+          replies.push({ id, text: asked.text, action: asked.action, preview: null, proposal: "approve", mode: "answer" as BrainMode });
           continue;
         }
         const decided = await decideAction(admin, { householdId, actionId: entry.id, memberId: membership.memberId, decision: approve ? "approved" : "rejected" });
@@ -1095,7 +1110,15 @@ async function turnInEnglish(input: HomeTalkInput, speaking: Speaking) {
       privacy: { provider: routing.code, disclosure: routing.disclosure },
     };
   }
-  if (result.kind === "approve" || result.kind === "reject") {
+  if (result.kind === "approve" && membership.memberType !== "adult") {
+    const waiting = await loadAction(admin, { householdId, actionId: result.actionId }).catch(() => null);
+    if (waiting && waiting.status === "proposed") {
+      const asked = await referInstead(admin, householdId, membership, { id: result.actionId, actionType: waiting.actionType, status: "proposed", preview: waiting.preview ?? null, createdAt: new Date() });
+      text = asked.text;
+      action = asked.action;
+      await admin.from("conversation_messages").update({ content: text }).eq("id", replyId);
+    }
+  } else if (result.kind === "approve" || result.kind === "reject") {
     action = await decideAction(admin, {
       householdId,
       actionId: result.actionId,
@@ -1160,6 +1183,31 @@ async function understandingOf(admin: ReturnType<typeof createAdminClient>, acti
   const { data: message } = await admin.from("conversation_messages").select("source:metadata->>understanding").eq("id", action.message_id).maybeSingle();
   const source = (message as { source?: string | null } | null)?.source;
   return source === "model" || source === "rules" ? source : null;
+}
+
+/**
+ * A child's or helper's "go ahead" (the owner, 2026-10-20): what they asked
+ * for goes to an adult for the final OK instead of being carried out
+ * (`conversation/referral.ts`). The proposal stays waiting; nothing is
+ * written until a guardian or an Admin approves it.
+ */
+async function referInstead(
+  admin: ReturnType<typeof createAdminClient>,
+  householdId: string,
+  membership: HouseholdMembership,
+  action: ConversationAction,
+): Promise<{ text: string; action: ConversationAction; focus: FocusEntity[] }> {
+  const name = membership.preferredName ?? membership.displayName.split(/\s+/)[0] ?? membership.displayName;
+  const referral = await referToAdult(admin, { householdId, actionId: action.id, requester: { memberId: membership.memberId, name } }).catch(() => null);
+  if (!referral) {
+    return { text: "There is no grown-up in the household who can OK this yet, so I have left it as it is.", action, focus: [] };
+  }
+  const summary = action.preview?.summary ?? "this";
+  return {
+    text: `I have asked ${referral.approver.name} to OK it: ${summary.charAt(0).toLowerCase()}${summary.slice(1)}. Nothing changes until they approve, and I will tell you what they decide.`,
+    action: { ...action, awaitingAdult: referral.approver.name },
+    focus: [],
+  };
 }
 
 async function carryOutApproved(input: {
@@ -1836,4 +1884,86 @@ async function recordShown(admin: ReturnType<typeof createAdminClient>, messageI
 /** "Take me to the grocery list" (conversation/screens.ts): what to say, and the screen, when this person is offered it. */
 function screenReply(intent: HouseholdIntent, view: Viewer, source: string): { text: string; navigate: string | null } {
   return openScreenReply(intent.parameters.screen, { viewer: { permissions: view.permissions, tone: view.tone }, hasScreen: source !== "alexa", because: intent.parameters.because });
+}
+
+/**
+ * An adult's answer to a child's or helper's request (the owner,
+ * 2026-10-20; `conversation/referral.ts`). Only a guardian of the requester
+ * or an Admin may answer. An approval carries the exact proposal out through
+ * the same executor as any approved HomeTalk action, on the adult's own
+ * session, and is refused if the proposal changed since it was asked for or
+ * lapsed. Either way the requester is told in their own conversation.
+ */
+export async function answerReferral(input: {
+  supabase: Supabase;
+  householdId: string;
+  approver: HouseholdMembership;
+  approvalId: string;
+  decision: "approved" | "rejected";
+}): Promise<{ ok: true; text: string } | { ok: false; reason: string }> {
+  const { closeApproval, mayApproveFor, REFERRAL_TTL_MINUTES } = await import("@wonderhome/core/conversation/referral");
+  const admin = createAdminClient();
+  const { data: approval } = await admin
+    .from("approvals")
+    .select("id, status, expires_at, action_fingerprint, conversation_action_id, conversation_actions(session_id, payload)")
+    .eq("id", input.approvalId)
+    .eq("household_id", input.householdId)
+    .eq("requested_by", "member")
+    .maybeSingle();
+  if (!approval || approval.status !== "pending" || !approval.conversation_action_id) return { ok: false, reason: "That request has already been answered." };
+  const raw = approval.conversation_actions as { session_id?: string; payload?: Record<string, unknown> } | { session_id?: string; payload?: Record<string, unknown> }[] | null;
+  const action = Array.isArray(raw) ? raw[0] : raw;
+  const referral = (action?.payload?.referral as { requesterMemberId?: string } | undefined) ?? {};
+  const requesterMemberId = referral.requesterMemberId;
+  if (!requesterMemberId || !action?.session_id) return { ok: false, reason: "That request can no longer be found." };
+  if (!(await mayApproveFor(admin, { householdId: input.householdId, approverMemberId: input.approver.memberId, requesterMemberId }))) {
+    return { ok: false, reason: "Only their guardian or an Admin can answer this." };
+  }
+  if (new Date(approval.expires_at as string).getTime() <= Date.now()) {
+    await closeApproval(admin, { householdId: input.householdId, approvalId: input.approvalId, status: "expired" });
+    return { ok: false, reason: "That request has timed out. They can ask again." };
+  }
+
+  const approverName = input.approver.preferredName ?? input.approver.displayName.split(/\s+/)[0] ?? input.approver.displayName;
+  const fingerprint = typeof approval.action_fingerprint === "string" && approval.action_fingerprint.startsWith("fp-") ? approval.action_fingerprint : null;
+  const decided = await decideAction(admin, {
+    householdId: input.householdId,
+    actionId: approval.conversation_action_id as string,
+    memberId: input.approver.memberId,
+    decision: input.decision,
+    seen: fingerprint,
+    ttlMinutes: REFERRAL_TTL_MINUTES,
+  });
+  if (!decided) {
+    await closeApproval(admin, { householdId: input.householdId, approvalId: input.approvalId, status: "expired" });
+    return { ok: false, reason: "That request is no longer waiting." };
+  }
+  if (decided.refused) {
+    await closeApproval(admin, { householdId: input.householdId, approvalId: input.approvalId, status: "expired" });
+    await recordMessage(admin, { householdId: input.householdId, sessionId: action.session_id, role: "assistant", content: `${approverName} could not OK it because it changed or timed out, so nothing was changed. Ask again and I will send it fresh.`, metadata: { referralAnswered: input.approvalId } });
+    return { ok: false, reason: approvalRefusal(decided.refused) };
+  }
+
+  const summary = decided.preview?.summary ?? "your request";
+  const said = `${summary.charAt(0).toLowerCase()}${summary.slice(1)}`;
+  if (input.decision === "rejected") {
+    await closeApproval(admin, { householdId: input.householdId, approvalId: input.approvalId, status: "rejected" });
+    await recordMessage(admin, { householdId: input.householdId, sessionId: action.session_id, role: "assistant", content: `${approverName} said no to ${said}, so nothing was changed.`, metadata: { referralAnswered: input.approvalId } });
+    return { ok: true, text: "Declined. Nothing was changed." };
+  }
+
+  const { data: requester } = await admin.from("household_members").select("member_type").eq("id", requesterMemberId).maybeSingle();
+  const people = await listPeople(input.supabase, input.householdId);
+  const actingFor = { ...input.approver, memberId: requesterMemberId, memberType: (requester?.member_type as HouseholdMembership["memberType"] | undefined) ?? input.approver.memberType };
+  const done = await carryOutApproved({ admin, supabase: input.supabase, householdId: input.householdId, membership: actingFor, action: decided, people, source: "web", modality: "text" });
+  await closeApproval(admin, { householdId: input.householdId, approvalId: input.approvalId, status: "approved" });
+  const ran = done.action.status === "executed";
+  await recordMessage(admin, {
+    householdId: input.householdId,
+    sessionId: action.session_id,
+    role: "assistant",
+    content: `${approverName} said yes. ${done.text}`,
+    metadata: { referralAnswered: input.approvalId },
+  });
+  return ran ? { ok: true, text: done.text } : { ok: false, reason: done.text };
 }

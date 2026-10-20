@@ -21,6 +21,8 @@ export type ActionPreviewProps = {
   reversible?: boolean;
   /** Confirm / Change / Cancel, rendered by the caller so it owns the handlers. */
   controls?: ReactNode;
+  /** The badge in other words, when the state needs saying more exactly ("Waiting for Riya's OK"). */
+  stateLabel?: string;
   className?: string;
   labels?: ActionPreviewLabels;
 };
@@ -71,8 +73,8 @@ export const ACTION_PREVIEW_LABELS: ActionPreviewLabels = {
   irreversible: "Cannot be undone once it happens.",
 };
 
-export function ActionPreview({ state, understood, plan, impact, reversible, controls, className, labels = ACTION_PREVIEW_LABELS }: ActionPreviewProps) {
-  const badge = { label: labels.state[state], tone: TONE[state] };
+export function ActionPreview({ state, understood, plan, impact, reversible, controls, stateLabel, className, labels = ACTION_PREVIEW_LABELS }: ActionPreviewProps) {
+  const badge = { label: stateLabel ?? labels.state[state], tone: TONE[state] };
 
   return (
     <section

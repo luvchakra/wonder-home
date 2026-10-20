@@ -197,6 +197,12 @@ export function proposeFromIntent(intent: HouseholdIntent, context: ProposalCont
     case "needs_approval":
       return { kind: "needs_approval", preview };
     case "execute":
+      // A child's or helper's request never writes on its own (the owner,
+      // 2026-10-20): it is shown, and an adult gives the final OK
+      // (`referral.ts`), whatever the household's autonomy says.
+      if (context.requestedBy === "person" && (context.actor.memberType === "child" || context.actor.memberType === "helper")) {
+        return { kind: "needs_approval", preview: { ...preview, because: "A grown-up gives the final OK before anything is added." } };
+      }
       return { kind: "executed", preview };
   }
 }
