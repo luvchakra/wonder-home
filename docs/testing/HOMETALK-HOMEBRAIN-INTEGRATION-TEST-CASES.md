@@ -129,8 +129,8 @@ A failure is fixed in the product, given a golden case, and the case's **Result*
 | IT-CORE-22 | A/Kunal | **U:** "Take me to the grocery list" | `open_screen` → `/groceries?view=to-buy`. The conversation carries on | Changing any record | HT-84…87 | Pass |
 | IT-CORE-23 | A/Asmi (child) | **U:** "Open the bills" | `open_screen` refused for a child, with a kind sentence | Opening `/bills`; revealing amounts | HT-84…87 | Pass |
 | IT-CORE-24 | A/Kunal | **U:** "Asdfgh qwerty" | `unknown`. One line saying it wasn't understood, with two examples | A guess at an action | new | Pass |
-| IT-CORE-25 | A/Kunal | **U:** "Put it on the calendar" (nothing discussed) | Clarify: "What should I put on the calendar?" | Inventing an event | new | Fail → fixed in #PRNUM |
-| IT-CORE-26 | A/Kunal | **U:** "Add the same milk we bought last week" | `add_to_list`, grounded to the tracked Milk item (its usual amount) | A new item called "the same milk" | HT (add) | Fail → fixed in #PRNUM |
+| IT-CORE-25 | A/Kunal | **U:** "Put it on the calendar" (nothing discussed) | Clarify: "What should I put on the calendar?" | Inventing an event | new | Fail → fixed in #263 |
+| IT-CORE-26 | A/Kunal | **U:** "Add the same milk we bought last week" | `add_to_list`, grounded to the tracked Milk item (its usual amount) | A new item called "the same milk" | HT (add) | Fail → fixed in #263 |
 | IT-CORE-27 | A/Kunal | **U:** "We're out of atta" | `add_to_list` {item: atta}. Atta's stock is set to none only if he says so; the add is done | Changing stock without the words | HT (out of) | Pass |
 | IT-CORE-28 | A/Kunal | Several turns, then **U:** "What did I just ask you to do?" | Answered from this conversation's own record (the actions it took) | Things from another session | new | Fail (open): answers with unrelated records |
 | IT-CORE-29 | A/Kunal | **U:** "Search my messages for plumber" | Message search over his own conversations only | Other members' conversations | message-search.test | Not run |
@@ -152,8 +152,8 @@ A failure is fixed in the product, given a golden case, and the case's **Result*
 | IT-FAM-08 | C/Priya | **U:** "Who is Pinky?" | Priyanka, Ravi's sister | — | new | Fail → fixed in #262 |
 | IT-FAM-09 | E/Harpreet | **U:** "Tell me about the kids" | A person at a glance for each child (`profiles.ts`), from the viewer's own items | Health or money in a profile | new | Pass |
 | IT-FAM-10 | A/Kunal | **U:** "What do you know about Asmi?" | Profile first: school, upcoming things, likes (Indian food). Every line from a record | A health detail; anything the model "remembers" on its own | HT (profiles) | Pass |
-| IT-FAM-11 | A/Kunal | **U:** "Make Upasana an admin" | Role changes are not a HomeTalk action. The reply points to Family → Members & roles, where any Admin can do it | Changing a role from a sentence | new | Fail → fixed in #PRNUM |
-| IT-FAM-12 | A/Kunal | **U:** "Add a new family member called Riya" | Not a HomeTalk action: a link to Family → Add a member | Creating a member from a sentence | new | Fail → fixed in #PRNUM |
+| IT-FAM-11 | A/Kunal | **U:** "Make Upasana an admin" | Role changes are not a HomeTalk action. The reply points to Family → Members & roles, where any Admin can do it | Changing a role from a sentence | new | Fail → fixed in #263 |
+| IT-FAM-12 | A/Kunal | **U:** "Add a new family member called Riya" | Not a HomeTalk action: a link to Family → Add a member | Creating a member from a sentence | new | Fail → fixed in #263 |
 | IT-FAM-13 | A/Kunal | **U:** "Who is Rohan?" (not in household A) | "I don't know who Rohan is in your household. Check the name under Family." | Reading household D's Rohan | new | Fail (open): a generic reply, not "I don't know who Rohan is" |
 | IT-FAM-14 | A/Sunita (helper) | **U:** "Who is in the family?" | The roster without phone numbers or emails | Private details | new | Pass |
 
@@ -164,14 +164,14 @@ A failure is fixed in the product, given a golden case, and the case's **Result*
 | ID | Actor | Conversation | Expected | Never | Golden | Result |
 |---|---|---|---|---|---|---|
 | IT-HH-01 | A/Kunal | **U:** "Who is responsible for the bills?" | Answered from responsibilities: the bill owner and any backup | Reading "Who" as a person's name | HT (who is responsible) | Partial (open): the answer is there, after unrelated lines |
-| IT-HH-02 | A/Kunal | **U:** "Make Upasana responsible for groceries" | `assign_responsibility` to Upasana. It touches another person's duty → **Ask once** → yes → written | Done without asking | new | Fail → fixed in #PRNUM |
-| IT-HH-03 | A/Kunal | **U:** "Give the dog walking to Manan" | `assign_responsibility` for pet care to a child. **Ask once**; the reply names what Manan will be reminded about | — | new | Fail → fixed in #PRNUM |
+| IT-HH-02 | A/Kunal | **U:** "Make Upasana responsible for groceries" | `assign_responsibility` to Upasana. It touches another person's duty → **Ask once** → yes → written | Done without asking | new | Fail → fixed in #263 |
+| IT-HH-03 | A/Kunal | **U:** "Give the dog walking to Manan" | `assign_responsibility` for pet care to a child. **Ask once**; the reply names what Manan will be reminded about | — | new | Fail → fixed in #263 |
 | IT-HH-04 | A/Asmi (child) | **U:** "Make Manan do the dishes" | A child cannot assign duties: refused with a kind reason, or sent to an adult for approval | Writing a responsibility | new | Pass |
 | IT-HH-05 | A/Kunal | **U:** "What does Sunita do?" | Her responsibilities and arrangement, from records | Productivity scores or tracking | new | Partial (open): her cooking duty is not said |
 | IT-HH-06 | A/Kunal | **U:** "Who backs up Sunita when she's away?" | The backup from responsibilities, or "nobody is set as a backup" with a link | Inventing a backup | new | Fail (open): the name is repeated ("Sunita or Sunita") |
 | IT-HH-07 | A/Kunal | **U:** "What's the rule for screen time?" | From the playbook, when one is recorded; otherwise "not on record" and where to add it | A generic parenting rule as the household's | new | Fail (open): food likes listed instead of "not on record" |
 | IT-HH-08 | A/Kunal | **U:** "Dinner is at 8 now" | `set_preference` with `corrects: true`. The new time replaces the old one in memory, and both stay in the history | Two dinner times kept as current | fixtures | Pass |
-| IT-HH-09 | A/Kunal | **U:** "Stop asking me before you do things" | Not a HomeTalk setting change: the reply links Manage Household → AI autonomy and Settings → AI Assistant | Changing autonomy from a sentence | new | Fail → fixed in #PRNUM |
+| IT-HH-09 | A/Kunal | **U:** "Stop asking me before you do things" | Not a HomeTalk setting change: the reply links Manage Household → AI autonomy and Settings → AI Assistant | Changing autonomy from a sentence | new | Fail → fixed in #263 |
 | IT-HH-10 | A/Kunal, Setup: groceries autonomy is "observe" | **U:** "Add milk" | Kunal is an adult speaking for himself, so §3.9 applies and it is done with undo. Autonomy governs agents and children, not his own clear request | Treating his own request as an agent's | consent.test | Not run |
 | IT-HH-11 | A/Asmi (child), Setup: groceries autonomy is "observe" | **U:** "Add chocolate to the list" | Added: a list add is a draft, which every autonomy level allows (an order from the list still needs an adult) | Ordering it | consent.test | Pass (expectation corrected) |
 | IT-HH-12 | A/Asmi (child), Setup: groceries autonomy is "execute" | **U:** "Add chocolate to the list" | Done, with undo | — | consent.test | Pass (expectation corrected) |
@@ -184,7 +184,7 @@ A failure is fixed in the product, given a golden case, and the case's **Result*
 
 | ID | Actor | Conversation | Expected | Never | Golden | Result |
 |---|---|---|---|---|---|---|
-| IT-OUT-01 | A/Kunal | **U:** "Check on things" | `check_agents`: a real `runHouseholdAgents` run. The headline says what was executed, what awaits approval and what was refused | A summary made up without a run | new | Fail → fixed in #PRNUM |
+| IT-OUT-01 | A/Kunal | **U:** "Check on things" | `check_agents`: a real `runHouseholdAgents` run. The headline says what was executed, what awaits approval and what was refused | A summary made up without a run | new | Fail → fixed in #263 |
 | IT-OUT-02 | A/Kunal | **U:** "How is the home doing?" | The attention summary built from every domain's agenda: only what needs someone, with one line of reason each | Routine items that need nobody ("normal routines are silent") | HT (status) | Fail (open): "nothing pending" with bills and homework due |
 | IT-OUT-03 | A/Kunal | **U:** "What needs my attention today?" | Things owned by Kunal or waiting on him, today | Things owned by others with nothing for him to do | new | Pass |
 | IT-OUT-04 | A/Kunal | **U:** "Is anything overdue?" | The overdue items across domains, or "nothing is overdue" | — | new | Fail (open): claims there are no records of bills |
@@ -766,4 +766,4 @@ Each run adds one row. A failing case links the PR that fixed it.
 | Date | Run | Cases | Pass | Fail | Fixed in |
 |---|---|---|---|---|---|
 | 2026-10-20 | CORE, FAM, HH, OUT through the golden runner with the QA Gemini key (the route's rules-first order) | 59 run (13 need the route or a live setting) | 36 (3 after a fix) | 20 open | #262 (CORE-08, FAM-04, FAM-08) |
-| 2026-10-20 | Re-run of the open CORE, FAM, HH, OUT cases | 9 | 9 (8 after a fix) | 11 open | #PRNUM (CORE-25, CORE-26, FAM-11, FAM-12, HH-02, HH-03, HH-09, OUT-01) |
+| 2026-10-20 | Re-run of the open CORE, FAM, HH, OUT cases | 9 | 9 (8 after a fix) | 11 open | #263 (CORE-25, CORE-26, FAM-11, FAM-12, HH-02, HH-03, HH-09, OUT-01) |
