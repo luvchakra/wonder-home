@@ -1,4 +1,5 @@
-import { OBLIGATION_KINDS, type ObligationKind } from "./payments";
+import { BILL_TYPES } from "./bill-catalog";
+import { OBLIGATION_KINDS } from "./payments";
 
 /**
  * What a budget has used so far (story 11-007, 22-007).
@@ -9,13 +10,22 @@ import { OBLIGATION_KINDS, type ObligationKind } from "./payments";
  * the budget's own currency. A payment in another currency is never
  * converted and never added in; it is counted separately so the screen can
  * say so, rather than show a total that quietly mixes rupees and dollars.
+ *
+ * Since the owner's ask (2026-10-20: "instead of utility mention all line
+ * items separately, electricity, water, gas, petrol etc") a budget is for
+ * one line item — a typical bill (`BILL_TYPES`: electricity, water, piped
+ * gas, petrol…) — and counts the payments of bills of that type. A budget
+ * set earlier for a whole kind ("utility") keeps counting its kind.
  */
+
+/** What a new budget can be for: each typical bill, and "other" for the rest. */
+export const BUDGET_CATEGORIES = [...BILL_TYPES.map((type) => type.key), "other"] as const;
 
 export const BUDGET_PERIODS = ["month", "quarter", "year"] as const;
 export type BudgetPeriod = (typeof BUDGET_PERIODS)[number];
 
-export function isBudgetCategory(value: string): value is ObligationKind {
-  return (OBLIGATION_KINDS as readonly string[]).includes(value);
+export function isBudgetCategory(value: string): boolean {
+  return (BUDGET_CATEGORIES as readonly string[]).includes(value) || (OBLIGATION_KINDS as readonly string[]).includes(value);
 }
 
 /** The first day (YYYY-MM-DD) of the period `today` falls in. */
@@ -28,6 +38,8 @@ export function budgetPeriodStart(period: BudgetPeriod, today: string): string {
 
 export type BudgetPayment = {
   kind: string;
+  /** The typical bill it was paid for (`bill-catalog.ts`), when its bill says. */
+  billType?: string | null;
   currency: string;
   amountMinor: number;
   /** When it was actually paid, if recorded. */
@@ -51,7 +63,7 @@ export function budgetSpend(
   let spentMinor = 0;
   const others = new Map<string, number>();
   for (const payment of payments) {
-    if (payment.kind !== budget.category) continue;
+    if (payment.kind !== budget.category && payment.billType !== budget.category) continue;
     const day = payment.paidOn ?? (/^\d{4}-\d{2}$/.test(payment.periodLabel) ? `${payment.periodLabel}-01` : null);
     if (!day || day < start || day > today) continue;
     if (payment.currency === budget.currency) spentMinor += payment.amountMinor;

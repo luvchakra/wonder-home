@@ -126,7 +126,7 @@ export type AgentRunRecord = {
 export type EventGuestRecord = { eventId: string; name: string; response: "yes" | "no" | "maybe"; partySize: number; note: string | null };
 
 /** A food preference from the Meals screen (`food_preferences`); null member means the whole household. */
-export type FoodPreferenceRecord = { id: string; memberId: string | null; kind: "allergy" | "medical" | "ethical" | "dislike" | "preference"; subject: string };
+export type FoodPreferenceRecord = { id: string; memberId: string | null; kind: "allergy" | "medical" | "ethical" | "dislike" | "preference" | "diet"; subject: string };
 
 export type AgendaInput = {
   needsYou: readonly HomeAssessment[];
@@ -1127,14 +1127,19 @@ export function buildContextItems(records: ContextRecords, options: BuildOptions
   }
 
   if (records.foodPreferences) {
-    const kindWords: Record<FoodPreferenceRecord["kind"], string> = { preference: "likes", dislike: "doesn't like", allergy: "is allergic to", medical: "avoids for health reasons", ethical: "doesn't eat, by choice" };
+    const kindWords: Record<Exclude<FoodPreferenceRecord["kind"], "diet">, string> = { preference: "likes", dislike: "doesn't like", allergy: "is allergic to", medical: "avoids for health reasons", ethical: "doesn't eat, by choice" };
+    // A diet is said as one: "The household eats vegetarian with eggs" (the owner, 2026-10-20).
+    const dietWords: Record<string, string> = { vegetarian: "vegetarian", eggetarian: "vegetarian with eggs", non_vegetarian: "non-vegetarian", vegan: "vegan", jain: "Jain (no onion, garlic or root vegetables)" };
     for (const preference of records.foodPreferences) {
       const who = preference.memberId ? (name(preference.memberId) ?? "Someone") : "The household";
       add({
         domain: "preferences",
         entityType: "food_preference",
         entityId: preference.id,
-        summary: `${who} ${kindWords[preference.kind]} ${preference.subject} (from the Meals screen).`,
+        summary:
+          preference.kind === "diet"
+            ? `${who} eats ${dietWords[preference.subject] ?? preference.subject} (diet, from the Meals screen).`
+            : `${who} ${kindWords[preference.kind]} ${preference.subject} (from the Meals screen).`,
         need: "what the household prefers to eat",
         privacyClass: preference.kind === "allergy" || preference.kind === "medical" ? "health" : preference.memberId && isChild(preference.memberId) ? "child" : "general",
         subjectMemberIds: [preference.memberId],

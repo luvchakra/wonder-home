@@ -41,6 +41,9 @@ export function billFormLabels(t: Translate): BillFormLabels {
     recurs: t("billForm.recurs"),
     payee: t("billForm.payee"),
     payeePlaceholder: t("billForm.payeePlaceholder"),
+    thisBill: t("billForm.thisBill"),
+    thisBillHint: t("billForm.thisBillHint"),
+    monthsAfterAdd: t("billForm.monthsAfterAdd"),
     amountOptional: t("billForm.amountOptional"),
     dueOptional: t("billForm.dueOptional"),
     edit: t("billForm.edit", KEEP),
@@ -98,12 +101,5 @@ export function billFormLabels(t: Translate): BillFormLabels {
     whoPays: t("billForm.whoPays"),
     payeesNear: t("billForm.payeesNear", { place: "{place}" }),
     payeesAnywhere: t("billForm.payeesAnywhere"),
-    earlierTitle: t("billForm.earlier.title"),
-    earlierHint: t("billForm.earlier.hint"),
-    earlierMonth: t("billForm.earlier.month"),
-    earlierAmount: t("billForm.earlier.amount"),
-    earlierPaidOn: t("billForm.earlier.paidOn"),
-    earlierAdd: t("billForm.earlier.add"),
-    earlierRemove: t("billForm.earlier.remove"),
   };
 }

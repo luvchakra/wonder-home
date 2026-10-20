@@ -21,7 +21,7 @@ export type LikesRecord =
   /** Something HomeTalk was told and kept, with whether anyone has confirmed it. */
   | { kind: "memory"; memberId: string | null; statement: string; confirmed: boolean }
   /** A food preference from the Meals screen. */
-  | { kind: "food"; memberId: string | null; preference: "preference" | "dislike" | "allergy" | "medical" | "ethical"; subject: string };
+  | { kind: "food"; memberId: string | null; preference: "preference" | "dislike" | "allergy" | "medical" | "ethical" | "diet"; subject: string };
 
 const NAME = String.raw`([\p{L}][\p{L}'-]*(?:\s+[\p{L}][\p{L}'-]*)?)`;
 const FOOD = /\b(food|eat|eating|dish|dishes|cuisine|meals?|tastes?)\b/i;
@@ -125,7 +125,11 @@ const FOOD_WORDS: Record<Exclude<LikesRecord, { kind: "memory" }>["preference"],
   allergy: "Allergic to",
   medical: "Avoids for health reasons:",
   ethical: "Doesn't eat, by choice:",
+  diet: "Eats",
 };
+
+/** A diet's subject as said in a line: "Eats vegetarian with eggs". */
+const DIET_SAID: Record<string, string> = { vegetarian: "vegetarian", eggetarian: "vegetarian with eggs", non_vegetarian: "non-vegetarian", vegan: "vegan", jain: "Jain" };
 
 /** Every record about one person, as lines: the Meals screen's preferences, and what HomeTalk was told that names them. */
 function linesFor(person: LikesPerson, records: readonly LikesRecord[]): { lines: string[]; health: boolean } {
@@ -139,7 +143,7 @@ function linesFor(person: LikesPerson, records: readonly LikesRecord[]): { lines
   for (const record of records) {
     if (record.kind === "food") {
       if (record.memberId !== person.id) continue;
-      const line = `${FOOD_WORDS[record.preference]} ${record.subject}`;
+      const line = `${FOOD_WORDS[record.preference]} ${record.preference === "diet" ? (DIET_SAID[record.subject] ?? record.subject) : record.subject}`;
       if (record.preference === "allergy" || record.preference === "medical") health = true;
       if (!seen.has(line.toLowerCase())) {
         seen.add(line.toLowerCase());

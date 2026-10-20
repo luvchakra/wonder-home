@@ -15,6 +15,9 @@ import type { RecipeForEdit } from "@wonderhome/core/meals/repository";
 
 import type { ActionState } from "../(auth)/actions";
 import { DishIdeas, type DishIdeaLabels } from "./dish-ideas";
+import { RecipePicker, type RecipePickerLabels } from "./recipe-picker";
+import type { Diet } from "@wonderhome/core/meals/diet";
+import type { PickerDish } from "@wonderhome/core/meals/recipe-picker";
 import {
   addSuggestedMealAction,
   createMealAction,
@@ -26,7 +29,7 @@ import {
   suggestMealAction,
   updateRecipeAction,
   type RecipeActionState,
-  type SuggestMealState, searchIngredientChoicesAction } from "../(auth)/meal-actions";
+  type SuggestMealState, catalogDishLinesAction, searchIngredientChoicesAction } from "../(auth)/meal-actions";
 
 const SLOTS = ["breakfast", "lunch", "snack", "dinner"] as const;
 
@@ -173,11 +176,20 @@ export function PlanMealButton({
   householdId,
   members,
   recipes = [],
+  dishes = [],
+  familyDiet = null,
+  people = [],
+  pickerLabels,
   labels,
 }: {
   householdId: string;
   members: { id: string; displayName: string }[];
   labels: MealFormLabels;
+  /** Every recipe the picker offers, the household's own and WonderHome's (`pickerDishes`). */
+  dishes?: PickerDish[];
+  familyDiet?: Diet | null;
+  people?: { name: string; diet: Diet }[];
+  pickerLabels: RecipePickerLabels;
   recipes?: {
     id: string;
     name: string;
@@ -193,12 +205,13 @@ export function PlanMealButton({
   // The recipe comes first (the owner, 2026-10-18): picking one fills in the
   // meal's name and what it needs, and everything stays editable.
   const [recipeId, setRecipeId] = useState("");
+  // A WonderHome dish not saved yet: planning it saves it to the household's recipes.
+  const [catalog, setCatalog] = useState<{ slug: string; name: string; lines: { name: string; quantity: number; unit: string }[] } | null>(null);
   const [name, setName] = useState("");
   const [nameTouched, setNameTouched] = useState(false);
   const [scope, setScope] = useState<"meal" | "recipe" | "new">("meal");
-  const recipe = recipes.find((choice) => choice.id === recipeId) ?? null;
-  const ready = recipes.filter((choice) => choice.available);
-  const missingSomething = recipes.filter((choice) => !choice.available);
+  const recipe = recipes.find((choice) => choice.id === recipeId) ?? (catalog ? { id: "", name: catalog.name, ingredients: catalog.lines } : null);
+  const pickedKey = recipeId ? `recipe:${recipeId}` : catalog ? `catalog:${catalog.slug}` : "";
   const select = "block min-h-11 w-full rounded-[var(--wh-radius-sm)] border border-[var(--wh-border)] bg-[var(--wh-surface)] px-3 text-base";
   const scopes: { key: "meal" | "recipe" | "new"; label: string }[] = recipe
     ? [
@@ -222,44 +235,29 @@ export function PlanMealButton({
           {state.error ? <Alert>{state.error}</Alert> : null}
           {state.notice ? <Alert tone="info">{state.notice}</Alert> : null}
           <input type="hidden" name="householdId" value={householdId} />
-          <div className="space-y-1.5">
-            <label htmlFor="recipeId" className="block text-sm font-medium">
-              {labels.fromRecipe}
-            </label>
-            <select
-              id="recipeId"
-              name="recipeId"
-              value={recipeId}
-              onChange={(event) => {
-                const next = recipes.find((choice) => choice.id === event.target.value) ?? null;
-                setRecipeId(event.target.value);
-                if (next && !nameTouched) setName(next.name);
-                if (!next && !nameTouched) setName("");
-                if (!next && scope === "recipe") setScope("meal");
-              }}
-              className={select}
-            >
-              <option value="">{labels.oneOff}</option>
-              {ready.length > 0 ? (
-                <optgroup label={labels.readyToCook}>
-                  {ready.map((choice) => (
-                    <option key={choice.id} value={choice.id}>
-                      {fill(labels.recipeOption, { name: choice.name, minutes: choice.totalMinutes, serves: choice.serves })}
-                    </option>
-                  ))}
-                </optgroup>
-              ) : null}
-              {missingSomething.length > 0 ? (
-                <optgroup label={labels.missingIngredient}>
-                  {missingSomething.map((choice) => (
-                    <option key={choice.id} value={choice.id}>
-                      {fill(labels.recipeOption, { name: choice.name, minutes: choice.totalMinutes, serves: choice.serves })}
-                    </option>
-                  ))}
-                </optgroup>
-              ) : null}
-            </select>
-          </div>
+          <input type="hidden" name="recipeId" value={recipeId} />
+          <input type="hidden" name="catalogSlug" value={catalog?.slug ?? ""} />
+          <RecipePicker
+            dishes={dishes}
+            value={pickedKey}
+            familyDiet={familyDiet}
+            people={people}
+            labels={pickerLabels}
+            onChange={async (key) => {
+              const own = key.startsWith("recipe:") ? (recipes.find((choice) => `recipe:${choice.id}` === key) ?? null) : null;
+              const slug = key.startsWith("catalog:") ? key.slice("catalog:".length) : null;
+              const dish = dishes.find((entry) => entry.key === key) ?? null;
+              setRecipeId(own?.id ?? "");
+              setCatalog(null);
+              if (!nameTouched) setName(dish?.name ?? "");
+              if (!own && scope === "recipe" && !slug) setScope("meal");
+              if (slug && dish) {
+                // What the dish needs, from the catalog, to fill the rows below.
+                const lines = await catalogDishLinesAction(slug);
+                setCatalog({ slug, name: dish.name, lines });
+              }
+            }}
+          />
           <Field
             label={labels.mealName}
             name="name"
@@ -274,7 +272,7 @@ export function PlanMealButton({
           />
           {/* A new key starts the rows again from the recipe just picked. */}
           <IngredientRows
-            key={recipeId || "one-off"}
+            key={pickedKey || "one-off"}
             prefix="essential"
             initial={recipe?.ingredients}
             labels={{ ...labels.rows, legend: labels.essential }}

@@ -16,7 +16,7 @@ import {
   updateObligation,
 } from "@wonderhome/core/finance/repository";
 import { retireBudget, saveBudget } from "@wonderhome/core/finance/budget-repository";
-import { BUDGET_PERIODS } from "@wonderhome/core/finance/budgets";
+import { BUDGET_PERIODS, isBudgetCategory } from "@wonderhome/core/finance/budgets";
 import { OBLIGATION_KINDS } from "@wonderhome/core/finance/payments";
 import { requireHouseholdAdmin } from "@wonderhome/core/identity/households";
 
@@ -56,27 +56,6 @@ const obligationFields = z.object({
 
 const MONTH = /^\d{4}-(0[1-9]|1[0-2])$/;
 
-/**
- * "Earlier bills" on the add form (11-010): each a month, what it came to and
- * when it was paid, kept in the bill's history from the start. A row with no
- * month or no amount is left out; a bad one says which.
- */
-function earlierBillsOf(formData: FormData): { rows: { periodLabel: string; amount: number; paidOn: string | null }[]; error?: string } {
-  const rows: { periodLabel: string; amount: number; paidOn: string | null }[] = [];
-  for (let index = 0; index < 24; index += 1) {
-    const month = String(formData.get(`earlier.${index}.month`) ?? "").trim();
-    const amount = String(formData.get(`earlier.${index}.amount`) ?? "").trim();
-    const paidOn = String(formData.get(`earlier.${index}.paidOn`) ?? "").trim();
-    if (!month && !amount) continue;
-    if (!MONTH.test(month)) return { rows, error: "Pick the month each earlier bill was for." };
-    const value = Number(amount.replace(/,/g, ""));
-    if (!amount || !Number.isFinite(value) || value < 0) return { rows, error: "Say what each earlier bill came to." };
-    if (paidOn && !/^\d{4}-\d{2}-\d{2}$/.test(paidOn)) return { rows, error: "Use a date for when it was paid." };
-    rows.push({ periodLabel: month, amount: value, paidOn: paidOn || null });
-  }
-  return { rows };
-}
-
 function requiresCurrencyWithAmount() {
   return { error: "Add a currency along with the amount.", path: ["currency"] };
 }
@@ -112,46 +91,26 @@ export async function createObligationAction(
         parsed.error.issues[0]?.message ?? "Please check the details above.",
     };
   }
-  const earlier = earlierBillsOf(formData);
-  if (earlier.error) return { error: earlier.error };
-  if (earlier.rows.length > 0 && !parsed.data.currency) return { error: "Add a currency for the earlier bills." };
-
   try {
     const supabase = await createClient();
     await requireHouseholdAdmin(supabase, parsed.data.householdId);
 
-    const created = await createObligation(supabase, {
+    await createObligation(supabase, {
       householdId: parsed.data.householdId,
       name: parsed.data.name,
       kind: parsed.data.kind,
       payee: parsed.data.payee || null,
       amountMinor: toMinorUnits(parsed.data.amount),
-      currency: parsed.data.currency || null,
+      // A currency goes with an amount, never alone: the form always has one picked, the amount may be empty.
+      currency: toMinorUnits(parsed.data.amount) === null ? null : parsed.data.currency || null,
       dueOn: parsed.data.dueOn || null,
       recurrence: parsed.data.recurrence || null,
       billType: parsed.data.billType || null,
       responsibleMemberId: parsed.data.responsibleMemberId || null,
     });
-    // The earlier bills, one history row each, in month order.
-    for (const row of [...earlier.rows].sort((a, b) => a.periodLabel.localeCompare(b.periodLabel))) {
-      await recordAmount(supabase, {
-        householdId: parsed.data.householdId,
-        obligationId: created.id,
-        periodLabel: row.periodLabel,
-        amountMinor: Math.round(row.amount * 100),
-        currency: parsed.data.currency!,
-        paidOn: row.paidOn,
-        payee: parsed.data.payee || null,
-        ownerMemberId: parsed.data.responsibleMemberId || null,
-      });
-    }
-
     revalidatePath("/bills");
     return {
-      notice:
-        earlier.rows.length > 0
-          ? `Added, with ${earlier.rows.length} earlier ${earlier.rows.length === 1 ? "bill" : "bills"}. The coming months show under it, ready to fill in.`
-          : "Added. The coming months show under it, ready to fill in.",
+      notice: "Added. Its last three months and the next one show under it, ready to fill in.",
     };
   } catch (thrown) {
     return { error: toErrorBody(thrown, "finance").body.error.message };
@@ -201,7 +160,8 @@ export async function updateObligationAction(
       kind: parsed.data.kind,
       payee: parsed.data.payee || null,
       amountMinor: toMinorUnits(parsed.data.amount),
-      currency: parsed.data.currency || null,
+      // A currency goes with an amount, never alone: the form always has one picked, the amount may be empty.
+      currency: toMinorUnits(parsed.data.amount) === null ? null : parsed.data.currency || null,
       dueOn: parsed.data.dueOn || null,
       recurrence: parsed.data.recurrence || null,
       billType: parsed.data.billType || null,
@@ -346,7 +306,8 @@ export async function removeTransactionAction(
 const budgetSchema = z.object({
   householdId: z.uuid(),
   id: z.union([z.uuid(), z.literal("")]).optional(),
-  category: z.enum(OBLIGATION_KINDS, { error: "Pick which kind of bill this budget is for." }),
+  // A line item (electricity, petrol…); a whole kind is still accepted for a budget set before (2026-10-20).
+  category: z.string().refine(isBudgetCategory, { error: "Pick which bill this budget is for." }),
   period: z.enum(BUDGET_PERIODS, { error: "Pick a month, a quarter or a year." }),
   // Decimal major units as typed (CLAUDE.md principle 22), converted once here.
   amount: z.coerce.number({ error: "Add the amount." }).positive({ error: "Add an amount above zero." }),

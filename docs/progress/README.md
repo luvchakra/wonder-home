@@ -13,6 +13,7 @@ decision that shapes later work each earns a note, written before moving on.
 |---|---|
 | 2026-10-20 | [A cat companion for the child, and clear ways to earn stars](2026-10-20-child-cat-companion.md) |
 | 2026-10-20 | [The cat's colour, facts and reminders; Groceries; HomeTalk opens what it changed](2026-10-20-cat-colours-facts-and-groceries-header.md) |
+| 2026-10-20 | [Recipe picker and diets; bills month by month, line-item budgets, the bill form](2026-10-20-recipe-picker-diets-and-bill-months.md) |
 | 2026-10-20 | [Bills picked not typed, payees by location, months made ahead](2026-10-20-bills-made-ahead.md) |
 | 2026-10-20 | [WonderHome's recipe catalog, and recipes you can change](2026-10-20-recipe-catalog.md) |
 | 2026-10-20 | [A child's or helper's request goes to an adult for the final OK](2026-10-20-child-requests-adult-ok.md) |

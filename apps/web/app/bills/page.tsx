@@ -21,8 +21,9 @@ import {
   type Obligation,
 } from "@wonderhome/core/finance/payments";
 import { BILL_TYPES } from "@wonderhome/core/finance/bill-catalog";
+import type { TranslationKey } from "@wonderhome/core/i18n/translate";
 import { homePlaceFrom, payeesFor } from "@wonderhome/core/finance/payees";
-import { billPeriods, type BillPeriod } from "@wonderhome/core/finance/periods";
+import { billPeriods, PERIODS_BEHIND, type BillPeriod } from "@wonderhome/core/finance/periods";
 import {
   financeAgenda,
   listGivenPeriods,
@@ -178,9 +179,11 @@ export default async function BillsPage({
   // the budget's own currency only (story 22-007). A payment's kind is its
   // own when recorded, else its bill's.
   const kindOfBill = new Map(obligations.map((o) => [o.id, o.kind as string]));
+  // And the line item it is (electricity, petrol…), what a budget is now set for (2026-10-20).
+  const typeOfBill = new Map(obligations.map((o) => [o.id, o.billType ?? null]));
   const payments: BudgetPayment[] = history.flatMap((row) => {
     const kind = row.kind ?? kindOfBill.get(row.obligation_id);
-    return kind ? [{ kind, currency: row.currency, amountMinor: Number(row.amount_minor), paidOn: row.paid_on, periodLabel: row.period_label }] : [];
+    return kind ? [{ kind, billType: typeOfBill.get(row.obligation_id) ?? null, currency: row.currency, amountMinor: Number(row.amount_minor), paidOn: row.paid_on, periodLabel: row.period_label }] : [];
   });
   const today = isoDateIn(new Date(), timezone);
   const budgets = budgetRows.map((budget) => ({ ...budget, ...budgetSpend(budget, payments, today) }));
@@ -475,6 +478,8 @@ export default async function BillsPage({
                           { dueOn: bill.dueOn, recurrence: bill.recurrence ?? null, status: bill.status, amountMinor: bill.amountMinor, currency: bill.currency },
                           history.filter((h) => h.obligation_id === bill.id).map((h) => ({ periodLabel: h.period_label, amountMinor: Number(h.amount_minor), currency: h.currency, paidOn: h.paid_on })),
                           givenPeriods.get(bill.id) ?? [],
+                          undefined,
+                          PERIODS_BEHIND,
                         )}
                         monthOf={(dueOn: string) => monthName.format(new Date(`${dueOn}T00:00:00Z`))}
                         periodLabels={periodLabels}
@@ -596,7 +601,7 @@ export default async function BillsPage({
                         <li key={budget.id}>
                           <div className="flex items-start justify-between gap-3">
                             <div className="min-w-0 flex-1">
-                              <p className="text-sm font-medium">{billKindName(t, budget.category)}</p>
+                              <p className="text-sm font-medium">{(BILL_TYPES as readonly { key: string }[]).some((type) => type.key === budget.category) ? t(`bills.type.${budget.category}` as TranslationKey) : billKindName(t, budget.category)}</p>
                               <p className="text-xs text-[var(--wh-foreground-muted)]">
                                 {used} ·{" "}
                                 {v.overBy
@@ -797,20 +802,24 @@ function BillRow({
                     ? period.paidOn
                       ? t("bills.periods.paid", { date: formatDate(timezone, new Date(period.paidOn), "long") })
                       : t("bills.periods.paidNoDate")
-                    : t("bills.periods.due", { date: formatDate(timezone, new Date(period.dueOn), "long") });
+                    : period.state === "earlier"
+                      ? t("bills.periods.wasDue", { date: formatDate(timezone, new Date(period.dueOn), "long") })
+                      : t("bills.periods.due", { date: formatDate(timezone, new Date(period.dueOn), "long") });
                 const amountWords =
                   period.amountMinor !== null
                     ? money(period.amountMinor)
-                    : period.usualMinor !== null
-                      ? t("bills.periods.usually", { amount: money(period.usualMinor) })
-                      : t("bills.periods.notIn");
+                    : period.state === "earlier"
+                      ? t("bills.periods.notEntered")
+                      : period.usualMinor !== null
+                        ? t("bills.periods.usually", { amount: money(period.usualMinor) })
+                        : t("bills.periods.notIn");
                 return (
                   <li key={period.periodLabel} className="flex items-center gap-2 py-2">
                     <span className="min-w-0 flex-1">
                       <span className="block text-sm font-medium">{month}</span>
                       <span className="block text-xs text-[var(--wh-foreground-subtle)]">{line}</span>
                     </span>
-                    <span className={`shrink-0 text-right text-sm ${period.amountMinor !== null ? "font-medium" : "text-[var(--wh-foreground-muted)]"}`}>{amountWords}</span>
+                    <span className={`shrink-0 text-right text-sm ${period.amountMinor !== null ? "font-medium" : period.state === "earlier" ? "font-medium text-[var(--wh-attention)]" : "text-[var(--wh-foreground-muted)]"}`}>{amountWords}</span>
                     {period.state === "paid" ? (
                       <CircleCheck aria-hidden className="size-4 shrink-0 text-[var(--wh-handled)]" />
                     ) : admin ? (

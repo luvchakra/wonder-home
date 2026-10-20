@@ -15,6 +15,8 @@ import { startBy, type Meal } from "@wonderhome/core/meals/meals";
 import type { Translate } from "@wonderhome/core/i18n/translate";
 import { listGroceries, type GroceryItem } from "@wonderhome/core/commerce/inventory";
 import { listRecipeChoices, listRecipesForEdit, mealAgenda } from "@wonderhome/core/meals/repository";
+import { DIET_CLASHES, DIETS, isDiet, type Diet, type DietClash } from "@wonderhome/core/meals/diet";
+import { pickerDishes } from "@wonderhome/core/meals/recipe-picker";
 import { listCatalogRecipes, RECIPE_COURSES, type RecipeCourse } from "@wonderhome/core/meals/recipe-catalog";
 import { publicEnv } from "@wonderhome/core/config/env";
 import { itemFor } from "@wonderhome/core/meals/shortfall";
@@ -43,6 +45,8 @@ import {
 } from "../_components/meal-forms";
 import { groceryWords, type GroceryWords } from "../_lib/grocery-words";
 import { mealFormLabels } from "../_lib/meal-form-labels";
+import type { RecipePickerLabels } from "../_components/recipe-picker";
+import { DietSettings } from "./diet-settings";
 import { MealIngredientsSheet } from "./meal-ingredients-sheet";
 import { formatDate, formatTime, requireSession } from "../_lib/session";
 
@@ -129,8 +133,8 @@ export default async function MealsPage({
       listRecipeChoices(supabase, householdId).catch(() => []),
       // What is at home and on the list, for each meal's shortfall (25-003a).
       listGroceries(supabase, householdId).catch(() => [] as GroceryItem[]),
-      // WonderHome's own ideas (25-022), only where they are shown.
-      active === "recipes"
+      // WonderHome's own dishes (25-022): the Recipes tab, and the recipe picker in Plan a meal.
+      active !== "preferences"
         ? listCatalogRecipes(supabase, publicEnv().NEXT_PUBLIC_SUPABASE_URL).catch(() => [])
         : Promise.resolve([]),
     ]);
@@ -140,7 +144,14 @@ export default async function MealsPage({
   const picked = RECIPE_COURSES.includes(course as RecipeCourse) ? (course as RecipeCourse) : null;
   const ideas = picked ? catalog.filter((dish) => dish.course === picked) : catalog;
   const pictureOf = new Map(catalog.map((dish) => [dish.id, dish.imageUrl]));
-  const preferences = (preferenceRows.data as PreferenceRow[] | null) ?? [];
+  const allPreferences = (preferenceRows.data as PreferenceRow[] | null) ?? [];
+  // A diet has its own section and its own picker; the list below is everything else.
+  const preferences = allPreferences.filter((preference) => preference.kind !== "diet");
+  const dietOf = (memberId: string | null): Diet | null => {
+    const subject = allPreferences.find((preference) => preference.kind === "diet" && preference.member_id === memberId)?.subject;
+    return isDiet(subject) ? subject : null;
+  };
+  const familyDiet = dietOf(null);
   const nameOf = (id: string | null) =>
     members.find((member) => member.id === id)?.displayName ?? null;
   const admin = isHouseholdAdmin(membership);
@@ -155,6 +166,14 @@ export default async function MealsPage({
     name: recipe.name,
   }));
   const formLabels = mealFormLabels(t, words.unitNames);
+  const dietWords = Object.fromEntries(DIETS.map((diet) => [diet, t(`meals.diet.${diet}` as TranslationKey)])) as Record<Diet, string>;
+  const pickerLabels = recipePickerLabels(t, dietWords);
+  const dishes = pickerDishes(recipeChoices, catalog);
+  const dietPeople = members.flatMap((member) => {
+    const diet = dietOf(member.id);
+    return diet ? [{ name: member.displayName, diet }] : [];
+  });
+  const plan = { dishes, familyDiet, people: dietPeople, pickerLabels };
 
   const days = Array.from({ length: 7 }, (_, index) => {
     const date = new Date(now.getTime() + index * 86_400_000);
@@ -205,6 +224,7 @@ export default async function MealsPage({
                   householdId={householdId}
                   members={memberOptions}
                   recipes={recipeChoices}
+                  {...plan}
                   labels={formLabels}
                 />
               </>
@@ -270,6 +290,7 @@ export default async function MealsPage({
                     householdId={householdId}
                     members={memberOptions}
                     recipes={recipeChoices}
+                    {...plan}
                     labels={formLabels}
                   />
                 }
@@ -433,6 +454,28 @@ export default async function MealsPage({
         ) : null}
 
         {active === "preferences" ? (
+          <DietSettings
+            householdId={householdId}
+            family={familyDiet}
+            people={members.map((member) => ({
+              memberId: member.id,
+              name: member.displayName,
+              diet: dietOf(member.id),
+              canEdit: admin || member.id === membership.memberId,
+            }))}
+            labels={{
+              title: t("meals.diet.title"),
+              lede: t("meals.diet.lede"),
+              family: t("meals.diet.family"),
+              notSet: t("meals.diet.notSet"),
+              diets: dietWords,
+              dietOf: t("meals.diet.dietOf", { name: "{name}" }),
+              saved: t("meals.diet.saved"),
+            }}
+          />
+        ) : null}
+
+        {active === "preferences" ? (
           preferences.length === 0 ? (
             <EmptyState
               icon={Heart}
@@ -495,7 +538,45 @@ const PREFERENCE_KIND_KEYS = {
   ethical: "meals.prefKind.ethical",
   dislike: "meals.prefKind.dislike",
   preference: "meals.prefKind.preference",
+  diet: "meals.prefKind.diet",
 } as const;
+
+/** The recipe picker's words (`RecipePicker`), in the reader's language. */
+function recipePickerLabels(t: Translate, diets: Record<Diet, string>): RecipePickerLabels {
+  return {
+    label: t("mealForm.fromRecipe"),
+    oneOff: t("mealForm.oneOff"),
+    search: t("mealForm.picker.search"),
+    fits: t("mealForm.picker.fits"),
+    any: t("mealForm.picker.any"),
+    anyCalories: t("mealForm.picker.anyCalories"),
+    anyProtein: t("mealForm.picker.anyProtein"),
+    dishDiets: { veg: t("recipes.diet.veg"), egg: t("recipes.diet.egg"), non_veg: t("recipes.diet.non_veg") },
+    diets,
+    clashes: Object.fromEntries(DIET_CLASHES.map((clash) => [clash, t(`meals.dietClash.${clash}` as TranslationKey)])) as Record<DietClash, string>,
+    filterDiet: t("mealForm.picker.filterDiet"),
+    filterCalories: t("mealForm.picker.filterCalories"),
+    filterProtein: t("mealForm.picker.filterProtein"),
+    under: t("mealForm.picker.under", { kcal: "{kcal}" }),
+    atLeast: t("mealForm.picker.atLeast", { grams: "{grams}" }),
+    sort: t("mealForm.picker.sort"),
+    sortSuggested: t("mealForm.picker.sortSuggested"),
+    sortProtein: t("mealForm.picker.sortProtein"),
+    sortCalories: t("mealForm.picker.sortCalories"),
+    yours: t("mealForm.picker.yours"),
+    ready: t("mealForm.readyToCook"),
+    missing: t("mealForm.missingIngredient"),
+    fromWonderHome: t("mealForm.picker.fromWonderHome"),
+    nutrition: t("mealForm.picker.nutrition", { kcal: "{kcal}", protein: "{protein}" }),
+    caloriesOnly: t("mealForm.picker.caloriesOnly", { kcal: "{kcal}" }),
+    proteinOnly: t("mealForm.picker.proteinOnly", { protein: "{protein}" }),
+    notCounted: t("mealForm.picker.notCounted"),
+    time: t("mealForm.picker.time", { minutes: "{minutes}", serves: "{serves}" }),
+    notFor: t("mealForm.picker.notFor", { name: "{name}", diet: "{diet}", reason: "{reason}" }),
+    empty: t("mealForm.picker.empty"),
+    savedOnPlan: t("mealForm.picker.savedOnPlan", { name: "{name}" }),
+  };
+}
 
 /** A preference's kind in the reader's words; a kind the catalog does not know is shown as stored. */
 function preferenceKindWords(t: Translate, kind: string): string {
