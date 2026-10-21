@@ -307,6 +307,25 @@ export async function recentFocus(admin: SupabaseClient, sessionId: string, limi
 }
 
 /**
+ * The metadata of WonderHome's last reply in this session, when it came
+ * after `since` — what a follow-up is read together with (HomePlaces: the
+ * place request the last reply was about). Null when there is none that
+ * recent: an old answer is not what a new short request leans on.
+ */
+export async function lastReplyMetadata(admin: SupabaseClient, sessionId: string, since: Date): Promise<Record<string, unknown> | null> {
+  const { data } = await admin
+    .from("conversation_messages")
+    .select("metadata, created_at")
+    .eq("session_id", sessionId)
+    .eq("role", "assistant")
+    .gte("created_at", since.toISOString())
+    .order("created_at", { ascending: false })
+    .limit(1);
+  const row = ((data as Row[] | null) ?? [])[0];
+  return (row?.metadata as Record<string, unknown> | null | undefined) ?? null;
+}
+
+/**
  * The question WonderHome asked last, if the last thing it said was one.
  *
  * Stored on the assistant message that asked it rather than in a table of

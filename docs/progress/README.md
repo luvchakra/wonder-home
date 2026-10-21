@@ -11,6 +11,7 @@ decision that shapes later work each earns a note, written before moving on.
 
 | Date | Note |
 |---|---|
+| 2026-10-21 | [A place question is answered, never asked twice (24-013)](2026-10-21-homeplaces-answer-not-ask.md) |
 | 2026-10-21 | [Chat: /, @ and #, Trending at home, and chat notifications](2026-10-21-chat-composer-notices.md) |
 | 2026-10-21 | [What the first Anthropic evaluation found, and what was fixed](2026-10-21-anthropic-eval-findings.md) |
 | 2026-10-21 | [Health records: attach the report, read it, suggest next steps](2026-10-21-health-report-reading.md) |

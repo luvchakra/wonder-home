@@ -17,6 +17,10 @@ import { openScreenReply } from "../conversation/screens";
 import { permissionsFor } from "../identity/permissions";
 import { resolveCalendarSpan } from "../conversation/temporal";
 import { focusFromAnswer } from "../homebrain/focus";
+import { placesOpenQuestion, placesReply } from "../homeplaces/answer";
+import { placeRequestForTurn, type PlaceRequest } from "../homeplaces/request";
+import { householdNow, suggestPlaces } from "../homeplaces/service";
+import type { PlaceResult, PlacesProvider } from "../places/provider";
 import { answerWithHomeBrain, type HomeBrainAnswer } from "../homebrain/turn";
 import { decideConfirmation } from "../homesend/confirmation";
 import { detectInstructionInjection } from "../homesend/injection";
@@ -98,9 +102,53 @@ type Carried = {
   previousQuestion: string | null;
   /** The request a correction would change: the proposal waiting, or what was just done (as the route reads it back). */
   last: CorrectableAction | null;
+  /** The place request the last reply was about, as the route keeps it on the reply (`placeRequest`). */
+  placeRequest?: PlaceRequest | null;
 };
 
-const FRESH: Carried = { pending: null, clarifying: null, history: [], focus: [], previousQuestion: null, last: null };
+const FRESH: Carried = { pending: null, clarifying: null, history: [], focus: [], previousQuestion: null, last: null, placeRequest: null };
+
+/**
+ * HomePlaces in the golden households: a synthetic home point and a
+ * synthetic place search, so a place question runs the real reading,
+ * ranking and reply (`homeplaces/`) with no provider and no network. Every
+ * golden place is open 10 am to 11 pm every day.
+ */
+const GOLDEN_HOME = { latitude: 18.52, longitude: 73.85 };
+const GOLDEN_HOURS = [0, 1, 2, 3, 4, 5, 6].map((day) => ({ open: { day, minute: 600 }, close: { day, minute: 1380 } }));
+const goldenPlace = (placeId: string, name: string, kind: string, north: number, rating: number): PlaceResult => ({
+  placeId, name, address: "Golden Road", kind, rating, ratingCount: 400, priceLevel: null, openNow: null, periods: GOLDEN_HOURS, mapsUri: null,
+  location: { latitude: GOLDEN_HOME.latitude + north, longitude: GOLDEN_HOME.longitude },
+});
+const GOLDEN_PLACES: PlacesProvider = {
+  name: "golden",
+  search: async () => [],
+  details: async () => null,
+  findNearby: async (query) =>
+    /restaurant|cafe|dessert/.test(query.text)
+      ? [goldenPlace("g-r1", "Golden Spoon", "Restaurant", 0.01, 4.5), goldenPlace("g-r2", "Saffron Table", "Restaurant", 0.015, 4.3)]
+      : [goldenPlace("g-p1", "Riverside Park", "Park", 0.012, 4.6), goldenPlace("g-p2", "Lakeview Mall", "Shopping mall", 0.02, 4.4)],
+};
+
+/** A place question, answered as the route answers it (`findPlaces` in hometalk-turn.ts), with what it leaves for the next turn. */
+async function goldenPlacesAnswer(c: HomeTalkCase, utterance: string, earlier: PlaceRequest | null, intent: HouseholdIntent) {
+  const household = GOLDEN_HOUSEHOLDS[c.household];
+  const children = household.members.filter((m) => m.status === "active" && m.memberType === "child");
+  const request = placeRequestForTurn({ utterance, earlier, children: children.map((child) => ({ name: child.displayName })) });
+  const outcome = await suggestPlaces(
+    null as never,
+    GOLDEN_PLACES,
+    request,
+    { householdId: household.id, now: householdNow(household.now, household.timezone), children: children.map((child) => ({ id: child.id, name: child.displayName })), schools: [] },
+    { home: async () => GOLDEN_HOME, known: async () => [] },
+  );
+  const text = placesReply(request, outcome);
+  const question = placesOpenQuestion(request, outcome, text);
+  const clarification: PendingClarification | null = question
+    ? { action: "find_places", target: { kind: "unspecified" }, parameters: outcome.kind === "which_child" ? { children: children.map((child) => child.displayName) } : {}, question, utterance: intent.utterance, asked: 1 }
+    : null;
+  return { text, placeRequest: request, clarification };
+}
 
 export async function observeHomeTalk(c: HomeTalkCase, models: Models = {}): Promise<Observation> {
   return (await talkTurn(c, c.utterance, FRESH, models)).observed;
@@ -176,14 +224,15 @@ async function talkTurn(c: HomeTalkCase, utterance: string, carried: Carried, mo
     };
   }
   const intent = result.intent;
-  const composed = await composedAnswer(c, utterance, result, carried.previousQuestion, models);
+  const placed = result.intent.action === "find_places" ? await goldenPlacesAnswer(c, utterance, carried.placeRequest ?? null, result.intent) : null;
+  const composed = placed ?? (await composedAnswer(c, utterance, result, carried.previousQuestion, models));
   const answer = composed?.text ?? result.text;
   // What this turn was about, exactly as the route persists it for the next turn.
   const at = household.now.toISOString();
   const focus: FocusEntity[] = [
     ...(result.focus ?? []),
     ...(result.record ? focusFromProposal({ actionType: intent.action, parameters: intent.parameters, targetReference: intent.target.reference ?? null, at }) : []),
-    ...(composed?.brain ? focusFromAnswer(composed.brain, contextItemsFor(household, c.actor), at) : []),
+    ...(composed && "brain" in composed && composed.brain ? focusFromAnswer(composed.brain, contextItemsFor(household, c.actor), at) : []),
   ];
   const awaiting = intent.parameters.awaiting;
   const entity =
@@ -215,7 +264,8 @@ async function talkTurn(c: HomeTalkCase, utterance: string, carried: Carried, mo
       // A proposal waiting for a yes is written down and carried, as the route records it;
       // one that already ran, or was refused, waits for nothing.
       pending: result.record && result.proposal.kind === "needs_approval" ? pendingFrom({ id: `eval-${c.id}-${history.length}`, summary: result.text, createdAt: household.now }) : null,
-      clarifying: result.clarification ?? null,
+      clarifying: result.clarification ?? placed?.clarification ?? null,
+      placeRequest: placed?.placeRequest ?? null,
       history: [...history, { role: "assistant", text: answer }],
       focus: [...focus, ...carried.focus],
       previousQuestion: asked ? utterance : carried.previousQuestion,

@@ -2,9 +2,9 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 import { describe, expect, it } from "vitest";
 
 import type { PlaceResult, PlacesProvider } from "../places/provider";
-import { placesReply } from "./answer";
+import { placesOpenQuestion, placesReply } from "./answer";
 import { readPlaceRequest } from "./request";
-import { householdNow, placesFrom, rankPlaces, suggestPlaces } from "./service";
+import { householdNow, placesFrom, rankPlaces, suggestPlaces, WHICH_SCHOOL_FALLBACK } from "./service";
 
 const school = { latitude: 12.97, longitude: 77.59 };
 // Every weekday, 10:00 to 21:00.
@@ -140,6 +140,45 @@ describe("suggestPlaces", () => {
   it("is off without a provider that can search nearby", async () => {
     const request = readPlaceRequest("Suggest some good places for dinner tonight")!;
     expect(await suggestPlaces(unreadable, null, request, context)).toEqual({ kind: "off" });
+    // A kind assumed is still answered honestly: off is off, never "what kind of place?".
+    const vague = readPlaceRequest("can we go somewhere out tomorrow")!;
+    expect(placesReply(vague, await suggestPlaces(unreadable, null, vague, context))).toBe("Place search isn't switched on for this WonderHome yet, so I can't look places up.");
+  });
+
+  const home = school;
+  const reads = { home: async () => home, known: async () => [] };
+
+  it("answers going out tomorrow near home, checked against tomorrow's hours, and says the kind was assumed (the owner's report, 2026-10-21)", async () => {
+    let asked: { openNow?: boolean; text: string } | null = null;
+    const watching: PlacesProvider = { ...provider([]), findNearby: async (query) => ((asked = query), [place("park"), place("shut", { periods: [{ open: { day: 4, minute: 15 * 60 }, close: { day: 4, minute: 22 * 60 } }] })]) };
+    const request = readPlaceRequest("can we go somewhere out tomorrow")!;
+    // Wednesday 10:00; tomorrow is Thursday, and "shut" only opens at 3 pm then.
+    const outcome = await suggestPlaces(unreadable, watching, request, context, reads);
+    expect(asked).toMatchObject({ text: "family outing places", openNow: false });
+    expect(outcome).toMatchObject({ kind: "found", near: "home", window: "tomorrow from 11 am" });
+    expect(outcome.kind === "found" && outcome.places.map((entry) => entry.placeId)).toEqual(["park"]);
+    const text = placesReply(request, outcome);
+    expect(text).toContain("Here is a place for going out near home, open tomorrow from 11 am:");
+    expect(text).toContain("You didn't say what kind of place, so I looked for places to go out. Say dinner, a park or a mall to narrow it.");
+    expect(placesOpenQuestion(request, outcome, text)).toBe("You didn't say what kind of place, so I looked for places to go out. Say dinner, a park or a mall to narrow it.");
+
+    // "Dinner nearby home" next: dinner tomorrow, near home, and nothing assumed any more.
+    const dinner = readPlaceRequest("dinner nearby home", { asked: true, earlier: request })!;
+    const second = await suggestPlaces(unreadable, provider([place("food", { kind: "Restaurant" })]), dinner, context, reads);
+    expect(second).toMatchObject({ kind: "found", window: "tomorrow from 7:30 pm" });
+    expect(placesReply(dinner, second)).not.toContain("You didn't say");
+    expect(placesOpenQuestion(dinner, second, placesReply(dinner, second))).toBeNull();
+  });
+
+  it("asks whose school once, and never a second time: an unresolved answer is answered near home, said back", async () => {
+    const request = readPlaceRequest("Suggest a park near school after school")!;
+    const first = await suggestPlaces(unreadable, provider([place("p1")]), request, context, reads);
+    expect(first.kind).toBe("which_child");
+    const text = placesReply(request, first);
+    expect(placesOpenQuestion(request, first, text)).toBe(text);
+    const again = await suggestPlaces(unreadable, provider([place("p1")]), { ...request, asked: "which_child" }, context, reads);
+    expect(again).toMatchObject({ kind: "found", near: "home" });
+    expect(placesReply({ ...request, asked: "which_child" }, again)).toContain(WHICH_SCHOOL_FALLBACK);
   });
 });
 

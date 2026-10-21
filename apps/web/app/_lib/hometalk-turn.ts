@@ -32,6 +32,7 @@ import {
   openProposals,
   openSession,
   surfaceForChannel,
+  lastReplyMetadata,
   pendingAction,
   pendingClarification,
   recentExecutedActions,
@@ -43,7 +44,8 @@ import {
   unchangedResult,
   type ConversationAction,
 } from "@wonderhome/core/conversation/repository";
-import { focusFromProposal, focusFromResult, homeSendFocus, NO_REFERENCES, readFocus, type FocusEntity, type ReferenceState } from "@wonderhome/core/conversation/references";
+import { focusFromProposal, focusFromResult, homeSendFocus, NO_REFERENCES, readFocus, SAME_MOMENT_MS, type FocusEntity, type ReferenceState } from "@wonderhome/core/conversation/references";
+import type { PendingClarification } from "@wonderhome/core/conversation/clarify";
 import { englishNoticeKey, EVERY_SENSITIVE_CLASS, localizeReply, mayTranslate, replyClassesFor, type ReplyTranslator, type TranslationFallback } from "@wonderhome/core/conversation/reply-language";
 import { composeStatusAnswer } from "@wonderhome/core/conversation/status";
 import { composeRoster } from "@wonderhome/core/conversation/roster";
@@ -85,11 +87,11 @@ import { listRelationships } from "@wonderhome/core/identity/relationships";
 import { listMembers } from "@wonderhome/core/identity/households";
 import { listMemories } from "@wonderhome/core/context/repository";
 import type { Viewer } from "@wonderhome/core/navigation/secondary-navigation";
-import { placesReply } from "@wonderhome/core/homeplaces/answer";
-import { readPlaceRequest, type PlaceRequest } from "@wonderhome/core/homeplaces/request";
+import { placesOpenQuestion, placesReply } from "@wonderhome/core/homeplaces/answer";
+import { placeRequestForTurn, placeRequestFrom, type PlaceRequest } from "@wonderhome/core/homeplaces/request";
 import { tripDestinationRequest, withDestinations } from "@wonderhome/core/homeplaces/trip";
 import { minuteOf } from "@wonderhome/core/household/day-hours";
-import { householdNow, suggestPlaces, type PlaceSuggestion } from "@wonderhome/core/homeplaces/service";
+import { householdNow, suggestPlaces, type PlaceSuggestion, type PlacesOutcome } from "@wonderhome/core/homeplaces/service";
 import { asksTheCalendar, calendarSpanReply, lookAheadReply, lookAheadSpan, readLookAhead } from "@wonderhome/core/calendar/answer";
 import { calendarRange, readCalendarPreferences } from "@wonderhome/core/calendar/repository";
 import { resolveCalendarSpan, type CalendarSpan } from "@wonderhome/core/conversation/temporal";
@@ -852,6 +854,10 @@ async function turnInEnglish(input: HomeTalkInput, speaking: Speaking) {
   const lastAssistantText = [...history].reverse().find((turn) => turn.role === "assistant")?.text ?? null;
 
   let places: PlaceSuggestion[] | null = null;
+  // HomePlaces: what this turn's place request was read as, kept for the next
+  // turn to lean on, and the question it leaves open (narrowing, or "whose school?").
+  let placeRequest: PlaceRequest | null = null;
+  let placeQuestion: PendingClarification | null = null;
   let navigate: string | null = null;
   if (result.kind === "reply" && result.intent.action === "open_screen") {
     // "Take me to the grocery list": the screen's name and its path, by
@@ -865,10 +871,25 @@ async function turnInEnglish(input: HomeTalkInput, speaking: Speaking) {
     // HomePlaces: real places near home or a child's school, open when asked,
     // ranked by the rules and by what the family saved before. The request is
     // read from the person's own words; a model only said it was one.
-    const found = await findPlaces({ supabase, admin, householdId, membership, people, utterance: body.utterance, said: result.intent.parameters.request });
+    // Read together with the place request the last reply was about, when it
+    // was one and recent: "dinner nearby home" after "somewhere out tomorrow"
+    // is dinner tomorrow near home (the owner's report, 2026-10-21).
+    const earlier = placeRequestFrom(await lastReplyMetadata(admin, sessionId, new Date(Date.now() - SAME_MOMENT_MS)).catch(() => null));
+    const found = await findPlaces({ supabase, admin, householdId, membership, people, utterance: said ?? body.utterance, earlier });
     composedAt = Date.now();
     text = found.text;
     places = found.places;
+    placeRequest = found.request;
+    placeQuestion = found.openQuestion
+      ? {
+          action: "find_places",
+          target: { kind: "unspecified" },
+          parameters: found.outcome === "which_child" ? { children: people.filter((person) => person.memberType === "child").map((person) => person.displayName) } : {},
+          question: found.openQuestion,
+          utterance: body.utterance,
+          asked: 1,
+        }
+      : null;
     carry(speaking, ["location"]);
     brain = { source: "deterministic", factsSent: 0 };
   } else if (
@@ -1017,7 +1038,7 @@ async function turnInEnglish(input: HomeTalkInput, speaking: Speaking) {
     // question uses: budgeted, near home, only where this channel may search.
     const trip = answered?.text && (!limits || channelAllowsAction("find_places", limits)) ? tripDestinationRequest(body.utterance, answered.text) : null;
     if (trip) {
-      const where = await findPlaces({ supabase, admin, householdId, membership, people, utterance: body.utterance, said: null, request: trip });
+      const where = await findPlaces({ supabase, admin, householdId, membership, people, utterance: body.utterance, request: trip });
       composedAt = Date.now();
       // Only what the search found, or the one thing the household can fix: the rest would be noise after a good answer.
       if (where.kind === "found" || where.kind === "needs_home") {
@@ -1087,7 +1108,7 @@ async function turnInEnglish(input: HomeTalkInput, speaking: Speaking) {
   // HomeBrain answered instead; and one asked earlier stays open while the
   // member asks why it was asked.
   const openQuestion =
-    result.kind !== "reply" ? null : explained ? (result.intent.parameters.explain === "why_question" ? clarifying : null) : brainAnswer ? null : (result.clarification ?? null);
+    result.kind !== "reply" ? null : explained ? (result.intent.parameters.explain === "why_question" ? clarifying : null) : brainAnswer ? null : (result.clarification ?? placeQuestion);
   let mode: BrainMode =
     result.kind === "confirm_transcript"
       ? "clarify"
@@ -1096,6 +1117,8 @@ async function turnInEnglish(input: HomeTalkInput, speaking: Speaking) {
         : brainAnswer
           ? (brainAnswer.mode === "clarify" ? "clarify" : "answer")
           : modeFor(result.proposal.kind, outcome ? outcome.status === "executed" : null);
+  // "Near whose school?" is a question; a place answer that only invites narrowing is still an answer.
+  if (placeQuestion && "children" in placeQuestion.parameters && openQuestion === placeQuestion) mode = "clarify";
 
   let action: ConversationAction | null = null;
   const replyId = await recordMessage(admin, {
@@ -1119,6 +1142,8 @@ async function turnInEnglish(input: HomeTalkInput, speaking: Speaking) {
         : { kind: result.kind }),
       // The places offered, so the cards survive a reload (HomePlaces).
       ...(places && places.length > 0 ? { places } : {}),
+      // What the place request was read as, for the next turn's follow-up (`placeRequestFrom`).
+      ...(placeRequest ? { placeRequest } : {}),
       ...(navigate ? { navigate } : {}),
       // What this turn was about (Wave 4 §16): ids and labels only,
       // never the text around them, for the next turn's "that".
@@ -1510,14 +1535,29 @@ async function findPlaces(input: {
   householdId: string;
   membership: HouseholdMembership;
   people: readonly (Person & PersonLike)[];
+  /** The person's own words: what the request is read from, never a model's paraphrase. */
   utterance: string;
-  said: unknown;
   /** A request already read (destinations beside "when should we go?"), instead of reading the words. */
   request?: PlaceRequest;
-}): Promise<{ text: string; places: PlaceSuggestion[] | null; kind: "found" | "none" | "needs_home" | "other" | "limited" | "unread" }> {
-  const request = input.request ?? (typeof input.said === "string" ? readPlaceRequest(input.said) : null) ?? readPlaceRequest(input.utterance);
-  if (!request) return { text: "Tell me what kind of place you have in mind, like somewhere for dinner tonight or a park near school, and I'll look nearby.", places: null, kind: "unread" };
-  if (!(await hitRateLimit(input.admin, "places.find", input.householdId))) return { text: rateLimitMessage("places.find"), places: null, kind: "limited" };
+  /** The place request the last reply was about, which a follow-up is read together with. */
+  earlier?: PlaceRequest | null;
+}): Promise<{
+  text: string;
+  places: PlaceSuggestion[] | null;
+  kind: "found" | "none" | "needs_home" | "other" | "limited";
+  /** What was read, kept on the reply for the next turn. */
+  request: PlaceRequest | null;
+  outcome: PlacesOutcome["kind"] | null;
+  /** The question the reply leaves open: narrowing an assumed kind, or "whose school?". */
+  openQuestion: string | null;
+}> {
+  // Once a turn is a place question it is answered, never asked "what kind
+  // of place?": a kind nobody named is going out, said back with how to
+  // narrow it (the owner's report, 2026-10-21).
+  const request =
+    input.request ??
+    placeRequestForTurn({ utterance: input.utterance, earlier: input.earlier ?? null, children: input.people.filter((person) => person.memberType === "child").map((person) => ({ name: person.displayName })) });
+  if (!(await hitRateLimit(input.admin, "places.find", input.householdId))) return { text: rateLimitMessage("places.find"), places: null, kind: "limited", request, outcome: null, openQuestion: null };
   const preferences = preferencesOf(input.membership.locale, input.membership.household.timezone);
   const [enrolments, speaker, offices] = await Promise.all([
     listEnrolments(input.supabase, input.householdId).catch(() => []),
@@ -1549,7 +1589,15 @@ async function findPlaces(input: {
     log.warn("hometalk.places_failed", { householdId: input.householdId, error: error instanceof Error ? error.name : "unknown" });
     return { kind: "unavailable" } as const;
   });
-  return { text: placesReply(request, outcome), places: outcome.kind === "found" ? outcome.places : null, kind: outcome.kind === "found" || outcome.kind === "none" || outcome.kind === "needs_home" ? outcome.kind : "other" };
+  const text = placesReply(request, outcome);
+  return {
+    text,
+    places: outcome.kind === "found" ? outcome.places : null,
+    kind: outcome.kind === "found" || outcome.kind === "none" || outcome.kind === "needs_home" ? outcome.kind : "other",
+    request,
+    outcome: outcome.kind,
+    openQuestion: placesOpenQuestion(request, outcome, text),
+  };
 }
 
 async function listPeople(supabase: Supabase, householdId: string): Promise<(Person & PersonLike)[]> {
