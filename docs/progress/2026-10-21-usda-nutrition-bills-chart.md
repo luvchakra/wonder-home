@@ -48,7 +48,7 @@
   - OPSWAT MetaDefender detects more, but its private processing needs a paid licence, and its free tier shares samples;
   - VirusTotal shares uploads with vendors, which is unacceptable for household documents.
 
-  `homesend/malware-scan.ts` has a tested Cloudmersive adapter (`inputFile`, the `Apikey` header, `CleanResult`). `WONDERHOME_MALWARE_SCAN_PROVIDER=cloudmersive` is set in production. Scanning starts once the owner creates a free Cloudmersive account and its key is set as `WONDERHOME_MALWARE_SCAN_KEY`; until then nothing is scanned or claimed.
+  `homesend/malware-scan.ts` has a tested Cloudmersive adapter (`inputFile`, the `Apikey` header, `CleanResult`). `WONDERHOME_MALWARE_SCAN_PROVIDER=cloudmersive` is set in production. The owner then created the account, and the key is set as `WONDERHOME_MALWARE_SCAN_KEY` (sensitive, production). The adapter was checked against the live API: a harmless file came back `{scanned: true, clean: true}` and the EICAR test file `{scanned: true, clean: false}`. Production was redeployed to pick the key up. The key was pasted in chat, so the owner was advised to rotate it.
 - **Test data.** Nine test households from earlier sessions were deleted, with their HomeSend files. These were left in place pending the owner:
   - five "Chakrabarty Family" households with no linked account;
   - "Family" (Aarav);
@@ -62,5 +62,5 @@
 - Production build passes.
 
 ## Open
-- The owner's chicken biryani photo needs a licence before it is added (task 99).
+- Chicken biryani's picture: the owner's own photo was added and then removed at their request. It was replaced by [File:Biryani_chicken.JPG](https://commons.wikimedia.org/wiki/File:Biryani_chicken.JPG) (Kamalsahansi, CC BY-SA 4.0).
 - QA cleanup after the merge: household `fcef7692` and user `f252387a`.
