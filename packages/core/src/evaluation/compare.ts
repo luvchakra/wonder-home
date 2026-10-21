@@ -92,7 +92,8 @@ export function compareStages(expected: Expectation, observed: Observation, cate
 
   if (expected.answer !== undefined) {
     const text = normal(observed.answer);
-    const missing = (expected.answer.includes ?? []).filter((fragment) => !text.includes(normal(fragment)));
+    // A listed fact is said when any one of its wordings is in the answer.
+    const missing = (expected.answer.includes ?? []).filter((fact) => !(typeof fact === "string" ? [fact] : fact).some((wording) => text.includes(normal(wording))));
     const leaked = (expected.answer.excludes ?? []).filter((fragment) => text.includes(normal(fragment)));
     const pass = missing.length === 0 && leaked.length === 0;
     stages.push({ stage: "answer", pass, expected: expected.answer, actual: { missing, leaked } });

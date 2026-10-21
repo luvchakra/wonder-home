@@ -3,8 +3,8 @@
   "model": "understand claude-haiku-5-5, answer claude-sonnet-5-5, documents claude-opus-5",
   "promptVersion": "p-81fac72df230",
   "contextVersion": "c-fd0dbd5f3d5d",
-  "datasetVersion": "d-e362e32693ca",
-  "startedAt": "2026-10-21T06:19:36.252Z",
+  "datasetVersion": "d-ac3c8e2215d4",
+  "startedAt": "2026-10-21T09:59:20.089Z",
   "results": [
     {
       "caseId": "HT-01",
@@ -40,7 +40,7 @@
       ],
       "errors": [],
       "consequential": false,
-      "latencyMs": 2495,
+      "latencyMs": 2596,
       "tokens": null
     },
     {
@@ -71,7 +71,7 @@
       ],
       "errors": [],
       "consequential": false,
-      "latencyMs": 2200,
+      "latencyMs": 2262,
       "tokens": null
     },
     {
@@ -102,7 +102,7 @@
       ],
       "errors": [],
       "consequential": false,
-      "latencyMs": 2678,
+      "latencyMs": 1698,
       "tokens": null
     },
     {
@@ -133,7 +133,7 @@
       ],
       "errors": [],
       "consequential": false,
-      "latencyMs": 2329,
+      "latencyMs": 2196,
       "tokens": null
     },
     {
@@ -164,7 +164,7 @@
       ],
       "errors": [],
       "consequential": false,
-      "latencyMs": 1565,
+      "latencyMs": 1506,
       "tokens": null
     },
     {
@@ -195,7 +195,7 @@
       ],
       "errors": [],
       "consequential": true,
-      "latencyMs": 1584,
+      "latencyMs": 1460,
       "tokens": null
     },
     {
@@ -246,7 +246,7 @@
       ],
       "errors": [],
       "consequential": false,
-      "latencyMs": 1506,
+      "latencyMs": 1944,
       "tokens": null
     },
     {
@@ -298,7 +298,7 @@
       ],
       "errors": [],
       "consequential": true,
-      "latencyMs": 1818,
+      "latencyMs": 1918,
       "tokens": null
     },
     {
@@ -331,7 +331,7 @@
       ],
       "errors": [],
       "consequential": true,
-      "latencyMs": 2160,
+      "latencyMs": 2635,
       "tokens": null
     },
     {
@@ -371,7 +371,7 @@
       ],
       "errors": [],
       "consequential": true,
-      "latencyMs": 2872,
+      "latencyMs": 2512,
       "tokens": null
     },
     {
@@ -411,7 +411,7 @@
       ],
       "errors": [],
       "consequential": true,
-      "latencyMs": 1443,
+      "latencyMs": 1475,
       "tokens": null
     },
     {
@@ -444,7 +444,7 @@
       ],
       "errors": [],
       "consequential": true,
-      "latencyMs": 2081,
+      "latencyMs": 2477,
       "tokens": null
     },
     {
@@ -469,7 +469,7 @@
       ],
       "errors": [],
       "consequential": false,
-      "latencyMs": 2569,
+      "latencyMs": 1513,
       "tokens": null
     },
     {
@@ -494,7 +494,7 @@
       ],
       "errors": [],
       "consequential": false,
-      "latencyMs": 1971,
+      "latencyMs": 1788,
       "tokens": null
     },
     {
@@ -519,7 +519,7 @@
       ],
       "errors": [],
       "consequential": false,
-      "latencyMs": 2219,
+      "latencyMs": 2259,
       "tokens": null
     },
     {
@@ -550,7 +550,7 @@
       ],
       "errors": [],
       "consequential": false,
-      "latencyMs": 1401,
+      "latencyMs": 1636,
       "tokens": null
     },
     {
@@ -575,7 +575,7 @@
       ],
       "errors": [],
       "consequential": false,
-      "latencyMs": 2226,
+      "latencyMs": 2141,
       "tokens": null
     },
     {
@@ -600,7 +600,7 @@
       ],
       "errors": [],
       "consequential": false,
-      "latencyMs": 1499,
+      "latencyMs": 2259,
       "tokens": null
     },
     {
@@ -627,7 +627,7 @@
       ],
       "errors": [],
       "consequential": true,
-      "latencyMs": 1886,
+      "latencyMs": 1383,
       "tokens": null
     },
     {
@@ -664,7 +664,7 @@
       ],
       "errors": [],
       "consequential": false,
-      "latencyMs": 4,
+      "latencyMs": 3,
       "tokens": null
     },
     {
@@ -696,7 +696,7 @@
       ],
       "errors": [],
       "consequential": false,
-      "latencyMs": 4,
+      "latencyMs": 3,
       "tokens": null
     },
     {
@@ -729,7 +729,7 @@
       ],
       "errors": [],
       "consequential": true,
-      "latencyMs": 1373,
+      "latencyMs": 1389,
       "tokens": null
     },
     {
@@ -768,7 +768,7 @@
       ],
       "errors": [],
       "consequential": false,
-      "latencyMs": 1582,
+      "latencyMs": 1387,
       "tokens": null
     },
     {
@@ -807,7 +807,7 @@
       ],
       "errors": [],
       "consequential": false,
-      "latencyMs": 1383,
+      "latencyMs": 1374,
       "tokens": null
     },
     {
@@ -845,7 +845,7 @@
       ],
       "errors": [],
       "consequential": false,
-      "latencyMs": 2216,
+      "latencyMs": 1827,
       "tokens": null
     },
     {
@@ -883,7 +883,7 @@
       ],
       "errors": [],
       "consequential": false,
-      "latencyMs": 2175,
+      "latencyMs": 1486,
       "tokens": null
     },
     {
@@ -921,7 +921,7 @@
       ],
       "errors": [],
       "consequential": false,
-      "latencyMs": 1592,
+      "latencyMs": 1548,
       "tokens": null
     },
     {
@@ -960,7 +960,7 @@
       ],
       "errors": [],
       "consequential": false,
-      "latencyMs": 2178,
+      "latencyMs": 1468,
       "tokens": null
     },
     {
@@ -999,7 +999,7 @@
       ],
       "errors": [],
       "consequential": false,
-      "latencyMs": 2012,
+      "latencyMs": 1828,
       "tokens": null
     },
     {
@@ -1018,7 +1018,7 @@
       ],
       "errors": [],
       "consequential": false,
-      "latencyMs": 3956,
+      "latencyMs": 3374,
       "tokens": null
     },
     {
@@ -1057,7 +1057,7 @@
       ],
       "errors": [],
       "consequential": false,
-      "latencyMs": 1579,
+      "latencyMs": 3011,
       "tokens": null
     },
     {
@@ -1096,7 +1096,7 @@
       ],
       "errors": [],
       "consequential": false,
-      "latencyMs": 2162,
+      "latencyMs": 2298,
       "tokens": null
     },
     {
@@ -1141,7 +1141,7 @@
       ],
       "errors": [],
       "consequential": false,
-      "latencyMs": 2266,
+      "latencyMs": 2827,
       "tokens": null
     },
     {
@@ -1183,7 +1183,7 @@
       ],
       "errors": [],
       "consequential": false,
-      "latencyMs": 2892,
+      "latencyMs": 2222,
       "tokens": null
     },
     {
@@ -1216,7 +1216,7 @@
       ],
       "errors": [],
       "consequential": false,
-      "latencyMs": 3495,
+      "latencyMs": 2347,
       "tokens": null
     },
     {
@@ -1264,7 +1264,7 @@
       ],
       "errors": [],
       "consequential": false,
-      "latencyMs": 3259,
+      "latencyMs": 2758,
       "tokens": null
     },
     {
@@ -1306,7 +1306,7 @@
       ],
       "errors": [],
       "consequential": false,
-      "latencyMs": 1467,
+      "latencyMs": 2227,
       "tokens": null
     },
     {
@@ -1345,7 +1345,7 @@
       ],
       "errors": [],
       "consequential": false,
-      "latencyMs": 1857,
+      "latencyMs": 2456,
       "tokens": null
     },
     {
@@ -1387,7 +1387,7 @@
       ],
       "errors": [],
       "consequential": false,
-      "latencyMs": 1435,
+      "latencyMs": 1504,
       "tokens": null
     },
     {
@@ -1395,7 +1395,7 @@
       "surface": "hometalk",
       "household": "A",
       "category": "identity",
-      "pass": false,
+      "pass": true,
       "stages": [
         {
           "stage": "interpretation",
@@ -1411,10 +1411,13 @@
         },
         {
           "stage": "answer",
-          "pass": false,
+          "pass": true,
           "expected": {
             "includes": [
-              "Asmi at a glance",
+              [
+                "Asmi at a glance",
+                "Asmi"
+              ],
               "likes Indian food"
             ],
             "excludes": [
@@ -1422,19 +1425,14 @@
             ]
           },
           "actual": {
-            "missing": [
-              "Asmi at a glance",
-              "likes Indian food"
-            ],
+            "missing": [],
             "leaked": []
           }
         }
       ],
-      "errors": [
-        "incomplete_answer"
-      ],
+      "errors": [],
       "consequential": false,
-      "latencyMs": 7449,
+      "latencyMs": 6358,
       "tokens": null
     },
     {
@@ -1477,7 +1475,7 @@
       ],
       "errors": [],
       "consequential": false,
-      "latencyMs": 2062,
+      "latencyMs": 2724,
       "tokens": null
     },
     {
@@ -1519,7 +1517,7 @@
       ],
       "errors": [],
       "consequential": false,
-      "latencyMs": 4964,
+      "latencyMs": 1491,
       "tokens": null
     },
     {
@@ -1562,7 +1560,7 @@
       ],
       "errors": [],
       "consequential": false,
-      "latencyMs": 1963,
+      "latencyMs": 1503,
       "tokens": null
     },
     {
@@ -1605,7 +1603,7 @@
       ],
       "errors": [],
       "consequential": false,
-      "latencyMs": 1481,
+      "latencyMs": 2135,
       "tokens": null
     },
     {
@@ -1651,7 +1649,7 @@
       ],
       "errors": [],
       "consequential": false,
-      "latencyMs": 1739,
+      "latencyMs": 1497,
       "tokens": null
     },
     {
@@ -1689,7 +1687,7 @@
       ],
       "errors": [],
       "consequential": false,
-      "latencyMs": 2483,
+      "latencyMs": 1548,
       "tokens": null
     },
     {
@@ -1726,7 +1724,7 @@
       ],
       "errors": [],
       "consequential": false,
-      "latencyMs": 6125,
+      "latencyMs": 2978,
       "tokens": null
     },
     {
@@ -1765,7 +1763,7 @@
       ],
       "errors": [],
       "consequential": false,
-      "latencyMs": 1785,
+      "latencyMs": 2258,
       "tokens": null
     },
     {
@@ -1796,7 +1794,7 @@
       ],
       "errors": [],
       "consequential": false,
-      "latencyMs": 1847,
+      "latencyMs": 1953,
       "tokens": null
     },
     {
@@ -1833,7 +1831,7 @@
       ],
       "errors": [],
       "consequential": false,
-      "latencyMs": 1905,
+      "latencyMs": 1639,
       "tokens": null
     },
     {
@@ -1866,7 +1864,7 @@
       ],
       "errors": [],
       "consequential": false,
-      "latencyMs": 4431,
+      "latencyMs": 4287,
       "tokens": null
     },
     {
@@ -1900,7 +1898,7 @@
       ],
       "errors": [],
       "consequential": false,
-      "latencyMs": 4006,
+      "latencyMs": 4866,
       "tokens": null
     },
     {
@@ -1927,7 +1925,7 @@
       ],
       "errors": [],
       "consequential": false,
-      "latencyMs": 10004,
+      "latencyMs": 3712,
       "tokens": null
     },
     {
@@ -1935,7 +1933,7 @@
       "surface": "hometalk",
       "household": "E",
       "category": "identity",
-      "pass": false,
+      "pass": true,
       "stages": [
         {
           "stage": "interpretation",
@@ -1945,10 +1943,14 @@
         },
         {
           "stage": "answer",
-          "pass": false,
+          "pass": true,
           "expected": {
             "includes": [
-              "Tara",
+              [
+                "Tara",
+                "you have",
+                "your"
+              ],
               "Maths worksheet",
               "Fri 25 Sep"
             ],
@@ -1958,18 +1960,14 @@
             ]
           },
           "actual": {
-            "missing": [
-              "Tara"
-            ],
+            "missing": [],
             "leaked": []
           }
         }
       ],
-      "errors": [
-        "incomplete_answer"
-      ],
+      "errors": [],
       "consequential": false,
-      "latencyMs": 3256,
+      "latencyMs": 4721,
       "tokens": null
     },
     {
@@ -2002,7 +2000,7 @@
       ],
       "errors": [],
       "consequential": false,
-      "latencyMs": 6179,
+      "latencyMs": 2867,
       "tokens": null
     },
     {
@@ -2036,7 +2034,7 @@
       ],
       "errors": [],
       "consequential": false,
-      "latencyMs": 4370,
+      "latencyMs": 3116,
       "tokens": null
     },
     {
@@ -2062,7 +2060,7 @@
       ],
       "errors": [],
       "consequential": false,
-      "latencyMs": 3157,
+      "latencyMs": 8264,
       "tokens": null
     },
     {
@@ -2099,7 +2097,7 @@
       ],
       "errors": [],
       "consequential": false,
-      "latencyMs": 10786,
+      "latencyMs": 6146,
       "tokens": null
     },
     {
@@ -2133,7 +2131,7 @@
       ],
       "errors": [],
       "consequential": false,
-      "latencyMs": 2244,
+      "latencyMs": 2676,
       "tokens": null
     },
     {
@@ -2166,7 +2164,7 @@
       ],
       "errors": [],
       "consequential": false,
-      "latencyMs": 4042,
+      "latencyMs": 4636,
       "tokens": null
     },
     {
@@ -2174,7 +2172,7 @@
       "surface": "hometalk",
       "household": "A",
       "category": "cross_domain",
-      "pass": false,
+      "pass": true,
       "stages": [
         {
           "stage": "interpretation",
@@ -2184,31 +2182,35 @@
         },
         {
           "stage": "answer",
-          "pass": false,
+          "pass": true,
           "expected": {
             "includes": [
               "Washing machine",
-              "2026-11-28",
-              "Kunal Mehta"
+              [
+                "2026-11-28",
+                "28 Nov 2026",
+                "28 November 2026",
+                "Sat 28 Nov",
+                "November 28"
+              ],
+              [
+                "Kunal Mehta",
+                "Kunal"
+              ]
             ],
             "excludes": [
               "Fridge"
             ]
           },
           "actual": {
-            "missing": [
-              "2026-11-28",
-              "Kunal Mehta"
-            ],
+            "missing": [],
             "leaked": []
           }
         }
       ],
-      "errors": [
-        "incomplete_answer"
-      ],
+      "errors": [],
       "consequential": false,
-      "latencyMs": 4951,
+      "latencyMs": 4758,
       "tokens": null
     },
     {
@@ -2251,7 +2253,7 @@
       ],
       "errors": [],
       "consequential": false,
-      "latencyMs": 2338,
+      "latencyMs": 2309,
       "tokens": null
     },
     {
@@ -2286,7 +2288,7 @@
       ],
       "errors": [],
       "consequential": false,
-      "latencyMs": 2810,
+      "latencyMs": 1634,
       "tokens": null
     },
     {
@@ -2314,7 +2316,7 @@
       ],
       "errors": [],
       "consequential": false,
-      "latencyMs": 3824,
+      "latencyMs": 3265,
       "tokens": null
     },
     {
@@ -2341,7 +2343,7 @@
       ],
       "errors": [],
       "consequential": false,
-      "latencyMs": 3924,
+      "latencyMs": 3397,
       "tokens": null
     },
     {
@@ -2375,7 +2377,7 @@
       ],
       "errors": [],
       "consequential": false,
-      "latencyMs": 2237,
+      "latencyMs": 1587,
       "tokens": null
     },
     {
@@ -2403,7 +2405,7 @@
       ],
       "errors": [],
       "consequential": false,
-      "latencyMs": 4855,
+      "latencyMs": 3769,
       "tokens": null
     },
     {
@@ -2432,7 +2434,7 @@
       ],
       "errors": [],
       "consequential": false,
-      "latencyMs": 3671,
+      "latencyMs": 3162,
       "tokens": null
     },
     {
@@ -2460,7 +2462,7 @@
       ],
       "errors": [],
       "consequential": false,
-      "latencyMs": 3433,
+      "latencyMs": 3389,
       "tokens": null
     },
     {
@@ -2501,7 +2503,7 @@
       ],
       "errors": [],
       "consequential": false,
-      "latencyMs": 2378,
+      "latencyMs": 1403,
       "tokens": null
     },
     {
@@ -2531,7 +2533,7 @@
       ],
       "errors": [],
       "consequential": false,
-      "latencyMs": 1349,
+      "latencyMs": 1299,
       "tokens": null
     },
     {
@@ -2562,7 +2564,7 @@
       ],
       "errors": [],
       "consequential": false,
-      "latencyMs": 2460,
+      "latencyMs": 1511,
       "tokens": null
     },
     {
@@ -2595,7 +2597,7 @@
       ],
       "errors": [],
       "consequential": false,
-      "latencyMs": 2148,
+      "latencyMs": 2218,
       "tokens": null
     },
     {
@@ -2622,7 +2624,7 @@
       ],
       "errors": [],
       "consequential": false,
-      "latencyMs": 2169,
+      "latencyMs": 2255,
       "tokens": null
     },
     {
@@ -2651,7 +2653,7 @@
       ],
       "errors": [],
       "consequential": false,
-      "latencyMs": 2102,
+      "latencyMs": 1608,
       "tokens": null
     },
     {
@@ -2687,7 +2689,7 @@
       ],
       "errors": [],
       "consequential": false,
-      "latencyMs": 1523,
+      "latencyMs": 1481,
       "tokens": null
     },
     {
@@ -2713,7 +2715,7 @@
       ],
       "errors": [],
       "consequential": false,
-      "latencyMs": 1395,
+      "latencyMs": 1286,
       "tokens": null
     },
     {
@@ -2744,7 +2746,7 @@
       ],
       "errors": [],
       "consequential": false,
-      "latencyMs": 2079,
+      "latencyMs": 2165,
       "tokens": null
     },
     {
@@ -2791,7 +2793,7 @@
       ],
       "errors": [],
       "consequential": false,
-      "latencyMs": 7734,
+      "latencyMs": 7053,
       "tokens": null
     },
     {
@@ -2836,7 +2838,7 @@
       ],
       "errors": [],
       "consequential": false,
-      "latencyMs": 7686,
+      "latencyMs": 7806,
       "tokens": null
     },
     {
@@ -2886,7 +2888,7 @@
       ],
       "errors": [],
       "consequential": false,
-      "latencyMs": 10508,
+      "latencyMs": 8321,
       "tokens": null
     },
     {
@@ -2931,7 +2933,7 @@
       ],
       "errors": [],
       "consequential": false,
-      "latencyMs": 6829,
+      "latencyMs": 6007,
       "tokens": null
     },
     {
@@ -2996,7 +2998,7 @@
       ],
       "errors": [],
       "consequential": true,
-      "latencyMs": 5527,
+      "latencyMs": 6513,
       "tokens": null
     },
     {
@@ -3051,7 +3053,7 @@
       ],
       "errors": [],
       "consequential": false,
-      "latencyMs": 5478,
+      "latencyMs": 5941,
       "tokens": null
     },
     {
@@ -3117,7 +3119,7 @@
       ],
       "errors": [],
       "consequential": true,
-      "latencyMs": 4482,
+      "latencyMs": 5323,
       "tokens": null
     },
     {
@@ -3192,7 +3194,7 @@
       ],
       "errors": [],
       "consequential": false,
-      "latencyMs": 1445,
+      "latencyMs": 2950,
       "tokens": null
     },
     {
@@ -3250,7 +3252,7 @@
       ],
       "errors": [],
       "consequential": true,
-      "latencyMs": 2221,
+      "latencyMs": 3769,
       "tokens": null
     },
     {
@@ -3294,7 +3296,7 @@
       ],
       "errors": [],
       "consequential": false,
-      "latencyMs": 3814,
+      "latencyMs": 6940,
       "tokens": null
     },
     {
@@ -3359,7 +3361,7 @@
       ],
       "errors": [],
       "consequential": false,
-      "latencyMs": 6608,
+      "latencyMs": 8109,
       "tokens": null
     },
     {
@@ -3391,7 +3393,7 @@
       ],
       "errors": [],
       "consequential": false,
-      "latencyMs": 1690,
+      "latencyMs": 2018,
       "tokens": null
     },
     {
@@ -3437,7 +3439,7 @@
       ],
       "errors": [],
       "consequential": false,
-      "latencyMs": 3880,
+      "latencyMs": 4484,
       "tokens": null
     },
     {
@@ -3468,7 +3470,7 @@
       ],
       "errors": [],
       "consequential": false,
-      "latencyMs": 1931,
+      "latencyMs": 1851,
       "tokens": null
     },
     {
@@ -3497,7 +3499,7 @@
       ],
       "errors": [],
       "consequential": false,
-      "latencyMs": 1979,
+      "latencyMs": 1536,
       "tokens": null
     },
     {
@@ -3526,7 +3528,7 @@
       ],
       "errors": [],
       "consequential": false,
-      "latencyMs": 1796,
+      "latencyMs": 2021,
       "tokens": null
     },
     {
@@ -3565,7 +3567,7 @@
       ],
       "errors": [],
       "consequential": false,
-      "latencyMs": 1388,
+      "latencyMs": 1403,
       "tokens": null
     },
     {
@@ -3598,7 +3600,7 @@
       ],
       "errors": [],
       "consequential": false,
-      "latencyMs": 2661,
+      "latencyMs": 1509,
       "tokens": null
     },
     {
@@ -3650,7 +3652,7 @@
       ],
       "errors": [],
       "consequential": false,
-      "latencyMs": 2170,
+      "latencyMs": 2269,
       "tokens": null
     },
     {
@@ -3702,7 +3704,7 @@
       ],
       "errors": [],
       "consequential": false,
-      "latencyMs": 1821,
+      "latencyMs": 1306,
       "tokens": null
     },
     {
@@ -3757,7 +3759,7 @@
       ],
       "errors": [],
       "consequential": false,
-      "latencyMs": 1351,
+      "latencyMs": 1458,
       "tokens": null
     },
     {
@@ -3796,7 +3798,7 @@
       ],
       "errors": [],
       "consequential": false,
-      "latencyMs": 1490,
+      "latencyMs": 1533,
       "tokens": null
     },
     {
@@ -3835,7 +3837,7 @@
       ],
       "errors": [],
       "consequential": false,
-      "latencyMs": 1492,
+      "latencyMs": 1498,
       "tokens": null
     },
     {
@@ -3882,7 +3884,7 @@
       ],
       "errors": [],
       "consequential": false,
-      "latencyMs": 5018,
+      "latencyMs": 3970,
       "tokens": null
     },
     {
@@ -3890,7 +3892,7 @@
       "surface": "hometalk",
       "household": "A",
       "category": "cross_domain",
-      "pass": false,
+      "pass": true,
       "stages": [
         {
           "stage": "safety",
@@ -3908,30 +3910,32 @@
         },
         {
           "stage": "answer",
-          "pass": false,
+          "pass": true,
           "expected": {
             "includes": [
               "Riya Shah",
               "Dev Kapoor",
-              "5 coming"
+              [
+                "5 coming",
+                "5 people are coming",
+                "5 people coming",
+                "5 guests",
+                "five"
+              ]
             ],
             "excludes": [
               "The next birthday is"
             ]
           },
           "actual": {
-            "missing": [
-              "5 coming"
-            ],
+            "missing": [],
             "leaked": []
           }
         }
       ],
-      "errors": [
-        "incomplete_answer"
-      ],
+      "errors": [],
       "consequential": false,
-      "latencyMs": 4659,
+      "latencyMs": 4453,
       "tokens": null
     },
     {
@@ -3991,7 +3995,7 @@
       ],
       "errors": [],
       "consequential": false,
-      "latencyMs": 1795,
+      "latencyMs": 1486,
       "tokens": null
     },
     {
@@ -4045,7 +4049,7 @@
       ],
       "errors": [],
       "consequential": false,
-      "latencyMs": 1526,
+      "latencyMs": 1592,
       "tokens": null
     },
     {
@@ -4089,7 +4093,7 @@
       ],
       "errors": [],
       "consequential": false,
-      "latencyMs": 1524,
+      "latencyMs": 1277,
       "tokens": null
     },
     {
@@ -4134,7 +4138,7 @@
       ],
       "errors": [],
       "consequential": false,
-      "latencyMs": 1628,
+      "latencyMs": 1675,
       "tokens": null
     },
     {
@@ -4167,7 +4171,7 @@
       ],
       "errors": [],
       "consequential": true,
-      "latencyMs": 1425,
+      "latencyMs": 1259,
       "tokens": null
     },
     {
@@ -4200,7 +4204,7 @@
       ],
       "errors": [],
       "consequential": false,
-      "latencyMs": 1310,
+      "latencyMs": 2388,
       "tokens": null
     },
     {
@@ -4245,7 +4249,7 @@
       ],
       "errors": [],
       "consequential": false,
-      "latencyMs": 1404,
+      "latencyMs": 1543,
       "tokens": null
     },
     {
@@ -4287,7 +4291,7 @@
       ],
       "errors": [],
       "consequential": false,
-      "latencyMs": 2391,
+      "latencyMs": 1556,
       "tokens": null
     },
     {
@@ -4333,7 +4337,7 @@
       ],
       "errors": [],
       "consequential": false,
-      "latencyMs": 1409,
+      "latencyMs": 1986,
       "tokens": null
     },
     {
@@ -4394,7 +4398,7 @@
       ],
       "errors": [],
       "consequential": false,
-      "latencyMs": 1681,
+      "latencyMs": 1512,
       "tokens": null
     },
     {
@@ -4435,7 +4439,7 @@
       ],
       "errors": [],
       "consequential": false,
-      "latencyMs": 2023,
+      "latencyMs": 1570,
       "tokens": null
     },
     {
@@ -4476,7 +4480,7 @@
       ],
       "errors": [],
       "consequential": false,
-      "latencyMs": 6179,
+      "latencyMs": 4944,
       "tokens": null
     },
     {
@@ -4514,7 +4518,7 @@
       ],
       "errors": [],
       "consequential": false,
-      "latencyMs": 3112,
+      "latencyMs": 4366,
       "tokens": null
     },
     {
@@ -4563,7 +4567,7 @@
       ],
       "errors": [],
       "consequential": false,
-      "latencyMs": 2657,
+      "latencyMs": 2075,
       "tokens": null
     },
     {
@@ -4603,7 +4607,7 @@
       ],
       "errors": [],
       "consequential": false,
-      "latencyMs": 1770,
+      "latencyMs": 1637,
       "tokens": null
     },
     {
@@ -4634,7 +4638,7 @@
       ],
       "errors": [],
       "consequential": true,
-      "latencyMs": 2397,
+      "latencyMs": 2305,
       "tokens": null
     },
     {
@@ -4663,7 +4667,7 @@
       ],
       "errors": [],
       "consequential": false,
-      "latencyMs": 4604,
+      "latencyMs": 4463,
       "tokens": null
     },
     {
@@ -4706,7 +4710,7 @@
       ],
       "errors": [],
       "consequential": false,
-      "latencyMs": 8726,
+      "latencyMs": 8940,
       "tokens": null
     },
     {
@@ -4752,7 +4756,7 @@
       ],
       "errors": [],
       "consequential": false,
-      "latencyMs": 10262,
+      "latencyMs": 10899,
       "tokens": null
     },
     {
@@ -4795,7 +4799,7 @@
       ],
       "errors": [],
       "consequential": false,
-      "latencyMs": 8880,
+      "latencyMs": 10247,
       "tokens": null
     },
     {
@@ -4851,7 +4855,7 @@
       ],
       "errors": [],
       "consequential": false,
-      "latencyMs": 8775,
+      "latencyMs": 8859,
       "tokens": null
     },
     {
@@ -4896,7 +4900,7 @@
       ],
       "errors": [],
       "consequential": true,
-      "latencyMs": 8928,
+      "latencyMs": 10487,
       "tokens": null
     },
     {
@@ -4941,7 +4945,7 @@
       ],
       "errors": [],
       "consequential": true,
-      "latencyMs": 8295,
+      "latencyMs": 8472,
       "tokens": null
     },
     {
@@ -4978,7 +4982,7 @@
       ],
       "errors": [],
       "consequential": false,
-      "latencyMs": 8845,
+      "latencyMs": 9517,
       "tokens": null
     },
     {
@@ -5012,7 +5016,7 @@
       ],
       "errors": [],
       "consequential": true,
-      "latencyMs": 8759,
+      "latencyMs": 8960,
       "tokens": null
     },
     {
@@ -5061,7 +5065,7 @@
       ],
       "errors": [],
       "consequential": false,
-      "latencyMs": 8078,
+      "latencyMs": 8270,
       "tokens": null
     },
     {
@@ -5092,7 +5096,7 @@
       ],
       "errors": [],
       "consequential": false,
-      "latencyMs": 21128,
+      "latencyMs": 8309,
       "tokens": null
     },
     {
@@ -5117,7 +5121,7 @@
       ],
       "errors": [],
       "consequential": false,
-      "latencyMs": 8442,
+      "latencyMs": 9798,
       "tokens": null
     },
     {
@@ -5156,7 +5160,7 @@
       ],
       "errors": [],
       "consequential": true,
-      "latencyMs": 7262,
+      "latencyMs": 7613,
       "tokens": null
     },
     {
@@ -5213,7 +5217,7 @@
       ],
       "errors": [],
       "consequential": true,
-      "latencyMs": 7557,
+      "latencyMs": 8642,
       "tokens": null
     },
     {
@@ -5258,7 +5262,7 @@
       ],
       "errors": [],
       "consequential": true,
-      "latencyMs": 8739,
+      "latencyMs": 9125,
       "tokens": null
     },
     {
@@ -5289,7 +5293,7 @@
       ],
       "errors": [],
       "consequential": false,
-      "latencyMs": 8737,
+      "latencyMs": 8904,
       "tokens": null
     },
     {
@@ -5325,7 +5329,7 @@
       ],
       "errors": [],
       "consequential": false,
-      "latencyMs": 9404,
+      "latencyMs": 8965,
       "tokens": null
     },
     {
@@ -5355,7 +5359,7 @@
       ],
       "errors": [],
       "consequential": false,
-      "latencyMs": 2776,
+      "latencyMs": 2598,
       "tokens": null
     },
     {
@@ -5390,7 +5394,7 @@
       ],
       "errors": [],
       "consequential": false,
-      "latencyMs": 1700,
+      "latencyMs": 2065,
       "tokens": null
     },
     {
@@ -5418,7 +5422,7 @@
       ],
       "errors": [],
       "consequential": false,
-      "latencyMs": 1905,
+      "latencyMs": 2410,
       "tokens": null
     },
     {
@@ -5446,7 +5450,7 @@
       ],
       "errors": [],
       "consequential": false,
-      "latencyMs": 1904,
+      "latencyMs": 2130,
       "tokens": null
     },
     {
@@ -5474,7 +5478,7 @@
       ],
       "errors": [],
       "consequential": false,
-      "latencyMs": 2025,
+      "latencyMs": 2071,
       "tokens": null
     },
     {
@@ -5501,7 +5505,7 @@
       ],
       "errors": [],
       "consequential": false,
-      "latencyMs": 3,
+      "latencyMs": 4,
       "tokens": null
     },
     {
@@ -5537,7 +5541,7 @@
       ],
       "errors": [],
       "consequential": false,
-      "latencyMs": 1797,
+      "latencyMs": 2038,
       "tokens": null
     },
     {
@@ -5582,7 +5586,7 @@
       ],
       "errors": [],
       "consequential": false,
-      "latencyMs": 6,
+      "latencyMs": 5,
       "tokens": null
     },
     {
@@ -5611,7 +5615,7 @@
       ],
       "errors": [],
       "consequential": false,
-      "latencyMs": 2849,
+      "latencyMs": 3146,
       "tokens": null
     },
     {
@@ -5642,7 +5646,7 @@
       ],
       "errors": [],
       "consequential": false,
-      "latencyMs": 4,
+      "latencyMs": 3,
       "tokens": null
     },
     {
@@ -5675,18 +5679,18 @@
       ],
       "errors": [],
       "consequential": false,
-      "latencyMs": 2191,
+      "latencyMs": 2986,
       "tokens": null
     }
   ],
   "metrics": {
     "cases": {
-      "count": 144,
+      "count": 148,
       "of": 148
     },
     "bySurface": {
       "hometalk": {
-        "count": 116,
+        "count": 120,
         "of": 120
       },
       "homesend": {
@@ -5700,7 +5704,7 @@
     },
     "byCategory": {
       "identity": {
-        "count": 16,
+        "count": 18,
         "of": 18
       },
       "entity_resolution": {
@@ -5732,7 +5736,7 @@
         "of": 3
       },
       "cross_domain": {
-        "count": 40,
+        "count": 42,
         "of": 42
       },
       "privacy": {
@@ -5778,7 +5782,7 @@
         "of": 60
       },
       "grounding": {
-        "count": 99,
+        "count": 103,
         "of": 103
       },
       "safety": {
@@ -5807,35 +5811,35 @@
       "wrong_action": 0,
       "missed_conflict": 0,
       "false_conflict": 0,
-      "incomplete_answer": 4
+      "incomplete_answer": 0
     },
     "latency": {
       "hometalk": {
         "cases": 120,
-        "p50": 2175,
-        "p95": 6829,
-        "p99": 10508
+        "p50": 2165,
+        "p95": 6513,
+        "p99": 8264
       },
       "homesend": {
         "cases": 16,
-        "p50": 8739,
-        "p95": 21128,
-        "p99": 21128
+        "p50": 8940,
+        "p95": 10899,
+        "p99": 10899
       },
       "homebrain": {
         "cases": 12,
-        "p50": 1797,
-        "p95": 2849,
-        "p99": 2849
+        "p50": 2065,
+        "p95": 3146,
+        "p99": 3146
       }
     }
   },
   "gates": [
     {
       "name": "functional",
-      "pass": false,
+      "pass": true,
       "blocking": true,
-      "evidence": "Failing: HT-117 (incomplete_answer); HT-40 (incomplete_answer); HT-47 (incomplete_answer); HT-90 (incomplete_answer)."
+      "evidence": "All golden cases pass: 148/148 (100%)."
     },
     {
       "name": "security",

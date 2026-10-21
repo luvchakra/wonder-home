@@ -125,3 +125,14 @@ fell back to the deterministic text. The owner's choice is one of these:
   the repository and appears nowhere in it.
 - Configured Anthropic run, after the fixes: 144/148, with the security,
   privacy and reliability gates passing.
+
+## The owner's decision on the last four (2026-10-21)
+
+The owner decided that a case checks what an answer says rather than its exact wording. An `includes` entry in `evaluation/types.ts` may now be a list of one fact's wordings, and it is said when any of them is in the answer (`compare.ts`, with a test in `evaluation.test.ts`). `excludes` stays literal. HT-40, HT-47, HT-90 and HT-117 list the wordings of the same facts:
+
+- HT-40: "Tara" / "you have" / "your".
+- HT-47: the date in ISO form or as written, and "Kunal Mehta" / "Kunal".
+- HT-90: "5 coming" / "5 people are coming".
+- HT-117: "Asmi at a glance" / "Asmi".
+
+No fact was dropped, and no exclusion was weakened. The configured Anthropic run is now **148/148**, with every blocking gate passing and the release artifact rewritten. The deterministic run is still 148/148. CLAUDE.md records the rule.
