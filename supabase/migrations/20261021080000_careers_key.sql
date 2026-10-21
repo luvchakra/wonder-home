@@ -17,7 +17,7 @@
 -- migration: the functions raise when called, and the app falls back to the
 -- WONDERJOBS_CAREERS_KEY environment variable.
 --
--- Applied to the live project on 2026-10-21 in six steps (careers_key,
+-- Applied to the live project on 2026-10-21 in seven steps (careers_key,
 -- careers_key_status_fn, careers_key_read_fn, careers_key_set_fn,
 -- careers_key_clear_fn, careers_key_events_append_only,
 -- careers_key_events_allow_actor_erasure) with the same
