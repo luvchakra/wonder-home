@@ -924,13 +924,23 @@ function MealCard({
                   <Utensils className="size-5" />
                 </span>
               )}
-              <span className="min-w-0 flex-1">
-                <span className="block text-sm font-semibold break-words">{meal.name}</span>
-                <span className="block text-xs text-[var(--wh-foreground-muted)]">
-                  {[labels.slots[meal.slot], formatTime(timezone, meal.readyBy), toGet > 0 ? t("meals.card.toGet", { count: toGet }) : null].filter(Boolean).join(" · ")}
+              {/* The words take every bit of width between the picture and the icons (the owner, 2026-10-21): the status sits under them, not in a column of its own. */}
+              <span className="min-w-0 flex-1 space-y-0.5">
+                <span className="block text-sm leading-snug font-semibold break-words">{meal.name}</span>
+                <span className="block text-xs leading-snug text-[var(--wh-foreground-muted)]">
+                  {[labels.slots[meal.slot], formatTime(timezone, meal.readyBy), toGet > 0 ? t("meals.card.toGet", { count: toGet }) : null]
+                    .filter((piece): piece is string => Boolean(piece))
+                    .map((piece, index) => (
+                      <span key={piece} className="whitespace-nowrap">
+                        {index > 0 ? " · " : null}
+                        {piece}
+                      </span>
+                    ))}
+                </span>
+                <span className="block pt-0.5">
+                  <Badge tone={tone}>{t(`meals.status.${meal.status}`)}</Badge>
                 </span>
               </span>
-              <Badge tone={tone}>{t(`meals.status.${meal.status}`)}</Badge>
             </>
           }
         >
