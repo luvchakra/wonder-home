@@ -46,9 +46,9 @@ export default async function ChatThreadPage({ params }: { params: Promise<{ thr
   const inChat = new Set(thread.people.map((person) => person.memberId));
   const others = thread.people.filter((person) => person.memberId !== membership.memberId).map((person) => nameOf.get(person.memberId) ?? "");
   const title = thread.kind === "household" ? t("chat.household") : thread.title || others.filter(Boolean).join(", ") || t("chat.title");
-  // Anyone in the family can be in a chat (the owner, 2026-10-21); someone who has not signed in yet reads it once they do.
+  // Anyone in the family can be in a chat (the owner, 2026-10-21); someone who has not signed in yet reads it once they do. Family chat never includes a househelper.
   const waiting = members
-    .filter((member) => member.id !== membership.memberId && member.status === "active" && !member.hasAccount && (thread.kind === "household" || inChat.has(member.id)))
+    .filter((member) => member.id !== membership.memberId && member.status === "active" && !member.hasAccount && (thread.kind === "household" ? member.memberType !== "helper" : inChat.has(member.id)))
     .map((member) => calledName(member));
   const notice = waiting.length > 0 ? t("chat.notJoined", { names: waiting.join(", "), count: waiting.length }) : null;
   const now = new Date();
