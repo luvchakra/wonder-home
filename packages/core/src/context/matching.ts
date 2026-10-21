@@ -65,6 +65,32 @@ function sameThingByName(left: string, right: string): boolean {
   });
 }
 
+/**
+ * Words that say what kind of outing or occasion something is, not which one:
+ * "Field trip to Bounce" and "Bounce School Trip" are both the Bounce trip
+ * (the owner, 2026-10-21: a school notice made a second copy of an event the
+ * family had already put on the calendar). Set aside, what is left names the
+ * occasion itself.
+ */
+const OCCASION_WORDS = new Set([
+  "trip", "field", "school", "class", "excursion", "outing", "visit", "tour", "picnic", "event", "day", "activity",
+  "program", "programme", "function", "celebration", "trek",
+]);
+
+/**
+ * Whether two names are the same occasion once its kind words are set aside:
+ * what is left is non-empty and the same on both sides. Only ever used for two
+ * things on the same day — "Bounce" on two different days is two outings.
+ */
+export function sameOccasionName(left: string, right: string): boolean {
+  if (partsOf(left) !== partsOf(right)) return false;
+  const named = (value: string) => new Set(tokens(value).filter((word) => !OCCASION_WORDS.has(word)));
+  const a = named(left);
+  const b = named(right);
+  if (a.size === 0 || a.size !== b.size) return false;
+  return [...a].every((word) => b.has(word));
+}
+
 /** Kinds of thing that recur: two with different dates are two occurrences, not an update. */
 const RECURRING_DOMAINS = new Set(["bills", "calendar", "meals", "school"]);
 const UPDATE_WINDOW_DAYS = 14;
@@ -74,6 +100,8 @@ type Comparison = {
   titleSimilarity: number;
   /** Whether the two are known names for the same kind of occasion ("PTM" and "parent-teacher meeting"). */
   sameThing: boolean;
+  /** Whether the two name the same occasion once its kind words are set aside ("Field trip to Bounce", "Bounce School Trip"). */
+  sameOccasion: boolean;
   /** Similarity once variety words are set aside: "almond milk" against "Amul Milk" is still milk. */
   coreSimilarity: number;
   sameSubject: boolean | null;
@@ -111,6 +139,7 @@ function compare(incoming: IncomingFact, item: HouseholdContextItem, timezone: s
   const ownTitle = typeof item.attributes.title === "string" ? item.attributes.title : null;
   const titleSimilarity = Math.max(0, ...(ownTitle ? [similarity(incoming.title, ownTitle)] : []), ...item.aliases.map((alias) => aliasSimilarity(incoming.title, alias)));
   const sameThing = titles.some((title) => sameThingByName(incoming.title, title));
+  const sameOccasion = ownTitle !== null && sameOccasionName(incoming.title, ownTitle);
   const primary = typeof item.attributes.title === "string" ? item.attributes.title : (titles[0] ?? "");
   const variant = [...extraTokens(incoming.title, primary), ...extraTokens(primary, incoming.title)].some((word) => VARIANT_WORDS.has(word));
   const core = (title: string) => tokens(title).filter((word) => !VARIANT_WORDS.has(word)).join(" ");
@@ -127,7 +156,7 @@ function compare(incoming: IncomingFact, item: HouseholdContextItem, timezone: s
   const incomingPayee = incoming.attributes?.payee;
   const payeeMatches = typeof incomingPayee === "string" && typeof item.attributes.payee === "string" && similarity(incomingPayee, item.attributes.payee) >= 0.8;
 
-  return { item, titleSimilarity, sameThing, coreSimilarity, sameSubject, variant, dateDelta, amount, payeeMatches };
+  return { item, titleSimilarity, sameThing, sameOccasion, coreSimilarity, sameSubject, variant, dateDelta, amount, payeeMatches };
 }
 
 /**
@@ -146,9 +175,11 @@ function recordIsNewerThanSource(item: HouseholdContextItem, incoming: IncomingF
 }
 
 function verdictFor(comparison: Comparison, incoming: IncomingFact): { verdict: MatchVerdict; confidence: number; reasons: string[] } {
-  const { item, titleSimilarity, sameThing, coreSimilarity, sameSubject, variant, dateDelta, amount, payeeMatches } = comparison;
+  const { item, titleSimilarity, sameThing, sameOccasion, coreSimilarity, sameSubject, variant, dateDelta, amount, payeeMatches } = comparison;
   const reasons: string[] = [];
-  const effective = payeeMatches || sameThing ? Math.max(titleSimilarity, 0.85) : titleSimilarity;
+  // The same occasion by name counts only on the same day.
+  const occasionOnTheDay = sameOccasion && dateDelta === 0;
+  const effective = payeeMatches || sameThing || occasionOnTheDay ? Math.max(titleSimilarity, 0.85) : titleSimilarity;
   if (payeeMatches) reasons.push("the same payee");
 
   // A different variety of the same thing is worth naming even when the
@@ -163,7 +194,7 @@ function verdictFor(comparison: Comparison, incoming: IncomingFact): { verdict: 
   }
   if (titleSimilarity >= 0.95) reasons.push("the same name");
   else if (titleSimilarity >= 0.8) reasons.push("nearly the same name");
-  else if (sameThing) reasons.push("another name for the same thing");
+  else if (sameThing || occasionOnTheDay) reasons.push("another name for the same thing");
   else reasons.push("a similar name");
 
   if (variant) return { verdict: "related_but_different", confidence: 0.6, reasons: [...reasons, "a different variety"] };

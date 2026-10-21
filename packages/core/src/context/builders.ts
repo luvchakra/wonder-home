@@ -471,7 +471,8 @@ export function buildContextItems(records: ContextRecords, options: BuildOptions
         need: "what needs attention",
         privacyClass: classForSubject(need.subjectKey),
         tier: 1,
-        attributes: { title: need.title, dueOn: need.dueOn, riskLevel: need.riskLevel },
+        // The reason rides along for the line a person reads when no model answers (homebrain/say.ts).
+        attributes: { title: need.title, dueOn: need.dueOn, riskLevel: need.riskLevel, reason: need.reason },
         source: { type: "agenda", sourceId: need.subjectKey },
         aliases: [need.title],
       });

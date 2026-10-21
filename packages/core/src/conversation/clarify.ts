@@ -1,3 +1,4 @@
+import { carriesPlaceDetail } from "../homeplaces/request";
 import type { HouseholdIntent, IntentTarget } from "./intent";
 import { chooseCandidate, readFocus } from "./references";
 
@@ -147,6 +148,26 @@ export function answerClarification(
         action: pending.action,
         target: pending.target,
         parameters: Object.fromEntries(Object.entries({ ...rest, ...named }).filter(([, value]) => value !== undefined)),
+        confidence: 0.9,
+      };
+    }
+
+    // A place question HomeTalk left open — "whose school?", or "say dinner,
+    // a park or a mall to narrow it" — answered with a few words that carry
+    // a kind, a day, where or a child's name. The route reads them together
+    // with the request that asked (the owner's report, 2026-10-21: "dinner
+    // nearby home" was read alone and got the same question back).
+    case "find_places": {
+      const answer = stripFiller(utterance).replace(/^(?:what|how) about\s+/i, "").replace(/[.!?]+$/, "").trim();
+      const names = Array.isArray(pending.parameters.children) ? pending.parameters.children.filter((name): name is string => typeof name === "string") : [];
+      if (!answer || answer.split(/\s+/).length > 8 || NEW_REQUEST.test(answer) || !carriesPlaceDetail(answer, names)) return null;
+      return {
+        actorMemberId: context.actorMemberId,
+        channel: context.channel,
+        utterance,
+        action: "find_places",
+        target: { kind: "unspecified" },
+        parameters: { request: answer, followUp: true },
         confidence: 0.9,
       };
     }

@@ -9,7 +9,22 @@ import type { PlacesOutcome } from "./service";
  * validator to catch. Places themselves are shown as cards under the reply,
  * each with its map link; the words only introduce them.
  */
+/**
+ * Said back when no kind of place was named: what was looked for, and how
+ * to narrow it. HomeTalk keeps it as the open question, so a short "dinner"
+ * or "a park" next is read as narrowing this request (the owner, 2026-10-21).
+ */
+export const NARROW_LINE = "You didn't say what kind of place, so I looked for places to go out. Say dinner, a park or a mall to narrow it.";
+
+/** The question a place reply leaves open for the next turn, if any: the narrowing line, or "whose school?". */
+export function placesOpenQuestion(request: PlaceRequest, outcome: PlacesOutcome, reply: string): string | null {
+  if (outcome.kind === "which_child") return reply;
+  if (request.assumed === "kind" && (outcome.kind === "found" || outcome.kind === "none")) return NARROW_LINE;
+  return null;
+}
+
 export function placesReply(request: PlaceRequest, outcome: PlacesOutcome): string {
+  const narrow = request.assumed === "kind" ? NARROW_LINE : null;
   switch (outcome.kind) {
     case "found": {
       const lines = outcome.places.map((place) => {
@@ -26,6 +41,7 @@ export function placesReply(request: PlaceRequest, outcome: PlacesOutcome): stri
         intro,
         lines.join("\n"),
         [
+          narrow,
           outcome.assumption,
           unknownHours ? "For any without hours listed, check before you go." : null,
           request.purpose === "getaway" ? "Check the drive, the weather and where to stay before you book." : null,
@@ -36,7 +52,9 @@ export function placesReply(request: PlaceRequest, outcome: PlacesOutcome): stri
     case "none":
       return request.purpose === "getaway"
         ? `I couldn't find a getaway within a few hours of ${outcome.near}. Try naming the kind of place, like hills, a beach or a lake.`
-        : `I couldn't find anywhere for ${request.label} near ${outcome.near} that's open ${outcome.window}. Try another time, or ask about somewhere a bit further away.`;
+        : narrow
+          ? `I couldn't find anywhere to go out near ${outcome.near} that's open ${outcome.window}. Say dinner, a park or a mall, or another time, and I'll look again.`
+          : `I couldn't find anywhere for ${request.label} near ${outcome.near} that's open ${outcome.window}. Try another time, or ask about somewhere a bit further away.`;
     case "needs_home":
       return "I don't know where home is yet. An Admin can add the home address in Manage Household, under Home address, and then I can look nearby.";
     case "needs_school":

@@ -239,3 +239,39 @@ describe("the conversation from the screenshot, end to end", () => {
     expect(answered.clarification).toBeNull();
   });
 });
+
+describe("answering a place question HomeTalk left open (the owner's report, 2026-10-21)", () => {
+  const narrowing = pending({ action: "find_places", question: "You didn't say what kind of place, so I looked for places to go out. Say dinner, a park or a mall to narrow it.", utterance: "can we go somewhere out tomorrow" });
+
+  it("reads a short reply that carries a kind, a day or where as narrowing the same request", () => {
+    expect(answerClarification(narrowing, "dinner nearby home", context)).toMatchObject({ action: "find_places", parameters: { request: "dinner nearby home", followUp: true } });
+    expect(answerClarification(narrowing, "what about a park?", context)).toMatchObject({ action: "find_places", parameters: { request: "a park" } });
+    expect(answerClarification(narrowing, "tomorrow evening", context)?.action).toBe("find_places");
+  });
+
+  it("reads \"whose school?\" answered with a child's name", () => {
+    const whose = pending({ action: "find_places", question: "Near whose school: Anya Sharma or Kabir Sharma?", parameters: { children: ["Anya Sharma", "Kabir Sharma"] } });
+    expect(answerClarification(whose, "Anya", context)).toMatchObject({ action: "find_places", parameters: { request: "Anya" } });
+  });
+
+  it("lets anything else be what it is: thanks is not a search, a new request is read as one", () => {
+    expect(answerClarification(narrowing, "thanks", context)).toBeNull();
+    expect(answerClarification(narrowing, "add milk to the list", context)).toBeNull();
+    expect(answerClarification(narrowing, "what is due this week?", context)).toBeNull();
+  });
+
+  it("goes through the engine as the answer, not as a fresh sentence the rules cannot read", async () => {
+    const turn = await converse({
+      utterance: "a park",
+      channel: "text",
+      actor: { memberId: "member-1", roles: ["adult"], memberType: "adult" },
+      pending: null,
+      clarifying: narrowing,
+      autonomyFor: () => "approve",
+      entitledFor: () => true,
+      sessionId: "s",
+    });
+    expect(turn.kind === "reply" && turn.intent.action).toBe("find_places");
+    expect(turn.kind === "reply" && turn.proposal.kind).toBe("answer");
+  });
+});

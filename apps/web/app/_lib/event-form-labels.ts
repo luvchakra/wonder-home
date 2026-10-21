@@ -26,6 +26,7 @@ export function eventCalendarLabels(t: Translate): EventCalendarLabels {
     visibilityHint: t("calendar.form.visibilityHint"),
     notes: t("calendar.form.notes"),
     clash: t("calendar.form.clash"),
+    duplicate: t("calendar.form.duplicate"),
     anyway: t("calendar.form.anyway"),
   };
 }

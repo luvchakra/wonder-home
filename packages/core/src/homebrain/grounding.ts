@@ -6,6 +6,7 @@ import { sourcesOf } from "../context/provenance";
 import { findRelevantFacts } from "../context/retrieval";
 import type { ContextDomain, ContextTier, HouseholdContextItem, PrivacyClass } from "../context/types";
 import { hopsFor } from "./goal";
+import { placeOf, sayItem } from "./say";
 import { profileFacts } from "./sleep/profiles";
 import { buildHouseholdGraph, neighbours, type EdgeKind } from "./graph";
 import { householdInsights } from "./insights";
@@ -47,6 +48,10 @@ export type GroundedFact = {
   need: string;
   /** Why it was chosen, for the household's "what did you look at?" — never sent. */
   reasons: string[];
+  /** The fact as a person reads it, where its statement is written for a model (`say.ts`). Never sent. */
+  say?: string;
+  /** The screen it belongs to, for a link in an answer composed from the facts (`say.ts`). Never sent. */
+  place?: string | null;
 };
 
 /** Domains whose facts are about a particular person, so a question about someone else can leave them out. */
@@ -203,8 +208,11 @@ export function groundFacts(items: readonly HouseholdContextItem[], reading: Bra
       }
     }
 
+    const say = sayItem(item);
     drafts.push({
       statement: statementOf(item),
+      ...(say ? { say } : {}),
+      place: placeOf(item.domain, item),
       sourceIds: sourcesOf(item).map((ref) => `${ref.type}:${ref.sourceId ?? "summary"}`),
       confidence: item.confidence,
       privacyClass: item.privacyClass,
@@ -251,10 +259,16 @@ export function groundFacts(items: readonly HouseholdContextItem[], reading: Bra
   // The person at a glance (HomeBrain Sleep): offered alongside, never what a rules answer is made of.
   // "Tell me about Asmi", "what do you know about Manan": the profile is the answer, so it leads.
   const aboutThePerson = /\b(?:tell me (?:all |everything )?about|what do you know about|what can you tell me about|who is|describe)\b/i.test(reading.retrievalText);
-  if (options.today && reading.people.length > 0) {
-    for (const profile of profileFacts(items, { memberIds: reading.people.map((person) => person.memberId), today: options.today })) {
+  // "What do you know about the family?": everyone in it, each at a glance — never the househelper's, who is not the family.
+  const glanced = reading.people.length > 0
+    ? reading.people.map((person) => person.memberId)
+    : reading.aboutFamily
+      ? items.filter((item) => item.entityType === "member" && item.attributes.memberType !== "helper").map((item) => item.entityId)
+      : [];
+  if (options.today && glanced.length > 0) {
+    for (const profile of profileFacts(items, { memberIds: glanced, today: options.today })) {
       // Leading, the profile already says what its facts say: they step back, still there for a model to read.
-      if (aboutThePerson) {
+      if (aboutThePerson || reading.aboutFamily) {
         const covered = new Set(profile.sourceItemIds);
         for (const draft of drafts) {
           if (draft.itemId && covered.has(draft.itemId) && draft.score > LINKED_SCORE) {
@@ -269,7 +283,7 @@ export function groundFacts(items: readonly HouseholdContextItem[], reading: Bra
         confidence: 0.9,
         privacyClass: profile.privacyClass,
         relevant: true,
-        score: aboutThePerson ? 0.75 : LINKED_SCORE,
+        score: aboutThePerson || reading.aboutFamily ? 0.75 : LINKED_SCORE,
         itemId: null,
         domain: "profile",
         subjectMemberIds: [profile.memberId],

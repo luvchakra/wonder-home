@@ -1,7 +1,7 @@
 "use client";
 
 import { Check, Contact, Copy, ImageIcon, Pencil, Share2 } from "lucide-react";
-import { useActionState, useEffect, useRef, useState, useSyncExternalStore, type ReactNode } from "react";
+import { startTransition, type ReactNode, useActionState, useEffect, useRef, useState, useSyncExternalStore } from "react";
 
 import { Alert } from "@wonderhome/core/ui/alert";
 import { Button } from "@wonderhome/core/ui/button";
@@ -139,7 +139,18 @@ export function EventEditForm({
         {trigger ? null : <Pencil aria-hidden className="size-3.5" />} {trigger ?? labels.edit}
       </Pill>
       <Sheet open={open} onOpenChange={setOpen} title={labels.title}>
-        <form action={formAction} onChange={() => setEditedAfter(state)} className="space-y-4">
+        <form
+          onSubmit={(event) => {
+            // Submitted by hand rather than as a form action, so a question
+            // back (a clash, something already on the calendar) keeps what was
+            // typed and "Add anyway" sends it again, instead of a reset form.
+            event.preventDefault();
+            const data = new FormData(event.currentTarget);
+            startTransition(() => formAction(data));
+          }}
+          onChange={() => setEditedAfter(state)}
+          className="space-y-4"
+        >
           {state.error ? <Alert>{state.error}</Alert> : null}
           {clashes.length > 0 ? (
             <Alert>

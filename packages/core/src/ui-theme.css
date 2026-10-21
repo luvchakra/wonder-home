@@ -670,6 +670,35 @@
     transform: translateY(calc(100% + var(--wh-tabbar-raised-overhang) + 0.5rem));
   }
 }
+/* FamilyChat's composer (the owner, 2026-10-21) sticks just above the tab bar
+   and its raised assistant button (rule 15). When the bar slides away, or
+   steps aside while a person types (data-wh-typing, set by the chat while its
+   message box has focus), the composer drops to the bottom edge with it. */
+.wh-chat-composer {
+  bottom: calc(var(--wh-tabbar-height) + var(--wh-tabbar-raised-overhang) + var(--wh-live-bar-clearance) + env(safe-area-inset-bottom) + 0.25rem);
+}
+@media (min-width: 1024px) {
+  .wh-chat-composer {
+    bottom: 1rem;
+  }
+}
+@media (max-width: 1023.98px) {
+  .wh-chat-composer {
+    transition: bottom 300ms ease-out;
+  }
+  :root[data-wh-chrome="all-hidden"] .wh-chat-composer,
+  :root[data-wh-typing="on"] .wh-chat-composer {
+    bottom: calc(env(safe-area-inset-bottom) + 0.5rem);
+  }
+  :root[data-wh-typing="on"] .wh-chrome-bottom {
+    transform: translateY(calc(100% + var(--wh-tabbar-raised-overhang) + 0.5rem));
+  }
+}
+@media (max-width: 1023.98px) and (prefers-reduced-motion: reduce) {
+  .wh-chat-composer {
+    transition: none;
+  }
+}
 @media (max-width: 1023.98px) and (prefers-reduced-motion: reduce) {
   .wh-chrome-top,
   .wh-chrome-bottom {

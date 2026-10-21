@@ -61,6 +61,7 @@ export function ChatMessage({
   aside,
   sentAt,
   pending = false,
+  timeTail = false,
   id,
   className,
 }: {
@@ -87,20 +88,32 @@ export function ChatMessage({
    * `dateTime` is the machine-readable instant.
    */
   sentAt?: { label: string; dateTime: string };
+  /**
+   * The children already end with a `ChatTimeRoom` for `sentAt` (a reply's
+   * last line), so the time can sit in the bubble's corner beside those
+   * words instead of taking a line of its own. Plain-text children get the
+   * room automatically.
+   */
+  timeTail?: boolean;
   pending?: boolean;
   /** An anchor, so something else on the screen (a search result) can bring this message into view. */
   id?: string;
   className?: string;
 }) {
   const fromAssistant = role === "assistant";
+  const timeClass = cn(
+    "text-[0.6875rem] leading-none whitespace-nowrap tabular-nums",
+    fromAssistant ? "text-[var(--wh-foreground-subtle)]" : "text-[var(--wh-primary-foreground)]/75",
+  );
+  const plainText = typeof children === "string" || typeof children === "number";
 
   return (
     <div id={id} className={cn("wh-rise flex scroll-my-4 gap-2.5", fromAssistant ? "flex-row" : "flex-row-reverse", className)}>
       {!fromAssistant && name ? <Avatar name={name} size="sm" className="mt-0.5" imageUrl={avatarUrl ?? undefined} /> : null}
-      <div className={cn("flex min-w-0 max-w-[85%] flex-col gap-2", fromAssistant ? "items-start" : "items-end")}>
+      <div className={cn("flex min-w-0 max-w-[85%] flex-col gap-1", fromAssistant ? "items-start" : "items-end")}>
         <div
           className={cn(
-            "rounded-[var(--wh-radius)] px-3.5 py-2.5 text-[0.9375rem] leading-relaxed",
+            "rounded-[var(--wh-radius)] px-3 py-1.5 text-[0.9375rem] leading-normal",
             fromAssistant
               ? "rounded-tl-[var(--wh-radius-xs)] border border-[var(--wh-border)] bg-[var(--wh-surface)] shadow-[var(--wh-shadow-card)]"
               : "rounded-tr-[var(--wh-radius-xs)] bg-[var(--wh-primary)] text-[var(--wh-primary-foreground)]",
@@ -113,6 +126,18 @@ export function ChatMessage({
           ) : null}
           {pending ? (
             <ThinkingDots />
+          ) : sentAt && (plainText || timeTail) ? (
+            // The time sits in the corner, on the last line of the words: an
+            // invisible copy of it at the end of the text keeps that line's
+            // room, so it wraps onto a line of its own only when the last line
+            // is full, as a messaging app does.
+            <div className="relative">
+              {children}
+              {plainText ? <ChatTimeRoom label={sentAt.label} /> : null}
+              <time dateTime={sentAt.dateTime} className={cn("absolute end-0 bottom-[0.3125rem]", timeClass)}>
+                {sentAt.label}
+              </time>
+            </div>
           ) : sentAt ? (
             // The time sits beside a short message's last words and drops to
             // its own line, still in the corner, when the text needs the width.
@@ -120,10 +145,7 @@ export function ChatMessage({
               <div className="min-w-0 flex-auto">{children}</div>
               <time
                 dateTime={sentAt.dateTime}
-                className={cn(
-                  "shrink-0 translate-y-0.5 text-[0.6875rem] leading-none whitespace-nowrap tabular-nums",
-                  fromAssistant ? "text-[var(--wh-foreground-subtle)]" : "text-[var(--wh-primary-foreground)]/75",
-                )}
+                className={cn("shrink-0 translate-y-0.5", timeClass)}
               >
                 {sentAt.label}
               </time>
@@ -135,6 +157,19 @@ export function ChatMessage({
         {aside ? <div className="w-full">{aside}</div> : null}
       </div>
     </div>
+  );
+}
+
+/**
+ * The room a message's time needs at the end of its last line: an invisible
+ * copy of the time itself, so it is exactly as wide in every language. Put
+ * it at the end of the words (`ReplyText`'s `tail`) and set `timeTail`.
+ */
+export function ChatTimeRoom({ label }: { label: string }) {
+  return (
+    <span aria-hidden className="invisible inline-block ps-2.5 text-[0.6875rem] leading-none whitespace-nowrap tabular-nums">
+      {label}
+    </span>
   );
 }
 

@@ -89,15 +89,38 @@ export type PlacesContext = {
 /** `schoolEnds`: when the school it is anchored at finishes, when that is recorded. */
 type Anchor = { point: LatLng; near: string; schoolEnds?: number | null };
 
+/**
+ * The household's own reads this needs: its home point and its place book.
+ * Read through the session by default; the evaluation passes the golden
+ * household's instead (`evaluation/runners.ts`), so it runs the same rules.
+ */
+export type PlacesReads = {
+  home: () => Promise<LatLng | null>;
+  known: () => Promise<HouseholdPlace[]>;
+};
+
+/** Said when "whose school?" was asked once and still not answered: never asked a second time. */
+export const WHICH_SCHOOL_FALLBACK = "I couldn't tell whose school you meant, so I looked near home. Name the child to look near their school.";
+
 export async function suggestPlaces(
   supabase: SupabaseClient,
   provider: PlacesProvider | null,
   request: PlaceRequest,
   context: PlacesContext,
+  reads: PlacesReads = sessionReads(supabase, context.householdId),
 ): Promise<PlacesOutcome> {
   if (!provider?.findNearby) return { kind: "off" };
 
-  const anchor = await anchorFor(supabase, request, context);
+  let anchor = await anchorFor(reads, request, context);
+  let anchorNote: string | null = null;
+  // The same question is never asked twice: a "whose school?" that is still
+  // open after its answer is answered near home, and that is said back.
+  if ("kind" in anchor && anchor.kind === "which_child" && request.asked === "which_child") {
+    const home = await reads.home().catch(() => null);
+    if (!home) return { kind: "needs_home" };
+    anchor = { point: home, near: "home" };
+    anchorNote = WHICH_SCHOOL_FALLBACK;
+  }
   if ("kind" in anchor) return anchor;
 
   const window = windowFor(request, context, anchor);
@@ -119,7 +142,7 @@ export async function suggestPlaces(
     throw error;
   }
 
-  const known = await listHouseholdPlaces(supabase, context.householdId).catch(() => [] as HouseholdPlace[]);
+  const known = await reads.known().catch(() => [] as HouseholdPlace[]);
   const places = rankPlaces(found, {
     anchor: anchor.point,
     window,
@@ -130,13 +153,20 @@ export async function suggestPlaces(
     minMeters: request.when.kind === "trip" && request.when.days >= 2 ? 25_000 : 0,
   });
   if (places.length === 0) return { kind: "none", near: anchor.near, window: window.label };
-  return { kind: "found", places, near: anchor.near, window: window.label, assumption: window.assumption };
+  return { kind: "found", places, near: anchor.near, window: window.label, assumption: [anchorNote, window.assumption].filter(Boolean).join(" ") || null };
 }
 
-async function anchorFor(supabase: SupabaseClient, request: PlaceRequest, context: PlacesContext): Promise<Anchor | Exclude<PlacesOutcome, { kind: "found" | "none" }>> {
+function sessionReads(supabase: SupabaseClient, householdId: string): PlacesReads {
+  return {
+    home: async () => (await loadHouseholdAddress(supabase, householdId))?.location ?? null,
+    known: () => listHouseholdPlaces(supabase, householdId),
+  };
+}
+
+async function anchorFor(reads: PlacesReads, request: PlaceRequest, context: PlacesContext): Promise<Anchor | Exclude<PlacesOutcome, { kind: "found" | "none" }>> {
   if (request.anchor.kind === "home") {
-    const home = await loadHouseholdAddress(supabase, context.householdId).catch(() => null);
-    return home?.location ? { point: home.location, near: "home" } : { kind: "needs_home" };
+    const home = await reads.home().catch(() => null);
+    return home ? { point: home, near: "home" } : { kind: "needs_home" };
   }
   if (request.anchor.kind === "work") return workAnchor(request.anchor.personName, context);
 
@@ -185,8 +215,14 @@ function schoolEndFor(anchor: Anchor, context: PlacesContext): number | null {
   return ends.length ? Math.max(...ends) : null;
 }
 
+const WEEKDAYS = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
+
 function windowFor(request: PlaceRequest, context: PlacesContext, anchor: Anchor): Window {
-  const { day, minute } = context.now;
+  // Another day ("tomorrow"): that day's weekday, and its times are never "already gone".
+  const offset = request.when.kind === "trip" ? 0 : Math.max(request.dayOffset ?? 0, 0);
+  const day = (context.now.day + offset) % 7;
+  const minute = offset > 0 ? 0 : context.now.minute;
+  const on = offset === 0 ? "" : offset === 1 ? "tomorrow " : `on ${WEEKDAYS[day]} `;
   switch (request.when.kind) {
     case "now":
       return { day, minute, forMinutes: 60, label: "now", assumption: null, now: true };
@@ -196,7 +232,8 @@ function windowFor(request: PlaceRequest, context: PlacesContext, anchor: Anchor
     case "today": {
       // A time already gone today ("dinner" asked at 10 pm) means from now.
       const start = Math.max(request.when.minute, minute);
-      return { day, minute: start, forMinutes: request.when.forMinutes, label: start === minute ? "now" : `from ${clock(start)}`, assumption: null, now: start === minute };
+      const now = offset === 0 && start === minute;
+      return { day, minute: start, forMinutes: request.when.forMinutes, label: now ? "now" : `${on}from ${clock(start)}`, assumption: null, now };
     }
     case "after_school": {
       const known = schoolEndFor(anchor, context);
@@ -205,7 +242,7 @@ function windowFor(request: PlaceRequest, context: PlacesContext, anchor: Anchor
         day,
         minute: start,
         forMinutes: request.when.forMinutes,
-        label: `after school, from ${clock(start)}`,
+        label: `${on}after school, from ${clock(start)}`,
         assumption: known === null ? `I've taken school as finishing around ${clock(ASSUMED_SCHOOL_END_MINUTE)}. Add school hours to the child's details in Family to make this exact.` : null,
         now: false,
       };
@@ -217,7 +254,7 @@ function windowFor(request: PlaceRequest, context: PlacesContext, anchor: Anchor
         day,
         minute: start,
         forMinutes: request.when.forMinutes,
-        label: `after work, from ${clock(start)}`,
+        label: `${on}after work, from ${clock(start)}`,
         assumption: known === null ? `I've taken work as finishing around ${clock(ASSUMED_WORK_END_MINUTE)}. Add your office hours to your details in Settings to make this exact.` : null,
         now: false,
       };

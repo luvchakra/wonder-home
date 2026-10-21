@@ -611,3 +611,21 @@ used **only** by a shared component is never generated.
 **The bell shows where you are (`NotificationsBell`, `shell/notifications-bell.tsx`, 2026-10-21).** On the notifications screen the header bell is filled and tinted in the active-nav blue with `aria-current`, the way a tab shows it is open (rule 3: Primary marks the active nav state).
 
 **Icon actions on a settings row (Manage Household's playbook and policies, 2026-10-21).** Edit, Pause/Resume and Stand down are icon buttons with their words as the accessible name, and the category badge sits under the name, so the name is never squeezed letter by letter (rules 11 and 15).
+
+### FamilyChat's compact thread and `Popover` (rules 11, 12, 15, 20)
+
+The owner (2026-10-21) asked for a WhatsApp-compact thread. One row per
+message: the time sits inside the bubble's bottom corner (an invisible copy
+keeps room for it on the last line, so it never covers a word), a person's
+name shows only on the first of their run, runs sit 2px apart and 8px from
+the next person, and a small Today / Yesterday / date chip marks a new day.
+A message's options — react, and for your own change and take back (rule 12)
+— open from a long-press, a right-click or the smiley icon on the same row,
+in the kit's new `Popover` (`ui/popover.tsx`, Radix underneath: focus,
+Escape and a tap outside handled). Reactions are a picked set of six (rule
+20), shown as a pill under the bubble's corner with each emoji's count; the
+pill opens who reacted. The composer is one row that grows, sticky above the
+tab bar and its raised button (`.wh-chat-composer` in `ui-theme.css`, rule
+15); while its box has focus on a phone the tab bar steps aside
+(`data-wh-typing`) so the keyboard, the composer and the conversation have
+the screen.

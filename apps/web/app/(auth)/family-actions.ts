@@ -14,7 +14,7 @@ import { parseRecurrence, RECURRENCE_FREQUENCIES } from "@wonderhome/core/calend
 import { requireMembership } from "@wonderhome/core/identity/households";
 import { log } from "@wonderhome/core/observability/logger";
 
-import { clashesFor, eventWindow } from "../_lib/event-window";
+import { clashesFor, duplicateFor, eventWindow } from "../_lib/event-window";
 import { eventPlaceFromForm } from "../_lib/places";
 import type { ActionState } from "./actions";
 
@@ -28,7 +28,7 @@ import type { ActionState } from "./actions";
  * the people going, "busy" from free/busy, which never says why — are said in
  * words; the form then offers "Add anyway".
  */
-export type EventActionState = ActionState & { clashes?: string[] };
+export type EventActionState = ActionState & { clashes?: string[]; duplicate?: string | null };
 
 const eventSchema = z.object({
   householdId: z.uuid(),
@@ -89,9 +89,14 @@ export async function createEventAction(_previous: EventActionState, formData: F
     if (input.repeat !== "none" && !rule) return { error: "That repeat could not be read." };
     if (rule?.until && rule.until < localMoment(new Date(when.startsAt), timezone).dateKey) return { error: "A repeat has to end after it starts." };
 
-    if (!input.confirmClash && !input.allDay) {
-      const clashes = await clashesFor(supabase, membership, { start: new Date(when.startsAt), end: new Date(when.endsAt), memberIds: input.memberIds });
-      if (clashes.length > 0) return { clashes };
+    // One question before anything is written: what this clashes with, and
+    // whether it is already on the calendar under this or another name.
+    if (!input.confirmClash) {
+      const [clashes, duplicate] = await Promise.all([
+        input.allDay ? Promise.resolve([] as string[]) : clashesFor(supabase, membership, { start: new Date(when.startsAt), end: new Date(when.endsAt), memberIds: input.memberIds }),
+        duplicateFor(supabase, membership, { title: input.title, start: new Date(when.startsAt) }),
+      ]);
+      if (clashes.length > 0 || duplicate) return { clashes, duplicate };
     }
 
     const place = await eventPlaceFromForm(membership, formData);

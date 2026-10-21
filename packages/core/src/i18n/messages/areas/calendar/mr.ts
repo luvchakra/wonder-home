@@ -115,6 +115,7 @@ export const calendarMr: AreaCatalog<typeof calendarEn> = {
   "calendar.form.clashEntry": "{title}, {time}",
   "calendar.form.clashBusy": "{name} त्या वेळी व्यस्त आहेत",
   "calendar.form.anyway": "तरीही जोडा",
+  "calendar.form.duplicate": "हे कदाचित आधीच कॅलेंडरवर आहे:",
   "calendar.form.saveAnyway": "तरीही जतन करा",
   "calendar.event.repeats": "पुनरावृत्ती",
   "calendar.event.visibility": "कोण पाहू शकते",

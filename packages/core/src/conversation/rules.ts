@@ -10,7 +10,7 @@ import { CALENDAR_SPAN_PHRASE, splitTrailingWhen } from "./temporal";
 import { isPlaceQuestion } from "../homeplaces/request";
 import { readLikesQuestion } from "./likes";
 import { readRelationQuestion } from "./relations";
-import { isRosterQuestion } from "./roster";
+import { isFamilyOverviewQuestion, isRosterQuestion } from "./roster";
 import { readOpenScreen } from "./screens";
 
 /**
@@ -278,8 +278,14 @@ const RULES: readonly Rule[] = [
     // "Who are the family members?" is answered from the member list itself
     // (roster.ts), so nobody without other records is left out.
     pattern: /^.+$/,
+    // "What do you know about the family?" is the same list, each person at a
+    // glance (`overview`), never "what's going on?" (the owner, 2026-10-21).
     read: (_match, utterance) =>
-      isRosterQuestion(utterance) ? { action: "ask_status", target: { kind: "unspecified" }, parameters: { scope: "people" }, confidence: 0.95 } : null,
+      isFamilyOverviewQuestion(utterance)
+        ? { action: "ask_status", target: { kind: "unspecified" }, parameters: { scope: "people", overview: true }, confidence: 0.95 }
+        : isRosterQuestion(utterance)
+          ? { action: "ask_status", target: { kind: "unspecified" }, parameters: { scope: "people" }, confidence: 0.95 }
+          : null,
   },
 
   // --- How the family is related ---------------------------------------------

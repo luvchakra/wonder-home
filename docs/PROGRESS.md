@@ -11,11 +11,11 @@ in `docs/progress/`; for the running log of what changed when, `tracking/PROGRES
 
 ## The whole picture
 
-**355 of 380 stories done — 93.4%**
+**356 of 381 stories done — 93.4%**
 
 | Status | Stories |
 |---|---:|
-| Done | 355 |
+| Done | 356 |
 | In Progress | 8 |
 | Blocked | 1 |
 | Not Started | 12 |
@@ -49,7 +49,7 @@ in `docs/progress/`; for the running log of what changed when, `tracking/PROGRES
 | 21 Health and Fitness | `█████████░` | 11 | 12 | 1 not started |
 | 22 Internationalization and Localization | `████████░░` | 7 | 8 | 1 deferred |
 | 23 Smart Notifications | `██████████` | 13 | 13 | — |
-| 24 HomePlaces | `██████████` | 12 | 12 | — |
+| 24 HomePlaces | `██████████` | 13 | 13 | — |
 | 25 HomeFood | `████████░░` | 25 | 30 | 5 not started |
 | 26 HomeEvents | `███████░░░` | 11 | 15 | 1 in progress, 3 not started |
 | 27 Notification Channels and Events | `█████████░` | 14 | 15 | 1 blocked |
@@ -564,7 +564,7 @@ in `docs/progress/`; for the running log of what changed when, `tracking/PROGRES
 
 ### 24 — HomePlaces
 
-12 of 12 done `██████████`
+13 of 13 done `██████████`
 
 | Story | Priority | Status | Notes |
 |---|---|---|---|
@@ -580,6 +580,7 @@ in `docs/progress/`; for the running log of what changed when, `tracking/PROGRES
 | `24-010` Every picked place shows in HomePlaces | P0 | Done | The owner, 2026-10-18 (PR #233): a home address added in Manage Household did not appear in HomePlaces, which only listed the place book. HomePlaces now opens with **Our places**: the home address, each child's school and each adult's office, every place picked from Google Maps anywhere in the app (`homeplaces/our-places.ts`; siblings at one school and colleagues at one office are one row). Each opens in Google Maps, and its pencil goes to its one editor: Manage Household for the home (Admins; others see no pencil), Kids & School for a school, Family for an office. An Admin with no address on record sees **Add your home address**. A child's school, which could only be set during setup, can now be picked from Google Maps (or typed) on Kids & School under **Schools**, per child (`saveChildSchoolAction`, `_lib/places.ts`'s `saveSchoolFromForm`; leaving it empty retires it with `endEnrolments`, kept rather than deleted). The owner asked for the same in Family: a child's details now pick the school from Google Maps in place of the free-text "School or work location", through the same save, so the two screens always show one school; an adult's location is their Office picker, and only a helper keeps the free-text line. Event and appointment locations are typed text, not Maps picks, so they are not listed. Help ¶11 in eight languages. Browser-checked at 360px and 1280px on the live project |
 | `24-011` Destinations beside "when should we go away?" | P1 | Done | The owner, 2026-10-19: "suggest destinations for those long weekends too". A when-question about a trip (14-033/14-034) now also searches getaway places near home (`homeplaces/trip.ts`: `tripDestinationRequest`, `withDestinations`) and shows them as place cards under the free weekends, sized to the trip: the days said, three for a long weekend, two otherwise. A getaway of up to four days searches "hill station weekend getaway" (the vaguer "holiday destination" drew one travel agency live). Same budget (`places.find`), same channel gate (`find_places`), and the reply keeps its weekend list when cards are shown (`withoutList` drops only the bullets that name a card). Browser-checked at 360px with a QA household and a real Google Maps key |
 | `24-012` Added places apart from saved ones, and first | P1 | Done | The owner, 2026-10-21. `household_places.origin` ('added' from the place book's own search, 'suggestion' from a HomeTalk answer; existing rows told apart by `kind`). /places lists Added by you, then Saved from HomeTalk, then Not for us, with counts; `rankPlaces` gives an added place +2.5 (a saved one +1.5). Test: added outranks suggested. Waits on migration `20261021001000_household_places_origin.sql` (until then a place with no kind reads as added). Live 2026-10-21: migration on the live project. |
+| `24-013` A place question is answered, never asked "what kind of place?" twice | P0 | Done | The owner's report, 2026-10-21: "can we go somewhere out tomorrow" got "Tell me what kind of place you have in mind…", and the answer "dinner nearby home" got the identical question back. Causes: the route's `findPlaces` re-ran `isPlaceQuestion` on the words after the model had already said `find_places`, and neither "go somewhere out" (no asking word it knew, and only "go out" as a kind) nor "dinner nearby home" (no asking word at all) passed, so both fell to a fixed question that was never stored as an open question. Now a turn known to be a place question is read with `asked` (`homeplaces/request.ts`): no kind named is going out (`assumed: "kind"`), answered and said back with "Say dinner, a park or a mall to narrow it"; "tomorrow" is tomorrow's window (`dayOffset`); the short "dinner nearby home" reads by rules; each reply keeps its reading (`metadata.placeRequest`) and a follow-up within 30 minutes is read with it (`placeRequestFrom`, `lastReplyMetadata`), so the day and anchor carry. The narrowing line and "whose school?" are open questions (`placesOpenQuestion`; `clarify.ts` answers `find_places` with a short reply that carries a kind, day, place or child's name), and a "whose school?" left unanswered is answered near home, said back (`WHICH_SCHOOL_FALLBACK`). Golden HT-135 to HT-137; the evaluation now runs place questions through the real reading, ranking and reply against golden places |
 
 ### 25 — HomeFood
 

@@ -1,6 +1,7 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 
 import { ApiError } from "../api/errors";
+import type { ChatReaction } from "./thread";
 import { cleanBody, linkForPage, linkForRecord, type ChatLink, type ChatRecord, type ChatRecordKind } from "./links";
 
 /**
@@ -33,6 +34,8 @@ export type ChatMessage = {
   createdAt: string;
   editedAt: string | null;
   removed: boolean;
+  /** Who reacted with what; empty for a message taken back. */
+  reactions: { memberId: string; emoji: string }[];
 };
 
 export type ChatThread = {
@@ -141,16 +144,31 @@ export async function readThread(supabase: SupabaseClient, threadId: string): Pr
   };
 }
 
-/** The newest messages of a thread, oldest first, as a conversation reads. */
+/**
+ * The newest messages of a thread, oldest first, as a conversation reads,
+ * each with its reactions in the same request (one embedded read, bounded by
+ * the messages it returns).
+ */
 export async function readMessages(supabase: SupabaseClient, threadId: string, limit = 200): Promise<ChatMessage[]> {
-  const { data, error } = await supabase
-    .from("chat_messages")
-    .select("id, author_member_id, body, link_kind, link_path, link_label, created_at, edited_at, removed_at")
-    .eq("thread_id", threadId)
-    .order("created_at", { ascending: false })
-    .limit(limit);
+  return (await readMessagesWithReactions(supabase, threadId, limit)).messages;
+}
+
+/**
+ * The same read, and whether this database has reactions at all — until its
+ * migration reaches the live project nothing offers to react (rule 10).
+ */
+export async function readMessagesWithReactions(supabase: SupabaseClient, threadId: string, limit = 200): Promise<{ messages: ChatMessage[]; reactionsOn: boolean }> {
+  const read = (columns: string) =>
+    supabase.from("chat_messages").select(columns).eq("thread_id", threadId).order("created_at", { ascending: false }).limit(limit);
+  const base = "id, author_member_id, body, link_kind, link_path, link_label, created_at, edited_at, removed_at";
+  let { data, error } = await read(`${base}, chat_message_reactions(member_id, emoji)`);
+  // A database without reactions yet (its migration may reach the live project
+  // after the code does) still shows the messages: PostgREST's PGRST200 is
+  // "no such relationship".
+  const reactionsOn = error?.code !== "PGRST200";
+  if (!reactionsOn) ({ data, error } = await read(base));
   if (error) refused(error, "readMessages");
-  return ((data as Record<string, unknown>[] | null) ?? [])
+  const messages = ((data as Record<string, unknown>[] | null) ?? [])
     .map((row) => ({
       id: row.id as string,
       authorMemberId: row.author_member_id as string,
@@ -161,8 +179,12 @@ export async function readMessages(supabase: SupabaseClient, threadId: string, l
       createdAt: row.created_at as string,
       editedAt: (row.edited_at as string | null) ?? null,
       removed: Boolean(row.removed_at),
+      reactions: row.removed_at
+        ? []
+        : ((row.chat_message_reactions as { member_id: string; emoji: string }[] | null) ?? []).map((reaction) => ({ memberId: reaction.member_id, emoji: reaction.emoji })),
     }))
     .reverse();
+  return { messages, reactionsOn };
 }
 
 /** What the browser may ask to link: a record by kind and id, or a screen by key. */
@@ -266,6 +288,17 @@ export async function editMessage(supabase: SupabaseClient, messageId: string, b
     .select("id");
   if (error) refused(error, "editMessage");
   return ((data as unknown[] | null) ?? []).length === 1;
+}
+
+/**
+ * Sets the caller's one reaction to a message, or with null takes it away
+ * (`public.chat_react`, security invoker: RLS decides). A message the caller
+ * cannot read, or one taken back, is refused.
+ */
+export async function reactToMessage(supabase: SupabaseClient, messageId: string, emoji: ChatReaction | null): Promise<ChatReaction | null> {
+  const { data, error } = await supabase.rpc("chat_react", { p_message: messageId, p_emoji: emoji });
+  if (error) refused(error, "chat_react");
+  return (data as ChatReaction | null) ?? null;
 }
 
 /** Takes a message back. Its row stays, so the thread's history does not move. */

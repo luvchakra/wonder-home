@@ -3,7 +3,8 @@ import { after } from "next/server";
 
 import { CHAT_PAGE_KEYS, pageKeyFor, type ChatLinkKind } from "@wonderhome/core/chat/links";
 import { trendingTags, type Mentionable } from "@wonderhome/core/chat/composer";
-import { linkOptions, markRead, readMessages, readThread, recentTaggedMessages } from "@wonderhome/core/chat/repository";
+import { CHAT_REACTIONS, CHAT_REACTION_KEYS, dayKind, type ChatReaction, groupMessages, tallyReactions } from "@wonderhome/core/chat/thread";
+import { linkOptions, markRead, readMessagesWithReactions, readThread, recentTaggedMessages } from "@wonderhome/core/chat/repository";
 import { createAdminClient } from "@wonderhome/core/db/admin";
 import { listPets } from "@wonderhome/core/home/repository";
 import { sweepNotices } from "@wonderhome/core/notifications/notices-sweep";
@@ -13,7 +14,7 @@ import { AppShell } from "@wonderhome/core/shell/app-shell";
 import { formatDate, formatTime, requireSession } from "../../_lib/session";
 import { ThreadView, type ThreadLabels, type ThreadMessage } from "./thread-view";
 
-export const metadata = { title: "Chat" };
+export const metadata = { title: "FamilyChat" };
 export const dynamic = "force-dynamic";
 
 /**
@@ -35,16 +36,17 @@ export default async function ChatThreadPage({ params }: { params: Promise<{ thr
   const timezone = membership.household.timezone;
   const today = new Intl.DateTimeFormat("en-CA", { timeZone: timezone }).format(new Date());
 
-  const [thread, messages, members, options, pets, tagged] = await Promise.all([
+  const [thread, read, members, options, pets, tagged] = await Promise.all([
     readThread(supabase, threadId).catch(() => null),
-    readMessages(supabase, threadId).catch(() => null),
+    readMessagesWithReactions(supabase, threadId).catch(() => null),
     listMembers(supabase, householdId, membership.household.ownerMemberId).catch(() => []),
     linkOptions(supabase, householdId, today).catch(() => []),
     // Who and what "@" offers, and the tags "#" suggests (the owner, 2026-10-21).
     listPets(supabase, householdId).catch(() => []),
     recentTaggedMessages(supabase, householdId, 30).catch(() => []),
   ]);
-  if (!thread || !messages || thread.householdId !== householdId) notFound();
+  if (!thread || !read || thread.householdId !== householdId) notFound();
+  const { messages, reactionsOn } = read;
   if (thread.kind !== "household" && !thread.people.some((person) => person.memberId === membership.memberId)) notFound();
   // Read once the page is on its way: nothing a person waits for.
   // Its chat notice resolves as soon as it is read, rather than on the next clock tick.
@@ -73,24 +75,33 @@ export default async function ChatThreadPage({ params }: { params: Promise<{ thr
     t("chat.note.attach"),
     ...(waiting.length > 0 ? [t("chat.note.waiting", { names: waiting.join(", "), count: waiting.length })] : []),
   ];
-  const now = new Date();
-  const stamp = (at: string) => {
-    const date = new Date(at);
-    return formatDate(timezone, date) === formatDate(timezone, now) ? formatTime(timezone, date) : `${formatDate(timezone, date)}, ${formatTime(timezone, date)}`;
-  };
+  const dayOf = (date: Date) => new Intl.DateTimeFormat("en-CA", { timeZone: timezone }).format(date);
   const kindWord = (kind: ChatLinkKind) => t(`chat.kind.${kind}`);
+  // WhatsApp-compact (the owner, 2026-10-21): runs of one person's messages, a day chip where the day changes.
+  const days = messages.map((message) => dayOf(new Date(message.createdAt)));
+  const places = groupMessages(messages.map((message, index) => ({ authorMemberId: message.authorMemberId, createdAt: message.createdAt, day: days[index]! })));
+  const dayLabel = (index: number) => {
+    const kind = dayKind(days[index]!, today);
+    return kind === "today" ? t("chat.today") : kind === "yesterday" ? t("chat.yesterday") : formatDate(timezone, new Date(messages[index]!.createdAt), "long");
+  };
+  const reactorName = (memberId: string) => (memberId === membership.memberId ? t("chat.you") : (nameOf.get(memberId) ?? ""));
 
-  const shown: ThreadMessage[] = messages.map((message) => {
+  const shown: ThreadMessage[] = messages.map((message, index) => {
     const pageKey = message.link?.kind === "page" ? pageKeyFor(message.link.path) : null;
+    const place = places[index]!;
     return {
       id: message.id,
       mine: message.authorMemberId === membership.memberId,
       author: message.authorMemberId === membership.memberId ? t("chat.you") : (nameOf.get(message.authorMemberId) ?? ""),
       body: message.body,
-      at: stamp(message.createdAt),
+      at: formatTime(timezone, new Date(message.createdAt)),
       edited: Boolean(message.editedAt),
       removed: message.removed,
       link: message.link ? { path: message.link.path, label: pageKey ? t(`nav.item.${pageKey}`) : message.link.label, kind: kindWord(message.link.kind) } : null,
+      first: place.first,
+      last: place.last,
+      day: place.dayStart ? dayLabel(index) : null,
+      reactions: tallyReactions(message.reactions, membership.memberId).map((entry) => ({ ...entry, names: entry.memberIds.map(reactorName) })),
     };
   });
 
@@ -132,7 +143,11 @@ export default async function ChatThreadPage({ params }: { params: Promise<{ thr
     helper: t("chat.pick.helper"),
     pet: t("chat.pick.pet"),
     you: t("chat.you"),
+    react: t("chat.react"),
+    removeReaction: t("chat.removeReaction"),
+    reactedBy: t("chat.reactedBy"),
   };
+  const reactionNames = Object.fromEntries(CHAT_REACTIONS.map((emoji) => [emoji, t(`chat.reaction.${CHAT_REACTION_KEYS[emoji]}`)])) as Record<ChatReaction, string>;
 
   return (
     <AppShell active="more" viewer={viewer} secondary={secondary} pathname={`/chat/${threadId}`} back={{ href: "/chat", label: t("chat.back") }} title={title}>
@@ -150,6 +165,9 @@ export default async function ChatThreadPage({ params }: { params: Promise<{ thr
         options={options.map((option) => ({ kind: option.kind, id: option.id, label: option.label, kindLabel: kindWord(option.kind) }))}
         pages={CHAT_PAGE_KEYS.filter((key) => secondary.some((item) => item.key === key)).map((key) => ({ key, label: t(`nav.item.${key}`) }))}
         labels={labels}
+        reactionNames={reactionNames}
+        canReact={reactionsOn}
+        me={membership.memberId}
         notice={notice}
         mentionables={mentionables}
         tags={tags}

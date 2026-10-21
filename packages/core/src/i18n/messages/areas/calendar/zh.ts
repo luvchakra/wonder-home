@@ -115,6 +115,7 @@ export const calendarZh: AreaCatalog<typeof calendarEn> = {
   "calendar.form.clashEntry": "{title}，{time}",
   "calendar.form.clashBusy": "{name} 那时有事",
   "calendar.form.anyway": "仍然添加",
+  "calendar.form.duplicate": "日历上可能已经有了：",
   "calendar.form.saveAnyway": "仍然保存",
   "calendar.event.repeats": "重复",
   "calendar.event.visibility": "谁能看到",

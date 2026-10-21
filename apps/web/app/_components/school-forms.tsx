@@ -1,7 +1,7 @@
 "use client";
 
 import { Camera, Plus } from "lucide-react";
-import { useActionState, useRef, useState } from "react";
+import { startTransition, useActionState, useRef, useState } from "react";
 
 import { Alert } from "@wonderhome/core/ui/alert";
 import { Button } from "@wonderhome/core/ui/button";
@@ -9,12 +9,12 @@ import { Field } from "@wonderhome/core/ui/field";
 import { Pill } from "@wonderhome/core/ui/pill";
 import { Sheet } from "@wonderhome/core/ui/sheet";
 
-import type { ActionState } from "../(auth)/actions";
 import {
   createSchoolItemAction,
   extractSchoolItemFromPhotoAction,
   type ExtractedSchoolItem,
   type ExtractSchoolItemState,
+  type SchoolItemActionState,
 } from "../(auth)/school-actions";
 
 const KINDS = ["homework", "worksheet", "exam", "project", "event", "notice"] as const;
@@ -32,6 +32,9 @@ export type SchoolFormLabels = {
   title: string;
   description: string;
   readingPhoto: string;
+  /** "This may already be on the calendar:", and the button that adds it anyway. */
+  duplicate: string;
+  addAnyway: string;
   fromScreenshot: string;
   for: string;
   kind: string;
@@ -73,7 +76,7 @@ export type SchoolFormLabels = {
  */
 export function AddHomeworkButton({ householdId, kids, labels, defaultChildId }: { householdId: string; kids: { id: string; displayName: string }[]; labels: SchoolFormLabels; /** The child picked on the screen, chosen in the form to start with. */ defaultChildId?: string | null }) {
   const [open, setOpen] = useState(false);
-  const [state, formAction, pending] = useActionState<ActionState, FormData>(createSchoolItemAction, {});
+  const [state, formAction, pending] = useActionState<SchoolItemActionState, FormData>(createSchoolItemAction, {});
   const [extractState, extractAction, extracting] = useActionState<ExtractSchoolItemState, FormData>(extractSchoolItemFromPhotoAction, {});
   const prefill = extractState.extracted ?? null;
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -141,18 +144,41 @@ function AddHomeworkForm({
   kids: { id: string; displayName: string }[];
   defaultChildId?: string | null;
   prefill: ExtractedSchoolItem | null;
-  state: ActionState;
+  state: SchoolItemActionState;
   formAction: (formData: FormData) => void;
   pending: boolean;
   labels: SchoolFormLabels;
 }) {
   const [kind, setKind] = useState<Kind>(prefill?.kind ?? "homework");
   const dueRequired = kind !== "notice";
+  // A duplicate answers the details as they were sent; editing after it asks again.
+  const [editedAfter, setEditedAfter] = useState<SchoolItemActionState | null>(null);
+  const duplicate = editedAfter === state ? null : (state.duplicate ?? null);
 
   return (
-    <form action={formAction} className="space-y-3">
+    <form
+          onSubmit={(event) => {
+            // Submitted by hand rather than as a form action, so a question
+            // back (a clash, something already on the calendar) keeps what was
+            // typed and "Add anyway" sends it again, instead of a reset form.
+            event.preventDefault();
+            const data = new FormData(event.currentTarget);
+            startTransition(() => formAction(data));
+          }}
+          onChange={() => setEditedAfter(state)}
+          className="space-y-3"
+        >
       {state.error ? <Alert>{state.error}</Alert> : null}
       {state.notice ? <Alert tone="info">{state.notice}</Alert> : null}
+      {duplicate ? (
+        <Alert>
+          <span className="block font-medium">{labels.duplicate}</span>
+          <ul className="mt-1 list-disc ps-5">
+            <li>{duplicate}</li>
+          </ul>
+          <input type="hidden" name="confirmDuplicate" value="on" />
+        </Alert>
+      ) : null}
       <input type="hidden" name="householdId" value={householdId} />
       <div className="space-y-1.5">
         <label htmlFor="childMemberId" className="block text-sm font-medium">{labels.for}</label>
@@ -200,7 +226,7 @@ function AddHomeworkForm({
         <Field label={labels.ends} name="endTime" type="time" />
       </div>
       <Button type="submit" disabled={pending} className="w-full">
-        {pending ? labels.adding : labels.submit}
+        {pending ? labels.adding : duplicate ? labels.addAnyway : labels.submit}
       </Button>
     </form>
   );

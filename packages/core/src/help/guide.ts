@@ -117,14 +117,14 @@ const SECTIONS: readonly SectionShape[] = [
   {
     id: "calendar",
     group: "Everyday use",
-    updated: "2026-10-19",
-    keywords: ["next event", "next holiday", "upcoming", "calendar", "month", "week", "day", "year", "pinch", "holiday", "public holiday", "birthday", "repeat", "recurring", "private", "just me", "clash", "conflict", "filter", "skip", "where", "place", "address", "google maps", "directions", "appointments", "busy", "deliveries", "service visit", "helper away", "also show", "long weekend", "getaway", "free weekend", "trip", "vacation"],
+    updated: "2026-10-21",
+    keywords: ["duplicate", "twice", "already on the calendar", "same event", "next event", "next holiday", "upcoming", "calendar", "month", "week", "day", "year", "pinch", "holiday", "public holiday", "birthday", "repeat", "recurring", "private", "just me", "clash", "conflict", "filter", "skip", "where", "place", "address", "google maps", "directions", "appointments", "busy", "deliveries", "service visit", "helper away", "also show", "long weekend", "getaway", "free weekend", "trip", "vacation"],
   },
   {
     id: "chat",
     group: "Everyday use",
     updated: "2026-10-21",
-    keywords: ["chat", "message", "messages", "talk", "conversation", "group", "direct message", "dm", "everyone", "attach", "link", "share a bill", "add people", "leave chat", "take back", "edit message", "unread", "family chat", "group chat", "not signed in", "mention", "@", "tag", "#", "hashtag", "trending", "slash"],
+    keywords: ["chat", "familychat", "whole family", "long press", "message options", "message", "messages", "talk", "conversation", "group", "direct message", "dm", "everyone", "attach", "link", "share a bill", "add people", "leave chat", "take back", "edit message", "unread", "family chat", "group chat", "not signed in", "mention", "@", "tag", "#", "hashtag", "trending", "slash"],
   },
   {
     id: "notifications",
