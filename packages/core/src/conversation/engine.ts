@@ -14,7 +14,7 @@ import {
 import { extractMemory, type Memory } from "./memory";
 import { needsRecording, proposeFromIntent, type ActionPreview, type Proposal } from "./proposal";
 import type { FocusEntity } from "./references";
-import { resolveRuleIntent } from "./rules";
+import { resolveRuleIntent, rulesAnswerItself, sameRuleReading } from "./rules";
 
 /**
  * One turn of conversation, from what was said to what WonderHome says back.
@@ -253,12 +253,26 @@ export async function converse(raw: TurnInput): Promise<TurnResult> {
     // the model did say is overwritten, and nothing is added that the
     // household's own words do not carry.
     const rules = resolveRuleIntent(input.utterance, context);
-    if (rules.action === intent.action) {
+    if (rulesAnswerItself(rules) && !sameRuleReading(rules, intent)) {
+      // A question the rules answer from the whole record — who is in the
+      // family, how they are related, who likes what, where to go — keeps the
+      // rules' reading. A real model (Anthropic, 21 Oct 2026) read "who is in
+      // the family?" as a general status question and "suggest a two-day
+      // vacation plan" as an event to put on the calendar; the roster, the
+      // relationships and the place search never ran. These are reads, so the
+      // rules can only make the turn safer, never do more than was asked.
+      intent = rules;
+    } else if (rules.action === intent.action) {
       const filled: Record<string, unknown> = { ...intent.parameters };
       for (const [key, value] of Object.entries(rules.parameters)) {
         if (key !== "clarify" && (filled[key] === undefined || filled[key] === null)) filled[key] = value;
       }
-      intent = { ...intent, parameters: filled };
+      // Two readings of the same action are better evidence than one: a real
+      // model (Anthropic, 21 Oct 2026) scored "pay the electricity bill" and
+      // "move it to Friday" below the clarify line while the rules read each
+      // plainly, and the turn asked "which bill?". The higher of the two
+      // stands; a consequential act still waits for a person's yes.
+      intent = { ...intent, parameters: filled, confidence: Math.max(intent.confidence, rules.confidence) };
     }
   }
 

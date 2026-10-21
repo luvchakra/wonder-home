@@ -316,6 +316,9 @@ function normalise(phrase: string): string {
     .trim()
     .replace(/^(?:on|by|for|at|from|in) /, "")
     .replace(/^the coming /, "coming ")
+    // "Friday this week" is "this friday", the order a real model (Anthropic,
+    // 21 Oct 2026) named the day in and nothing here read.
+    .replace(/^(\w+day) this week\b/, "this $1")
     .replace(/'s$/, "");
 }
 

@@ -148,6 +148,44 @@ function relevantAnswers(facts: readonly GroundedFact[], reading: BrainReading):
 }
 
 /**
+ * The facts a model is shown, narrowed to what the question asked for: a
+ * question about a day sees nothing dated on another day, and a question that
+ * names a thing ("when is the washing machine due?") sees no other thing of
+ * the same kind. A real model (Anthropic, 21 Oct 2026) answered "what have I
+ * got on tomorrow?" with Friday's parent-teacher meeting, and the washing
+ * machine's service date with the fridge's — both true, neither asked (the
+ * first through the asker's own profile line). A fact
+ * an inference rests on is always kept with it (§3.5). The rest stay marked
+ * not relevant, so the gate still says what was held back.
+ */
+export function factsForModel(facts: readonly GroundedFact[], reading: BrainReading): GroundedFact[] {
+  const named = facts.filter((fact) => fact.relevant && fact.reasons.includes("named in the question"));
+  const namedDomains = new Set(named.map((fact) => fact.domain));
+  const evidence = new Set(facts.filter((fact) => fact.relevant && fact.domain === "insight").flatMap((fact) => fact.evidence ?? []));
+  return facts.map((fact) => {
+    if (!fact.relevant || evidence.has(fact.contextId) || fact.domain === "insight" || fact.domain === "conflict") return fact;
+    // A person at a glance carries their next things on any day ("next: the
+    // parent-teacher meeting on Friday"): it leads "what do you know about
+    // her?", never an answer about one day.
+    if (fact.domain === "profile") return reading.time ? { ...fact, relevant: false } : fact;
+    const otherDay = Boolean(reading.time && fact.date && !inWindow(fact.date, reading.time));
+    const sibling = named.length > 0 && namedDomains.has(fact.domain) && !fact.reasons.includes("named in the question");
+    return otherDay || sibling ? { ...fact, relevant: false } : fact;
+  });
+}
+
+/**
+ * Whether the answer is a rule's arithmetic (rule 9): a count of replies, a
+ * sum of the bills due, the weekends the family is free. Such an answer is
+ * told in the rule's own words, which show each term — a real model
+ * (Anthropic, 21 Oct 2026) re-told the free weekends and dropped the one
+ * Sports Day blocks, and re-told a guest count without its undecided reply.
+ */
+export function answeredByArithmetic(answering: readonly GroundedFact[]): boolean {
+  return answering.some((fact) => fact.domain === "insight" && fact.reasons.some((reason) => /^inference \((?:count|total|free_window)\)/.test(reason)));
+}
+
+/**
  * What a rule worked out over a window of its own: the free weekends for "when
  * should we go away?" (14-033, 14-034) and the sum of the bills due this month
  * (H-1). They carry no single day, so the day filter must not drop them.
