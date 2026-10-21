@@ -176,6 +176,8 @@ export type UpdateRecordInput = {
   label?: string;
   recordType?: RecordType;
   documentDate?: string | null;
+  /** The attached report (story 21-012): a new path to replace it, null to remove it. */
+  filePath?: string | null;
   notes?: string | null;
   privacyScope?: PrivacyScope;
 };
@@ -190,6 +192,7 @@ export async function updateRecord(
   if (input.label !== undefined) patch.label = input.label;
   if (input.recordType !== undefined) patch.record_type = input.recordType;
   if (input.documentDate !== undefined) patch.document_date = input.documentDate;
+  if (input.filePath !== undefined) patch.file_path = input.filePath;
   if (input.notes !== undefined) patch.notes = input.notes;
   if (input.privacyScope !== undefined) patch.privacy_scope = input.privacyScope;
 
