@@ -21,7 +21,7 @@ import type { PlaceSuggestion } from "@wonderhome/core/homeplaces/service";
 import { spokenSummary } from "@wonderhome/core/conversation/speech";
 import { ActionPreview } from "@wonderhome/core/ui/action-preview";
 import { messageDay, messageDayLabel, messageTime } from "@wonderhome/core/conversation/message-time";
-import { AiOrb, ChatDayDivider, ChatMessage, SuggestionChips } from "@wonderhome/core/ui/ai-message";
+import { AiOrb, ChatDayDivider, ChatMessage, ChatTimeRoom, SuggestionChips } from "@wonderhome/core/ui/ai-message";
 import { Button } from "@wonderhome/core/ui/button";
 import { safeHref, useLiveTalk } from "@wonderhome/core/ui/live-talk";
 import { TalkComposer, type TalkComposerState } from "@wonderhome/core/ui/talk-composer";
@@ -517,8 +517,11 @@ export function Assistant({
           className="flex min-h-0 flex-1 flex-col-reverse overflow-y-auto overscroll-contain [scrollbar-width:thin]"
           aria-live="polite"
         >
-          <div className="space-y-4 py-2">
-          {messages.map((message, index) => (
+          <div className="space-y-2.5 pt-2 pb-1">
+          {messages.map((message, index) => {
+            const sentAt = message.at ? { label: messageTime(new Date(message.at), timeZone, labels.time), dateTime: message.at } : undefined;
+            const withPlaces = Boolean(message.places && message.places.length > 0);
+            return (
             <Fragment key={message.id}>
             {/* A date between the days, as a messaging app shows it. */}
             {message.at && dayChanges(messages, index, timeZone) ? <ChatDayDivider label={messageDayLabel(new Date(message.at), timeZone, new Date(), labels.time)} /> : null}
@@ -529,7 +532,8 @@ export function Assistant({
               avatarUrl={memberAvatarUrl}
               speaker={message.speaker}
               pending={message.pending}
-              sentAt={message.at ? { label: messageTime(new Date(message.at), timeZone, labels.time), dateTime: message.at } : undefined}
+              sentAt={sentAt}
+              timeTail={message.role === "assistant" && !withPlaces}
               aside={
                 message.action?.preview || message.preview ? (
                   <ActionPreview
@@ -567,7 +571,7 @@ export function Assistant({
                       onClick={() => startEdit(message)}
                       disabled={busy || editing?.id === message.id}
                       aria-label={labels.editAria}
-                      className="inline-flex items-center gap-1 rounded-full px-2 py-1 text-xs font-medium text-[var(--wh-foreground-subtle)] transition-colors hover:bg-[var(--wh-surface-muted)] hover:text-[var(--wh-foreground)] disabled:opacity-40"
+                      className="relative inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-xs font-medium before:absolute before:inset-x-0 before:-inset-y-2.5 before:content-[''] text-[var(--wh-foreground-subtle)] transition-colors hover:bg-[var(--wh-surface-muted)] hover:text-[var(--wh-foreground)] disabled:opacity-40"
                     >
                       <Pencil aria-hidden className="size-3" /> {labels.edit}
                     </button>
@@ -576,14 +580,14 @@ export function Assistant({
               }
             >
               {message.role === "assistant" ? (
-                message.places && message.places.length > 0 ? (
-                  <div className="space-y-3">
+                withPlaces ? (
+                  <div className="space-y-2">
                     {/* The cards say what the list said; the words around it stay. */}
-                    <ReplyText text={withoutList(message.text, message.places)} />
-                    <PlaceCards householdId={householdId} messageId={message.id} places={message.places} marks={placeMarks} labels={labels.places} />
+                    <ReplyText text={withoutList(message.text, message.places!)} className="space-y-1.5" />
+                    <PlaceCards householdId={householdId} messageId={message.id} places={message.places!} marks={placeMarks} labels={labels.places} />
                   </div>
                 ) : (
-                  <ReplyText text={message.text} />
+                  <ReplyText text={message.text} className="space-y-1.5" tail={sentAt ? <ChatTimeRoom label={sentAt.label} /> : null} />
                 )
               ) : (
                 message.text
@@ -607,7 +611,8 @@ export function Assistant({
               </div>
             ) : null}
             </Fragment>
-          ))}
+            );
+          })}
           </div>
         </div>
       )}
@@ -629,7 +634,7 @@ export function Assistant({
       ) : null}
 
       {/* A plain flex child below the scroller — nothing is stacked over anything, so nothing can show through it. */}
-      <div className="relative shrink-0 pt-1.5">
+      <div className="relative shrink-0 pt-1">
         {/* Only while the reader is actually back up the conversation —
             otherwise it is a button that does nothing, over the one thing
             on this screen somebody came to use. */}
@@ -644,11 +649,11 @@ export function Assistant({
             <ArrowDown aria-hidden className="size-5" />
           </button>
         ) : null}
-        {/* Ask me about family (the owner, 2026-10-20): subtle — one quiet line. While a
-            question waits it says which part of the app the answer fills, how many are
-            left, and offers Skip and Stop; otherwise, for an adult, one small way in. */}
-        {!editing && !voiceInProgress ? (
-          amafNow ? (
+        {/* Ask me about family (the owner, 2026-10-20): subtle — one quiet line while a
+            question waits: which part of the app the answer fills, how many are left,
+            Skip and Stop. Otherwise, for an adult, the way in is the round people
+            button beside the microphone (2026-10-21), passed to the composer below. */}
+        {!editing && !voiceInProgress && amafNow ? (
             <div className="mb-1.5 flex flex-wrap items-center gap-x-2 gap-y-1 px-1 text-xs text-[var(--wh-foreground-muted)]">
               <Users aria-hidden className="size-3.5 shrink-0 text-[var(--wh-tone-people)]" />
               <span className="font-semibold text-[var(--wh-foreground)]">{labels.amaf.mode}</span>
@@ -671,13 +676,6 @@ export function Assistant({
                 </button>
               </span>
             </div>
-          ) : !needsAdult && !quiet ? (
-            <div className="mb-1 px-1">
-              <button type="button" disabled={busy} onClick={() => void send("Ask me about my family", "text")} className="inline-flex min-h-8 items-center gap-1.5 rounded-full px-2 text-xs font-medium text-[var(--wh-foreground-muted)] hover:bg-[var(--wh-surface-muted)] hover:text-[var(--wh-foreground)] disabled:opacity-50">
-                <Users aria-hidden className="size-3.5 text-[var(--wh-tone-people)]" /> {labels.amaf.start}
-              </button>
-            </div>
-          ) : null
         ) : null}
         {editing ? (
           <div className="mb-2 flex items-center justify-between rounded-[var(--wh-radius-sm)] bg-[var(--wh-primary-soft)] px-3 py-1.5 text-xs font-medium text-[var(--wh-primary)]">
@@ -712,8 +710,13 @@ export function Assistant({
           geminiLive={geminiLive}
           onLiveTranscript={handleLiveTranscript}
           onLiveTranscriptRevised={handleLiveTranscriptRevised}
+          extraAction={
+            !editing && !voiceInProgress && !amafNow && !needsAdult && !quiet
+              ? { label: labels.amaf.start, icon: <Users aria-hidden className="size-5 text-[var(--wh-tone-people)]" />, onClick: () => void send("Ask me about my family", "text"), disabled: busy }
+              : null
+          }
         />
-        <p className="mt-1.5 text-center text-[0.6875rem] leading-snug text-[var(--wh-foreground-subtle)]">
+        <p className="mt-1 text-center text-[0.6875rem] leading-snug text-[var(--wh-foreground-subtle)]">
           {labels.footer}
         </p>
       </div>

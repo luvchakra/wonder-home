@@ -5,7 +5,8 @@ import { parseReply, type Inline } from "../../conversation/reply-format";
 import { cn } from "../../lib/cn";
 
 /**
- * An assistant reply, rendered.
+ * An assistant reply, rendered. `tail` goes at the end of its last line
+ * (a message's time, kept in the corner beside the words).
  *
  * Paragraphs, a bullet list, bold, and links to screens in this app — and
  * nothing else, because `parseReply` produces nothing else. A link is a real
@@ -13,18 +14,23 @@ import { cn } from "../../lib/cn";
  * never treated as markup: whatever a model wrote is text until the parser
  * says it is a list, an emphasis or a vetted path.
  */
-export function ReplyText({ text, className }: { text: string; className?: string }) {
+export function ReplyText({ text, className, tail }: { text: string; className?: string; tail?: ReactNode }) {
   const blocks = parseReply(text);
+  const last = blocks.length - 1;
   return (
     <div className={cn("space-y-2", className)}>
       {blocks.map((block, index) =>
         block.kind === "paragraph" ? (
-          <p key={index}>{renderInlines(block.inlines)}</p>
+          <p key={index}>
+            {renderInlines(block.inlines)}
+            {index === last ? tail : null}
+          </p>
         ) : (
           <ul key={index} className="space-y-1 pl-4 [list-style:disc]">
             {block.items.map((item, itemIndex) => (
               <li key={itemIndex} className="marker:text-[var(--wh-foreground-subtle)]">
                 {renderInlines(item)}
+                {index === last && itemIndex === block.items.length - 1 ? tail : null}
               </li>
             ))}
           </ul>

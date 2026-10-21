@@ -188,6 +188,7 @@ export function TalkComposer({
   geminiLive: geminiLiveAvailability = { available: false },
   onLiveTranscript,
   onLiveTranscriptRevised,
+  extraAction,
   className,
 }: {
   /** The composer's words in the viewer's language; English when absent. */
@@ -235,6 +236,13 @@ export function TalkComposer({
   onLiveTranscript?: (entry: { role: "member" | "assistant"; text: string; id?: string }) => void;
   /** A live line written down properly afterwards: replace the shown line with this id. */
   onLiveTranscriptRevised?: (entry: { id: string; text: string }) => void;
+  /**
+   * One more round control in the button row, just left of the microphone
+   * (HomeTalk's Ask me about family, 2026-10-21). Shown only while composing;
+   * the caller decides whether it exists at all and what it does. Icon-only,
+   * so `label` is its accessible name and its tooltip.
+   */
+  extraAction?: { label: string; icon: React.ReactNode; onClick: () => void; disabled?: boolean } | null;
   className?: string;
 }) {
   const labels: TalkComposerLabels = { ...TALK_COMPOSER_LABELS, ...labelOverrides };
@@ -402,13 +410,13 @@ export function TalkComposer({
     <form onSubmit={onSubmit} className={cn("w-full", className)}>
       <div
         className={cn(
-          "rounded-[1.75rem] border border-[var(--wh-border)] bg-[var(--wh-surface)] p-2 shadow-[var(--wh-shadow-raised)] transition-colors",
+          "rounded-[1.75rem] border border-[var(--wh-border)] bg-[var(--wh-surface)] p-1.5 shadow-[var(--wh-shadow-raised)] transition-colors",
           composing && "focus-within:border-[var(--wh-primary)]",
         )}
       >
         {/* What is being said: the words, the microphone, or the live
             conversation. Always the full width, so a long message has room. */}
-        <div className="flex min-h-12 px-2 pt-1">
+        <div className="flex min-h-10 px-2">
           {voiceBusy ? (
             <ListeningField transcribing={state === "transcribing"} />
           ) : inLive ? (
@@ -442,7 +450,7 @@ export function TalkComposer({
                   disabled={disabled}
                   autoFocus={autoFocus}
                   enterKeyHint="send"
-                  className="max-h-36 min-h-11 w-full resize-none bg-transparent py-2.5 text-[0.9375rem] leading-snug outline-none disabled:opacity-60"
+                  className="max-h-36 min-h-10 w-full resize-none bg-transparent py-2 text-[0.9375rem] leading-snug outline-none disabled:opacity-60"
                 />
                 {value === "" ? (
                   <span
@@ -460,7 +468,7 @@ export function TalkComposer({
 
         {/* The controls. Which ones exist is the state's decision, never a
             disabled row of everything. */}
-        <div className="mt-1 flex items-center gap-1 sm:gap-2">
+        <div className="@container flex min-w-0 items-center gap-1 sm:gap-2">
           {composing ? (
             <>
               {onAttach ? (
@@ -474,7 +482,7 @@ export function TalkComposer({
                 </RoundButton>
               ) : null}
               {liveConversationAvailable ? (
-                <LiveEnginePicker value={engine} onChange={setEngine} geminiLive={geminiLiveAvailability} disabled={disabled} />
+                <LiveEnginePicker value={engine} onChange={setEngine} geminiLive={geminiLiveAvailability} disabled={disabled} compact={Boolean(extraAction)} />
               ) : null}
             </>
           ) : null}
@@ -504,6 +512,11 @@ export function TalkComposer({
             </>
           ) : (
             <>
+              {extraAction ? (
+                <RoundButton tone="soft" label={extraAction.label} onClick={extraAction.onClick} disabled={disabled || extraAction.disabled}>
+                  {extraAction.icon}
+                </RoundButton>
+              ) : null}
               {speech.available ? (
                 <RoundButton
                   tone="soft"
@@ -613,11 +626,18 @@ function LiveEnginePicker({
   onChange,
   geminiLive,
   disabled,
+  compact = false,
 }: {
   value: LiveEngineChoice;
   onChange: (engine: LiveEngineChoice) => void;
   geminiLive: { available: boolean; reason?: string; fix?: { href: string; label: string } };
   disabled?: boolean;
+  /**
+   * The row also carries another control: where the row is too narrow for
+   * the engine's name as well (a 360px phone), the pill keeps its icon and
+   * chevron and the name stays in its accessible label — never clipped.
+   */
+  compact?: boolean;
 }) {
   const labels = useContext(LabelsContext);
   const options: { engine: LiveEngineChoice; available: boolean; note?: string }[] = [
@@ -635,7 +655,7 @@ function LiveEnginePicker({
         <span className="grid size-8 place-items-center rounded-full bg-[var(--wh-surface)]">
           <EngineIcon engine={value} size={value === "gemini_live" ? 18 : 22} />
         </span>
-        <span>{LIVE_ENGINE_NAMES[value]}</span>
+        <span className={cn("whitespace-nowrap", compact && "hidden @[22.5rem]:inline")}>{LIVE_ENGINE_NAMES[value]}</span>
         <ChevronDown aria-hidden className="size-4 text-[var(--wh-foreground-muted)]" />
       </DropdownMenu.Trigger>
 
