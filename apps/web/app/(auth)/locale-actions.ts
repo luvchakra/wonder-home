@@ -29,6 +29,7 @@ import {
 } from "@wonderhome/core/i18n/repository";
 import { translatorFor } from "@wonderhome/core/i18n/translate";
 import { log } from "@wonderhome/core/observability/logger";
+import { sameSitePath } from "@wonderhome/core/security/same-site-path";
 
 /**
  * Language, region, currency, time and units (stories 22-002 and 22-003).
@@ -53,7 +54,7 @@ function field(formData: FormData, key: string): string | null {
 
 /** Only same-site paths, so a `returnTo` can never become an open redirect. */
 function safeReturn(value: string | null): string | null {
-  return value && value.startsWith("/") && !value.startsWith("//") ? value : null;
+  return sameSitePath(value);
 }
 
 function problem(error: unknown): LocaleActionState {

@@ -1,3 +1,5 @@
+import { sameSitePath } from "@wonderhome/core/security/same-site-path";
+
 /**
  * "Take me there, then bring me back": a page that sends someone to fix a
  * setting passes where they were as `returnTo`, and the settings page sends
@@ -5,10 +7,7 @@
  * an open redirect.
  */
 export function safeReturnTo(value: unknown): string | null {
-  if (typeof value !== "string") return null;
-  const path = value.trim();
-  if (!path.startsWith("/") || path.startsWith("//") || path.includes("\\") || path.length > 200) return null;
-  return path;
+  return sameSitePath(value, 200);
 }
 
 export function withReturnTo(href: string, returnTo: string): string {

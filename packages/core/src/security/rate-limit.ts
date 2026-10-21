@@ -57,11 +57,23 @@ export const RATE_LIMITS = {
   "event.reply": { max: 20, windowSeconds: 600 },
   /** HomePlaces questions in HomeTalk, per household: each is a paid nearby search. */
   "places.find": { max: 30, windowSeconds: 3600 },
+  /**
+   * Sign-in, sign-up, password reset and phone codes, per hashed client
+   * address: generous, since a family behind one home router shares an
+   * address, but a script trying passwords or addresses is slowed to a crawl.
+   * Supabase Auth keeps its own limits behind this one.
+   */
+  "auth.attempt": { max: 30, windowSeconds: 600 },
   /** Partner API requests, per key (story 18-008): an integration syncing, not a scraper. */
   "partner.request": { max: 120, windowSeconds: 60 },
 } as const;
 
 export type RateLimitBucket = keyof typeof RATE_LIMITS;
+
+/** How long a refused caller should wait, for a `Retry-After` header. */
+export function retryAfterSeconds(bucket: RateLimitBucket): number {
+  return RATE_LIMITS[bucket].windowSeconds;
+}
 
 /** What a person is told when they hit a limit: that it is temporary, and when to try again. */
 export function rateLimitMessage(bucket: RateLimitBucket): string {
@@ -79,7 +91,11 @@ export async function hitRateLimit(admin: SupabaseClient, bucket: RateLimitBucke
   try {
     const { data, error } = await admin.rpc("rate_limit_hit", { p_bucket: bucket, p_subject: subject, p_window_seconds: windowSeconds, p_max: max });
     if (error) throw error;
-    return data !== false;
+    const allowed = data !== false;
+    // A refusal is the signal worth watching for scraping or abuse: which
+    // bucket, and which member, household, key or address hash hit it.
+    if (!allowed) log.warn("rate limit reached", { bucket, subject: subject.slice(0, 16) });
+    return allowed;
   } catch (thrown) {
     log.warn("rate limit unavailable; allowing", { bucket, reason: (thrown as { code?: string } | null)?.code ?? (thrown instanceof Error ? thrown.name : "unknown") });
     return true;

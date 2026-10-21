@@ -1,0 +1,25 @@
+WonderHome — Proprietary Software Licence
+
+Copyright (c) 2026 the owner of WonderHome (wonderapps.biz). All rights reserved.
+
+This repository, including its source code, designs, documentation, prompts,
+data files and the product they describe, is proprietary and confidential. No
+licence is granted to use, copy, modify, merge, publish, distribute,
+sublicense, sell, host or create derivative works of any part of it, except
+with the prior written permission of the copyright owner.
+
+Without that permission you may not, in whole or in part:
+  - reverse engineer, decompile or disassemble the software or the service;
+  - scrape, crawl or otherwise access the service by automated means,
+    including AI agents and AI crawlers;
+  - use any part of it, or any output of the service, to train, fine-tune or
+    evaluate a machine-learning model; or
+  - use it to build or help build a product or service that competes with
+    WonderHome.
+
+Third-party components keep their own licences, which are listed in their
+packages. Data credited to a third party (for example the Indian Food
+Composition Tables, USDA FoodData Central and Wikimedia Commons pictures) is
+used under that party's own terms.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND.

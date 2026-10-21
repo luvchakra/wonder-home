@@ -60,6 +60,10 @@ export const metadata: Metadata = {
   },
   description: DESCRIPTION,
   applicationName: "WonderHome",
+  // A household's own space is never indexed or archived. The landing page
+  // and the legal page opt back in for search engines; AI use of any page is
+  // refused by X-Robots-Tag in next.config.ts (security/exposure.ts).
+  robots: { index: false, follow: false, noarchive: true, nocache: true },
   manifest: "/manifest.webmanifest",
   /**
    * The card a link turns into in WhatsApp, iMessage and every group chat.

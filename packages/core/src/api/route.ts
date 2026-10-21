@@ -117,6 +117,11 @@ export function defineRoute<
         });
       }
 
+      // A refused caller is told when to come back (RFC 9110 Retry-After).
+      if (status === 429) {
+        const wait = (thrown as { details?: { retryAfterSeconds?: unknown } } | null)?.details?.retryAfterSeconds;
+        return json(body, status, requestId, { "retry-after": String(typeof wait === "number" && wait > 0 ? Math.ceil(wait) : 60) });
+      }
       return json(body, status, requestId);
     }
   };
@@ -132,10 +137,11 @@ export function fieldErrors(error: z.ZodError): Record<string, string[]> {
   return out;
 }
 
-export function json(payload: unknown, status: number, requestId: string): Response {
+export function json(payload: unknown, status: number, requestId: string, extra: Record<string, string> = {}): Response {
   return new Response(JSON.stringify(payload), {
     status,
     headers: {
+      ...extra,
       "content-type": "application/json; charset=utf-8",
       "cache-control": "no-store",
       [REQUEST_ID_HEADER]: requestId,

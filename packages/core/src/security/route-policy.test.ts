@@ -67,8 +67,23 @@ describe("route policy", () => {
     expect(redirectFor("/", false)).toBeNull();
   });
 
-  it("does not match a prefix that is only part of a segment", () => {
-    expect(routeRequirement("/families")).toBe("public");
+  it("does not match a public prefix that is only part of a segment", () => {
+    expect(routeRequirement("/e/abc")).toBe("public");
+    expect(routeRequirement("/events")).toBe("authenticated");
+    expect(routeRequirement("/apis")).toBe("authenticated");
+  });
+
+  it("puts every screen behind sign-in unless it is named public, so a new one is never open by accident", () => {
+    for (const path of ["/health", "/home-send", "/onboarding", "/some-new-screen", "/families"]) {
+      expect(routeRequirement(path), path).toBe("authenticated");
+      expect(redirectFor(path, false), path).toEqual({ redirectTo: `/sign-in?next=${encodeURIComponent(path)}` });
+    }
+  });
+
+  it("leaves API handlers, protocol pages and the files a browser fetches on its own to their own gates", () => {
+    for (const path of ["/api/v1/me", "/api/v1/billing/webhook/stripe", "/oauth/voice/authorize", "/email-off", "/robots.txt", "/manifest.webmanifest", "/sw.js"]) {
+      expect(redirectFor(path, false), path).toBeNull();
+    }
   });
 
   it("keeps the help guide for members, and returns a signed-out visitor to it after sign-in", () => {

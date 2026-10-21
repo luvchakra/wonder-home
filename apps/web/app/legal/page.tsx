@@ -5,7 +5,7 @@ import { InstallBanner } from "@wonderhome/core/shell/install-banner";
 import { BrandMark, Wordmark } from "@wonderhome/core/ui/brand";
 import { Card } from "@wonderhome/core/ui/card";
 
-export const metadata = { title: "Terms and privacy" };
+export const metadata = { title: "Terms and privacy", robots: { index: true, follow: true } };
 
 /**
  * Terms and privacy, stated honestly.
