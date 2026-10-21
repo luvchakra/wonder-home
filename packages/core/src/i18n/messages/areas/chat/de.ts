@@ -60,6 +60,9 @@ export const chatDe: AreaCatalog<typeof chatEn> = {
   "chat.leaveConfirm": "Verlassen",
   "chat.closing": "Zuhause läuft es besser. Gemeinsam.",
   "chat.familyChat": "Familienchat",
-  "chat.notJoined#one": "{names} hat sich noch nicht bei WonderHome angemeldet. Nachrichten warten hier und sind nach der Anmeldung sichtbar.",
-  "chat.notJoined#other": "{names} haben sich noch nicht bei WonderHome angemeldet. Nachrichten warten hier und sind nach der Anmeldung sichtbar.",
+  "chat.note.family": "Die ganze Familie liest das. Haushaltshilfen nie.",
+  "chat.note.private": "Nur die Personen in diesem Chat lesen es.",
+  "chat.note.attach": "Tippe auf die Büroklammer, um die Rechnung, Mahlzeit oder den Termin anzuhängen.",
+  "chat.note.waiting#one": "{names} sieht es nach der Anmeldung.",
+  "chat.note.waiting#other": "{names} sehen es nach der Anmeldung.",
 };

@@ -50,7 +50,12 @@ export default async function ChatThreadPage({ params }: { params: Promise<{ thr
   const waiting = members
     .filter((member) => member.id !== membership.memberId && member.status === "active" && !member.hasAccount && (thread.kind === "household" ? member.memberType !== "helper" : inChat.has(member.id)))
     .map((member) => calledName(member));
-  const notice = waiting.length > 0 ? t("chat.notJoined", { names: waiting.join(", "), count: waiting.length }) : null;
+  // Three short lines above the message box: who reads it, how to attach, who reads it later.
+  const notice = [
+    thread.kind === "household" ? t("chat.note.family") : t("chat.note.private"),
+    t("chat.note.attach"),
+    ...(waiting.length > 0 ? [t("chat.note.waiting", { names: waiting.join(", "), count: waiting.length })] : []),
+  ];
   const now = new Date();
   const stamp = (at: string) => {
     const date = new Date(at);

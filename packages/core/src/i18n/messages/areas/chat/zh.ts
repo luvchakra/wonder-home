@@ -60,6 +60,9 @@ export const chatZh: AreaCatalog<typeof chatEn> = {
   "chat.leaveConfirm": "退出",
   "chat.closing": "家里更顺，大家一起。",
   "chat.familyChat": "家庭聊天",
-  "chat.notJoined#one": "{names} 还没有登录 WonderHome。消息会留在这里，加入后就能看到。",
-  "chat.notJoined#other": "{names} 还没有登录 WonderHome。消息会留在这里，加入后就能看到。",
+  "chat.note.family": "全家人都能看到这里。家政帮手永远看不到。",
+  "chat.note.private": "只有这个聊天里的人能看到。",
+  "chat.note.attach": "点回形针，附上相关的账单、饭菜或活动。",
+  "chat.note.waiting#one": "{names} 登录后就能看到。",
+  "chat.note.waiting#other": "{names} 登录后就能看到。",
 };

@@ -62,6 +62,9 @@ export const chatEn = {
   "chat.leaveConfirm": "Leave",
   "chat.closing": "Home runs smoother. Together.",
   "chat.familyChat": "Family chat",
-  "chat.notJoined#one": "{names} hasn't signed in to WonderHome yet. Messages wait here, and they'll see them once they join.",
-  "chat.notJoined#other": "{names} haven't signed in to WonderHome yet. Messages wait here, and they'll see them once they join.",
+  "chat.note.family": "The whole family reads this. House helpers never do.",
+  "chat.note.private": "Only the people in this chat read it.",
+  "chat.note.attach": "Tap the paperclip to attach the bill, meal or event it's about.",
+  "chat.note.waiting#one": "{names} will see it once they sign in.",
+  "chat.note.waiting#other": "{names} will see it once they sign in.",
 } as const;

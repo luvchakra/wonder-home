@@ -64,6 +64,9 @@ export const chatAr: AreaCatalog<typeof chatEn> = {
   "chat.leaveConfirm": "مغادرة",
   "chat.closing": "البيت يسير أسهل. معًا.",
   "chat.familyChat": "دردشة العائلة",
-  "chat.notJoined#one": "لم يسجّل {names} الدخول إلى WonderHome بعد. تنتظر الرسائل هنا، وسيراها عند الانضمام.",
-  "chat.notJoined#other": "لم يسجّل {names} الدخول إلى WonderHome بعد. تنتظر الرسائل هنا، وسيرونها عند الانضمام.",
+  "chat.note.family": "تقرأ العائلة كلها هذا، ولا يقرؤه مساعدو المنزل أبدًا.",
+  "chat.note.private": "لا يقرأ هذا إلا من في هذه الدردشة.",
+  "chat.note.attach": "اضغط مشبك الورق لإرفاق الفاتورة أو الوجبة أو المناسبة المعنية.",
+  "chat.note.waiting#one": "سيراه {names} عند تسجيل الدخول.",
+  "chat.note.waiting#other": "سيراه {names} عند تسجيل الدخول.",
 };

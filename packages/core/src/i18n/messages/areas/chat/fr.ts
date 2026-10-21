@@ -60,6 +60,9 @@ export const chatFr: AreaCatalog<typeof chatEn> = {
   "chat.leaveConfirm": "Quitter",
   "chat.closing": "La maison tourne mieux. Ensemble.",
   "chat.familyChat": "Discussion familiale",
-  "chat.notJoined#one": "{names} ne s'est pas encore connecté à WonderHome. Les messages l'attendent ici, et il les verra en rejoignant.",
-  "chat.notJoined#other": "{names} ne se sont pas encore connectés à WonderHome. Les messages les attendent ici, et ils les verront en rejoignant.",
+  "chat.note.family": "Toute la famille lit ceci. Les aides à domicile, jamais.",
+  "chat.note.private": "Seules les personnes de cette discussion la lisent.",
+  "chat.note.attach": "Touchez le trombone pour joindre la facture, le repas ou l'événement concerné.",
+  "chat.note.waiting#one": "{names} le verra en se connectant.",
+  "chat.note.waiting#other": "{names} le verront en se connectant.",
 };
