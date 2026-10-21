@@ -67,7 +67,7 @@ export default async function ChatPage() {
   };
   const household = rows.find((row) => row.kind === "household");
   const chats = rows.filter((row) => row.kind !== "household");
-  const reachable = members.filter((member) => member.id !== membership.memberId && member.status === "active" && member.hasAccount);
+  const reachable = members.filter((member) => member.id !== membership.memberId && member.status === "active");
   const firstName = viewer.displayName.split(/\s+/)[0] ?? viewer.displayName;
 
   const threadRow = (row: ChatInboxRow) => {

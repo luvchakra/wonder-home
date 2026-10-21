@@ -1,4 +1,4 @@
-import { CalendarDays, CalendarHeart, GraduationCap, HandHeart, Heart, MapPin, MessageCircle, PawPrint, Settings2, Sun, UserPlus, Users } from "lucide-react";
+import { CalendarDays, CalendarHeart, GraduationCap, HandHeart, Heart, MapPin, MessageCircle, MessagesSquare, PawPrint, Settings2, Sun, UserPlus, Users } from "lucide-react";
 import Link from "next/link";
 
 import { may } from "@wonderhome/core/billing/repository";
@@ -208,15 +208,24 @@ export default async function FamilyPage() {
             title={t("family.members")}
             count={familyMembers.length}
             action={
-              admin ? (
-                // Manage is an icon with its name (rule 11), so the title and Invite stay whole on one line (the owner, 2026-10-21).
+              admin || session.chatOn ? (
+                // Manage and the family chat are icons with their names (rule 11), so the title and Invite stay whole on one line (the owner, 2026-10-21).
                 <div className="flex shrink-0 items-center gap-1.5 whitespace-nowrap">
-                  <Link href="/household/members" aria-label={t("family.manage")} title={t("family.manage")} className={ICON_LINK}>
-                    <Settings2 aria-hidden className="size-4" />
-                  </Link>
-                  <PillLink href="/household/members" tone="primary">
-                    <UserPlus aria-hidden className="size-3.5" /> <span className="sm:hidden">{t("family.inviteShort")}</span><span className="hidden sm:inline">{t("family.inviteMember")}</span>
-                  </PillLink>
+                  {session.chatOn ? (
+                    <Link href="/chat/family" aria-label={t("chat.familyChat")} title={t("chat.familyChat")} className={ICON_LINK}>
+                      <MessagesSquare aria-hidden className="size-4" />
+                    </Link>
+                  ) : null}
+                  {admin ? (
+                    <>
+                      <Link href="/household/members" aria-label={t("family.manage")} title={t("family.manage")} className={ICON_LINK}>
+                        <Settings2 aria-hidden className="size-4" />
+                      </Link>
+                      <PillLink href="/household/members" tone="primary">
+                        <UserPlus aria-hidden className="size-3.5" /> <span className="sm:hidden">{t("family.inviteShort")}</span><span className="hidden sm:inline">{t("family.inviteMember")}</span>
+                      </PillLink>
+                    </>
+                  ) : null}
                 </div>
               ) : null
             }
@@ -233,8 +242,8 @@ export default async function FamilyPage() {
                   <ExpandableRow
                     key={member.id}
                     trailing={
-                      // A chat with this person (story 12-015): anyone else here who signs in themselves.
-                      session.chatOn && member.id !== membership.memberId && member.status === "active" && member.hasAccount ? (
+                      // A chat with this person (story 12-015): anyone else in the family (the owner, 2026-10-21); someone not signed in yet reads it once they do.
+                      session.chatOn && member.id !== membership.memberId && member.status === "active" ? (
                         <Link href={`/chat/with/${member.id}`} aria-label={t("chat.with", { name: member.displayName })} title={t("chat.with", { name: member.displayName })} className={ICON_LINK}>
                           <MessageCircle aria-hidden className="size-4" />
                         </Link>

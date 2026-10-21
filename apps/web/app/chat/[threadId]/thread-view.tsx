@@ -57,6 +57,7 @@ export function ThreadView({
   options,
   pages,
   labels,
+  notice = null,
 }: {
   householdId: string;
   threadId: string;
@@ -69,6 +70,8 @@ export function ThreadView({
   options: Option[];
   pages: { key: string; label: string }[];
   labels: ThreadLabels;
+  /** Who in this chat has not signed in yet, said once, so a message to them is never assumed read. */
+  notice?: string | null;
 }) {
   const router = useRouter();
   const [body, setBody] = useState("");
@@ -115,6 +118,7 @@ export function ThreadView({
         <div className="min-w-0">
           <h1 className="text-xl font-bold tracking-tight break-words lg:text-2xl">{title}</h1>
           <p className="text-sm text-[var(--wh-foreground-muted)]">{meta}</p>
+          {notice ? <p className="mt-1 text-xs break-words text-[var(--wh-foreground-subtle)]">{notice}</p> : null}
         </div>
         {kind !== "household" ? (
           <div className="flex shrink-0 items-center gap-1">
