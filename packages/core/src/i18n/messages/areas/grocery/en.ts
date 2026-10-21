@@ -150,6 +150,7 @@ export const groceryEn = {
   "grocery.item.nutritionApproximate": "Approximate: the values are for {food}, the nearest food in the table.",
   "grocery.item.nutritionEnergyComputed": "Energy is worked out from its protein, fat, carbohydrate and fibre, as the table gives none for it.",
   "grocery.item.nutritionIfctCredit": "From the Indian Food Composition Tables 2017, ICMR–National Institute of Nutrition, Hyderabad. Your own food may differ.",
+  "grocery.item.nutritionUsdaCredit": "From USDA FoodData Central (SR Legacy), the US Department of Agriculture's food table. Your own food may differ.",
   "grocery.nutrient.calcium_mg": "Calcium",
   "grocery.nutrient.iron_mg": "Iron",
   "grocery.nutrient.potassium_mg": "Potassium",

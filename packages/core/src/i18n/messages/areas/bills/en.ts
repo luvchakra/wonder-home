@@ -8,6 +8,7 @@ export const billsEn = {
   "bills.view": "Finance view",
   "bills.tab.overview": "Overview",
   "bills.tab.transactions": "Transactions",
+  "bills.tab.budget": "Budget",
   "bills.metric.needYou": "Need you",
   "bills.metric.needYou.empty": "Nothing needs you right now.",
   "bills.metric.upcoming": "Upcoming",

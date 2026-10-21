@@ -11,6 +11,7 @@ import {
 
 import { may } from "@wonderhome/core/billing/repository";
 import type { Translate } from "@wonderhome/core/i18n/translate";
+import { billedMonths, type BilledMonth } from "@wonderhome/core/finance/billed-months";
 import { listBudgets } from "@wonderhome/core/finance/budget-repository";
 import { budgetSpend, type BudgetPayment } from "@wonderhome/core/finance/budgets";
 import { describeEmailHealth } from "@wonderhome/core/finance/email-connector";
@@ -136,7 +137,7 @@ export default async function BillsPage({
     );
   }
 
-  const active = tab === "transactions" ? "transactions" : "overview";
+  const active = tab === "transactions" || tab === "budget" ? tab : "overview";
   const [agenda, obligations, members, historyRows, budgetRows, integrations, address, givenPeriods] =
     await Promise.all([
       financeAgenda(supabase, householdId).catch(() => null),
@@ -253,21 +254,26 @@ export default async function BillsPage({
     clear: t("bills.periods.clear"),
   };
 
-  // Monthly spend from recorded history: a trend, not a ledger. Only the
-  // amounts in the currency shown are added; any others are counted, never
-  // converted or mixed in (story 22-007).
-  // A month paid ahead (11-010) is not spending yet: the trend runs up to this month.
+  // Monthly spend: what each bill came to each month — paid, else the amount
+  // given for that month, else the open bill's own (`billedMonths`), so a bill's
+  // months chart as soon as they are entered (the owner, 2026-10-21). A trend,
+  // not a ledger. Only the amounts in the currency shown are added; any others
+  // are counted, never converted or mixed in (story 22-007). A month given
+  // ahead (11-010) is not spending yet: the trend runs up to this month.
   const thisMonth = today.slice(0, 7);
-  const trendRows = history.filter((row) => row.currency === currency && row.period_label <= thisMonth);
+  const billed = billedMonths({
+    paid: history.map((row) => ({ obligationId: row.obligation_id, periodLabel: row.period_label, amountMinor: Number(row.amount_minor), currency: row.currency, payee: row.payee })),
+    given: givenPeriods,
+    bills: obligations,
+    thisMonth,
+  });
+  const trendRows = billed.filter((row) => row.currency === currency);
   const otherCurrencyCounts = new Map<string, number>();
-  for (const row of history)
+  for (const row of billed)
     if (row.currency !== currency) otherCurrencyCounts.set(row.currency, (otherCurrencyCounts.get(row.currency) ?? 0) + 1);
   const byPeriod = new Map<string, number>();
   for (const row of trendRows)
-    byPeriod.set(
-      row.period_label,
-      (byPeriod.get(row.period_label) ?? 0) + Number(row.amount_minor),
-    );
+    byPeriod.set(row.periodLabel, (byPeriod.get(row.periodLabel) ?? 0) + row.amountMinor);
   const periods = [...byPeriod.entries()]
     .sort(([a], [b]) => a.localeCompare(b))
     .slice(-6);
@@ -300,16 +306,16 @@ export default async function BillsPage({
     const step = [1, 2, 2.5, 5, 10].map((factor) => factor * magnitude).find((candidate) => candidate * 2 >= peak) ?? 10 * magnitude;
     return [0, step, step * 2].map((value) => ({ value, text: formatMoney(value, currency) }));
   };
-  const seriesOf = (key: string, name: string, rows: HistoryRow[]): SpendSeries => {
+  const seriesOf = (key: string, name: string, rows: BilledMonth[]): SpendSeries => {
     const byMonth = new Map<string, number>();
-    for (const row of rows) byMonth.set(row.period_label, (byMonth.get(row.period_label) ?? 0) + Number(row.amount_minor));
+    for (const row of rows) byMonth.set(row.periodLabel, (byMonth.get(row.periodLabel) ?? 0) + row.amountMinor);
     const values = lineMonths.map((label) => byMonth.get(label) ?? null);
     return { key, name, values, texts: values.map((value) => (value === null ? null : formatMoney(value, currency))), ticks: niceTicks(values) };
   };
   const billName = new Map(obligations.map((o) => [o.id, o.name]));
-  const inWindow = trendRows.filter((row) => lineMonths.includes(row.period_label));
-  const billSeries = [...new Set(inWindow.map((row) => row.obligation_id))]
-    .map((id) => seriesOf(id, billName.get(id) ?? inWindow.find((row) => row.obligation_id === id)?.payee ?? t("bills.spend.all"), inWindow.filter((row) => row.obligation_id === id)))
+  const inWindow = trendRows.filter((row) => lineMonths.includes(row.periodLabel));
+  const billSeries = [...new Set(inWindow.map((row) => row.obligationId))]
+    .map((id) => seriesOf(id, billName.get(id) ?? inWindow.find((row) => row.obligationId === id)?.payee ?? t("bills.spend.all"), inWindow.filter((row) => row.obligationId === id)))
     .sort((a, b) => b.values.reduce<number>((sum, value) => sum + (value ?? 0), 0) - a.values.reduce<number>((sum, value) => sum + (value ?? 0), 0) || a.name.localeCompare(b.name));
   const spendSeries = [seriesOf("all", t("bills.spend.all"), inWindow), ...billSeries];
 
@@ -422,19 +428,17 @@ export default async function BillsPage({
               {t("bills.lede")}
             </p>
           </div>
-          {admin ? (
+          {/* Add a bill sits on the Upcoming bills line and Add a budget in its card,
+              beside what each adds to (the owner, 2026-10-21); a transaction is added here. */}
+          {admin && active === "transactions" ? (
             <div className="flex flex-wrap gap-2">
-              {active === "transactions" ? (
-                <AddTransactionButton
-                  householdId={householdId}
-                  bills={trackedBills}
-                  defaultCurrency={householdCurrency}
-                  labels={formLabels}
-                  {...transactionChoices}
-                />
-              ) : (
-                <AddBillButton householdId={householdId} defaultCurrency={householdCurrency} labels={formLabels} choices={billChoices} />
-              )}
+              <AddTransactionButton
+                householdId={householdId}
+                bills={trackedBills}
+                defaultCurrency={householdCurrency}
+                labels={formLabels}
+                {...transactionChoices}
+              />
             </div>
           ) : null}
         </header>
@@ -473,6 +477,12 @@ export default async function BillsPage({
               label: t("bills.tab.transactions"),
               href: "/bills?tab=transactions",
             },
+            {
+              key: "budget",
+              label: t("bills.tab.budget"),
+              href: "/bills?tab=budget",
+              count: budgets.length,
+            },
           ]}
         />
 
@@ -481,7 +491,12 @@ export default async function BillsPage({
             <ExpandableMetricRow metrics={metrics} />
 
             <section>
-              <SectionHeader title={t("bills.upcoming")} count={upcoming.length} />
+              <SectionHeader
+                title={t("bills.upcoming")}
+                count={upcoming.length}
+                // The empty state below carries its own Add a bill, so the line carries it only when there are bills.
+                action={admin && upcoming.length > 0 ? <AddBillButton householdId={householdId} defaultCurrency={householdCurrency} labels={formLabels} choices={billChoices} /> : undefined}
+              />
               {upcoming.length === 0 ? (
                 <EmptyState
                   icon={Receipt}
@@ -548,8 +563,8 @@ export default async function BillsPage({
               </section>
             ) : null}
 
-            <section className="grid gap-4 sm:grid-cols-2">
-              <Card className="sm:col-span-2">
+            <section>
+              <Card>
                 <p className="text-xs font-semibold tracking-wide text-[var(--wh-foreground-subtle)] uppercase">
                   {t("bills.spend")}
                 </p>
@@ -595,72 +610,6 @@ export default async function BillsPage({
                   </p>
                 ) : null}
               </Card>
-              <Card>
-                <div className="flex flex-wrap items-center justify-between gap-2">
-                  <p className="text-xs font-semibold tracking-wide text-[var(--wh-foreground-subtle)] uppercase">
-                    {t("bills.budgets")}
-                  </p>
-                  {admin ? <AddBudgetButton householdId={householdId} defaultCurrency={householdCurrency} labels={formLabels} /> : null}
-                </div>
-                {budgets.length === 0 ? (
-                  <p className="mt-2 text-sm text-[var(--wh-foreground-muted)]">
-                    {admin ? t("bills.budgets.emptyAdmin") : t("bills.budgets.emptyMember")}
-                  </p>
-                ) : (
-                  <ul className="mt-3 space-y-3">
-                    {budgets.map((budget) => {
-                      const v = budgetView({
-                        category: budget.category,
-                        limitMinor: budget.limitMinor,
-                        currency: budget.currency,
-                        spentMinor: budget.spentMinor,
-                      });
-                      const pct = Math.min(100, Math.round((budget.spentMinor / Math.max(1, budget.limitMinor)) * 100));
-                      const used = t(`bills.budget.used.${budget.period}`, {
-                        spent: formatMoney(budget.spentMinor, budget.currency),
-                        limit: formatMoney(budget.limitMinor, budget.currency),
-                      });
-                      return (
-                        <li key={budget.id}>
-                          <div className="flex items-start justify-between gap-3">
-                            <div className="min-w-0 flex-1">
-                              <p className="text-sm font-medium">{(BILL_TYPES as readonly { key: string }[]).some((type) => type.key === budget.category) ? t(`bills.type.${budget.category}` as TranslationKey) : billKindName(t, budget.category)}</p>
-                              <p className="text-xs text-[var(--wh-foreground-muted)]">
-                                {used} ·{" "}
-                                {v.overBy
-                                  ? t("bills.budget.overBy", { amount: formatMoney(v.overBy, budget.currency) })
-                                  : t("bills.budget.left", { amount: formatMoney(v.remainingMinor, budget.currency) })}
-                              </p>
-                            </div>
-                            {admin ? (
-                              <BudgetRowControls
-                                householdId={householdId}
-                                budget={{ id: budget.id, category: budget.category, period: budget.period, limitMinor: budget.limitMinor, currency: budget.currency }}
-                                labels={formLabels}
-                              />
-                            ) : null}
-                          </div>
-                          <div
-                            className="mt-1.5 h-1.5 rounded-full bg-[var(--wh-surface-muted)]"
-                            role="img"
-                            aria-label={t("bills.budget.usedAria", { percent: pct })}
-                          >
-                            <div
-                              className={`h-full rounded-full ${v.overBy ? "bg-[var(--wh-attention)]" : "bg-[var(--wh-primary)]"}`}
-                              style={{ width: `${pct}%` }}
-                            />
-                          </div>
-                          {budget.otherCurrencies.length > 0 ? (
-                            <p className="mt-1 text-xs text-[var(--wh-foreground-subtle)]">
-                              {t("bills.budget.notCounted", { list: paymentsIn(budget.otherCurrencies) })}
-                            </p>
-                          ) : null}
-                        </li>
-                      );
-                    })}
-                  </ul>
-                )}
-              </Card>
             </section>
 
             <Card className="flex items-start gap-3 bg-[var(--wh-primary-soft)]/50 p-4">
@@ -673,6 +622,75 @@ export default async function BillsPage({
               </p>
             </Card>
           </>
+        ) : null}
+
+        {active === "budget" ? (
+          <Card>
+            <div className="flex flex-wrap items-center justify-between gap-2">
+              <p className="text-xs font-semibold tracking-wide text-[var(--wh-foreground-subtle)] uppercase">
+                {t("bills.budgets")}
+              </p>
+              {admin ? <AddBudgetButton householdId={householdId} defaultCurrency={householdCurrency} labels={formLabels} /> : null}
+            </div>
+            {budgets.length === 0 ? (
+              <p className="mt-2 text-sm text-[var(--wh-foreground-muted)]">
+                {admin ? t("bills.budgets.emptyAdmin") : t("bills.budgets.emptyMember")}
+              </p>
+            ) : (
+              <ul className="mt-3 space-y-3">
+                {budgets.map((budget) => {
+                  const v = budgetView({
+                    category: budget.category,
+                    limitMinor: budget.limitMinor,
+                    currency: budget.currency,
+                    spentMinor: budget.spentMinor,
+                  });
+                  const pct = Math.min(100, Math.round((budget.spentMinor / Math.max(1, budget.limitMinor)) * 100));
+                  const used = t(`bills.budget.used.${budget.period}`, {
+                    spent: formatMoney(budget.spentMinor, budget.currency),
+                    limit: formatMoney(budget.limitMinor, budget.currency),
+                  });
+                  return (
+                    <li key={budget.id}>
+                      <div className="flex items-start justify-between gap-3">
+                        <div className="min-w-0 flex-1">
+                          <p className="text-sm font-medium">{(BILL_TYPES as readonly { key: string }[]).some((type) => type.key === budget.category) ? t(`bills.type.${budget.category}` as TranslationKey) : billKindName(t, budget.category)}</p>
+                          <p className="text-xs text-[var(--wh-foreground-muted)]">
+                            {used} ·{" "}
+                            {v.overBy
+                              ? t("bills.budget.overBy", { amount: formatMoney(v.overBy, budget.currency) })
+                              : t("bills.budget.left", { amount: formatMoney(v.remainingMinor, budget.currency) })}
+                          </p>
+                        </div>
+                        {admin ? (
+                          <BudgetRowControls
+                            householdId={householdId}
+                            budget={{ id: budget.id, category: budget.category, period: budget.period, limitMinor: budget.limitMinor, currency: budget.currency }}
+                            labels={formLabels}
+                          />
+                        ) : null}
+                      </div>
+                      <div
+                        className="mt-1.5 h-1.5 rounded-full bg-[var(--wh-surface-muted)]"
+                        role="img"
+                        aria-label={t("bills.budget.usedAria", { percent: pct })}
+                      >
+                        <div
+                          className={`h-full rounded-full ${v.overBy ? "bg-[var(--wh-attention)]" : "bg-[var(--wh-primary)]"}`}
+                          style={{ width: `${pct}%` }}
+                        />
+                      </div>
+                      {budget.otherCurrencies.length > 0 ? (
+                        <p className="mt-1 text-xs text-[var(--wh-foreground-subtle)]">
+                          {t("bills.budget.notCounted", { list: paymentsIn(budget.otherCurrencies) })}
+                        </p>
+                      ) : null}
+                    </li>
+                  );
+                })}
+              </ul>
+            )}
+          </Card>
         ) : null}
 
         {active === "transactions" ? (

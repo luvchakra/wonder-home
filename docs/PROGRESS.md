@@ -11,14 +11,14 @@ in `docs/progress/`; for the running log of what changed when, `tracking/PROGRES
 
 ## The whole picture
 
-**340 of 364 stories done — 93.4%**
+**342 of 365 stories done — 93.7%**
 
 | Status | Stories |
 |---|---:|
-| Done | 340 |
+| Done | 342 |
 | In Progress | 7 |
 | Blocked | 1 |
-| Not Started | 12 |
+| Not Started | 11 |
 | Deferred | 4 |
 
 ## By module
@@ -36,7 +36,7 @@ in `docs/progress/`; for the running log of what changed when, `tracking/PROGRES
 | 08 Kids & School Intelligence | `████████░░` | 18 | 21 | 2 in progress, 1 not started |
 | 09 Commerce, Groceries & Pet Supplies | `██████████` | 9 | 9 | — |
 | 10 Meals & Cooking | `██████████` | 13 | 13 | — |
-| 11 Bills, Fees & Finance | `█████████░` | 12 | 13 | 1 not started |
+| 11 Bills, Fees & Finance | `█████████░` | 13 | 14 | 1 not started |
 | 12 Family Time & Social Activities | `██████████` | 8 | 8 | — |
 | 13 Maintenance, Laundry & Pet Care | `█████████░` | 9 | 10 | 1 in progress |
 | 14 AI Orchestration & Learning | `████████░░` | 29 | 34 | 2 in progress, 3 deferred |
@@ -50,7 +50,7 @@ in `docs/progress/`; for the running log of what changed when, `tracking/PROGRES
 | 22 Internationalization and Localization | `████████░░` | 7 | 8 | 1 deferred |
 | 23 Smart Notifications | `██████████` | 13 | 13 | — |
 | 24 HomePlaces | `██████████` | 12 | 12 | — |
-| 25 HomeFood | `████████░░` | 24 | 30 | 6 not started |
+| 25 HomeFood | `████████░░` | 25 | 30 | 5 not started |
 | 26 HomeEvents | `███████░░░` | 11 | 15 | 1 in progress, 3 not started |
 | 27 Notification Channels and Events | `█████████░` | 14 | 15 | 1 blocked |
 
@@ -76,7 +76,6 @@ in `docs/progress/`; for the running log of what changed when, `tracking/PROGRES
 | `25-008` Catalog follow-ups: pictures for curated items, products linked to their item | 25 HomeFood | P2 | Not Started |
 | `25-011` Indian nutrition, the rest | 25 HomeFood | P1 | Not Started |
 | `25-023` The recipe catalog in every language, and more dishes | 25 HomeFood | P2 | Not Started |
-| `25-031` Nutrients for dairy, sugar and pastes that IFCT does not list | 25 HomeFood | P2 | Not Started |
 | `26-003` HomeTalk plans with the calendar | 26 HomeEvents | P1 | In Progress |
 | `26-004` Calendar reminders and holiday region | 26 HomeEvents | P1 | Not Started |
 | `26-005` Calendar notices over WhatsApp | 26 HomeEvents | P2 | Not Started |
@@ -310,7 +309,7 @@ in `docs/progress/`; for the running log of what changed when, `tracking/PROGRES
 
 ### 11 — Bills, Fees & Finance
 
-12 of 13 done `█████████░`
+13 of 14 done `█████████░`
 
 | Story | Priority | Status | Notes |
 |---|---|---|---|
@@ -327,6 +326,7 @@ in `docs/progress/`; for the running log of what changed when, `tracking/PROGRES
 | `11-011` Payees beyond the catalogue's cities, and outside India | P2 | Not Started | Left open by 11-010: the payee list covers each state's electricity company and the larger cities' water, gas and property tax; smaller cities and other countries show the national list and Add a new payee. Grow the list by city, and add per-country lists once a household outside India asks. |
 | `11-012` Month by month, budgets per line item, and a bill form that asks once | P0 | Done | The owner, 2026-10-20, from phone screenshots. A recurring bill shows Month by month: its last three months (Paid from the history, or Not entered with the pencil to say what it came to and when it was paid), this month and one ahead (`billPeriods` with `PERIODS_BEHIND`, `previousDueDate`). Budgets are per line item — electricity, water, piped gas, cooking gas, petrol and diesel (new `fuel` bill type), rent… — picked from a list grouped by kind like the bill picker, and count the payments of bills of that type (`budgetSpend` by `billType`); a budget set earlier for a whole kind keeps counting it. Add a bill asks for the amount and the due date once, under This bill; the Earlier bills rows are gone (the months are filled in on the bill). Saving a bill with no amount no longer fails: a currency is kept only with an amount (`obligations_amount_has_currency`). An unexpected error now carries a real reference in its message and the server log (`toErrorBody`). |
 | `11-013` Monthly spend as line charts, all bills and each bill | P1 | Done | The owner, 2026-10-20 ("show line graph for each type, show data points on x and y axis, decide best way to plot it"). The bar strip became `bills/spend-lines.tsx`: the household's total first, then one small chart per bill (small multiples, two up from `sm`, one per row on a phone), all on the same six calendar months ending at the newest on record. Each chart is one series (title, no legend); y axis is money from zero with three nice ticks; x axis the months (with the year when they span two); a dot per month on record, a month with nothing breaks the line (never interpolated); the newest amount labelled; tap, hover or focus a dot for its amount; Show as table gives the same numbers. Domain tone `--wh-tone-money`, 2 px line, dots with a surface ring, recessive grid. Words in all eight languages, help ¶1. Checked at 360px and 1280px, no overflow. |
+| `11-014` A bill's months chart as soon as they are entered; Add a bill on its line; a Budget tab | P1 | Done | The owner, 2026-10-21 ("gas bills are added but the line chart didn't appear … as soon as bill entries are added, chart should appear immediately"; "move Add Bill pill in same line as upcoming bills … add a new tab called Budget on right of transaction tab"). Monthly spend charted only paid months (`obligation_history`), so amounts entered under Month by month (`obligation_periods`) and an open bill's own amount never showed. `finance/billed-months.ts` (tested) now gives each bill one figure a month — paid, else the amount given for that month, else the open bill's own for its due month — up to this month, never twice. Add a bill moved from the page header to the Upcoming bills line (shown there only when there are bills; the empty state keeps its own). Budgets moved from Overview to a new Budget tab after Transactions, with its count; help (Bills → Budget) in all eight languages. Browser QA at 360px on a QA household seeded like the owner's: piped gas charts Jul–Oct from the given months and the open bill, no horizontal scroll. |
 
 ### 12 — Family Time & Social Activities
 
@@ -566,7 +566,7 @@ in `docs/progress/`; for the running log of what changed when, `tracking/PROGRES
 
 ### 25 — HomeFood
 
-24 of 30 done `████████░░`
+25 of 30 done `████████░░`
 
 | Story | Priority | Status | Notes |
 |---|---|---|---|
@@ -599,7 +599,7 @@ in `docs/progress/`; for the running log of what changed when, `tracking/PROGRES
 | `25-028` Recipe ticks, sharing and filter counts | P2 | Done | The owner, 2026-10-20/21. A recipe's ingredients and steps tick off on screen only (kit `TickItem`, a real checkbox, nothing saved). Each household recipe has Share: WhatsApp gets the recipe card picture (`/meals/recipe-card/[id]`, under the member's own session) with the whole recipe as the message (`meals/recipe-share.ts`, 4 tests), plus other apps, copy, email and save picture. The course and veg/non-veg filters show counts. Help (Meals and shopping) in all eight languages. |
 | `25-029` More non-veg dishes in WonderHome's recipe list | P1 | Done | The owner, 2026-10-21 ("get more non veg recipes in the WonderHome recipe list"). 26 dishes added to `scripts/recipe-catalog/recipes.ts` through the same seed as 25-022 (catalog now 60: 33 veg, 5 egg, 22 non-veg): egg bhurji, masala omelette, egg paratha, keema paratha; chicken curry, butter chicken, chicken tikka masala, kadai chicken, chicken korma, Chettinad chicken, mutton curry, rogan josh, keema matar, macher jhol, Goan fish curry, Kerala meen curry, prawn masala; fish fry; chicken, mutton and egg biryani, prawn pulao; chicken 65, tandoori chicken, chicken seekh kebab, fish tikka. Every ingredient links to an existing grocery-catalog item (no new items needed); nutrients per serving come from `nutritionPerServing` and stay empty where too little is known about the items (e.g. chicken cuts, prawns). 25 Wikimedia Commons pictures with licence and author in `pictures.tsv` (CC BY / BY-SA / CC0 only); chicken biryani has none, since no correctly licensed picture of that dish turned up. Seeded to the live catalog with `seed.mts --apply`; no schema change (`diet` already allowed `non_veg`). |
 | `25-030` Nutrients for chicken, mutton and prawn cuts | P1 | Done | The owner, 2026-10-21 ("add nutrition data for chicken, mutton and prawns"). Seven grocery-catalog items had no IFCT 2017 link, so the 25-029 dishes made from them showed no nutrients. Linked in `ifct-links.csv`, all `close` with a note: chicken biryani cut, curry cut, keema and whole to N002 (thigh, the middle cut, as the skinless curry cut already was); chicken boneless to N003 (breast); mutton keema to O001 (goat shoulder); medium prawns to Q007 (brown tiger prawns, *Solenocera*). Mutton paya stays unlinked: IFCT has no trotters. Applied live with `npm run catalog:ifct -- --apply` (7 links changed) and the recipe catalog re-seeded: keema paratha, chicken curry, kadai chicken, chicken korma, keema matar, prawn masala, chicken biryani, chicken 65 and seekh kebab now carry kcal and protein. Butter chicken, chicken tikka masala, Chettinad chicken and prawn pulao still don't: their curd, butter, cream, coconut milk and some spices have no data (25-031). |
-| `25-031` Nutrients for dairy, sugar and pastes that IFCT does not list | P2 | Not Started | Follow-up from 25-030. IFCT 2017 has no curd, butter, fresh cream, sugar, coconut milk, ginger-garlic paste or masala blends, so 17 catalog dishes (e.g. butter chicken, dal makhani, palak paneer, kheer, idli) fall under the 80% coverage `nutritionPerServing` needs. Reviewed `usda_foods` links exist (`usda_foods.catalog_id`) but recipe nutrients read only IFCT or the item's own nutrients; decide whether a reviewed USDA match may supply them, then re-seed. |
+| `25-031` Nutrients for dairy, sugar and the plain foods IFCT does not list | P2 | Done | The owner, 2026-10-21 ("yes use USDA for dairy and sugar nutrients"). USDA FoodData Central SR Legacy (public domain) is the second source after IFCT 2017: `scripts/catalog-usda.ts` reads USDA's pinned, checksummed SR Legacy CSV release (`commerce/usda.ts`, tested) and links 53 curated items through `supabase/seed/grocery-catalog/usda-links.csv` (22 exact, 29 close, 2 approximate, each with a note): butter, cream, malai, cheeses, curd and Greek yogurt, buttermilk, milks (toned, double toned, skimmed, powder, condensed, soy, almond), sugars, honey and maple syrup, plus the plain foods recipes need — coconut milk, desiccated coconut, cinnamon, tej patta, fennel, saffron, tomato puree, rice flour, corn flour, baking soda. Migration `20261021010000_usda_catalog_nutrition.sql`: the link lives on the catalog (`grocery_catalog.usda_fdc_id`, one USDA food for several items), and a member reads a USDA food only once an item links it (unlinked research rows stay the server's; RLS test updated). `referenceNutrition` is the one rule (IFCT, then USDA, then the label) for the item page, grocery cards, the ingredient picker and recipe nutrients; USDA is credited wherever shown, in all eight languages; help updated. Applied live (38 foods, 53 links) and the recipe catalog re-seeded: 56 of 60 dishes now carry nutrients (was 43), including butter chicken, chicken tikka masala, Chettinad chicken, prawn pulao, dal makhani, palak paneer, kheer and curd rice. Still blank: idli, masala dosa, uttapam (ready batter) and pav bhaji (pav) — no reference food fits a shop batter or bread roll. |
 
 ### 26 — HomeEvents
 

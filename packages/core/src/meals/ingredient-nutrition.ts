@@ -1,4 +1,4 @@
-import type { CatalogEntry, Nutrients } from "../commerce/catalog";
+import { referenceNutrition, type CatalogEntry } from "../commerce/catalog";
 import { toBase } from "../commerce/units";
 import type { IngredientLine } from "./ingredient-lines";
 
@@ -16,11 +16,12 @@ import type { IngredientLine } from "./ingredient-lines";
  * ingredient counted in pieces or with no amount cannot be weighed, so it is
  * left out and said so — `counted` of `total` — rather than guessed at. The
  * Indian Food Composition Tables (IFCT 2017) are preferred where a curated
- * item has them, as the item page already does; a label's own values
- * otherwise. Null when no ingredient could be counted.
+ * item has them, as the item page already does; then the item's USDA food
+ * (25-031); a label's own values otherwise. Null when no ingredient could be
+ * counted.
  *
- * A liquid whose figures are per 100 g (IFCT keeps oils, ghee and milk that
- * way) is weighed at a stated density — oils and ghee 0.92 g/ml, anything
+ * A liquid whose figures are per 100 g (IFCT and USDA keep oils, ghee and
+ * milk that way) is weighed at a stated density — oils and ghee 0.92 g/ml, anything
  * else 1 g/ml — never skipped for being in millilitres. And because a sum
  * made from a small part of the dish says little, the figures are given only
  * when what was counted is at least `MIN_COVERAGE` of everything that could
@@ -80,8 +81,8 @@ export function nutritionPerServing(lines: readonly IngredientLine[], entries: R
       leaveOut(line.name, entry);
       continue;
     }
-    const nutrients: Nutrients = entry.ifct?.nutrients && Object.keys(entry.ifct.nutrients).length > 0 ? entry.ifct.nutrients : entry.nutrients;
-    const basis = entry.ifct ? "100g" : entry.nutrientBasis;
+    // IFCT 2017, else USDA, else the label (`referenceNutrition`).
+    const { nutrients, basis } = referenceNutrition(entry);
     if (!basis) {
       leaveOut(line.name, entry);
       continue;

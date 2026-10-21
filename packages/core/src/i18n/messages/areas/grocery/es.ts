@@ -146,6 +146,7 @@ export const groceryEs: AreaCatalog<typeof groceryEn> = {
   "grocery.item.nutritionApproximate": "Aproximado: los valores son de {food}, el alimento más cercano de la tabla.",
   "grocery.item.nutritionEnergyComputed": "La energía se calcula a partir de sus proteínas, grasas, carbohidratos y fibra, porque la tabla no la da.",
   "grocery.item.nutritionIfctCredit": "De las Indian Food Composition Tables 2017, ICMR–National Institute of Nutrition, Hyderabad. Tu alimento puede variar.",
+  "grocery.item.nutritionUsdaCredit": "De USDA FoodData Central (SR Legacy), la tabla de alimentos del Departamento de Agricultura de EE. UU. Tu alimento puede variar.",
   "grocery.nutrient.calcium_mg": "Calcio",
   "grocery.nutrient.iron_mg": "Hierro",
   "grocery.nutrient.potassium_mg": "Potasio",

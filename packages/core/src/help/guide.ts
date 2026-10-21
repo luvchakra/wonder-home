@@ -129,7 +129,7 @@ const SECTIONS: readonly SectionShape[] = [
   {
     id: "bills",
     group: "Everyday use",
-    updated: "2026-10-20",
+    updated: "2026-10-21",
     keywords: ["bill", "payment", "money", "finance", "due", "overdue", "budget", "anomaly", "pay", "transaction", "currency", "payee", "electricity", "rent", "emi", "earlier bills", "past bills", "coming up", "pay ahead", "next month", "paid"],
   },
   {

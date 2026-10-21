@@ -884,6 +884,7 @@ export const hi: Catalog = {
   "mealForm.rows.energyProtein": "प्रति 100 {per} {kcal} kcal, {protein} g प्रोटीन",
   "mealForm.rows.protein": "प्रति 100 {per} {protein} g प्रोटीन",
   "mealForm.rows.ifctCredit": "IFCT 2017, ICMR–NIN",
+  "mealForm.rows.usdaCredit": "USDA FoodData Central",
   "mealForm.rows.removeRow": "{name} हटाएँ",
   "mealForm.rows.thisItem": "यह सामान",
   "mealForm.saveIngredients": "सामग्री सहेजें",

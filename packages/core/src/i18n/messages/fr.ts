@@ -884,6 +884,7 @@ export const fr: Catalog = {
   "mealForm.rows.energyProtein": "{kcal} kcal, {protein} g de protéines pour 100 {per}",
   "mealForm.rows.protein": "{protein} g de protéines pour 100 {per}",
   "mealForm.rows.ifctCredit": "IFCT 2017, ICMR–NIN",
+  "mealForm.rows.usdaCredit": "USDA FoodData Central",
   "mealForm.rows.removeRow": "Retirer {name}",
   "mealForm.rows.thisItem": "cet ingrédient",
   "mealForm.saveIngredients": "Enregistrer les ingrédients",

@@ -53,7 +53,7 @@ const NON_TENANT_TABLES = new Set([
   "billing_reconciliation_runs",
   // The shared grocery catalog (HomeFood 25-006): open data every household reads and none writes.
   "grocery_catalog",
-  // USDA FoodData Central foods, linked to the catalog by review (25-006): public-domain reference data, service role only.
+  // USDA FoodData Central foods (25-006/25-031): public-domain reference data a member reads once a curated item links to it.
   "usda_foods",
   // IFCT 2017 (ICMR-NIN) Indian foods, linked from the catalog (25-009): reference data every household reads.
   "ifct_foods",

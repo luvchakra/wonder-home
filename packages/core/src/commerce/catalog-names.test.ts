@@ -50,6 +50,14 @@ describe("the nutrition a card shows", () => {
     ).toEqual({ basis: "100g", energyKcal: 134, proteinG: 13.3, source: "ifct" });
   });
 
+  it("uses the item's USDA food where IFCT 2017 does not list it, and IFCT where it does (25-031)", () => {
+    const usda = { fdcId: 171284, name: "Yogurt, plain, whole milk", match: "close" as const, note: null, nutrients: { energy_kcal: 61, protein_g: 3.47 } };
+    expect(cardNutrition({ ifct: null, usda, nutrients: {}, nutrientBasis: null })).toEqual({ basis: "100g", energyKcal: 61, proteinG: 3.47, source: "usda" });
+    expect(
+      cardNutrition({ ifct: { code: "L001", name: "Curd", match: "exact", note: null, nutrients: { energy_kcal: 60 }, energyComputed: false }, usda, nutrients: {}, nutrientBasis: null }),
+    ).toMatchObject({ energyKcal: 60, source: "ifct" });
+  });
+
   it("uses a packed product's label, per 100 ml when it says so", () => {
     expect(cardNutrition({ ifct: null, nutrients: { energy_kcal: 62 }, nutrientBasis: "100ml" })).toEqual({ basis: "100ml", energyKcal: 62, proteinG: null, source: "label" });
   });

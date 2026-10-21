@@ -1,0 +1,54 @@
+slug,fdc_id,match_type,note
+butter-salted,173410,exact,
+butter-unsalted,173430,exact,
+butter-white,173430,close,White makhan is unsalted butter; USDA butter without salt
+butter-garlic,173410,close,Garlic butter is mostly salted butter; USDA salted butter
+fresh-cream,170858,close,Indian fresh cream is about 25% fat; USDA light whipping cream (30%)
+whipping-cream,170859,close,USDA heavy whipping cream (about 36% fat)
+malai,170859,approximate,Malai is the cream skimmed off boiled milk; USDA heavy whipping cream
+cheese-cheddar,173414,exact,
+cheese-mozzarella,170845,exact,
+cheese-pizza-diced,170846,close,Pizza blends are mostly low-moisture mozzarella
+cheese-parmesan,170848,exact,
+cheese-feta,173420,exact,
+cheese-gouda,171241,exact,
+cream-cheese,173418,exact,
+cheese-block,171290,close,Processed cheese block; USDA pasteurized process American cheese
+cheese-slices,171290,close,Processed cheese slices; USDA pasteurized process American cheese
+cheese-cubes,171290,close,Processed cheese cubes; USDA pasteurized process American cheese
+curd,171284,close,Plain curd set from whole milk; USDA plain whole-milk yogurt
+curd-probiotic,171284,close,Plain probiotic curd; USDA plain whole-milk yogurt
+curd-low-fat,170886,close,USDA plain low-fat yogurt
+hung-curd,171304,close,Strained curd; USDA plain whole-milk Greek yogurt
+greek-yogurt,171304,close,USDA plain whole-milk Greek yogurt
+buttermilk,170874,close,Chaas is thinner than USDA cultured low-fat buttermilk
+milk-toned,171265,close,Toned milk is 3% fat; USDA whole milk (3.25%)
+milk-double-toned,170872,close,Double-toned milk is 1.5% fat; USDA low-fat milk (1%)
+milk-skimmed,171269,exact,
+milk-powder,173454,close,USDA whole milk powder; skimmed powders have less fat
+condensed-milk,171275,exact,
+milk-soy,172446,close,USDA unfortified soy milk
+milk-almond,174832,close,USDA unsweetened almond milk
+sugar,169655,exact,
+caster-sugar,169655,close,Finely ground white sugar; USDA granulated sugar
+sugar-cubes,169655,close,Pressed white sugar; USDA granulated sugar
+sugar-sulphurless,169655,close,White sugar made without sulphur; USDA granulated sugar
+mishri-crystal,169655,close,Crystallised white sugar; USDA granulated sugar
+icing-sugar,169656,exact,
+boora,169656,close,Bura is powdered sugar; USDA powdered sugar
+brown-sugar,168833,exact,
+demerara-sugar,168833,close,USDA brown sugar
+honey,169640,exact,
+honey-raw,169640,close,USDA honey
+maple-syrup,169661,exact,
+coconut-milk,170173,exact,
+desiccated-coconut,170170,exact,
+dalchini,171320,close,USDA ground cinnamon
+tej-patta,170917,approximate,Indian tej patta is Cinnamomum tamala; USDA bay leaf is Laurus nobilis
+saunf,171323,exact,
+saunf-powder,171323,close,Ground fennel; USDA fennel seed
+kesar,170934,exact,
+tomato-puree,170546,close,USDA canned tomato puree with salt
+rice-flour,169714,exact,
+corn-flour,169698,exact,
+baking-soda,175040,exact,

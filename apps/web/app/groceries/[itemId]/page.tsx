@@ -1,7 +1,7 @@
 import { History, PackageCheck, ShoppingBasket } from "lucide-react";
 
 import { may } from "@wonderhome/core/billing/repository";
-import { NUTRIENT_KEYS, stepperOf } from "@wonderhome/core/commerce/catalog";
+import { NUTRIENT_KEYS, referenceNutrition, stepperOf } from "@wonderhome/core/commerce/catalog";
 import {
   getGroceryItem,
   stockHistory,
@@ -114,14 +114,15 @@ export default async function GroceryItemPage({
     ...new Set([...all.map((entry) => entry.category), ...words.categories]),
   ];
   // Nutrition from the shared catalog: for a curated item, its Indian food in
-  // IFCT 2017 (ICMR–NIN, 25-009), saying how close the match is; for a packed
-  // product, only what its label states (25-006). Each with its basis and credit.
+  // IFCT 2017 (ICMR–NIN, 25-009), else its USDA food (25-031), saying how close
+  // the match is; for a packed product, only what its label states (25-006).
+  // Each with its basis and credit.
   const nutrition = (() => {
     const catalog = item.catalog;
     if (!catalog) return null;
-    const ifct = catalog.ifct;
-    const nutrients = ifct ? ifct.nutrients : catalog.nutrients;
-    const basis = ifct ? "100g" : catalog.nutrientBasis;
+    const { source, nutrients, basis } = referenceNutrition(catalog);
+    const ifct = source === "ifct" ? catalog.ifct : null;
+    const usda = source === "usda" ? catalog.usda : null;
     if (!basis) return null;
     const number = new Intl.NumberFormat(viewer.language, { maximumFractionDigits: 1 });
     const rows = NUTRIENT_KEYS.flatMap((key) => {
@@ -131,6 +132,16 @@ export default async function GroceryItemPage({
       return [{ key, label: words.nutrition.names[key], value: `${number.format(value)} ${unit}`, sub: key === "sugars_g" || key === "saturated_fat_g" }];
     });
     if (rows.length === 0) return null;
+    if (usda) {
+      return {
+        basis,
+        rows,
+        heading: words.nutrition.per100g,
+        match: usda.match === "exact" ? null : fill(usda.match === "close" ? words.nutrition.close : words.nutrition.approximate, { food: usda.name }),
+        energyComputed: false,
+        credit: words.nutrition.usdaCredit,
+      };
+    }
     return ifct
       ? {
           basis,

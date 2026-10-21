@@ -146,6 +146,7 @@ export const groceryFr: AreaCatalog<typeof groceryEn> = {
   "grocery.item.nutritionApproximate": "Approximatif : les valeurs sont celles de {food}, l’aliment le plus proche de la table.",
   "grocery.item.nutritionEnergyComputed": "L’énergie est calculée à partir des protéines, lipides, glucides et fibres, la table n’en donnant pas.",
   "grocery.item.nutritionIfctCredit": "D’après les Indian Food Composition Tables 2017, ICMR–National Institute of Nutrition, Hyderabad. Votre aliment peut différer.",
+  "grocery.item.nutritionUsdaCredit": "D’après USDA FoodData Central (SR Legacy), la table des aliments du ministère de l’Agriculture des États-Unis. Votre aliment peut différer.",
   "grocery.nutrient.calcium_mg": "Calcium",
   "grocery.nutrient.iron_mg": "Fer",
   "grocery.nutrient.potassium_mg": "Potassium",

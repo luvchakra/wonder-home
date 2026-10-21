@@ -342,3 +342,5 @@ disagree again.)
 | 2026-10-21 | 24 | 24-012 | Done | Migration live. |
 | 2026-10-21 | 04 | 04-030 | Done | Ask me about family in HomeTalk: one question at a time, each answer into its own screen, undo, conflicts said back with their source, unknown names kept as notes; checked live. |
 | 2026-10-21 | 10 | 10-013 | Done | Week template moved from the Meals tab row to the header's top right (icon on a phone, named from sm, filled while open); three tabs fit on one line at 360px. |
+| 2026-10-21 | 25 | 25-031 | Done | USDA FoodData Central (SR Legacy) as the second nutrition source after IFCT 2017: 53 curated dairy, sugar and plain-food items linked, credited on every screen; live; 56 of 60 catalog dishes now carry nutrients. |
+| 2026-10-21 | 11 | 11-014 | Done | Monthly spend charts a bill's months as soon as they are entered (paid, given or the open bill's own); Add a bill on the Upcoming bills line; budgets on their own Budget tab. |
