@@ -1,5 +1,6 @@
 import { parsePreference } from "../../conversation/memory";
 import type { HouseholdContextItem, PrivacyClass } from "../../context/types";
+import { dayWords } from "../say";
 
 /**
  * A person at a glance (the cortex's schema): what someone likes, who they
@@ -11,7 +12,14 @@ import type { HouseholdContextItem, PrivacyClass } from "../../context/types";
  * money are never in it; a child's profile carries the child class.
  */
 
-export type ProfileFact = { memberId: string; statement: string; privacyClass: PrivacyClass; sourceItemIds: string[] };
+export type ProfileFact = {
+  memberId: string;
+  statement: string;
+  privacyClass: PrivacyClass;
+  sourceItemIds: string[];
+  /** The same at-a-glance, in parts, for a line a person reads (`familyGlances`). Never allergies: those are health. */
+  parts: { likes: string[]; dislikes: string[]; looksAfter: string[]; next: { title: string; date: string }[] };
+};
 
 const MAX_THINGS = 8;
 
@@ -85,7 +93,36 @@ export function profileFacts(items: readonly HouseholdContextItem[], options: { 
     ].filter((part): part is string => part !== null);
     if (parts.length === 0) continue;
     const child = about.some((item) => used.includes(item.id) && item.privacyClass === "child") || members.get(memberId)?.attributes.memberType === "child";
-    facts.push({ memberId, statement: `${name} at a glance: ${parts.join("; ")}`, privacyClass: child ? "child" : "general", sourceItemIds: [...new Set(used)] });
+    facts.push({
+      memberId,
+      statement: `${name} at a glance: ${parts.join("; ")}`,
+      privacyClass: child ? "child" : "general",
+      sourceItemIds: [...new Set(used)],
+      parts: { likes, dislikes, looksAfter, next: coming.map((item) => ({ title: String(item.attributes.title ?? item.summary.split(/[.;]/)[0]), date: String(item.attributes.date).slice(0, 10) })) },
+    });
   }
   return facts;
+}
+
+/**
+ * Each family member at a glance, as one line a person reads — for "what do
+ * you know about the family?" (`conversation/roster.ts`): what they like,
+ * what they look after, what is next for them, with days in words. Built
+ * from the asker's own items, like `profileFacts`, and like it never health
+ * or money: allergies stay out of the line. A member with nothing on record
+ * has no line.
+ */
+export function familyGlances(items: readonly HouseholdContextItem[], options: { memberIds: readonly string[]; today: string }): Map<string, string> {
+  const out = new Map<string, string>();
+  for (const fact of profileFacts(items, options)) {
+    const { likes, dislikes, looksAfter, next } = fact.parts;
+    const line = [
+      likes.length > 0 ? `likes ${listOf(likes)}` : null,
+      dislikes.length > 0 ? `doesn't like ${listOf(dislikes)}` : null,
+      looksAfter.length > 0 ? `looks after ${listOf(looksAfter.map((thing) => thing.toLowerCase()))}` : null,
+      next.length > 0 ? `next: ${next.map((entry) => `${entry.title} (${dayWords(entry.date)})`).join(", ")}` : null,
+    ].filter((part): part is string => part !== null);
+    if (line.length > 0) out.set(fact.memberId, line.join("; "));
+  }
+  return out;
 }

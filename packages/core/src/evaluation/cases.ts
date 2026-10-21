@@ -74,6 +74,23 @@ const CONNECTED: HomeTalkCase[] = [
     expected: { interpretation: "ask_status", action: "answer", answer: { includes: [["Asmi at a glance", "Asmi"], "likes Indian food"], excludes: ["not have anything on record"] } },
   },
   {
+    // The owner, 2026-10-21: asked this, HomeTalk listed the overdue bills with "suggested: pay_bill", ISO dates and no links.
+    id: "HT-132", surface: "hometalk", household: "A", category: "identity", actor: "a-kunal",
+    description: "\"What do you know about the family?\" is the family — every member by rules (roster.ts), each at a glance — never the attention summary, an action code or a raw date.",
+    utterance: "what do you know about the family",
+    expected: {
+      interpretation: "ask_status",
+      action: "answer",
+      answer: { includes: ["Kunal Mehta", "Upasana Mehta", "Asmi", "Manan", "Sunita", "4 people", "[Family](/family)"], excludes: ["suggested:", "pay_bill", "Needs attention", "2026-", "not have anything on record"] },
+    },
+  },
+  {
+    id: "HT-133", surface: "hometalk", household: "A", category: "identity", actor: "a-asmi",
+    description: "\"Tell me about us\", from a child, is the family from where she stands — she is \"you\" — and nothing about the household's money.",
+    utterance: "Tell me about us",
+    expected: { interpretation: "ask_status", action: "answer", answer: { includes: ["Asmi** — you", "Manan", "Kunal Mehta"], excludes: ["₹", "Electricity", "2026-"] } },
+  },
+  {
     id: "HT-118", surface: "hometalk", household: "A", category: "cross_domain", actor: "a-kunal",
     description: "\"What best time for 2 day getaway\" (live, 2026-10-19) is answered with the weekends nothing is on the family calendar, and what is on the others — never the attention summary.",
     utterance: "what best time for 2 day getaway",
@@ -115,7 +132,7 @@ const CONNECTED: HomeTalkCase[] = [
     id: "HT-33", surface: "hometalk", household: "A", category: "cross_domain", actor: "a-kunal",
     description: "When the internet bill is due is the internet bill's own date and amount.",
     utterance: "When is the internet bill due?",
-    expected: { interpretation: "ask_status", answer: { includes: ["Internet", "₹999", "2026-10-10"], excludes: ["Electricity"] } },
+    expected: { interpretation: "ask_status", answer: { includes: ["Internet", "₹999", ["2026-10-10", "Sat 10 Oct"]], excludes: ["Electricity"] } },
   },
   {
     id: "HT-34", surface: "hometalk", household: "B", category: "conflicts", actor: "b-arjun",
@@ -127,13 +144,13 @@ const CONNECTED: HomeTalkCase[] = [
     id: "HT-35", surface: "hometalk", household: "B", category: "cross_domain", actor: "b-arjun",
     description: "\"How much is the rent?\" is the rent's amount and date, even though no rule reads it — HomeBrain answers it from the record.",
     utterance: "How much is the rent?",
-    expected: { answer: { includes: ["Rent", "₹32,000", "2026-10-01"], excludes: ["Credit card"] } },
+    expected: { answer: { includes: ["Rent", "₹32,000", ["2026-10-01", "Thu 1 Oct"]], excludes: ["Credit card"] } },
   },
   {
     id: "HT-36", surface: "hometalk", household: "D", category: "cross_domain", actor: "d-neha",
     description: "\"School fees\" are a bill: the fee's amount and date, and nothing from the shopping.",
     utterance: "When are the school fees due?",
-    expected: { interpretation: "ask_status", answer: { includes: ["School fees", "₹85,000", "2026-09-30"], excludes: ["Milk"] } },
+    expected: { interpretation: "ask_status", answer: { includes: ["School fees", "₹85,000", ["2026-09-30", "Wed 30 Sep"]], excludes: ["Milk"] } },
   },
 
   // --- School ---
@@ -185,7 +202,7 @@ const CONNECTED: HomeTalkCase[] = [
     id: "HT-44", surface: "hometalk", household: "A", category: "cross_domain", actor: "a-kunal",
     description: "Whether milk is needed is the milk on record and why it is probably low — from past purchases, said as such.",
     utterance: "Do we need milk?",
-    expected: { interpretation: "ask_status", answer: { includes: ["Milk", "going by past purchases", "2026-09-21"], excludes: ["Atta"] } },
+    expected: { interpretation: "ask_status", answer: { includes: ["Milk", "going by past purchases", ["2026-09-21", "Mon 21 Sep"]], excludes: ["Atta"] } },
   },
   {
     id: "HT-45", surface: "hometalk", household: "A", category: "cross_domain", actor: "a-kunal",
@@ -1004,6 +1021,19 @@ const HOMEBRAIN: HomeBrainCase[] = [
     description: "A parent's \"my tomorrow\" carries every child's plans, and nothing that is not tomorrow.",
     question: "What have I got on tomorrow?",
     expected: { answer: { includes: ["Football", "Piano", "Maths worksheet"], excludes: ["Hindi test", "Solar system", "Parent-teacher"] } },
+  },
+  {
+    // The owner, 2026-10-21: "links are not appearing in chat anymore".
+    id: "HB-13", surface: "homebrain", household: "A", category: "cross_domain", actor: "a-kunal",
+    description: "A bill's date is said as a day and the answer links to Bills — never the ISO date the fact carries for a model, nor an internal action code.",
+    question: "When is the internet bill due?",
+    expected: { answer: { includes: ["Internet", ["Sat 10 Oct", "10 Oct", "October 10"], "[Bills](/bills)"], excludes: ["2026-10-10", "suggested:", "pay_bill"] } },
+  },
+  {
+    id: "HB-14", surface: "homebrain", household: "A", category: "identity", actor: "a-upasana",
+    description: "\"What do you know about my family?\" asked of HomeBrain itself leads with the people — each at a glance — not with whatever needs attention.",
+    question: "What do you know about my family?",
+    expected: { answer: { includes: ["Kunal", "Asmi", "Manan", "[Family](/family)"], excludes: ["suggested:", "2026-"] } },
   },
 ];
 

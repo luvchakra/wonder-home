@@ -49,6 +49,7 @@ import { composeStatusAnswer } from "@wonderhome/core/conversation/status";
 import { composeRoster } from "@wonderhome/core/conversation/roster";
 import { isAmafStart } from "@wonderhome/core/amaf/session";
 import { normaliseUtterance } from "@wonderhome/core/conversation/normalise";
+import { isoDateIn } from "@wonderhome/core/context/format";
 import { gatherHouseholdContext } from "@wonderhome/core/context/repository";
 import { invalidateHouseholdContext } from "@wonderhome/core/context/invalidation";
 import type { DeepReadRecord } from "@wonderhome/core/homebrain/deep-read";
@@ -59,6 +60,7 @@ import { translatorFor } from "@wonderhome/core/i18n/translate";
 import { addDays, resolveTemporal } from "@wonderhome/core/conversation/temporal";
 import { summarizeConversation } from "@wonderhome/core/conversation/summary";
 import { after } from "next/server";
+import { familyGlances } from "@wonderhome/core/homebrain/sleep/profiles";
 import { meaningForTurn, recalledMemoryIds, recordRecall } from "@wonderhome/core/homebrain/sleep/recall";
 import { publicEnv } from "@wonderhome/core/config/env";
 import { createAdminClient } from "@wonderhome/core/db/admin";
@@ -923,12 +925,27 @@ async function turnInEnglish(input: HomeTalkInput, speaking: Speaking) {
     brain = { source: "deterministic", factsSent: 0 };
   } else if (result.kind === "reply" && result.intent.action === "ask_status" && result.proposal.kind === "answer" && result.intent.parameters.scope === "people") {
     // Who is in the household: the whole member list, by rules (roster.ts).
-    const { data: petRows } = await supabase.from("pets").select("name, species").eq("household_id", householdId).eq("active", true);
+    // "What do you know about the family?" (`overview`) is the same list, each
+    // person at a glance from what this member may see, then what needs
+    // someone around the home — never health or money (the owner, 2026-10-21).
+    const overview = result.intent.parameters.overview === true;
+    const [{ data: petRows }, read] = await Promise.all([
+      supabase.from("pets").select("name, species").eq("household_id", householdId).eq("active", true),
+      overview ? (brainRead ?? readBrain()).catch(() => null) : Promise.resolve(null),
+    ]);
+    const glances = read
+      ? familyGlances(read.context.snapshot.items, {
+          memberIds: people.filter((person) => person.memberType !== "helper").map((person) => person.id),
+          today: isoDateIn(new Date(), membership.household.timezone),
+        })
+      : undefined;
     composedAt = Date.now();
     text = composeRoster(people, {
       viewerMemberId: membership.memberId,
       householdName: membership.household.name,
       pets: ((petRows as { name: string; species: string | null }[] | null) ?? []).map((pet) => ({ name: pet.name, species: pet.species })),
+      ...(glances ? { glances } : {}),
+      ...(read ? { attention: { count: read.agenda.needsYou.length, urgent: read.agenda.needsYou.filter((need) => need.riskLevel === "high").length } } : {}),
     });
     carry(speaking, people.some((person) => person.memberType === "child") ? ["child"] : []);
     brain = { source: "deterministic", factsSent: 0 };

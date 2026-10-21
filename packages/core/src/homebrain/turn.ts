@@ -8,6 +8,7 @@ import { answeredByArithmetic, answeringFacts, composeFromFacts, composeGrounded
 import { gateCandidates, groundFacts, type GroundedFact } from "./grounding";
 import { deepReadTargets, mergeLiveItems, withinDeepReadBudget, type DeepReadRecord } from "./deep-read";
 import { readBrainQuestion, type BrainReading } from "./question";
+import { isoDaysInWords } from "./say";
 import type { ViolationKind } from "./validate";
 
 /**
@@ -213,7 +214,8 @@ async function answerOnce(turn: HomeBrainTurn): Promise<HomeBrainAnswer> {
           facts,
           factsSent,
           validation,
-          text: restoreNames(outcome.draft.text, minimised.pseudonyms, turn.people),
+          // A day is said as a day ("Sat 10 Oct"), never as the ISO the facts carry for the model (say.ts).
+          text: isoDaysInWords(restoreNames(outcome.draft.text, minimised.pseudonyms, turn.people)),
           mode: outcome.draft.mode,
           source: outcome.attempts > 1 ? "model_regenerated" : "model",
         };

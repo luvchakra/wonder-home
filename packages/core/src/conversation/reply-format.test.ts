@@ -45,6 +45,11 @@ describe("the reply format", () => {
     expect(linkTo("/bills")).toBe("[Bills](/bills)");
     expect(linkTo("/groceries?tab=list", "the list")).toBe("[the list](/groceries?tab=list)");
     expect(linkTo("/nowhere", "there")).toBe("there");
+    // Screens replies already point to (executor.ts: "off the calendar", "See Health & Fitness") are real links (the owner, 2026-10-21).
+    expect(linkTo("/calendar", "calendar")).toBe("[calendar](/calendar)");
+    expect(linkTo("/health", "Health & Fitness")).toBe("[Health & Fitness](/health)");
+    expect(linkTo("/places")).toBe("[HomePlaces](/places)");
+    expect(linkTo("/home-send")).toBe("[HomeSend](/home-send)");
   });
 
   it("flattens to plain words for places that cannot render it", () => {
