@@ -63,6 +63,7 @@ export const recipesEn = {
   "recipes.inYours": "In your recipes",
   "recipes.openYours": "Open your recipes",
   "recipes.photo": "Photo: {author}, {licence}, Wikimedia Commons",
+  "recipes.photoOwn": "Photo: {author}",
   "recipes.photoSource": "Photo source",
   "recipes.notFound": "That recipe isn't in the catalog",
   "recipes.notFoundLede": "It may have been taken out. Your own recipes are still under Recipes.",

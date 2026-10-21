@@ -65,6 +65,7 @@ export const recipesAr: AreaCatalog<typeof recipesEn> = {
   "recipes.inYours": "في وصفاتك",
   "recipes.openYours": "فتح وصفاتك",
   "recipes.photo": "الصورة: {author}، {licence}، Wikimedia Commons",
+  "recipes.photoOwn": "الصورة: {author}",
   "recipes.photoSource": "مصدر الصورة",
   "recipes.notFound": "هذه الوصفة ليست في القائمة",
   "recipes.notFoundLede": "ربما أُزيلت. وصفاتك الخاصة ما زالت في الوصفات.",

@@ -65,6 +65,7 @@ export const recipesHi: AreaCatalog<typeof recipesEn> = {
   "recipes.inYours": "आपकी रेसिपी में",
   "recipes.openYours": "आपकी रेसिपी खोलें",
   "recipes.photo": "फ़ोटो: {author}, {licence}, Wikimedia Commons",
+  "recipes.photoOwn": "फ़ोटो: {author}",
   "recipes.photoSource": "फ़ोटो का स्रोत",
   "recipes.notFound": "यह रेसिपी सूची में नहीं है",
   "recipes.notFoundLede": "शायद इसे हटा दिया गया है। आपकी अपनी रेसिपी अब भी रेसिपी में हैं।",

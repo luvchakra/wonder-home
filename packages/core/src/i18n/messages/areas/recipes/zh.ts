@@ -65,6 +65,7 @@ export const recipesZh: AreaCatalog<typeof recipesEn> = {
   "recipes.inYours": "在你的菜谱中",
   "recipes.openYours": "打开你的菜谱",
   "recipes.photo": "照片：{author}，{licence}，Wikimedia Commons",
+  "recipes.photoOwn": "照片：{author}",
   "recipes.photoSource": "照片来源",
   "recipes.notFound": "目录中没有这道菜谱",
   "recipes.notFoundLede": "它可能已被移除。你自己的菜谱仍在“菜谱”中。",
