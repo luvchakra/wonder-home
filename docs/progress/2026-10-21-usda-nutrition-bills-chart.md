@@ -39,6 +39,16 @@
 - On a QA household seeded like the owner's at 360px, piped gas charts July to October and nothing scrolls sideways.
 - The Budget tab lists the budget, with Set a budget.
 
+## Also in this pull request
+- **Bills.** The Upcoming bills line always shows with Add a bill. With no bills it sits above the empty section, and the empty section no longer has its own button. Checked at 360px.
+- **Home & Upkeep (13-011).** A new request reads Open. The status picker lists the current status first, selected by default, and Update stays off until another is picked. Checked at 360px.
+- **Release notes.** Version 0.1 covers PRs #243–#283 in 14 items, in all eight languages (`help/release-notes.ts`, `help.release.0.1.*`).
+- **Vercel production settings.** `WONDERHOME_WEATHER_PROVIDER=open-meteo` and `WONDERHOME_DEVELOPER_API=on` were set at the owner's request, and take effect from the next deploy. `WONDERHOME_MALWARE_SCAN_ENDPOINT` is not set, because no scanning service has been chosen yet.
+- **Test data.** Nine test households from earlier sessions were deleted, with their HomeSend files. These were left in place pending the owner:
+  - five "Chakrabarty Family" households with no linked account;
+  - "Family" (Aarav);
+  - an older "Asmi Family" (`bc5c99ff`, linked accounts).
+
 ## Gates
 - typecheck passes.
 - Unit tests: 377, across commerce, meals, i18n and help, plus 74 in finance.

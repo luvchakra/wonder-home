@@ -344,3 +344,5 @@ disagree again.)
 | 2026-10-21 | 10 | 10-013 | Done | Week template moved from the Meals tab row to the header's top right (icon on a phone, named from sm, filled while open); three tabs fit on one line at 360px. |
 | 2026-10-21 | 25 | 25-031 | Done | USDA FoodData Central (SR Legacy) as the second nutrition source after IFCT 2017: 53 curated dairy, sugar and plain-food items linked, credited on every screen; live; 56 of 60 catalog dishes now carry nutrients. |
 | 2026-10-21 | 11 | 11-014 | Done | Monthly spend charts a bill's months as soon as they are entered (paid, given or the open bill's own); Add a bill on the Upcoming bills line; budgets on their own Budget tab. |
+| 2026-10-21 | 13 | 13-011 | Done | Home & Upkeep: a new request is Open (was Raised); the status picker starts at the current status and Update waits for a change. |
+| 2026-10-21 | — | Release 0.1 | Done | Release notes: Version 0.1 (PRs #243–#283), confirmed live by the owner, in all eight languages. |

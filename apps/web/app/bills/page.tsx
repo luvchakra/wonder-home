@@ -494,8 +494,8 @@ export default async function BillsPage({
               <SectionHeader
                 title={t("bills.upcoming")}
                 count={upcoming.length}
-                // The empty state below carries its own Add a bill, so the line carries it only when there are bills.
-                action={admin && upcoming.length > 0 ? <AddBillButton householdId={householdId} defaultCurrency={householdCurrency} labels={formLabels} choices={billChoices} /> : undefined}
+                // The line always shows, with Add a bill, even before the first bill (the owner, 2026-10-21); the empty state below has no second one.
+                action={admin ? <AddBillButton householdId={householdId} defaultCurrency={householdCurrency} labels={formLabels} choices={billChoices} /> : undefined}
               />
               {upcoming.length === 0 ? (
                 <EmptyState
@@ -503,7 +503,6 @@ export default async function BillsPage({
                   tone="money"
                   title={t("bills.upcoming.emptyTitle")}
                   description={t("bills.upcoming.emptyLede")}
-                  action={<AddBillButton householdId={householdId} defaultCurrency={householdCurrency} labels={formLabels} choices={billChoices} />}
                 />
               ) : (
                 <Card className="p-2">

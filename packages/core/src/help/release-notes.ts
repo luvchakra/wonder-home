@@ -31,6 +31,8 @@ export type ReleaseNote = ReleaseNoteShape & { title: string; items: string[] };
 
 /** Newest first. Add the next entry at the top, starting after the first entry's `throughPr`. */
 export const RELEASE_NOTES: readonly ReleaseNoteShape[] = [
+  // Version 0.1, confirmed live by the owner on 2026-10-21.
+  { id: "0.1", date: "2026-10-21", fromPr: 243, throughPr: 283 },
   { id: "2026-10-19", date: "2026-10-19", fromPr: 201, throughPr: 242 },
 ];
 

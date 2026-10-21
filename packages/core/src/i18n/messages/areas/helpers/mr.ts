@@ -219,7 +219,7 @@ export const helpersMr: AreaCatalog<typeof helpersEn> = {
   "upkeepForm.scheduledOn": "भेटीची तारीख",
   "upkeepForm.moveOn": "पुढे न्या",
   "upkeepForm.moveTo": "आता हे",
-  "upkeepForm.status.requested": "पाठवली",
+  "upkeepForm.status.requested": "खुला",
   "upkeepForm.status.scheduled": "बुक झाली",
   "upkeepForm.status.in_progress": "काम सुरू",
   "upkeepForm.status.awaiting_parts": "सुट्या भागांची वाट",
