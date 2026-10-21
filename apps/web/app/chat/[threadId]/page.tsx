@@ -4,7 +4,9 @@ import { after } from "next/server";
 import { CHAT_PAGE_KEYS, pageKeyFor, type ChatLinkKind } from "@wonderhome/core/chat/links";
 import { trendingTags, type Mentionable } from "@wonderhome/core/chat/composer";
 import { linkOptions, markRead, readMessages, readThread, recentTaggedMessages } from "@wonderhome/core/chat/repository";
+import { createAdminClient } from "@wonderhome/core/db/admin";
 import { listPets } from "@wonderhome/core/home/repository";
+import { sweepNotices } from "@wonderhome/core/notifications/notices-sweep";
 import { calledName, listMembers } from "@wonderhome/core/identity/households";
 import { AppShell } from "@wonderhome/core/shell/app-shell";
 
@@ -45,7 +47,12 @@ export default async function ChatThreadPage({ params }: { params: Promise<{ thr
   if (!thread || !messages || thread.householdId !== householdId) notFound();
   if (thread.kind !== "household" && !thread.people.some((person) => person.memberId === membership.memberId)) notFound();
   // Read once the page is on its way: nothing a person waits for.
-  after(() => markRead(supabase, threadId).catch(() => undefined));
+  // Its chat notice resolves as soon as it is read, rather than on the next clock tick.
+  after(() =>
+    markRead(supabase, threadId)
+      .then(() => sweepNotices(createAdminClient(), householdId))
+      .catch(() => undefined),
+  );
 
   const nameOf = new Map(members.map((member) => [member.id, calledName(member)]));
   const mentionables: Mentionable[] = [
