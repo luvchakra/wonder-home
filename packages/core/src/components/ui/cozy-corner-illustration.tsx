@@ -84,7 +84,7 @@ function CozyCat() {
         d="M378 218 C 360 200 356 168 374 158 C 376 176 386 190 396 200 Z"
         fill="oklch(0.62 0.04 60)"
       />
-      <circle cx="396" cy="196" r="46" fill="oklch(0.94 0.012 75)" />
+      <circle data-cat-head="" cx="396" cy="196" r="46" fill="oklch(0.94 0.012 75)" />
       <path d="M362 176 L 374 152 L 388 180 Z" fill="oklch(0.9 0.015 75)" />
       <path d="M408 178 L 418 150 L 432 176 Z" fill="oklch(0.9 0.015 75)" />
 

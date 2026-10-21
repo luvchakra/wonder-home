@@ -265,7 +265,7 @@ export function HomeDashboard({ session }: { session: Session }) {
             card says only what is on record or what a real provider sent
             (rule 9); on a phone it sits above the greeting rather than
             beside it, so nothing runs into the greeting (rule 15). */}
-        <header className="wh-rise relative min-h-[15.5rem] overflow-hidden max-sm:pb-10 rounded-[var(--wh-radius-lg)] sm:min-h-[16rem]">
+        <header className="wh-rise relative min-h-[15.5rem] overflow-hidden rounded-[var(--wh-radius-lg)] sm:min-h-[16rem]">
           <CozyCornerIllustration className="absolute inset-0 h-full w-full rtl:-scale-x-100" />
           <div
             aria-hidden
@@ -287,12 +287,7 @@ export function HomeDashboard({ session }: { session: Session }) {
             <TodayCard session={session} now={now} date={formatToday(timezone, now)} />
           </Suspense>
 
-          {/* On a phone the scene's cat is cropped away, so it sits whole in the corner, thinking (the owner, 2026-10-21). */}
-          <Suspense fallback={<HeroCatFigure />}>
-            <HeroCatThought session={session} now={now} />
-          </Suspense>
-
-          <div className="relative z-10 max-w-[60%] space-y-1 px-5 pt-3 pb-5 sm:max-w-[42%] sm:p-6">
+          <div data-hero-words="" className="relative z-10 max-w-[80%] space-y-1 px-5 pt-3 pb-5 sm:max-w-[42%] sm:p-6">
             <p className="text-lg font-medium text-[var(--wh-foreground-muted)]">{greetingFor(timezone, now)},</p>
             <h1 className="min-w-0 text-[2rem] leading-tight font-bold tracking-tight text-balance sm:text-[2.5rem]">
               {firstName}! <span aria-hidden className="wh-hand-wave">👋</span>
@@ -300,6 +295,11 @@ export function HomeDashboard({ session }: { session: Session }) {
             <p className="mt-1 text-base font-semibold text-[var(--wh-foreground)]">{t("home.doingGreat")}</p>
             <p className="text-sm text-[var(--wh-foreground-muted)]">{t("home.lede")}</p>
           </div>
+
+          {/* The cat thinking out loud, in the room the header has (the owner, 2026-10-21). */}
+          <Suspense fallback={<HeroCatFigure />}>
+            <HeroCatThought session={session} now={now} />
+          </Suspense>
         </header>
 
         {/* What reached WonderHome since this person last opened it: temporary, and gone once seen. */}

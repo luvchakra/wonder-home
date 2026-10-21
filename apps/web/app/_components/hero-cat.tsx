@@ -87,23 +87,21 @@ export async function HeroCatThought({ session, now }: { session: Session; now: 
 }
 
 /**
- * The cat and its bubble. On a phone the scene's cat is cropped away, so it is
- * drawn whole in the corner with the bubble above it; on a wider screen the
- * scene draws the cat, and the bubble floats over its head, clear of the
- * greeting and the date card.
+ * The cat and its bubble, in the room the header has (the owner, 2026-10-21:
+ * "show a think bubble over the cat in available area"). On a phone the
+ * scene's cat is cropped away, so the cat is drawn whole in its own row under
+ * the greeting with the bubble beside it, never over any words. On a wider
+ * screen the scene draws the cat, and the bubble finds the cat's head and sits
+ * just above it, clear of the date card (`follow`).
  */
 export function HeroCatFigure({ facts = [], thoughts = [], voices = [] }: { facts?: string[]; thoughts?: string[]; voices?: string[] }) {
   return (
     <>
-      <div aria-hidden className="pointer-events-none absolute end-2 bottom-2 z-0 flex w-[10rem] flex-col items-end sm:hidden">
-        <div className="relative mb-1 me-5 min-h-[4.5rem] w-full">
-          <CatThoughtBubble facts={facts} thoughts={thoughts} voices={voices} className="absolute end-0 bottom-0 max-w-[10rem]" />
-        </div>
-        <HeroCat className="h-auto w-[7.5rem]" />
+      <div aria-hidden className="pointer-events-none relative z-10 -mt-2 flex items-end justify-end gap-1 px-4 pb-3 sm:hidden">
+        <CatThoughtBubble facts={facts} thoughts={thoughts} voices={voices} className="mb-6 max-w-[13rem] min-w-0 flex-1" trail="toward-end" />
+        <HeroCat className="h-auto w-[6.5rem] shrink-0" />
       </div>
-      <div aria-hidden className="pointer-events-none absolute start-[36%] top-5 z-0 hidden w-[13rem] sm:block">
-        <CatThoughtBubble facts={facts} thoughts={thoughts} voices={voices} className="max-w-[13rem]" trail="start" />
-      </div>
+      <CatThoughtBubble facts={facts} thoughts={thoughts} voices={voices} follow trail="start" className="pointer-events-none absolute z-0 hidden w-[13rem] sm:block" />
     </>
   );
 }

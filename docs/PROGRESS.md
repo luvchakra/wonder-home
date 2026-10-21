@@ -11,14 +11,14 @@ in `docs/progress/`; for the running log of what changed when, `tracking/PROGRES
 
 ## The whole picture
 
-**350 of 375 stories done — 93.3%**
+**354 of 380 stories done — 93.2%**
 
 | Status | Stories |
 |---|---:|
-| Done | 350 |
+| Done | 354 |
 | In Progress | 9 |
 | Blocked | 1 |
-| Not Started | 11 |
+| Not Started | 12 |
 | Deferred | 4 |
 
 ## By module
@@ -33,20 +33,20 @@ in `docs/progress/`; for the running log of what changed when, `tracking/PROGRES
 | 05 Household Certification & Understanding | `██████████` | 12 | 12 | — |
 | 06 Actionable Notification Engine | `██████████` | 8 | 8 | — |
 | 07 Househelper & Home Operations | `██████████` | 10 | 10 | — |
-| 08 Kids & School Intelligence | `████████░░` | 20 | 24 | 3 in progress, 1 not started |
+| 08 Kids & School Intelligence | `████████░░` | 21 | 25 | 3 in progress, 1 not started |
 | 09 Commerce, Groceries & Pet Supplies | `██████████` | 9 | 9 | — |
-| 10 Meals & Cooking | `██████████` | 15 | 15 | — |
+| 10 Meals & Cooking | `██████████` | 16 | 16 | — |
 | 11 Bills, Fees & Finance | `█████████░` | 14 | 15 | 1 not started |
 | 12 Family Time & Social Activities | `████████░░` | 8 | 9 | 1 in progress |
 | 13 Maintenance, Laundry & Pet Care | `█████████░` | 10 | 11 | 1 in progress |
-| 14 AI Orchestration & Learning | `████████░░` | 29 | 34 | 2 in progress, 3 deferred |
+| 14 AI Orchestration & Learning | `████████░░` | 30 | 35 | 2 in progress, 3 deferred |
 | 15 Privacy, Security & Governance | `██████████` | 9 | 9 | — |
 | 16 Platform Admin & Operations | `██████████` | 8 | 8 | — |
 | 17 External Integrations | `██████████` | 9 | 9 | — |
 | 18 API & Developer Platform | `██████████` | 8 | 8 | — |
 | 19 Testing, Observability & Production | `██████████` | 8 | 8 | — |
 | 20 Subscriptions, Entitlements & Usage | `██████████` | 11 | 11 | — |
-| 21 Health and Fitness | `██████████` | 9 | 9 | — |
+| 21 Health and Fitness | `█████████░` | 10 | 11 | 1 not started |
 | 22 Internationalization and Localization | `████████░░` | 7 | 8 | 1 deferred |
 | 23 Smart Notifications | `██████████` | 13 | 13 | — |
 | 24 HomePlaces | `██████████` | 12 | 12 | — |
@@ -72,6 +72,7 @@ in `docs/progress/`; for the running log of what changed when, `tracking/PROGRES
 | `14-023` HomeBrain 3.0 phase D — keep-warm hardening | 14 AI Orchestration & Learning | P1 | Deferred |
 | `14-027` HomeBrain 4.0 phase 3 — one pass over the store | 14 AI Orchestration & Learning | P0 | In Progress |
 | `14-031` HomeBrain 4.0 phase 7 — keep it whole | 14 AI Orchestration & Learning | P1 | In Progress |
+| `21-011` Edit an appointment | 21 Health and Fitness | P2 | Not Started |
 | `22-008` Right-to-left readiness | 22 Internationalization and Localization | P1 | Deferred |
 | `25-004` Send to Cook over WhatsApp | 25 HomeFood | P1 | Not Started |
 | `25-007` USDA nutrition for catalog items, linked in phases | 25 HomeFood | P2 | Not Started |
@@ -247,7 +248,7 @@ in `docs/progress/`; for the running log of what changed when, `tracking/PROGRES
 
 ### 08 — Kids & School Intelligence
 
-20 of 24 done `████████░░`
+21 of 25 done `████████░░`
 
 | Story | Priority | Status | Notes |
 |---|---|---|---|
@@ -275,6 +276,7 @@ in `docs/progress/`; for the running log of what changed when, `tracking/PROGRES
 | `08-023` The cat walks, goes back and forth, and goes round its whole list | P1 | In Progress | The owner, 2026-10-21 ("repeat the quotes only when the stored list is finished"; "make the cat move in the empty area"; "show left arrow icon and right arrow icon around the 'tell me another' button"). `companion_sayings_for` now offers every saying that suits the child, unheard first, and only once all are heard the one heard longest ago; telling one again moves its `heard_at` on (`markSayingHeard`, column-limited update policy; migration `20261021031000_companion_sayings_cycle.sql`, `test-companion-sayings-rls.mjs` 4/4). Before the migration reaches the live project the cat behaves as before. The cat strolls down its column and back with a step-bob (`wh-cat-wander`, still under reduced motion). The left arrow goes back the way the child came this visit, the right arrow forward again; Tell me another always finds a new line; the controls sit under the cat across the card so both arrows fit at 360px. Help ¶10 in all eight languages. Waits on: applying the migration live (two `apply_migration` calls were cancelled on 2026-10-21). |
 | `08-024` One stray tap never takes a tick back | P1 | Done | The owner, 2026-10-21 ("yesterday it was showing 1 star and 1 streak, but today is showing 0"). The API log showed Asmi's check-in for 20 Oct (17:28 UTC) taken back at 18:12 by the done button's second tap (`undoCheckIn`, not a grown-up's Not yet). The done button now asks first: one tap on a done tick shows "Tap again to take it back", which lapses after four seconds; only a second tap takes it back (`kid-done-button.tsx`). Asmi's 20 Oct tick was restored on the live project (1 star, the streak resumes with today's). Words in all eight languages; help ¶10. Browser QA at 360px: one tap asks, the question lapses, the check-in stays on record. |
 | `08-025` Add homework and Connect school sit under the child picker | P2 | Done | The owner, 2026-10-21 ("bring this row in between these lines, these should specific to each child"). The two actions moved out of the page header to a row between the child picker and the Overview/Homework/Calendar/Goals tabs (`school/page.tsx`). Add homework opens on the child picked above (`defaultChildId` on `AddHomeworkButton`); Connect school still opens Integrations, because a school portal is connected for the household. Help (Kids & School ¶1) in all eight languages. Browser QA at 360px and 1280px: the row sits between the pills and the tabs, no horizontal scroll, and picking the second child then Add homework shows that child in For. |
+| `08-026` Touch the cat and it darts away | P2 | Done | The owner, 2026-10-21 ("if you try to touch the cat, it should quickly move away!"). A touch on the companion cat (or a mouse coming near it) sends it to the far side of its card from the finger in 140 ms, with a sideways skip, never past the card's edge (worked out from where it rests, so a second tap moves on from there rather than off the card); it strolls back after 1.5 s (`companion-card.tsx`, `flee`). A touch that arrives as two pointer events counts once. Still under reduced motion. Browser QA at 360px: the cat moved about 370px inside a card of 466px and came back. |
 
 ### 09 — Commerce, Groceries & Pet Supplies
 
@@ -294,7 +296,7 @@ in `docs/progress/`; for the running log of what changed when, `tracking/PROGRES
 
 ### 10 — Meals & Cooking
 
-15 of 15 done `██████████`
+16 of 16 done `██████████`
 
 | Story | Priority | Status | Notes |
 |---|---|---|---|
@@ -313,6 +315,7 @@ in `docs/progress/`; for the running log of what changed when, `tracking/PROGRES
 | `10-013` Week template at the header's top right | P1 | Done | The owner, 2026-10-21 ("move the weekly template to the top right, align all labels properly"). Week template left the tab row for a link at the right end of the Meals header, beside Suggest / Plan a meal or Add recipe / Add preference: an icon with an accessible name on a phone, icon and words from `sm`, filled while the template is open (tapping it again goes back to Plan). It is the same height as the header pills. With three tabs (Plan, Recipes, Preferences) each label and its count sit on one line at 360px. Browser QA at 360px and 1280px: no horizontal scroll. |
 | `10-014` Meal cards folded, with the dish's own picture; Week template a named tab | P1 | Done | The owner, 2026-10-21 ("keep all the entries folded in, minimize the height of each card so maximum entries are visible on screen. use real pictures from catalog wherever possible"; "instead of showing calendar icon, show Template tab instead with label"). A planned meal is one short `ExpandableRow`: the dish's catalog picture (from the recipe it came from, else the catalog dish of the same name; the meals tile only when neither has one), the dish, its meal and ready-by time, how many ingredients are still to get, and its status. The chevron opens the rest: WonderHome's pick, start time and cook, what is missing, nutrients, View recipe, Ingredients, Change meal and Choose again. Week template left the header for a tab named Template, and Preferences left the tab row for a named sliders button to its right ("remove preferences tab, instead put it as an icon on the right of template tab"): Plan, Recipes, Template on one line at 360px; 10-013's header icon is gone. The open card's time line breaks between its pieces, never inside "8:00 am". Words in all eight languages. |
 | `10-015` Add preference on its list, not the page header | P2 | Done | The owner, 2026-10-21 ("remove add preference button from top"). Add preference moved from the Meals header to the Preferences list's own heading (and stays the empty state's action), so adding is still one tap away (rule 12). Browser QA at 360px. |
+| `10-016` Like and dislike a dish | P1 | Done | The owner, 2026-10-21 ("give like and dislike feature in meals and recipes entries"). Every planned meal (beside its chevron, `ExpandableRow` `trailing`), each of the family's own recipes and each WonderHome idea card has I like this and Not for me (`meals/dish-taste.tsx`, `taste-actions.ts`). A taste is the person's own `food_preferences` row for that dish (`preference` or `dislike`, member scope), so meal ideas, the week template and HomeBrain already read it; tapping the same one again takes it back; a dish already on record for an allergy, a medical or an ethical reason is never overwritten by a tap. A dish shows "Liked by …" with the family members who like it. Words and help (Meals ¶20) in all eight languages. Browser QA at 360px and 1280px: a like on Dal tadka wrote the member's preference row and showed pressed; 60 recipe cards carry the pair; a dislike on a recipe card showed pressed; no horizontal scroll. |
 
 ### 11 — Bills, Fees & Finance
 
@@ -372,7 +375,7 @@ in `docs/progress/`; for the running log of what changed when, `tracking/PROGRES
 
 ### 14 — AI Orchestration & Learning
 
-29 of 34 done `████████░░`
+30 of 35 done `████████░░`
 
 | Story | Priority | Status | Notes |
 |---|---|---|---|
@@ -410,6 +413,7 @@ in `docs/progress/`; for the running log of what changed when, `tracking/PROGRES
 | `14-032` HomeBrain Sleep (HomeBrain 5.0) — a nightly tidy-up, meaning, links and profiles | P1 | Done | The owner, 2026-10-19: the brain's sleep built for HomeBrain, automatic, review only for contradictions (PR #252). Migration `20261019160000_homebrain_sleep.sql` (live, `verify:live` 317/317): memory `salience`/`tier`/`valid_until`/`merged_into`; `homebrain_recall`, `homebrain_runs`, `homebrain_consolidations`, `homebrain_links`, `homebrain_embeddings` (pgvector, 768) with `match_homebrain_embeddings`. `homebrain/sleep/`: `consolidate.ts` (`planSleep`: let go of empty notes, tag salience, expire what is past, read notes into person–stance–thing, merge the same thing, split a sentence about several people, file a note under its person, conflicts to Needs review, merge by meaning only near-identical and ask a model when close, rest what is unused for 90 days, wake on use), `run.ts` (one household's night, once per local day, between 2 and 5 am on its own clock, on the delivery tick after the response), `undo.ts`, `links.ts` (rule links plus validated model links, followed by the graph as `associated`), `profiles.ts` (a person at a glance, built per turn from what the viewer may see), `embeddings.ts` (household Google/OpenAI key, else its Gemini key; names never sent; data-use classes only), `recall.ts` (meaning on the turn within 900 ms; recall counted after the response), `sleep-model.ts`. Learned tab: While you slept, with Undo and Bring back; Connections. Spoken lists read a heading and its lines as one sentence (`groupedForSpeech`). Rule "What do you know about X?" → HomeBrain, profile first (HT-117). Help ¶5 in 8 languages |
 | `14-033` "When should we go away?" answered from the calendar | P1 | Done | Live finding, 2026-10-19: "what best time for 2 day getaway" fell into the wide status net and was answered with the attention summary. `homebrain/insights.ts` gains rule `free_window` (`tripQuestion` reads when and how many days): the next 8 weekends with nothing on the family calendar, and what is on the others — events, school events and exams, someone away, an exam the day after. Drawn as an insight that answers the question (`grounding.ts`), so a model may cite it and the rules answer with it. Golden case HT-118, `free-window.test.ts` (PR #254) |
 | `14-034` Long weekends from public holidays | P1 | Done | The owner, 2026-10-19: "add public holidays so it suggests long weekends". `calendar/holidays.ts` (`listHouseholdHolidays`: the household's country, national days, six months ahead) feeds HomeBrain's context as `holiday` items (calendar, general), in the store and the live read. `free_window` leads with the long weekends a holiday makes — a Friday or Monday (three days), a Thursday or Tuesday with one day taken off (four) — where nothing is on for the family, never one already begun. A rule reads "which weekend is free for a trip?" as a HomeBrain question; a trip fact is not cut to "this weekend". Golden case HT-119 (Gandhi Jayanti in household A). Help Calendar ¶10 in 8 languages (PR #255). Destinations for those weekends: 24-011. "Which are the next long weekends coming up" (live, 2026-10-20) was answered with the calendar's next three months: it is now read as this question (`tripQuestion` names "long weekends", the rule pattern takes it) and answered with only the long weekends, up to five, or says there are none; golden case HT-120 |
+| `14-035` The Home cat thinks something new each load | P2 | Done | The owner, 2026-10-21 ("only a small portion of the cat is visible now, show the max possible portion of cat, it should be moving a bit. no thought bubble appearing, use ai to create something new on every page load"). On a phone the cozy corner's cat is drawn whole in the header's corner (`HeroCat`, the same shapes as the scene), breathing gently (`wh-cat-bob`) and blinking, with a thought bubble. The thought is written by the platform's model (`home/cat-thoughts.ts`): only the language is sent, never anything of a household; a batch of sixteen per language is kept per server for three hours, each load picks one, and every line is checked first (one short sentence, no numbers, links, quotes or emoji). A page never waits on it beyond 1.2 s once per server; a failed batch is not asked again for 15 minutes; without a key or a batch the cat thinks one of eight built-in lines (`today.thought.*`, eight languages). Tests: 4. Follow-up the same day (the owner: "show a think bubble over the cat in available area, in thought bubble show useful info. it should appear randomly, with seamless animation, it should speak in cat language"): the bubble now says what is on record for the viewer — tonight's dinner, today's and tomorrow's calendar, how much is on the list to buy (`home/cat-facts.ts`, rules and catalog keys only, read through the viewer's own session; tested) — wrapped in a cat's voice ("Meow! …", "Purr… …", in each language), with a passing thought now and then. It rises and fades at random moments with a new line each time (`CatThoughtBubble`; one thought stays under reduced motion). On a phone the cat and its bubble sit in their own row under the greeting; on a wider screen the bubble finds the cat's head and takes the first spot clear of the greeting and the date card. Browser QA at 360, 412, 1024 and 1280px: the bubble covered neither the greeting nor the date card, no horizontal scroll. Help (Today and Home ¶8) in all eight languages. |
 
 ### 15 — Privacy, Security & Governance
 
@@ -456,7 +460,7 @@ in `docs/progress/`; for the running log of what changed when, `tracking/PROGRES
 | `17-006` WhatsApp | P1 | Done | WhatsApp Cloud API adapter behind the 06-008 channel shape (approved template, E.164 only, closed-word errors); new due notifications now go out on the member's live channels (`notifications/deliver.ts`) with `sent`/`delivery_failed` events; signed webhook records delivered/seen/failed by provider message id and honours STOP; inert until a deployment sets `WHATSAPP_*` |
 | `17-007` Weather | P1 | Done | Open-Meteo behind the 13-005 weather port; an Admin picks an area (coordinates rounded to ~1 km, `weather_locations`), the forecast is cached hourly on the household's row, entitlement `home.weather` decided on the server; laundry/drying plans around it; outages recorded on the connection only, last forecast serves ≤6 h; off unless the deployment sets `WONDERHOME_WEATHER_PROVIDER=open-meteo` |
 | `17-008` Smart home | P2 | Done | One canonical device payload behind the 17-001 contract; a device is linked to an appliance by an Admin (or ignored), never inferred; only fresh readings from linked devices become `home_device_signals`, once each, with provider confidence capped below certainty; outages change connection health only; `home_device_links` (sync-created, Admin decides asset/ignored), Devices section on Integrations; POST integrations/smart-home/sync (409 until a provider is live) |
-| `17-009` Home's date card: the day's weather, a film in cinemas and a family pick to stream | P2 | Done | The owner, 2026-10-21 ("make this card longer and show more weather info on this card, any new movies released, any good family stuff to watch on ott. align this nicely and show something new on every load"). The date pill became a card (`_components/today-card.tsx`, streamed behind the greeting): the day and household; where Weather is on, now, the day's high and low (°F where the household measures in imperial) and rain still ahead today with its time (`home/today-weather.ts`, tested), else that the day is dry; and where `TMDB_API_KEY` is set, one film now playing and one family film or show on subscription streaming in the household's region (`home/screen-picks.ts`: TMDB adapter, adult titles dropped, per-server six-hour cache, last good lists kept on failure, a different pair each load; tested), each opening its TMDB page with where to watch, with TMDB's attribution. Without a key nothing about films is shown. CSP allows TMDB's image host. Today's plan stays one tap away on the card. Words and help (Today and Home ¶7) in all eight languages. Waits on: a person creating a TMDB account and setting `TMDB_API_KEY` in Vercel. |
+| `17-009` Home's date card: the day's weather, a film in cinemas and a family pick to stream | P2 | Done | The owner, 2026-10-21 ("make this card longer and show more weather info on this card, any new movies released, any good family stuff to watch on ott. align this nicely and show something new on every load"). The date pill became a card (`_components/today-card.tsx`, streamed behind the greeting): the day and household; where Weather is on, now, the day's high and low (°F where the household measures in imperial) and rain still ahead today with its time (`home/today-weather.ts`, tested), else that the day is dry; and where `TMDB_API_KEY` is set, one film now playing and one family film or show on subscription streaming in the household's region (`home/screen-picks.ts`: TMDB adapter, adult titles dropped, per-server six-hour cache, last good lists kept on failure, a different pair each load; tested), each opening its TMDB page with where to watch, with TMDB's attribution. Without a key nothing about films is shown. CSP allows TMDB's image host. Today's plan stays one tap away on the card. Words and help (Today and Home ¶7) in all eight languages. Waits on: a person creating a TMDB account and setting `TMDB_API_KEY` in Vercel. Follow-up the same day: where Weather is on but no area has been chosen, an Admin sees "Show the weather here: pick your area" on the card, linking to Integrations → Weather (the owner's own households had none, so the card showed only the date). The home address is not used without that choice, because choosing the area is the consent for it to leave. |
 
 ### 18 — API & Developer Platform
 
@@ -508,7 +512,7 @@ in `docs/progress/`; for the running log of what changed when, `tracking/PROGRES
 
 ### 21 — Health and Fitness
 
-9 of 9 done `██████████`
+10 of 11 done `█████████░`
 
 | Story | Priority | Status | Notes |
 |---|---|---|---|
@@ -521,6 +525,8 @@ in `docs/progress/`; for the running log of what changed when, `tracking/PROGRES
 | `21-007` Vitals & measurement routines | P1 | Done | `health_measurement_routines` (created first, `cadence_days`/`preferred_time`/`reminder_enabled`/`next_due_on`/`last_completed_on`) and `health_vitals` (`value`/`secondary_value` for a paired reading like blood pressure, free-text `unit`, `status` active/archived, `routine_id` traces a reading back to the routine that produced it), same self-or-guardian RLS shape as every other health entity; `completeRoutine` records the real reading and advances `next_due_on` by the routine's own cadence in one step; `summarizeVitalTrend`/`describeVitalTrend` are pure verifiable arithmetic ("your last N readings were recorded over the past M weeks"), never a stated conclusion; HomeTalk's `log_vital` now actually executes via `createVital` — blood pressure/pulse/steps resolve without an explicit unit (their one conventional unit), every other type requires one or is honestly declined; day-scale reminder sweep (`routine-reminders.ts`) folded into `/platform/retention` alongside appointment/checkup reminders; add/edit/archive/reactivate UI for vitals, add/edit/complete/dismiss/reactivate UI for routines; live QA surfaced and fixed two real gaps — a dismissed routine with no completion history had no path back to "Bring back" (now included in Recent), and HomeTalk only recognized "My X was Y" phrasing (added "Log/Record my X as Y"); live-verified 2026-09-22 |
 | `21-008` Fitness & connected-health scaffolding | P1 | Done | `health_fitness_goals`/`health_fitness_sessions` (new migration, applied live, verified via direct schema/RLS introspection — no local Supabase credentials available in this session to run `verify:live`'s scripted checks), same self-or-guardian RLS shape as every other health entity; `health/health-provider.ts`'s `HealthProvider` is a real registry — manual/home_talk/home_send/calendar declared `live: true`, apple_health_kit/android_health_connect/wearable `live: false` and refused by `assertHealthProviderLive` before any write; `health/fitness.ts`'s goal (active/dismissed, mirroring measurement routines) and session (active/archived, mirroring vitals) services depend only on that abstraction, never a provider SDK. No leaderboard, no guilt messaging, no child fitness surveillance anywhere in the module — a goal or session lives only in Overview's Recent, never escalated to Needs attention. HomeTalk's `set_fitness_goal` ("I want to walk three times a week") now genuinely executes via `createFitnessGoal`, replacing the "not tracked yet" stub from 21-006; `mapFitnessActivity` maps free speech onto the known activity set or keeps the household's own words. Add/edit/dismiss/reactivate UI for goals and add/edit/archive/reactivate for sessions on `/health`, a session optionally linking to the goal it counts toward. `countSessionsInCurrentPeriod` is pure, verifiable arithmetic, never a scored conclusion. OpenAPI extended with the four new routes |
 | `21-009` One Add for Health & Fitness | P2 | Done | The owner, 2026-10-21 ("too many entry options"). Eight header pills became one Add opening a grouped sheet (Health · Doctor visits · Fitness), kit `AddMenu`; every form reachable as before. Help (Health) in all eight languages. |
+| `21-010` Who can see it, on every sheet | P1 | Done | The owner, 2026-10-21: an edit sheet had no "Who can see this", and picking "People I choose" offered no people. One `HealthPrivacyField` (`_components/health-privacy-field.tsx`) on every create and edit sheet: the scope, and for "People I choose" a checkbox list of the other members, pre-ticked from the subject's `health_consents`, with a line saying it is that person's own sharing list. A viewer who is neither the subject nor their guardian sees that said, never a control. Saving makes the list equal to the ticks (`(auth)/health-sharing.ts`, pure `health/sharing.ts`'s `planSharingChange`), under the actor's session so RLS decides. `privacyScope` added to the issue, appointment, checkup and routine update inputs; no migration (the update policies are row-level). Awaiting browser QA at 360px and desktop. Same PR: a reading's Unit is picked, not typed (the owner: "make the unit a drop-down, avoid free text fields as much as possible"), from `VITAL_UNITS` per measurement with Add new… (`VitalUnitField`, in Record a reading, its edit and routine readings). Browser QA at 360px: Record a reading offers kg/lb/g for Weight; choosing People I choose listed Priya QA; saving with her ticked stored the reading as `selected_family` and her `health_consents` row. |
+| `21-011` Edit an appointment | P2 | Not Started | Follow-up from 21-010: an appointment has status actions only, no edit sheet, so its details and "Who can see this" cannot be changed after booking (rule 12). `updateAppointment` already accepts `privacyScope`; it needs an action and a sheet. |
 
 ### 22 — Internationalization and Localization
 

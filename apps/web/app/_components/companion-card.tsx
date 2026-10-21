@@ -215,7 +215,7 @@ export function CompanionCard({
           >
             <CompanionCat
               coat={naming ? coat : keptCoat}
-              className="wh-cat-wander absolute start-0 top-0 size-16 sm:size-24"
+              className={`wh-cat-wander absolute start-0 top-0 size-16 sm:size-24 ${dodge ? "[animation-play-state:paused]" : ""}`}
             />
           </span>
         </div>
