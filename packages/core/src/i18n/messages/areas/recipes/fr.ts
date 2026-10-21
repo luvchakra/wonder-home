@@ -65,6 +65,7 @@ export const recipesFr: AreaCatalog<typeof recipesEn> = {
   "recipes.inYours": "Dans vos recettes",
   "recipes.openYours": "Ouvrir vos recettes",
   "recipes.photo": "Photo : {author}, {licence}, Wikimedia Commons",
+  "recipes.photoOwn": "Photo : {author}",
   "recipes.photoSource": "Source de la photo",
   "recipes.notFound": "Cette recette n’est pas dans le catalogue",
   "recipes.notFoundLede": "Elle a peut-être été retirée. Vos propres recettes sont toujours dans Recettes.",

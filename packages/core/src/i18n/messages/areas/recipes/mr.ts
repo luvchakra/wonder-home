@@ -65,6 +65,7 @@ export const recipesMr: AreaCatalog<typeof recipesEn> = {
   "recipes.inYours": "तुमच्या पाककृतींमध्ये",
   "recipes.openYours": "तुमच्या पाककृती उघडा",
   "recipes.photo": "फोटो: {author}, {licence}, Wikimedia Commons",
+  "recipes.photoOwn": "फोटो: {author}",
   "recipes.photoSource": "फोटोचा स्रोत",
   "recipes.notFound": "ही पाककृती सूचीमध्ये नाही",
   "recipes.notFoundLede": "कदाचित ती काढून टाकली असेल. तुमच्या स्वतःच्या पाककृती पाककृतींमध्ये आहेतच.",

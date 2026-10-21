@@ -119,11 +119,14 @@ export default async function CatalogRecipePage({ params }: { params: Promise<{ 
         <header className="wh-rise space-y-3">
           {dish.imageUrl ? (
             <figure className="space-y-1">
-              {/* eslint-disable-next-line @next/next/no-img-element -- the catalog's own copy of a Commons picture, already sized */}
+              {/* eslint-disable-next-line @next/next/no-img-element -- the catalog's own copy of its picture, already sized */}
               <img src={dish.imageUrl} alt={dish.name} className="aspect-[16/10] w-full rounded-[var(--wh-radius)] object-cover shadow-[var(--wh-shadow-card)] sm:aspect-[21/9]" />
               {dish.image?.attribution ? (
                 <figcaption className="text-[0.6875rem] text-[var(--wh-foreground-subtle)]">
-                  {t("recipes.photo", { author: dish.image.attribution, licence: dish.image.licence ?? "CC" })}
+                  {/* A Commons picture names its licence and links its page; the family's own photo names who took it (2026-10-21). */}
+                  {dish.image.sourceUrl
+                    ? t("recipes.photo", { author: dish.image.attribution, licence: dish.image.licence ?? "CC" })
+                    : t("recipes.photoOwn", { author: dish.image.attribution })}
                   {dish.image.sourceUrl ? (
                     <>
                       {" · "}

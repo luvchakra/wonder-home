@@ -498,8 +498,10 @@ WonderHome's AI layer is one pipeline with three named, real surfaces —
   seam (`homesend/malware-scan.ts`'s `scanForMalware`, wired in through
   `security.ts`'s `assessUploadSecurity`) alongside the existing
   magic-byte check — provider-neutral and genuinely inert until a
-  deployment sets `WONDERHOME_MALWARE_SCAN_ENDPOINT`, same discipline as
-  every other integration point here. The classifier's structured output
+  deployment sets `WONDERHOME_MALWARE_SCAN_ENDPOINT`, or
+  `WONDERHOME_MALWARE_SCAN_PROVIDER=cloudmersive` (the owner's pick,
+  2026-10-21) together with `WONDERHOME_MALWARE_SCAN_KEY` — same discipline
+  as every other integration point here. The classifier's structured output
   runs through a deterministic backstop (`classify-intake.ts`'s
   `sanitizeIntakeExtraction`) that nulls out any field a hallucinating
   model set outside its own claimed kind — never trusted to classify,
