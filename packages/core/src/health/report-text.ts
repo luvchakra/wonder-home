@@ -21,7 +21,7 @@ const MAX_INFLATED_BYTES = 4 * 1024 * 1024;
 
 /** Streams that are never page text: images, fonts, metadata, cross-reference and object streams. */
 const NOT_TEXT = /\/(?:Length1|Length2|Length3)\b|\/Type\s*\/(?:XRef|ObjStm|Metadata|EmbeddedFile|XObject)\b|\/Subtype\s*\/(?:Image|Type1C|CIDFontType0C|OpenType|XML|Form)\b/;
-const OTHER_FILTERS = /\/(?:DCTDecode|JPXDecode|CCITTFaxDecode|JBIG2Decode|LZWDecode|ASCII85Decode|ASCIIHexDecode|RunLengthDecode)\b/;
+const OTHER_FILTERS = /\/(?:DCTDecode|JPXDecode|CCITTFaxDecode|JBIG2Decode|LZWDecode|RunLengthDecode)\b/;
 
 function inflate(data: Buffer): Buffer | null {
   try {
@@ -34,6 +34,57 @@ function inflate(data: Buffer): Buffer | null {
       return null;
     }
   }
+}
+
+/** ASCII85 (`<~ … ~>` optional), as some report generators wrap a compressed stream in it. */
+function ascii85(data: Buffer): Buffer | null {
+  const text = data.toString("latin1").replace(/^\s*<~/, "").replace(/~>[\s\S]*$/, "").replace(/\s+/g, "");
+  if (text.length * 0.8 > MAX_INFLATED_BYTES) return null;
+  const out: number[] = [];
+  let group: number[] = [];
+  for (const char of text) {
+    if (char === "z" && group.length === 0) {
+      out.push(0, 0, 0, 0);
+      continue;
+    }
+    const code = char.charCodeAt(0) - 33;
+    if (code < 0 || code > 84) return null;
+    group.push(code);
+    if (group.length === 5) {
+      const value = group.reduce((sum, digit) => sum * 85 + digit, 0);
+      out.push((value >>> 24) & 0xff, (value >>> 16) & 0xff, (value >>> 8) & 0xff, value & 0xff);
+      group = [];
+    }
+  }
+  if (group.length === 1) return null;
+  if (group.length > 1) {
+    const kept = group.length - 1;
+    while (group.length < 5) group.push(84);
+    const value = group.reduce((sum, digit) => sum * 85 + digit, 0);
+    out.push(...[(value >>> 24) & 0xff, (value >>> 16) & 0xff, (value >>> 8) & 0xff, value & 0xff].slice(0, kept));
+  }
+  return Buffer.from(out);
+}
+
+function asciiHex(data: Buffer): Buffer | null {
+  const hex = data.toString("latin1").replace(/>[\s\S]*$/, "").replace(/\s+/g, "");
+  if (/[^0-9a-f]/i.test(hex)) return null;
+  return Buffer.from(hex.length % 2 ? `${hex}0` : hex, "hex");
+}
+
+/** Applies a stream's filters in their order; null when one is not a filter this reads. */
+function decodeStream(dict: string, body: Buffer): Buffer | null {
+  const listed = /\/Filter\s*(\[[^\]]*\]|\/\w+)/.exec(dict)?.[1] ?? "";
+  const filters = listed.match(/\/\w+/g) ?? [];
+  let data: Buffer | null = body;
+  for (const filter of filters) {
+    if (!data) return null;
+    if (filter === "/FlateDecode" || filter === "/Fl") data = inflate(data);
+    else if (filter === "/ASCII85Decode" || filter === "/A85") data = ascii85(data);
+    else if (filter === "/ASCIIHexDecode" || filter === "/AHx") data = asciiHex(data);
+    else return null;
+  }
+  return data;
 }
 
 /** Every content stream's decoded bytes, as latin1 text. */
@@ -49,7 +100,7 @@ function contentStreams(raw: string): string[] {
     const dict = raw.slice(Math.max(0, raw.lastIndexOf("obj", match.index)), match.index);
     if (NOT_TEXT.test(dict) || OTHER_FILTERS.test(dict)) continue;
     const body = Buffer.from(raw.slice(start, end).replace(/\r?\n$/, ""), "latin1");
-    const decoded = /\/FlateDecode\b/.test(dict) ? inflate(body) : body;
+    const decoded = decodeStream(dict, body);
     if (!decoded) continue;
     const text = decoded.toString("latin1");
     if (/\bBT\b/.test(text) && /\bET\b/.test(text)) out.push(text);

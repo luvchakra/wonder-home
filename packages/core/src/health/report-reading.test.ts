@@ -167,6 +167,28 @@ describe("extractPdfText", () => {
     }
   });
 
+  it("reads a stream that is ASCII85 over Flate, as report generators like ReportLab write it", () => {
+    function ascii85(bytes: Buffer): string {
+      let out = "";
+      for (let i = 0; i < bytes.length; i += 4) {
+        const chunk = [0, 1, 2, 3].map((k) => bytes[i + k] ?? 0);
+        let value = ((chunk[0]! << 24) | (chunk[1]! << 16) | (chunk[2]! << 8) | chunk[3]!) >>> 0;
+        const digits: string[] = [];
+        for (let d = 0; d < 5; d++) {
+          digits.unshift(String.fromCharCode((value % 85) + 33));
+          value = Math.floor(value / 85);
+        }
+        const kept = Math.min(4, bytes.length - i) + 1;
+        out += kept === 5 && digits.join("") === "!!!!!" ? "z" : digits.slice(0, kept).join("");
+      }
+      return `${out}~>`;
+    }
+    const body = Buffer.from(ascii85(deflateSync(Buffer.from(content, "latin1"))), "latin1");
+    const head = Buffer.from(`%PDF-1.4\n1 0 obj\n<< /Filter [ /ASCII85Decode /FlateDecode ] /Length ${body.length} >>\nstream\n`, "latin1");
+    const text = extractPdfText(new Uint8Array(Buffer.concat([head, body, Buffer.from("\nendstream\nendobj\n%%EOF\n", "latin1")])));
+    expect(text).toContain("LDL Cholesterol 162 H mg/dL <100");
+  });
+
   it("is null for a PDF with no readable text layer, or for bytes that are not a PDF", () => {
     expect(extractPdfText(pdf("BT ET", true))).toBeNull();
     expect(extractPdfText(new Uint8Array(Buffer.from("not a pdf at all, just words and words")))).toBeNull();
