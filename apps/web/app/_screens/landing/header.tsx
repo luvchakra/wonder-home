@@ -16,6 +16,7 @@ const NAV = [
   { href: "#pricing", label: "Pricing" },
   { href: "#security", label: "Security" },
   { href: "#stories", label: "Stories" },
+  { href: "/careers", label: "Careers" },
 ];
 
 /**
@@ -51,17 +52,17 @@ export function LandingHeader() {
       )}
     >
       <div className="mx-auto flex h-16 max-w-[var(--wh-content-wide)] items-center justify-between gap-4 px-4 lg:px-8">
-        <a href="#top" aria-label="WonderHome" className="min-w-0 shrink">
+        <a href="#top" aria-label="WonderHome" className="min-w-0 shrink xl:shrink-0">
           <Wordmark size={32} className="[&_span]:whitespace-nowrap" />
         </a>
 
         <nav aria-label="Landing" className="hidden xl:block">
-          <ul className="flex items-center gap-5 text-[0.8125rem] font-medium whitespace-nowrap text-[var(--wh-foreground-muted)]">
+          <ul className="flex items-center gap-4 2xl:gap-5 text-[0.8125rem] font-medium whitespace-nowrap text-[var(--wh-foreground-muted)]">
             {NAV.map((item) => (
               <li key={item.href}>
-                <a href={item.href} className="transition-colors hover:text-[var(--wh-foreground)]">
+                <Link href={item.href} className="transition-colors hover:text-[var(--wh-foreground)]">
                   {item.label}
-                </a>
+                </Link>
               </li>
             ))}
             <li>
@@ -100,9 +101,9 @@ export function LandingHeader() {
           <ul className="space-y-1">
             {NAV.map((item) => (
               <li key={item.href}>
-                <a href={item.href} onClick={() => setOpen(false)} className="block min-h-11 rounded-[var(--wh-radius-sm)] px-3 py-2.5 text-sm font-medium hover:bg-[var(--wh-surface-muted)]">
+                <Link href={item.href} onClick={() => setOpen(false)} className="block min-h-11 rounded-[var(--wh-radius-sm)] px-3 py-2.5 text-sm font-medium hover:bg-[var(--wh-surface-muted)]">
                   {item.label}
-                </a>
+                </Link>
               </li>
             ))}
             <li>
