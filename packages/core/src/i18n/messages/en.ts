@@ -894,6 +894,7 @@ export const en = {
   "mealForm.rows.energyProtein": "{kcal} kcal, {protein} g protein per 100 {per}",
   "mealForm.rows.protein": "{protein} g protein per 100 {per}",
   "mealForm.rows.ifctCredit": "IFCT 2017, ICMR–NIN",
+  "mealForm.rows.usdaCredit": "USDA FoodData Central",
   "mealForm.rows.removeRow": "Remove {name}",
   "mealForm.rows.thisItem": "this item",
   "mealForm.saveIngredients": "Save ingredients",

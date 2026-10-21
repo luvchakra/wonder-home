@@ -221,7 +221,7 @@ export const helpersEn = {
   "upkeepForm.scheduledOn": "Visit on",
   "upkeepForm.moveOn": "Move it on",
   "upkeepForm.moveTo": "Now it is",
-  "upkeepForm.status.requested": "Raised",
+  "upkeepForm.status.requested": "Open",
   "upkeepForm.status.scheduled": "Booked",
   "upkeepForm.status.in_progress": "Being worked on",
   "upkeepForm.status.awaiting_parts": "Waiting for parts",

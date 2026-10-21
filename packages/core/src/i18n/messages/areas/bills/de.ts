@@ -9,6 +9,7 @@ export const billsDe: AreaCatalog<typeof billsEn> = {
   "bills.view": "Finanzansicht",
   "bills.tab.overview": "Überblick",
   "bills.tab.transactions": "Buchungen",
+  "bills.tab.budget": "Budget",
   "bills.metric.needYou": "Braucht dich",
   "bills.metric.needYou.empty": "Gerade braucht dich nichts.",
   "bills.metric.upcoming": "Anstehend",

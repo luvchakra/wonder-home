@@ -884,6 +884,7 @@ export const zh: Catalog = {
   "mealForm.rows.energyProtein": "每 100 {per} {kcal} 千卡，蛋白质 {protein} 克",
   "mealForm.rows.protein": "每 100 {per} 蛋白质 {protein} 克",
   "mealForm.rows.ifctCredit": "IFCT 2017, ICMR–NIN",
+  "mealForm.rows.usdaCredit": "USDA FoodData Central",
   "mealForm.rows.removeRow": "移除{name}",
   "mealForm.rows.thisItem": "这样食材",
   "mealForm.saveIngredients": "保存食材",

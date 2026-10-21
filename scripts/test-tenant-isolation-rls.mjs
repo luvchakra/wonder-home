@@ -41,7 +41,7 @@ const NON_TENANT_TABLES = new Set([
   "grocery_catalog", // the shared grocery catalog (HomeFood 25-006): every household reads it, none writes it
   "recipe_catalog", // WonderHome's recipe catalog (HomeFood 25-022): every household reads it, only the seed writes it
   "recipe_catalog_ingredients", // each catalog dish's ingredients, the same platform data
-  "usda_foods", // USDA FoodData Central reference foods, linked to the catalog by review; service role only
+  "usda_foods", // USDA FoodData Central reference foods; a member reads one only once a curated item links to it
   "ifct_foods", // IFCT 2017 (ICMR-NIN) Indian reference foods, linked from the catalog; every member reads
   "companion_sayings", // the cat's sayings (08-021): WonderHome's own list every member reads and none writes
 ]);

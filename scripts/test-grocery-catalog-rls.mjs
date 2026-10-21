@@ -4,8 +4,9 @@
  *
  * Every signed-in member reads the catalog and searches it; no session writes
  * it, and a signed-out visitor sees nothing. The search ranks a name match
- * above another name's, and WonderHome's items before products. USDA foods are
- * the service role's alone: no session reads or writes them. A USDA food's
+ * above another name's, and WonderHome's items before products. No session
+ * writes USDA foods; a member reads one only once a curated item links to it
+ * (25-031), so unreviewed research rows stay the server's. A USDA food's
  * catalog id and its link status always agree.
  */
 import assert from "node:assert/strict";
@@ -62,9 +63,14 @@ test("only a product names the item it is", () => {
   assert.throws(() => psql(`update public.grocery_catalog set item_id = id where id = '${toorDal}';`, options));
 });
 
-test("USDA foods are the service role's alone, and a link's catalog id and status agree", () => {
+test("a member reads a USDA food only once an item links it, never writes one, and a link's catalog id and status agree", () => {
   psql(`insert into public.usda_foods (fdc_id, data_type, description, release) values (172436, 'sr_legacy', 'Pigeon peas (red gram), mature seeds, raw', 'SR Legacy 2018-04');`, options);
-  assert.ok(deniedForProfile(MEMBER, `select * from public.usda_foods;`, options));
+  assert.equal(asProfile(MEMBER, `select count(*) from public.usda_foods;`, options), "0");
+  assert.ok(deniedForAnonymous(`select count(*) from public.usda_foods;`, options));
+  psql(`update public.grocery_catalog set usda_fdc_id = 172436, usda_match = 'close' where id = '${toorDal}';`, options);
+  assert.equal(asProfile(MEMBER, `select count(*) from public.usda_foods;`, options), "1");
+  // A product carries its own label; only a curated item links to a USDA food.
+  assert.throws(() => psql(`update public.grocery_catalog set usda_fdc_id = 172436, usda_match = 'close' where kind = 'product';`, options));
   assert.ok(deniedForProfile(MEMBER, `update public.usda_foods set link_status = 'approved';`, options));
   assert.throws(() => psql(`update public.usda_foods set link_status = 'candidate' where fdc_id = 172436;`, options));
   psql(`update public.usda_foods set catalog_id = '${toorDal}', link_status = 'candidate', match_type = 'close' where fdc_id = 172436;`, options);

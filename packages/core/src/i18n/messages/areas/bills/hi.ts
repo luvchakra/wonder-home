@@ -9,6 +9,7 @@ export const billsHi: AreaCatalog<typeof billsEn> = {
   "bills.view": "वित्त दृश्य",
   "bills.tab.overview": "सारांश",
   "bills.tab.transactions": "लेन-देन",
+  "bills.tab.budget": "बजट",
   "bills.metric.needYou": "आपकी ज़रूरत",
   "bills.metric.needYou.empty": "अभी किसी चीज़ को आपकी ज़रूरत नहीं है।",
   "bills.metric.upcoming": "आने वाले",

@@ -206,7 +206,8 @@ export function choiceFacts(choice: IngredientChoice, labels: IngredientSearchLa
   if (n) {
     const fill = (text: string) => text.replace("{kcal}", String(Math.round(n.kcal ?? 0))).replace("{protein}", String(Math.round((n.protein ?? 0) * 10) / 10)).replace("{per}", n.per);
     const line = n.kcal !== null && n.protein !== null ? labels.energyProtein : n.kcal !== null ? labels.energy : labels.protein;
-    if (line) facts.push(`${fill(line)}${n.source === "ifct" && labels.ifctCredit ? ` (${labels.ifctCredit})` : ""}`);
+    const credit = n.source === "ifct" ? labels.ifctCredit : n.source === "usda" ? labels.usdaCredit : undefined;
+    if (line) facts.push(`${fill(line)}${credit ? ` (${credit})` : ""}`);
   }
   return facts;
 }

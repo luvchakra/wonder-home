@@ -17,7 +17,8 @@ import { normalizeUnit, unitInfo } from "./units";
  * - a **product**: a packed product from open data, Open Food Facts (ODbL;
  *   pictures CC BY-SA), with its brand, pack and label nutrients.
  * A nutrient the source does not state is absent, never 0. A row's id is its
- * catalog id; USDA foods link to it by review (`usda_foods.catalog_id`).
+ * catalog id. A curated item says which reference food it is: its Indian food
+ * in IFCT 2017 (25-009), else its USDA SR Legacy food (25-031).
  *
  * This file is the read side and the pure mapping from a source's record to
  * a catalog row; `catalog-import.ts` is the server's import.
@@ -74,6 +75,19 @@ export type CatalogEntry = {
    * close (25-009): nutrition per 100 g edible portion, credited to NIN.
    */
   ifct: IfctNutrition | null;
+  /**
+   * For a curated item IFCT 2017 does not list (curd, butter, sugar), its USDA
+   * FoodData Central SR Legacy food and how close (25-031): per 100 g, public domain.
+   */
+  usda: UsdaNutrition | null;
+};
+
+export type UsdaNutrition = {
+  fdcId: number;
+  name: string;
+  match: "exact" | "close" | "approximate";
+  note: string | null;
+  nutrients: Nutrients;
 };
 
 export type IfctNutrition = {
@@ -116,6 +130,8 @@ type Row = Record<string, unknown>;
 
 export const CATALOG_COLUMNS =
   "ifct_match, ifct_note, ifct_foods(code, name, nutrients, energy_basis), " +
+  // Two keys join these tables (usda_foods.catalog_id is the research link), so the embed names its own.
+  "usda_match, usda_note, usda_foods!grocery_catalog_usda_fdc_id_fkey(fdc_id, description, nutrients), " +
   "id, kind, common, buy_sizes, image_licence, image_attribution, name, brand, category, subcategory, pack_quantity, pack_unit, unit, image_path, nutrients, nutrient_basis, source, licence, attribution, source_url";
 
 /** A picture's public address in the catalog bucket, on the project's own origin. */
@@ -146,6 +162,7 @@ export function toCatalogEntry(row: Row, supabaseUrl: string): CatalogEntry {
     attribution: row.attribution as string,
     sourceUrl: (row.source_url as string | null) ?? null,
     ifct: toIfct(row),
+    usda: toUsda(row),
   };
 }
 
@@ -187,6 +204,34 @@ function toIfct(row: Row): IfctNutrition | null {
     nutrients: cleanNutrients(food.nutrients),
     energyComputed: food.energy_basis === "computed",
   };
+}
+
+function toUsda(row: Row): UsdaNutrition | null {
+  const food = (Array.isArray(row.usda_foods) ? row.usda_foods[0] : row.usda_foods) as Row | null | undefined;
+  const match = row.usda_match;
+  if (!food || (match !== "exact" && match !== "close" && match !== "approximate")) return null;
+  return {
+    fdcId: Number(food.fdc_id),
+    name: food.description as string,
+    match,
+    note: (row.usda_note as string | null) ?? null,
+    nutrients: cleanNutrients(food.nutrients),
+  };
+}
+
+/**
+ * Where a catalog entry's nutrition comes from, in order: its Indian food in
+ * IFCT 2017, its USDA food, then what its own label states. The one rule every
+ * reader (the item page, a card, a recipe's per-serving figures) follows.
+ */
+export function referenceNutrition(entry: Pick<CatalogEntry, "ifct" | "nutrients" | "nutrientBasis"> & { usda?: UsdaNutrition | null }): {
+  source: "ifct" | "usda" | "label";
+  nutrients: Nutrients;
+  basis: "100g" | "100ml" | null;
+} {
+  if (entry.ifct && Object.keys(entry.ifct.nutrients).length > 0) return { source: "ifct", nutrients: entry.ifct.nutrients, basis: "100g" };
+  if (entry.usda && Object.keys(entry.usda.nutrients).length > 0) return { source: "usda", nutrients: entry.usda.nutrients, basis: "100g" };
+  return { source: "label", nutrients: entry.nutrients, basis: entry.nutrientBasis };
 }
 
 /** Only known keys with real, non-negative numbers. */
@@ -424,21 +469,20 @@ export async function catalogItemFor(supabase: SupabaseClient, name: string): Pr
 /**
  * The line a grocery card shows under its name (25-012): energy and protein
  * per 100 g or 100 ml, from the same source the item page credits — the
- * item's Indian food in IFCT 2017, or a packed product's own label. Null
- * when neither is on record: nothing is estimated.
+ * item's Indian food in IFCT 2017, its USDA food, or a packed product's own
+ * label (`referenceNutrition`). Null when none is on record: nothing is estimated.
  */
-export function cardNutrition(entry: Pick<CatalogEntry, "ifct" | "nutrients" | "nutrientBasis"> | null): {
+export function cardNutrition(entry: (Pick<CatalogEntry, "ifct" | "nutrients" | "nutrientBasis"> & { usda?: UsdaNutrition | null }) | null): {
   basis: "100g" | "100ml";
   energyKcal: number | null;
   proteinG: number | null;
-  source: "ifct" | "label";
+  source: "ifct" | "usda" | "label";
 } | null {
   if (!entry) return null;
-  const nutrients = entry.ifct ? entry.ifct.nutrients : entry.nutrients;
-  const basis = entry.ifct ? "100g" : entry.nutrientBasis;
+  const { nutrients, basis, source } = referenceNutrition(entry);
   if (!basis) return null;
   const energyKcal = nutrients.energy_kcal ?? null;
   const proteinG = nutrients.protein_g ?? null;
   if (energyKcal === null && proteinG === null) return null;
-  return { basis, energyKcal, proteinG, source: entry.ifct ? "ifct" : "label" };
+  return { basis, energyKcal, proteinG, source };
 }

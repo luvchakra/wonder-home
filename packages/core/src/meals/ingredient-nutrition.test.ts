@@ -8,7 +8,7 @@ function entry(nutrients: CatalogEntry["nutrients"], extra: Partial<CatalogEntry
   return {
     id: "c", kind: "item", common: true, name: "x", brand: null, category: "staples", subcategory: null, pack: null, unit: "g",
     ladder: { unit: "g", steps: [] } as unknown as CatalogEntry["ladder"], imageUrl: null, imageCredit: null, nutrients, nutrientBasis: "100g",
-    source: "wonderhome", licence: "", attribution: "", sourceUrl: null, ifct: null, ...extra,
+    source: "wonderhome", licence: "", attribution: "", sourceUrl: null, ifct: null, usda: null, ...extra,
   };
 }
 
@@ -90,5 +90,12 @@ describe("nutrients per serving, added up from the ingredients (25-017)", () => 
   it("prefers the Indian Food Composition Tables where an item has them", () => {
     const entries = new Map([["dal", entry({ energy_kcal: 999 }, { ifct: { code: "A1", name: "Dal", match: "exact", note: null, nutrients: { energy_kcal: 340 }, energyComputed: false } })]]);
     expect(nutritionPerServing([{ name: "Dal", quantity: 100, unit: "g", consumableId: "dal" }], entries, 1)?.caloriesPerServing).toBe(340);
+  });
+
+  it("counts an item IFCT 2017 does not list by its USDA food (25-031)", () => {
+    const usda = { fdcId: 171284, name: "Yogurt, plain, whole milk", match: "close" as const, note: null, nutrients: { energy_kcal: 61, protein_g: 3.47 } };
+    const entries = new Map([["curd", entry({}, { nutrientBasis: null, usda })]]);
+    const result = nutritionPerServing([{ name: "Curd", quantity: 200, unit: "g", consumableId: "curd" }], entries, 2);
+    expect(result).toMatchObject({ caloriesPerServing: 61, counted: 1, total: 1 });
   });
 });

@@ -146,6 +146,7 @@ export const groceryHi: AreaCatalog<typeof groceryEn> = {
   "grocery.item.nutritionApproximate": "अनुमानित: ये मान {food} के हैं, जो तालिका में सबसे नज़दीकी खाद्य है।",
   "grocery.item.nutritionEnergyComputed": "ऊर्जा इसके प्रोटीन, वसा, कार्बोहाइड्रेट और फाइबर से निकाली गई है, क्योंकि तालिका में इसकी ऊर्जा नहीं दी गई।",
   "grocery.item.nutritionIfctCredit": "भारतीय खाद्य संरचना तालिका 2017, ICMR–राष्ट्रीय पोषण संस्थान, हैदराबाद से। आपका भोजन अलग हो सकता है।",
+  "grocery.item.nutritionUsdaCredit": "USDA FoodData Central (SR Legacy), अमेरिकी कृषि विभाग की खाद्य तालिका से। आपका भोजन अलग हो सकता है।",
   "grocery.nutrient.calcium_mg": "कैल्शियम",
   "grocery.nutrient.iron_mg": "आयरन",
   "grocery.nutrient.potassium_mg": "पोटैशियम",

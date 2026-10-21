@@ -904,6 +904,7 @@ export const ar: Catalog = {
   "mealForm.rows.energyProtein": "{kcal} سعرة، {protein} غ بروتين لكل 100 {per}",
   "mealForm.rows.protein": "{protein} غ بروتين لكل 100 {per}",
   "mealForm.rows.ifctCredit": "IFCT 2017, ICMR–NIN",
+  "mealForm.rows.usdaCredit": "USDA FoodData Central",
   "mealForm.rows.removeRow": "إزالة {name}",
   "mealForm.rows.thisItem": "هذا المكوّن",
   "mealForm.saveIngredients": "حفظ المكونات",

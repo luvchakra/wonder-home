@@ -162,6 +162,7 @@ export const groceryAr: AreaCatalog<typeof groceryEn> = {
   "grocery.item.nutritionApproximate": "تقريبي: القيم لـ {food}، أقرب غذاء في الجدول.",
   "grocery.item.nutritionEnergyComputed": "الطاقة محسوبة من البروتين والدهون والكربوهيدرات والألياف، لأن الجدول لا يذكرها.",
   "grocery.item.nutritionIfctCredit": "من جداول تركيب الأغذية الهندية 2017، ICMR–المعهد الوطني للتغذية، حيدر آباد. قد يختلف طعامك.",
+  "grocery.item.nutritionUsdaCredit": "من USDA FoodData Central (SR Legacy)، جدول الأغذية لوزارة الزراعة الأمريكية. قد يختلف طعامك.",
   "grocery.nutrient.calcium_mg": "الكالسيوم",
   "grocery.nutrient.iron_mg": "الحديد",
   "grocery.nutrient.potassium_mg": "البوتاسيوم",

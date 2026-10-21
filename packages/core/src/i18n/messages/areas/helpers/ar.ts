@@ -227,7 +227,7 @@ export const helpersAr: AreaCatalog<typeof helpersEn> = {
   "upkeepForm.scheduledOn": "الزيارة في",
   "upkeepForm.moveOn": "تقدّم به",
   "upkeepForm.moveTo": "الآن",
-  "upkeepForm.status.requested": "مُرسَل",
+  "upkeepForm.status.requested": "مفتوح",
   "upkeepForm.status.scheduled": "محجوز",
   "upkeepForm.status.in_progress": "قيد العمل",
   "upkeepForm.status.awaiting_parts": "بانتظار قطع",

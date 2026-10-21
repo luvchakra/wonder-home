@@ -186,6 +186,7 @@ export function groceryWords(translate: Translate, language: string | undefined)
       approximate: t("grocery.item.nutritionApproximate", { food: "{food}" }),
       energyComputed: t("grocery.item.nutritionEnergyComputed"),
       ifctCredit: t("grocery.item.nutritionIfctCredit"),
+      usdaCredit: t("grocery.item.nutritionUsdaCredit"),
       pictureCredit: t("grocery.item.pictureCredit", { credit: "{credit}" }),
       names: Object.fromEntries(NUTRIENT_KEYS.map((nutrient) => [nutrient, t(`grocery.nutrient.${nutrient}` as TranslationKey)])) as Record<(typeof NUTRIENT_KEYS)[number], string>,
     },

@@ -219,7 +219,7 @@ export const helpersDe: AreaCatalog<typeof helpersEn> = {
   "upkeepForm.scheduledOn": "Besuch am",
   "upkeepForm.moveOn": "Weiterbringen",
   "upkeepForm.moveTo": "Jetzt",
-  "upkeepForm.status.requested": "Angefragt",
+  "upkeepForm.status.requested": "Offen",
   "upkeepForm.status.scheduled": "Gebucht",
   "upkeepForm.status.in_progress": "In Arbeit",
   "upkeepForm.status.awaiting_parts": "Wartet auf Teile",

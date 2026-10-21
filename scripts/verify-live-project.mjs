@@ -890,6 +890,8 @@ async function main() {
   check("USDA foods carry a catalog id", !usda.error, usda.error?.code ?? "ok");
   const ifct = await admin.from("grocery_catalog").select("id", { count: "exact", head: true }).not("ifct_code", "is", null);
   check("curated items carry Indian nutrition (IFCT 2017)", !ifct.error && (ifct.count ?? 0) > 300, ifct.error?.code ?? `${ifct.count} linked`);
+  const usdaLinked = await admin.from("grocery_catalog").select("id", { count: "exact", head: true }).not("usda_fdc_id", "is", null);
+  check("curated items IFCT does not list carry USDA nutrition (25-031)", !usdaLinked.error && (usdaLinked.count ?? 0) > 40, usdaLinked.error?.code ?? `${usdaLinked.count} linked`);
   const common = await admin.from("grocery_catalog").select("id", { count: "exact", head: true }).eq("common", true);
   check("the catalog marks its everyday items", !common.error && (common.count ?? 0) > 300, common.error?.code ?? `${common.count} everyday`);
   const anonKind = await anon.rpc("search_grocery_catalog_kind", { p_query: "eggs", p_limit: 3, p_kind: "item" });

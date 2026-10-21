@@ -219,7 +219,7 @@ export const helpersZh: AreaCatalog<typeof helpersEn> = {
   "upkeepForm.scheduledOn": "上门日期",
   "upkeepForm.moveOn": "推进",
   "upkeepForm.moveTo": "现在是",
-  "upkeepForm.status.requested": "已提交",
+  "upkeepForm.status.requested": "待处理",
   "upkeepForm.status.scheduled": "已预约",
   "upkeepForm.status.in_progress": "处理中",
   "upkeepForm.status.awaiting_parts": "等待配件",

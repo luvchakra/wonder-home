@@ -41,7 +41,7 @@ export type IngredientChoice = {
   /** The catalog's pack, as it is sold ("1 kg"), when known. */
   pack?: string | null;
   /** Energy and protein per 100 g or ml, from the catalog — only what it actually records. */
-  nutrition?: { kcal: number | null; protein: number | null; per: "g" | "ml"; source: "ifct" | "label" } | null;
+  nutrition?: { kcal: number | null; protein: number | null; per: "g" | "ml"; source: "ifct" | "usda" | "label" } | null;
   /** How much the household has at home, when someone counted it ("2 kg"). */
   stock?: string | null;
 };
@@ -64,6 +64,7 @@ export type IngredientSearchLabels = {
   protein?: string;
   /** The credit for Indian nutrition figures (IFCT 2017, ICMR–NIN). */
   ifctCredit?: string;
+  usdaCredit?: string;
 };
 
 /**

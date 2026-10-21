@@ -80,6 +80,7 @@ export function mealFormLabels(t: Translate, unitNames: Record<string, string>):
         energyProtein: t("mealForm.rows.energyProtein", { kcal: "{kcal}", protein: "{protein}", per: "{per}" }),
         protein: t("mealForm.rows.protein", { protein: "{protein}", per: "{per}" }),
         ifctCredit: t("mealForm.rows.ifctCredit"),
+        usdaCredit: t("mealForm.rows.usdaCredit"),
       },
     },
     unitNames,

@@ -146,6 +146,7 @@ export const groceryMr: AreaCatalog<typeof groceryEn> = {
   "grocery.item.nutritionApproximate": "अंदाजे: ही मूल्ये {food} ची आहेत, तक्त्यातील सर्वात जवळचा पदार्थ.",
   "grocery.item.nutritionEnergyComputed": "ऊर्जा त्यातील प्रथिने, चरबी, कर्बोदके आणि तंतूंवरून काढली आहे, कारण तक्त्यात ती दिलेली नाही.",
   "grocery.item.nutritionIfctCredit": "भारतीय अन्न रचना तक्ते 2017, ICMR–राष्ट्रीय पोषण संस्था, हैदराबाद येथून. तुमचे अन्न वेगळे असू शकते.",
+  "grocery.item.nutritionUsdaCredit": "USDA FoodData Central (SR Legacy), अमेरिकेच्या कृषी विभागाच्या अन्न तक्त्यातून. तुमचे अन्न वेगळे असू शकते.",
   "grocery.nutrient.calcium_mg": "कॅल्शियम",
   "grocery.nutrient.iron_mg": "लोह",
   "grocery.nutrient.potassium_mg": "पोटॅशियम",

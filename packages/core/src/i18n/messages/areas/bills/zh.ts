@@ -9,6 +9,7 @@ export const billsZh: AreaCatalog<typeof billsEn> = {
   "bills.view": "财务视图",
   "bills.tab.overview": "概览",
   "bills.tab.transactions": "收支记录",
+  "bills.tab.budget": "预算",
   "bills.metric.needYou": "待你处理",
   "bills.metric.needYou.empty": "目前没有需要你处理的事。",
   "bills.metric.upcoming": "即将到期",

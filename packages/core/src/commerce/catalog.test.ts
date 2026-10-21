@@ -73,6 +73,7 @@ describe("what the quick search shows (25-010)", () => {
     attribution: "",
     sourceUrl: null,
     ifct: null,
+    usda: null,
     ...over,
   });
 

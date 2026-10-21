@@ -316,14 +316,18 @@ export function EditRequestButton({ householdId, request, labels, editLabel }: {
 }
 
 /**
- * Moving a request on: only the steps that can follow where it is now (the
+ * Moving a request on: where it is now, picked by default (a new request is
+ * Open — the owner, 2026-10-21), then only the steps that can follow it (the
  * same rules the agents use), picked rather than typed (rule 20). Cancelled is
  * one of them — that is how a request is taken back, and it stays on record.
+ * Update stays off until a different step is picked.
  */
 export function RequestStatusControl({ householdId, request, labels }: { householdId: string; request: RequestValues; labels: UpkeepFormLabels }) {
   const [state, formAction, pending] = useActionState<ActionState, FormData>(updateServiceRequestAction, {});
+  const [picked, setPicked] = useState<string>(request.status);
   const next = SERVICE_STATUSES.filter((status) => canTransition(request.status, status));
   if (next.length === 0) return null;
+  const options = [request.status, ...next];
   return (
     <form action={formAction} className="space-y-2">
       <Notice state={state} />
@@ -338,17 +342,18 @@ export function RequestStatusControl({ householdId, request, labels }: { househo
           <select
             id={`status-${request.id}`}
             name="status"
-            defaultValue={next[0]}
+            value={picked}
+            onChange={(event) => setPicked(event.target.value)}
             className="block min-h-11 w-full rounded-[var(--wh-radius-sm)] border border-[var(--wh-border)] bg-[var(--wh-surface)] px-3 text-base focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-[var(--wh-primary)]"
           >
-            {next.map((status) => (
+            {options.map((status) => (
               <option key={status} value={status}>
                 {labels.statuses[status]}
               </option>
             ))}
           </select>
         </div>
-        <Button type="submit" variant="secondary" disabled={pending}>
+        <Button type="submit" variant="secondary" disabled={pending || picked === request.status}>
           {labels.update}
         </Button>
       </div>

@@ -146,6 +146,7 @@ export const groceryZh: AreaCatalog<typeof groceryEn> = {
   "grocery.item.nutritionApproximate": "近似：数值来自表中最接近的 {food}。",
   "grocery.item.nutritionEnergyComputed": "表中没有给出能量，因此根据蛋白质、脂肪、碳水化合物和膳食纤维计算。",
   "grocery.item.nutritionIfctCredit": "数据来自《印度食物成分表 2017》，ICMR–印度国家营养研究所（海得拉巴）。你的食物可能有所不同。",
+  "grocery.item.nutritionUsdaCredit": "数据来自 USDA FoodData Central（SR Legacy），美国农业部的食物成分表。你的食物可能有所不同。",
   "grocery.nutrient.calcium_mg": "钙",
   "grocery.nutrient.iron_mg": "铁",
   "grocery.nutrient.potassium_mg": "钾",
