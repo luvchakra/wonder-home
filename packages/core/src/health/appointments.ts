@@ -385,7 +385,7 @@ export async function createAppointment(
 export type UpdateAppointmentInput = Partial<
   Pick<
     CreateAppointmentInput,
-    "provider" | "facility" | "location" | "preparationNotes" | "notes" | "remindAdvance" | "remindPreparation" | "remindDayOf"
+    "provider" | "facility" | "location" | "preparationNotes" | "notes" | "remindAdvance" | "remindPreparation" | "remindDayOf" | "privacyScope"
   >
 >;
 
@@ -405,6 +405,7 @@ export async function updateAppointment(
   if (input.remindAdvance !== undefined) patch.remind_advance = input.remindAdvance;
   if (input.remindPreparation !== undefined) patch.remind_preparation = input.remindPreparation;
   if (input.remindDayOf !== undefined) patch.remind_day_of = input.remindDayOf;
+  if (input.privacyScope !== undefined) patch.privacy_scope = input.privacyScope;
 
   const { data, error } = await supabase.from("health_appointments").update(patch).eq("id", id).eq("household_id", actor.householdId).select(SELECT).single();
 

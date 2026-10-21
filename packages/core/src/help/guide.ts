@@ -148,13 +148,13 @@ const SECTIONS: readonly SectionShape[] = [
     id: "meals-and-shopping",
     group: "Everyday use",
     updated: "2026-10-21",
-    keywords: ["servings", "shortfall", "ingredients", "amount", "quantity", "meal", "recipe", "grocery", "shopping", "list", "to buy", "in stock", "pantry", "food", "allergy", "use by", "bought", "nutrients", "receipt", "suggest", "preferences", "catalog", "search", "brand", "picture", "nutrition", "change meal", "remove meal", "ingredients", "no recipe", "plan a meal", "save as recipe", "new recipe", "ingredient search", "calories per serving", "work out nutrients", "ideas", "what to cook", "suggest dishes", "from what is at home", "recipe ideas", "indian recipes", "diet", "vegetarian", "vegan", "jain", "eggetarian", "non-veg", "calories", "protein", "filter recipes", "recipe catalog", "save my version", "plan this", "edit recipe", "remove recipe", "steps", "week", "weekly plan", "meal plan", "repeat last week", "veg", "non-veg", "week template", "template", "weekly menu", "choose again", "options", "rotate"],
+    keywords: ["servings", "shortfall", "ingredients", "amount", "quantity", "meal", "recipe", "grocery", "shopping", "list", "to buy", "in stock", "pantry", "food", "allergy", "use by", "bought", "nutrients", "receipt", "suggest", "preferences", "catalog", "search", "brand", "picture", "nutrition", "change meal", "remove meal", "ingredients", "no recipe", "plan a meal", "save as recipe", "new recipe", "ingredient search", "calories per serving", "work out nutrients", "ideas", "what to cook", "suggest dishes", "from what is at home", "recipe ideas", "indian recipes", "diet", "vegetarian", "vegan", "jain", "eggetarian", "non-veg", "calories", "protein", "filter recipes", "recipe catalog", "save my version", "plan this", "edit recipe", "remove recipe", "steps", "week", "weekly plan", "meal plan", "repeat last week", "veg", "non-veg", "week template", "template", "weekly menu", "choose again", "options", "rotate", "like", "dislike", "thumbs up", "not for me", "liked by"],
   },
   {
     id: "health",
     group: "Everyday use",
     updated: "2026-10-21",
-    keywords: ["health", "fitness", "vitals", "weight", "blood pressure", "checkup", "appointment", "prescription", "medical record", "routine", "private"],
+    keywords: ["health", "fitness", "vitals", "weight", "blood pressure", "checkup", "appointment", "prescription", "medical record", "routine", "private", "who can see", "people I choose", "share", "sharing"],
   },
   {
     id: "home-upkeep",

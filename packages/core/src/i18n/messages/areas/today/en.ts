@@ -23,4 +23,13 @@ export const todayEn = {
   "today.thought.7": "Today I shall nap in a brand new spot.",
   "today.thought.8": "The yarn started it.",
   "today.weatherArea": "Show the weather here: pick your area",
+  "today.cat.dinner": "{meal} for dinner tonight",
+  "today.cat.eventToday": "{title} at {time} today",
+  "today.cat.eventTomorrow": "tomorrow there's {title}",
+  "today.cat.toBuy#one": "{count} thing on the list to buy",
+  "today.cat.toBuy#other": "{count} things on the list to buy",
+  "today.cat.voice.1": "Meow! {fact}.",
+  "today.cat.voice.2": "Purr… {fact}.",
+  "today.cat.voice.3": "Mrrp! {fact}, meow.",
+  "today.cat.voice.4": "Psst, meow: {fact}.",
 } as const;

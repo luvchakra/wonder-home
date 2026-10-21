@@ -52,6 +52,7 @@ import {
 } from "../_components/meal-forms";
 import { groceryWords, type GroceryWords } from "../_lib/grocery-words";
 import { recipeShareText } from "@wonderhome/core/meals/recipe-share";
+import { DishTaste, type DishTasteLabels } from "./dish-taste";
 import { RecipeShareButton, type RecipeShareLabels } from "./recipe-share-button";
 import { mealFormLabels, recipePickerLabels } from "../_lib/meal-form-labels";
 import { DietSettings } from "./diet-settings";
@@ -241,6 +242,21 @@ export default async function MealsPage({
     return isDiet(subject) ? subject : null;
   };
   const familyDiet = dietOf(null);
+  // Each dish's likes and dislikes (the owner, 2026-10-21): the viewer's own taste for its buttons, and who else likes it.
+  const tasteKey = (dish: string) => dish.trim().toLowerCase();
+  const myTaste = new Map<string, "like" | "dislike">();
+  const likedBy = new Map<string, string[]>();
+  for (const preference of allPreferences) {
+    if (preference.kind !== "preference" && preference.kind !== "dislike") continue;
+    const key = tasteKey(preference.subject);
+    if (preference.member_id === membership.memberId) myTaste.set(key, preference.kind === "preference" ? "like" : "dislike");
+    if (preference.kind === "preference" && preference.member_id) {
+      const name = members.find((member) => member.id === preference.member_id)?.displayName;
+      if (name) likedBy.set(key, [...(likedBy.get(key) ?? []), name]);
+    }
+  }
+  const tasteLabels: DishTasteLabels = { like: t("meals.taste.like"), dislike: t("meals.taste.dislike"), failed: t("meals.taste.failed") };
+  const taste = (dish: string) => ({ taste: myTaste.get(tasteKey(dish)) ?? null, likedBy: likedBy.get(tasteKey(dish)) ?? [] });
   const nameOf = (id: string | null) =>
     members.find((member) => member.id === id)?.displayName ?? null;
   const admin = isHouseholdAdmin(membership);
@@ -464,6 +480,8 @@ export default async function MealsPage({
                                   labels={formLabels}
                                   groceries={groceries}
                                   words={words}
+                                  taste={taste(meal.recipe?.name ?? meal.name)}
+                                  tasteLabels={tasteLabels}
                                   chooseAgain={meal.origin === "week_template" && nextOption({ options: templateOptions, weekday: weekdayOf(meal.onDate), slot: meal.slot, current: meal.recipe?.id ?? null }) !== null}
                                 />
                               ));
@@ -580,6 +598,7 @@ export default async function MealsPage({
                             />
                           </div>
                         </div>
+                        <TasteLine dish={recipe.name} householdId={householdId} taste={taste(recipe.name)} labels={tasteLabels} t={t} />
                       </Card>
                     );
                   })}
@@ -640,12 +659,11 @@ export default async function MealsPage({
                 ) : (
                   <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4">
                     {ideas.map((dish) => (
+                      <Card key={dish.id} className="wh-lift flex h-full flex-col overflow-hidden p-0">
                       <Link
-                        key={dish.id}
                         href={`/meals/recipes/${dish.slug}`}
-                        className="group rounded-[var(--wh-radius)] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--wh-primary)]"
+                        className="group block flex-1 rounded-t-[var(--wh-radius)] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--wh-primary)]"
                       >
-                        <Card className="wh-lift h-full overflow-hidden p-0">
                           {dish.imageUrl ? (
                             // eslint-disable-next-line @next/next/no-img-element -- a catalog picture from public storage, already sized
                             <img src={dish.imageUrl} alt="" loading="lazy" className="aspect-[4/3] w-full object-cover" />
@@ -669,8 +687,11 @@ export default async function MealsPage({
                               </p>
                             ) : null}
                           </div>
-                        </Card>
                       </Link>
+                      <div className="px-3 pb-2">
+                        <TasteLine dish={dish.name} householdId={householdId} taste={taste(dish.name)} labels={tasteLabels} t={t} />
+                      </div>
+                      </Card>
                     ))}
                   </div>
                 )}
@@ -813,6 +834,18 @@ function nutrientLine(
     .join(" · ");
 }
 
+/** A recipe card's foot: who in the family likes it, and the viewer's own like and dislike. */
+function TasteLine({ dish, householdId, taste, labels, t }: { dish: string; householdId: string; taste: { taste: "like" | "dislike" | null; likedBy: string[] }; labels: DishTasteLabels; t: Translate }) {
+  return (
+    <div className="mt-2 flex items-center justify-between gap-1 border-t border-[var(--wh-border)] pt-1">
+      <span className="min-w-0 text-[0.6875rem] break-words text-[var(--wh-handled)]">
+        {taste.likedBy.length > 0 ? t("meals.taste.likedBy", { names: taste.likedBy.join(", ") }) : null}
+      </span>
+      <DishTaste householdId={householdId} dish={dish} taste={taste.taste} labels={labels} />
+    </div>
+  );
+}
+
 function MealCard({
   meal,
   picture,
@@ -826,7 +859,12 @@ function MealCard({
   groceries,
   words,
   chooseAgain,
+  taste,
+  tasteLabels,
 }: {
+  /** The viewer's own like or dislike of this dish, and who in the family likes it. */
+  taste: { taste: "like" | "dislike" | null; likedBy: string[] };
+  tasteLabels: DishTasteLabels;
   /** WonderHome picked it from the week template, and the template lists another dish for it. */
   chooseAgain: boolean;
   meal: Meal;
@@ -875,6 +913,7 @@ function MealCard({
       <ul>
         <ExpandableRow
           className="min-h-0 gap-2.5 py-1.5"
+          trailing={<DishTaste householdId={householdId} dish={meal.recipe?.name ?? meal.name} taste={taste.taste} labels={tasteLabels} />}
           summary={
             <>
               {picture ? (
@@ -936,6 +975,9 @@ function MealCard({
         <p className="mt-1.5 text-xs text-[var(--wh-foreground-subtle)]">
           {nutrients}
         </p>
+      ) : null}
+      {taste.likedBy.length > 0 ? (
+        <p className="mt-1.5 text-xs text-[var(--wh-handled)]">{t("meals.taste.likedBy", { names: taste.likedBy.join(", ") })}</p>
       ) : null}
       <div className="mt-3 flex flex-wrap gap-1.5">
         {meal.recipe ? (

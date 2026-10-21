@@ -11,6 +11,7 @@ import { PRIVACY_SCOPES } from "@wonderhome/core/health/repository";
 import { requireMembership } from "@wonderhome/core/identity/households";
 
 import type { ActionState } from "./actions";
+import { applyHealthSharing, sharingNotSaved } from "./health-sharing";
 
 /** Recording, editing and moving a health issue through its status (story 21-003). */
 const createSchema = z.object({
@@ -52,11 +53,12 @@ export async function createIssueAction(_previous: ActionState, formData: FormDa
       startedAt,
     });
 
+    const sharing = await applyHealthSharing(supabase, { householdId: parsed.data.householdId, memberId: membership.memberId }, formData, { subjectMemberId: memberId, privacyScope });
+
     revalidatePath("/health");
 
-    return {
-      notice: result.medicalAttention.recommend ? `Recorded. ${result.medicalAttention.message}` : "Recorded.",
-    };
+    const recorded = result.medicalAttention.recommend ? `Recorded. ${result.medicalAttention.message}` : "Recorded.";
+    return { notice: sharing ? `${recorded} ${sharingNotSaved(sharing)}` : recorded };
   } catch (thrown) {
     return { error: toErrorBody(thrown, "health-issues").body.error.message };
   }
@@ -68,6 +70,7 @@ const updateSchema = z.object({
   label: z.string().trim().min(1).max(160).optional(),
   description: z.string().trim().max(2000).optional(),
   notes: z.string().trim().max(1000).optional(),
+  privacyScope: z.enum(PRIVACY_SCOPES).optional(),
 });
 
 export async function updateIssueAction(_previous: ActionState, formData: FormData): Promise<ActionState> {
@@ -77,6 +80,7 @@ export async function updateIssueAction(_previous: ActionState, formData: FormDa
     label: formData.get("label") || undefined,
     description: formData.get("description") || undefined,
     notes: formData.get("notes") || undefined,
+    privacyScope: formData.get("privacyScope") || undefined,
   });
   if (!parsed.success) return { error: parsed.error.issues[0]?.message ?? "Please check the details above." };
 
@@ -84,12 +88,15 @@ export async function updateIssueAction(_previous: ActionState, formData: FormDa
     const supabase = await createClient();
     const membership = await requireMembership(supabase, parsed.data.householdId);
 
-    const { issueId, label, description, notes } = parsed.data;
+    const { issueId, label, description, notes, privacyScope } = parsed.data;
     const result = await updateIssue(supabase, { householdId: parsed.data.householdId, memberId: membership.memberId }, issueId, {
       label,
       description,
       notes,
+      privacyScope,
     });
+    const sharing = await applyHealthSharing(supabase, { householdId: parsed.data.householdId, memberId: membership.memberId }, formData, { subjectMemberId: result.issue.memberId, privacyScope: result.issue.privacyScope });
+    if (sharing) return { error: sharingNotSaved(sharing) };
 
     revalidatePath("/health");
 

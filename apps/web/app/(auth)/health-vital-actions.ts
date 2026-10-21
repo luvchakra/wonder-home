@@ -12,6 +12,7 @@ import { requireMembership } from "@wonderhome/core/identity/households";
 import { householdInstant } from "@wonderhome/core/school/times";
 
 import type { ActionState } from "./actions";
+import { applyHealthSharing, sharingNotSaved } from "./health-sharing";
 
 const createSchema = z.object({
   householdId: z.uuid(),
@@ -63,8 +64,9 @@ export async function createVitalAction(_previous: ActionState, formData: FormDa
       notes,
     });
 
+    const sharing = await applyHealthSharing(supabase, { householdId: parsed.data.householdId, memberId: membership.memberId }, formData, { subjectMemberId: memberId, privacyScope: privacyScope });
     revalidatePath("/health");
-    return { notice: "Recorded." };
+    return { notice: sharing ? `Recorded. ${sharingNotSaved(sharing)}` : "Recorded." };
   } catch (thrown) {
     return { error: toErrorBody(thrown, "health-vitals").body.error.message };
   }
@@ -77,6 +79,7 @@ const updateSchema = z.object({
   secondaryValue: z.coerce.number().finite().optional(),
   unit: z.string().trim().min(1).max(20).optional(),
   notes: z.string().trim().max(1000).optional(),
+  privacyScope: z.enum(PRIVACY_SCOPES).optional(),
 });
 
 export async function updateVitalAction(_previous: ActionState, formData: FormData): Promise<ActionState> {
@@ -87,6 +90,7 @@ export async function updateVitalAction(_previous: ActionState, formData: FormDa
     secondaryValue: formData.get("secondaryValue") || undefined,
     unit: formData.get("unit") || undefined,
     notes: formData.get("notes") || undefined,
+    privacyScope: formData.get("privacyScope") || undefined,
   });
   if (!parsed.success) return { error: parsed.error.issues[0]?.message ?? "Please check the details above." };
 
@@ -94,8 +98,10 @@ export async function updateVitalAction(_previous: ActionState, formData: FormDa
     const supabase = await createClient();
     const membership = await requireMembership(supabase, parsed.data.householdId);
 
-    const { vitalId, value, secondaryValue, unit, notes } = parsed.data;
-    await updateVital(supabase, { householdId: parsed.data.householdId, memberId: membership.memberId }, vitalId, { value, secondaryValue, unit, notes });
+    const { vitalId, value, secondaryValue, unit, notes, privacyScope } = parsed.data;
+    const vital = await updateVital(supabase, { householdId: parsed.data.householdId, memberId: membership.memberId }, vitalId, { value, secondaryValue, unit, notes, privacyScope });
+    const sharing = await applyHealthSharing(supabase, { householdId: parsed.data.householdId, memberId: membership.memberId }, formData, { subjectMemberId: vital.memberId, privacyScope: vital.privacyScope });
+    if (sharing) return { error: sharingNotSaved(sharing) };
 
     revalidatePath("/health");
     return { notice: "Saved." };

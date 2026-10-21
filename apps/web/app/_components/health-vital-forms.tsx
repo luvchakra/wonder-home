@@ -3,9 +3,10 @@
 import { Pencil, Plus, RotateCcw, Trash2 } from "lucide-react";
 import { startTransition, useActionState, useEffect, useRef, useState } from "react";
 
-import type { VitalType } from "@wonderhome/core/health/vitals";
+import { defaultVitalUnit, VITAL_UNITS, type VitalType } from "@wonderhome/core/health/vitals";
 import { Alert } from "@wonderhome/core/ui/alert";
 import { Button } from "@wonderhome/core/ui/button";
+import { ComboboxField } from "@wonderhome/core/ui/combobox-field";
 import { Field } from "@wonderhome/core/ui/field";
 import { Pill } from "@wonderhome/core/ui/pill";
 import { Select } from "@wonderhome/core/ui/select";
@@ -14,9 +15,7 @@ import { Sheet } from "@wonderhome/core/ui/sheet";
 import type { ActionState } from "../(auth)/actions";
 import { archiveVitalAction, createVitalAction, reactivateVitalAction, updateVitalAction } from "../(auth)/health-vital-actions";
 import { withName, type HealthFormLabels } from "../_lib/health-form-labels";
-
-/** The stored values, in the order they are offered; their words come from `labels` (story 22-004). */
-const SCOPES = ["private", "selected_family", "household_operational"] as const;
+import { HealthPrivacyField } from "./health-privacy-field";
 
 /** Blood pressure is the one vital type with a paired reading — everything else takes one value and one unit, exactly what the household typed. */
 function VitalValueFields({ vitalType, secondaryValue, labels }: { vitalType: VitalType; secondaryValue?: number | null; labels: HealthFormLabels }) {
@@ -29,6 +28,30 @@ function VitalValueFields({ vitalType, secondaryValue, labels }: { vitalType: Vi
     );
   }
   return <Field label={labels.common.value} name="value" type="number" step="any" required autoComplete="off" />;
+}
+
+/**
+ * A reading's unit, picked from the ones that measurement is taken in (rule
+ * 20, the owner, 2026-10-21: "make the unit a drop-down"), with Add new… for
+ * one not listed. Keyed by the type so changing the measurement starts its
+ * own list.
+ */
+export function VitalUnitField({ vitalType, defaultValue, labels }: { vitalType: VitalType; defaultValue?: string; labels: HealthFormLabels }) {
+  const units = [...VITAL_UNITS[vitalType]];
+  if (defaultValue && !units.includes(defaultValue)) units.push(defaultValue);
+  return (
+    <ComboboxField
+      key={vitalType}
+      label={labels.common.unit}
+      name="unit"
+      options={units}
+      defaultValue={defaultValue ?? defaultVitalUnit(vitalType)}
+      required
+      addNewLabel={labels.common.addNew}
+      chooseExistingLabel={labels.common.chooseExisting}
+      newValuePlaceholder={labels.common.unitPlaceholder}
+    />
+  );
 }
 
 /** Recording a reading — always what the household typed, never a value WonderHome fills in (story 21-007). */
@@ -100,16 +123,10 @@ export function AddVitalButton({
           </Select>
           {vitalType === "custom" ? <Field label={common.whatCalled} name="customLabel" placeholder={common.measurementPlaceholder} required autoComplete="off" /> : null}
           <VitalValueFields vitalType={vitalType} labels={labels} />
-          <Field label={common.unit} name="unit" placeholder={vitalType === "blood_pressure" ? "mmHg" : common.unitPlaceholder} required autoComplete="off" />
+          <VitalUnitField vitalType={vitalType} labels={labels} />
           <Field label={common.whenDefaultNow} name="measuredAt" type="datetime-local" />
           <Field label={common.notes} name="notes" placeholder={common.notesPlaceholder} autoComplete="off" />
-          <Select label={common.whoCanSee} name="privacyScope" defaultValue={defaultPrivacyScope}>
-            {SCOPES.map((scope) => (
-              <option key={scope} value={scope}>
-                {labels.scopes[scope]}
-              </option>
-            ))}
-          </Select>
+          <HealthPrivacyField labels={labels} defaultValue={defaultPrivacyScope} />
           <Button type="submit" disabled={pending} className="w-full">
             {pending ? common.recording : common.record}
           </Button>
@@ -128,6 +145,8 @@ export function EditVitalButton({
   secondaryValue,
   unit,
   notes,
+  memberId,
+  privacyScope,
   labels,
 }: {
   householdId: string;
@@ -138,6 +157,8 @@ export function EditVitalButton({
   secondaryValue: number | null;
   unit: string;
   notes: string | null;
+  memberId: string;
+  privacyScope: "private" | "selected_family" | "household_operational";
   labels: HealthFormLabels;
 }) {
   const words = labels.vital;
@@ -179,8 +200,9 @@ export function EditVitalButton({
           ) : (
             <Field label={common.value} name="value" type="number" step="any" defaultValue={value} required autoComplete="off" />
           )}
-          <Field label={common.unit} name="unit" defaultValue={unit} required autoComplete="off" />
+          <VitalUnitField vitalType={vitalType} defaultValue={unit} labels={labels} />
           <Field label={common.notes} name="notes" defaultValue={notes ?? ""} autoComplete="off" />
+          <HealthPrivacyField labels={labels} defaultValue={privacyScope} subjectMemberId={memberId} />
           <Button type="submit" disabled={pending} className="w-full">
             {pending ? common.saving : common.save}
           </Button>
@@ -197,7 +219,7 @@ export function VitalActions({
   labels,
 }: {
   householdId: string;
-  vital: { id: string; vitalType: VitalType; label: string; value: number; secondaryValue: number | null; unit: string; notes: string | null; status: "active" | "archived" };
+  vital: { id: string; vitalType: VitalType; label: string; value: number; secondaryValue: number | null; unit: string; notes: string | null; status: "active" | "archived"; memberId: string; privacyScope: "private" | "selected_family" | "household_operational" };
   labels: HealthFormLabels;
 }) {
   const common = labels.common;
@@ -230,6 +252,8 @@ export function VitalActions({
         secondaryValue={vital.secondaryValue}
         unit={vital.unit}
         notes={vital.notes}
+        memberId={vital.memberId}
+        privacyScope={vital.privacyScope}
         labels={labels}
       />
       <Pill type="button" tone="quiet" disabled={archivePending} onClick={() => submit(archiveAction)} aria-label={common.remove} title={common.remove}>

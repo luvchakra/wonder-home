@@ -21,11 +21,11 @@ import {
   updateRoutineAction,
 } from "../(auth)/health-measurement-routine-actions";
 import { withName, type HealthFormLabels } from "../_lib/health-form-labels";
+import { HealthPrivacyField } from "./health-privacy-field";
+import { VitalUnitField } from "./health-vital-forms";
 
 /** Days between measurements, stored as they are; their words come from `labels` (story 22-004). */
 const CADENCES = ["1", "7", "14", "30"] as const;
-
-const SCOPES = ["private", "selected_family", "household_operational"] as const;
 
 /** Configuring a recurring measurement — the household's own commitment, never one WonderHome invents (story 21-007). */
 export function AddRoutineButton({
@@ -111,13 +111,7 @@ export function AddRoutineButton({
             <Switch checked={reminderEnabled} onCheckedChange={setReminderEnabled} label={words.remind} />
           </div>
           <Field label={common.notes} name="notes" placeholder={common.notesPlaceholder} autoComplete="off" />
-          <Select label={common.whoCanSee} name="privacyScope" defaultValue={defaultPrivacyScope}>
-            {SCOPES.map((scope) => (
-              <option key={scope} value={scope}>
-                {labels.scopes[scope]}
-              </option>
-            ))}
-          </Select>
+          <HealthPrivacyField labels={labels} defaultValue={defaultPrivacyScope} />
           <Button type="submit" disabled={pending} className="w-full">
             {pending ? common.adding : words.submit}
           </Button>
@@ -134,6 +128,8 @@ export function EditRoutineButton({
   cadenceDays,
   nextDueOn,
   notes,
+  memberId,
+  privacyScope,
   labels,
 }: {
   householdId: string;
@@ -142,6 +138,8 @@ export function EditRoutineButton({
   cadenceDays: number;
   nextDueOn: string;
   notes: string | null;
+  memberId: string;
+  privacyScope: "private" | "selected_family" | "household_operational";
   labels: HealthFormLabels;
 }) {
   const words = labels.routine;
@@ -184,6 +182,7 @@ export function EditRoutineButton({
           </Select>
           <Field label={common.nextDue} name="nextDueOn" type="date" defaultValue={nextDueOn} required />
           <Field label={common.notes} name="notes" defaultValue={notes ?? ""} autoComplete="off" />
+          <HealthPrivacyField labels={labels} defaultValue={privacyScope} subjectMemberId={memberId} />
           <Button type="submit" disabled={pending} className="w-full">
             {pending ? common.saving : common.save}
           </Button>
@@ -246,7 +245,7 @@ function CompleteRoutineButton({
           ) : (
             <Field label={common.value} name="value" type="number" step="any" required autoComplete="off" />
           )}
-          <Field label={common.unit} name="unit" placeholder={vitalType === "blood_pressure" ? "mmHg" : common.unitPlaceholder} required autoComplete="off" />
+          <VitalUnitField vitalType={vitalType} labels={labels} />
           <Field label={common.notes} name="notes" autoComplete="off" />
           <Button type="submit" disabled={pending} className="w-full">
             {pending ? common.recording : common.record}
@@ -264,7 +263,7 @@ export function RoutineActions({
   labels,
 }: {
   householdId: string;
-  routine: { id: string; vitalType: VitalType; customLabel: string | null; label: string; cadenceDays: number; nextDueOn: string; notes: string | null; status: "active" | "dismissed" };
+  routine: { id: string; vitalType: VitalType; customLabel: string | null; label: string; cadenceDays: number; nextDueOn: string; notes: string | null; status: "active" | "dismissed"; memberId: string; privacyScope: "private" | "selected_family" | "household_operational" };
   labels: HealthFormLabels;
 }) {
   const common = labels.common;
@@ -296,6 +295,8 @@ export function RoutineActions({
         cadenceDays={routine.cadenceDays}
         nextDueOn={routine.nextDueOn}
         notes={routine.notes}
+        memberId={routine.memberId}
+        privacyScope={routine.privacyScope}
         labels={labels}
       />
       <Pill type="button" tone="quiet" disabled={dismissPending} onClick={() => submit(dismissAction)} aria-label={common.remove} title={common.remove}>

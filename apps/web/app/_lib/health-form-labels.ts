@@ -50,12 +50,22 @@ export type HealthFormLabels = {
     measurementPlaceholder: string;
     unit: string;
     unitPlaceholder: string;
+    addNew: string;
+    chooseExisting: string;
     value: string;
     systolic: string;
     diastolic: string;
     activity: string;
     householdCommitment: string;
     correctDescription: string;
+  };
+  /** The "People I choose" list under every sheet's "Who can see this" (the owner, 2026-10-21). `{name}` is filled in by the sheet. */
+  sharing: {
+    legend: string;
+    explainerSelf: string;
+    explainerOther: string;
+    notYours: string;
+    noOne: string;
   };
   privacy: {
     label: string;
@@ -288,12 +298,21 @@ export function healthFormLabels(t: Translate, language: string): HealthFormLabe
       measurementPlaceholder: t("healthForm.measurementPlaceholder"),
       unit: t("healthForm.unit"),
       unitPlaceholder: t("healthForm.unitPlaceholder"),
+      addNew: t("common.addNew"),
+      chooseExisting: t("common.chooseExisting"),
       value: t("healthForm.value"),
       systolic: t("healthForm.systolic"),
       diastolic: t("healthForm.diastolic"),
       activity: t("healthForm.activity"),
       householdCommitment: t("healthForm.householdCommitment"),
       correctDescription: t("healthForm.correctDescription"),
+    },
+    sharing: {
+      legend: t("healthForm.sharing.legend"),
+      explainerSelf: t("healthForm.sharing.explainerSelf"),
+      explainerOther: t("healthForm.sharing.explainerOther", KEEP_NAME),
+      notYours: t("healthForm.sharing.notYours", KEEP_NAME),
+      noOne: t("healthForm.sharing.noOne"),
     },
     privacy: {
       label: t("healthForm.privacy.label"),

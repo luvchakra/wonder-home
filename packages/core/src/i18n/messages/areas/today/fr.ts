@@ -22,4 +22,13 @@ export const todayFr: AreaCatalog<typeof todayEn> = {
   "today.thought.7": "Aujourd'hui, je fais la sieste à un nouvel endroit.",
   "today.thought.8": "C'est la pelote qui a commencé.",
   "today.weatherArea": "Affichez la météo ici : choisissez votre secteur",
+  "today.cat.dinner": "{meal} pour le dîner ce soir",
+  "today.cat.eventToday": "{title} aujourd'hui à {time}",
+  "today.cat.eventTomorrow": "demain, il y a {title}",
+  "today.cat.toBuy#one": "{count} chose sur la liste de courses",
+  "today.cat.toBuy#other": "{count} choses sur la liste de courses",
+  "today.cat.voice.1": "Miaou ! {fact}.",
+  "today.cat.voice.2": "Ronron… {fact}.",
+  "today.cat.voice.3": "Mrrp ! {fact}, miaou.",
+  "today.cat.voice.4": "Psst, miaou : {fact}.",
 };

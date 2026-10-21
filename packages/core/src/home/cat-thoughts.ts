@@ -146,11 +146,6 @@ export async function settleThoughts(language: LanguageCode, ms: number): Promis
   await Promise.race([fill, new Promise((resolve) => setTimeout(resolve, ms))]);
 }
 
-/** This load's thought: one of the model's, or the number of a built-in line (1…`builtIn`) when there are none. */
-export function pickThought(thoughts: readonly string[], builtIn: number, random: () => number = Math.random): { line: string } | { builtIn: number } {
-  return thoughts.length > 0 ? { line: thoughts[Math.floor(random() * thoughts.length)]! } : { builtIn: 1 + Math.floor(random() * builtIn) };
-}
-
 /** For tests: forget what this server has kept. */
 export function resetThoughtPools(): void {
   pools.clear();

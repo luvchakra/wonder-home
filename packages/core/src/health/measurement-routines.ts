@@ -160,6 +160,7 @@ export type UpdateRoutineInput = {
   reminderEnabled?: boolean;
   notes?: string | null;
   nextDueOn?: string;
+  privacyScope?: PrivacyScope;
 };
 
 /** Editing a routine's own cadence, reminder policy or content — not its lifecycle, see completeRoutine/dismissRoutine/reactivateRoutine. */
@@ -170,6 +171,7 @@ export async function updateRoutine(supabase: SupabaseClient, actor: { household
   if (input.reminderEnabled !== undefined) patch.reminder_enabled = input.reminderEnabled;
   if (input.notes !== undefined) patch.notes = input.notes;
   if (input.nextDueOn !== undefined) patch.next_due_on = input.nextDueOn;
+  if (input.privacyScope !== undefined) patch.privacy_scope = input.privacyScope;
 
   const { data, error } = await supabase.from("health_measurement_routines").update(patch).eq("id", id).eq("household_id", actor.householdId).select(SELECT).single();
 

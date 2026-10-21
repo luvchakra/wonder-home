@@ -168,6 +168,7 @@ export type UpdateCheckupInput = {
   checkupType?: CheckupType;
   cadenceDays?: number | null;
   notes?: string | null;
+  privacyScope?: PrivacyScope;
 };
 
 /** Editing a checkup's own content — not its due date or status, see rescheduleCheckup/completeCheckup/dismissCheckup. */
@@ -177,6 +178,7 @@ export async function updateCheckup(supabase: SupabaseClient, actor: { household
   if (input.checkupType !== undefined) patch.checkup_type = input.checkupType;
   if (input.cadenceDays !== undefined) patch.cadence_days = input.cadenceDays;
   if (input.notes !== undefined) patch.notes = input.notes;
+  if (input.privacyScope !== undefined) patch.privacy_scope = input.privacyScope;
 
   const { data, error } = await supabase.from("health_checkups").update(patch).eq("id", id).eq("household_id", actor.householdId).select(SELECT).single();
 

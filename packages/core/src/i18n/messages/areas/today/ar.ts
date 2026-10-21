@@ -22,4 +22,13 @@ export const todayAr: AreaCatalog<typeof todayEn> = {
   "today.thought.7": "اليوم سآخذ قيلولة في مكان جديد.",
   "today.thought.8": "كرة الصوف هي التي بدأت.",
   "today.weatherArea": "اعرض الطقس هنا: اختر منطقتك",
+  "today.cat.dinner": "{meal} للعشاء الليلة",
+  "today.cat.eventToday": "{title} اليوم الساعة {time}",
+  "today.cat.eventTomorrow": "غدًا {title}",
+  "today.cat.toBuy#one": "{count} شيء في قائمة المشتريات",
+  "today.cat.toBuy#other": "{count} أشياء في قائمة المشتريات",
+  "today.cat.voice.1": "مياو! {fact}.",
+  "today.cat.voice.2": "خرررر… {fact}.",
+  "today.cat.voice.3": "مرررب! {fact}، مياو.",
+  "today.cat.voice.4": "بسس، مياو: {fact}.",
 };

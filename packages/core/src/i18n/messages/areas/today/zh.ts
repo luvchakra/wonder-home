@@ -22,4 +22,13 @@ export const todayZh: AreaCatalog<typeof todayEn> = {
   "today.thought.7": "今天我要换个新地方打盹",
   "today.thought.8": "是毛线球先动手的",
   "today.weatherArea": "在这里显示天气：选择你所在的区域",
+  "today.cat.dinner": "今晚吃{meal}",
+  "today.cat.eventToday": "今天{time}有{title}",
+  "today.cat.eventTomorrow": "明天有{title}",
+  "today.cat.toBuy#one": "购物清单上有{count}样东西",
+  "today.cat.toBuy#other": "购物清单上有{count}样东西",
+  "today.cat.voice.1": "喵！{fact}。",
+  "today.cat.voice.2": "呼噜呼噜……{fact}。",
+  "today.cat.voice.3": "喵呜！{fact}，喵。",
+  "today.cat.voice.4": "嘘，喵：{fact}。",
 };

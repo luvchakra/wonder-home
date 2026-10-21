@@ -288,8 +288,8 @@ export function HomeDashboard({ session }: { session: Session }) {
           </Suspense>
 
           {/* On a phone the scene's cat is cropped away, so it sits whole in the corner, thinking (the owner, 2026-10-21). */}
-          <Suspense fallback={<HeroCatFigure thought={null} />}>
-            <HeroCatThought session={session} />
+          <Suspense fallback={<HeroCatFigure />}>
+            <HeroCatThought session={session} now={now} />
           </Suspense>
 
           <div className="relative z-10 max-w-[60%] space-y-1 px-5 pt-3 pb-5 sm:max-w-[42%] sm:p-6">

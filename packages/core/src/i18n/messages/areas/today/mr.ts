@@ -22,4 +22,13 @@ export const todayMr: AreaCatalog<typeof todayEn> = {
   "today.thought.7": "आज मी नव्या जागी डुलकी घेणार.",
   "today.thought.8": "सुरुवात लोकरीच्या गुंड्याने केली.",
   "today.weatherArea": "इथे हवामान दाखवा: तुमचा भाग निवडा",
+  "today.cat.dinner": "आज रात्री जेवणात {meal}",
+  "today.cat.eventToday": "आज {time} वाजता {title}",
+  "today.cat.eventTomorrow": "उद्या {title} आहे",
+  "today.cat.toBuy#one": "घ्यायच्या यादीत {count} वस्तू",
+  "today.cat.toBuy#other": "घ्यायच्या यादीत {count} वस्तू",
+  "today.cat.voice.1": "म्याँव! {fact}.",
+  "today.cat.voice.2": "घुर्र… {fact}.",
+  "today.cat.voice.3": "म्रप! {fact}, म्याँव.",
+  "today.cat.voice.4": "ऐका, म्याँव: {fact}.",
 };

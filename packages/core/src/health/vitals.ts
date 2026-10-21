@@ -32,6 +32,32 @@ export const VITAL_TYPES = [
 ] as const;
 export type VitalType = (typeof VITAL_TYPES)[number];
 
+/**
+ * The units a reading of each type is offered in, picked rather than typed
+ * (rule 20); the picker still takes a unit not listed. The first one is the
+ * metric default, the second (where there is one) the imperial. Symbols are
+ * the same in every language, so they are stored and shown as they are.
+ */
+export const VITAL_UNITS: Readonly<Record<VitalType, readonly string[]>> = {
+  weight: ["kg", "lb", "g"],
+  height: ["cm", "in", "m", "ft"],
+  temperature: ["°C", "°F"],
+  blood_pressure: ["mmHg"],
+  pulse: ["bpm"],
+  steps: ["steps"],
+  distance: ["km", "mi", "m"],
+  exercise_duration: ["min", "h"],
+  resting_heart_rate: ["bpm"],
+  custom: ["kg", "cm", "°C", "bpm", "mmHg", "mg/dL", "mmol/L", "%", "min", "km", "steps"],
+};
+
+/** The unit a new reading starts in: the household's own system where the type has both. */
+export function defaultVitalUnit(type: VitalType, measurement: "metric" | "imperial" = "metric"): string | undefined {
+  const units = VITAL_UNITS[type];
+  if (type === "custom") return undefined;
+  return measurement === "imperial" && units.length > 1 && ["weight", "height", "temperature", "distance"].includes(type) ? units[1] : units[0];
+}
+
 export const VITAL_STATUSES = ["active", "archived"] as const;
 export type VitalStatus = (typeof VITAL_STATUSES)[number];
 
