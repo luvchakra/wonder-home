@@ -26,17 +26,25 @@ import { cn } from "../../lib/cn";
  * chevron, outside the toggle, because a link cannot live inside a button.
  * The chevron beside it still opens the row for a pointer; the row's own
  * button stays the one control a keyboard or screen reader uses.
+ *
+ * `trailingCorner` lifts the trailing controls and the chevron into the
+ * row's top-right corner (Meals' like and dislike, the owner, 2026-10-21),
+ * so everything under the first line gets the row's full width. The summary
+ * then keeps its own first line clear of them.
  */
 export function ExpandableRow({
   summary,
   children,
   className,
   trailing,
+  trailingCorner = false,
 }: {
   /** Everything in the collapsed row except the chevron. */
   summary: ReactNode;
   /** One control of the row's own, shown before the chevron (an icon link with its own label). */
   trailing?: ReactNode;
+  /** Puts `trailing` and the chevron in the top-right corner, over the summary's first line. */
+  trailingCorner?: boolean;
   /** Revealed below the row once it is opened. */
   children: ReactNode;
   className?: string;
@@ -60,7 +68,19 @@ export function ExpandableRow({
 
   return (
     <li>
-      {trailing ? (
+      {trailing && trailingCorner ? (
+        <div className="relative">
+          <button type="button" onClick={() => setOpen((value) => !value)} aria-expanded={open} aria-controls={panelId} className={toggleClass}>
+            {summary}
+          </button>
+          <div className="absolute end-1 top-1 flex items-center">
+            {trailing}
+            <button type="button" tabIndex={-1} aria-hidden onClick={() => setOpen((value) => !value)} className="grid size-9 shrink-0 place-items-center">
+              {chevron}
+            </button>
+          </div>
+        </div>
+      ) : trailing ? (
         <div className="flex items-center gap-1">
           <button type="button" onClick={() => setOpen((value) => !value)} aria-expanded={open} aria-controls={panelId} className={cn(toggleClass, "min-w-0 flex-1")}>
             {summary}
