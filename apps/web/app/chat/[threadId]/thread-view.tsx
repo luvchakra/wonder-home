@@ -1,6 +1,6 @@
 "use client";
 
-import { ArrowUpRight, Info, LogOut, Paperclip, Pencil, SendHorizontal, SmilePlus, Undo2, UserPlus, Users, X } from "lucide-react";
+import { ArrowUpRight, ChevronDown, Info, LogOut, Paperclip, Pencil, SendHorizontal, SmilePlus, Undo2, UserPlus, Users, X } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useLayoutEffect, useOptimistic, useRef, useState, useTransition, type MouseEvent, type ReactNode } from "react";
@@ -83,6 +83,7 @@ export function ThreadView({
   pages,
   labels,
   reactionNames,
+  canReact = true,
   me,
   notice = null,
   mentionables = [],
@@ -101,6 +102,8 @@ export function ThreadView({
   labels: ThreadLabels;
   /** Each reaction's name, for a screen reader: "Thumbs up". */
   reactionNames: Record<ChatReaction, string>;
+  /** Whether this database has reactions yet; until it does nothing offers to react (rule 10). */
+  canReact?: boolean;
   /** This member's id, so a reaction tapped shows at once. */
   me: string;
   /** A short note above the message box (the owner, 2026-10-21): who reads this chat, the / @ # keys, and who reads it once they sign in. */
@@ -253,6 +256,7 @@ export function ThreadView({
               names={names}
               showAuthor={!message.mine && message.first && kind !== "direct"}
               reactionNames={reactionNames}
+              canReact={canReact}
               me={me}
             />,
           ])
@@ -423,6 +427,7 @@ function MessageBubble({
   names,
   showAuthor,
   reactionNames,
+  canReact,
   me,
 }: {
   message: ThreadMessage;
@@ -431,6 +436,7 @@ function MessageBubble({
   names: readonly string[];
   showAuthor: boolean;
   reactionNames: Record<ChatReaction, string>;
+  canReact: boolean;
   me: string;
 }) {
   const router = useRouter();
@@ -447,7 +453,8 @@ function MessageBubble({
     return withMyReaction(current, me, mine).map((entry) => ({ ...entry, names: entry.memberIds.map((id) => nameOf.get(id) ?? "") }));
   });
   const myReaction = reactions.find((entry) => entry.mine)?.emoji ?? null;
-  const actionable = !message.removed && !editing;
+  // Someone else's message has nothing to do but react, so without reactions it has no menu.
+  const actionable = !message.removed && !editing && (canReact || message.mine);
 
   const save = () =>
     startTransition(async () => {
@@ -634,14 +641,14 @@ function MessageBubble({
               aria-label={labels.messageActions}
               title={labels.messageActions}
               className="grid size-8 shrink-0 place-items-center rounded-full text-[var(--wh-foreground-subtle)] transition hover:bg-[var(--wh-surface-muted)] hover:text-[var(--wh-primary)] focus-visible:opacity-100 focus-visible:outline-2 focus-visible:outline-[var(--wh-primary)] data-[state=open]:opacity-100 pointer-fine:opacity-0 pointer-fine:group-hover:opacity-100 motion-reduce:transition-none">
-              <SmilePlus aria-hidden className="size-4" />
+              {canReact ? <SmilePlus aria-hidden className="size-4" /> : <ChevronDown aria-hidden className="size-4" />}
             </button>
           ) : undefined
         }
       >
-        <ReactionChoices current={myReaction} names={reactionNames} labels={labels} onPick={(emoji) => react(nextReaction(myReaction, emoji))} />
+        {canReact ? <ReactionChoices current={myReaction} names={reactionNames} labels={labels} onPick={(emoji) => react(nextReaction(myReaction, emoji))} /> : null}
         {message.mine ? (
-          <div className="mt-1 border-t border-[var(--wh-border)] pt-1">
+          <div className={canReact ? "mt-1 border-t border-[var(--wh-border)] pt-1" : ""}>
             <MenuItem icon={<Pencil aria-hidden className="size-4" />} onClick={() => { setMenu(false); setDraft(message.body); setEditing(true); }}>{labels.edit}</MenuItem>
             <MenuItem icon={<Undo2 aria-hidden className="size-4" />} onClick={takeBack} disabled={pending}>{labels.takeBack}</MenuItem>
           </div>

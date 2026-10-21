@@ -150,6 +150,14 @@ export async function readThread(supabase: SupabaseClient, threadId: string): Pr
  * the messages it returns).
  */
 export async function readMessages(supabase: SupabaseClient, threadId: string, limit = 200): Promise<ChatMessage[]> {
+  return (await readMessagesWithReactions(supabase, threadId, limit)).messages;
+}
+
+/**
+ * The same read, and whether this database has reactions at all — until its
+ * migration reaches the live project nothing offers to react (rule 10).
+ */
+export async function readMessagesWithReactions(supabase: SupabaseClient, threadId: string, limit = 200): Promise<{ messages: ChatMessage[]; reactionsOn: boolean }> {
   const read = (columns: string) =>
     supabase.from("chat_messages").select(columns).eq("thread_id", threadId).order("created_at", { ascending: false }).limit(limit);
   const base = "id, author_member_id, body, link_kind, link_path, link_label, created_at, edited_at, removed_at";
@@ -157,9 +165,10 @@ export async function readMessages(supabase: SupabaseClient, threadId: string, l
   // A database without reactions yet (its migration may reach the live project
   // after the code does) still shows the messages: PostgREST's PGRST200 is
   // "no such relationship".
-  if (error?.code === "PGRST200") ({ data, error } = await read(base));
+  const reactionsOn = error?.code !== "PGRST200";
+  if (!reactionsOn) ({ data, error } = await read(base));
   if (error) refused(error, "readMessages");
-  return ((data as Record<string, unknown>[] | null) ?? [])
+  const messages = ((data as Record<string, unknown>[] | null) ?? [])
     .map((row) => ({
       id: row.id as string,
       authorMemberId: row.author_member_id as string,
@@ -175,6 +184,7 @@ export async function readMessages(supabase: SupabaseClient, threadId: string, l
         : ((row.chat_message_reactions as { member_id: string; emoji: string }[] | null) ?? []).map((reaction) => ({ memberId: reaction.member_id, emoji: reaction.emoji })),
     }))
     .reverse();
+  return { messages, reactionsOn };
 }
 
 /** What the browser may ask to link: a record by kind and id, or a screen by key. */

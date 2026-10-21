@@ -45,7 +45,7 @@
 
 ## Still open
 
-- **The migration is not on the live project.** The `apply_migration` call was cancelled, and the table and function are absent (verified with `to_regclass`). Until it is applied, a reaction pick fails quietly: the pill does not appear and the messages still load. Apply `supabase/migrations/20261021070000_chat_reactions.sql` with `apply_migration`, then run `npm run verify:live`.
+- **The migration is not on the live project.** The `apply_migration` call was cancelled, and the table and function are absent (verified with `to_regclass`). The owner chose to ship without it for now (story 12-016, Blocked). Until it is applied, `readMessagesWithReactions` reports `reactionsOn: false`, the thread offers no reaction at all (rule 10), and the Chat help paragraph leaves reactions out. Apply `supabase/migrations/20261021070000_chat_reactions.sql` with `apply_migration`, then run `npm run verify:live`.
 - **No before screenshots** were taken; the owner's own screenshot is the before.
 
 ## Cleanup

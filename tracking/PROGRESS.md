@@ -362,6 +362,7 @@ disagree again.)
 | 2026-10-21 | — | Release 0.1 | Done | Release notes: Version 0.1 (PRs #243–#283), confirmed live by the owner, in all eight languages. |
 | 2026-10-21 | 12 | 12-015 | Done | Household chat live: a chat icon for every family member (signed in or not, with a note until they join) and Family chat from the Family members header. |
 | 2026-10-21 | 12 | 12-015 | Done | Chat: / attaches anything, @ mentions people, helpers and pets, # tags with Trending at home on Home, and a notification for something new to read. |
-| 2026-10-21 | 12 | 12-015 | Done | FamilyChat: renamed (household thread now Whole family), a WhatsApp-compact thread with a composer kept above the tab bar, and emoji reactions; the reactions migration waits on reaching live. |
+| 2026-10-21 | 12 | 12-015 | Done | FamilyChat: renamed (household thread now Whole family), a WhatsApp-compact thread with a composer kept above the tab bar, and emoji reactions built (12-016, blocked on its migration reaching live; nothing offers a reaction until then). |
 | 2026-10-21 | 24 | 24-013 | Done | A place question is answered, never asked "what kind of place?": going out is assumed and said back, "tomorrow" is tomorrow's hours, and a short follow-up ("dinner nearby home") narrows the same request; eval HT-135 to HT-137. |
 | 2026-10-21 | 26 | 26-017 | Done | Nothing is added to the calendar twice: the same occasion under another name on the same day is asked about first, from the Calendar, Kids & School, HomeTalk and HomeSend. |
+| 2026-10-21 | 12 | 12-016 | Blocked | Reactions on FamilyChat messages: built and tested, waiting on its migration reaching the live project; the thread hides them until then. |
