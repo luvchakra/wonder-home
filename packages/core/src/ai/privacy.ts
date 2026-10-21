@@ -467,6 +467,16 @@ export function restoreParameterNames<T extends Record<string, unknown>>(paramet
 }
 
 /** Replaces every household name in the text, longest first so "Ravi Nair" wins over "Ravi". */
+/**
+ * One text with the household's names swapped for the same placeholders
+ * `minimiseContext` uses. Already-pseudonymised text comes back unchanged, so
+ * a caller that minimised the question itself loses nothing by passing it
+ * through again.
+ */
+export function pseudonymiseText(text: string, people: readonly Person[]): string {
+  return substitute(text, people, pseudonymise(people));
+}
+
 function substitute(
   text: string,
   people: readonly Person[],

@@ -11,6 +11,7 @@ decision that shapes later work each earns a note, written before moving on.
 
 | Date | Note |
 |---|---|
+| 2026-10-21 | [What the first Anthropic evaluation found, and what was fixed](2026-10-21-anthropic-eval-findings.md) |
 | 2026-10-21 | [Health records: attach the report, read it, suggest next steps](2026-10-21-health-report-reading.md) |
 | 2026-10-21 | [The cat darts away and thinks, likes on dishes, Health visibility, units picked, chat waits for its tables](2026-10-21-cats-units-chat-gate.md) |
 | 2026-10-21 | [Household chat, with the thing itself attached](2026-10-21-household-chat.md) |

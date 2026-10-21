@@ -909,10 +909,20 @@ export function readPlan(text: string): { what: string; window: string | null; g
   const what = rest.trim().replace(/\s*\b(?:for|on)$/i, "").trim();
   // A day with no time: the event's own name says when ("movie night", "dinner party").
   if (window && new RegExp(`^(?:(?:this|next) )?${WEEKDAY}$|^tomorrow$|^today$`).test(window)) {
-    const part = /\bnight\b|\bmovie|\bparty\b|\bdinner\b|\bsleepover\b/i.test(what) ? "night" : /\bbreakfast\b|\bbrunch\b|\bmorning\b/i.test(what) ? "morning" : /\blunch\b|\bpicnic\b/i.test(what) ? "afternoon" : null;
-    if (part) window = window === "today" ? (part === "night" ? "tonight" : `this ${part}`) : `${window} ${part}`;
+    const part = partOfDayFor(what);
+    if (part) window = withPartOfDay(window, part);
   }
   return { what, window, guests };
+}
+
+/** The time of day an event's own name says ("movie night", "dinner party", "picnic"), or null. */
+export function partOfDayFor(what: string): "night" | "morning" | "afternoon" | null {
+  return /\bnight\b|\bmovie|\bparty\b|\bdinner\b|\bsleepover\b/i.test(what) ? "night" : /\bbreakfast\b|\bbrunch\b|\bmorning\b/i.test(what) ? "morning" : /\blunch\b|\bpicnic\b/i.test(what) ? "afternoon" : null;
+}
+
+/** A day phrase with that time of day added: "friday" → "friday night", "today" → "tonight". */
+export function withPartOfDay(day: string, part: "night" | "morning" | "afternoon"): string {
+  return /^today$/i.test(day.trim()) ? (part === "night" ? "tonight" : `this ${part}`) : `${day} ${part}`;
 }
 
 function withWhen(parameters: Record<string, unknown>, when: string | undefined, key = "when"): Record<string, unknown> {
@@ -952,6 +962,26 @@ function normaliseTime(raw: string): string {
  * — the same shape a fixture miss produces — when nothing applies, so the
  * caller's clarification path is unchanged.
  */
+/** Scopes of a question answered by rules from the whole record (roster.ts, relations.ts, likes.ts), never from facts a model was shown. */
+const RULE_ANSWERED_SCOPES = new Set(["people", "relations", "likes"]);
+
+/**
+ * Whether the rules' reading of a turn is one the rules answer themselves:
+ * a read whose answer is composed from every record by rules — who is in the
+ * family, how people are related, who likes what — or a place question for
+ * HomePlaces. Such a reading stands over a model's (engine.ts): it only ever
+ * reads, so it can never do more than the person asked.
+ */
+export function rulesAnswerItself(intent: HouseholdIntent): boolean {
+  if (intent.action === "find_places") return true;
+  return intent.action === "ask_status" && typeof intent.parameters.scope === "string" && RULE_ANSWERED_SCOPES.has(intent.parameters.scope);
+}
+
+/** Whether a model already read the turn as the same rule-answered question. */
+export function sameRuleReading(rules: HouseholdIntent, model: HouseholdIntent): boolean {
+  return rules.action === model.action && (rules.action === "find_places" || rules.parameters.scope === model.parameters.scope);
+}
+
 export function resolveRuleIntent(
   utterance: string,
   context: { actorMemberId: string; channel: "text" | "voice" },

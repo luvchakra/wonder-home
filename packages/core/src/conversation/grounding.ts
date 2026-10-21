@@ -8,6 +8,7 @@ import { resolvePerson } from "../context/resolution";
 import type { HouseholdContextItem } from "../context/types";
 import { isConsequential, type HouseholdIntent } from "./intent";
 import { anaphorOf, resolveAnaphor, whichOf, type FocusEntity, type ReferenceState } from "./references";
+import { partOfDayFor, withPartOfDay } from "./rules";
 import { resolveTemporal, splitTrailingWhen, TEMPORAL_PHRASE } from "./temporal";
 
 /**
@@ -155,6 +156,21 @@ export async function groundIntent(intent: HouseholdIntent, env: GroundingEnv): 
   if (implicit && grounded.target.kind === "unspecified") grounded = { ...grounded, target: { ...implicit } };
   const focus: FocusEntity[] = [];
   const at = env.now.toISOString();
+
+  // A plan named for a time of day ("movie night", "dinner party") on a bare
+  // day is that time of that day, as `readPlan` reads it from the words. A
+  // real model (Anthropic, 21 Oct 2026) named "Friday this week" alone, so the
+  // movie night had no time and stayed prepared instead of going on the calendar.
+  if (grounded.action === "plan_event" && typeof grounded.parameters.what === "string") {
+    const part = partOfDayFor(grounded.parameters.what);
+    for (const key of ["window", "when"] as const) {
+      const phrase = grounded.parameters[key];
+      if (!part || typeof phrase !== "string" || !phrase.trim()) continue;
+      if (resolveTemporal(phrase, { timezone: env.timezone, now: env.now })?.precision !== "day") continue;
+      const timed = withPartOfDay(phrase.trim(), part);
+      if (resolveTemporal(timed, { timezone: env.timezone, now: env.now })?.precision === "part_of_day") grounded.parameters[key] = timed;
+    }
+  }
 
   // --- Dates (§7): the phrase is the model's, the day is ours -------------
   for (const key of DATE_KEYS) {

@@ -1,16 +1,21 @@
 import { describe, expect, it } from "vitest";
 
 import { groundIntakeDate, type IntakeExtraction } from "../ai/classify-intake";
-import { DEFAULT_DATA_USE } from "../ai/privacy";
+import type { AnswerComposer, AnswerInput } from "../ai/model-client";
+import { DEFAULT_DATA_USE, pseudonymiseText } from "../ai/privacy";
+import type { Understanding } from "../conversation/engine";
 import { groundIntent } from "../conversation/grounding";
 import type { HouseholdIntent } from "../conversation/intent";
 import { localDateTime, pendingWords, roleWords } from "../conversation/moment";
 import { proposeFromIntent } from "../conversation/proposal";
+import { rulesAnswerItself, sameRuleReading } from "../conversation/rules";
+import { resolveTemporal } from "../conversation/temporal";
 import type { ModelDraft } from "../homebrain/answer";
 import { answerWithHomeBrain } from "../homebrain/turn";
 import { adoptMatchedSubject, type SubjectResolution } from "../homesend/resolve";
 import { contextItemsFor, GOLDEN_HOUSEHOLDS, groundingEnvFor, memberOf, peopleOf, viewerFor } from "./households";
-import { BLANK_READING } from "./runners";
+import { GOLDEN_CASES } from "./cases";
+import { BLANK_READING, runCase } from "./runners";
 
 /**
  * Defects the configured-provider evaluation found (`npm run eval --
@@ -198,5 +203,129 @@ describe("HomeTalk: a bill the model named from the conversation is as settled a
     const grounded = await groundIntent(named("water", 0.6), env);
     expect(grounded.kind === "grounded" && grounded.intent.confidence).toBe(0.6);
     expect(grounded.kind === "grounded" && grounded.intent.parameters.billId).toBeUndefined();
+  });
+});
+
+/**
+ * Defects the configured-provider evaluation found against Anthropic (`npm run
+ * eval -- --provider configured`, 21 Oct 2026: 128/148 before these fixes).
+ * Each model reply below is the shape the real one gave, replayed without a
+ * model, so the fix holds whichever provider runs next.
+ */
+function goldenTalk(id: string) {
+  const found = GOLDEN_CASES.find((c) => c.id === id);
+  if (!found) throw new Error(`no golden case ${id}`);
+  return found;
+}
+
+const anthropicRead =
+  (read: Partial<HouseholdIntent>): Understanding =>
+  (utterance, context) => ({
+    action: "ask_status",
+    actorMemberId: context.actorMemberId,
+    target: { kind: "unspecified" },
+    parameters: {},
+    confidence: 0.6,
+    channel: context.channel,
+    utterance,
+    understanding: { source: "model", provider: "anthropic" },
+    ...read,
+  });
+
+describe("2026-10-21 Anthropic run: what the rules answer stays the rules'", () => {
+  it("\"who is in the family?\" read by a model as a general status question is still the roster (HT-28, HT-29, HT-30, HT-101)", async () => {
+    for (const id of ["HT-28", "HT-29", "HT-30", "HT-101"]) {
+      const result = await runCase(goldenTalk(id), { understand: anthropicRead({ parameters: { scope: "home" } }) });
+      expect(result.pass, id).toBe(true);
+    }
+  });
+
+  it("\"what do you know about the preferences in food and family?\" stays the likes answer (HT-112)", async () => {
+    const result = await runCase(goldenTalk("HT-112"), { understand: anthropicRead({ parameters: { what: "preferences in food and family", scope: "home" }, confidence: 0.7 }) });
+    expect(result.pass).toBe(true);
+  });
+
+  it("\"suggest a two-day vacation plan\" read as an event to plan is still a place question, and nothing is prepared (HT-88)", async () => {
+    const result = await runCase(goldenTalk("HT-88"), { understand: anthropicRead({ action: "plan_event", target: { kind: "event" }, parameters: { window: "two-day", what: "vacation" } }) });
+    expect(result.pass).toBe(true);
+  });
+
+  it("the rules only ever take over a read, and only when the model read something else", () => {
+    const people = { action: "ask_status", parameters: { scope: "people" } } as unknown as HouseholdIntent;
+    expect(rulesAnswerItself(people)).toBe(true);
+    expect(sameRuleReading(people, { action: "ask_status", parameters: { scope: "people" } } as unknown as HouseholdIntent)).toBe(true);
+    expect(rulesAnswerItself({ action: "make_payment", parameters: {} } as unknown as HouseholdIntent)).toBe(false);
+    expect(rulesAnswerItself({ action: "ask_status", parameters: { scope: "home" } } as unknown as HouseholdIntent)).toBe(false);
+  });
+
+  it("a request the rules read plainly is not asked about because the model scored itself low (HT-06, HT-73)", async () => {
+    const move = await runCase(goldenTalk("HT-06"), {
+      understand: anthropicRead({ action: "adjust_schedule", target: { kind: "event", reference: "science project" }, parameters: { to: "Friday", what: "Science project" } }),
+    });
+    expect(move.pass).toBe(true);
+    const pay = await runCase(goldenTalk("HT-73"), {
+      understand: (utterance, context) =>
+        utterance.trim().toLowerCase() === "no"
+          ? anthropicRead({ action: "unknown" })(utterance, context)
+          : anthropicRead({ action: "make_payment", target: { kind: "bill", reference: "electricity bill" }, parameters: { billLabel: "electricity bill" } })(utterance, context),
+    });
+    expect(pay.pass).toBe(true);
+  });
+
+  it("\"Friday this week\" is this Friday, and a movie night on it is Friday night, on the calendar at once (HT-103)", async () => {
+    expect(resolveTemporal("Friday this week", { timezone: A.timezone, now: A.now })?.date).toBe("2026-09-25");
+    const result = await runCase(goldenTalk("HT-103"), {
+      understand: anthropicRead({ action: "plan_event", target: { kind: "event" }, parameters: { window: "Friday this week", what: "movie night" }, confidence: 0.9 }),
+    });
+    expect(result.pass).toBe(true);
+  });
+});
+
+describe("2026-10-21 Anthropic run: what HomeBrain lets a model see and say", () => {
+  const statusRead = anthropicRead({ parameters: { scope: "home" }, confidence: 0.8 });
+  const recording = (draft: (input: AnswerInput) => ModelDraft) => {
+    const seen: AnswerInput[] = [];
+    const compose: AnswerComposer = async (input) => {
+      seen.push(input);
+      return draft(input);
+    };
+    return { seen, compose };
+  };
+
+  it("a model's \"nothing on record\" is said in WonderHome's words — never the question dressed as a record (HT-54)", async () => {
+    const model = recording(() => ({ text: "I can't see any school fees.\n- **School fees** — nothing recorded → [Bills](/bills)", mode: "unknown", grounded: false, usedFacts: [] }));
+    const result = await runCase(goldenTalk("HT-54"), { understand: statusRead, compose: model.compose });
+    expect(result.pass).toBe(true);
+  });
+
+  it("a count, a sum or the free weekends is told by its rule, never re-told by a model (HT-111, HT-118, HT-120)", async () => {
+    for (const id of ["HT-111", "HT-118", "HT-120"]) {
+      const model = recording(() => ({ text: "5 guests are coming.", mode: "answer", grounded: true, usedFacts: [] }));
+      const result = await runCase(goldenTalk(id), { compose: model.compose });
+      expect(model.seen, id).toHaveLength(0);
+      expect(result.pass, id).toBe(true);
+    }
+  });
+
+  it("a question about one day shows a model nothing on another day, not even through the asker's profile (HB-12)", async () => {
+    const model = recording((input) => ({ text: "Football practice and the Piano lesson.", mode: "answer", grounded: true, usedFacts: input.facts.slice(0, 1).map((fact) => fact.id) }));
+    await runCase(goldenTalk("HB-12"), { compose: model.compose });
+    expect(model.seen.length).toBeGreaterThan(0);
+    for (const input of model.seen) expect(input.facts.map((fact) => fact.text).join("\n")).not.toMatch(/Parent-teacher/);
+  });
+
+  it("a question that names one thing shows a model no other thing of its kind (HT-47)", async () => {
+    const model = recording((input) => ({ text: "The washing machine is due for service.", mode: "answer", grounded: true, usedFacts: input.facts.slice(0, 1).map((fact) => fact.id) }));
+    await runCase(goldenTalk("HT-47"), { understand: statusRead, compose: model.compose });
+    expect(model.seen.length).toBeGreaterThan(0);
+    for (const input of model.seen) expect(input.facts.map((fact) => fact.text).join("\n")).not.toMatch(/Fridge/);
+  });
+
+  it("the question leaves with the same placeholders as the facts, so a model never says it has nobody of that name (HT-65)", async () => {
+    const model = recording(() => ({ text: "Nothing.", mode: "answer", grounded: true, usedFacts: [] }));
+    await runCase(goldenTalk("HT-65"), { understand: statusRead, compose: model.compose });
+    expect(model.seen.length).toBeGreaterThan(0);
+    for (const input of model.seen) expect(input.question).not.toMatch(/\bAsmi\b|\bManan\b/);
+    expect(pseudonymiseText("What does Asmi have tomorrow?", peopleOf(A))).not.toMatch(/Asmi/);
   });
 });

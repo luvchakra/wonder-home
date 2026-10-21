@@ -1,10 +1,10 @@
 import type { AnswerComposer } from "../ai/model-client";
-import { minimiseContext, restoreNames, type DataUsePolicy, type Person } from "../ai/privacy";
+import { minimiseContext, pseudonymiseText, restoreNames, type DataUsePolicy, type Person } from "../ai/privacy";
 import { describeLocalNow } from "../context/format";
 import { isoDay } from "../context/normalize";
 import type { ContextDomain, HouseholdContextItem } from "../context/types";
 import type { ConversationTurn } from "../conversation/engine";
-import { answeringFacts, composeFromFacts, composeGrounded, heldForAdultsAnswer, unknownAnswer } from "./answer";
+import { answeredByArithmetic, answeringFacts, composeFromFacts, composeGrounded, factsForModel, heldForAdultsAnswer, unknownAnswer } from "./answer";
 import { gateCandidates, groundFacts, type GroundedFact } from "./grounding";
 import { deepReadTargets, mergeLiveItems, withinDeepReadBudget, type DeepReadRecord } from "./deep-read";
 import { readBrainQuestion, type BrainReading } from "./question";
@@ -140,7 +140,7 @@ async function answerOnce(turn: HomeBrainTurn): Promise<HomeBrainAnswer> {
   let factsSent = 0;
 
   if (turn.compose) {
-    const minimised = minimiseContext(gateCandidates(facts), { policy: { ...turn.policy, maxItems: Math.max(turn.policy.maxItems, turn.factBudget) }, people: turn.people });
+    const minimised = minimiseContext(gateCandidates(factsForModel(facts, reading)), { policy: { ...turn.policy, maxItems: Math.max(turn.policy.maxItems, turn.factBudget) }, people: turn.people });
     const sent = minimised.included.map((entry) => ({ id: entry.id, text: entry.text }));
     // A fact that answers the question but may not leave (a child's, a
     // bill's, under the household's data-use policy) means a model can only
@@ -155,9 +155,15 @@ async function answerOnce(turn: HomeBrainTurn): Promise<HomeBrainAnswer> {
     // 23 Sep 2026). A broad question with no day ("what time is the
     // meeting?") keeps the model, which answers from what it may see.
     const withheld = (!reading.broad || reading.time !== null) && answering.some((fact) => !sentIds.has(fact.contextId));
-    if (sent.length > 0 && !withheld) {
+    if (sent.length > 0 && !withheld && !answeredByArithmetic(answering)) {
       const compose = turn.compose;
       const localNow = describeLocalNow(turn.now, turn.timezone);
+      // The question goes out with the same placeholders as the facts, whoever
+      // the caller is. Asked "what does Asmi have tomorrow?" beside facts about
+      // "Child A", a real model (Anthropic, 21 Oct 2026) said it had nobody
+      // called Asmi — and the name had left the household besides.
+      const question = pseudonymiseText(turn.sentQuestion, turn.people);
+      const history = turn.sentHistory.map((entry) => ({ ...entry, text: pseudonymiseText(entry.text, turn.people) }));
       let lastRequestSize = sent.length;
       const outcome = await composeGrounded({
         facts: sent,
@@ -166,14 +172,14 @@ async function answerOnce(turn: HomeBrainTurn): Promise<HomeBrainAnswer> {
           // A composer that throws — a timeout, an outage it did not catch
           // itself — is a model with no answer, never an error the person sees.
           try {
-            return await compose({ question: turn.sentQuestion, facts: request.facts, history: turn.sentHistory, viewer: turn.viewer.roleLabel, localNow, problems: request.problems, goal: reading.goal });
+            return await compose({ question, facts: request.facts, history, viewer: turn.viewer.roleLabel, localNow, problems: request.problems, goal: reading.goal });
           } catch {
             return null;
           }
         },
         validation: {
-          question: turn.sentQuestion,
-          history: turn.sentHistory.map((entry) => entry.text),
+          question,
+          history: history.map((entry) => entry.text),
           localNow,
           today: isoDay(turn.now, turn.timezone),
           inferences: facts.filter((fact) => fact.domain === "insight").map((fact) => fact.contextId),
@@ -196,7 +202,12 @@ async function answerOnce(turn: HomeBrainTurn): Promise<HomeBrainAnswer> {
         answering.length === 0 &&
         !facts.some((fact) => outcome.draft.usedFacts.includes(fact.contextId) && (fact.domain === "insight" || fact.domain === "profile" || (fact.domain !== "conflict" && (reading.focus.has(fact.domain) || reading.connected.has(fact.domain)))));
       if (unfounded) validation.rejected = [...new Set([...validation.rejected, "unfounded_answer" as const])];
-      if (outcome.status === "accepted" && !unfounded && !(outcome.draft.mode === "unknown" && answering.length > 0)) {
+      // "Nothing on record" is WonderHome's to say, in its own words. A real
+      // model (Anthropic, 21 Oct 2026), asked by a helper about school fees she
+      // may not see, wrote "**School fees** — nothing recorded" with links to
+      // Bills: the question's own words, dressed as a record, pointing at a
+      // screen she cannot open. A model's "unknown" is never shown as written.
+      if (outcome.status === "accepted" && !unfounded && outcome.draft.mode !== "unknown") {
         return {
           reading,
           facts,
