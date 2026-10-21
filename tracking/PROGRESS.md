@@ -360,3 +360,4 @@ disagree again.)
 | 2026-10-21 | 21 | 21-012 | Done | Attach a report to a health record (PDF or photo), AI reads only what it prints (validated against its text), rule-based next steps open existing sheets prefilled; `health_record_readings` migration waits on the owner. |
 | 2026-10-21 | 13 | 13-011 | Done | Home & Upkeep: a new request is Open (was Raised); the status picker starts at the current status and Update waits for a change. |
 | 2026-10-21 | — | Release 0.1 | Done | Release notes: Version 0.1 (PRs #243–#283), confirmed live by the owner, in all eight languages. |
+| 2026-10-21 | 12 | 12-015 | Done | Household chat live: a chat icon for every family member (signed in or not, with a note until they join) and Family chat from the Family members header. |
