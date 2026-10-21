@@ -38,6 +38,7 @@ export function BookAppointmentButton({
   checkupId,
   defaultMemberId,
   defaultAppointmentType = "doctor",
+  defaultNotes,
   trigger,
   labels,
   defaultOpen = false,
@@ -50,6 +51,8 @@ export function BookAppointmentButton({
   checkupId?: string;
   defaultMemberId?: string;
   defaultAppointmentType?: AppointmentType;
+  /** Prefilled notes, for a suggestion that opens this sheet (a report's follow-up, story 21-012); the person can change them. */
+  defaultNotes?: string;
   /** A custom trigger, for a checkup row's own contextual "Book" action instead of the generic header pill. */
   trigger?: ReactNode;
   labels: HealthFormLabels;
@@ -136,7 +139,7 @@ export function BookAppointmentButton({
 
           <div className={step === 4 ? "space-y-3" : "hidden"}>
             <Field label={words.prepare} name="preparationNotes" placeholder={words.preparePlaceholder} autoComplete="off" />
-            <Field label={common.notes} name="notes" placeholder={common.notesPlaceholderElse} autoComplete="off" />
+            <Field label={common.notes} name="notes" placeholder={common.notesPlaceholderElse} defaultValue={defaultNotes} autoComplete="off" />
             <HealthPrivacyField labels={labels} defaultValue={defaultPrivacyScope} />
           </div>
 

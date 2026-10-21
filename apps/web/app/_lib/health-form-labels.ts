@@ -193,6 +193,60 @@ export type HealthFormLabels = {
     filing: string;
     editTitle: string;
     editDescription: string;
+    attach: string;
+    attachHint: string;
+    replace: string;
+    hasReport: string;
+    removeReport: string;
+    tooLarge: string;
+  };
+  /** Reading an attached report (story 21-012); `{…}` placeholders are filled on the client with the report's own words. */
+  report: {
+    open: string;
+    noReport: string;
+    section: string;
+    lede: string;
+    read: string;
+    readAgain: string;
+    reading: string;
+    readOn: string;
+    testDate: string;
+    notRead: string;
+    notReadViewer: string;
+    nothingRead: string;
+    range: string;
+    noRange: string;
+    flag: Record<"high" | "low" | "abnormal" | "normal", string>;
+    outside: Record<"high" | "low", string>;
+    within: string;
+    noFlag: string;
+    page: string;
+    fromPicture: string;
+    dropped: string;
+    instructions: string;
+    notKept: Record<"not_ready" | "failed", string>;
+    refusal: Record<
+      "not_in_plan" | "no_file" | "not_writer" | "person_off" | "no_provider" | "provider_off" | "health_not_allowed" | "limit" | "unreadable_file" | "failed",
+      string
+    >;
+    suggest: {
+      title: string;
+      lede: string;
+      nothingFlagged: string;
+      because: string;
+      followUpTitle: string;
+      followUpAction: string;
+      followUpNotes: string;
+      trackTitle: string;
+      trackAction: string;
+      trackNotes: string;
+      recheckTitle: string;
+      recheckIn3: string;
+      recheckIn6: string;
+      recheckLabel: string;
+    };
+    measure: Record<"blood_pressure" | "weight" | "pulse" | "blood_sugar", string>;
+    bloodSugarLabel: string;
   };
   vital: {
     add: string;
@@ -461,6 +515,77 @@ export function healthFormLabels(t: Translate, language: string): HealthFormLabe
       filing: t("healthForm.healthRecord.filing"),
       editTitle: t("healthForm.healthRecord.editTitle"),
       editDescription: t("healthForm.healthRecord.editDescription"),
+      attach: t("healthForm.healthRecord.attach"),
+      attachHint: t("healthForm.healthRecord.attachHint"),
+      replace: t("healthForm.healthRecord.replace"),
+      hasReport: t("healthForm.healthRecord.hasReport"),
+      removeReport: t("healthForm.healthRecord.removeReport"),
+      tooLarge: t("healthForm.healthRecord.tooLarge"),
+    },
+    report: {
+      open: t("healthReport.open"),
+      noReport: t("healthReport.noReport"),
+      section: t("healthReport.section"),
+      lede: t("healthReport.lede"),
+      read: t("healthReport.read"),
+      readAgain: t("healthReport.readAgain"),
+      reading: t("healthReport.reading"),
+      readOn: t("healthReport.readOn", { date: "{date}" }),
+      testDate: t("healthReport.testDate", { date: "{date}" }),
+      notRead: t("healthReport.notRead"),
+      notReadViewer: t("healthReport.notReadViewer"),
+      nothingRead: t("healthReport.nothingRead"),
+      range: t("healthReport.range", { range: "{range}" }),
+      noRange: t("healthReport.noRange"),
+      flag: {
+        high: t("healthReport.flag.high"),
+        low: t("healthReport.flag.low"),
+        abnormal: t("healthReport.flag.abnormal"),
+        normal: t("healthReport.flag.normal"),
+      },
+      outside: { high: t("healthReport.outside.high"), low: t("healthReport.outside.low") },
+      within: t("healthReport.within"),
+      noFlag: t("healthReport.noFlag"),
+      page: t("healthReport.page", { page: "{page}" }),
+      fromPicture: t("healthReport.fromPicture"),
+      dropped: t("healthReport.dropped"),
+      instructions: t("healthReport.instructions"),
+      notKept: { not_ready: t("healthReport.notKept.not_ready"), failed: t("healthReport.notKept.failed") },
+      refusal: {
+        not_in_plan: t("healthReport.refusal.not_in_plan"),
+        no_file: t("healthReport.refusal.no_file"),
+        not_writer: t("healthReport.refusal.not_writer"),
+        person_off: t("healthReport.refusal.person_off"),
+        no_provider: t("healthReport.refusal.no_provider"),
+        provider_off: t("healthReport.refusal.provider_off"),
+        health_not_allowed: t("healthReport.refusal.health_not_allowed"),
+        limit: t("healthReport.refusal.limit"),
+        unreadable_file: t("healthReport.refusal.unreadable_file"),
+        failed: t("healthReport.refusal.failed"),
+      },
+      suggest: {
+        title: t("healthReport.suggest.title"),
+        lede: t("healthReport.suggest.lede"),
+        nothingFlagged: t("healthReport.suggest.nothingFlagged"),
+        because: t("healthReport.suggest.because", { names: "{names}" }),
+        followUpTitle: t("healthReport.suggest.followUp.title"),
+        followUpAction: t("healthReport.suggest.followUp.action"),
+        followUpNotes: t("healthReport.suggest.followUp.notes", { label: "{label}", findings: "{findings}" }),
+        trackTitle: t("healthReport.suggest.track.title", { measure: "{measure}" }),
+        trackAction: t("healthReport.suggest.track.action"),
+        trackNotes: t("healthReport.suggest.track.notes", { label: "{label}" }),
+        recheckTitle: t("healthReport.suggest.recheck.title"),
+        recheckIn3: t("healthReport.suggest.recheck.in3"),
+        recheckIn6: t("healthReport.suggest.recheck.in6"),
+        recheckLabel: t("healthReport.suggest.recheck.label", { label: "{label}" }),
+      },
+      measure: {
+        blood_pressure: t("healthReport.measure.blood_pressure"),
+        weight: t("healthReport.measure.weight"),
+        pulse: t("healthReport.measure.pulse"),
+        blood_sugar: t("healthReport.measure.blood_sugar"),
+      },
+      bloodSugarLabel: t("healthReport.measure.blood_sugarLabel"),
     },
     vital: {
       add: t("healthForm.vital.add"),

@@ -357,5 +357,6 @@ disagree again.)
 | 2026-10-21 | 14 | 14-035 | Done | The Home cat, whole on phones, thinks out loud at random moments: what is on record today, said like a cat. |
 | 2026-10-21 | 10 | 10-016 | Done | I like this / Not for me on meals, own recipes and recipe ideas; each person's own food preference. |
 | 2026-10-21 | 21 | 21-010 | Done | Who can see a health record on every sheet, People I choose picks the people; reading units picked from a list. |
+| 2026-10-21 | 21 | 21-012 | Done | Attach a report to a health record (PDF or photo), AI reads only what it prints (validated against its text), rule-based next steps open existing sheets prefilled; `health_record_readings` migration waits on the owner. |
 | 2026-10-21 | 13 | 13-011 | Done | Home & Upkeep: a new request is Open (was Raised); the status picker starts at the current status and Update waits for a change. |
 | 2026-10-21 | — | Release 0.1 | Done | Release notes: Version 0.1 (PRs #243–#283), confirmed live by the owner, in all eight languages. |

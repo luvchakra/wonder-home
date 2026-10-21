@@ -25,13 +25,17 @@ import { listFitnessGoals, listFitnessSessions } from "@wonderhome/core/health/f
 import { listIssues } from "@wonderhome/core/health/issues";
 import { listRoutines } from "@wonderhome/core/health/measurement-routines";
 import { listRecords } from "@wonderhome/core/health/records";
+import { latestByRecord, listRecentReadings } from "@wonderhome/core/health/report-readings";
 import { getHealthProfile, listGuardedChildIds, listHealthConsents, listHouseholdHealthConsents, type PrivacyScope } from "@wonderhome/core/health/repository";
 import { viewersBySubject } from "@wonderhome/core/health/sharing";
 import { listVitals } from "@wonderhome/core/health/vitals";
 import { listMembers } from "@wonderhome/core/identity/households";
+import { localMoment } from "@wonderhome/core/notifications/timing";
 import { AppShell } from "@wonderhome/core/shell/app-shell";
 import { Card } from "@wonderhome/core/ui/card";
 import { ActionRow } from "@wonderhome/core/ui/action-row";
+import { ExpandableRow } from "@wonderhome/core/ui/expandable-row";
+import { IconTile } from "@wonderhome/core/ui/icon-tile";
 import { QuoteCard } from "@wonderhome/core/ui/quote-card";
 import { SectionHeader } from "@wonderhome/core/ui/section-header";
 import { SegmentedControl } from "@wonderhome/core/ui/segmented-control";
@@ -51,6 +55,7 @@ import { HealthSharingProvider, type HealthSharing } from "../_components/health
 import { EditIssueButton, IssueStatusActions } from "../_components/health-issue-forms";
 import { RoutineActions } from "../_components/health-measurement-routine-forms";
 import { RecordActions } from "../_components/health-record-forms";
+import { HealthReportPanel } from "../_components/health-report-panel";
 import { VitalActions } from "../_components/health-vital-forms";
 import { healthFormLabels } from "../_lib/health-form-labels";
 import { requireSession } from "../_lib/session";
@@ -104,7 +109,7 @@ export default async function HealthPage({
   const active = tab === "privacy" ? "privacy" : "overview";
   const memberId = membership.memberId;
 
-  const [profile, consents, members, appointments, issues, checkups, records, vitals, routines, fitnessGoals, fitnessSessions, householdConsents, guardedChildIds] = await Promise.all([
+  const [profile, consents, members, appointments, issues, checkups, records, vitals, routines, fitnessGoals, fitnessSessions, householdConsents, guardedChildIds, recentReadings] = await Promise.all([
     getHealthProfile(supabase, householdId, memberId).catch(() => null),
     listHealthConsents(supabase, householdId, memberId).catch(() => []),
     listMembers(supabase, householdId, membership.household.ownerMemberId).catch(() => []),
@@ -123,6 +128,8 @@ export default async function HealthPage({
     // sharing lists this session can read, and whose it may change.
     listHouseholdHealthConsents(supabase, householdId).catch(() => []),
     listGuardedChildIds(supabase, householdId, memberId),
+    // What each attached report says (story 21-012); empty until the table reaches the project.
+    listRecentReadings(supabase, householdId).catch(() => ({ available: false, readings: [] })),
   ]);
 
   // The sheets' words in the viewer's language; the vital and activity names
@@ -151,6 +158,8 @@ export default async function HealthPage({
   const issueById = new Map(issues.map((issue) => [issue.id, issue]));
   const checkupById = new Map(checkups.map((checkup) => [checkup.id, checkup]));
   const recordById = new Map(records.map((record) => [record.id, record]));
+  const readingByRecord = latestByRecord(recentReadings.readings, records);
+  const today = localMoment(new Date(), membership.household.timezone).dateKey;
   const vitalById = new Map(vitals.map((vital) => [vital.id, vital]));
   const routineById = new Map(routines.map((routine) => [routine.id, routine]));
   const fitnessGoalById = new Map(fitnessGoals.map((goal) => [goal.id, goal]));
@@ -431,15 +440,45 @@ export default async function HealthPage({
                             // home, not a silent history of something that
                             // already happened elsewhere.
                             const record = recordById.get(item.subjectKey.replace("record.", ""));
+                            if (!record) {
+                              return <ActionRow key={item.subjectKey} icon={section.icon} tone={section.tone} title={item.title} meta={item.reason} />;
+                            }
+                            // Opens in place to its notes, its report and what the report says (rule 21, story 21-012).
+                            const stored = readingByRecord.get(record.id);
                             return (
-                              <ActionRow
+                              <ExpandableRow
                                 key={item.subjectKey}
-                                icon={section.icon}
-                                tone={section.tone}
-                                title={item.title}
-                                meta={item.reason}
-                                action={record ? <RecordActions householdId={householdId} record={record} labels={formLabels} /> : null}
-                              />
+                                summary={
+                                  <>
+                                    <IconTile icon={section.icon} tone={section.tone} />
+                                    <span className="min-w-0 flex-1">
+                                      <span className="block text-sm font-medium break-words">{item.title}</span>
+                                      <span className="block text-xs break-words text-[var(--wh-foreground-subtle)]">{item.reason}</span>
+                                    </span>
+                                  </>
+                                }
+                                trailing={<RecordActions householdId={householdId} record={record} labels={formLabels} />}
+                              >
+                                <HealthReportPanel
+                                  householdId={householdId}
+                                  record={{
+                                    id: record.id,
+                                    memberId: record.memberId,
+                                    label: record.label,
+                                    documentDate: record.documentDate,
+                                    notes: record.notes,
+                                    filePath: record.filePath,
+                                    privacyScope: record.privacyScope,
+                                  }}
+                                  stored={stored ? { reading: stored.reading, readAt: stored.readAt } : null}
+                                  canAsk={record.status === "active" && (record.memberId === memberId || guardedChildIds.includes(record.memberId))}
+                                  today={today}
+                                  language={locale.preferences.language}
+                                  timeZone={membership.household.timezone}
+                                  members={memberList}
+                                  labels={formLabels}
+                                />
+                              </ExpandableRow>
                             );
                           }
 
