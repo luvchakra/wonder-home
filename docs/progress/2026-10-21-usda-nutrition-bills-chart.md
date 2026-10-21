@@ -43,7 +43,12 @@
 - **Bills.** The Upcoming bills line always shows with Add a bill. With no bills it sits above the empty section, and the empty section no longer has its own button. Checked at 360px.
 - **Home & Upkeep (13-011).** A new request reads Open. The status picker lists the current status first, selected by default, and Update stays off until another is picked. Checked at 360px.
 - **Release notes.** Version 0.1 covers PRs #243–#283 in 14 items, in all eight languages (`help/release-notes.ts`, `help.release.0.1.*`).
-- **Vercel production settings.** `WONDERHOME_WEATHER_PROVIDER=open-meteo` and `WONDERHOME_DEVELOPER_API=on` were set at the owner's request, and take effect from the next deploy. `WONDERHOME_MALWARE_SCAN_ENDPOINT` is not set, because no scanning service has been chosen yet.
+- **Vercel production settings.** `WONDERHOME_WEATHER_PROVIDER=open-meteo` and `WONDERHOME_DEVELOPER_API=on` were set at the owner's request, and take effect from the next deploy. For malware scanning the owner asked for the best available option, chosen and used automatically. Cloudmersive's Virus Scan API was chosen:
+  - it scans synchronously, processes files in memory, does not share samples, and has a free tier that covers early access;
+  - OPSWAT MetaDefender detects more, but its private processing needs a paid licence, and its free tier shares samples;
+  - VirusTotal shares uploads with vendors, which is unacceptable for household documents.
+
+  `homesend/malware-scan.ts` has a tested Cloudmersive adapter (`inputFile`, the `Apikey` header, `CleanResult`). `WONDERHOME_MALWARE_SCAN_PROVIDER=cloudmersive` is set in production. Scanning starts once the owner creates a free Cloudmersive account and its key is set as `WONDERHOME_MALWARE_SCAN_KEY`; until then nothing is scanned or claimed.
 - **Test data.** Nine test households from earlier sessions were deleted, with their HomeSend files. These were left in place pending the owner:
   - five "Chakrabarty Family" households with no linked account;
   - "Family" (Aarav);
