@@ -193,6 +193,14 @@ export async function resolveLink(supabase: SupabaseClient, householdId: string,
         const { data } = await supabase.from("consumables").select("id, name").eq("household_id", householdId).eq("id", choice.id).maybeSingle();
         return data ? { kind: "grocery", id: data.id as string, label: data.name as string } : null;
       }
+      case "school": {
+        const { data } = await supabase.from("school_items").select("id, title").eq("household_id", householdId).eq("id", choice.id).maybeSingle();
+        return data ? { kind: "school", id: data.id as string, label: data.title as string } : null;
+      }
+      case "home": {
+        const { data } = await supabase.from("home_assets").select("id, name").eq("household_id", householdId).eq("id", choice.id).maybeSingle();
+        return data ? { kind: "home", id: data.id as string, label: data.name as string } : null;
+      }
     }
   };
   const record = await read();
@@ -203,11 +211,14 @@ export async function resolveLink(supabase: SupabaseClient, householdId: string,
 export type LinkOption = { kind: ChatRecordKind; id: string; label: string };
 
 export async function linkOptions(supabase: SupabaseClient, householdId: string, today: string): Promise<LinkOption[]> {
-  const [bills, meals, events, groceries] = await Promise.all([
+  const [bills, meals, events, groceries, school, home] = await Promise.all([
     supabase.from("obligations").select("id, name").eq("household_id", householdId).not("status", "in", "(paid,cancelled)").order("due_on", { ascending: true, nullsFirst: false }).limit(15),
     supabase.from("meals").select("id, name, on_date").eq("household_id", householdId).gte("on_date", today).order("on_date", { ascending: true }).limit(15),
     supabase.from("family_events").select("id, title").eq("household_id", householdId).gte("starts_at", `${today}T00:00:00Z`).neq("status", "cancelled").order("starts_at", { ascending: true }).limit(15),
     supabase.from("consumables").select("id, name, shopping_list_entries!inner(state)").eq("household_id", householdId).eq("shopping_list_entries.state", "to_buy").order("name", { ascending: true }).limit(20),
+    // School work still to do and the things at home to look after (the owner, 2026-10-21: "/ can list all module related tasks").
+    supabase.from("school_items").select("id, title").eq("household_id", householdId).in("status", ["pending", "in_progress"]).order("due_at", { ascending: true, nullsFirst: false }).limit(15),
+    supabase.from("home_assets").select("id, name").eq("household_id", householdId).eq("status", "active").order("name", { ascending: true }).limit(15),
   ]);
   const rows = <T,>(result: { data: T[] | null; error: unknown }) => (result.error ? [] : (result.data ?? []));
   return [
@@ -215,6 +226,8 @@ export async function linkOptions(supabase: SupabaseClient, householdId: string,
     ...rows(meals as { data: { id: string; name: string }[] | null; error: unknown }).map((row) => ({ kind: "meal" as const, id: row.id, label: row.name })),
     ...rows(events as { data: { id: string; title: string }[] | null; error: unknown }).map((row) => ({ kind: "event" as const, id: row.id, label: row.title })),
     ...rows(groceries as { data: { id: string; name: string }[] | null; error: unknown }).map((row) => ({ kind: "grocery" as const, id: row.id, label: row.name })),
+    ...rows(school as { data: { id: string; title: string }[] | null; error: unknown }).map((row) => ({ kind: "school" as const, id: row.id, label: row.title })),
+    ...rows(home as { data: { id: string; name: string }[] | null; error: unknown }).map((row) => ({ kind: "home" as const, id: row.id, label: row.name })),
   ];
 }
 
@@ -265,4 +278,24 @@ export async function takeBackMessage(supabase: SupabaseClient, messageId: strin
     .select("id");
   if (error) refused(error, "takeBackMessage");
   return ((data as unknown[] | null) ?? []).length === 1;
+}
+
+/**
+ * The messages from the last few days that carry a #tag, as this member's
+ * session reads them, so a tag in a chat they are not in never counts for
+ * them (Home's "Trending at home", the owner, 2026-10-21). Bounded.
+ */
+export async function recentTaggedMessages(supabase: SupabaseClient, householdId: string, days: number, now: Date = new Date()): Promise<{ threadId: string; body: string; createdAt: string }[]> {
+  const since = new Date(now.getTime() - days * 86_400_000);
+  const { data, error } = await supabase
+    .from("chat_messages")
+    .select("thread_id, body, created_at")
+    .eq("household_id", householdId)
+    .is("removed_at", null)
+    .gte("created_at", since.toISOString())
+    .like("body", "%#%")
+    .order("created_at", { ascending: false })
+    .limit(500);
+  if (error) return [];
+  return (data ?? []).map((row) => ({ threadId: row.thread_id as string, body: row.body as string, createdAt: row.created_at as string }));
 }

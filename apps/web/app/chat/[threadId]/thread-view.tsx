@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useRef, useState, useTransition } from "react";
 
+import { activeTrigger, normaliseTag, piecesOf, replaceTrigger, type Mentionable } from "@wonderhome/core/chat/composer";
 import { Avatar } from "@wonderhome/core/ui/avatar";
 import { Button } from "@wonderhome/core/ui/button";
 import { Card } from "@wonderhome/core/ui/card";
@@ -26,11 +27,15 @@ export type ThreadMessage = {
 export type ThreadLabels = Record<
   | "placeholder" | "send" | "sending" | "failed" | "attach" | "attachTitle" | "attachLede" | "attachFromHome" | "attachScreens" | "attachNone" | "attachRemove"
   | "open" | "edited" | "removed" | "edit" | "takeBack" | "save" | "cancel" | "messageActions"
-  | "people" | "addPeople" | "addPeopleTitle" | "addPeopleLede" | "addPeopleNone" | "add" | "leave" | "leaveLede" | "leaveConfirm" | "empty" | "you",
+  | "people" | "addPeople" | "addPeopleTitle" | "addPeopleLede" | "addPeopleNone" | "add" | "leave" | "leaveLede" | "leaveConfirm" | "empty" | "you"
+  | "pickAttach" | "pickMention" | "pickTag" | "pickNone" | "newTag" | "helper" | "pet",
   string
 >;
 
-type Option = { kind: "bill" | "meal" | "event" | "grocery"; id: string; label: string; kindLabel: string };
+type Option = { kind: "bill" | "meal" | "event" | "grocery" | "school" | "home"; id: string; label: string; kindLabel: string };
+
+/** How many picks a /, @ or # list shows at once; typing narrows it. */
+const PICKS = 8;
 type Attachment = { kind: Option["kind"]; id: string; label: string; kindLabel: string } | { kind: "page"; key: string; label: string; kindLabel: string };
 
 const ICON_BUTTON =
@@ -58,6 +63,8 @@ export function ThreadView({
   pages,
   labels,
   notice = null,
+  mentionables = [],
+  tags = [],
 }: {
   householdId: string;
   threadId: string;
@@ -73,6 +80,10 @@ export function ThreadView({
   /** Who in this chat has not signed in yet, said once, so a message to them is never assumed read. */
   /** A short note above the message box (the owner, 2026-10-21): who reads this chat, the paperclip, and who reads it once they sign in. */
   notice?: string[] | null;
+  /** Everyone and everything a message can mention with @: members, helpers and pets (the owner, 2026-10-21). */
+  mentionables?: Mentionable[];
+  /** Tags already used in chats this member reads, most used first, for #. */
+  tags?: string[];
 }) {
   const router = useRouter();
   const [body, setBody] = useState("");
@@ -82,6 +93,43 @@ export function ThreadView({
   const [error, setError] = useState<string | null>(null);
   const [pending, startTransition] = useTransition();
   const end = useRef<HTMLDivElement>(null);
+  const box = useRef<HTMLTextAreaElement>(null);
+  const [caret, setCaret] = useState(0);
+  const [closedAt, setClosedAt] = useState<number | null>(null);
+  const found = activeTrigger(body, caret);
+  const trigger = found && found.start !== closedAt ? found : null;
+  const names = mentionables.map((entry) => entry.name);
+
+  const query = trigger?.query.toLocaleLowerCase() ?? "";
+  const matches = (label: string) => label.toLocaleLowerCase().includes(query);
+  type Pick = { key: string; label: string; meta: string; attach: Attachment | null; text: string };
+  const picks: Pick[] = !trigger
+    ? []
+    : trigger.char === "/"
+      ? [
+          ...options.filter((option) => matches(option.label)).map((option) => ({ key: `${option.kind}-${option.id}`, label: option.label, meta: option.kindLabel, attach: option as Attachment, text: "" })),
+          ...pages.filter((page) => matches(page.label)).map((page) => ({ key: `page-${page.key}`, label: page.label, meta: "", attach: { kind: "page" as const, key: page.key, label: page.label, kindLabel: "" }, text: "" })),
+        ].slice(0, PICKS)
+      : trigger.char === "@"
+        ? mentionables.filter((entry) => matches(entry.name)).slice(0, PICKS).map((entry) => ({ key: `${entry.kind}-${entry.name}`, label: entry.name, meta: entry.kind === "helper" ? labels.helper : entry.kind === "pet" ? labels.pet : "", attach: null, text: `@${entry.name}` }))
+        : (() => {
+            const typed = normaliseTag(trigger.query);
+            const known = tags.filter((tag) => tag.startsWith(typed ?? "")).slice(0, PICKS);
+            const fresh = typed && !known.includes(typed) ? [{ key: `new-${typed}`, label: `#${typed}`, meta: labels.newTag, attach: null, text: `#${typed}` }] : [];
+            return [...fresh, ...known.map((tag) => ({ key: `tag-${tag}`, label: `#${tag}`, meta: "", attach: null, text: `#${tag}` }))];
+          })();
+  // A pick goes in where the trigger was: a "/" pick becomes the attachment, the others become text.
+  const choose = (pick: Pick) => {
+    if (!trigger) return;
+    if (pick.attach) setAttachment(pick.attach);
+    const next = replaceTrigger(body, trigger, pick.text);
+    setBody(next.text);
+    setCaret(next.caret);
+    window.requestAnimationFrame(() => {
+      box.current?.focus();
+      box.current?.setSelectionRange(next.caret, next.caret);
+    });
+  };
   const lastId = messages.at(-1)?.id;
 
   // The newest message in view on arrival and whenever a new one lands.
@@ -146,7 +194,7 @@ export function ThreadView({
             <Card className="p-4 text-sm text-[var(--wh-foreground-muted)]">{labels.empty}</Card>
           </li>
         ) : (
-          messages.map((message) => <MessageBubble key={message.id} message={message} threadId={threadId} labels={labels} />)
+          messages.map((message) => <MessageBubble key={message.id} message={message} threadId={threadId} labels={labels} names={names} />)
         )}
       </ol>
 
@@ -173,12 +221,56 @@ export function ThreadView({
               </button>
             </div>
           ) : null}
+          {trigger ? (
+            // What "/", "@" or "#" asks for, narrowed by what follows it; a tap puts it in (the owner, 2026-10-21).
+            <div id="chat-picks" className="rounded-[var(--wh-radius-sm)] border border-[var(--wh-border)] bg-[var(--wh-surface)]">
+              <p className="px-3 pt-2 text-[0.6875rem] font-semibold text-[var(--wh-foreground-subtle)] uppercase">
+                {trigger.char === "/" ? labels.pickAttach : trigger.char === "@" ? labels.pickMention : labels.pickTag}
+              </p>
+              {picks.length === 0 ? (
+                <p className="px-3 pt-1 pb-2 text-sm text-[var(--wh-foreground-muted)]">{labels.pickNone}</p>
+              ) : (
+                <ul className="max-h-56 overflow-y-auto py-1">
+                  {picks.map((pick) => (
+                    <li key={pick.key}>
+                      <button
+                        type="button"
+                        onMouseDown={(event) => event.preventDefault()}
+                        onClick={() => choose(pick)}
+                        className="flex min-h-11 w-full items-center gap-3 px-3 py-1.5 text-left hover:bg-[var(--wh-primary-soft)]/30"
+                      >
+                        <span className="min-w-0 flex-1 text-sm break-words">{pick.label}</span>
+                        {pick.meta ? <span className="shrink-0 text-[0.6875rem] font-semibold text-[var(--wh-foreground-subtle)] uppercase">{pick.meta}</span> : null}
+                      </button>
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </div>
+          ) : null}
           <label className="sr-only" htmlFor="chat-body">{labels.placeholder}</label>
           <textarea
             id="chat-body"
+            ref={box}
             value={body}
-            onChange={(event) => setBody(event.target.value)}
+            aria-controls={trigger ? "chat-picks" : undefined}
+            onChange={(event) => {
+              setBody(event.target.value);
+              setCaret(event.target.selectionStart ?? event.target.value.length);
+              setClosedAt(null);
+            }}
+            onSelect={(event) => setCaret(event.currentTarget.selectionStart ?? 0)}
             onKeyDown={(event) => {
+              if (trigger && event.key === "Escape") {
+                event.preventDefault();
+                setClosedAt(trigger.start);
+                return;
+              }
+              if (trigger && picks.length > 0 && (event.key === "Enter" || event.key === "Tab") && !event.shiftKey && !event.nativeEvent.isComposing) {
+                event.preventDefault();
+                choose(picks[0]!);
+                return;
+              }
               if (event.key === "Enter" && !event.shiftKey && !event.nativeEvent.isComposing) {
                 event.preventDefault();
                 send();
@@ -257,7 +349,7 @@ export function ThreadView({
   );
 }
 
-function MessageBubble({ message, threadId, labels }: { message: ThreadMessage; threadId: string; labels: ThreadLabels }) {
+function MessageBubble({ message, threadId, labels, names }: { message: ThreadMessage; threadId: string; labels: ThreadLabels; names: readonly string[] }) {
   const router = useRouter();
   const [menu, setMenu] = useState(false);
   const [editing, setEditing] = useState(false);
@@ -307,7 +399,13 @@ function MessageBubble({ message, threadId, labels }: { message: ThreadMessage; 
               </div>
             </div>
           ) : (
-            <p className="whitespace-pre-wrap break-words">{message.body}</p>
+            <p className="whitespace-pre-wrap break-words">
+              {piecesOf(message.body, names).map((piece, index) =>
+                piece.kind === "text" ? piece.text : (
+                  <span key={index} className="font-semibold text-[var(--wh-primary)]">{piece.text}</span>
+                ),
+              )}
+            </p>
           )}
           {message.link && !message.removed && !editing ? (
             <Link
