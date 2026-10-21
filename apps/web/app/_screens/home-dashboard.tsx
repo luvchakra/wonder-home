@@ -287,13 +287,18 @@ export function HomeDashboard({ session }: { session: Session }) {
             <TodayCard session={session} now={now} date={formatToday(timezone, now)} />
           </Suspense>
 
-          <div data-hero-words="" className="relative z-10 max-w-[80%] space-y-1 px-5 pt-3 pb-5 sm:max-w-[42%] sm:p-6">
-            <p className="text-lg font-medium text-[var(--wh-foreground-muted)]">{greetingFor(timezone, now)},</p>
-            <h1 className="min-w-0 text-[2rem] leading-tight font-bold tracking-tight text-balance sm:text-[2.5rem]">
-              {firstName}! <span aria-hidden className="wh-hand-wave">👋</span>
-            </h1>
-            <p className="mt-1 text-base font-semibold text-[var(--wh-foreground)]">{t("home.doingGreat")}</p>
-            <p className="text-sm text-[var(--wh-foreground-muted)]">{t("home.lede")}</p>
+          {/* On a phone the encouragement sits to the right of the greeting, level with it (the owner, 2026-10-21: "move this section on the right"); on a wider screen the scene holds the right, so it stays under the name. */}
+          <div data-hero-words="" className="relative z-10 flex items-center gap-4 px-5 pt-3 pb-5 sm:block sm:max-w-[42%] sm:space-y-1 sm:p-6">
+            <div className="min-w-0 flex-1 space-y-1">
+              <p className="text-lg font-medium text-[var(--wh-foreground-muted)]">{greetingFor(timezone, now)},</p>
+              <h1 className="min-w-0 text-[1.75rem] leading-tight font-bold tracking-tight break-words text-balance min-[400px]:text-[2rem] sm:text-[2.5rem]">
+                {firstName}! <span aria-hidden className="wh-hand-wave">👋</span>
+              </h1>
+            </div>
+            <div className="w-[44%] max-w-[12rem] shrink-0 space-y-0.5 border-s-2 border-[var(--wh-primary-soft)] ps-3 sm:mt-1 sm:w-auto sm:max-w-none sm:border-0 sm:ps-0">
+              <p className="text-sm font-semibold text-[var(--wh-foreground)] sm:text-base">{t("home.doingGreat")}</p>
+              <p className="text-xs leading-snug text-[var(--wh-foreground-muted)] sm:text-sm">{t("home.lede")}</p>
+            </div>
           </div>
 
           {/* The cat thinking out loud, in the room the header has (the owner, 2026-10-21). */}
