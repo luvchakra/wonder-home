@@ -260,6 +260,7 @@ export const healthEn = {
   "healthForm.healthRecord.replace": "Replace the report (optional)",
   "healthForm.healthRecord.hasReport": "A report is attached to this record.",
   "healthForm.healthRecord.removeReport": "Remove the attached report",
+  "healthForm.healthRecord.tooLarge": "That file is too large — please use one under 4MB.",
 
   // Reading an attached report (story 21-012).
   "healthReport.open": "Open the report",

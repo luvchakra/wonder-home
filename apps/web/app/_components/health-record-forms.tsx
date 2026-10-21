@@ -1,9 +1,10 @@
 "use client";
 
-import { Ban, Pencil, Plus, RotateCcw } from "lucide-react";
-import { startTransition, useActionState, useEffect, useRef, useState } from "react";
+import { Ban, Paperclip, Pencil, Plus, RotateCcw } from "lucide-react";
+import { startTransition, useActionState, useEffect, useId, useRef, useState } from "react";
 
 import type { RecordType } from "@wonderhome/core/health/records";
+import { REPORT_ACCEPT, REPORT_MAX_BYTES } from "@wonderhome/core/health/report-limits";
 import { Alert } from "@wonderhome/core/ui/alert";
 import { Button } from "@wonderhome/core/ui/button";
 import { Field } from "@wonderhome/core/ui/field";
@@ -33,6 +34,58 @@ const TYPES: RecordType[] = [
   "visit_summary",
   "other",
 ];
+
+/**
+ * "Attach the report" (story 21-012): a PDF or a photo, sent with the rest of
+ * the sheet and checked again on the server from its bytes. In an edit sheet
+ * a report already attached can be replaced, or removed (rule 12). Posts
+ * `report` (the file) and `removeReport` ("true" to take it off the record).
+ */
+function ReportFileField({ labels, hasReport = false }: { labels: HealthFormLabels; hasReport?: boolean }) {
+  const words = labels.healthRecord;
+  const id = useId();
+  const [chosen, setChosen] = useState<string | null>(null);
+  const [problem, setProblem] = useState<string | null>(null);
+  const [remove, setRemove] = useState(false);
+
+  return (
+    <div className="space-y-1.5">
+      <label htmlFor={id} className="flex items-center gap-1.5 text-sm font-medium">
+        <Paperclip aria-hidden className="size-3.5" /> {hasReport ? words.replace : words.attach}
+      </label>
+      {hasReport ? <p className="text-xs text-[var(--wh-foreground-muted)]">{words.hasReport}</p> : null}
+      <input
+        id={id}
+        type="file"
+        name="report"
+        accept={REPORT_ACCEPT}
+        onChange={(event) => {
+          const file = event.currentTarget.files?.[0] ?? null;
+          if (file && file.size > REPORT_MAX_BYTES) {
+            event.currentTarget.value = "";
+            setChosen(null);
+            setProblem(words.tooLarge);
+            return;
+          }
+          setProblem(null);
+          setChosen(file?.name ?? null);
+          if (file) setRemove(false);
+        }}
+        className="block w-full min-w-0 text-sm text-[var(--wh-foreground-muted)] file:mr-3 file:min-h-11 file:rounded-full file:border-0 file:bg-[var(--wh-primary-soft)] file:px-4 file:text-sm file:font-medium file:text-[var(--wh-primary)]"
+      />
+      {chosen ? <p className="text-xs break-words text-[var(--wh-foreground-muted)]">{chosen}</p> : null}
+      <p className="text-xs text-[var(--wh-foreground-subtle)]">{words.attachHint}</p>
+      {problem ? <p className="text-xs text-[var(--wh-risk)]">{problem}</p> : null}
+      {hasReport && !chosen ? (
+        <label className="flex min-h-11 items-center gap-2 text-sm">
+          <input type="checkbox" checked={remove} onChange={(event) => setRemove(event.currentTarget.checked)} className="size-4 accent-[var(--wh-primary)]" />
+          {words.removeReport}
+        </label>
+      ) : null}
+      <input type="hidden" name="removeReport" value={remove && !chosen ? "true" : "false"} />
+    </div>
+  );
+}
 
 /** Filing a health document by hand — HomeSend's own confirm writes through routeHomeSendItemAction instead (story 21-005). */
 export function AddRecordButton({
@@ -103,6 +156,7 @@ export function AddRecordButton({
           </Select>
           <Field label={words.date} name="documentDate" type="date" />
           <Field label={common.notes} name="notes" placeholder={common.notesPlaceholder} autoComplete="off" />
+          <ReportFileField labels={labels} />
           <HealthPrivacyField labels={labels} defaultValue={defaultPrivacyScope} />
           <Button type="submit" disabled={pending} className="w-full">
             {pending ? words.filing : words.submit}
@@ -113,7 +167,7 @@ export function AddRecordButton({
   );
 }
 
-/** Editing a record's own content — never its file, only what describes it. */
+/** Editing a record: what describes it, who can see it, and its attached report (replace or remove). */
 export function EditRecordButton({
   householdId,
   recordId,
@@ -123,6 +177,7 @@ export function EditRecordButton({
   notes,
   memberId,
   privacyScope,
+  hasReport,
   labels,
 }: {
   householdId: string;
@@ -132,6 +187,7 @@ export function EditRecordButton({
   documentDate: string | null;
   notes: string | null;
   memberId: string;
+  hasReport: boolean;
   privacyScope: "private" | "selected_family" | "household_operational";
   labels: HealthFormLabels;
 }) {
@@ -176,6 +232,7 @@ export function EditRecordButton({
           </Select>
           <Field label={words.date} name="documentDate" type="date" defaultValue={documentDate ?? ""} />
           <Field label={common.notes} name="notes" defaultValue={notes ?? ""} autoComplete="off" />
+          <ReportFileField labels={labels} hasReport={hasReport} />
           <HealthPrivacyField labels={labels} defaultValue={privacyScope} subjectMemberId={memberId} />
           <Button type="submit" disabled={pending} className="w-full">
             {pending ? common.saving : common.save}
@@ -205,6 +262,7 @@ export function RecordActions({
     status: "active" | "archived";
     memberId: string;
     privacyScope: "private" | "selected_family" | "household_operational";
+    filePath: string | null;
   };
   labels: HealthFormLabels;
 }) {
@@ -238,6 +296,7 @@ export function RecordActions({
         notes={record.notes}
         memberId={record.memberId}
         privacyScope={record.privacyScope}
+        hasReport={record.filePath !== null}
         labels={labels}
       />
       <Pill type="button" tone="quiet" disabled={archivePending} onClick={() => submit(archiveAction)} aria-label={common.remove} title={common.remove}>

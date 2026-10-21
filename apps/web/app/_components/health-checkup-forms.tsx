@@ -1,6 +1,7 @@
 "use client";
 
 import { Ban, CalendarPlus, CircleCheck, Pencil, Plus, RotateCcw } from "lucide-react";
+import type { ReactNode } from "react";
 import { startTransition, useActionState, useEffect, useRef, useState } from "react";
 
 import type { AppointmentType } from "@wonderhome/core/health/appointments";
@@ -52,11 +53,25 @@ export function AddCheckupButton({
   labels,
   defaultOpen = false,
   hideTrigger = false,
+  defaultMemberId,
+  defaultLabel,
+  defaultCheckupType = "dentist",
+  defaultNextDueOn,
+  defaultNotes,
+  trigger,
 }: {
   householdId: string;
   members: { id: string; displayName: string }[];
   defaultPrivacyScope: "private" | "selected_family" | "household_operational";
   labels: HealthFormLabels;
+  /** Prefills, for a suggestion that opens this sheet (a report's recheck, story 21-012); the person checks them and saves. */
+  defaultMemberId?: string;
+  defaultLabel?: string;
+  defaultCheckupType?: CheckupType;
+  defaultNextDueOn?: string;
+  defaultNotes?: string;
+  /** A custom trigger in place of the Add pill. */
+  trigger?: ReactNode;
   /** Opens as it mounts — picked from the page's Add menu rather than its own pill. */
   defaultOpen?: boolean;
   /** Leaves its own pill out, when the Add menu is how it is reached. */
@@ -79,7 +94,9 @@ export function AddCheckupButton({
 
   return (
     <>
-      {hideTrigger ? null : (
+      {hideTrigger ? null : trigger ? (
+        <span onClick={() => setOpen(true)}>{trigger}</span>
+      ) : (
         <Pill type="button" tone="soft" onClick={() => setOpen(true)} className="gap-1.5">
           <Plus aria-hidden className="size-3.5" /> {words.add}
         </Pill>
@@ -96,15 +113,15 @@ export function AddCheckupButton({
           {state.error ? <Alert>{state.error}</Alert> : null}
           {state.notice ? <Alert tone="info">{state.notice}</Alert> : null}
           <input type="hidden" name="householdId" value={householdId} />
-          <Select label={common.whoFor} name="memberId" defaultValue={members[0]?.id ?? ""}>
+          <Select label={common.whoFor} name="memberId" defaultValue={defaultMemberId ?? members[0]?.id ?? ""}>
             {members.map((member) => (
               <option key={member.id} value={member.id}>
                 {member.displayName}
               </option>
             ))}
           </Select>
-          <Field label={words.whatsDue} name="label" placeholder={words.whatsDuePlaceholder} required autoComplete="off" />
-          <Select label={words.type} name="checkupType" defaultValue="dentist">
+          <Field label={words.whatsDue} name="label" placeholder={words.whatsDuePlaceholder} defaultValue={defaultLabel} required autoComplete="off" />
+          <Select label={words.type} name="checkupType" defaultValue={defaultCheckupType}>
             {TYPES.map((type) => (
               <option key={type} value={type}>
                 {labels.careTypes[type]}
@@ -118,8 +135,8 @@ export function AddCheckupButton({
               </option>
             ))}
           </Select>
-          <Field label={common.nextDue} name="nextDueOn" type="date" required />
-          <Field label={common.notes} name="notes" placeholder={common.notesPlaceholder} autoComplete="off" />
+          <Field label={common.nextDue} name="nextDueOn" type="date" defaultValue={defaultNextDueOn} required />
+          <Field label={common.notes} name="notes" placeholder={common.notesPlaceholder} defaultValue={defaultNotes} autoComplete="off" />
           <HealthPrivacyField labels={labels} defaultValue={defaultPrivacyScope} />
           <Button type="submit" disabled={pending} className="w-full">
             {pending ? common.adding : words.submit}

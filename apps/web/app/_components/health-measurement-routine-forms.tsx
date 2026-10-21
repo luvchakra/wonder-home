@@ -1,6 +1,7 @@
 "use client";
 
 import { Ban, CircleCheck, Pencil, Plus, RotateCcw } from "lucide-react";
+import type { ReactNode } from "react";
 import { startTransition, useActionState, useEffect, useRef, useState } from "react";
 
 import type { VitalType } from "@wonderhome/core/health/vitals";
@@ -35,11 +36,27 @@ export function AddRoutineButton({
   labels,
   defaultOpen = false,
   hideTrigger = false,
+  defaultMemberId,
+  defaultVitalType = "blood_pressure",
+  defaultCustomLabel,
+  defaultCadenceDays = "7",
+  defaultNextDueOn,
+  defaultNotes,
+  trigger,
 }: {
   householdId: string;
   members: { id: string; displayName: string }[];
   defaultPrivacyScope: "private" | "selected_family" | "household_operational";
   labels: HealthFormLabels;
+  /** Prefills, for a suggestion that opens this sheet (a report's "track it at home", story 21-012); the person checks them and saves. */
+  defaultMemberId?: string;
+  defaultVitalType?: VitalType;
+  defaultCustomLabel?: string;
+  defaultCadenceDays?: (typeof CADENCES)[number];
+  defaultNextDueOn?: string;
+  defaultNotes?: string;
+  /** A custom trigger in place of the Add pill. */
+  trigger?: ReactNode;
   /** Opens as it mounts — picked from the page's Add menu rather than its own pill. */
   defaultOpen?: boolean;
   /** Leaves its own pill out, when the Add menu is how it is reached. */
@@ -48,7 +65,7 @@ export function AddRoutineButton({
   const words = labels.routine;
   const common = labels.common;
   const [open, setOpen] = useState(defaultOpen);
-  const [vitalType, setVitalType] = useState<VitalType>("blood_pressure");
+  const [vitalType, setVitalType] = useState<VitalType>(defaultVitalType);
   const [reminderEnabled, setReminderEnabled] = useState(true);
   const [state, formAction, pending] = useActionState<ActionState, FormData>(createRoutineAction, {});
   const submitted = useRef(false);
@@ -64,7 +81,9 @@ export function AddRoutineButton({
 
   return (
     <>
-      {hideTrigger ? null : (
+      {hideTrigger ? null : trigger ? (
+        <span onClick={() => setOpen(true)}>{trigger}</span>
+      ) : (
         <Pill type="button" tone="soft" onClick={() => setOpen(true)} className="gap-1.5">
           <Plus aria-hidden className="size-3.5" /> {words.add}
         </Pill>
@@ -81,7 +100,7 @@ export function AddRoutineButton({
           {state.error ? <Alert>{state.error}</Alert> : null}
           {state.notice ? <Alert tone="info">{state.notice}</Alert> : null}
           <input type="hidden" name="householdId" value={householdId} />
-          <Select label={common.whoFor} name="memberId" defaultValue={members[0]?.id ?? ""}>
+          <Select label={common.whoFor} name="memberId" defaultValue={defaultMemberId ?? members[0]?.id ?? ""}>
             {members.map((member) => (
               <option key={member.id} value={member.id}>
                 {member.displayName}
@@ -95,8 +114,8 @@ export function AddRoutineButton({
               </option>
             ))}
           </Select>
-          {vitalType === "custom" ? <Field label={common.whatCalled} name="customLabel" placeholder={common.measurementPlaceholder} required autoComplete="off" /> : null}
-          <Select label={common.repeats} name="cadenceDays" defaultValue="7">
+          {vitalType === "custom" ? <Field label={common.whatCalled} name="customLabel" placeholder={common.measurementPlaceholder} defaultValue={defaultCustomLabel} required autoComplete="off" /> : null}
+          <Select label={common.repeats} name="cadenceDays" defaultValue={defaultCadenceDays}>
             {CADENCES.map((cadence) => (
               <option key={cadence} value={cadence}>
                 {words.cadence[cadence]}
@@ -104,13 +123,13 @@ export function AddRoutineButton({
             ))}
           </Select>
           <Field label={common.preferredTime} name="preferredTime" type="time" />
-          <Field label={words.firstDue} name="nextDueOn" type="date" required />
+          <Field label={words.firstDue} name="nextDueOn" type="date" defaultValue={defaultNextDueOn} required />
           <input type="hidden" name="reminderEnabled" value={reminderEnabled ? "true" : "false"} />
           <div className="flex items-center justify-between gap-3 py-1">
             <span className="text-sm font-medium">{words.remind}</span>
             <Switch checked={reminderEnabled} onCheckedChange={setReminderEnabled} label={words.remind} />
           </div>
-          <Field label={common.notes} name="notes" placeholder={common.notesPlaceholder} autoComplete="off" />
+          <Field label={common.notes} name="notes" placeholder={common.notesPlaceholder} defaultValue={defaultNotes} autoComplete="off" />
           <HealthPrivacyField labels={labels} defaultValue={defaultPrivacyScope} />
           <Button type="submit" disabled={pending} className="w-full">
             {pending ? common.adding : words.submit}

@@ -3,6 +3,7 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 import { scanForMalware, platformMalwareScanConfig } from "../homesend/malware-scan";
 import { detectIntakeFile, MAX_PDF_PAGES, pdfPageCount } from "../homesend/normalize";
 import { assessUploadSecurity } from "../homesend/security";
+import { REPORT_MAX_BYTES } from "./report-limits";
 
 /**
  * An attached health report (story 21-012): checked the way HomeSend checks an
@@ -14,10 +15,7 @@ import { assessUploadSecurity } from "../homesend/security";
 
 export const HEALTH_REPORT_BUCKET = "health-records";
 
-/** What one Server Action body carries (`next.config.ts`), the same ceiling HomeSend's upload form promises. */
-export const REPORT_MAX_BYTES = 4 * 1024 * 1024;
-
-export const REPORT_ACCEPT = "application/pdf,image/jpeg,image/png,image/webp,.pdf,.jpg,.jpeg,.png,.webp";
+export { REPORT_ACCEPT, REPORT_MAX_BYTES } from "./report-limits";
 
 export type ReportContentType = "application/pdf" | "image/jpeg" | "image/png" | "image/webp";
 
