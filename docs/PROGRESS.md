@@ -11,11 +11,11 @@ in `docs/progress/`; for the running log of what changed when, `tracking/PROGRES
 
 ## The whole picture
 
-**339 of 363 stories done — 93.4%**
+**340 of 364 stories done — 93.4%**
 
 | Status | Stories |
 |---|---:|
-| Done | 339 |
+| Done | 340 |
 | In Progress | 7 |
 | Blocked | 1 |
 | Not Started | 12 |
@@ -35,7 +35,7 @@ in `docs/progress/`; for the running log of what changed when, `tracking/PROGRES
 | 07 Househelper & Home Operations | `██████████` | 10 | 10 | — |
 | 08 Kids & School Intelligence | `████████░░` | 18 | 21 | 2 in progress, 1 not started |
 | 09 Commerce, Groceries & Pet Supplies | `██████████` | 9 | 9 | — |
-| 10 Meals & Cooking | `██████████` | 12 | 12 | — |
+| 10 Meals & Cooking | `██████████` | 13 | 13 | — |
 | 11 Bills, Fees & Finance | `█████████░` | 12 | 13 | 1 not started |
 | 12 Family Time & Social Activities | `██████████` | 8 | 8 | — |
 | 13 Maintenance, Laundry & Pet Care | `█████████░` | 9 | 10 | 1 in progress |
@@ -290,7 +290,7 @@ in `docs/progress/`; for the running log of what changed when, `tracking/PROGRES
 
 ### 10 — Meals & Cooking
 
-12 of 12 done `██████████`
+13 of 13 done `██████████`
 
 | Story | Priority | Status | Notes |
 |---|---|---|---|
@@ -306,6 +306,7 @@ in `docs/progress/`; for the running log of what changed when, `tracking/PROGRES
 | `10-010` An ingredient pick you can see: the list in view, the item's picture and details | P1 | Done | The owner, 2026-10-20. The suggestion list stays clear of the keyboard without flicker: on a phone it sits in the flow, and `useKeepListInView` (`ui/keep-in-view.tsx`) scrolls just enough, in one frame, and caps the list to the space left; the place search uses it too, and a sheet no longer re-centres a field whose list is open. A picked item shows its picture in the field and a line under the row: brand, pack, what is at home (only when counted) and energy and protein per 100 g or ml when the catalog records them, IFCT credited. Checked at 360×430 as a touch phone |
 | `10-011` Plan the week: every day's breakfast, lunch and dinner, Repeat last week, and Veg / Non-veg on WonderHome's ideas | P1 | Done | The owner, 2026-10-20 (PR #273). Meals → Plan is the week, Monday to Sunday on the household's clock (`meals/week.ts`, tested): ‹ › move a week, This week comes back, and the count is the everyday slots planned out of those still to come. Each day shows Breakfast, Lunch and Dinner (a snack only when one is planned); an empty slot is a quiet "+ Lunch" that opens Plan a meal on that day and slot with its usual time. A past day shows only what was planned on it. Repeat last week plans last week's meals a week on, into empty slots not yet past, through the same `createMeal` and meal ingredients (`copyLastWeekAction`); nothing planned is moved or replaced. On Recipes, All · Veg · Non-veg under Ideas from WonderHome filters the dishes (an egg dish shows with non-veg), keeping the course picked; All was added the same day (PR #274), on its own row so it fits 360px. Words and help in all eight languages. |
 | `10-012` Week template: several dishes per meal, and WonderHome plans each week from it (accepted unless changed) | P1 | Done | The owner, 2026-10-20: "create a week template with multiple options per slot. for each week let WonderHome select the weekly meal plan and show to you, if required user can make change or its accepted by default". Meals → Week template lists, per weekday and meal, the household's recipes WonderHome may pick (`meal_week_template_options`; add for one day, every day, weekdays or the weekend; change; remove). Each week, the first time an adult opens Plan, `planWeekFromTemplate` claims the week once (`meal_week_plans`) and plans one dish per covered meal straight away through `createMeal` with `origin = 'week_template'`: the pick rotates week by week, steps past last week's dish in that slot, never takes a dish an allergy, diet or ethical rule rules out (`meals/week-template.ts`, 8 unit tests), and fills only empty slots not past, so nothing a person planned moves and a removed meal is not put back. Plan shows "WonderHome's plan for this week" with the count and Plan this week from the template; a picked meal says WonderHome's pick, and Choose again swaps in the slot's next dish; Change meal makes it the person's. Adults write; every member reads (`scripts/test-meal-week-template-rls.mjs`, 5/5). Words and help in all eight languages. Migration `20261020234000_meal_week_template.sql` waits to reach the live project; until then the screens read as before. Live 2026-10-21: migration on the live project; opening Plan planned this week's 4 remaining dinners from the template, each marked WonderHome's pick with Choose again. |
+| `10-013` Week template at the header's top right | P1 | Done | The owner, 2026-10-21 ("move the weekly template to the top right, align all labels properly"). Week template left the tab row for a link at the right end of the Meals header, beside Suggest / Plan a meal or Add recipe / Add preference: an icon with an accessible name on a phone, icon and words from `sm`, filled while the template is open (tapping it again goes back to Plan). It is the same height as the header pills. With three tabs (Plan, Recipes, Preferences) each label and its count sit on one line at 360px. Browser QA at 360px and 1280px: no horizontal scroll. |
 
 ### 11 — Bills, Fees & Finance
 
@@ -644,4 +645,4 @@ in `docs/progress/`; for the running log of what changed when, `tracking/PROGRES
 | `27-014` Weather that changes a plan tells the person it affects | P2 | Done | The owner, 2026-10-20. `weatherNotices`: only where Weather is on (`householdWeather`: provider, area, plan) — rain likely while an outing is on (owner), or rain that makes outdoor washing miss its deadline (whoever holds `laundry.ready`); rounded to ten per cent so a nudge is no news; never a forecast readout. Runs with the reminder pass. |
 | `27-015` Channels that suit a helper and a child | P2 | Done | The owner, 2026-10-20. A helper, or anyone with no confirmed account email, is not offered email in Settings → Notifications (WhatsApp and push are). A child's channels and reminders keep their age's quiet hours until a guardian sets their own (`child-quiet.ts`: under 8 7:30 PM–7 AM, 8–12 8:30 PM–7 AM, 13–17 10 PM–7 AM, from the date of birth each time); an Admin or the child's guardian sets it in Family → the child's details. |
 
-_Generated 2026-10-20 from 28 backlog files._
+_Generated 2026-10-21 from 28 backlog files._

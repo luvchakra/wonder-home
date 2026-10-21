@@ -317,7 +317,7 @@ export default async function MealsPage({
               aria-current={active === "template" ? "page" : undefined}
               aria-label={t("meals.tab.template")}
               title={t("meals.tab.template")}
-              className="ms-auto min-h-11 min-w-11 px-3"
+              className="ms-auto min-w-9 px-2.5 sm:px-3.5"
             >
               <CalendarRange aria-hidden className="size-4" />
               <span className="sr-only sm:not-sr-only">{t("meals.tab.template")}</span>
