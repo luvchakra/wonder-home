@@ -44,6 +44,25 @@ export type ChatThread = {
   people: { memberId: string; addedBy: string | null }[];
 };
 
+/**
+ * Whether this deployment's database has chat at all (its migration may reach
+ * the live project after the code does). Kept per server for five minutes: it
+ * is a fact about the schema, the same for every household. Until it is true,
+ * nothing offers chat — no nav item, no Family icon, no page (rule 10).
+ */
+const CHAT_CHECK_MS = 5 * 60 * 1000;
+let chatChecked: { at: number; ready: boolean } | null = null;
+
+export async function chatReady(supabase: SupabaseClient, now = Date.now()): Promise<boolean> {
+  if (chatChecked && now - chatChecked.at < CHAT_CHECK_MS) return chatChecked.ready;
+  const { error } = await supabase.from("chat_threads").select("id", { head: true }).limit(1);
+  // A missing table is PostgREST's PGRST205 (or Postgres's 42P01); anything else is an outage, so ask again soon.
+  const missing = Boolean(error && (error.code === "PGRST205" || error.code === "42P01"));
+  const ready = !error;
+  if (ready || missing) chatChecked = { at: now, ready };
+  return ready;
+}
+
 function refused(error: { code?: string; message?: string } | null, what: string): never {
   if (error?.code === "42501") throw ApiError.forbidden("That chat isn't open to you.");
   if (error?.code === "22023") throw ApiError.badRequest("Add between one and fifty people.");

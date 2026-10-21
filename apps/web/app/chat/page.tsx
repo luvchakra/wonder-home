@@ -1,5 +1,6 @@
 import { MessageCircle, Users } from "lucide-react";
 import Link from "next/link";
+import { notFound } from "next/navigation";
 
 import { chatInbox, householdThreadId, type ChatInboxRow } from "@wonderhome/core/chat/repository";
 import { calledName, listMembers, type HouseholdMember } from "@wonderhome/core/identity/households";
@@ -29,6 +30,7 @@ export const dynamic = "force-dynamic";
  */
 export default async function ChatPage() {
   const session = await requireSession("/chat");
+  if (!session.chatOn) notFound();
   const { supabase, membership, viewer, secondary, locale } = session;
   const { t } = locale;
   const householdId = membership.household.id;

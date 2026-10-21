@@ -234,7 +234,7 @@ export default async function FamilyPage() {
                     key={member.id}
                     trailing={
                       // A chat with this person (story 12-015): anyone else here who signs in themselves.
-                      member.id !== membership.memberId && member.status === "active" && member.hasAccount ? (
+                      session.chatOn && member.id !== membership.memberId && member.status === "active" && member.hasAccount ? (
                         <Link href={`/chat/with/${member.id}`} aria-label={t("chat.with", { name: member.displayName })} title={t("chat.with", { name: member.displayName })} className={ICON_LINK}>
                           <MessageCircle aria-hidden className="size-4" />
                         </Link>

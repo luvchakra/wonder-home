@@ -13,4 +13,13 @@ export const todayZh: AreaCatalog<typeof todayEn> = {
   "today.credit": "影视信息来自 TMDB。本产品使用 TMDB API，但未获 TMDB 认可或认证。",
   "today.plan": "今天的安排",
   "today.weatherIn": "{place}天气",
+  "today.thought.1": "阳光挪了一下，我得跟过去",
+  "today.thought.2": "这个盒子刚好是我的尺寸",
+  "today.thought.3": "我没睡着，只是在让眼睛休息",
+  "today.thought.4": "窗外就是我最爱的节目",
+  "today.thought.5": "有人说开饭了，我听见了",
+  "today.thought.6": "某个地方有个温暖的膝盖在等我",
+  "today.thought.7": "今天我要换个新地方打盹",
+  "today.thought.8": "是毛线球先动手的",
+  "today.weatherArea": "在这里显示天气：选择你所在的区域",
 };

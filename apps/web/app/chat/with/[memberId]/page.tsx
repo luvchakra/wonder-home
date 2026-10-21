@@ -14,7 +14,8 @@ export const dynamic = "force-dynamic";
 export default async function ChatWithPage({ params }: { params: Promise<{ memberId: string }> }) {
   const { memberId } = await params;
   if (!/^[0-9a-f-]{36}$/i.test(memberId)) notFound();
-  const { supabase } = await requireSession(`/chat/with/${memberId}`);
+  const { supabase, chatOn } = await requireSession(`/chat/with/${memberId}`);
+  if (!chatOn) notFound();
   let threadId: string;
   try {
     threadId = await openDirect(supabase, memberId);

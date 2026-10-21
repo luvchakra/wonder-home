@@ -34,6 +34,8 @@ export const MODEL_TIMEOUT_MS = {
   suggest: 25_000,
   /** Turning text into meaning (HomeBrain Sleep): a question on a turn, a night's batch of records. Small and fast; a turn never waits past this. */
   embed: 8_000,
+  /** A batch of the Home cat's passing thoughts: nobody waits on it, the page shows a built-in line meanwhile. */
+  muse: 10_000,
   /** A night's sleep (HomeBrain Sleep): nobody is waiting, but a night has many households. */
   sleep: 45_000,
 } as const;

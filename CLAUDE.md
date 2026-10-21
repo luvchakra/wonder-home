@@ -195,6 +195,11 @@ work, and hold new work against these:
     it is a dropdown/select, a tag picker, a radio group or a checkbox list,
     never a free-text box a person has to remember the right spelling for.
     Free text stays for what it's actually for: a name, a note, an amount.
+    Avoid free-text fields as much as possible (the owner, 2026-10-21, on
+    Health's "Unit" box): before adding a text input, ask whether its
+    answers are a known set — a unit of measure is (`VITAL_UNITS`,
+    `health/vitals.ts`), so it is `ComboboxField` with Add new…, never a
+    box that says "kg, lb, bpm…".
     Whatever the picker, it always carries its own way to add a value that
     isn't listed yet, inline, so a household is never stuck picking the
     closest existing option because the real one doesn't exist — a form

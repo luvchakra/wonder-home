@@ -24,6 +24,7 @@ export default async function ChatThreadPage({ params }: { params: Promise<{ thr
   const { threadId } = await params;
   if (!/^[0-9a-f-]{36}$/i.test(threadId)) notFound();
   const session = await requireSession(`/chat/${threadId}`);
+  if (!session.chatOn) notFound();
   const { supabase, membership, viewer, secondary, locale } = session;
   const { t } = locale;
   const householdId = membership.household.id;

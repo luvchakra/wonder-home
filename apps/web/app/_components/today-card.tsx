@@ -1,4 +1,4 @@
-import { ChevronRight, Clapperboard, CloudRain, Sun, Tv } from "lucide-react";
+import { ChevronRight, Clapperboard, CloudRain, CloudSun, Sun, Tv } from "lucide-react";
 import Link from "next/link";
 
 import { pickFew, screenLists, type ScreenPick } from "@wonderhome/core/home/screen-picks";
@@ -105,6 +105,13 @@ export async function TodayCard({ session, now, date }: { session: Session; now:
           {" · "}
           <span className="break-words">{t("today.weatherIn", { place: weather.place })}</span>
         </p>
+      ) : null}
+      {weather?.state === "off" && weather.reason === "no_area" && view.permissions.includes("household.manage") ? (
+        // Weather is on here but nobody has said where home is; only an Admin can, and only on Integrations.
+        <Link href="/household/integrations#weather" className="mt-2 flex items-center gap-1.5 text-xs font-medium text-[var(--wh-primary)] hover:underline">
+          <CloudSun aria-hidden className="size-4 shrink-0" />
+          <span className="break-words">{t("today.weatherArea")}</span>
+        </Link>
       ) : null}
       {cinema || stream ? (
         <div className="mt-2 grid gap-1 border-t border-[var(--wh-border)] pt-2">

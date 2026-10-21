@@ -13,4 +13,13 @@ export const todayHi: AreaCatalog<typeof todayEn> = {
   "today.credit": "फ़िल्में और शो TMDB से। यह उत्पाद TMDB API का उपयोग करता है, पर TMDB ने इसका समर्थन या प्रमाणन नहीं किया है।",
   "today.plan": "आज की योजना",
   "today.weatherIn": "{place} का मौसम",
+  "today.thought.1": "धूप थोड़ी खिसक गई, मुझे पीछे जाना होगा।",
+  "today.thought.2": "यह डिब्बा बिलकुल मेरे नाप का है।",
+  "today.thought.3": "मैं सो नहीं रही थी, बस आँखें आराम कर रही थीं।",
+  "today.thought.4": "खिड़की मेरा सबसे पसंदीदा कार्यक्रम है।",
+  "today.thought.5": "किसी ने खाने का नाम लिया, मैंने सुन लिया।",
+  "today.thought.6": "कहीं एक गरम गोद मेरा इंतज़ार कर रही है।",
+  "today.thought.7": "आज मैं किसी नई जगह झपकी लूँगी।",
+  "today.thought.8": "शुरुआत ऊन के गोले ने की थी।",
+  "today.weatherArea": "यहाँ मौसम दिखाएँ: अपना इलाका चुनें",
 };

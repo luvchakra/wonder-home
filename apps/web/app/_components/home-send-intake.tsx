@@ -8,6 +8,8 @@ import type { DocumentPlan } from "@wonderhome/core/homesend/plan";
 import type { IntakeUnderstanding } from "@wonderhome/core/homesend/understanding";
 import { Alert } from "@wonderhome/core/ui/alert";
 import { Button } from "@wonderhome/core/ui/button";
+import { UNIT_CHOICES } from "@wonderhome/core/commerce/units";
+import { ComboboxField } from "@wonderhome/core/ui/combobox-field";
 import { Field } from "@wonderhome/core/ui/field";
 import { Pill } from "@wonderhome/core/ui/pill";
 
@@ -590,7 +592,17 @@ export function HomeSendConfirmFields({
       ) : (
         <div className="grid grid-cols-2 gap-3">
           <Field label={words.quantity} name="quantity" type="number" min={0.01} step="0.01" defaultValue={prefill?.quantity ?? ""} />
-          <Field label={words.unit} name="unit" defaultValue={prefill?.unit ?? ""} placeholder={words.unitPlaceholder} autoComplete="off" />
+          {/* A unit is picked, never typed (rule 20); Add new… keeps one the list lacks. */}
+          <ComboboxField
+            label={words.unit}
+            name="unit"
+            options={[...new Set<string>([...UNIT_CHOICES, ...(prefill?.unit ? [prefill.unit] : [])])]}
+            defaultValue={prefill?.unit ?? ""}
+            emptyLabel={words.noUnit}
+            addNewLabel={words.addNew}
+            chooseExistingLabel={words.chooseExisting}
+            newValuePlaceholder={words.unitPlaceholder}
+          />
           <div className="col-span-2">
             <Field label={words.category} name="category" defaultValue={prefill?.category ?? ""} placeholder={words.categoryPlaceholder} autoComplete="off" />
           </div>
