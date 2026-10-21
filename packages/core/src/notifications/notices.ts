@@ -23,7 +23,7 @@ import { localMoment } from "./timing";
  * name, a title and a count crosses to another channel.
  */
 
-export const NOTICE_SOURCE_TYPES = ["homesend_item", "event_replies", "helper_absence", "grocery_order", "event_change", "weather_plan", "goal_checkin"] as const;
+export const NOTICE_SOURCE_TYPES = ["homesend_item", "event_replies", "helper_absence", "grocery_order", "event_change", "weather_plan", "goal_checkin", "chat_thread"] as const;
 export type NoticeSourceType = (typeof NOTICE_SOURCE_TYPES)[number];
 
 export type Notice = {
@@ -414,6 +414,88 @@ export function goalCheckInNotices(
       action: { action: "open", target: `/school?tab=goals&child=${row.child_member_id}#waiting` },
       expiresAt: new Date(new Date(`${row.on_day}T00:00:00Z`).getTime() + 8 * DAY_MS),
     });
+  }
+  return notices;
+}
+
+// --- Chat: something new to read (the owner, 2026-10-21) --------------------
+
+export type ChatThreadRow = { id: string; kind: "household" | "direct" | "group"; title: string | null };
+export type ChatParticipantRow = { thread_id: string; member_id: string; left_at: string | null; last_read_at: string | null };
+export type ChatMessageRow = { thread_id: string; author_member_id: string; created_at: string; body: string; removed_at?: string | null };
+
+/** Whether a message names this person with "@" and their called name, as the composer writes it. */
+export function mentions(body: string, calledName: string): boolean {
+  const name = calledName.trim();
+  if (!name) return false;
+  const escaped = name.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+  return new RegExp(`(^|[^\\p{L}\\p{N}])@${escaped}(?![\\p{L}\\p{N}])`, "iu").test(body);
+}
+
+/**
+ * One notice per person per chat with messages from someone else they have
+ * not read yet (the last seven days). Family chat is everyone in the family
+ * who signs in, never a househelper; a direct or group chat is the people
+ * still in it. It names the chat, who wrote and how many — never what was
+ * said — and turns urgent only when a message mentions the reader by name.
+ * It resolves by itself once they open the chat (nothing unread is left).
+ */
+export function chatNotices(
+  threads: readonly ChatThreadRow[],
+  participants: readonly ChatParticipantRow[],
+  messages: readonly ChatMessageRow[],
+  directory: Directory,
+  names: ReadonlyMap<string, string>,
+  now: Date,
+): Notice[] {
+  const notices: Notice[] = [];
+  const since = now.getTime() - 7 * DAY_MS;
+  const byThread = new Map<string, ChatMessageRow[]>();
+  for (const row of messages) {
+    if (row.removed_at || new Date(row.created_at).getTime() < since) continue;
+    byThread.set(row.thread_id, [...(byThread.get(row.thread_id) ?? []), row]);
+  }
+  const lastRead = new Map(participants.map((row) => [`${row.thread_id}|${row.member_id}`, row.last_read_at]));
+  for (const thread of threads) {
+    const rows = byThread.get(thread.id);
+    if (!rows || rows.length === 0) continue;
+    const inThread = participants.filter((row) => row.thread_id === thread.id && row.left_at === null).map((row) => row.member_id);
+    const readers = thread.kind === "household"
+      ? [...directory.members.values()].filter((member) => member.memberType !== "helper").map((member) => member.id)
+      : inThread;
+    for (const reader of readers) {
+      if (!reachable(directory, reader, true)) continue;
+      if (thread.kind === "household" && directory.members.get(reader)?.memberType === "helper") continue;
+      const read = lastRead.get(`${thread.id}|${reader}`);
+      const readAt = read ? new Date(read).getTime() : -Infinity;
+      const unread = rows.filter((row) => row.author_member_id !== reader && new Date(row.created_at).getTime() > readAt);
+      if (unread.length === 0) continue;
+      const writers = [...new Set(unread.map((row) => row.author_member_id))].map((id) => names.get(id) ?? "").filter(Boolean);
+      const latest = unread.reduce((a, b) => (a.created_at > b.created_at ? a : b));
+      const others = inThread.filter((id) => id !== reader).map((id) => names.get(id) ?? "").filter(Boolean);
+      const chat: string | { msg: NotificationMessage } | { list: string[] } = thread.kind === "household"
+        ? { msg: msg("reminder.chat.family") }
+        : thread.title?.trim() || (thread.kind === "direct" ? others[0] ?? "" : { list: others });
+      const myName = names.get(reader) ?? "";
+      const mentioner = unread.find((row) => mentions(row.body, myName));
+      const title = mentioner
+        ? msg("reminder.chat.mention", { name: names.get(mentioner.author_member_id) ?? "", chat })
+        : thread.kind === "direct"
+          ? msg("reminder.chat.direct", { name: writers[0] ?? "" })
+          : msg("reminder.chat.inChat", { chat });
+      notices.push({
+        sourceType: "chat_thread",
+        sourceId: thread.id,
+        threadKey: `chat:${thread.id}`,
+        recipientMemberId: reader,
+        category: "family",
+        priority: mentioner ? "high" : "normal",
+        title,
+        body: msg("reminder.chat.body", { count: unread.length, names: { list: writers } }),
+        action: { action: "open", target: `/chat/${thread.id}` },
+        expiresAt: new Date(new Date(latest.created_at).getTime() + 7 * DAY_MS),
+      });
+    }
   }
   return notices;
 }
