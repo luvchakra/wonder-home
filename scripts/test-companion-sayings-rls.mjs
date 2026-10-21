@@ -1,13 +1,14 @@
 #!/usr/bin/env node
 /**
  * The cat's sayings (story 08-018; the owner, 2026-10-20: "never repeat
- * these for a child").
+ * these for a child"; 2026-10-21: "repeat the quotes only when the stored
+ * list is finished").
  *
  * Every member reads the list and nobody writes it from a session. The cat
  * picks only sayings that suit the child's age (and gender, when a saying was
- * chosen for one) and that this child has not heard; once one is recorded as
- * heard it is never picked for them again. A person records only what they
- * themselves heard, and reads only their own.
+ * chosen for one), the ones this child has not heard first; a heard one comes
+ * back only once every one has been heard, longest-ago first. A person
+ * records only what they themselves heard, and reads only their own.
  */
 import assert from "node:assert/strict";
 import { after, before, test } from "node:test";
@@ -67,19 +68,24 @@ test("the cat picks only what suits the child's age and gender", () => {
   }
 });
 
-test("a saying the child heard is never picked for them again", () => {
+test("nothing comes back until the child has heard the whole list, then the longest ago first", () => {
   const eligible = Number(psql(`select count(*) from public.companion_sayings where min_age <= 6 and max_age >= 6 and gender in ('any', 'girl');`, options));
   const first = asProfile(KID, `select id from public.companion_sayings_for('${child}', 1);`, options);
   asProfile(KID, `insert into public.companion_sayings_heard (household_id, member_id, saying_id) values ('${household}', '${child}', '${first}');`, options);
-  const left = asProfile(KID, `select count(*) from (select public.companion_sayings_for('${child}', 20)) t;`, options);
-  assert.ok(Number(left) > 0);
   assert.equal(asProfile(KID, `select count(*) from public.companion_sayings_for('${child}', 20) where id = '${first}';`, options), "0");
-  // Hear every one: then there is nothing left to say, and nothing repeats.
+  // Hear every one, the first of them longest ago: the list starts again with it.
   asProfile(KID, `insert into public.companion_sayings_heard (household_id, member_id, saying_id) select '${household}', '${child}', id from public.companion_sayings where min_age <= 6 and max_age >= 6 and gender in ('any', 'girl') on conflict do nothing;`, options);
+  asProfile(KID, `update public.companion_sayings_heard set heard_at = now() - interval '30 days' where saying_id = '${first}';`, options);
   assert.equal(psql(`select count(*) from public.companion_sayings_heard where member_id = '${child}';`, options), String(eligible));
-  assert.equal(asProfile(KID, `select count(*) from public.companion_sayings_for('${child}', 20);`, options), "0");
-  // Rohan's list is untouched by what Anaya heard.
+  assert.equal(asProfile(KID, `select count(*) from public.companion_sayings_for('${child}', 20);`, options), "20");
+  assert.equal(asProfile(KID, `select id from public.companion_sayings_for('${child}', 1);`, options), first);
+  // Told again, it goes to the back of the list.
+  asProfile(KID, `update public.companion_sayings_heard set heard_at = now() + interval '1 minute' where saying_id = '${first}';`, options);
+  assert.equal(asProfile(KID, `select count(*) from public.companion_sayings_for('${child}', 1) where id = '${first}';`, options), "0");
+  // Rohan's list is untouched by what Anaya heard, and he cannot move her list.
   assert.equal(asProfile(TEEN, `select count(*) from public.companion_sayings_for('${teen}', 20);`, options), "20");
+  asProfile(TEEN, `update public.companion_sayings_heard set heard_at = now() - interval '1 year' where member_id = '${child}';`, options);
+  assert.equal(psql(`select count(*) from public.companion_sayings_heard where member_id = '${child}' and heard_at < now() - interval '200 days';`, options), "0");
 });
 
 test("a person records and reads only what they themselves heard", () => {
@@ -89,4 +95,5 @@ test("a person records and reads only what they themselves heard", () => {
   );
   assert.equal(asProfile(TEEN, `select count(*) from public.companion_sayings_heard;`, options), "0");
   assert.equal(asProfile(HEAD, `select count(*) from public.companion_sayings_heard;`, options), "0");
+  assert.throws(() => asProfile(KID, `update public.companion_sayings_heard set saying_id = 'a-fact-001';`, options), /permission denied/);
 });

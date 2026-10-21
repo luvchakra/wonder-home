@@ -1,8 +1,8 @@
 "use client";
 
-import { Check, Hourglass } from "lucide-react";
+import { Check, Hourglass, Undo2 } from "lucide-react";
 import { useRouter } from "next/navigation";
-import { useState, useTransition } from "react";
+import { useEffect, useState, useTransition } from "react";
 
 import { cn } from "@wonderhome/core/lib/cn";
 import { Celebration } from "@wonderhome/core/ui/celebration";
@@ -11,8 +11,11 @@ import { checkInGoalAction, markSchoolWorkAction } from "../(auth)/goal-actions"
 
 /**
  * The child's one tap (story 08-017): "I did it!" on a goal for today or a
- * piece of school work. A done one shows a tick and takes it back on a second
- * tap. The "+2 ⭐" that floats up is decoration; the label already says it.
+ * piece of school work. A done one shows a tick; taking it back takes two taps
+ * — the first only asks ("Tap again to take it back") and the question goes
+ * away after a few seconds — because one stray tap took a child's only star
+ * and their streak away (the owner, 2026-10-21). The "+2 ⭐" that floats up is
+ * decoration; the label already says it.
  *
  * A goal's tick waits for a grown-up (the owner, 2026-10-20: "send this to
  * adult for verification before making done"): with `review`, the tap sends
@@ -31,7 +34,7 @@ export function KidDoneButton({
   target: { kind: "goal"; householdId: string; goalId: string; childMemberId: string } | { kind: "school"; householdId: string; id: string };
   done: boolean;
   stars: number;
-  labels: { doIt: string; done: string; undo: string; earned: string };
+  labels: { doIt: string; done: string; undo: string; earned: string; undoConfirm?: string };
   /** Ticked and still waiting for a grown-up to verify it. */
   waiting?: boolean;
   /** Present when the tick must be verified: the words for while it waits. */
@@ -47,8 +50,20 @@ export function KidDoneButton({
   // Confetti and balloons each time something is done (the owner, 2026-10-20).
   const [party, setParty] = useState(0);
   const [error, setError] = useState<string | null>(null);
+  // A done tick asks once before it is taken back; the question lapses on its own.
+  const [armed, setArmed] = useState(false);
+  useEffect(() => {
+    if (!armed) return;
+    const timer = window.setTimeout(() => setArmed(false), 4000);
+    return () => window.clearTimeout(timer);
+  }, [armed]);
 
   const toggle = () => {
+    if (optimistic && !armed) {
+      setArmed(true);
+      return;
+    }
+    setArmed(false);
     const next = !optimistic;
     setOptimistic(next);
     setError(null);
@@ -78,7 +93,9 @@ export function KidDoneButton({
         title={error ?? (optimistic && !settled ? labels.undo : undefined)}
         className={cn(
           "inline-flex min-h-11 items-center gap-1.5 rounded-full px-4 text-sm font-bold transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--wh-primary)] disabled:opacity-70",
-          pendingNow
+          armed && optimistic
+            ? "max-w-[9.5rem] border-2 border-[var(--wh-attention)] bg-[var(--wh-surface)] py-1.5 text-left leading-tight text-[var(--wh-foreground)]"
+            : pendingNow
             ? // Waiting wraps within a narrow width, so the goal's own name keeps the room (rule 11).
               "max-w-[8.5rem] border-2 border-[var(--wh-attention)] bg-[var(--wh-attention-soft)] py-1.5 text-left leading-tight text-[var(--wh-foreground)]"
             : optimistic
@@ -86,7 +103,11 @@ export function KidDoneButton({
             : "bg-[var(--wh-primary)] text-[var(--wh-primary-foreground)] shadow-[0_6px_16px_-6px_var(--wh-primary-glow)] hover:bg-[var(--wh-primary-hover)]",
         )}
       >
-        {pendingNow ? (
+        {armed && optimistic ? (
+          <>
+            <Undo2 aria-hidden className="size-4" /> {labels.undoConfirm ?? labels.undo}
+          </>
+        ) : pendingNow ? (
           <>
             <Hourglass aria-hidden className="size-4" /> {review!.waiting}
           </>

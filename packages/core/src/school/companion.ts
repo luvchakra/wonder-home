@@ -62,10 +62,10 @@ export type CompanionFacts = {
   /** What the child looks after in the household (their responsibilities, by name). */
   duties?: readonly string[];
   /**
-   * Sayings from the list this child has not heard yet (`nextSayings`). When
-   * present they are the cat's fun lines, so nothing repeats; an empty list
-   * means the child has heard them all and the cat keeps to reminders. Absent
-   * (no list yet) falls back to the built-in daily lines.
+   * Sayings from the list, unheard first (`nextSayings`). When present they
+   * are the cat's fun lines, and nothing repeats until the child has heard the
+   * whole list; an empty list means none suits the child and the cat keeps to
+   * reminders. Absent (no list yet) falls back to the built-in daily lines.
    */
   sayings?: readonly Saying[] | null;
 };

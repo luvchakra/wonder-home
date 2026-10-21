@@ -1,6 +1,6 @@
 "use client";
 
-import { ArrowRight, Pencil, RefreshCw } from "lucide-react";
+import { ArrowRight, ChevronLeft, ChevronRight, Pencil, RefreshCw } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useState, useTransition } from "react";
@@ -25,6 +25,9 @@ export type CompanionCardLabels = {
   saving: string;
   rename: string;
   another: string;
+  /** The arrows either side of "Tell me another", named for a screen reader. */
+  previous: string;
+  next: string;
   show: string;
   /** The heading over the colours. */
   colour: string;
@@ -84,6 +87,10 @@ export function CompanionCard({
 }) {
   const router = useRouter();
   const [index, setIndex] = useState(0);
+  // Where the child has been this visit, so the left arrow goes back the way they
+  // came and the right arrow forward again before it finds a new line (the owner,
+  // 2026-10-21: "so that child can traverse back and forth on the quotes").
+  const [trail, setTrail] = useState<{ visited: number[]; at: number }>({ visited: [0], at: 0 });
   const [ready, setReady] = useState(false);
   const [naming, setNaming] = useState(name === null);
   const [draft, setDraft] = useState(name ?? "");
@@ -124,18 +131,45 @@ export function CompanionCard({
     // Reading the browser's own storage has to wait for the browser.
     // eslint-disable-next-line react-hooks/set-state-in-effect
     setIndex(turn);
+    setTrail({ visited: [turn], at: 0 });
     setReady(true);
   }, [visit]);
+  const goBack = () => {
+    if (trail.at === 0) return;
+    const at = trail.at - 1;
+    setTrail({ ...trail, at });
+    setIndex(trail.visited[at]!);
+  };
+  // The right arrow retraces a step taken back; "Tell me another" always finds a
+  // new line (one job each, rule 14), dropping any steps ahead of where they are.
+  const goForward = () => {
+    if (trail.at >= trail.visited.length - 1) return;
+    const at = trail.at + 1;
+    setTrail({ ...trail, at });
+    setIndex(trail.visited[at]!);
+  };
+  const another = () => {
+    const next = skipShown(index);
+    setTrail({ visited: [...trail.visited.slice(0, trail.at + 1), next], at: trail.at + 1 });
+    setIndex(next);
+  };
+  const arrow =
+    "grid size-10 shrink-0 place-items-center rounded-full border border-[var(--wh-border)] bg-[var(--wh-surface)] text-[var(--wh-foreground-muted)] hover:bg-[var(--wh-surface-muted)] focus-visible:outline-2 focus-visible:outline-[var(--wh-primary)] disabled:opacity-40";
   const fill = (template: string) =>
     template.replace("{name}", shown ?? labels.noName);
 
   return (
     <Card className="wh-kid-card overflow-hidden p-4 [--wh-kid-accent:var(--wh-tone-meals)]">
-      <div className="flex items-start gap-3">
-        <CompanionCat
-          coat={naming ? coat : keptCoat}
-          className="size-20 sm:size-24"
-        />
+      <div className="flex items-stretch gap-3">
+        {/* The cat strolls up and down the empty column beside its words (the
+            owner, 2026-10-21: "make the cat move in the empty area"); it sits
+            still at the top when the device asks for reduced motion. */}
+        <div className="relative min-h-16 w-16 shrink-0 [--wh-cat-size:4rem] sm:min-h-24 sm:w-24 sm:[--wh-cat-size:6rem]">
+          <CompanionCat
+            coat={naming ? coat : keptCoat}
+            className="wh-cat-wander absolute start-0 top-0 size-16 sm:size-24"
+          />
+        </div>
         <div className="min-w-0 flex-1 space-y-2">
           <div className="flex items-center gap-1">
             <p className="min-w-0 flex-1 text-sm font-bold break-words">
@@ -163,31 +197,42 @@ export function CompanionCard({
               >
                 {line.text}
               </p>
-              <div className="flex flex-wrap gap-2">
-                {line.href ? (
-                  <Link
-                    href={line.href}
-                    onClick={() => scrollWhenShown(line.href!)}
-                    className="inline-flex min-h-11 items-center gap-1.5 rounded-full bg-[var(--wh-primary)] px-4 text-sm font-semibold text-[var(--wh-primary-foreground)] hover:bg-[var(--wh-primary-hover)]"
-                  >
-                    {labels.show} <ArrowRight aria-hidden className="size-4" />
-                  </Link>
-                ) : null}
-                {lines.length > 1 ? (
-                  <button
-                    type="button"
-                    onClick={() => setIndex((value) => skipShown(value))}
-                    className="inline-flex min-h-11 items-center gap-1.5 rounded-full border border-[var(--wh-border)] bg-[var(--wh-surface)] px-4 text-sm font-semibold text-[var(--wh-foreground-muted)] hover:bg-[var(--wh-surface-muted)]"
-                  >
-                    <RefreshCw aria-hidden className="size-4" />{" "}
-                    {labels.another}
-                  </button>
-                ) : null}
-              </div>
             </>
           ) : null}
         </div>
       </div>
+      {!naming && line ? (
+        // Under the cat and its words, across the card: room for both arrows on a phone.
+        <div className="mt-3 flex flex-wrap items-center justify-end gap-2">
+          {line.href ? (
+            <Link
+              href={line.href}
+              onClick={() => scrollWhenShown(line.href!)}
+              className="inline-flex min-h-11 items-center gap-1.5 rounded-full bg-[var(--wh-primary)] px-4 text-sm font-semibold text-[var(--wh-primary-foreground)] hover:bg-[var(--wh-primary-hover)]"
+            >
+              {labels.show} <ArrowRight aria-hidden className="size-4" />
+            </Link>
+          ) : null}
+          {lines.length > 1 ? (
+            <div className="flex items-center gap-1">
+              <button type="button" onClick={goBack} disabled={trail.at === 0} aria-label={labels.previous} title={labels.previous} className={arrow}>
+                <ChevronLeft aria-hidden className="size-5" />
+              </button>
+              <button
+                type="button"
+                onClick={another}
+                className="inline-flex min-h-10 items-center gap-1.5 rounded-full border border-[var(--wh-border)] bg-[var(--wh-surface)] px-3 text-sm font-semibold whitespace-nowrap text-[var(--wh-foreground-muted)] hover:bg-[var(--wh-surface-muted)]"
+              >
+                <RefreshCw aria-hidden className="size-4" />{" "}
+                {labels.another}
+              </button>
+              <button type="button" onClick={goForward} disabled={trail.at >= trail.visited.length - 1} aria-label={labels.next} title={labels.next} className={arrow}>
+                <ChevronRight aria-hidden className="size-5" />
+              </button>
+            </div>
+          ) : null}
+      </div>
+      ) : null}
       {naming ? (
         <form
           className="mt-3 space-y-2"

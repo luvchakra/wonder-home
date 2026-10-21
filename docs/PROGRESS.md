@@ -11,12 +11,12 @@ in `docs/progress/`; for the running log of what changed when, `tracking/PROGRES
 
 ## The whole picture
 
-**346 of 369 stories done — 93.8%**
+**348 of 372 stories done — 93.5%**
 
 | Status | Stories |
 |---|---:|
-| Done | 346 |
-| In Progress | 7 |
+| Done | 348 |
+| In Progress | 8 |
 | Blocked | 1 |
 | Not Started | 11 |
 | Deferred | 4 |
@@ -33,9 +33,9 @@ in `docs/progress/`; for the running log of what changed when, `tracking/PROGRES
 | 05 Household Certification & Understanding | `██████████` | 12 | 12 | — |
 | 06 Actionable Notification Engine | `██████████` | 8 | 8 | — |
 | 07 Househelper & Home Operations | `██████████` | 10 | 10 | — |
-| 08 Kids & School Intelligence | `████████░░` | 18 | 21 | 2 in progress, 1 not started |
+| 08 Kids & School Intelligence | `████████░░` | 19 | 23 | 3 in progress, 1 not started |
 | 09 Commerce, Groceries & Pet Supplies | `██████████` | 9 | 9 | — |
-| 10 Meals & Cooking | `██████████` | 14 | 14 | — |
+| 10 Meals & Cooking | `██████████` | 15 | 15 | — |
 | 11 Bills, Fees & Finance | `█████████░` | 14 | 15 | 1 not started |
 | 12 Family Time & Social Activities | `██████████` | 8 | 8 | — |
 | 13 Maintenance, Laundry & Pet Care | `█████████░` | 10 | 11 | 1 in progress |
@@ -63,6 +63,7 @@ in `docs/progress/`; for the running log of what changed when, `tracking/PROGRES
 | `08-016` A child's timetable and exams in their details in Family, and the day's lessons in Calendar's day view | 08 Kids & School Intelligence | P2 | Not Started |
 | `08-020` A child's Done on a goal waits for a grown-up | 08 Kids & School Intelligence | P0 | In Progress |
 | `08-021` The cat's sayings from a long list, by age and gender, never repeated for a child | 08 Kids & School Intelligence | P1 | In Progress |
+| `08-023` The cat walks, goes back and forth, and goes round its whole list | 08 Kids & School Intelligence | P1 | In Progress |
 | `11-011` Payees beyond the catalogue's cities, and outside India | 11 Bills, Fees & Finance | P2 | Not Started |
 | `13-009` A pet's likes, dislikes, favourites, fears and allergies | 13 Maintenance, Laundry & Pet Care | P1 | In Progress |
 | `14-021` HomeBrain 3.0 phase B — retrieval and one pass | 14 AI Orchestration & Learning | P0 | Deferred |
@@ -245,7 +246,7 @@ in `docs/progress/`; for the running log of what changed when, `tracking/PROGRES
 
 ### 08 — Kids & School Intelligence
 
-18 of 21 done `████████░░`
+19 of 23 done `████████░░`
 
 | Story | Priority | Status | Notes |
 |---|---|---|---|
@@ -270,6 +271,8 @@ in `docs/progress/`; for the running log of what changed when, `tracking/PROGRES
 | `08-020` A child's Done on a goal waits for a grown-up | P0 | In Progress | The owner, 2026-10-20 ("send this to adult for verification before making done"). A check-in the child makes is kept unverified (`child_goal_checkins.verified_at`/`verified_by`, migration `20261020230000`): the child sees **Waiting for a grown-up** (amber, hourglass; a second tap takes it back), and it earns no stars, streak or reward until verified (`goalStandings`/`childProgress` count only verified ticks; `waitingToday`). The child's guardian, else an Admin, gets a notice (`goalCheckInNotices`, source `goal_checkin`, one per waiting tick, resolved when answered). Kids & School → Goals shows **Waiting for you** first, each with **Yes, done** (verifies, in their own name) and **Not yet** (takes the tick back) — `answerCheckInAction`. A guardian's or Admin's own tick is verified as made; RLS lets only them verify, and the child can no longer take back a verified tick. Rows from before stay counted. Tests: goals 2, notices 3, RLS 2 (`test-child-goals-rls.mjs` 10/10). Words and help ¶11 in all eight languages. **Waiting on:** the migration reaching the live project (the database tool's calls were cancelled; until it runs, ticks count as before). |
 | `08-021` The cat's sayings from a long list, by age and gender, never repeated for a child | P1 | In Progress | The owner, 2026-10-20 ("store a long list of such quotes in a table, tag with age, gender etc. use that to display, never repeat these for a child"). `companion_sayings` holds 154 facts, sayings, ideas, jokes and riddles (`school/companion-sayings.json`, the migration's seed, kept equal by `companion-sayings.test.ts`), each tagged with ages (4–7, 8–12, 13–17, or all), a gender when chosen for one, and topics, in all eight languages. `companion_sayings_for` (security invoker) picks unheard ones for the child's age and gender from their own member row; each line the cat shows is recorded in `companion_sayings_heard` (`heardSayingAction`), so it never comes back, and Tell me another skips any already shown. When every saying is heard, the cat keeps to reminders; without the table it keeps the built-in daily lines. Also fixed: each tab press added another cat card (PR #276). Tests: companion 2, sayings 4, RLS 4 (`test-companion-sayings-rls.mjs`). Help ¶10 in all eight languages. **Waiting on:** migration `20261020231000` reaching the live project. |
 | `08-022` Confetti and balloons when a child does something | P2 | Done | The owner, 2026-10-20 ("on goal completion show confetti and balloons going up as celebration"). `Celebration` in the kit (`ui/celebration.tsx`, keyframes in `ui-theme.css`): about three seconds of confetti falling and balloons rising over the screen in the domain tones, catching no taps, hidden from assistive technology (the button already announces it) and not shown under reduced motion. It plays each time I did it! is tapped on a goal or school work. The Waiting for a grown-up button now wraps in a narrow width so a goal's name is never squeezed (rule 11). Also the same day, every tab row (`SegmentedControl`): tabs size to their own label and count so a count stays beside it (it drops under only when the row truly cannot fit, 320px Kids & School), and a tapped tab brings its row to the top of the screen (`SegmentInView`, `scroll-margin-top`, reduced motion jumps). Checked at 320/360/412px: no tab row scrolls, no two-line tab at 360; a tab tap put the row at 64px. |
+| `08-023` The cat walks, goes back and forth, and goes round its whole list | P1 | In Progress | The owner, 2026-10-21 ("repeat the quotes only when the stored list is finished"; "make the cat move in the empty area"; "show left arrow icon and right arrow icon around the 'tell me another' button"). `companion_sayings_for` now offers every saying that suits the child, unheard first, and only once all are heard the one heard longest ago; telling one again moves its `heard_at` on (`markSayingHeard`, column-limited update policy; migration `20261021031000_companion_sayings_cycle.sql`, `test-companion-sayings-rls.mjs` 4/4). Before the migration reaches the live project the cat behaves as before. The cat strolls down its column and back with a step-bob (`wh-cat-wander`, still under reduced motion). The left arrow goes back the way the child came this visit, the right arrow forward again; Tell me another always finds a new line; the controls sit under the cat across the card so both arrows fit at 360px. Help ¶10 in all eight languages. Waits on: applying the migration live (two `apply_migration` calls were cancelled on 2026-10-21). |
+| `08-024` One stray tap never takes a tick back | P1 | Done | The owner, 2026-10-21 ("yesterday it was showing 1 star and 1 streak, but today is showing 0"). The API log showed Asmi's check-in for 20 Oct (17:28 UTC) taken back at 18:12 by the done button's second tap (`undoCheckIn`, not a grown-up's Not yet). The done button now asks first: one tap on a done tick shows "Tap again to take it back", which lapses after four seconds; only a second tap takes it back (`kid-done-button.tsx`). Asmi's 20 Oct tick was restored on the live project (1 star, the streak resumes with today's). Words in all eight languages; help ¶10. Browser QA at 360px: one tap asks, the question lapses, the check-in stays on record. |
 
 ### 09 — Commerce, Groceries & Pet Supplies
 
@@ -289,7 +292,7 @@ in `docs/progress/`; for the running log of what changed when, `tracking/PROGRES
 
 ### 10 — Meals & Cooking
 
-14 of 14 done `██████████`
+15 of 15 done `██████████`
 
 | Story | Priority | Status | Notes |
 |---|---|---|---|
@@ -307,6 +310,7 @@ in `docs/progress/`; for the running log of what changed when, `tracking/PROGRES
 | `10-012` Week template: several dishes per meal, and WonderHome plans each week from it (accepted unless changed) | P1 | Done | The owner, 2026-10-20: "create a week template with multiple options per slot. for each week let WonderHome select the weekly meal plan and show to you, if required user can make change or its accepted by default". Meals → Week template lists, per weekday and meal, the household's recipes WonderHome may pick (`meal_week_template_options`; add for one day, every day, weekdays or the weekend; change; remove). Each week, the first time an adult opens Plan, `planWeekFromTemplate` claims the week once (`meal_week_plans`) and plans one dish per covered meal straight away through `createMeal` with `origin = 'week_template'`: the pick rotates week by week, steps past last week's dish in that slot, never takes a dish an allergy, diet or ethical rule rules out (`meals/week-template.ts`, 8 unit tests), and fills only empty slots not past, so nothing a person planned moves and a removed meal is not put back. Plan shows "WonderHome's plan for this week" with the count and Plan this week from the template; a picked meal says WonderHome's pick, and Choose again swaps in the slot's next dish; Change meal makes it the person's. Adults write; every member reads (`scripts/test-meal-week-template-rls.mjs`, 5/5). Words and help in all eight languages. Migration `20261020234000_meal_week_template.sql` waits to reach the live project; until then the screens read as before. Live 2026-10-21: migration on the live project; opening Plan planned this week's 4 remaining dinners from the template, each marked WonderHome's pick with Choose again. |
 | `10-013` Week template at the header's top right | P1 | Done | The owner, 2026-10-21 ("move the weekly template to the top right, align all labels properly"). Week template left the tab row for a link at the right end of the Meals header, beside Suggest / Plan a meal or Add recipe / Add preference: an icon with an accessible name on a phone, icon and words from `sm`, filled while the template is open (tapping it again goes back to Plan). It is the same height as the header pills. With three tabs (Plan, Recipes, Preferences) each label and its count sit on one line at 360px. Browser QA at 360px and 1280px: no horizontal scroll. |
 | `10-014` Meal cards folded, with the dish's own picture; Week template a named tab | P1 | Done | The owner, 2026-10-21 ("keep all the entries folded in, minimize the height of each card so maximum entries are visible on screen. use real pictures from catalog wherever possible"; "instead of showing calendar icon, show Template tab instead with label"). A planned meal is one short `ExpandableRow`: the dish's catalog picture (from the recipe it came from, else the catalog dish of the same name; the meals tile only when neither has one), the dish, its meal and ready-by time, how many ingredients are still to get, and its status. The chevron opens the rest: WonderHome's pick, start time and cook, what is missing, nutrients, View recipe, Ingredients, Change meal and Choose again. Week template left the header for a tab named Template, and Preferences left the tab row for a named sliders button to its right ("remove preferences tab, instead put it as an icon on the right of template tab"): Plan, Recipes, Template on one line at 360px; 10-013's header icon is gone. The open card's time line breaks between its pieces, never inside "8:00 am". Words in all eight languages. |
+| `10-015` Add preference on its list, not the page header | P2 | Done | The owner, 2026-10-21 ("remove add preference button from top"). Add preference moved from the Meals header to the Preferences list's own heading (and stays the empty state's action), so adding is still one tap away (rule 12). Browser QA at 360px. |
 
 ### 11 — Bills, Fees & Finance
 
