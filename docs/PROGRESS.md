@@ -11,11 +11,11 @@ in `docs/progress/`; for the running log of what changed when, `tracking/PROGRES
 
 ## The whole picture
 
-**354 of 380 stories done — 93.2%**
+**355 of 381 stories done — 93.2%**
 
 | Status | Stories |
 |---|---:|
-| Done | 354 |
+| Done | 355 |
 | In Progress | 9 |
 | Blocked | 1 |
 | Not Started | 12 |
@@ -46,7 +46,7 @@ in `docs/progress/`; for the running log of what changed when, `tracking/PROGRES
 | 18 API & Developer Platform | `██████████` | 8 | 8 | — |
 | 19 Testing, Observability & Production | `██████████` | 8 | 8 | — |
 | 20 Subscriptions, Entitlements & Usage | `██████████` | 11 | 11 | — |
-| 21 Health and Fitness | `█████████░` | 10 | 11 | 1 not started |
+| 21 Health and Fitness | `█████████░` | 11 | 12 | 1 not started |
 | 22 Internationalization and Localization | `████████░░` | 7 | 8 | 1 deferred |
 | 23 Smart Notifications | `██████████` | 13 | 13 | — |
 | 24 HomePlaces | `██████████` | 12 | 12 | — |
@@ -512,7 +512,7 @@ in `docs/progress/`; for the running log of what changed when, `tracking/PROGRES
 
 ### 21 — Health and Fitness
 
-10 of 11 done `█████████░`
+11 of 12 done `█████████░`
 
 | Story | Priority | Status | Notes |
 |---|---|---|---|
@@ -527,6 +527,7 @@ in `docs/progress/`; for the running log of what changed when, `tracking/PROGRES
 | `21-009` One Add for Health & Fitness | P2 | Done | The owner, 2026-10-21 ("too many entry options"). Eight header pills became one Add opening a grouped sheet (Health · Doctor visits · Fitness), kit `AddMenu`; every form reachable as before. Help (Health) in all eight languages. |
 | `21-010` Who can see it, on every sheet | P1 | Done | The owner, 2026-10-21: an edit sheet had no "Who can see this", and picking "People I choose" offered no people. One `HealthPrivacyField` (`_components/health-privacy-field.tsx`) on every create and edit sheet: the scope, and for "People I choose" a checkbox list of the other members, pre-ticked from the subject's `health_consents`, with a line saying it is that person's own sharing list. A viewer who is neither the subject nor their guardian sees that said, never a control. Saving makes the list equal to the ticks (`(auth)/health-sharing.ts`, pure `health/sharing.ts`'s `planSharingChange`), under the actor's session so RLS decides. `privacyScope` added to the issue, appointment, checkup and routine update inputs; no migration (the update policies are row-level). Awaiting browser QA at 360px and desktop. Same PR: a reading's Unit is picked, not typed (the owner: "make the unit a drop-down, avoid free text fields as much as possible"), from `VITAL_UNITS` per measurement with Add new… (`VitalUnitField`, in Record a reading, its edit and routine readings). Browser QA at 360px: Record a reading offers kg/lb/g for Weight; choosing People I choose listed Priya QA; saving with her ticked stored the reading as `selected_family` and her `health_consents` row. |
 | `21-011` Edit an appointment | P2 | Not Started | Follow-up from 21-010: an appointment has status actions only, no edit sheet, so its details and "Who can see this" cannot be changed after booking (rule 12). `updateAppointment` already accepts `privacyScope`; it needs an action and a sheet. |
+| `21-012` Attach a report, read it, suggest next steps | P1 | Done | The owner, 2026-10-21: "give option to add the report, once added, there should be ai analysis on the report… suggestions should be actionable, which can use existing WonderHome features". Add/Edit record sheets take a PDF or photo (≤4MB), checked from its bytes and by the malware seam (`health/report-upload.ts`), uploaded to `health-records/<householdId>/<uuid>.<ext>` through the person's session; Edit replaces or removes it, the old object let go only once no record carries it. "Open the report" is `/health/records/[recordId]/report`, a 60-second signed link made through the viewer's session so the bucket policy decides. A record opens in place (`ExpandableRow`, rule 21) to its notes, report and "What the report says". "Read the report" (record's person or guardian only) runs only past the plan, the person's own AI-help-with-health switch, a configured provider, the data-use agreement and the `health` content class; the model (`health/report-model.ts`, `provider-clients.ts`' `vision` budget) only proposes findings from the PDF's own text layer (`health/report-text.ts`) or, failing that, the picture, fenced as untrusted; `health/report-reading.ts` keeps a finding only when its name and value are in that text (or, from a picture, in its own quote, marked so), a flag only with a printed flag mark, and "outside the range" only from the report's own printed range. Suggestions are rules (`health/report-suggestions.ts`): follow-up appointment, weekly home tracking for BP/weight/pulse/blood sugar, recheck checkup in 3 or 6 months — each opens the existing sheet prefilled, never saves on its own; nothing flagged is one calm line. Readings kept in `health_record_readings` (migration `20261021040000_health_report_readings.sql`, RLS via the record's `wh.may_see_health`, set-form membership, DB test `scripts/test-health-readings-rls.mjs`) — **not yet applied to the live project: waits on the owner**; until then a fresh reading shows for that request and says it couldn't be kept. Words in all eight languages; Help (Health) body 4. PR #291. Browser QA at 360px and 1280px: a PDF attached in Add a health record filed as `health-records/<household>/<uuid>.pdf`, the record opened in place, Open the report answered with a signed link, Read the report showed the plain "AI assistant isn't set up" refusal (no local AI key), no horizontal scroll. The model path is covered by 24 golden tests on the validator and the suggestions, not yet by a live reading. |
 
 ### 22 — Internationalization and Localization
 
