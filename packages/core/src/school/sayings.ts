@@ -6,9 +6,11 @@
  * `companion_sayings` holds facts, sayings, ideas, jokes and riddles, each
  * tagged with the ages it suits, a gender when it was chosen for one, and its
  * topics, in every app language. `companion_sayings_for` picks the next few
- * this child has not heard, for their age and gender as on record; a saying
- * the cat actually shows is recorded in `companion_sayings_heard`, so it is
- * never shown to them again.
+ * for this child's age and gender as on record — the ones they have not
+ * heard first, and only once every one has been heard, the one heard longest
+ * ago (the owner, 2026-10-21: "repeat the quotes only when the stored list is
+ * finished"). A saying the cat shows is recorded in `companion_sayings_heard`
+ * with when, so the list goes round in full before anything comes back.
  */
 
 type Client = import("@supabase/supabase-js").SupabaseClient;
@@ -27,9 +29,10 @@ export function sayingText(words: Record<string, unknown>, language: string): st
 }
 
 /**
- * The next sayings this child has not heard yet, in their language. `null`
- * when the list is not there (a database before the migration): the cat then
- * keeps to its built-in lines. An empty list means they have heard them all.
+ * The next sayings for this child, in their language: unheard first, then the
+ * longest-unheard once the list is finished. `null` when the list is not
+ * there (a database before the migration): the cat then keeps to its
+ * built-in lines. Empty only when no saying suits the child.
  */
 export async function nextSayings(supabase: Client, memberId: string, language: string, limit = 6): Promise<Saying[] | null> {
   const { data, error } = await supabase.rpc("companion_sayings_for", { p_member_id: memberId, p_limit: limit });
@@ -42,10 +45,21 @@ export async function nextSayings(supabase: Client, memberId: string, language: 
   return sayings;
 }
 
-/** The cat showed this saying to this child: it is never picked for them again. Saying it twice is not an error. */
+/** The cat showed this saying to this child: it goes to the back of their list, and when it was heard moves to now. */
 export async function markSayingHeard(supabase: Client, input: { householdId: string; memberId: string; sayingId: string }): Promise<void> {
+  const heardAt = new Date().toISOString();
+  // Heard before (the list went round): move it to the back. Else record it.
+  const { data: moved, error: moveError } = await supabase
+    .from("companion_sayings_heard")
+    .update({ heard_at: heardAt })
+    .eq("member_id", input.memberId)
+    .eq("saying_id", input.sayingId)
+    .select("saying_id");
+  // A database before 20261021031000 has no update right here: record it as before.
+  if (moveError && moveError.code !== "42501") throw new Error(`markSayingHeard failed: ${moveError.code ?? "unknown"}`);
+  if (!moveError && (moved ?? []).length > 0) return;
   const { error } = await supabase
     .from("companion_sayings_heard")
-    .upsert({ household_id: input.householdId, member_id: input.memberId, saying_id: input.sayingId }, { onConflict: "member_id,saying_id", ignoreDuplicates: true });
+    .upsert({ household_id: input.householdId, member_id: input.memberId, saying_id: input.sayingId, heard_at: heardAt }, { onConflict: "member_id,saying_id", ignoreDuplicates: true });
   if (error) throw new Error(`markSayingHeard failed: ${error.code ?? "unknown"}`);
 }

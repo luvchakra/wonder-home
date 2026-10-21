@@ -152,6 +152,7 @@ export async function ChildHome({ session, tab = "today" }: { session: Session; 
     doIt: t("kids.do"),
     done: t("kids.done"),
     undo: t("kids.undo", { name }),
+    undoConfirm: t("kids.undoConfirm"),
     earned: t("kids.earned", { count: stars }),
   });
 
@@ -186,6 +187,8 @@ export async function ChildHome({ session, tab = "today" }: { session: Session; 
             saving: t("kids.cat.saving"),
             rename: t("kids.cat.rename", { name: "{name}" }),
             another: t("kids.cat.another"),
+            previous: t("kids.cat.previous"),
+            next: t("kids.cat.next"),
             show: t("kids.cat.show"),
             colour: t("kids.cat.colour"),
             coats: Object.fromEntries(CAT_COATS.map((coat) => [coat, t(`kids.cat.coat.${coat}`)])) as Record<(typeof CAT_COATS)[number], string>,
@@ -439,7 +442,7 @@ function GoalCard({
   householdId: string;
   childMemberId: string;
   t: Translate;
-  labels: { doIt: string; done: string; undo: string; earned: string };
+  labels: { doIt: string; done: string; undo: string; earned: string; undoConfirm?: string };
 }) {
   const { goal } = standing;
   const how =
@@ -503,7 +506,7 @@ function GoalCard({
  * the teacher's note, when it is due and how long it may take — and the
  * Done button stays beside it, one tap, whether it is open or not.
  */
-function SchoolCard({ item, householdId, timezone, t, labels }: { item: SchoolItem; householdId: string; timezone: string; t: Translate; labels: { doIt: string; done: string; undo: string; earned: string } }) {
+function SchoolCard({ item, householdId, timezone, t, labels }: { item: SchoolItem; householdId: string; timezone: string; t: Translate; labels: { doIt: string; done: string; undo: string; earned: string; undoConfirm?: string } }) {
   const done = item.status === "done" || item.status === "submitted";
   const zone = schoolDayZone(item, timezone);
   // Events and notices are things to know, not things to do: no button, which is itself the message.

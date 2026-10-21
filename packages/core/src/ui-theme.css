@@ -418,6 +418,46 @@
   }
 }
 
+/* The companion card's cat strolls down its own column and back, with a
+   small step-bob on the way and a rest at each end, so it reads as a cat out
+   for a walk rather than a lift. `top` is relative to the column, which is as
+   tall as the card's words; `--wh-cat-size` keeps it from walking off the end. */
+@keyframes wh-cat-wander {
+  0%,
+  12% {
+    top: 0;
+    transform: translateY(0) rotate(0deg);
+  }
+  20% {
+    transform: translateY(-3px) rotate(-3deg);
+  }
+  28% {
+    transform: translateY(0) rotate(2deg);
+  }
+  36% {
+    transform: translateY(-3px) rotate(-2deg);
+  }
+  44%,
+  56% {
+    top: max(0px, calc(100% - var(--wh-cat-size, 5rem)));
+    transform: translateY(0) rotate(0deg);
+  }
+  64% {
+    transform: translateY(-3px) rotate(3deg);
+  }
+  72% {
+    transform: translateY(0) rotate(-2deg);
+  }
+  80% {
+    transform: translateY(-3px) rotate(2deg);
+  }
+  88%,
+  100% {
+    top: 0;
+    transform: translateY(0) rotate(0deg);
+  }
+}
+
 /* A blink: eyes open most of the time, a quick close, then a second quick
    one now and then, so it reads as a cat and not a metronome. */
 @keyframes wh-cat-blink {
@@ -506,6 +546,9 @@
   animation-delay: 300ms;
 }
 
+.wh-cat-wander {
+  animation: wh-cat-wander 12s ease-in-out 1.5s infinite;
+}
 .wh-cat-sneak {
   animation: wh-cat-sneak 2.6s cubic-bezier(0.3, 0.7, 0.4, 1) 0.4s both;
 }
@@ -578,6 +621,7 @@
   .wh-install-banner-enter,
   .wh-hand-wave,
   .wh-cat-sneak,
+  .wh-cat-wander,
   .wh-cat-blink,
   .wh-cat-tail {
     animation: none;

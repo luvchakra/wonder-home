@@ -298,15 +298,7 @@ export default async function MealsPage({
           <div className="flex w-full flex-wrap items-center gap-2 lg:w-auto">
             {active === "recipes" ? (
               <AddRecipeButton householdId={householdId} labels={formLabels} />
-            ) : active === "preferences" ? (
-              <AddPreferenceButton
-                householdId={householdId}
-                currentMemberId={membership.memberId}
-                admin={admin}
-                members={memberOptions}
-                labels={formLabels}
-              />
-            ) : active === "template" ? null : (
+            ) : active === "preferences" || active === "template" ? null : (
               <>
                 <SuggestMealButton householdId={householdId} labels={formLabels} />
                 <PlanMealButton
@@ -735,36 +727,53 @@ export default async function MealsPage({
               }
             />
           ) : (
-            <Card className="p-2">
-              <ul className="divide-y divide-[var(--wh-border)]">
-                {preferences.map((preference) => (
-                  <ActionRow
-                    key={preference.id}
-                    icon={Heart}
-                    tone={
-                      preference.kind === "allergy" ||
-                      preference.kind === "medical"
-                        ? "risk"
-                        : "people"
-                    }
-                    title={preference.subject}
-                    meta={nameOf(preference.member_id) ?? t("meals.wholeHousehold")}
-                    action={
-                      <Badge
-                        tone={
-                          preference.kind === "allergy" ||
-                          preference.kind === "medical"
-                            ? "risk"
-                            : "neutral"
-                        }
-                      >
-                        {preferenceKindWords(t, preference.kind)}
-                      </Badge>
-                    }
+            // Add preference sits on the list it adds to, not in the page header
+            // (the owner, 2026-10-21: "remove add preference button from top").
+            <section>
+              <SectionHeader
+                title={t("meals.tab.preferences")}
+                count={preferences.length}
+                action={
+                  <AddPreferenceButton
+                    householdId={householdId}
+                    currentMemberId={membership.memberId}
+                    admin={admin}
+                    members={memberOptions}
+                    labels={formLabels}
                   />
-                ))}
-              </ul>
-            </Card>
+                }
+              />
+              <Card className="p-2">
+                <ul className="divide-y divide-[var(--wh-border)]">
+                  {preferences.map((preference) => (
+                    <ActionRow
+                      key={preference.id}
+                      icon={Heart}
+                      tone={
+                        preference.kind === "allergy" ||
+                        preference.kind === "medical"
+                          ? "risk"
+                          : "people"
+                      }
+                      title={preference.subject}
+                      meta={nameOf(preference.member_id) ?? t("meals.wholeHousehold")}
+                      action={
+                        <Badge
+                          tone={
+                            preference.kind === "allergy" ||
+                            preference.kind === "medical"
+                              ? "risk"
+                              : "neutral"
+                          }
+                        >
+                          {preferenceKindWords(t, preference.kind)}
+                        </Badge>
+                      }
+                    />
+                  ))}
+                </ul>
+              </Card>
+            </section>
           )
         ) : null}
 

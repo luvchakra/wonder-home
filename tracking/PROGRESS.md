@@ -347,5 +347,8 @@ disagree again.)
 | 2026-10-21 | 15 | 15-009 | Done | Reverse-engineering hardening: open redirect fixed, API description members-only in production, deny-by-default sign-in gate, robots.txt and noai, auth throttle, Retry-After, prompt disclosure rules, prompt bundle check, LICENSE, terms draft. |
 | 2026-10-21 | 10 | 10-014 | Done | Meal cards folded to one short row with the dish's catalog picture; Week template a named tab. |
 | 2026-10-21 | 11 | 11-015 | Done | Spend charts answer a touch: slide along a chart to read each month's amount. |
+| 2026-10-21 | 08 | 08-023 | In Progress | The cat strolls its column, arrows go back and forth, and the sayings list goes round in full before repeating (migration waits to reach live). |
+| 2026-10-21 | 08 | 08-024 | Done | A done tick takes two taps to take back; Asmi's lost 20 Oct tick restored. |
+| 2026-10-21 | 10 | 10-015 | Done | Add preference on the Preferences list, not the page header. |
 | 2026-10-21 | 13 | 13-011 | Done | Home & Upkeep: a new request is Open (was Raised); the status picker starts at the current status and Update waits for a change. |
 | 2026-10-21 | — | Release 0.1 | Done | Release notes: Version 0.1 (PRs #243–#283), confirmed live by the owner, in all eight languages. |
