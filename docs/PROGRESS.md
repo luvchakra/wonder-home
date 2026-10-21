@@ -11,11 +11,11 @@ in `docs/progress/`; for the running log of what changed when, `tracking/PROGRES
 
 ## The whole picture
 
-**356 of 381 stories done — 93.4%**
+**357 of 382 stories done — 93.5%**
 
 | Status | Stories |
 |---|---:|
-| Done | 356 |
+| Done | 357 |
 | In Progress | 8 |
 | Blocked | 1 |
 | Not Started | 12 |
@@ -37,7 +37,7 @@ in `docs/progress/`; for the running log of what changed when, `tracking/PROGRES
 | 09 Commerce, Groceries & Pet Supplies | `██████████` | 9 | 9 | — |
 | 10 Meals & Cooking | `██████████` | 16 | 16 | — |
 | 11 Bills, Fees & Finance | `█████████░` | 14 | 15 | 1 not started |
-| 12 Family Time & Social Activities | `██████████` | 8 | 8 | — |
+| 12 Family Time & Social Activities | `██████████` | 9 | 9 | — |
 | 13 Maintenance, Laundry & Pet Care | `█████████░` | 10 | 11 | 1 in progress |
 | 14 AI Orchestration & Learning | `████████░░` | 30 | 35 | 2 in progress, 3 deferred |
 | 15 Privacy, Security & Governance | `██████████` | 9 | 9 | — |
@@ -340,7 +340,7 @@ in `docs/progress/`; for the running log of what changed when, `tracking/PROGRES
 
 ### 12 — Family Time & Social Activities
 
-8 of 8 done `██████████`
+9 of 9 done `██████████`
 
 | Story | Priority | Status | Notes |
 |---|---|---|---|
@@ -352,6 +352,7 @@ in `docs/progress/`; for the running log of what changed when, `tracking/PROGRES
 | `12-006` Gift planning | P1 | Done | gifts planned against an explicit occasion, never guessed from a date |
 | `12-007` Conflict detection | P1 | Done | both sides named and a proposal made; never a silent move |
 | `12-008` End-to-end outing | P2 | Done | outing planning composes availability, conflicts and gifts already built |
+| `12-016` React to a FamilyChat message | P1 | Done | The owner, 2026-10-21 ("add feature for reacting to messages"). Built in PR #300: one of six emoji per person per message, picked never typed, changed or taken away; a pill under the bubble with counts and who reacted; no notices. Migration `20261021070000_chat_reactions.sql` (`chat_message_reactions`, guard trigger, set-form RLS, `public.chat_react`); RLS test 12/12 on a local database. The owner ran the migration on the live project (2026-10-21) and it was verified there (table, RLS, four policies, `public.chat_react`); the Chat help paragraph `chat.body.4` describes reactions again in all eight languages, with the keywords react/reaction/emoji. Shipped in PR #301. |
 
 ### 13 — Maintenance, Laundry & Pet Care
 

@@ -45,7 +45,7 @@
 
 ## Still open
 
-- **The migration is not on the live project.** The `apply_migration` call was cancelled, and the table and function are absent (verified with `to_regclass`). The owner chose to ship without it for now (story 12-016, Blocked). Until it is applied, `readMessagesWithReactions` reports `reactionsOn: false`, the thread offers no reaction at all (rule 10), and the Chat help paragraph leaves reactions out. Apply `supabase/migrations/20261021070000_chat_reactions.sql` with `apply_migration`, then run `npm run verify:live`.
+- ~~**The migration is not on the live project.**~~ Done later the same day: the owner ran `20261021070000_chat_reactions.sql` on the live project, and it was verified there (the table with RLS on, four policies, `public.chat_react`). Story 12-016 is Done, the Chat help paragraph describes reactions again in all eight languages, and a reaction was driven end to end in the browser at 360px and 1280px on a QA household: picked, changed, shown with who reacted, with Remove reaction offered. The QA account and household were deleted afterwards (PR #301).
 - **No before screenshots** were taken; the owner's own screenshot is the before.
 
 ## Cleanup
