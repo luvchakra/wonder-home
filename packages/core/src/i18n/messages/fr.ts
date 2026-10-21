@@ -13,6 +13,7 @@ import { eventsFr } from "./areas/events/fr";
 import { calendarFr } from "./areas/calendar/fr";
 import { memberInviteFr } from "./areas/memberinvite/fr";
 import { whatsNewFr } from "./areas/whatsnew/fr";
+import { todayFr } from "./areas/today/fr";
 import { amafFr } from "./areas/amaf/fr";
 import { groceryFr } from "./areas/grocery/fr";
 import { welcomeFr } from "./areas/welcome/fr";
@@ -960,6 +961,7 @@ export const fr: Catalog = {
   ...eventsFr,
   ...calendarFr,
   ...whatsNewFr,
+  ...todayFr,
   ...amafFr,
   ...memberInviteFr,
   ...groceryFr,

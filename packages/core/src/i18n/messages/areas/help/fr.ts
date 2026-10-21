@@ -164,6 +164,7 @@ export const helpFr: AreaCatalog<typeof helpEn> = {
   "help.guide.today-and-home.body.5":
     "Sous l'état de la famille, l'accueil affiche vos animaux, si vous en avez. Chacun ouvre les mêmes informations que l'écran Famille ; pour les modifier, allez dans Famille.",
   "help.guide.today-and-home.body.6": "Nouveautés, en haut de l’Accueil, liste ce qui a été ajouté à WonderHome depuis votre dernière ouverture ici, et chaque élément ouvre l’endroit où il se trouve. Compris masque la liste ; elle ne montre jamais deux fois la même chose, et chaque élément s’en va de lui-même un mois après son arrivée. Pour tout ce qui a changé, version par version, consultez Notes de version à la fin d’Obtenir de l’aide.",
+  "help.guide.today-and-home.body.7": "La carte en haut de l'Accueil affiche la date du jour et votre foyer. Là où la météo est activée pour votre zone, elle indique aussi la température actuelle, les maximales et minimales du jour, et l'heure à laquelle la pluie est probable plus tard, ou que le reste de la journée sera sec. Là où l'application a un catalogue de films connecté, elle ajoute un film nouveau au cinéma et une suggestion familiale à regarder en streaming dans votre région, une paire différente à chaque ouverture de l'Accueil ; chacune ouvre la page du titre, qui indique où le regarder. Ces titres viennent de TMDB, pas de WonderHome, et rien ne s'affiche si aucun catalogue n'est connecté. Le programme du jour, en bas de la carte, ouvre la journée sous forme de frise.",
 
   // Calendar
   "help.guide.calendar.title": "Calendrier",
@@ -223,7 +224,7 @@ export const helpFr: AreaCatalog<typeof helpEn> = {
   "help.guide.school.title": "École et travail des enfants",
   "help.guide.school.summary": "Devoirs, examens et notes d’information, et les échéances qui ne tiendront pas.",
   "help.guide.school.body.1":
-    "Enfants et école affiche les devoirs, examens, événements et nouvelles des enseignants de chaque enfant, regroupés par échéance. Ajoutez des devoirs à la main, ou téléversez une capture d’écran et WonderHome remplit le formulaire pour que vous le vérifiiez avant l’ajout. Avec plusieurs enfants, il en montre un à la fois : touchez un prénom en haut pour changer ; le premier enfant s’affiche d’abord.",
+    "Enfants et école affiche les devoirs, examens, événements et nouvelles des enseignants de chaque enfant, regroupés par échéance. Ajoutez des devoirs à la main, ou téléversez une capture d’écran et WonderHome remplit le formulaire pour que vous le vérifiiez avant l’ajout. Avec plusieurs enfants, il en montre un à la fois : touchez un prénom en haut pour changer ; le premier enfant s’affiche d’abord. Ajouter des devoirs, juste sous les prénoms, commence avec l'enfant affiché.",
   "help.guide.school.body.2":
     "Envoyez une note de l’école via HomeSend et chaque date, chaque frais et chaque chose à apporter devient un élément distinct à passer en revue. Si la note nomme un enfant qui n’est pas encore dans votre foyer, un Admin peut l’ajouter directement dans la revue ; WonderHome ne suppose jamais qu’une note concerne le seul enfant qu’il connaît.",
   "help.guide.school.body.3": "Seule une personne peut marquer un travail comme fait. Un portail qui se tait, ce n’est pas un enfant qui dit avoir fini.",

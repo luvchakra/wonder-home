@@ -13,6 +13,7 @@ import { eventsEs } from "./areas/events/es";
 import { calendarEs } from "./areas/calendar/es";
 import { memberInviteEs } from "./areas/memberinvite/es";
 import { whatsNewEs } from "./areas/whatsnew/es";
+import { todayEs } from "./areas/today/es";
 import { amafEs } from "./areas/amaf/es";
 import { groceryEs } from "./areas/grocery/es";
 import { welcomeEs } from "./areas/welcome/es";
@@ -960,6 +961,7 @@ export const es: Catalog = {
   ...eventsEs,
   ...calendarEs,
   ...whatsNewEs,
+  ...todayEs,
   ...amafEs,
   ...memberInviteEs,
   ...groceryEs,

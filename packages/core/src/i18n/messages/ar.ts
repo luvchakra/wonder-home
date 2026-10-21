@@ -13,6 +13,7 @@ import { eventsAr } from "./areas/events/ar";
 import { calendarAr } from "./areas/calendar/ar";
 import { memberInviteAr } from "./areas/memberinvite/ar";
 import { whatsNewAr } from "./areas/whatsnew/ar";
+import { todayAr } from "./areas/today/ar";
 import { amafAr } from "./areas/amaf/ar";
 import { groceryAr } from "./areas/grocery/ar";
 import { welcomeAr } from "./areas/welcome/ar";
@@ -982,6 +983,7 @@ export const ar: Catalog = {
   ...eventsAr,
   ...calendarAr,
   ...whatsNewAr,
+  ...todayAr,
   ...amafAr,
   ...memberInviteAr,
   ...groceryAr,

@@ -184,6 +184,7 @@ export const helpEn = {
   "help.guide.today-and-home.body.5":
     "Under Family status, Home shows your pets, if you have any. Each opens to the same details the Family screen shows; to change them, go to Family.",
   "help.guide.today-and-home.body.6": "What's new, at the top of Home, lists what has been added to WonderHome since you last opened it here, each opening where it lives. Got it hides the list; it never shows the same thing twice, and an entry leaves on its own a month after it arrived. For everything that has changed, version by version, see Release notes at the end of Get help.",
+  "help.guide.today-and-home.body.7": "The card at the top of Home shows today's date and your household. Where Weather is on for your area, it also shows the temperature now, today's high and low, and when rain is likely later today, or that the rest of the day is dry. Where the app has a film catalogue connected, it adds one film new in cinemas and one family pick to stream in your region, a different pair each time you open Home; each opens the title's page, which lists where to watch it. These come from TMDB, not from WonderHome, and nothing is shown when no catalogue is connected. Today's plan, at the bottom of the card, opens the day as a timeline.",
 
   // Calendar
   "help.guide.calendar.title": "Calendar",
@@ -244,7 +245,7 @@ export const helpEn = {
   "help.guide.school.title": "School and children's work",
   "help.guide.school.summary": "Homework, exams and notices, and deadlines that will not fit.",
   "help.guide.school.body.1":
-    "Kids & School shows each child's homework, exams, events and teacher updates, grouped by when they are due. Add homework by hand, or upload a screenshot and WonderHome fills in the form for you to check before adding. With more than one child, it shows one child at a time: tap a name at the top to switch; the first child is shown to begin with.",
+    "Kids & School shows each child's homework, exams, events and teacher updates, grouped by when they are due. Add homework by hand, or upload a screenshot and WonderHome fills in the form for you to check before adding. With more than one child, it shows one child at a time: tap a name at the top to switch; the first child is shown to begin with. Add homework, just under the names, starts on the child shown.",
   "help.guide.school.body.2":
     "Send a school notice through HomeSend and every date, fee and thing to bring becomes its own item to review. If the notice names a child who is not in your household yet, an Admin can add them right there in the review; WonderHome never assumes a notice is about the only child it knows.",
   "help.guide.school.body.3":

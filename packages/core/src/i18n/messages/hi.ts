@@ -13,6 +13,7 @@ import { eventsHi } from "./areas/events/hi";
 import { calendarHi } from "./areas/calendar/hi";
 import { memberInviteHi } from "./areas/memberinvite/hi";
 import { whatsNewHi } from "./areas/whatsnew/hi";
+import { todayHi } from "./areas/today/hi";
 import { amafHi } from "./areas/amaf/hi";
 import { groceryHi } from "./areas/grocery/hi";
 import { welcomeHi } from "./areas/welcome/hi";
@@ -960,6 +961,7 @@ export const hi: Catalog = {
   ...eventsHi,
   ...calendarHi,
   ...whatsNewHi,
+  ...todayHi,
   ...amafHi,
   ...memberInviteHi,
   ...groceryHi,

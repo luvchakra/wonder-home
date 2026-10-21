@@ -26,7 +26,8 @@ function contentSecurityPolicy({ supabaseOrigin, development }: SecurityHeaderOp
     .join(" ");
   // A member's photo is served from Supabase Storage as a signed URL on the
   // project's own origin, never a public/unbounded third party.
-  const img = ["'self'", "blob:", "data:", supabaseOrigin].filter(Boolean).join(" ");
+  // Posters on Home's date card come from TMDB's image host, when a catalogue is configured.
+  const img = ["'self'", "blob:", "data:", supabaseOrigin, "https://image.tmdb.org"].filter(Boolean).join(" ");
 
   const directives: Record<string, string> = {
     "default-src": "'self'",

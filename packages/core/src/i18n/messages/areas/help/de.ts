@@ -164,6 +164,7 @@ export const helpDe: AreaCatalog<typeof helpEn> = {
   "help.guide.today-and-home.body.5":
     "Unter dem Familienstatus zeigt Home eure Haustiere, falls ihr welche habt. Jedes öffnet dieselben Angaben wie auf der Familienseite; ändern kannst du sie unter Familie.",
   "help.guide.today-and-home.body.6": "„Neu“ oben auf Start listet, was seit deinem letzten Öffnen hier zu WonderHome hinzugekommen ist, und jeder Eintrag öffnet seine Stelle. Verstanden blendet die Liste aus; sie zeigt nie zweimal dasselbe, und jeder Eintrag verschwindet einen Monat nach seinem Erscheinen von selbst. Was sich von Version zu Version geändert hat, steht in den Versionshinweisen am Ende von „Hilfe erhalten“.",
+  "help.guide.today-and-home.body.7": "Die Karte oben auf der Startseite zeigt das heutige Datum und euren Haushalt. Wo das Wetter für eure Gegend eingeschaltet ist, zeigt sie auch die Temperatur jetzt, die heutigen Höchst- und Tiefstwerte und wann später heute Regen wahrscheinlich ist – oder dass der Rest des Tages trocken bleibt. Wo die App einen Filmkatalog angebunden hat, kommt ein neuer Film im Kino und ein Familientipp zum Streamen in eurer Region hinzu, bei jedem Öffnen der Startseite ein anderes Paar; jeder öffnet die Seite des Titels, auf der steht, wo man ihn sehen kann. Sie stammen von TMDB, nicht von WonderHome, und ohne angebundenen Katalog wird nichts gezeigt. Der Plan für heute unten auf der Karte öffnet den Tag als Zeitleiste.",
 
   // Calendar
   "help.guide.calendar.title": "Kalender",
@@ -223,7 +224,7 @@ export const helpDe: AreaCatalog<typeof helpEn> = {
   "help.guide.school.title": "Schule und Aufgaben der Kinder",
   "help.guide.school.summary": "Hausaufgaben, Prüfungen und Elternbriefe, und Fristen, die nicht passen werden.",
   "help.guide.school.body.1":
-    "„Kinder & Schule“ zeigt Hausaufgaben, Prüfungen, Termine und Neuigkeiten der Lehrkräfte für jedes Kind, gruppiert nach Fälligkeit. Füge Hausaufgaben von Hand hinzu oder lade einen Screenshot hoch, und WonderHome füllt das Formular aus, damit du es vor dem Hinzufügen prüfst. Bei mehreren Kindern zeigt es jeweils ein Kind: Tipp oben auf einen Namen, um zu wechseln; zuerst wird das erste Kind gezeigt.",
+    "„Kinder & Schule“ zeigt Hausaufgaben, Prüfungen, Termine und Neuigkeiten der Lehrkräfte für jedes Kind, gruppiert nach Fälligkeit. Füge Hausaufgaben von Hand hinzu oder lade einen Screenshot hoch, und WonderHome füllt das Formular aus, damit du es vor dem Hinzufügen prüfst. Bei mehreren Kindern zeigt es jeweils ein Kind: Tipp oben auf einen Namen, um zu wechseln; zuerst wird das erste Kind gezeigt. Hausaufgaben hinzufügen, direkt unter den Namen, beginnt mit dem angezeigten Kind.",
   "help.guide.school.body.2":
     "Schick einen Elternbrief über HomeSend, und jedes Datum, jede Gebühr und alles, was mitgebracht werden muss, wird ein eigener Punkt zum Prüfen. Nennt der Brief ein Kind, das noch nicht in deinem Haushalt ist, kann ein Admin es direkt dort in der Prüfung hinzufügen; WonderHome nimmt nie an, dass ein Brief das einzige Kind betrifft, das es kennt.",
   "help.guide.school.body.3": "Nur ein Mensch kann eine Aufgabe als erledigt markieren. Wenn ein Portal still wird, heißt das nicht, dass ein Kind sagt, es sei fertig.",

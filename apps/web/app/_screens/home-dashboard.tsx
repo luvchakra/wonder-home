@@ -48,6 +48,7 @@ import { SetupProgressCard } from "@wonderhome/core/ui/setup-progress";
 
 import { OnboardingResumeCard } from "../_components/onboarding-resume-card";
 import { PersonalizeCard } from "../_components/personalize-card";
+import { TodayCard, TodayCardFallback } from "../_components/today-card";
 import { WhatsNewCard } from "../_components/whats-new-card";
 import { whatsNewItems, whatsNewLabels } from "../_lib/whats-new";
 import { ScriptAccent } from "@wonderhome/core/ui/script-accent";
@@ -259,12 +260,10 @@ export function HomeDashboard({ session }: { session: Session }) {
             legible over the artwork in both themes, and the illustration's
             own busy content is drawn into its right ~60% for exactly this
             reason. In a right-to-left language the artwork, scrim and chip
-            mirror so the text still starts over the quiet side. The
-            date/household chip is the true thing this screen actually
-            knows, never an invented temperature (rule 9: WonderHome has no
-            weather provider); on a phone it sits above the greeting rather
-            than beside it, because a long date in some languages would
-            otherwise run into the greeting (rule 15). */}
+            mirror so the text still starts over the quiet side. The date
+            card says only what is on record or what a real provider sent
+            (rule 9); on a phone it sits above the greeting rather than
+            beside it, so nothing runs into the greeting (rule 15). */}
         <header className="wh-rise relative min-h-[15.5rem] overflow-hidden rounded-[var(--wh-radius-lg)] sm:min-h-[16rem]">
           <CozyCornerIllustration className="absolute inset-0 h-full w-full rtl:-scale-x-100" />
           <div
@@ -276,22 +275,16 @@ export function HomeDashboard({ session }: { session: Session }) {
               (max-w-[80%] below) has nowhere for this to sit without
               overlapping it — the illustration itself is mostly cropped
               out of frame there too, so there is no clear region left. */}
-          <ScriptAccent size="sm" heart className="absolute start-[40%] top-5 hidden max-w-[10rem] leading-[1.15] sm:block">
+          <ScriptAccent size="sm" heart className="absolute start-[40%] bottom-6 hidden max-w-[10rem] leading-[1.15] sm:block">
             {t("homeScreen.script.line1")}
             <br />
             {t("homeScreen.script.line2")}
           </ScriptAccent>
 
-          <Link
-            href="/today"
-            className="relative z-10 mx-4 mt-4 inline-flex items-center gap-2 rounded-[var(--wh-radius-pill)] bg-[var(--wh-surface)]/90 px-3 py-2 shadow-[var(--wh-shadow-card)] backdrop-blur-sm transition-colors hover:bg-[var(--wh-surface)] sm:absolute sm:end-4 sm:top-4 sm:m-0"
-          >
-            <Sun aria-hidden className="size-5 shrink-0 text-[var(--wh-tone-money)]" />
-            <span className="min-w-0 text-start">
-              <span className="block text-xs font-semibold">{formatToday(timezone, now)}</span>
-              <span className="block truncate text-[0.6875rem] text-[var(--wh-foreground-subtle)]">{view.householdName}</span>
-            </span>
-          </Link>
+          {/* The date card: the day, the weather where it is on, and a film and a family pick where a catalogue is (the owner, 2026-10-21). */}
+          <Suspense fallback={<TodayCardFallback date={formatToday(timezone, now)} household={view.householdName} />}>
+            <TodayCard session={session} now={now} date={formatToday(timezone, now)} />
+          </Suspense>
 
           <div className="relative z-10 max-w-[80%] space-y-1 px-5 pt-3 pb-5 sm:max-w-[42%] sm:p-6">
             <p className="text-lg font-medium text-[var(--wh-foreground-muted)]">{greetingFor(timezone, now)},</p>
