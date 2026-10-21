@@ -1,4 +1,5 @@
 import {
+  CalendarRange,
   ChefHat,
   ChevronLeft,
   ChevronRight,
@@ -284,7 +285,7 @@ export default async function MealsPage({
               {t("meals.lede")}
             </p>
           </div>
-          <div className="flex flex-wrap gap-2">
+          <div className="flex w-full flex-wrap items-center gap-2 lg:w-auto">
             {active === "recipes" ? (
               <AddRecipeButton householdId={householdId} labels={formLabels} />
             ) : active === "preferences" ? (
@@ -307,6 +308,20 @@ export default async function MealsPage({
                 />
               </>
             )}
+            {/* The week template sits top right, beside the actions rather than among the tabs
+                (the owner, 2026-10-21): an icon on a phone, named from sm, filled while it is open. */}
+            <PillLink
+              href={active === "template" ? "/meals" : "/meals?tab=template"}
+              tone={active === "template" ? "primary" : "quiet"}
+              scroll={false}
+              aria-current={active === "template" ? "page" : undefined}
+              aria-label={t("meals.tab.template")}
+              title={t("meals.tab.template")}
+              className="ms-auto min-h-11 min-w-11 px-3"
+            >
+              <CalendarRange aria-hidden className="size-4" />
+              <span className="sr-only sm:not-sr-only">{t("meals.tab.template")}</span>
+            </PillLink>
           </div>
         </header>
 
@@ -319,11 +334,6 @@ export default async function MealsPage({
               label: t("meals.tab.plan"),
               href: "/meals",
               count: agenda?.meals.length,
-            },
-            {
-              key: "template",
-              label: t("meals.tab.template"),
-              href: "/meals?tab=template",
             },
             {
               key: "recipes",
