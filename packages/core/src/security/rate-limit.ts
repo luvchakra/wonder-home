@@ -64,6 +64,10 @@ export const RATE_LIMITS = {
    * Supabase Auth keeps its own limits behind this one.
    */
   "auth.attempt": { max: 30, windowSeconds: 600 },
+  /** Job applications sent from the careers pages, per hashed client address: a person applying, not a script. */
+  "careers.apply": { max: 10, windowSeconds: 3600 },
+  /** Status looks and withdrawals on the careers pages, per hashed client address. */
+  "careers.status": { max: 30, windowSeconds: 3600 },
   /** Partner API requests, per key (story 18-008): an integration syncing, not a scraper. */
   "partner.request": { max: 120, windowSeconds: 60 },
 } as const;

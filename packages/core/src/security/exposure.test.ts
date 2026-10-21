@@ -17,8 +17,17 @@ describe("what crawlers and anonymous callers may read", () => {
   it("lets search engines read the landing and legal pages, and nothing behind sign-in", () => {
     const everyone = ruleFor("*")!;
     expect(everyone.allow).toEqual(expect.arrayContaining(["/$", "/legal$"]));
-    expect(everyone.disallow).toEqual(["/"]);
+    expect(everyone.disallow).toEqual(["/", "/careers/status"]);
     expect(everyone.allow).not.toContain("/e/");
+  });
+
+  it("lets search engines read the careers list and each job, never an applicant's status page", () => {
+    for (const agent of ["*", "facebookexternalhit"]) {
+      const rule = ruleFor(agent)!;
+      expect(rule.allow).toEqual(expect.arrayContaining(["/careers$", "/careers/"]));
+      // The longer rule wins in robots.txt, so the status page stays out.
+      expect(rule.disallow).toContain("/careers/status");
+    }
   });
 
   it("lets chat link previews unfurl an event's invite link, which is sent over WhatsApp on purpose", () => {

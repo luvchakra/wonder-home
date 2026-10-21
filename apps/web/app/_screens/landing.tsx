@@ -648,6 +648,7 @@ export async function Landing() {
                 heading: "More",
                 links: [
                   ["/sign-in?next=%2Fhelp", "User guide (sign in)"],
+                  ["/careers", "Careers"],
                   ["/legal", "Terms & privacy"],
                   ["#top", "Back to top"],
                 ],

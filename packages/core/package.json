@@ -37,6 +37,7 @@
     "./finance/*": "./src/finance/*.ts",
     "./family/*": "./src/family/*.ts",
     "./calendar/*": "./src/calendar/*.ts",
+    "./careers/*": "./src/careers/*.ts",
     "./integrations/*": "./src/integrations/*.ts",
     "./ai/*": "./src/ai/*.ts",
     "./voice/*": "./src/voice/*.ts",

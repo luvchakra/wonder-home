@@ -39,6 +39,10 @@
  * - the files a browser or crawler fetches on its own: `robots.txt`, the
  *   web manifest, the service worker and the share card.
  *
+ * The careers pages (`/careers`, a job, an applicant's status) are public:
+ * WonderJobs holds the jobs and applications, and the status page is found
+ * by the token in the applicant's own email.
+ *
  * The user guide (`/help`) is not on this list: it is for members.
  */
 const PUBLIC_PATHS = new Set([
@@ -51,7 +55,7 @@ const PUBLIC_PATHS = new Set([
   "/sw.js",
   "/og.png",
 ]);
-const PUBLIC_PREFIXES = ["/auth", "/oauth", "/api", "/e"] as const;
+const PUBLIC_PREFIXES = ["/auth", "/oauth", "/api", "/e", "/careers"] as const;
 
 /** Surfaces only for a signed-out visitor; a signed-in member is sent home. */
 const ANONYMOUS_ONLY = new Set(["/sign-in", "/sign-in/phone", "/sign-up", "/forgot-password"]);
