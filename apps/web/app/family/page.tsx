@@ -1,4 +1,5 @@
-import { CalendarDays, CalendarHeart, GraduationCap, HandHeart, Heart, MapPin, PawPrint, Sun, UserPlus, Users } from "lucide-react";
+import { CalendarDays, CalendarHeart, GraduationCap, HandHeart, Heart, MapPin, MessageCircle, PawPrint, Settings2, Sun, UserPlus, Users } from "lucide-react";
+import Link from "next/link";
 
 import { may } from "@wonderhome/core/billing/repository";
 import { describeCalendarHealth } from "@wonderhome/core/family/calendar-connector";
@@ -47,6 +48,11 @@ import { childQuietHours } from "@wonderhome/core/notifications/child-quiet";
 import { atLocal, localMoment } from "@wonderhome/core/notifications/timing";
 
 export const metadata = { title: "Our Family" };
+
+/** A row's own icon control: a 36px target with its name for assistive technology (rule 11). */
+const ICON_LINK =
+  "grid size-9 shrink-0 place-items-center rounded-full text-[var(--wh-foreground-muted)] transition-colors hover:bg-[var(--wh-surface-muted)] hover:text-[var(--wh-primary)] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--wh-primary)]";
+
 export const dynamic = "force-dynamic";
 
 /**
@@ -203,12 +209,13 @@ export default async function FamilyPage() {
             count={familyMembers.length}
             action={
               admin ? (
-                <div className="flex gap-2">
-                  <PillLink href="/household/members" tone="quiet">
-                    {t("family.manage")}
-                  </PillLink>
+                // Manage is an icon with its name (rule 11), so the title and Invite stay whole on one line (the owner, 2026-10-21).
+                <div className="flex shrink-0 items-center gap-1.5 whitespace-nowrap">
+                  <Link href="/household/members" aria-label={t("family.manage")} title={t("family.manage")} className={ICON_LINK}>
+                    <Settings2 aria-hidden className="size-4" />
+                  </Link>
                   <PillLink href="/household/members" tone="primary">
-                    <Users aria-hidden className="size-3.5" /> {t("family.inviteMember")}
+                    <UserPlus aria-hidden className="size-3.5" /> <span className="sm:hidden">{t("family.inviteShort")}</span><span className="hidden sm:inline">{t("family.inviteMember")}</span>
                   </PillLink>
                 </div>
               ) : null
@@ -225,6 +232,14 @@ export default async function FamilyPage() {
                 {familyMembers.map((member) => (
                   <ExpandableRow
                     key={member.id}
+                    trailing={
+                      // A chat with this person (story 12-015): anyone else here who signs in themselves.
+                      member.id !== membership.memberId && member.status === "active" && member.hasAccount ? (
+                        <Link href={`/chat/with/${member.id}`} aria-label={t("chat.with", { name: member.displayName })} title={t("chat.with", { name: member.displayName })} className={ICON_LINK}>
+                          <MessageCircle aria-hidden className="size-4" />
+                        </Link>
+                      ) : null
+                    }
                     summary={
                       <>
                         <Avatar name={member.displayName} size="md" imageUrl={member.avatarUrl} badge={member.memberType === "child" ? "🧒" : member.isOwner || member.roles.includes("head") || member.roles.includes("administrator") ? "👑" : undefined} />

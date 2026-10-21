@@ -23,6 +23,7 @@ import { calendarEn } from "./areas/calendar/en";
 import { memberInviteEn } from "./areas/memberinvite/en";
 import { whatsNewEn } from "./areas/whatsnew/en";
 import { todayEn } from "./areas/today/en";
+import { chatEn } from "./areas/chat/en";
 import { amafEn } from "./areas/amaf/en";
 import { groceryEn } from "./areas/grocery/en";
 import { welcomeEn } from "./areas/welcome/en";
@@ -68,6 +69,7 @@ export const en = {
   "nav.item.certification": "HomeBrain",
   "nav.item.homesend": "HomeSend",
   "nav.item.places": "HomePlaces",
+  "nav.item.chat": "Chat",
   "nav.item.notifications": "Notifications",
   "nav.item.manage": "Manage Household",
   "nav.item.settings": "Settings & Profile",
@@ -82,6 +84,7 @@ export const en = {
   "nav.purpose.certification": "Your home, understood",
   "nav.purpose.homesend": "Send WonderHome anything",
   "nav.purpose.places": "Places your family likes",
+  "nav.purpose.chat": "Talk it over, with the thing itself attached",
   "nav.purpose.notifications": "Sparse and actionable",
   "nav.purpose.manage": "Playbook, policies, AI autonomy",
   "nav.purpose.settings": "You, your preferences, your privacy",
@@ -557,6 +560,7 @@ export const en = {
   "family.members": "Family members",
   "family.manage": "Manage",
   "family.inviteMember": "Invite member",
+  "family.inviteShort": "Invite",
   "family.empty.members": "Just you so far",
   "family.empty.membersLede": "Invite the family so everyone gets their own view of the home.",
   "family.inviteSomeone": "Invite someone",
@@ -972,6 +976,7 @@ export const en = {
   ...calendarEn,
   ...whatsNewEn,
   ...todayEn,
+  ...chatEn,
   ...amafEn,
   ...memberInviteEn,
   ...groceryEn,

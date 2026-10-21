@@ -11,12 +11,12 @@ in `docs/progress/`; for the running log of what changed when, `tracking/PROGRES
 
 ## The whole picture
 
-**350 of 374 stories done — 93.6%**
+**350 of 375 stories done — 93.3%**
 
 | Status | Stories |
 |---|---:|
 | Done | 350 |
-| In Progress | 8 |
+| In Progress | 9 |
 | Blocked | 1 |
 | Not Started | 11 |
 | Deferred | 4 |
@@ -37,7 +37,7 @@ in `docs/progress/`; for the running log of what changed when, `tracking/PROGRES
 | 09 Commerce, Groceries & Pet Supplies | `██████████` | 9 | 9 | — |
 | 10 Meals & Cooking | `██████████` | 15 | 15 | — |
 | 11 Bills, Fees & Finance | `█████████░` | 14 | 15 | 1 not started |
-| 12 Family Time & Social Activities | `██████████` | 8 | 8 | — |
+| 12 Family Time & Social Activities | `████████░░` | 8 | 9 | 1 in progress |
 | 13 Maintenance, Laundry & Pet Care | `█████████░` | 10 | 11 | 1 in progress |
 | 14 AI Orchestration & Learning | `████████░░` | 29 | 34 | 2 in progress, 3 deferred |
 | 15 Privacy, Security & Governance | `██████████` | 9 | 9 | — |
@@ -65,6 +65,7 @@ in `docs/progress/`; for the running log of what changed when, `tracking/PROGRES
 | `08-021` The cat's sayings from a long list, by age and gender, never repeated for a child | 08 Kids & School Intelligence | P1 | In Progress |
 | `08-023` The cat walks, goes back and forth, and goes round its whole list | 08 Kids & School Intelligence | P1 | In Progress |
 | `11-011` Payees beyond the catalogue's cities, and outside India | 11 Bills, Fees & Finance | P2 | Not Started |
+| `12-015` Household chat with the thing itself attached | 12 Family Time & Social Activities | P1 | In Progress |
 | `13-009` A pet's likes, dislikes, favourites, fears and allergies | 13 Maintenance, Laundry & Pet Care | P1 | In Progress |
 | `14-021` HomeBrain 3.0 phase B — retrieval and one pass | 14 AI Orchestration & Learning | P0 | Deferred |
 | `14-022` HomeBrain 3.0 phase C — one answer source | 14 AI Orchestration & Learning | P0 | Deferred |
@@ -337,7 +338,7 @@ in `docs/progress/`; for the running log of what changed when, `tracking/PROGRES
 
 ### 12 — Family Time & Social Activities
 
-8 of 8 done `██████████`
+8 of 9 done `████████░░`
 
 | Story | Priority | Status | Notes |
 |---|---|---|---|
@@ -349,6 +350,7 @@ in `docs/progress/`; for the running log of what changed when, `tracking/PROGRES
 | `12-006` Gift planning | P1 | Done | gifts planned against an explicit occasion, never guessed from a date |
 | `12-007` Conflict detection | P1 | Done | both sides named and a proposal made; never a silent move |
 | `12-008` End-to-end outing | P2 | Done | outing planning composes availability, conflicts and gifts already built |
+| `12-015` Household chat with the thing itself attached | P1 | In Progress | The owner, 2026-10-21 ("add an internal chat feature for each member, including household … direct link or tasks can be mentioned in the chat so other member can look at them and take action … put chat icon [on each Family member row] … add members in incremental way"; and the Family members header had wrapped). Migration `20261021030000_household_chat.sql`: `chat_threads` (one household thread per household, direct threads keyed by the pair, groups), `chat_participants` and `chat_messages`, RLS by the set form `wh.my_chat_threads()`, written only through `chat_household_thread`, `chat_open_direct`, `chat_add_participants` (a direct chat that gains a third person becomes a group, history included), `chat_leave`, `chat_mark_read`; `chat_inbox` (security invoker) gives each chat its last message and unread count. A message is written only as yourself; only its writer changes or takes it back, and nobody deletes one; a link is a path on this site only (check constraint). `chat/links.ts` builds an attachment from a bill, meal, event, thing to buy or screen the writer can see, never from what the browser sends (tested). Screens: `/chat` (Everyone, the chats, Start a chat), `/chat/[threadId]` (messages, Attach sheet, change and take back, Add people one or several at a time, Leave a group with a question first), `/chat/with/[memberId]`; Chat under More (Family & People); a chat icon beside each other person on Family who signs in (`ExpandableRow` `trailing`). Family: Manage is an icon, and `SectionHeader` lets its action move under the title rather than break it. Words, nav and help (Chat) in all eight languages. Tests: links 4, RLS 8 (`test-chat-rls.mjs`). **Waits on:** the migration reaching the live project (this session's `apply_migration` calls are cancelled), then browser QA at 360px and desktop. |
 
 ### 13 — Maintenance, Laundry & Pet Care
 

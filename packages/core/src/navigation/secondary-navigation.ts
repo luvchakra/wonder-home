@@ -21,6 +21,7 @@ export type SecondaryNavKey =
   | "certification"
   | "homesend"
   | "places"
+  | "chat"
   | "notifications"
   | "manage"
   | "settings";
@@ -42,6 +43,7 @@ export type SecondaryNavItem = {
     | "badge-check"
     | "send"
     | "map-pin"
+    | "message-circle"
     | "bell"
     | "settings-2"
     | "user-round-cog";
@@ -73,6 +75,7 @@ export const SECONDARY_GROUP_LABELS: Record<SecondaryNavGroup, string> = {
 export const SECONDARY_NAVIGATION: readonly SecondaryNavItem[] = [
   { key: "responsibilities", label: "Responsibilities", href: "/household/responsibilities", icon: "list-checks", tone: "primary", purpose: "Clear roles, less chaos", requires: null, adultOnly: true, group: "family" },
   { key: "school", label: "Kids & School", href: "/school", icon: "graduation-cap", tone: "school", purpose: "All school info in one place", requires: ["school.view_own", "school.manage"], group: "family" },
+  { key: "chat", label: "Chat", href: "/chat", icon: "message-circle", tone: "people", purpose: "Talk it over, with the thing itself attached", requires: null, group: "family" },
   { key: "househelper", label: "Househelper", href: "/househelper", icon: "hand-heart", tone: "people", purpose: "Support that works", requires: null, adultOnly: true, group: "family" },
   { key: "groceries", label: "Groceries", href: "/groceries", icon: "shopping-basket", tone: "care", purpose: "Always be stocked", requires: null, adultOnly: true, group: "food" },
   { key: "meals", label: "Meals & Recipes", href: "/meals", icon: "utensils", tone: "meals", purpose: "Plan, cook, enjoy", requires: null, group: "food" },

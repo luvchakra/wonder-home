@@ -121,6 +121,12 @@ const SECTIONS: readonly SectionShape[] = [
     keywords: ["next event", "next holiday", "upcoming", "calendar", "month", "week", "day", "year", "pinch", "holiday", "public holiday", "birthday", "repeat", "recurring", "private", "just me", "clash", "conflict", "filter", "skip", "where", "place", "address", "google maps", "directions", "appointments", "busy", "deliveries", "service visit", "helper away", "also show", "long weekend", "getaway", "free weekend", "trip", "vacation"],
   },
   {
+    id: "chat",
+    group: "Everyday use",
+    updated: "2026-10-21",
+    keywords: ["chat", "message", "messages", "talk", "conversation", "group", "direct message", "dm", "everyone", "attach", "link", "share a bill", "add people", "leave chat", "take back", "edit message", "unread"],
+  },
+  {
     id: "notifications",
     group: "Everyday use",
     updated: "2026-10-20",

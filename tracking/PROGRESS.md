@@ -352,5 +352,6 @@ disagree again.)
 | 2026-10-21 | 10 | 10-015 | Done | Add preference on the Preferences list, not the page header. |
 | 2026-10-21 | 17 | 17-009 | Done | Home's date card shows today's weather (now, high and low, rain ahead) and, once a TMDB key is set, a film in cinemas and a family pick to stream, different each load. |
 | 2026-10-21 | 08 | 08-025 | Done | Add homework and Connect school sit under the child picker; Add homework opens on the picked child. |
+| 2026-10-21 | 12 | 12-015 | In Progress | Household chat: Everyone, direct and group chats, a bill, meal, event, thing to buy or screen attached, people added one or several at a time, a chat icon on Family; waits on its migration reaching live. |
 | 2026-10-21 | 13 | 13-011 | Done | Home & Upkeep: a new request is Open (was Raised); the status picker starts at the current status and Update waits for a change. |
 | 2026-10-21 | — | Release 0.1 | Done | Release notes: Version 0.1 (PRs #243–#283), confirmed live by the owner, in all eight languages. |

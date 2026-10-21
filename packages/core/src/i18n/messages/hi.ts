@@ -14,6 +14,7 @@ import { calendarHi } from "./areas/calendar/hi";
 import { memberInviteHi } from "./areas/memberinvite/hi";
 import { whatsNewHi } from "./areas/whatsnew/hi";
 import { todayHi } from "./areas/today/hi";
+import { chatHi } from "./areas/chat/hi";
 import { amafHi } from "./areas/amaf/hi";
 import { groceryHi } from "./areas/grocery/hi";
 import { welcomeHi } from "./areas/welcome/hi";
@@ -58,6 +59,7 @@ export const hi: Catalog = {
   "nav.item.certification": "HomeBrain",
   "nav.item.homesend": "HomeSend",
   "nav.item.places": "HomePlaces",
+  "nav.item.chat": "चैट",
   "nav.item.notifications": "सूचनाएँ",
   "nav.item.manage": "घर का प्रबंधन",
   "nav.item.settings": "सेटिंग्स और प्रोफ़ाइल",
@@ -72,6 +74,7 @@ export const hi: Catalog = {
   "nav.purpose.certification": "आपका घर, समझा हुआ",
   "nav.purpose.homesend": "WonderHome को कुछ भी भेजें",
   "nav.purpose.places": "आपके परिवार की पसंदीदा जगहें",
+  "nav.purpose.chat": "बात करें, जिस चीज़ की बात है वह साथ जोड़कर",
   "nav.purpose.notifications": "कम, और काम के",
   "nav.purpose.manage": "प्लेबुक, नियम, AI की आज़ादी",
   "nav.purpose.settings": "आप, आपकी पसंद, आपकी निजता",
@@ -547,6 +550,7 @@ export const hi: Catalog = {
   "family.members": "परिवार के सदस्य",
   "family.manage": "प्रबंधित करें",
   "family.inviteMember": "सदस्य को आमंत्रित करें",
+  "family.inviteShort": "आमंत्रित करें",
   "family.empty.members": "अभी सिर्फ़ आप",
   "family.empty.membersLede": "परिवार को आमंत्रित करें ताकि सबको घर का अपना नज़ारा मिले।",
   "family.inviteSomeone": "किसी को आमंत्रित करें",
@@ -962,6 +966,7 @@ export const hi: Catalog = {
   ...calendarHi,
   ...whatsNewHi,
   ...todayHi,
+  ...chatHi,
   ...amafHi,
   ...memberInviteHi,
   ...groceryHi,

@@ -14,6 +14,7 @@ import { calendarFr } from "./areas/calendar/fr";
 import { memberInviteFr } from "./areas/memberinvite/fr";
 import { whatsNewFr } from "./areas/whatsnew/fr";
 import { todayFr } from "./areas/today/fr";
+import { chatFr } from "./areas/chat/fr";
 import { amafFr } from "./areas/amaf/fr";
 import { groceryFr } from "./areas/grocery/fr";
 import { welcomeFr } from "./areas/welcome/fr";
@@ -58,6 +59,7 @@ export const fr: Catalog = {
   "nav.item.certification": "HomeBrain",
   "nav.item.homesend": "HomeSend",
   "nav.item.places": "HomePlaces",
+  "nav.item.chat": "Discussion",
   "nav.item.notifications": "Notifications",
   "nav.item.manage": "Gérer le foyer",
   "nav.item.settings": "Paramètres et profil",
@@ -72,6 +74,7 @@ export const fr: Catalog = {
   "nav.purpose.certification": "Votre maison, comprise",
   "nav.purpose.homesend": "Envoyez n’importe quoi à WonderHome",
   "nav.purpose.places": "Les lieux que votre famille aime",
+  "nav.purpose.chat": "Parlez-en, la chose elle-même jointe",
   "nav.purpose.notifications": "Rares et utiles",
   "nav.purpose.manage": "Guide, règles, autonomie de l’IA",
   "nav.purpose.settings": "Vous, vos préférences, votre vie privée",
@@ -547,6 +550,7 @@ export const fr: Catalog = {
   "family.members": "Membres de la famille",
   "family.manage": "Gérer",
   "family.inviteMember": "Inviter un membre",
+  "family.inviteShort": "Inviter",
   "family.empty.members": "Vous seul pour l’instant",
   "family.empty.membersLede": "Invitez la famille pour que chacun ait sa propre vue du foyer.",
   "family.inviteSomeone": "Inviter quelqu’un",
@@ -962,6 +966,7 @@ export const fr: Catalog = {
   ...calendarFr,
   ...whatsNewFr,
   ...todayFr,
+  ...chatFr,
   ...amafFr,
   ...memberInviteFr,
   ...groceryFr,

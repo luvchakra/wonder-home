@@ -11,6 +11,7 @@
     "./config/*": "./src/config/*.ts",
     "./privacy/*": "./src/privacy/*.ts",
     "./brand/*": "./src/brand/*.ts",
+    "./chat/*": "./src/chat/*.ts",
     "./conversation/*": "./src/conversation/*.ts",
     "./context/*": "./src/context/*.ts",
     "./homebrain/*": "./src/homebrain/*.ts",
