@@ -1,3 +1,4 @@
+import { Fragment } from "react";
 import {
   ChefHat,
   ChevronLeft,
@@ -930,11 +931,14 @@ function MealCard({
                 <span className="block text-xs leading-snug text-[var(--wh-foreground-muted)]">
                   {[labels.slots[meal.slot], formatTime(timezone, meal.readyBy), toGet > 0 ? t("meals.card.toGet", { count: toGet }) : null]
                     .filter((piece): piece is string => Boolean(piece))
-                    .map((piece, index) => (
-                      <span key={piece} className="whitespace-nowrap">
-                        {index > 0 ? " · " : null}
-                        {piece}
-                      </span>
+                    .map((piece, index, pieces) => (
+                      <Fragment key={piece}>
+                        {index > 0 ? " " : null}
+                        <span className="whitespace-nowrap">
+                          {piece}
+                          {index < pieces.length - 1 ? " ·" : null}
+                        </span>
+                      </Fragment>
                     ))}
                 </span>
                 <span className="block pt-0.5">
@@ -953,11 +957,14 @@ function MealCard({
               cook ?? t("meals.card.nobodyAssigned"),
             ]
               .filter((piece): piece is string => Boolean(piece))
-              .map((piece, index) => (
-                <span key={piece} className="whitespace-nowrap">
-                  {index > 0 ? " · " : null}
-                  {piece}
-                </span>
+              .map((piece, index, pieces) => (
+                <Fragment key={piece}>
+                  {index > 0 ? " " : null}
+                  <span className="whitespace-nowrap">
+                    {piece}
+                    {index < pieces.length - 1 ? " ·" : null}
+                  </span>
+                </Fragment>
               ))}
           </p>
       {missing.length > 0 ? (
