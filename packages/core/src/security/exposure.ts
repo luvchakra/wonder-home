@@ -14,7 +14,13 @@
  */
 
 /** Pages a signed-out visitor, and a search engine, may read. */
-export const PUBLIC_MARKETING_PATHS = ["/", "/legal"] as const;
+export const PUBLIC_MARKETING_PATHS = ["/", "/legal", "/careers"] as const;
+
+/**
+ * A job's own page is public too (`/careers/{id}`); the applicant's status
+ * page (`/careers/status`) carries a private token and is never indexed.
+ */
+const CAREERS_PAGES = { allow: "/careers/", disallow: "/careers/status" } as const;
 
 /**
  * Crawlers that gather pages for AI training, AI search answers or AI agents.
@@ -78,8 +84,8 @@ export function robotsRules(): RobotsRule[] {
   const publicPages = ["/$", ...PUBLIC_MARKETING_PATHS.filter((path) => path !== "/").map((path) => `${path}$`)];
   return [
     { userAgent: [...AI_CRAWLERS], disallow: ["/"] },
-    { userAgent: [...LINK_PREVIEW_FETCHERS], allow: [...publicPages, "/e/", ...PUBLIC_ASSETS], disallow: ["/"] },
-    { userAgent: "*", allow: [...publicPages, ...PUBLIC_ASSETS], disallow: ["/"] },
+    { userAgent: [...LINK_PREVIEW_FETCHERS], allow: [...publicPages, CAREERS_PAGES.allow, "/e/", ...PUBLIC_ASSETS], disallow: ["/", CAREERS_PAGES.disallow] },
+    { userAgent: "*", allow: [...publicPages, CAREERS_PAGES.allow, ...PUBLIC_ASSETS], disallow: ["/", CAREERS_PAGES.disallow] },
   ];
 }
 

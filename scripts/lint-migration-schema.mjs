@@ -62,6 +62,9 @@ const NON_TENANT_TABLES = new Set([
   "recipe_catalog_ingredients",
   // The cat's sayings (08-018): WonderHome's own list every household reads and none writes; what a child heard is per household.
   "companion_sayings",
+  // The WonderJobs career-site key setting and its audit trail (careers, 2026-10-21): one per deployment, service role only.
+  "careers_settings",
+  "careers_key_events",
 ]);
 
 export function lintMigrationSource(filename, sql) {

@@ -125,4 +125,15 @@ if (import.meta.url === `file://${process.argv[1]}`) {
     process.exit(1);
   }
   console.log(`No AI prompt text in client chunks (${prompts.length} phrases checked).`);
+
+  // The WonderJobs client is server-only: its endpoint and its key's names never reach a browser.
+  const careers = ["/api/careers/v1", "careers_key_read", "WONDERJOBS_CAREERS_KEY"];
+  const careersHits = leaks(staticDir, careers);
+  if (careersHits.length > 0) {
+    console.error("The WonderJobs client is in client JavaScript; it must stay on the server:");
+    for (const { path, phrase } of careersHits.slice(0, 20)) console.error(`  ${path.replace(`${ROOT}/`, "")}: "${phrase}"`);
+    console.error("Call WonderJobs only from server code (apps/web/app/_lib/careers.ts, which is server-only).");
+    process.exit(1);
+  }
+  console.log(`No WonderJobs client code in client chunks (${careers.length} markers checked).`);
 }

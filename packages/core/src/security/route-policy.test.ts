@@ -26,6 +26,11 @@ describe("route policy", () => {
     });
   });
 
+  it("keeps the careers pages public, an applicant's status page included", () => {
+    for (const path of ["/careers", "/careers/job_1", "/careers/status"]) expect(routeRequirement(path)).toBe("public");
+    expect(routeRequirement("/platform-admin/careers")).toBe("platform-admin");
+  });
+
   it("keeps the platform admin boundary separate from household roles", () => {
     expect(routeRequirement("/platform-admin")).toBe("platform-admin");
     expect(routeRequirement("/platform-admin/households")).toBe("platform-admin");

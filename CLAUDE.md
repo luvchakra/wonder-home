@@ -727,6 +727,26 @@ household's region, a different pair each load. The lists are platform data,
 cached per server for six hours, and shown with TMDB's attribution. Never show
 a title no provider sent.
 
+Careers (story 17-010, `packages/core/src/careers/`) is WonderJobs': the jobs,
+the applications, every email, reminder and decision, and deletion all live
+at jobs.wonderapps.biz, and WonderHome only shows what it returns and forwards
+what an applicant submits. It keeps no applicant data and logs only the
+endpoint, a job id, the status code and the time taken.
+- **The key** is a career-site key (`wjcs_…`) a platform admin pastes at
+  `/platform-admin/careers`. It is kept in Supabase Vault through the
+  service-role-only `public.careers_key_*` functions, and every save and clear
+  is audited in `careers_key_events` (last four only). A screen only ever
+  shows its mask. `WONDERJOBS_CAREERS_KEY` is used only when none is saved.
+- **The client** (`careers/wonderjobs.ts`) is reached only through the
+  server-only `apps/web/app/_lib/careers.ts`, and `check:bundle` fails if it
+  reaches a browser chunk. The host is fixed; an override is honoured only
+  for an https host on wonderapps.biz. Calls time out at 8 s, a GET is retried
+  once, and a POST never is.
+- **The pages** `/careers`, `/careers/[id]` and `/careers/status` are public.
+  An application goes through this app's own server action, and the status
+  token only ever travels in a request body. Never show a job WonderJobs did
+  not return.
+
 Billing (story 20-006) goes through the `BillingProvider` port
 (`billing/provider.ts`). Only the pure `applyBillingEvent` moves a
 subscription in response to a payment. It ignores an event older than the

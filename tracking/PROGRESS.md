@@ -366,3 +366,4 @@ disagree again.)
 | 2026-10-21 | 24 | 24-013 | Done | A place question is answered, never asked "what kind of place?": going out is assumed and said back, "tomorrow" is tomorrow's hours, and a short follow-up ("dinner nearby home") narrows the same request; eval HT-135 to HT-137. |
 | 2026-10-21 | 26 | 26-017 | Done | Nothing is added to the calendar twice: the same occasion under another name on the same day is asked about first, from the Calendar, Kids & School, HomeTalk and HomeSend. |
 | 2026-10-21 | 12 | 12-016 | Blocked | Reactions on FamilyChat messages: built and tested, waiting on its migration reaching the live project; the thread hides them until then. |
+| 2026-10-21 | 17 | 17-010 | Done | A public Careers section powered by WonderJobs: /careers, each job with Apply, the applicant's status page, and the key set by a platform admin at /platform-admin/careers (kept in Vault, audited). |

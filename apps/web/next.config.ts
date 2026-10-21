@@ -31,6 +31,16 @@ const nextConfig: NextConfig = {
       { source: "/:path*", headers: [...securityHeaders(), { key: "X-Robots-Tag", value: "noai, noimageai" }] },
       { source: "/help", headers: membersOnly },
       { source: "/help/:path*", headers: membersOnly },
+      // An applicant's status page carries their token in its address:
+      // never cached, never indexed, never sent on as a referrer.
+      {
+        source: "/careers/status",
+        headers: [
+          { key: "Referrer-Policy", value: "no-referrer" },
+          { key: "Cache-Control", value: "private, no-store, max-age=0" },
+          { key: "X-Robots-Tag", value: MEMBERS_ROBOTS_META },
+        ],
+      },
     ];
   },
 };
