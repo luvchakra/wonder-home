@@ -6,12 +6,16 @@ import { z } from "zod";
 
 import { googleAuthEnabled, phoneAuthEnabled } from "@wonderhome/core/config/auth-providers";
 import { claimMembers, formatPhone, normalPhone } from "@wonderhome/core/identity/member-phone";
+import { createAdminClient } from "@wonderhome/core/db/admin";
 import { createClient } from "@wonderhome/core/db/server";
+import { clientIpFromHeaders, hashClientIp } from "@wonderhome/core/homesend/rate-limit";
 import { recordOnboardingEvent, startOnboarding } from "@wonderhome/core/household/onboarding-repository";
 import { createHousehold } from "@wonderhome/core/identity/households";
 import { createHouseholdSchema } from "@wonderhome/core/identity/schemas";
 import { signOut as sharedSignOut } from "@wonderhome/core/identity/session-actions";
 import { log } from "@wonderhome/core/observability/logger";
+import { hitRateLimit, rateLimitMessage } from "@wonderhome/core/security/rate-limit";
+import { sameSitePath } from "@wonderhome/core/security/same-site-path";
 
 /**
  * Authentication and onboarding actions.
@@ -36,6 +40,23 @@ const signUpSchema = credentialsSchema.extend({
   displayName: z.string().trim().min(1, { error: "Tell us what to call you." }).max(80),
 });
 
+/**
+ * Whether this address may try once more (`auth.attempt`, per hashed address).
+ * A throttle, not a gate: with no address or no counter it lets the attempt
+ * through, and Supabase Auth's own limits still stand behind it.
+ */
+async function authAttemptAllowed(): Promise<boolean> {
+  const ip = clientIpFromHeaders(await headers());
+  if (!ip) return true;
+  try {
+    return await hitRateLimit(createAdminClient(), "auth.attempt", hashClientIp(ip));
+  } catch {
+    return true;
+  }
+}
+
+const AUTH_PAUSED = rateLimitMessage("auth.attempt");
+
 /** The one message both failure modes return, so neither reveals which it was. */
 const SIGN_IN_FAILED = "That email and password did not match. Please try again.";
 
@@ -45,6 +66,7 @@ export async function signIn(_previous: ActionState, formData: FormData): Promis
     password: formData.get("password"),
   });
   if (!parsed.success) return { error: SIGN_IN_FAILED };
+  if (!(await authAttemptAllowed())) return { error: AUTH_PAUSED };
 
   const supabase = await createClient();
   const { error } = await supabase.auth.signInWithPassword(parsed.data);
@@ -68,6 +90,7 @@ export async function signUp(_previous: ActionState, formData: FormData): Promis
   if (!parsed.success) {
     return { error: parsed.error.issues[0]?.message ?? "Please check the details above." };
   }
+  if (!(await authAttemptAllowed())) return { error: AUTH_PAUSED };
 
   const supabase = await createClient();
   const { data, error } = await supabase.auth.signUp({
@@ -110,6 +133,7 @@ export async function requestPasswordReset(
 ): Promise<ActionState> {
   const parsed = emailSchema.safeParse({ email: formData.get("email") });
   if (!parsed.success) return { error: parsed.error.issues[0]?.message ?? "Enter a valid email address." };
+  if (!(await authAttemptAllowed())) return { error: AUTH_PAUSED };
 
   const supabase = await createClient();
   const { error } = await supabase.auth.resetPasswordForEmail(parsed.data.email, {
@@ -192,6 +216,7 @@ export async function sendPhoneCode(_previous: PhoneSignInState, formData: FormD
   if (!phoneAuthEnabled()) return { error: PHONE_UNAVAILABLE };
   const phone = normalPhone(String(formData.get("phone") ?? ""));
   if (!phone) return { error: "Enter your phone number. An Indian number works as it is; add the country code for any other (+44…)." };
+  if (!(await authAttemptAllowed())) return { error: AUTH_PAUSED };
   const supabase = await createClient();
   const { error } = await supabase.auth.signInWithOtp({ phone });
   if (error) {
@@ -301,6 +326,5 @@ export async function createHouseholdAction(
 
 /** Only same-site paths are honoured, so ?next= cannot become an open redirect. */
 function safeNext(value: FormDataEntryValue | null): string {
-  if (typeof value !== "string" || !value.startsWith("/") || value.startsWith("//")) return "/";
-  return value;
+  return sameSitePath(value) ?? "/";
 }

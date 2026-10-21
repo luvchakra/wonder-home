@@ -1,5 +1,6 @@
 import type { NextConfig } from "next";
 
+import { MEMBERS_ROBOTS_META } from "@wonderhome/core/security/exposure";
 import { securityHeaders } from "@wonderhome/core/security/headers";
 
 const nextConfig: NextConfig = {
@@ -22,10 +23,12 @@ const nextConfig: NextConfig = {
     // cache or the browser's back-forward cache, and never indexed.
     const membersOnly = [
       { key: "Cache-Control", value: "private, no-store, max-age=0" },
-      { key: "X-Robots-Tag", value: "noindex, nofollow" },
+      { key: "X-Robots-Tag", value: MEMBERS_ROBOTS_META },
     ];
     return [
-      { source: "/:path*", headers: securityHeaders() },
+      // No page is material for AI training or AI answers; signed-in pages
+      // also say noindex in their own robots meta (layout.tsx).
+      { source: "/:path*", headers: [...securityHeaders(), { key: "X-Robots-Tag", value: "noai, noimageai" }] },
       { source: "/help", headers: membersOnly },
       { source: "/help/:path*", headers: membersOnly },
     ];

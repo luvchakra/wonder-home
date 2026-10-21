@@ -1,11 +1,11 @@
 import {
-  CalendarRange,
   ChefHat,
   ChevronLeft,
   ChevronRight,
   CookingPot,
   Heart,
   ShoppingBasket,
+  SlidersHorizontal,
   Utensils,
 } from "lucide-react";
 
@@ -33,6 +33,7 @@ import Link from "next/link";
 import { ActionRow } from "@wonderhome/core/ui/action-row";
 import { IconTile } from "@wonderhome/core/ui/icon-tile";
 import { Card } from "@wonderhome/core/ui/card";
+import { ExpandableRow } from "@wonderhome/core/ui/expandable-row";
 import { Badge, PillLink } from "@wonderhome/core/ui/pill";
 import { QuoteCard } from "@wonderhome/core/ui/quote-card";
 import { SectionHeader } from "@wonderhome/core/ui/section-header";
@@ -223,6 +224,15 @@ export default async function MealsPage({
     return `/meals?${params.toString()}`;
   };
   const pictureOf = new Map(catalog.map((dish) => [dish.id, dish.imageUrl]));
+  // A planned meal shows its dish's real picture: the catalog dish its recipe
+  // came from, else the catalog dish of the same name; the tile only when
+  // neither has one (the owner, 2026-10-21).
+  const catalogPictureByName = new Map(catalog.filter((dish) => dish.imageUrl).map((dish) => [dish.name.trim().toLowerCase(), dish.imageUrl]));
+  const mealPicture = (meal: Meal): string | null => {
+    const own = meal.recipe ? recipes.find((recipe) => recipe.id === meal.recipe!.id) : undefined;
+    const fromRecipe = own?.catalogRecipeId ? (pictureOf.get(own.catalogRecipeId) ?? null) : null;
+    return fromRecipe ?? catalogPictureByName.get(meal.name.trim().toLowerCase()) ?? catalogPictureByName.get((meal.recipe?.name ?? "").trim().toLowerCase()) ?? null;
+  };
   const allPreferences = (preferenceRows.data as PreferenceRow[] | null) ?? [];
   // A diet has its own section and its own picker; the list below is everything else.
   const preferences = allPreferences.filter((preference) => preference.kind !== "diet");
@@ -308,47 +318,59 @@ export default async function MealsPage({
                 />
               </>
             )}
-            {/* The week template sits top right, beside the actions rather than among the tabs
-                (the owner, 2026-10-21): an icon on a phone, named from sm, filled while it is open. */}
-            <PillLink
-              href={active === "template" ? "/meals" : "/meals?tab=template"}
-              tone={active === "template" ? "primary" : "quiet"}
-              scroll={false}
-              aria-current={active === "template" ? "page" : undefined}
-              aria-label={t("meals.tab.template")}
-              title={t("meals.tab.template")}
-              className="ms-auto min-w-9 px-2.5 sm:px-3.5"
-            >
-              <CalendarRange aria-hidden className="size-4" />
-              <span className="sr-only sm:not-sr-only">{t("meals.tab.template")}</span>
-            </PillLink>
           </div>
         </header>
 
-        <SegmentedControl
-          label={t("meals.view")}
-          active={active}
-          segments={[
-            {
-              key: "plan",
-              label: t("meals.tab.plan"),
-              href: "/meals",
-              count: agenda?.meals.length,
-            },
-            {
-              key: "recipes",
-              label: t("meals.tab.recipes"),
-              href: "/meals?tab=recipes",
-              count: recipes.length,
-            },
-            {
-              key: "preferences",
-              label: t("meals.tab.preferences"),
-              href: "/meals?tab=preferences",
-              count: preferences.length,
-            },
-          ]}
-        />
+        {/* Plan, Recipes and Template as tabs; Preferences as a named icon to their right
+            (the owner, 2026-10-21: "remove preferences tab, instead put it as an icon on the
+            right of template tab"), filled while it is open. */}
+        <div className="flex items-center gap-2">
+          <SegmentedControl
+            className="mx-0 min-w-0 flex-1 px-0"
+            label={t("meals.view")}
+            active={active}
+            segments={[
+              {
+                key: "plan",
+                label: t("meals.tab.plan"),
+                href: "/meals",
+                count: agenda?.meals.length,
+              },
+              {
+                key: "recipes",
+                label: t("meals.tab.recipes"),
+                href: "/meals?tab=recipes",
+                count: recipes.length,
+              },
+              // The week template is a tab of its own, named (the owner, 2026-10-21:
+              // "show Template tab instead with label"), not an icon in the header.
+              {
+                key: "template",
+                label: t("meals.tab.templateShort"),
+                href: "/meals?tab=template",
+              },
+            ]}
+          />
+          <Link
+            href={active === "preferences" ? "/meals" : "/meals?tab=preferences"}
+            scroll={false}
+            aria-current={active === "preferences" ? "page" : undefined}
+            aria-label={preferences.length > 0 ? `${t("meals.tab.preferences")} (${preferences.length})` : t("meals.tab.preferences")}
+            title={t("meals.tab.preferences")}
+            className={
+              active === "preferences"
+                ? "relative grid size-11 shrink-0 place-items-center rounded-full bg-[var(--wh-primary)] text-[var(--wh-primary-foreground)] shadow-[var(--wh-shadow-primary)] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--wh-primary)]"
+                : "relative grid size-11 shrink-0 place-items-center rounded-full bg-[var(--wh-surface-muted)] text-[var(--wh-foreground-muted)] hover:text-[var(--wh-foreground)] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--wh-primary)]"
+            }
+          >
+            <SlidersHorizontal aria-hidden className="size-5" />
+            {preferences.length > 0 ? (
+              <span aria-hidden className="absolute -top-0.5 -right-0.5 grid min-w-5 place-items-center rounded-full bg-[var(--wh-surface)] px-1 text-[0.625rem] font-bold text-[var(--wh-foreground-muted)] shadow-[var(--wh-shadow-card)]">
+                {preferences.length}
+              </span>
+            ) : null}
+          </Link>
+        </div>
 
         {active === "plan" ? (
           <>
@@ -440,6 +462,7 @@ export default async function MealsPage({
                                 <MealCard
                                   key={meal.id}
                                   meal={meal}
+                                  picture={mealPicture(meal)}
                                   cook={nameOf(meal.cookMemberId)}
                                   timezone={timezone}
                                   householdId={householdId}
@@ -783,6 +806,7 @@ function nutrientLine(
 
 function MealCard({
   meal,
+  picture,
   cook,
   timezone,
   householdId,
@@ -797,6 +821,8 @@ function MealCard({
   /** WonderHome picked it from the week template, and the template lists another dish for it. */
   chooseAgain: boolean;
   meal: Meal;
+  /** The dish's own picture from the catalog, when there is one. */
+  picture: string | null;
   cook: string | null;
   timezone: string;
   householdId: string;
@@ -830,33 +856,52 @@ function MealCard({
         })
       : null;
 
+  const toGet = missing.length;
+  // Folded by default (the owner, 2026-10-21: "keep all the entries folded,
+  // minimise the height of each card so maximum entries are visible"): one
+  // short row — picture, meal, dish, when, status — and the chevron opens
+  // what is missing, the nutrients and every action (rule 21).
   return (
-    <Card className="p-3.5">
-      <div className="flex items-start gap-3">
-        <span
-          aria-hidden
-          className="grid size-12 shrink-0 place-items-center rounded-[var(--wh-radius)] bg-[var(--wh-tone-meals-soft)] text-[var(--wh-tone-meals)]"
+    <Card className="p-1">
+      <ul>
+        <ExpandableRow
+          className="min-h-0 gap-2.5 py-1.5"
+          summary={
+            <>
+              {picture ? (
+                // eslint-disable-next-line @next/next/no-img-element -- a catalog picture from public storage, already sized
+                <img src={picture} alt="" loading="lazy" className="size-11 shrink-0 rounded-[var(--wh-radius-sm)] object-cover" />
+              ) : (
+                <span aria-hidden className="grid size-11 shrink-0 place-items-center rounded-[var(--wh-radius-sm)] bg-[var(--wh-tone-meals-soft)] text-[var(--wh-tone-meals)]">
+                  <Utensils className="size-5" />
+                </span>
+              )}
+              <span className="min-w-0 flex-1">
+                <span className="block text-sm font-semibold break-words">{meal.name}</span>
+                <span className="block text-xs text-[var(--wh-foreground-muted)]">
+                  {[labels.slots[meal.slot], formatTime(timezone, meal.readyBy), toGet > 0 ? t("meals.card.toGet", { count: toGet }) : null].filter(Boolean).join(" · ")}
+                </span>
+              </span>
+              <Badge tone={tone}>{t(`meals.status.${meal.status}`)}</Badge>
+            </>
+          }
         >
-          <Utensils className="size-6" />
-        </span>
-        <div className="min-w-0 flex-1">
-          <p className="text-[0.6875rem] font-semibold tracking-wide text-[var(--wh-foreground-subtle)] uppercase">
-            {labels.slots[meal.slot]}
-            {meal.origin === "week_template" ? <span className="font-medium normal-case tracking-normal text-[var(--wh-primary)]"> · {t("meals.template.pick")}</span> : null}
-          </p>
-          <p className="text-sm font-semibold">{meal.name}</p>
           <p className="text-xs text-[var(--wh-foreground-muted)]">
+            {meal.origin === "week_template" ? <span className="font-medium text-[var(--wh-primary)]">{t("meals.template.pick")} · </span> : null}
+            {/* Each piece keeps its own words together, so a line breaks between them, never inside "8:00 am". */}
             {[
               t("meals.card.readyBy", { time: formatTime(timezone, meal.readyBy) }),
               begin ? t("meals.card.start", { time: formatTime(timezone, begin) }) : null,
               cook ?? t("meals.card.nobodyAssigned"),
             ]
-              .filter(Boolean)
-              .join(" · ")}
+              .filter((piece): piece is string => Boolean(piece))
+              .map((piece, index) => (
+                <span key={piece} className="whitespace-nowrap">
+                  {index > 0 ? " · " : null}
+                  {piece}
+                </span>
+              ))}
           </p>
-        </div>
-        <Badge tone={tone}>{t(`meals.status.${meal.status}`)}</Badge>
-      </div>
       {missing.length > 0 ? (
         // What is on the list is said to be; what is not is "still to get" —
         // never "on the shopping list" for something nobody added.
@@ -958,6 +1003,8 @@ function MealCard({
           />
         ) : null}
       </div>
+        </ExpandableRow>
+      </ul>
     </Card>
   );
 }

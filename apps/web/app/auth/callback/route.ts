@@ -3,6 +3,7 @@ import { NextResponse } from "next/server";
 import { createClient } from "@wonderhome/core/db/server";
 import { claimMembers } from "@wonderhome/core/identity/member-phone";
 import { log } from "@wonderhome/core/observability/logger";
+import { sameSitePath } from "@wonderhome/core/security/same-site-path";
 
 /**
  * Where Supabase returns a person after it has verified them.
@@ -42,10 +43,9 @@ export async function GET(request: Request) {
   return NextResponse.redirect(new URL(next, url.origin));
 }
 
-/** Only a path on this site, never another origin. */
+/** Only a path on this site, never another origin (`sameSitePath`). */
 function safeNext(value: string | null): string {
-  if (typeof value !== "string" || !value.startsWith("/") || value.startsWith("//")) return "/";
-  return value;
+  return sameSitePath(value) ?? "/";
 }
 
 export const dynamic = "force-dynamic";

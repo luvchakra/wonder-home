@@ -61,6 +61,11 @@ export class ApiError extends Error {
     return new ApiError("not_found", message);
   }
 
+  /** Too much in a short time; `Retry-After` tells the caller when to try again. */
+  static rateLimited(message: string, retryAfterSeconds: number) {
+    return new ApiError("rate_limited", message, { retryAfterSeconds });
+  }
+
   /** The request was valid but the world already says otherwise. */
   static conflict(message: string, details?: unknown) {
     return new ApiError("conflict", message, details);

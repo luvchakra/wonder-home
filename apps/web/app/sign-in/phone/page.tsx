@@ -6,6 +6,7 @@ import { phoneAuthEnabled } from "@wonderhome/core/config/auth-providers";
 import { AuthLayout } from "../../_components/auth-layout";
 import { visitorLocale } from "../../_lib/entry-locale";
 import { PhoneSignInForm } from "./phone-sign-in-form";
+import { sameSitePath } from "@wonderhome/core/security/same-site-path";
 
 export const metadata = { title: "Sign in with your phone" };
 
@@ -18,7 +19,7 @@ export default async function PhoneSignInPage({ searchParams }: { searchParams: 
   if (!phoneAuthEnabled()) notFound();
   const [{ next }, locale] = await Promise.all([searchParams, visitorLocale()]);
   const { t } = locale;
-  const safeNext = next && next.startsWith("/") && !next.startsWith("//") ? next : "/";
+  const safeNext = sameSitePath(next) ?? "/";
 
   return (
     <AuthLayout

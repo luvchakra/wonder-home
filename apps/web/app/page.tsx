@@ -7,6 +7,9 @@ import { Landing } from "./_screens/landing";
 
 export const dynamic = "force-dynamic";
 
+/** The landing page is the one screen a search engine is welcome to read. */
+export const metadata = { robots: { index: true, follow: true } };
+
 /**
  * "/" is three different screens depending on who is looking: the landing
  * page for a visitor, the household dashboard for an adult, and the child

@@ -11,11 +11,11 @@ in `docs/progress/`; for the running log of what changed when, `tracking/PROGRES
 
 ## The whole picture
 
-**343 of 366 stories done — 93.7%**
+**346 of 369 stories done — 93.8%**
 
 | Status | Stories |
 |---|---:|
-| Done | 343 |
+| Done | 346 |
 | In Progress | 7 |
 | Blocked | 1 |
 | Not Started | 11 |
@@ -35,12 +35,12 @@ in `docs/progress/`; for the running log of what changed when, `tracking/PROGRES
 | 07 Househelper & Home Operations | `██████████` | 10 | 10 | — |
 | 08 Kids & School Intelligence | `████████░░` | 18 | 21 | 2 in progress, 1 not started |
 | 09 Commerce, Groceries & Pet Supplies | `██████████` | 9 | 9 | — |
-| 10 Meals & Cooking | `██████████` | 13 | 13 | — |
-| 11 Bills, Fees & Finance | `█████████░` | 13 | 14 | 1 not started |
+| 10 Meals & Cooking | `██████████` | 14 | 14 | — |
+| 11 Bills, Fees & Finance | `█████████░` | 14 | 15 | 1 not started |
 | 12 Family Time & Social Activities | `██████████` | 8 | 8 | — |
 | 13 Maintenance, Laundry & Pet Care | `█████████░` | 10 | 11 | 1 in progress |
 | 14 AI Orchestration & Learning | `████████░░` | 29 | 34 | 2 in progress, 3 deferred |
-| 15 Privacy, Security & Governance | `██████████` | 8 | 8 | — |
+| 15 Privacy, Security & Governance | `██████████` | 9 | 9 | — |
 | 16 Platform Admin & Operations | `██████████` | 8 | 8 | — |
 | 17 External Integrations | `██████████` | 8 | 8 | — |
 | 18 API & Developer Platform | `██████████` | 8 | 8 | — |
@@ -289,7 +289,7 @@ in `docs/progress/`; for the running log of what changed when, `tracking/PROGRES
 
 ### 10 — Meals & Cooking
 
-13 of 13 done `██████████`
+14 of 14 done `██████████`
 
 | Story | Priority | Status | Notes |
 |---|---|---|---|
@@ -306,10 +306,11 @@ in `docs/progress/`; for the running log of what changed when, `tracking/PROGRES
 | `10-011` Plan the week: every day's breakfast, lunch and dinner, Repeat last week, and Veg / Non-veg on WonderHome's ideas | P1 | Done | The owner, 2026-10-20 (PR #273). Meals → Plan is the week, Monday to Sunday on the household's clock (`meals/week.ts`, tested): ‹ › move a week, This week comes back, and the count is the everyday slots planned out of those still to come. Each day shows Breakfast, Lunch and Dinner (a snack only when one is planned); an empty slot is a quiet "+ Lunch" that opens Plan a meal on that day and slot with its usual time. A past day shows only what was planned on it. Repeat last week plans last week's meals a week on, into empty slots not yet past, through the same `createMeal` and meal ingredients (`copyLastWeekAction`); nothing planned is moved or replaced. On Recipes, All · Veg · Non-veg under Ideas from WonderHome filters the dishes (an egg dish shows with non-veg), keeping the course picked; All was added the same day (PR #274), on its own row so it fits 360px. Words and help in all eight languages. |
 | `10-012` Week template: several dishes per meal, and WonderHome plans each week from it (accepted unless changed) | P1 | Done | The owner, 2026-10-20: "create a week template with multiple options per slot. for each week let WonderHome select the weekly meal plan and show to you, if required user can make change or its accepted by default". Meals → Week template lists, per weekday and meal, the household's recipes WonderHome may pick (`meal_week_template_options`; add for one day, every day, weekdays or the weekend; change; remove). Each week, the first time an adult opens Plan, `planWeekFromTemplate` claims the week once (`meal_week_plans`) and plans one dish per covered meal straight away through `createMeal` with `origin = 'week_template'`: the pick rotates week by week, steps past last week's dish in that slot, never takes a dish an allergy, diet or ethical rule rules out (`meals/week-template.ts`, 8 unit tests), and fills only empty slots not past, so nothing a person planned moves and a removed meal is not put back. Plan shows "WonderHome's plan for this week" with the count and Plan this week from the template; a picked meal says WonderHome's pick, and Choose again swaps in the slot's next dish; Change meal makes it the person's. Adults write; every member reads (`scripts/test-meal-week-template-rls.mjs`, 5/5). Words and help in all eight languages. Migration `20261020234000_meal_week_template.sql` waits to reach the live project; until then the screens read as before. Live 2026-10-21: migration on the live project; opening Plan planned this week's 4 remaining dinners from the template, each marked WonderHome's pick with Choose again. |
 | `10-013` Week template at the header's top right | P1 | Done | The owner, 2026-10-21 ("move the weekly template to the top right, align all labels properly"). Week template left the tab row for a link at the right end of the Meals header, beside Suggest / Plan a meal or Add recipe / Add preference: an icon with an accessible name on a phone, icon and words from `sm`, filled while the template is open (tapping it again goes back to Plan). It is the same height as the header pills. With three tabs (Plan, Recipes, Preferences) each label and its count sit on one line at 360px. Browser QA at 360px and 1280px: no horizontal scroll. |
+| `10-014` Meal cards folded, with the dish's own picture; Week template a named tab | P1 | Done | The owner, 2026-10-21 ("keep all the entries folded in, minimize the height of each card so maximum entries are visible on screen. use real pictures from catalog wherever possible"; "instead of showing calendar icon, show Template tab instead with label"). A planned meal is one short `ExpandableRow`: the dish's catalog picture (from the recipe it came from, else the catalog dish of the same name; the meals tile only when neither has one), the dish, its meal and ready-by time, how many ingredients are still to get, and its status. The chevron opens the rest: WonderHome's pick, start time and cook, what is missing, nutrients, View recipe, Ingredients, Change meal and Choose again. Week template left the header for a tab named Template, and Preferences left the tab row for a named sliders button to its right ("remove preferences tab, instead put it as an icon on the right of template tab"): Plan, Recipes, Template on one line at 360px; 10-013's header icon is gone. The open card's time line breaks between its pieces, never inside "8:00 am". Words in all eight languages. |
 
 ### 11 — Bills, Fees & Finance
 
-13 of 14 done `█████████░`
+14 of 15 done `█████████░`
 
 | Story | Priority | Status | Notes |
 |---|---|---|---|
@@ -327,6 +328,7 @@ in `docs/progress/`; for the running log of what changed when, `tracking/PROGRES
 | `11-012` Month by month, budgets per line item, and a bill form that asks once | P0 | Done | The owner, 2026-10-20, from phone screenshots. A recurring bill shows Month by month: its last three months (Paid from the history, or Not entered with the pencil to say what it came to and when it was paid), this month and one ahead (`billPeriods` with `PERIODS_BEHIND`, `previousDueDate`). Budgets are per line item — electricity, water, piped gas, cooking gas, petrol and diesel (new `fuel` bill type), rent… — picked from a list grouped by kind like the bill picker, and count the payments of bills of that type (`budgetSpend` by `billType`); a budget set earlier for a whole kind keeps counting it. Add a bill asks for the amount and the due date once, under This bill; the Earlier bills rows are gone (the months are filled in on the bill). Saving a bill with no amount no longer fails: a currency is kept only with an amount (`obligations_amount_has_currency`). An unexpected error now carries a real reference in its message and the server log (`toErrorBody`). |
 | `11-013` Monthly spend as line charts, all bills and each bill | P1 | Done | The owner, 2026-10-20 ("show line graph for each type, show data points on x and y axis, decide best way to plot it"). The bar strip became `bills/spend-lines.tsx`: the household's total first, then one small chart per bill (small multiples, two up from `sm`, one per row on a phone), all on the same six calendar months ending at the newest on record. Each chart is one series (title, no legend); y axis is money from zero with three nice ticks; x axis the months (with the year when they span two); a dot per month on record, a month with nothing breaks the line (never interpolated); the newest amount labelled; tap, hover or focus a dot for its amount; Show as table gives the same numbers. Domain tone `--wh-tone-money`, 2 px line, dots with a surface ring, recessive grid. Words in all eight languages, help ¶1. Checked at 360px and 1280px, no overflow. |
 | `11-014` A bill's months chart as soon as they are entered; Add a bill on its line; a Budget tab | P1 | Done | The owner, 2026-10-21 ("gas bills are added but the line chart didn't appear … as soon as bill entries are added, chart should appear immediately"; "move Add Bill pill in same line as upcoming bills … add a new tab called Budget on right of transaction tab"). Monthly spend charted only paid months (`obligation_history`), so amounts entered under Month by month (`obligation_periods`) and an open bill's own amount never showed. `finance/billed-months.ts` (tested) now gives each bill one figure a month — paid, else the amount given for that month, else the open bill's own for its due month — up to this month, never twice. Add a bill moved from the page header to the Upcoming bills line, which always shows — with no bills it sits above the empty section ("Nothing due"), which no longer carries a second Add a bill. Budgets moved from Overview to a new Budget tab after Transactions, with its count; help (Bills → Budget) in all eight languages. Browser QA at 360px on a QA household seeded like the owner's: piped gas charts Jul–Oct from the given months and the open bill, no horizontal scroll. |
+| `11-015` Spend charts answer a touch | P1 | Done | The owner, 2026-10-21 ("make the line charts touch enabled, showing numbers as per touch"). Press anywhere on a chart and slide along it: a guide line follows to the nearest month on record and the label reads that month and its amount ("Aug · ₹2,600"); hover does the same with a mouse, a dot still takes focus. Vertical scrolling still works over a chart (`touch-action: pan-y`), and sliding along one never moves to another screen (`data-swipe="own"`). |
 
 ### 12 — Family Time & Social Activities
 
@@ -404,7 +406,7 @@ in `docs/progress/`; for the running log of what changed when, `tracking/PROGRES
 
 ### 15 — Privacy, Security & Governance
 
-8 of 8 done `██████████`
+9 of 9 done `██████████`
 
 | Story | Priority | Status | Notes |
 |---|---|---|---|
@@ -416,6 +418,7 @@ in `docs/progress/`; for the running log of what changed when, `tracking/PROGRES
 | `15-006` Audit | P0 | Done | Catalogue with a coverage test; nine unrecorded actions closed; household-facing trail |
 | `15-007` Privacy Center | P0 | Done | Step-up that actually verifies; export, deletion with a grace window, retention applied by a nightly sweep |
 | `15-008` Security testing | P0 | Done | Nine-area suite with a deterministic signal; SSRF guard, prompt-injection and session-abuse coverage |
+| `15-009` Hardening against AI-assisted reverse engineering | P0 | Done | The owner, 2026-10-21 (a hardening prompt). Audit and fixes in `docs/progress/2026-10-21-reverse-engineering-hardening.md`. Fixed: an open redirect after sign-in (`/\evil.com` passed the `?next=` check; one `security/same-site-path.ts` check now backs all five places); the full API description (`/api/v1/openapi`) is for signed-in members in production; the sign-in gate is deny-by-default (`/health`, `/home-send` and `/onboarding` were reachable to their pages signed out); `robots.txt` refuses AI crawlers and lets search engines read only the landing and legal pages; signed-in pages carry noindex and every page `X-Robots-Tag: noai, noimageai`; sign-in, sign-up, password reset and phone codes are throttled per hashed address (`auth.attempt`); a 429 carries `Retry-After`; every rate-limit refusal is logged; HomeBrain's answer prompt treats facts as data and never reveals its instructions, and a fact can no longer start a line of its own; `check:bundle` fails if a prompt reaches client JavaScript; a proprietary `LICENSE`; a canary record in the partner sandbox; draft terms for legal review (`docs/legal/TERMS-DRAFT.md`). Owner actions listed in the note. |
 
 ### 16 — Platform Admin & Operations
 

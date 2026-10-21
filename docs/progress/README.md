@@ -11,6 +11,7 @@ decision that shapes later work each earns a note, written before moving on.
 
 | Date | Note |
 |---|---|
+| 2026-10-21 | [Hardening against AI-assisted reverse engineering; meal cards, Template tab and Preferences button, chart touch](2026-10-21-reverse-engineering-hardening.md) |
 | 2026-10-21 | [USDA nutrition for dairy and sugar; Bills chart from entered months, Budget tab](2026-10-21-usda-nutrition-bills-chart.md) |
 | 2026-10-21 | [Nutrients for chicken, mutton and prawn cuts](2026-10-21-meat-prawn-nutrients.md) |
 | 2026-10-21 | [Ask me about family ships](2026-10-21-ask-me-about-family.md) |

@@ -10,8 +10,11 @@ import { useId, useState } from "react";
  * Each chart is one series, so its title names it and there is no legend. The
  * y axis is money from zero with three ticks; the x axis is the months. Every
  * month on record is a dot; a month with nothing on record breaks the line
- * rather than drawing a guess through it (rule 9). Tap, hover or focus a dot
- * for its exact amount; the newest is labelled. The same numbers are in the
+ * rather than drawing a guess through it (rule 9). Touch the chart and slide
+ * a finger along it (or hover, or focus a dot) and a guide line follows to the
+ * nearest month on record, labelled with its month and exact amount (the
+ * owner, 2026-10-21: "make the line charts touch enabled, showing numbers as
+ * per touch"); the newest is labelled otherwise. The same numbers are in the
  * table below the charts.
  */
 export type SpendSeries = {
@@ -47,12 +50,36 @@ function Chart({ series, months, monthWords }: { series: SpendSeries; months: st
   const newest = series.values.reduce<number | null>((found, value, index) => (value === null ? found : index), null);
   const shown = active ?? newest;
 
+  // The month on record nearest the finger, in the chart's own coordinates.
+  const pick = (event: React.PointerEvent<SVGRectElement>) => {
+    const box = event.currentTarget.ownerSVGElement?.getBoundingClientRect();
+    if (!box || box.width === 0) return;
+    const at = ((event.clientX - box.left) / box.width) * W;
+    let best: number | null = null;
+    series.values.forEach((value, index) => {
+      if (value === null) return;
+      if (best === null || Math.abs(x(index) - at) < Math.abs(x(best) - at)) best = index;
+    });
+    if (best !== null) setActive(best);
+  };
+  const label = shown !== null && series.values[shown] !== null ? `${monthWords[shown]} · ${series.texts[shown]}` : null;
+
   return (
     <figure className="min-w-0 space-y-1">
       <figcaption id={titleId} className="text-sm font-medium break-words">
         {series.name}
       </figcaption>
-      <svg viewBox={`0 0 ${W} ${H}`} className="block h-auto w-full overflow-visible" role="group" aria-labelledby={titleId} onMouseLeave={() => setActive(null)}>
+      {/* `data-swipe="own"`: sliding along a chart reads it, never moves to another screen. */}
+      <svg
+        viewBox={`0 0 ${W} ${H}`}
+        className="block h-auto w-full touch-pan-y overflow-visible select-none"
+        role="group"
+        aria-labelledby={titleId}
+        data-swipe="own"
+        onPointerLeave={(event) => {
+          if (event.pointerType === "mouse") setActive(null);
+        }}
+      >
         {series.ticks.map((tick) => (
           <g key={tick.value}>
             <line x1={M.left} x2={W - M.right} y1={y(tick.value)} y2={y(tick.value)} stroke="var(--wh-border)" strokeWidth={1} strokeDasharray={tick.value === 0 ? undefined : "2 3"} />
@@ -66,6 +93,25 @@ function Chart({ series, months, monthWords }: { series: SpendSeries; months: st
             {word}
           </text>
         ))}
+        {active !== null && series.values[active] !== null ? (
+          <line x1={x(active)} x2={x(active)} y1={M.top} y2={H - M.bottom} stroke="var(--wh-foreground-subtle)" strokeWidth={1} strokeDasharray="3 3" pointerEvents="none" />
+        ) : null}
+        {/* The whole plot answers a touch: press, slide, and the label follows the finger. */}
+        <rect
+          x={M.left - 10}
+          y={0}
+          width={W - M.left - M.right + 20}
+          height={H - M.bottom}
+          fill="transparent"
+          onPointerDown={(event) => {
+            if (event.pointerType !== "mouse") event.currentTarget.setPointerCapture(event.pointerId);
+            pick(event);
+          }}
+          onPointerMove={(event) => {
+            if (event.pointerType === "mouse" || event.buttons > 0 || event.currentTarget.hasPointerCapture(event.pointerId)) pick(event);
+          }}
+          aria-hidden="true"
+        />
         {runs.map((run) => (
           <polyline
             key={run[0]}
@@ -75,12 +121,13 @@ function Chart({ series, months, monthWords }: { series: SpendSeries; months: st
             strokeWidth={2}
             strokeLinejoin="round"
             strokeLinecap="round"
+            pointerEvents="none"
           />
         ))}
         {series.values.map((value, index) =>
           value === null ? null : (
             <g key={months[index]}>
-              <circle cx={x(index)} cy={y(value)} r={index === shown ? 5 : 4} fill="var(--wh-tone-money)" stroke="var(--wh-surface)" strokeWidth={2} />
+              <circle cx={x(index)} cy={y(value)} r={index === shown ? 5 : 4} fill="var(--wh-tone-money)" stroke="var(--wh-surface)" strokeWidth={2} pointerEvents="none" />
               {/* A hit target bigger than the dot, for a finger as much as a pointer. */}
               <circle
                 cx={x(index)}
@@ -102,16 +149,17 @@ function Chart({ series, months, monthWords }: { series: SpendSeries; months: st
           <text
             x={Math.min(W - M.right, Math.max(M.left, x(shown)))}
             y={Math.max(10, y(series.values[shown]!) - 10)}
-            textAnchor={x(shown) > W - M.right - 30 ? "end" : x(shown) < M.left + 30 ? "start" : "middle"}
+            textAnchor={x(shown) > W - M.right - 45 ? "end" : x(shown) < M.left + 45 ? "start" : "middle"}
             fontSize="11"
             fontWeight="600"
             fill="var(--wh-foreground)"
             stroke="var(--wh-surface)"
             strokeWidth={3}
             paintOrder="stroke"
+            pointerEvents="none"
             className="tabular-nums"
           >
-            {series.texts[shown]}
+            {active !== null ? label : series.texts[shown]}
           </text>
         ) : null}
       </svg>

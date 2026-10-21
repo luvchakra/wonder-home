@@ -1,6 +1,7 @@
 {
   "name": "wonderhome",
   "private": true,
+  "license": "UNLICENSED",
   "version": "0.0.0",
   "workspaces": [
     "apps/*",

@@ -1,6 +1,7 @@
 #!/usr/bin/env node
 /**
- * Fails when the user guide's words reach client JavaScript.
+ * Fails when the user guide's words, or the AI's own prompts, reach client
+ * JavaScript.
  *
  *   node scripts/check-client-bundle.mjs [static dir]   (default apps/web/.next/static)
  *
@@ -10,6 +11,10 @@
  * (packages/core/src/help/words.ts); this proves it on the real build, by
  * looking for the guide's own sentences in every client chunk. Runs in CI
  * right after `next build`.
+ *
+ * The prompts (`*_PROMPT` and `*_RULE` constants in the AI and HomeSend
+ * modules) are checked the same way: they are how WonderHome reasons, and
+ * nobody needs them in a browser (docs/progress/2026-10-21-reverse-engineering-hardening.md).
  */
 import { readdirSync, readFileSync, statSync } from "node:fs";
 import { join } from "node:path";
@@ -30,6 +35,30 @@ export function sentinels(source, elsewhere = "") {
     // A phrase the app's own screens also say (HomeSend's lede shares one with
     // the guide) proves nothing about the guide, so it is not a sentinel.
     if (plain && !elsewhere.includes(plain[0].trim())) found.add(plain[0].trim());
+  }
+  return [...found];
+}
+
+/** Files whose prompt constants must stay on the server. */
+const PROMPT_SOURCES = [
+  "packages/core/src/ai/model-client.ts",
+  "packages/core/src/ai/classify-intake.ts",
+  "packages/core/src/homesend/injection.ts",
+];
+
+/**
+ * Distinctive pieces of every prompt: each `*_PROMPT` / `*_RULE` template
+ * or string constant, split into lines, and from each line of 60 characters
+ * or more its first plain ASCII run of 40–60 characters.
+ */
+export function promptSentinels(source) {
+  const found = new Set();
+  for (const match of source.matchAll(/const [A-Z0-9_]*(?:PROMPT|RULE)[A-Z0-9_]*\s*=\s*(`[^`]*`|"(?:[^"\\]|\\.)*")/g)) {
+    for (const line of match[1].split(/\n|\\n/)) {
+      if (line.length < 60 || line.includes("${")) continue;
+      const plain = line.match(/[A-Za-z][A-Za-z ,.]{39,59}/);
+      if (plain) found.add(plain[0].trim());
+    }
   }
   return [...found];
 }
@@ -82,4 +111,18 @@ if (import.meta.url === `file://${process.argv[1]}`) {
     process.exit(1);
   }
   console.log(`No user-guide text in client chunks (${phrases.length} phrases checked).`);
+
+  const prompts = PROMPT_SOURCES.flatMap((file) => promptSentinels(readFileSync(join(ROOT, file), "utf8")));
+  if (prompts.length < 10) {
+    console.error(`Only ${prompts.length} prompt sentinel phrases found; the prompt check would prove nothing.`);
+    process.exit(1);
+  }
+  const promptHits = leaks(staticDir, prompts);
+  if (promptHits.length > 0) {
+    console.error("An AI prompt is in client JavaScript, which anybody can download signed out:");
+    for (const { path, phrase } of promptHits.slice(0, 20)) console.error(`  ${path.replace(`${ROOT}/`, "")}: "${phrase}"`);
+    console.error("Keep prompts in server-only modules; pass a client component only what it shows.");
+    process.exit(1);
+  }
+  console.log(`No AI prompt text in client chunks (${prompts.length} phrases checked).`);
 }

@@ -108,7 +108,7 @@ export async function authenticatePartner(
     scopes: ((row.scopes as string[]) ?? []).filter(isScope),
   };
   if (!(await hitRateLimit(admin, "partner.request", actor.keyId))) {
-    throw new ApiError("rate_limited", "Too many requests with this key. Nothing was lost; try again in a minute.");
+    throw ApiError.rateLimited("Too many requests with this key. Nothing was lost; try again in a minute.", 60);
   }
   // "Last used" to the minute is enough for a person, and keeps a busy key from writing on every call.
   const last = row.last_used_at ? new Date(row.last_used_at as string).getTime() : 0;

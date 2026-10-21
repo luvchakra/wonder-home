@@ -19,6 +19,10 @@ export const SANDBOX_GROCERIES = [
   { id: "sandbox-milk", name: "Milk", category: "dairy", unit: "l" },
   { id: "sandbox-bread", name: "Bread", category: "bakery", unit: "item" },
   { id: "sandbox-rice", name: "Basmati rice", category: "grocery", unit: "kg" },
+  // A canary: an invented product nobody sells. Seen anywhere outside a
+  // WonderHome sandbox answer, it marks a copy of this API's data
+  // (docs/progress/2026-10-21-reverse-engineering-hardening.md).
+  { id: "sandbox-kesar-mishri", name: "Thimmanna kesar mishri", category: "grocery", unit: "item" },
 ] as const;
 
 export type PartnerHousehold = { name: string; timezone: string; members: number; environment: PartnerActor["environment"] };
