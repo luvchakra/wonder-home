@@ -362,3 +362,4 @@ disagree again.)
 | 2026-10-21 | — | Release 0.1 | Done | Release notes: Version 0.1 (PRs #243–#283), confirmed live by the owner, in all eight languages. |
 | 2026-10-21 | 12 | 12-015 | Done | Household chat live: a chat icon for every family member (signed in or not, with a note until they join) and Family chat from the Family members header. |
 | 2026-10-21 | 12 | 12-015 | Done | Chat: / attaches anything, @ mentions people, helpers and pets, # tags with Trending at home on Home, and a notification for something new to read. |
+| 2026-10-21 | 12 | 12-015 | Done | FamilyChat: renamed (household thread now Whole family), a WhatsApp-compact thread with a composer kept above the tab bar, and emoji reactions; the reactions migration waits on reaching live. |

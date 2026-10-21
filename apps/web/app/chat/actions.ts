@@ -5,8 +5,9 @@ import { after } from "next/server";
 import { z } from "zod";
 
 import { toErrorBody } from "@wonderhome/core/api/errors";
-import { addPeople, editMessage, leaveChat, markRead, resolveLink, sendMessage, takeBackMessage, type LinkChoice } from "@wonderhome/core/chat/repository";
+import { addPeople, editMessage, leaveChat, markRead, reactToMessage, resolveLink, sendMessage, takeBackMessage, type LinkChoice } from "@wonderhome/core/chat/repository";
 import { CHAT_PAGE_KEYS, CHAT_RECORD_KINDS } from "@wonderhome/core/chat/links";
+import { CHAT_REACTIONS } from "@wonderhome/core/chat/thread";
 import { createAdminClient } from "@wonderhome/core/db/admin";
 import { createClient } from "@wonderhome/core/db/server";
 import { requireMembership } from "@wonderhome/core/identity/households";
@@ -78,6 +79,26 @@ export async function takeBackChatMessageAction(input: z.input<typeof messageSch
   try {
     const supabase = await createClient();
     if (!(await takeBackMessage(supabase, parsed.data.messageId))) return { error: "That couldn't be taken back." };
+  } catch (thrown) {
+    return { error: toErrorBody(thrown, "household").body.error.message };
+  }
+  revalidatePath(`/chat/${parsed.data.threadId}`);
+  return { ok: true };
+}
+
+const reactSchema = messageSchema.extend({ emoji: z.enum(CHAT_REACTIONS).nullable() });
+
+/**
+ * Sets this member's one reaction to a message, or with null takes it away.
+ * The emoji is one of the fixed set; who is reacting, and whether they may,
+ * is the database's call (`public.chat_react`). A reaction raises no notice.
+ */
+export async function reactToChatMessageAction(input: z.input<typeof reactSchema>): Promise<Result> {
+  const parsed = reactSchema.safeParse(input);
+  if (!parsed.success) return { error: "That reaction couldn't be saved." };
+  try {
+    const supabase = await createClient();
+    await reactToMessage(supabase, parsed.data.messageId, parsed.data.emoji);
   } catch (thrown) {
     return { error: toErrorBody(thrown, "household").body.error.message };
   }

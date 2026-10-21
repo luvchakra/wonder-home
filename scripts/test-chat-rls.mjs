@@ -151,3 +151,54 @@ test("someone can leave a group, and then reads it no more; the household thread
   assert.equal(asProfile(KID, `select count(*) from public.chat_messages where thread_id = '${direct}';`, options), "0");
   assert.throws(() => asProfile(KID, `select public.chat_leave('${householdThread}');`, options), /only a group chat/);
 });
+
+test("someone in a chat reacts with one emoji, changes it, and takes it away", () => {
+  const id = say(ADULT, householdThread, adultMember, "Pizza tonight?");
+  assert.equal(asProfile(HEAD, `select public.chat_react('${id}', '👍');`, options), "👍");
+  assert.equal(asProfile(KID, `select public.chat_react('${id}', '😂');`, options), "😂");
+  assert.equal(asProfile(ADULT, `select count(*) from public.chat_message_reactions where message_id = '${id}';`, options), "2");
+  // The row takes its thread and household from the message, never from the caller.
+  assert.equal(psql(`select thread_id || ':' || household_id from public.chat_message_reactions where message_id = '${id}' and member_id = '${headMember}';`, options), `${householdThread}:${household}`);
+  // One per person: reacting again changes it.
+  asProfile(HEAD, `select public.chat_react('${id}', '❤️');`, options);
+  assert.equal(psql(`select string_agg(emoji, ',') from public.chat_message_reactions where message_id = '${id}' and member_id = '${headMember}';`, options), "❤️");
+  asProfile(HEAD, `select public.chat_react('${id}', null);`, options);
+  assert.equal(psql(`select count(*) from public.chat_message_reactions where message_id = '${id}' and member_id = '${headMember}';`, options), "0");
+  // Only the fixed set.
+  assert.throws(() => asProfile(HEAD, `select public.chat_react('${id}', 'lol');`, options), /check constraint/);
+});
+
+test("nobody outside a chat reads or writes its reactions, and a helper never reacts in Family chat", () => {
+  const id = say(HEAD, householdThread, headMember, "Movie night Friday");
+  asProfile(ADULT, `select public.chat_react('${id}', '🙏');`, options);
+  assert.equal(asProfile(OUTSIDER, `select count(*) from public.chat_message_reactions;`, options), "0");
+  assert.throws(() => asProfile(OUTSIDER, `select public.chat_react('${id}', '👍');`, options), /cannot be reacted to/);
+  assert.throws(
+    () => asProfile(OUTSIDER, `insert into public.chat_message_reactions (message_id, thread_id, household_id, member_id, emoji) values ('${id}', '${householdThread}', '${household}', '${outsiderMember}', '👍');`, options),
+    /row-level security|violates/,
+  );
+  assert.equal(asProfile(HELPER, `select count(*) from public.chat_message_reactions where thread_id = '${householdThread}';`, options), "0");
+  assert.throws(() => asProfile(HELPER, `select public.chat_react('${id}', '👍');`, options), /cannot be reacted to/);
+  assert.throws(
+    () => asProfile(HELPER, `insert into public.chat_message_reactions (message_id, thread_id, household_id, member_id, emoji) values ('${id}', '${householdThread}', '${household}', '${helperMember}', '👍');`, options),
+    /row-level security|violates/,
+  );
+  // Someone who left a group no longer reacts there.
+  const groupMessage = say(HEAD, direct, headMember, "Who is in?");
+  assert.throws(() => asProfile(KID, `select public.chat_react('${groupMessage}', '👍');`, options), /cannot be reacted to/);
+});
+
+test("nobody changes or removes someone else's reaction, and a taken-back message takes none", () => {
+  const id = say(HEAD, householdThread, headMember, "Bins go out tonight");
+  asProfile(ADULT, `select public.chat_react('${id}', '👍');`, options);
+  asProfile(HEAD, `update public.chat_message_reactions set emoji = '😢' where message_id = '${id}' and member_id = '${adultMember}';`, options);
+  asProfile(HEAD, `delete from public.chat_message_reactions where message_id = '${id}' and member_id = '${adultMember}';`, options);
+  assert.equal(psql(`select emoji from public.chat_message_reactions where message_id = '${id}' and member_id = '${adultMember}';`, options), "👍");
+  assert.throws(
+    () => asProfile(HEAD, `insert into public.chat_message_reactions (message_id, thread_id, household_id, member_id, emoji) values ('${id}', '${householdThread}', '${household}', '${adultMember}', '😮');`, options),
+    /row-level security|duplicate|violates/,
+  );
+  assert.throws(() => asProfile(ADULT, `update public.chat_message_reactions set member_id = '${headMember}' where message_id = '${id}';`, options), /permission denied/);
+  asProfile(HEAD, `update public.chat_messages set removed_at = now() where id = '${id}';`, options);
+  assert.throws(() => asProfile(KID, `select public.chat_react('${id}', '👍');`, options), /cannot be reacted to/);
+});
