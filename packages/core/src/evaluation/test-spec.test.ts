@@ -161,6 +161,15 @@ describe("HB-012 — the same real-world thing under different names", () => {
     expect(cancelled?.message).toMatch(/cancel it on the family calendar/);
   });
 
+  it("a school notice for a trip the family already put on the calendar under another name is that trip (the owner, 2026-10-21)", () => {
+    const trip = { ...E.records.events![0]!, id: "e-e-bounce", title: "Bounce School Trip", startsAt: new Date("2026-09-25T02:30:00Z"), endsAt: new Date("2026-09-25T09:30:00Z") };
+    const found = reconcile({ schoolItems: [], events: [trip] }, "Field trip to Bounce");
+    expect(found?.existingId).toBe("e-e-bounce");
+    expect(found?.message).toMatch(/family calendar/);
+    expect(reconcile({ schoolItems: [], events: [trip] }, "Field trip to the Zoo")).toBeNull();
+    expect(reconcile({ schoolItems: [], events: [trip] }, "Field trip to Bounce", "2026-10-09")).toBeNull();
+  });
+
   it("confidence does not support it: another month's meeting, or a different piece of homework, stays separate", () => {
     expect(reconcile({ schoolItems: [ptmItem] }, "School meeting", "2026-11-20")?.existingId).toBeUndefined();
     expect(reconcile({ schoolItems: [], events: E.records.events }, "School meeting", "2026-10-30")).toBeNull();

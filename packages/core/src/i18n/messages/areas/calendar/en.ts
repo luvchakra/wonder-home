@@ -126,6 +126,7 @@ export const calendarEn = {
   "calendar.form.clashEntry": "{title}, {time}",
   "calendar.form.clashBusy": "{name} is busy then",
   "calendar.form.anyway": "Add anyway",
+  "calendar.form.duplicate": "This may already be on the calendar:",
   "calendar.form.saveAnyway": "Save anyway",
 
   "calendar.event.repeats": "Repeats",

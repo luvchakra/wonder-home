@@ -1,7 +1,7 @@
 "use client";
 
 import { Plus } from "lucide-react";
-import { useActionState, useEffect, useRef, useState } from "react";
+import { startTransition, useActionState, useEffect, useRef, useState } from "react";
 
 import { Alert } from "@wonderhome/core/ui/alert";
 import { Button } from "@wonderhome/core/ui/button";
@@ -33,6 +33,8 @@ export type EventCalendarLabels = {
   visibilityHint: string;
   notes: string;
   clash: string;
+  /** "This may already be on the calendar:" — the line under it names the entry. */
+  duplicate: string;
   anyway: string;
 };
 
@@ -100,13 +102,15 @@ export function NewEventForm({
   // A save that came back without an error or a clash closes the sheet; anything else keeps it open.
   const wasPending = useRef(false);
   useEffect(() => {
-    if (wasPending.current && !pending && !state.error && !state.clashes?.length) setOpen(false);
+    if (wasPending.current && !pending && !state.error && !state.clashes?.length && !state.duplicate) setOpen(false);
     wasPending.current = pending;
   }, [pending, state]);
 
   // A clash answers the details as they were sent; editing after it asks again.
   const [editedAfter, setEditedAfter] = useState<EventActionState | null>(null);
   const clashes = editedAfter === state ? [] : (state.clashes ?? []);
+  const duplicate = editedAfter === state ? null : (state.duplicate ?? null);
+  const asking = clashes.length > 0 || Boolean(duplicate);
 
   return (
     <>
@@ -115,16 +119,39 @@ export function NewEventForm({
       </Button>
 
       <Sheet open={open} onOpenChange={setOpen} title={labels.title} description={labels.description}>
-        <form action={formAction} onChange={() => setEditedAfter(state)} className="space-y-4">
+        <form
+          onSubmit={(event) => {
+            // Submitted by hand rather than as a form action, so a question
+            // back (a clash, something already on the calendar) keeps what was
+            // typed and "Add anyway" sends it again, instead of a reset form.
+            event.preventDefault();
+            const data = new FormData(event.currentTarget);
+            startTransition(() => formAction(data));
+          }}
+          onChange={() => setEditedAfter(state)}
+          className="space-y-4"
+        >
           {state.error ? <Alert>{state.error}</Alert> : null}
-          {clashes.length > 0 ? (
+          {asking ? (
             <Alert>
-              <span className="block font-medium">{words.clash}</span>
-              <ul className="mt-1 list-disc ps-5">
-                {clashes.map((clash) => (
-                  <li key={clash}>{clash}</li>
-                ))}
-              </ul>
+              {duplicate ? (
+                <>
+                  <span className="block font-medium">{words.duplicate}</span>
+                  <ul className="mt-1 list-disc ps-5">
+                    <li>{duplicate}</li>
+                  </ul>
+                </>
+              ) : null}
+              {clashes.length > 0 ? (
+                <>
+                  <span className={duplicate ? "mt-2 block font-medium" : "block font-medium"}>{words.clash}</span>
+                  <ul className="mt-1 list-disc ps-5">
+                    {clashes.map((clash) => (
+                      <li key={clash}>{clash}</li>
+                    ))}
+                  </ul>
+                </>
+              ) : null}
               <input type="hidden" name="confirmClash" value="on" />
             </Alert>
           ) : null}
@@ -207,7 +234,7 @@ export function NewEventForm({
           </label>
 
           <Button type="submit" disabled={pending} className="w-full">
-            {pending ? labels.adding : clashes.length > 0 ? words.anyway : labels.submit}
+            {pending ? labels.adding : asking ? words.anyway : labels.submit}
           </Button>
         </form>
       </Sheet>

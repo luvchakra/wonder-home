@@ -119,6 +119,7 @@ export const calendarAr: AreaCatalog<typeof calendarEn> = {
   "calendar.form.clashEntry": "{title}، {time}",
   "calendar.form.clashBusy": "{name} مشغول في ذلك الوقت",
   "calendar.form.anyway": "أضف على أي حال",
+  "calendar.form.duplicate": "ربما يكون هذا في التقويم بالفعل:",
   "calendar.form.saveAnyway": "احفظ على أي حال",
   "calendar.event.repeats": "التكرار",
   "calendar.event.visibility": "من يمكنه رؤيته",

@@ -10,6 +10,7 @@ import { cancelSchoolItem, createSchoolItem, updateSchoolItem } from "@wonderhom
 import { SCHOOL_ITEM_KINDS } from "@wonderhome/core/school/items";
 import { schoolWhen } from "@wonderhome/core/school/times";
 
+import { duplicateFor } from "../_lib/event-window";
 import type { ActionState } from "./actions";
 
 /**
@@ -41,7 +42,10 @@ const schema = z
     path: ["dueAt"],
   });
 
-export async function createSchoolItemAction(_previous: ActionState, formData: FormData): Promise<ActionState> {
+/** A duplicate names what is already on the calendar; sending again with `confirmDuplicate` adds it anyway. */
+export type SchoolItemActionState = ActionState & { duplicate?: string | null };
+
+export async function createSchoolItemAction(_previous: SchoolItemActionState, formData: FormData): Promise<SchoolItemActionState> {
   const parsed = schema.safeParse({
     householdId: formData.get("householdId"),
     childMemberId: formData.get("childMemberId"),
@@ -61,6 +65,18 @@ export async function createSchoolItemAction(_previous: ActionState, formData: F
   try {
     const supabase = await createClient();
     const membership = await requireMembership(supabase, parsed.data.householdId);
+    const when = schoolWhen({ date: parsed.data.dueAt, time: parsed.data.dueTime, endTime: parsed.data.endTime, timezone: membership.household.timezone });
+
+    // Already on the calendar under this or another name — a family event,
+    // another school entry — is asked about once before a second copy is made.
+    if (when.dueAt && formData.get("confirmDuplicate") !== "on") {
+      const duplicate = await duplicateFor(supabase, membership, {
+        title: parsed.data.title,
+        start: new Date(when.dueAt),
+        day: when.dueTimeKnown ? undefined : parsed.data.dueAt,
+      });
+      if (duplicate) return { duplicate };
+    }
 
     await createSchoolItem(supabase, {
       householdId: parsed.data.householdId,
@@ -69,11 +85,12 @@ export async function createSchoolItemAction(_previous: ActionState, formData: F
       title: parsed.data.title,
       subject: parsed.data.subject || null,
       detail: parsed.data.detail || null,
-      ...schoolWhen({ date: parsed.data.dueAt, time: parsed.data.dueTime, endTime: parsed.data.endTime, timezone: membership.household.timezone }),
+      ...when,
       estimatedMinutes: parsed.data.estimatedMinutes === "" ? null : parsed.data.estimatedMinutes,
     });
 
     revalidatePath("/school");
+    revalidatePath("/calendar");
     return { notice: "Added. WonderHome will track it until it’s done." };
   } catch (thrown) {
     return { error: toErrorBody(thrown, "school").body.error.message };

@@ -3,6 +3,7 @@ import "server-only";
 import type { SupabaseClient } from "@supabase/supabase-js";
 
 import { atLocal, localMoment, shiftDate } from "@wonderhome/core/calendar/dates";
+import { sameEntryOnDay } from "@wonderhome/core/calendar/duplicates";
 import { clashesWith } from "@wonderhome/core/calendar/projection";
 import { calendarRange } from "@wonderhome/core/calendar/repository";
 import { isHouseholdAdmin, listMembers } from "@wonderhome/core/identity/households";
@@ -87,4 +88,42 @@ export async function clashesFor(
     if (name) lines.push(t("calendar.form.clashBusy", { name }));
   }
   return lines;
+}
+
+/**
+ * What the calendar already holds that this looks like, in the person's
+ * words, or null: the same check whichever form adds it (the owner,
+ * 2026-10-21: "there should be duplication check before any event is
+ * created"). Read through the member's own session, so only what they can see
+ * is ever named; not being able to read the calendar never blocks adding.
+ */
+export async function duplicateFor(
+  supabase: SupabaseClient,
+  membership: HouseholdMembership,
+  candidate: { title: string; start: Date; ignoreSourceId?: string; /** The local day itself, for an all-day entry stored at midnight UTC. */ day?: string },
+): Promise<string | null> {
+  const timezone = membership.household.timezone;
+  const day = candidate.day ?? localMoment(candidate.start, timezone).dateKey;
+  const viewer = { memberId: membership.memberId, isAdmin: isHouseholdAdmin(membership), timeZone: timezone };
+  try {
+    const [{ entries }, t] = await Promise.all([
+      calendarRange(supabase, {
+        householdId: membership.household.id,
+        householdRegion: null,
+        viewer,
+        from: day,
+        to: day,
+        holidayRegion: "off",
+        words: { birthday: (name) => name, occasion: (name) => name },
+      }),
+      translatorFor(preferencesOf(membership.locale, timezone).language),
+    ]);
+    const same = sameEntryOnDay(entries, { title: candidate.title, date: day, timeZone: timezone, ignoreSourceId: candidate.ignoreSourceId });
+    if (!same) return null;
+    const format = formatterFor(preferencesOf(membership.locale, timezone));
+    const time = same.allDay ? format.date(same.start) : `${format.date(same.start)}, ${format.time(same.start)}`;
+    return t("calendar.form.clashEntry", { title: same.title, time });
+  } catch {
+    return null;
+  }
 }

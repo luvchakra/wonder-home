@@ -115,6 +115,7 @@ export const calendarFr: AreaCatalog<typeof calendarEn> = {
   "calendar.form.clashEntry": "{title}, {time}",
   "calendar.form.clashBusy": "{name} est occupé à ce moment-là",
   "calendar.form.anyway": "Ajouter quand même",
+  "calendar.form.duplicate": "C’est peut-être déjà dans le calendrier :",
   "calendar.form.saveAnyway": "Enregistrer quand même",
   "calendar.event.repeats": "Répétition",
   "calendar.event.visibility": "Qui peut le voir",

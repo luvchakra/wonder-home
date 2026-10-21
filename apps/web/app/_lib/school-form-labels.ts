@@ -40,6 +40,8 @@ export function schoolFormLabels(t: Translate, language: string): SchoolFormLabe
     title: t("schoolForm.title"),
     description: t("schoolForm.description"),
     readingPhoto: t("schoolForm.readingPhoto"),
+    duplicate: t("calendar.form.duplicate"),
+    addAnyway: t("calendar.form.anyway"),
     fromScreenshot: t("schoolForm.fromScreenshot"),
     for: t("schoolForm.for"),
     kind: t("schoolForm.kind"),
