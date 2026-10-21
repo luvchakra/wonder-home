@@ -14,7 +14,7 @@ import { ErrorState } from "@wonderhome/core/ui/states";
 
 import { formatDate, formatTime, requireSession } from "../_lib/session";
 
-export const metadata = { title: "Chat" };
+export const metadata = { title: "FamilyChat" };
 export const dynamic = "force-dynamic";
 
 /**
