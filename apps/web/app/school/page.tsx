@@ -277,10 +277,6 @@ export default async function SchoolPage({ searchParams }: { searchParams: Promi
             <h1 className="text-[1.625rem] font-bold tracking-tight sm:text-3xl">{t("nav.item.school")}</h1>
             <p className="text-sm text-[var(--wh-foreground-muted)]">{t("school.lede")}</p>
           </div>
-          <div className="flex flex-wrap gap-2">
-            {children.length > 0 ? <AddHomeworkButton householdId={householdId} kids={childOptions} labels={formLabels} /> : null}
-            <PillLink href="/household/integrations" tone="quiet"><Plug aria-hidden className="size-3.5" /> {t("school.connect")}</PillLink>
-          </div>
         </header>
 
         {portalHealth ? (
@@ -304,6 +300,14 @@ export default async function SchoolPage({ searchParams }: { searchParams: Promi
             ))}
           </div>
         ) : null}
+
+        {/* What to do for the child picked above sits right under the picker, between it and the tabs
+            (the owner, 2026-10-21: "bring this row in between these lines, these should specific to each child").
+            Add homework starts on the picked child; a school portal is connected for the household. */}
+        <div className="flex flex-wrap gap-2">
+          {children.length > 0 ? <AddHomeworkButton householdId={householdId} kids={childOptions} labels={formLabels} defaultChildId={selected} /> : null}
+          <PillLink href="/household/integrations" tone="quiet"><Plug aria-hidden className="size-3.5" /> {t("school.connect")}</PillLink>
+        </div>
 
         <SegmentedControl
           label={t("school.view")}

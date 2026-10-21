@@ -71,7 +71,7 @@ export type SchoolFormLabels = {
  * misread gets caught by the household reviewing the fields before Add,
  * exactly the same trust level typing them in by hand already has.
  */
-export function AddHomeworkButton({ householdId, kids, labels }: { householdId: string; kids: { id: string; displayName: string }[]; labels: SchoolFormLabels }) {
+export function AddHomeworkButton({ householdId, kids, labels, defaultChildId }: { householdId: string; kids: { id: string; displayName: string }[]; labels: SchoolFormLabels; /** The child picked on the screen, chosen in the form to start with. */ defaultChildId?: string | null }) {
   const [open, setOpen] = useState(false);
   const [state, formAction, pending] = useActionState<ActionState, FormData>(createSchoolItemAction, {});
   const [extractState, extractAction, extracting] = useActionState<ExtractSchoolItemState, FormData>(extractSchoolItemFromPhotoAction, {});
@@ -108,6 +108,7 @@ export function AddHomeworkButton({ householdId, kids, labels }: { householdId: 
             key={prefill ? JSON.stringify(prefill) : "blank"}
             householdId={householdId}
             kids={kids}
+            defaultChildId={defaultChildId}
             prefill={prefill}
             state={state}
             formAction={formAction}
@@ -129,6 +130,7 @@ export function AddHomeworkButton({ householdId, kids, labels }: { householdId: 
 function AddHomeworkForm({
   householdId,
   kids,
+  defaultChildId,
   prefill,
   state,
   formAction,
@@ -137,6 +139,7 @@ function AddHomeworkForm({
 }: {
   householdId: string;
   kids: { id: string; displayName: string }[];
+  defaultChildId?: string | null;
   prefill: ExtractedSchoolItem | null;
   state: ActionState;
   formAction: (formData: FormData) => void;
@@ -156,6 +159,7 @@ function AddHomeworkForm({
         <select
           id="childMemberId"
           name="childMemberId"
+          defaultValue={defaultChildId ?? undefined}
           className="block min-h-11 w-full rounded-[var(--wh-radius-sm)] border border-[var(--wh-border)] bg-[var(--wh-surface)] px-3 text-base"
         >
           {kids.map((child) => (

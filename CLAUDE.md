@@ -708,8 +708,17 @@ kept on that row by the server. An outage is recorded on the integration
 row and never on household state. Weather is off unless the deployment
 sets `WONDERHOME_WEATHER_PROVIDER=open-meteo`. `OPEN_METEO_API_KEY` moves
 requests to Open-Meteo's commercial endpoint, and whether production needs
-that key is a person's call. Weather speaks only when it changes a
-decision, such as washing that won't dry. It never gives a forecast readout.
+that key is a person's call. Weather speaks when it changes a decision,
+such as washing that won't dry. The one readout is Home's date card (the
+owner's call, 2026-10-21): now, the day's high and low, and rain still ahead
+today (`home/today-weather.ts`), and nowhere else.
+
+Films and shows on Home's date card (2026-10-21, `home/screen-picks.ts`) come
+from TMDB behind a provider-neutral port, and are off unless a deployment sets
+`TMDB_API_KEY`. One film new in cinemas and one family pick to stream, in the
+household's region, a different pair each load. The lists are platform data,
+cached per server for six hours, and shown with TMDB's attribution. Never show
+a title no provider sent.
 
 Billing (story 20-006) goes through the `BillingProvider` port
 (`billing/provider.ts`). Only the pure `applyBillingEvent` moves a

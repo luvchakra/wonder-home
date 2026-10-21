@@ -11,6 +11,7 @@ decision that shapes later work each earns a note, written before moving on.
 
 | Date | Note |
 |---|---|
+| 2026-10-21 | [Home's date card: the day's weather and something to watch; Kids & School actions under the child picker](2026-10-21-today-card-school-row.md) |
 | 2026-10-21 | [The cat walks and goes back and forth; a tick needs two taps to take back; Add preference on its list](2026-10-21-cat-ticks-preferences.md) |
 | 2026-10-21 | [Hardening against AI-assisted reverse engineering; meal cards, Template tab and Preferences button, chart touch](2026-10-21-reverse-engineering-hardening.md) |
 | 2026-10-21 | [USDA nutrition for dairy and sugar; Bills chart from entered months, Budget tab](2026-10-21-usda-nutrition-bills-chart.md) |

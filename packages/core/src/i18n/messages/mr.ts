@@ -13,6 +13,7 @@ import { eventsMr } from "./areas/events/mr";
 import { calendarMr } from "./areas/calendar/mr";
 import { memberInviteMr } from "./areas/memberinvite/mr";
 import { whatsNewMr } from "./areas/whatsnew/mr";
+import { todayMr } from "./areas/today/mr";
 import { amafMr } from "./areas/amaf/mr";
 import { groceryMr } from "./areas/grocery/mr";
 import { welcomeMr } from "./areas/welcome/mr";
@@ -960,6 +961,7 @@ export const mr: Catalog = {
   ...eventsMr,
   ...calendarMr,
   ...whatsNewMr,
+  ...todayMr,
   ...amafMr,
   ...memberInviteMr,
   ...groceryMr,

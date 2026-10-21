@@ -164,6 +164,7 @@ export const helpEs: AreaCatalog<typeof helpEn> = {
   "help.guide.today-and-home.body.5":
     "Debajo del estado de la familia, Inicio muestra tus mascotas, si tienes. Cada una abre los mismos datos que la pantalla Familia; para cambiarlos, ve a Familia.",
   "help.guide.today-and-home.body.6": "Novedades, arriba en Inicio, enumera lo que se ha añadido a WonderHome desde la última vez que lo abriste aquí, y cada elemento abre su lugar. Entendido oculta la lista; nunca muestra lo mismo dos veces, y cada elemento desaparece solo un mes después de llegar. Para todo lo que ha cambiado, versión a versión, consulta Notas de la versión al final de Obtener ayuda.",
+  "help.guide.today-and-home.body.7": "La tarjeta de arriba de Inicio muestra la fecha de hoy y tu hogar. Donde el tiempo está activado para tu zona, también muestra la temperatura ahora, la máxima y la mínima de hoy, y cuándo es probable que llueva más tarde, o que el resto del día será seco. Donde la aplicación tiene un catálogo de cine conectado, añade una película nueva en cines y una propuesta familiar para ver en streaming en tu región, una pareja distinta cada vez que abres Inicio; cada una abre la página del título, que dice dónde verla. Vienen de TMDB, no de WonderHome, y no se muestra nada si no hay un catálogo conectado. El plan de hoy, al final de la tarjeta, abre el día como una línea de tiempo.",
 
   // Calendar
   "help.guide.calendar.title": "Calendario",
@@ -223,7 +224,7 @@ export const helpEs: AreaCatalog<typeof helpEn> = {
   "help.guide.school.title": "Colegio y tareas de los niños",
   "help.guide.school.summary": "Deberes, exámenes y avisos, y plazos que no van a caber.",
   "help.guide.school.body.1":
-    "Niños y colegio muestra los deberes, exámenes, eventos y novedades de los profesores de cada niño, agrupados por fecha de entrega. Añade deberes a mano, o sube una captura de pantalla y WonderHome rellena el formulario para que lo revises antes de añadirlo. Con más de un hijo, muestra uno cada vez: toca un nombre arriba para cambiar; al principio se muestra el primero.",
+    "Niños y colegio muestra los deberes, exámenes, eventos y novedades de los profesores de cada niño, agrupados por fecha de entrega. Añade deberes a mano, o sube una captura de pantalla y WonderHome rellena el formulario para que lo revises antes de añadirlo. Con más de un hijo, muestra uno cada vez: toca un nombre arriba para cambiar; al principio se muestra el primero. Añadir deberes, justo debajo de los nombres, empieza con el niño que se muestra.",
   "help.guide.school.body.2":
     "Envía un aviso del colegio por HomeSend y cada fecha, cuota y cosa que llevar se convierte en su propio elemento para revisar. Si el aviso nombra a un niño que aún no está en tu hogar, un Admin puede añadirlo allí mismo en la revisión; WonderHome nunca da por hecho que un aviso trata del único niño que conoce.",
   "help.guide.school.body.3": "Solo una persona puede marcar una tarea como hecha. Que un portal se quede en silencio no es un niño diciendo que ha terminado.",

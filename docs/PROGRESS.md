@@ -11,11 +11,11 @@ in `docs/progress/`; for the running log of what changed when, `tracking/PROGRES
 
 ## The whole picture
 
-**348 of 372 stories done — 93.5%**
+**350 of 374 stories done — 93.6%**
 
 | Status | Stories |
 |---|---:|
-| Done | 348 |
+| Done | 350 |
 | In Progress | 8 |
 | Blocked | 1 |
 | Not Started | 11 |
@@ -33,7 +33,7 @@ in `docs/progress/`; for the running log of what changed when, `tracking/PROGRES
 | 05 Household Certification & Understanding | `██████████` | 12 | 12 | — |
 | 06 Actionable Notification Engine | `██████████` | 8 | 8 | — |
 | 07 Househelper & Home Operations | `██████████` | 10 | 10 | — |
-| 08 Kids & School Intelligence | `████████░░` | 19 | 23 | 3 in progress, 1 not started |
+| 08 Kids & School Intelligence | `████████░░` | 20 | 24 | 3 in progress, 1 not started |
 | 09 Commerce, Groceries & Pet Supplies | `██████████` | 9 | 9 | — |
 | 10 Meals & Cooking | `██████████` | 15 | 15 | — |
 | 11 Bills, Fees & Finance | `█████████░` | 14 | 15 | 1 not started |
@@ -42,7 +42,7 @@ in `docs/progress/`; for the running log of what changed when, `tracking/PROGRES
 | 14 AI Orchestration & Learning | `████████░░` | 29 | 34 | 2 in progress, 3 deferred |
 | 15 Privacy, Security & Governance | `██████████` | 9 | 9 | — |
 | 16 Platform Admin & Operations | `██████████` | 8 | 8 | — |
-| 17 External Integrations | `██████████` | 8 | 8 | — |
+| 17 External Integrations | `██████████` | 9 | 9 | — |
 | 18 API & Developer Platform | `██████████` | 8 | 8 | — |
 | 19 Testing, Observability & Production | `██████████` | 8 | 8 | — |
 | 20 Subscriptions, Entitlements & Usage | `██████████` | 11 | 11 | — |
@@ -246,7 +246,7 @@ in `docs/progress/`; for the running log of what changed when, `tracking/PROGRES
 
 ### 08 — Kids & School Intelligence
 
-19 of 23 done `████████░░`
+20 of 24 done `████████░░`
 
 | Story | Priority | Status | Notes |
 |---|---|---|---|
@@ -273,6 +273,7 @@ in `docs/progress/`; for the running log of what changed when, `tracking/PROGRES
 | `08-022` Confetti and balloons when a child does something | P2 | Done | The owner, 2026-10-20 ("on goal completion show confetti and balloons going up as celebration"). `Celebration` in the kit (`ui/celebration.tsx`, keyframes in `ui-theme.css`): about three seconds of confetti falling and balloons rising over the screen in the domain tones, catching no taps, hidden from assistive technology (the button already announces it) and not shown under reduced motion. It plays each time I did it! is tapped on a goal or school work. The Waiting for a grown-up button now wraps in a narrow width so a goal's name is never squeezed (rule 11). Also the same day, every tab row (`SegmentedControl`): tabs size to their own label and count so a count stays beside it (it drops under only when the row truly cannot fit, 320px Kids & School), and a tapped tab brings its row to the top of the screen (`SegmentInView`, `scroll-margin-top`, reduced motion jumps). Checked at 320/360/412px: no tab row scrolls, no two-line tab at 360; a tab tap put the row at 64px. |
 | `08-023` The cat walks, goes back and forth, and goes round its whole list | P1 | In Progress | The owner, 2026-10-21 ("repeat the quotes only when the stored list is finished"; "make the cat move in the empty area"; "show left arrow icon and right arrow icon around the 'tell me another' button"). `companion_sayings_for` now offers every saying that suits the child, unheard first, and only once all are heard the one heard longest ago; telling one again moves its `heard_at` on (`markSayingHeard`, column-limited update policy; migration `20261021031000_companion_sayings_cycle.sql`, `test-companion-sayings-rls.mjs` 4/4). Before the migration reaches the live project the cat behaves as before. The cat strolls down its column and back with a step-bob (`wh-cat-wander`, still under reduced motion). The left arrow goes back the way the child came this visit, the right arrow forward again; Tell me another always finds a new line; the controls sit under the cat across the card so both arrows fit at 360px. Help ¶10 in all eight languages. Waits on: applying the migration live (two `apply_migration` calls were cancelled on 2026-10-21). |
 | `08-024` One stray tap never takes a tick back | P1 | Done | The owner, 2026-10-21 ("yesterday it was showing 1 star and 1 streak, but today is showing 0"). The API log showed Asmi's check-in for 20 Oct (17:28 UTC) taken back at 18:12 by the done button's second tap (`undoCheckIn`, not a grown-up's Not yet). The done button now asks first: one tap on a done tick shows "Tap again to take it back", which lapses after four seconds; only a second tap takes it back (`kid-done-button.tsx`). Asmi's 20 Oct tick was restored on the live project (1 star, the streak resumes with today's). Words in all eight languages; help ¶10. Browser QA at 360px: one tap asks, the question lapses, the check-in stays on record. |
+| `08-025` Add homework and Connect school sit under the child picker | P2 | Done | The owner, 2026-10-21 ("bring this row in between these lines, these should specific to each child"). The two actions moved out of the page header to a row between the child picker and the Overview/Homework/Calendar/Goals tabs (`school/page.tsx`). Add homework opens on the child picked above (`defaultChildId` on `AddHomeworkButton`); Connect school still opens Integrations, because a school portal is connected for the household. Help (Kids & School ¶1) in all eight languages. Browser QA at 360px and 1280px: the row sits between the pills and the tabs, no horizontal scroll, and picking the second child then Add homework shows that child in For. |
 
 ### 09 — Commerce, Groceries & Pet Supplies
 
@@ -441,7 +442,7 @@ in `docs/progress/`; for the running log of what changed when, `tracking/PROGRES
 
 ### 17 — External Integrations
 
-8 of 8 done `██████████`
+9 of 9 done `██████████`
 
 | Story | Priority | Status | Notes |
 |---|---|---|---|
@@ -453,6 +454,7 @@ in `docs/progress/`; for the running log of what changed when, `tracking/PROGRES
 | `17-006` WhatsApp | P1 | Done | WhatsApp Cloud API adapter behind the 06-008 channel shape (approved template, E.164 only, closed-word errors); new due notifications now go out on the member's live channels (`notifications/deliver.ts`) with `sent`/`delivery_failed` events; signed webhook records delivered/seen/failed by provider message id and honours STOP; inert until a deployment sets `WHATSAPP_*` |
 | `17-007` Weather | P1 | Done | Open-Meteo behind the 13-005 weather port; an Admin picks an area (coordinates rounded to ~1 km, `weather_locations`), the forecast is cached hourly on the household's row, entitlement `home.weather` decided on the server; laundry/drying plans around it; outages recorded on the connection only, last forecast serves ≤6 h; off unless the deployment sets `WONDERHOME_WEATHER_PROVIDER=open-meteo` |
 | `17-008` Smart home | P2 | Done | One canonical device payload behind the 17-001 contract; a device is linked to an appliance by an Admin (or ignored), never inferred; only fresh readings from linked devices become `home_device_signals`, once each, with provider confidence capped below certainty; outages change connection health only; `home_device_links` (sync-created, Admin decides asset/ignored), Devices section on Integrations; POST integrations/smart-home/sync (409 until a provider is live) |
+| `17-009` Home's date card: the day's weather, a film in cinemas and a family pick to stream | P2 | Done | The owner, 2026-10-21 ("make this card longer and show more weather info on this card, any new movies released, any good family stuff to watch on ott. align this nicely and show something new on every load"). The date pill became a card (`_components/today-card.tsx`, streamed behind the greeting): the day and household; where Weather is on, now, the day's high and low (°F where the household measures in imperial) and rain still ahead today with its time (`home/today-weather.ts`, tested), else that the day is dry; and where `TMDB_API_KEY` is set, one film now playing and one family film or show on subscription streaming in the household's region (`home/screen-picks.ts`: TMDB adapter, adult titles dropped, per-server six-hour cache, last good lists kept on failure, a different pair each load; tested), each opening its TMDB page with where to watch, with TMDB's attribution. Without a key nothing about films is shown. CSP allows TMDB's image host. Today's plan stays one tap away on the card. Words and help (Today and Home ¶7) in all eight languages. Waits on: a person creating a TMDB account and setting `TMDB_API_KEY` in Vercel. |
 
 ### 18 — API & Developer Platform
 
