@@ -96,7 +96,13 @@ export type Expectation = {
   /** The executor's own result, when the case runs one. */
   executor?: "ok" | "failed" | "not_run";
   /** What the final answer must, and must never, say. */
-  answer?: { includes?: string[]; excludes?: string[] };
+  /**
+   * What the answer must say and must never say. An `includes` entry that is
+   * a list is one fact in any of its wordings ("2026-11-28" or "28 Nov 2026"):
+   * the case checks what the answer says, not how it is worded (the owner,
+   * 2026-10-21). `excludes` stays literal.
+   */
+  answer?: { includes?: (string | readonly string[])[]; excludes?: string[] };
 };
 
 type CaseBase = {

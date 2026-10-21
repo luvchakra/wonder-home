@@ -1,6 +1,6 @@
 "use client";
 
-import { ArrowUpRight, LogOut, MoreHorizontal, Paperclip, SendHorizontal, UserPlus, Users, X } from "lucide-react";
+import { ArrowUpRight, Info, LogOut, MoreHorizontal, Paperclip, SendHorizontal, UserPlus, Users, X } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useRef, useState, useTransition } from "react";
@@ -71,7 +71,8 @@ export function ThreadView({
   pages: { key: string; label: string }[];
   labels: ThreadLabels;
   /** Who in this chat has not signed in yet, said once, so a message to them is never assumed read. */
-  notice?: string | null;
+  /** A short note above the message box (the owner, 2026-10-21): who reads this chat, the paperclip, and who reads it once they sign in. */
+  notice?: string[] | null;
 }) {
   const router = useRouter();
   const [body, setBody] = useState("");
@@ -118,7 +119,6 @@ export function ThreadView({
         <div className="min-w-0">
           <h1 className="text-xl font-bold tracking-tight break-words lg:text-2xl">{title}</h1>
           <p className="text-sm text-[var(--wh-foreground-muted)]">{meta}</p>
-          {notice ? <p className="mt-1 text-xs break-words text-[var(--wh-foreground-subtle)]">{notice}</p> : null}
         </div>
         {kind !== "household" ? (
           <div className="flex shrink-0 items-center gap-1">
@@ -150,7 +150,17 @@ export function ThreadView({
         )}
       </ol>
 
-      <div ref={end} className="scroll-mb-28">
+      <div ref={end} className="scroll-mb-28 space-y-2">
+        {notice && notice.length > 0 ? (
+          <ul className="space-y-0.5 px-1 text-xs break-words text-[var(--wh-foreground-subtle)]">
+            {notice.map((line) => (
+              <li key={line} className="flex gap-1.5">
+                <Info aria-hidden className="mt-0.5 size-3 shrink-0" />
+                <span>{line}</span>
+              </li>
+            ))}
+          </ul>
+        ) : null}
         <Card className="space-y-2 p-3">
           {attachment ? (
             <div className="flex items-center gap-2 rounded-[var(--wh-radius-sm)] bg-[var(--wh-primary-soft)]/50 px-3 py-2 text-sm">

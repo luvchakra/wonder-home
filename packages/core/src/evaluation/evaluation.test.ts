@@ -118,6 +118,15 @@ describe("comparing stages (§2) and naming failures (§10)", () => {
     expect(result.stages.map((s) => s.stage)).toEqual(["interpretation"]);
   });
 
+  it("an answer is checked for what it says, in any of a fact's wordings, not for one exact wording (the owner, 2026-10-21)", () => {
+    const expected = { answer: { includes: ["Washing machine", ["2026-11-28", "28 Nov 2026"]], excludes: ["Fridge"] } };
+    expect(compareStages(expected, observed({ answer: "The washing machine is due on 28 Nov 2026." }), "cross_domain").pass).toBe(true);
+    expect(compareStages(expected, observed({ answer: "The washing machine is due on 2026-11-28." }), "cross_domain").pass).toBe(true);
+    const wrongDay = compareStages(expected, observed({ answer: "The washing machine is due on 29 Nov 2026." }), "cross_domain");
+    expect(wrongDay.errors).toEqual(["incomplete_answer"]);
+    expect(compareStages(expected, observed({ answer: "The washing machine and the Fridge are due on 28 Nov 2026." }), "cross_domain").errors).toEqual(["unsupported_answer"]);
+  });
+
   it("entity failures are told apart", () => {
     expect(compareStages({ entity: "ask" }, observed({ entity: "a-asmi" }), "entity_resolution").errors).toEqual(["false_high_confidence"]);
     expect(compareStages({ entity: "a-asmi" }, observed({ entity: "ask" }), "entity_resolution").errors).toEqual(["unnecessary_clarification"]);

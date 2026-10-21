@@ -40,8 +40,9 @@ export default async function ChatPage() {
   let rows: ChatInboxRow[];
   let members: HouseholdMember[];
   try {
-    // The household thread exists from the first visit on; then one wave for the inbox and the names.
-    await householdThreadId(supabase, householdId);
+    // The family chat exists from the first visit on; then one wave for the inbox and the names.
+    // A househelper is never in the family chat (the owner, 2026-10-21), so it is not opened for one.
+    if (membership.memberType !== "helper") await householdThreadId(supabase, householdId);
     [rows, members] = await Promise.all([chatInbox(supabase, householdId), listMembers(supabase, householdId, membership.household.ownerMemberId)]);
   } catch {
     return (

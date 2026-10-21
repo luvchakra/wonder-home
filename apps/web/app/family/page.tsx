@@ -211,7 +211,7 @@ export default async function FamilyPage() {
               admin || session.chatOn ? (
                 // Manage and the family chat are icons with their names (rule 11), so the title and Invite stay whole on one line (the owner, 2026-10-21).
                 <div className="flex shrink-0 items-center gap-1.5 whitespace-nowrap">
-                  {session.chatOn ? (
+                  {session.chatOn && membership.memberType !== "helper" ? (
                     <Link href="/chat/family" aria-label={t("chat.familyChat")} title={t("chat.familyChat")} className={ICON_LINK}>
                       <MessagesSquare aria-hidden className="size-4" />
                     </Link>

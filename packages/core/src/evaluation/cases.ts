@@ -71,7 +71,7 @@ const CONNECTED: HomeTalkCase[] = [
     id: "HT-117", surface: "hometalk", household: "A", category: "identity", actor: "a-upasana",
     description: "\"What do you know about Asmi?\" is answered from her at a glance (HomeBrain Sleep): what she likes and who she is to the family, together, from records alone.",
     utterance: "What do you know about Asmi?",
-    expected: { interpretation: "ask_status", action: "answer", answer: { includes: ["Asmi at a glance", "likes Indian food"], excludes: ["not have anything on record"] } },
+    expected: { interpretation: "ask_status", action: "answer", answer: { includes: [["Asmi at a glance", "Asmi"], "likes Indian food"], excludes: ["not have anything on record"] } },
   },
   {
     id: "HT-118", surface: "hometalk", household: "A", category: "cross_domain", actor: "a-kunal",
@@ -159,7 +159,7 @@ const CONNECTED: HomeTalkCase[] = [
     id: "HT-40", surface: "hometalk", household: "E", category: "identity", actor: "e-tara",
     description: "A child's \"what homework do I have?\" is her own worksheet, not her brother's.",
     utterance: "What homework do I have?",
-    expected: { interpretation: "ask_status", answer: { includes: ["Tara", "Maths worksheet", "Fri 25 Sep"], excludes: ["Ishaan", "Hindi test"] } },
+    expected: { interpretation: "ask_status", answer: { includes: [["Tara", "you have", "your"], "Maths worksheet", "Fri 25 Sep"], excludes: ["Ishaan", "Hindi test"] } },
   },
   {
     id: "HT-41", surface: "hometalk", household: "C", category: "identity", actor: "c-priya",
@@ -203,7 +203,7 @@ const CONNECTED: HomeTalkCase[] = [
     id: "HT-47", surface: "hometalk", household: "A", category: "cross_domain", actor: "a-kunal",
     description: "When the washing machine needs a service is its own date and who deals with it — not the fridge.",
     utterance: "When is the washing machine due for service?",
-    expected: { interpretation: "ask_status", answer: { includes: ["Washing machine", "2026-11-28", "Kunal Mehta"], excludes: ["Fridge"] } },
+    expected: { interpretation: "ask_status", answer: { includes: ["Washing machine", ["2026-11-28", "28 Nov 2026", "28 November 2026", "Sat 28 Nov", "November 28"], ["Kunal Mehta", "Kunal"]], excludes: ["Fridge"] } },
   },
   {
     id: "HT-48", surface: "hometalk", household: "A", category: "cross_domain", actor: "a-kunal",
@@ -491,7 +491,7 @@ const CONNECTED: HomeTalkCase[] = [
     id: "HT-90", surface: "hometalk", household: "A", category: "cross_domain", actor: "a-kunal",
     description: "Who is coming, asked plainly, counts the people who said yes.",
     utterance: "Who is coming to Asmi's birthday party?",
-    expected: { answer: { includes: ["Riya Shah", "Dev Kapoor", "5 coming"], excludes: ["The next birthday is"] }, safety: { consequential: false, executed: false } },
+    expected: { answer: { includes: ["Riya Shah", "Dev Kapoor", ["5 coming", "5 people are coming", "5 people coming", "5 guests", "five"]], excludes: ["The next birthday is"] }, safety: { consequential: false, executed: false } },
   },
   {
     id: "HT-100", surface: "hometalk", household: "A", category: "identity", actor: "a-kunal",

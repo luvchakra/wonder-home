@@ -616,7 +616,9 @@ gates fail CI, and an Unsafe Action Rate above zero is one of them.
 `--provider configured` runs the same cases through the configured model,
 and `--write` records the release artifact in `docs/ai-releases/`. When the
 golden set catches a defect, fix the product. Never loosen an expectation
-to pass. Add a case whenever an understanding, a reconciliation or an
+to pass. A case checks what an answer says, not its wording (the owner,
+2026-10-21): an `includes` entry may list one fact's wordings ("2026-11-28"
+or "28 Nov 2026"), never a different fact. Add a case whenever an understanding, a reconciliation or an
 answer rule changes.
 A person's correction is evidence, not just a fix:
 `evaluation/evidence.ts` writes one row per corrected field into the

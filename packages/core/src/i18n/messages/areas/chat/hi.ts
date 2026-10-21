@@ -60,6 +60,9 @@ export const chatHi: AreaCatalog<typeof chatEn> = {
   "chat.leaveConfirm": "छोड़ें",
   "chat.closing": "साथ मिलकर घर आसानी से चलता है।",
   "chat.familyChat": "परिवार चैट",
-  "chat.notJoined#one": "{names} ने अभी WonderHome में साइन इन नहीं किया है। संदेश यहाँ रहेंगे, और जुड़ते ही उन्हें दिख जाएँगे।",
-  "chat.notJoined#other": "{names} ने अभी WonderHome में साइन इन नहीं किया है। संदेश यहाँ रहेंगे, और जुड़ते ही उन्हें दिख जाएँगे।",
+  "chat.note.family": "इसे पूरा परिवार पढ़ता है। घरेलू सहायक कभी नहीं।",
+  "chat.note.private": "इसे सिर्फ़ इस चैट के लोग पढ़ते हैं।",
+  "chat.note.attach": "जिस बिल, खाने या इवेंट की बात है, उसे पेपरक्लिप दबाकर जोड़ें।",
+  "chat.note.waiting#one": "{names} साइन इन करते ही इसे देखेंगे।",
+  "chat.note.waiting#other": "{names} साइन इन करते ही इसे देखेंगे।",
 };

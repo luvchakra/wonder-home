@@ -2,7 +2,8 @@
 /**
  * Household chat (story 12-015).
  *
- * Everyone in a household is in its household thread; a direct thread is
+ * Everyone in a household but its househelpers is in its household thread
+ * (Family chat); a direct thread is
  * between two members and only they read it; adding a third person makes it
  * a group they can then read, history included. Nobody outside a household
  * reads or writes any of it, a message is written only as yourself, only its
@@ -21,12 +22,14 @@ const HEAD = "11111111-1111-4111-8111-111111111111";
 const ADULT = "22222222-2222-4222-8222-222222222222";
 const OUTSIDER = "33333333-3333-4333-8333-333333333333";
 const KID = "44444444-4444-4444-8444-444444444444";
+const HELPER = "55555555-5555-4555-8555-555555555555";
 
 let household = "";
 let headMember = "";
 let adultMember = "";
 let kidMember = "";
 let outsiderMember = "";
+let helperMember = "";
 let householdThread = "";
 let direct = "";
 
@@ -40,7 +43,7 @@ const say = (profile, thread, member, body, extra = "") =>
 before(() => {
   buildTestDatabase(DB);
   psql(
-    `insert into auth.users (id, email) values ('${HEAD}', 'kunal@example.test'), ('${ADULT}', 'priya@example.test'), ('${OUTSIDER}', 'olu@example.test'), ('${KID}', 'anaya@example.test');`,
+    `insert into auth.users (id, email) values ('${HEAD}', 'kunal@example.test'), ('${ADULT}', 'priya@example.test'), ('${OUTSIDER}', 'olu@example.test'), ('${KID}', 'anaya@example.test'), ('${HELPER}', 'rekha@example.test');`,
     options,
   );
   [household, headMember] = asProfile(HEAD, `select household_id || ' ' || member_id from wh.create_household('Chakraborty Home', 'Kunal');`, options).split(" ");
@@ -52,6 +55,11 @@ before(() => {
   psql(`insert into public.household_roles (household_id, member_id, role) values ('${household}', '${adultMember}', 'adult');`, options);
   kidMember = asProfile(HEAD, `select wh.create_child_member('${household}', 'Anaya', '2016-09-18', array['${headMember}']::uuid[]);`, options);
   psql(`update public.household_members set profile_id = '${KID}' where id = '${kidMember}';`, options);
+  psql(`insert into public.profiles (id, display_name) values ('${HELPER}', 'Rekha');`, options);
+  helperMember = psql(
+    `insert into public.household_members (household_id, profile_id, member_type, display_name) values ('${household}', '${HELPER}', 'helper', 'Rekha') returning id;`,
+    options,
+  );
   const other = asProfile(OUTSIDER, `select household_id || ' ' || member_id from wh.create_household('Other Home', 'Olu');`, options).split(" ");
   outsiderMember = other[1];
 });
@@ -69,6 +77,16 @@ test("everyone in the household is in its one household thread, and nobody else 
   assert.equal(asProfile(OUTSIDER, `select count(*) from public.chat_messages;`, options), "0");
   assert.throws(() => asProfile(OUTSIDER, `select public.chat_household_thread('${household}');`, options), /not a member/);
   assert.throws(() => say(OUTSIDER, householdThread, outsiderMember, "hello"), /row-level security|violates/);
+});
+
+test("a househelper is never in the family chat, but keeps a direct chat", () => {
+  assert.throws(() => asProfile(HELPER, `select public.chat_household_thread('${household}');`, options), /for the family/);
+  assert.equal(asProfile(HELPER, `select count(*) from public.chat_messages where thread_id = '${householdThread}';`, options), "0");
+  assert.equal(asProfile(HELPER, `select count(*) from public.chat_threads where id = '${householdThread}';`, options), "0");
+  assert.throws(() => say(HELPER, householdThread, helperMember, "hello"), /row-level security|violates/);
+  const helperDirect = asProfile(HEAD, `select public.chat_open_direct('${helperMember}');`, options);
+  say(HELPER, helperDirect, helperMember, "Coming at 9 tomorrow");
+  assert.equal(asProfile(HEAD, `select count(*) from public.chat_messages where thread_id = '${helperDirect}';`, options), "1");
 });
 
 test("a message is written only as yourself", () => {
