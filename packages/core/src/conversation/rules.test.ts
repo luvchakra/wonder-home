@@ -227,6 +227,10 @@ describe("what it does not know", () => {
     expect(read("any good cafes nearby").action).toBe("find_places");
     expect(read("Okay. Can you suggest a two-day vacation plan?").action).toBe("find_places");
     expect(read("suggest a weekend getaway").action).toBe("find_places");
+    // The owner's report, 2026-10-21: both turns are place questions, by the rules alone.
+    expect(read("can we go somewhere out tomorrow").action).toBe("find_places");
+    expect(read("dinner nearby home").action).toBe("find_places");
+    expect(read("somewhere to eat near home").action).toBe("find_places");
     expect(read("plan a picnic this weekend").action).toBe("plan_event");
     expect(read("we prefer lunch at 1").action).not.toBe("find_places");
     expect(read("the food was good").action).not.toBe("find_places");

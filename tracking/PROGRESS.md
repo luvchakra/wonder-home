@@ -49,7 +49,7 @@ disagree again.)
 | 21 | Health and Fitness | 9 | 6 | 2 | 1 | 9 | Done |
 | 22 | Internationalization & Localization | 8 | 6 | 2 | 0 | 7 | In Progress (22-008 deferred) |
 | 23 | Smart Notifications | 12 | 6 | 6 | 0 | 12 | Done |
-| 24 | HomePlaces | 9 | 2 | 5 | 2 | 6 | In Progress |
+| 24 | HomePlaces | 13 | 4 | 7 | 2 | 13 | In Progress |
 | 25 | HomeFood | 25 | 12 | 8 | 5 | 20 | In Progress |
 | 26 | HomeEvents | 15 | 2 | 11 | 2 | 11 | In Progress |
 
@@ -363,3 +363,5 @@ disagree again.)
 | 2026-10-21 | 12 | 12-015 | Done | Household chat live: a chat icon for every family member (signed in or not, with a note until they join) and Family chat from the Family members header. |
 | 2026-10-21 | 12 | 12-015 | Done | Chat: / attaches anything, @ mentions people, helpers and pets, # tags with Trending at home on Home, and a notification for something new to read. |
 | 2026-10-21 | 12 | 12-015 | Done | FamilyChat: renamed (household thread now Whole family), a WhatsApp-compact thread with a composer kept above the tab bar, and emoji reactions; the reactions migration waits on reaching live. |
+| 2026-10-21 | 24 | 24-013 | Done | A place question is answered, never asked "what kind of place?": going out is assumed and said back, "tomorrow" is tomorrow's hours, and a short follow-up ("dinner nearby home") narrows the same request; eval HT-135 to HT-137. |
+| 2026-10-21 | 26 | 26-017 | Done | Nothing is added to the calendar twice: the same occasion under another name on the same day is asked about first, from the Calendar, Kids & School, HomeTalk and HomeSend. |
