@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 type Row = Record<string, unknown>;
 
 import { CHANNEL_ADAPTERS } from "./channels";
-import { adminOf, eventChangeNotices, goalCheckInNotices, eventReplyNotices, helperAbsenceNotices, homesendNotices, orderNotices, weatherNotices, type EventRow } from "./notices";
+import { adminOf, chatNotices, eventChangeNotices, goalCheckInNotices, mentions, eventReplyNotices, helperAbsenceNotices, homesendNotices, orderNotices, weatherNotices, type EventRow } from "./notices";
 import type { LaundryNeed } from "../home/laundry";
 import type { WeatherWindow } from "../home/weather";
 import { sweepNotices } from "./notices-sweep";
@@ -277,5 +277,83 @@ describe("a child's Done waits for a grown-up (goal check-ins)", () => {
 
   it("says nothing once a grown-up has verified it", () => {
     expect(goalCheckInNotices([{ ...row, verified_at: "2026-10-20T07:00:00Z" }], titles, withGuardian, names, NOW)).toEqual([]);
+  });
+});
+
+describe("something new to read in a chat (the owner, 2026-10-21)", () => {
+  // Asmi signs in for these, so a child hears about Family chat too.
+  const chatDirectory = buildDirectory(
+    members.map((member) => (member.id === "asmi" ? { ...member, profile_id: "u4" } : member)),
+    roles,
+    [],
+    [],
+  );
+  const chatNames = new Map([["kunal", "Kunal"], ["upasana", "Upasana"], ["asmi", "Asmi"], ["sunita", "Sunita"]]);
+  const family = { id: "t-family", kind: "household" as const, title: null };
+  const direct = { id: "t-direct", kind: "direct" as const, title: null };
+  const message = (over: Partial<{ thread_id: string; author_member_id: string; created_at: string; body: string }> = {}) => ({
+    thread_id: "t-family",
+    author_member_id: "kunal",
+    created_at: "2026-10-20T05:00:00Z",
+    body: "Can someone pick up milk on the way home?",
+    ...over,
+  });
+  const pair = [
+    { thread_id: "t-direct", member_id: "kunal", left_at: null, last_read_at: null },
+    { thread_id: "t-direct", member_id: "upasana", left_at: null, last_read_at: null },
+  ];
+
+  it("tells everyone in the family who did not write it — never the househelper", () => {
+    const notices = chatNotices([family], [], [message()], chatDirectory, chatNames, NOW);
+    expect(notices.map((notice) => notice.recipientMemberId).sort()).toEqual(["asmi", "upasana"]);
+    expect(notices[0]).toMatchObject({ sourceType: "chat_thread", threadKey: "chat:t-family", category: "family", priority: "normal", action: { action: "open", target: "/chat/t-family" } });
+    expect(notices[0]?.title).toEqual({ key: "reminder.chat.inChat", params: { chat: { msg: { key: "reminder.chat.family" } } } });
+    expect(notices[0]?.body).toEqual({ key: "reminder.chat.body", params: { count: 1, names: { list: ["Kunal"] } } });
+  });
+
+  it("never carries what was said", () => {
+    const notices = chatNotices([family, direct], pair, [message(), message({ thread_id: "t-direct" })], chatDirectory, chatNames, NOW);
+    expect(notices.length).toBeGreaterThan(0);
+    expect(JSON.stringify(notices)).not.toContain("milk");
+  });
+
+  it("a direct chat tells only the other person, by name", () => {
+    const notices = chatNotices([direct], pair, [message({ thread_id: "t-direct" })], chatDirectory, chatNames, NOW);
+    expect(notices).toHaveLength(1);
+    expect(notices[0]).toMatchObject({ recipientMemberId: "upasana", title: { key: "reminder.chat.direct", params: { name: "Kunal" } } });
+  });
+
+  it("is gone once they have read it, and counts only what came after", () => {
+    const read = [{ thread_id: "t-family", member_id: "upasana", left_at: null, last_read_at: "2026-10-20T05:30:00Z" }];
+    const later = message({ created_at: "2026-10-20T05:45:00Z", author_member_id: "asmi" });
+    expect(chatNotices([family], read, [message()], chatDirectory, chatNames, NOW).map((notice) => notice.recipientMemberId)).toEqual(["asmi"]);
+    const upasana = chatNotices([family], read, [message(), later], chatDirectory, chatNames, NOW).find((notice) => notice.recipientMemberId === "upasana");
+    expect(upasana?.body).toEqual({ key: "reminder.chat.body", params: { count: 1, names: { list: ["Asmi"] } } });
+  });
+
+  it("a mention by name is urgent and says so", () => {
+    const notices = chatNotices([family], [], [message({ body: "@Upasana can you check the gas bill?" })], chatDirectory, chatNames, NOW);
+    const upasana = notices.find((notice) => notice.recipientMemberId === "upasana");
+    expect(upasana).toMatchObject({ priority: "high", title: { key: "reminder.chat.mention", params: { name: "Kunal", chat: { msg: { key: "reminder.chat.family" } } } } });
+    expect(notices.find((notice) => notice.recipientMemberId === "asmi")?.priority).toBe("normal");
+  });
+
+  it("matches a mention as the composer writes it, and not inside another word", () => {
+    expect(mentions("thanks @Upasana Chakraborty!", "Upasana Chakraborty")).toBe(true);
+    expect(mentions("@asmi look", "Asmi")).toBe(true);
+    expect(mentions("email asmi@example.com", "Asmi")).toBe(false);
+    expect(mentions("@Asmita is here", "Asmi")).toBe(false);
+  });
+
+  it("someone who left a group hears nothing more from it", () => {
+    const group = { id: "t-group", kind: "group" as const, title: "Diwali plans" };
+    const people = [
+      { thread_id: "t-group", member_id: "kunal", left_at: null, last_read_at: null },
+      { thread_id: "t-group", member_id: "upasana", left_at: "2026-10-19T00:00:00Z", last_read_at: null },
+      { thread_id: "t-group", member_id: "asmi", left_at: null, last_read_at: null },
+    ];
+    const notices = chatNotices([group], people, [message({ thread_id: "t-group" })], chatDirectory, chatNames, NOW);
+    expect(notices.map((notice) => notice.recipientMemberId)).toEqual(["asmi"]);
+    expect(notices[0]?.title).toEqual({ key: "reminder.chat.inChat", params: { chat: "Diwali plans" } });
   });
 });

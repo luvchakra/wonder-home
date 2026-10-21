@@ -1,13 +1,16 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
+import { after } from "next/server";
 import { z } from "zod";
 
 import { toErrorBody } from "@wonderhome/core/api/errors";
 import { addPeople, editMessage, leaveChat, markRead, resolveLink, sendMessage, takeBackMessage, type LinkChoice } from "@wonderhome/core/chat/repository";
 import { CHAT_PAGE_KEYS, CHAT_RECORD_KINDS } from "@wonderhome/core/chat/links";
+import { createAdminClient } from "@wonderhome/core/db/admin";
 import { createClient } from "@wonderhome/core/db/server";
 import { requireMembership } from "@wonderhome/core/identity/households";
+import { sweepNotices } from "@wonderhome/core/notifications/notices-sweep";
 
 /**
  * Household chat's writes (story 12-015). The browser names only the thread,
@@ -46,6 +49,10 @@ export async function sendChatMessageAction(input: z.input<typeof sendSchema>): 
   } catch (thrown) {
     return { error: toErrorBody(thrown, "household").body.error.message };
   }
+  // Whoever has something new to read hears about it within seconds, after the
+  // response (the owner, 2026-10-21); the delivery clock catches anything this misses.
+  const householdId = parsed.data.householdId;
+  after(() => sweepNotices(createAdminClient(), householdId).then(() => undefined));
   revalidatePath(`/chat/${parsed.data.threadId}`);
   return { ok: true };
 }

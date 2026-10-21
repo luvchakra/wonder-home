@@ -361,3 +361,4 @@ disagree again.)
 | 2026-10-21 | 13 | 13-011 | Done | Home & Upkeep: a new request is Open (was Raised); the status picker starts at the current status and Update waits for a change. |
 | 2026-10-21 | — | Release 0.1 | Done | Release notes: Version 0.1 (PRs #243–#283), confirmed live by the owner, in all eight languages. |
 | 2026-10-21 | 12 | 12-015 | Done | Household chat live: a chat icon for every family member (signed in or not, with a note until they join) and Family chat from the Family members header. |
+| 2026-10-21 | 12 | 12-015 | Done | Chat: / attaches anything, @ mentions people, helpers and pets, # tags with Trending at home on Home, and a notification for something new to read. |

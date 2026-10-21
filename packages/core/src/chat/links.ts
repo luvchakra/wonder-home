@@ -7,14 +7,14 @@ import { sameSitePath } from "../security/same-site-path";
  * at them and take action").
  *
  * A link is one of the household's own records — a bill, a meal, an event, a
- * grocery item — or one of WonderHome's screens, picked from a list, never
+ * grocery item, a piece of school work, something at home to look after — or one of WonderHome's screens, picked from a list, never
  * typed (rule 20). The browser sends only the kind and the record's id; the
  * server reads the record through the writer's own session and builds the
  * path and label here, so a link can never name another site or a record the
  * writer cannot see. The database refuses any path that is not on this site.
  */
 
-export const CHAT_RECORD_KINDS = ["bill", "meal", "event", "grocery"] as const;
+export const CHAT_RECORD_KINDS = ["bill", "meal", "event", "grocery", "school", "home"] as const;
 export type ChatRecordKind = (typeof CHAT_RECORD_KINDS)[number];
 export type ChatLinkKind = ChatRecordKind | "page";
 
@@ -37,6 +37,10 @@ export function recordPath(record: ChatRecord): string | null {
       return `/family/events/${record.id}`;
     case "grocery":
       return `/groceries/${record.id}`;
+    case "school":
+      return "/school?tab=homework";
+    case "home":
+      return "/household/home";
   }
 }
 

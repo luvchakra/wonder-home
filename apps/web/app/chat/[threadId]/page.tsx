@@ -2,7 +2,11 @@ import { notFound } from "next/navigation";
 import { after } from "next/server";
 
 import { CHAT_PAGE_KEYS, pageKeyFor, type ChatLinkKind } from "@wonderhome/core/chat/links";
-import { linkOptions, markRead, readMessages, readThread } from "@wonderhome/core/chat/repository";
+import { trendingTags, type Mentionable } from "@wonderhome/core/chat/composer";
+import { linkOptions, markRead, readMessages, readThread, recentTaggedMessages } from "@wonderhome/core/chat/repository";
+import { createAdminClient } from "@wonderhome/core/db/admin";
+import { listPets } from "@wonderhome/core/home/repository";
+import { sweepNotices } from "@wonderhome/core/notifications/notices-sweep";
 import { calledName, listMembers } from "@wonderhome/core/identity/households";
 import { AppShell } from "@wonderhome/core/shell/app-shell";
 
@@ -31,18 +35,31 @@ export default async function ChatThreadPage({ params }: { params: Promise<{ thr
   const timezone = membership.household.timezone;
   const today = new Intl.DateTimeFormat("en-CA", { timeZone: timezone }).format(new Date());
 
-  const [thread, messages, members, options] = await Promise.all([
+  const [thread, messages, members, options, pets, tagged] = await Promise.all([
     readThread(supabase, threadId).catch(() => null),
     readMessages(supabase, threadId).catch(() => null),
     listMembers(supabase, householdId, membership.household.ownerMemberId).catch(() => []),
     linkOptions(supabase, householdId, today).catch(() => []),
+    // Who and what "@" offers, and the tags "#" suggests (the owner, 2026-10-21).
+    listPets(supabase, householdId).catch(() => []),
+    recentTaggedMessages(supabase, householdId, 30).catch(() => []),
   ]);
   if (!thread || !messages || thread.householdId !== householdId) notFound();
   if (thread.kind !== "household" && !thread.people.some((person) => person.memberId === membership.memberId)) notFound();
   // Read once the page is on its way: nothing a person waits for.
-  after(() => markRead(supabase, threadId).catch(() => undefined));
+  // Its chat notice resolves as soon as it is read, rather than on the next clock tick.
+  after(() =>
+    markRead(supabase, threadId)
+      .then(() => sweepNotices(createAdminClient(), householdId))
+      .catch(() => undefined),
+  );
 
   const nameOf = new Map(members.map((member) => [member.id, calledName(member)]));
+  const mentionables: Mentionable[] = [
+    ...members.filter((member) => member.status === "active").map((member) => ({ name: calledName(member), kind: member.memberType === "helper" ? ("helper" as const) : ("member" as const) })),
+    ...pets.map((pet) => ({ name: pet.name, kind: "pet" as const })),
+  ];
+  const tags = trendingTags(tagged, 20).map((entry) => entry.tag);
   const inChat = new Set(thread.people.map((person) => person.memberId));
   const others = thread.people.filter((person) => person.memberId !== membership.memberId).map((person) => nameOf.get(person.memberId) ?? "");
   const title = thread.kind === "household" ? t("chat.household") : thread.title || others.filter(Boolean).join(", ") || t("chat.title");
@@ -107,6 +124,13 @@ export default async function ChatThreadPage({ params }: { params: Promise<{ thr
     leaveLede: t("chat.leaveLede"),
     leaveConfirm: t("chat.leaveConfirm"),
     empty: t("chat.emptyThread"),
+    pickAttach: t("chat.pick.attach"),
+    pickMention: t("chat.pick.mention"),
+    pickTag: t("chat.pick.tag"),
+    pickNone: t("chat.pick.none"),
+    newTag: t("chat.pick.newTag"),
+    helper: t("chat.pick.helper"),
+    pet: t("chat.pick.pet"),
     you: t("chat.you"),
   };
 
@@ -127,6 +151,8 @@ export default async function ChatThreadPage({ params }: { params: Promise<{ thr
         pages={CHAT_PAGE_KEYS.filter((key) => secondary.some((item) => item.key === key)).map((key) => ({ key, label: t(`nav.item.${key}`) }))}
         labels={labels}
         notice={notice}
+        mentionables={mentionables}
+        tags={tags}
       />
     </AppShell>
   );

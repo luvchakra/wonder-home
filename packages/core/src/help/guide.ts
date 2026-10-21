@@ -124,7 +124,7 @@ const SECTIONS: readonly SectionShape[] = [
     id: "chat",
     group: "Everyday use",
     updated: "2026-10-21",
-    keywords: ["chat", "message", "messages", "talk", "conversation", "group", "direct message", "dm", "everyone", "attach", "link", "share a bill", "add people", "leave chat", "take back", "edit message", "unread", "family chat", "group chat", "not signed in"],
+    keywords: ["chat", "message", "messages", "talk", "conversation", "group", "direct message", "dm", "everyone", "attach", "link", "share a bill", "add people", "leave chat", "take back", "edit message", "unread", "family chat", "group chat", "not signed in", "mention", "@", "tag", "#", "hashtag", "trending", "slash"],
   },
   {
     id: "notifications",

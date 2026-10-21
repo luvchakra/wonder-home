@@ -50,6 +50,7 @@ import { OnboardingResumeCard } from "../_components/onboarding-resume-card";
 import { PersonalizeCard } from "../_components/personalize-card";
 import { HeroCatFigure, HeroCatThought } from "../_components/hero-cat";
 import { TodayCard, TodayCardFallback } from "../_components/today-card";
+import { TrendingTags } from "../_components/trending-tags";
 import { WhatsNewCard } from "../_components/whats-new-card";
 import { whatsNewItems, whatsNewLabels } from "../_lib/whats-new";
 import { ScriptAccent } from "@wonderhome/core/ui/script-accent";
@@ -309,6 +310,11 @@ export function HomeDashboard({ session }: { session: Session }) {
 
         {/* What reached WonderHome since this person last opened it: temporary, and gone once seen. */}
         <WhatsNewCard items={whatsNew} labels={whatsNewLabels(t, whatsNew.length)} />
+
+        {/* The #tags the family is using in chat this week (the owner, 2026-10-21); nothing until someone tags something. */}
+        <Suspense fallback={null}>
+          <TrendingTags session={session} now={now} />
+        </Suspense>
 
         <Suspense fallback={<LoadingState rows={4} label={t("homeScreen.loading")} />}>
           <DashboardBody session={session} now={now} />

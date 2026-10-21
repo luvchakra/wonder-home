@@ -6,6 +6,7 @@ import { log } from "../observability/logger";
 import type { ChannelAdapter, DeliveryChannel } from "./channels";
 import { createNotification } from "./create";
 import {
+  chatNotices,
   eventChangeNotices,
   eventReplyNotices,
   goalCheckInNotices,
@@ -15,6 +16,9 @@ import {
   orderNotices,
   weatherNotices,
   type AbsenceRow,
+  type ChatMessageRow,
+  type ChatParticipantRow,
+  type ChatThreadRow,
   type CheckInRow,
   type EventChangeRow,
   type ParticipantRow,
@@ -77,7 +81,7 @@ async function sweep(admin: SupabaseClient, householdId: string, now: Date, adap
   const since = (days: number) => new Date(now.getTime() - days * 86_400_000).toISOString();
   const today = localMoment(now, timeZone).dateKey;
 
-  const [members, roles, responsibilities, guardians, items, events, absences, helpers, orders, changes, checkIns, open, closed] = await Promise.all([
+  const [members, roles, responsibilities, guardians, items, events, absences, helpers, orders, changes, checkIns, chatMessages, chatThreads, chatParticipants, open, closed] = await Promise.all([
     admin.from("household_members").select("id, profile_id, member_type, status, display_name, nickname").eq("household_id", householdId),
     admin.from("household_roles").select("member_id, role").eq("household_id", householdId),
     admin.from("responsibilities").select("outcome_key, primary_member_id, backup_member_id").eq("household_id", householdId),
@@ -90,6 +94,11 @@ async function sweep(admin: SupabaseClient, householdId: string, now: Date, adap
     admin.from("family_event_changes").select("id, event_id, kind, changed_by_member_id, new_starts_at, created_at").eq("household_id", householdId).gte("created_at", since(3)).limit(100),
     // A child's "Done" waiting for a grown-up; before the verification migration there is none (the read fails and is empty).
     admin.from("child_goal_checkins").select("id, goal_id, child_member_id, on_day, verified_at, child_goals(title)").eq("household_id", householdId).is("verified_at", null).gte("on_day", since(7).slice(0, 10)).limit(200),
+    // Chat: the last week's messages (their words only to see who is mentioned), the chats and who has read what.
+    // Before the chat tables exist these reads fail and are empty.
+    admin.from("chat_messages").select("thread_id, author_member_id, created_at, body, removed_at").eq("household_id", householdId).gte("created_at", since(7)).order("created_at", { ascending: false }).limit(500),
+    admin.from("chat_threads").select("id, kind, title").eq("household_id", householdId).gte("last_message_at", since(7)).limit(200),
+    admin.from("chat_participants").select("thread_id, member_id, left_at, last_read_at").eq("household_id", householdId).limit(2000),
     admin.from("notifications").select("id, recipient_member_id, thread_key, title, body").eq("household_id", householdId).in("source_type", [...NOTICE_SOURCE_TYPES]).in("status", OPEN).limit(1000),
     admin.from("notifications").select("recipient_member_id, thread_key, title, body").eq("household_id", householdId).in("source_type", [...NOTICE_SOURCE_TYPES]).in("status", ["acted", "dismissed"]).gte("created_at", since(14)).limit(1000),
   ]);
@@ -121,6 +130,7 @@ async function sweep(admin: SupabaseClient, householdId: string, now: Date, adap
     ...weather,
     ...checkInNotices((checkIns.data ?? []) as (CheckInRow & { child_goals: { title: string } | { title: string }[] | null })[], directory, names, now),
     ...eventChangeNotices((changes.data ?? []) as EventChangeRow[], eventRows, participantRows, directory, names, now, timeZone),
+    ...chatNotices((chatThreads.data ?? []) as ChatThreadRow[], (chatParticipants.data ?? []) as ChatParticipantRow[], (chatMessages.data ?? []) as ChatMessageRow[], directory, names, now),
   ];
 
   const result: NoticeSweep = { created: 0, updated: 0, resolved: 0 };
@@ -180,16 +190,17 @@ async function sweep(admin: SupabaseClient, householdId: string, now: Date, adap
  */
 export async function householdsWithNoticeChanges(admin: SupabaseClient, since: Date, limit = 200): Promise<string[]> {
   const iso = since.toISOString();
-  const [items, guests, orders, absences, changes, checkIns] = await Promise.all([
+  const [items, guests, orders, absences, changes, checkIns, chat] = await Promise.all([
     admin.from("home_send_items").select("household_id").gte("updated_at", iso).limit(limit),
     admin.from("event_guests").select("household_id").gte("updated_at", iso).limit(limit),
     admin.from("orders").select("household_id").gte("updated_at", iso).limit(limit),
     admin.from("availability_exceptions").select("household_id").gte("created_at", iso).limit(limit),
     admin.from("family_event_changes").select("household_id").gte("created_at", iso).limit(limit),
     admin.from("child_goal_checkins").select("household_id").gte("created_at", iso).limit(limit),
+    admin.from("chat_messages").select("household_id").gte("created_at", iso).limit(limit),
   ]);
   const ids = new Set<string>();
-  for (const result of [items, guests, orders, absences, changes, checkIns]) for (const row of (result.data ?? []) as { household_id: string }[]) ids.add(row.household_id);
+  for (const result of [items, guests, orders, absences, changes, checkIns, chat]) for (const row of (result.data ?? []) as { household_id: string }[]) ids.add(row.household_id);
   return [...ids].slice(0, limit);
 }
 
