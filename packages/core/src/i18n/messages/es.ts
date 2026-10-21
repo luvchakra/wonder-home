@@ -14,6 +14,7 @@ import { calendarEs } from "./areas/calendar/es";
 import { memberInviteEs } from "./areas/memberinvite/es";
 import { whatsNewEs } from "./areas/whatsnew/es";
 import { todayEs } from "./areas/today/es";
+import { chatEs } from "./areas/chat/es";
 import { amafEs } from "./areas/amaf/es";
 import { groceryEs } from "./areas/grocery/es";
 import { welcomeEs } from "./areas/welcome/es";
@@ -58,6 +59,7 @@ export const es: Catalog = {
   "nav.item.certification": "HomeBrain",
   "nav.item.homesend": "HomeSend",
   "nav.item.places": "HomePlaces",
+  "nav.item.chat": "Chat",
   "nav.item.notifications": "Notificaciones",
   "nav.item.manage": "Gestionar el hogar",
   "nav.item.settings": "Ajustes y perfil",
@@ -72,6 +74,7 @@ export const es: Catalog = {
   "nav.purpose.certification": "Tu hogar, entendido",
   "nav.purpose.homesend": "Envía cualquier cosa a WonderHome",
   "nav.purpose.places": "Los lugares que le gustan a tu familia",
+  "nav.purpose.chat": "Habladlo, con la cosa misma adjunta",
   "nav.purpose.notifications": "Pocas y útiles",
   "nav.purpose.manage": "Guía, normas, autonomía de la IA",
   "nav.purpose.settings": "Tú, tus preferencias, tu privacidad",
@@ -547,6 +550,7 @@ export const es: Catalog = {
   "family.members": "Miembros de la familia",
   "family.manage": "Gestionar",
   "family.inviteMember": "Invitar a un miembro",
+  "family.inviteShort": "Invitar",
   "family.empty.members": "Por ahora solo tú",
   "family.empty.membersLede": "Invita a la familia para que cada uno tenga su propia vista del hogar.",
   "family.inviteSomeone": "Invitar a alguien",
@@ -791,6 +795,10 @@ export const es: Catalog = {
   "meals.card.toGet#one": "Falta {count} ingrediente",
   "meals.card.toGet#other": "Faltan {count} ingredientes",
   "meals.card.viewRecipe": "Ver receta",
+  "meals.taste.like": "Me gusta",
+  "meals.taste.dislike": "No es para mí",
+  "meals.taste.failed": "No se guardó. Inténtalo de nuevo.",
+  "meals.taste.likedBy": "Le gusta a {names}",
   "meals.card.ingredients": "Ingredientes",
   "meals.card.changeMeal": "Cambiar comida",
   "mealForm.plan": "Planificar una comida",
@@ -962,6 +970,7 @@ export const es: Catalog = {
   ...calendarEs,
   ...whatsNewEs,
   ...todayEs,
+  ...chatEs,
   ...amafEs,
   ...memberInviteEs,
   ...groceryEs,

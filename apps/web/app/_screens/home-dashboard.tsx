@@ -48,6 +48,7 @@ import { SetupProgressCard } from "@wonderhome/core/ui/setup-progress";
 
 import { OnboardingResumeCard } from "../_components/onboarding-resume-card";
 import { PersonalizeCard } from "../_components/personalize-card";
+import { HeroCatFigure, HeroCatThought } from "../_components/hero-cat";
 import { TodayCard, TodayCardFallback } from "../_components/today-card";
 import { WhatsNewCard } from "../_components/whats-new-card";
 import { whatsNewItems, whatsNewLabels } from "../_lib/whats-new";
@@ -286,7 +287,7 @@ export function HomeDashboard({ session }: { session: Session }) {
             <TodayCard session={session} now={now} date={formatToday(timezone, now)} />
           </Suspense>
 
-          <div className="relative z-10 max-w-[80%] space-y-1 px-5 pt-3 pb-5 sm:max-w-[42%] sm:p-6">
+          <div data-hero-words="" className="relative z-10 max-w-[80%] space-y-1 px-5 pt-3 pb-5 sm:max-w-[42%] sm:p-6">
             <p className="text-lg font-medium text-[var(--wh-foreground-muted)]">{greetingFor(timezone, now)},</p>
             <h1 className="min-w-0 text-[2rem] leading-tight font-bold tracking-tight text-balance sm:text-[2.5rem]">
               {firstName}! <span aria-hidden className="wh-hand-wave">👋</span>
@@ -294,6 +295,11 @@ export function HomeDashboard({ session }: { session: Session }) {
             <p className="mt-1 text-base font-semibold text-[var(--wh-foreground)]">{t("home.doingGreat")}</p>
             <p className="text-sm text-[var(--wh-foreground-muted)]">{t("home.lede")}</p>
           </div>
+
+          {/* The cat thinking out loud, in the room the header has (the owner, 2026-10-21). */}
+          <Suspense fallback={<HeroCatFigure />}>
+            <HeroCatThought session={session} now={now} />
+          </Suspense>
         </header>
 
         {/* What reached WonderHome since this person last opened it: temporary, and gone once seen. */}

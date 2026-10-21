@@ -3,7 +3,7 @@
 import { ArrowRight, ChevronLeft, ChevronRight, Pencil, RefreshCw } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useEffect, useState, useTransition } from "react";
+import { useEffect, useRef, useState, useTransition, type PointerEvent as ReactPointerEvent } from "react";
 
 import { Alert } from "@wonderhome/core/ui/alert";
 import { Button } from "@wonderhome/core/ui/button";
@@ -99,6 +99,41 @@ export function CompanionCard({
   const [keptCoat, setKeptCoat] = useState<CatCoat>(savedCoat);
   const [error, setError] = useState<string | null>(null);
   const [pending, startTransition] = useTransition();
+  // Try to touch the cat and it darts away (the owner, 2026-10-21: "if you try
+  // to touch the cat, it should quickly move away!"), then strolls back.
+  const [dodge, setDodge] = useState<{ x: number; y: number } | null>(null);
+  const catSpot = useRef<HTMLSpanElement>(null);
+  const comeBack = useRef<number | undefined>(undefined);
+  useEffect(() => () => window.clearTimeout(comeBack.current), []);
+  const lastFlee = useRef(0);
+  const flee = (event: ReactPointerEvent<HTMLSpanElement>) => {
+    if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+    // One touch can arrive as more than one pointer event; it is one fright.
+    if (event.timeStamp - lastFlee.current < 150) return;
+    lastFlee.current = event.timeStamp;
+    const spot = catSpot.current;
+    const seen = spot?.firstElementChild?.getBoundingClientRect();
+    // It runs anywhere inside its own card, never off it.
+    const arena = spot?.closest(".wh-kid-card")?.getBoundingClientRect();
+    if (!spot || !seen || !arena) return;
+    // Where it sits at rest: what is on screen less the dodge it is part-way through.
+    const moving = new DOMMatrixReadOnly(getComputedStyle(spot).transform === "none" ? undefined : getComputedStyle(spot).transform);
+    const top = seen.top - moving.m42;
+    const left = seen.left - moving.m41;
+    const inset = 6;
+    const minY = arena.top + inset - top;
+    const maxY = arena.bottom - inset - (top + seen.height);
+    const minX = Math.max(-48, arena.left + inset - left);
+    const maxX = Math.min(48, arena.right - inset - (left + seen.width));
+    // Away from the finger: to the far side of the card from where it came, never past its edge.
+    const fromAbove = event.clientY < seen.top + seen.height / 2;
+    const fromLeft = event.clientX < seen.left + seen.width / 2;
+    const y = fromAbove ? (maxY - moving.m42 > 12 ? maxY : minY) : moving.m42 - minY > 12 ? minY : maxY;
+    const x = fromLeft ? Math.max(0, maxX) : Math.min(0, minX);
+    setDodge({ x, y: Math.min(maxY, Math.max(minY, y)) });
+    window.clearTimeout(comeBack.current);
+    comeBack.current = window.setTimeout(() => setDodge(null), 1500);
+  };
   // A saying is shown once per child, ever: within a visit, "Tell me another"
   // skips any already shown, and each one shown is recorded on the server.
   const [shownSayings, setShownSayings] = useState<ReadonlySet<string>>(() => new Set());
@@ -165,10 +200,24 @@ export function CompanionCard({
             owner, 2026-10-21: "make the cat move in the empty area"); it sits
             still at the top when the device asks for reduced motion. */}
         <div className="relative min-h-16 w-16 shrink-0 [--wh-cat-size:4rem] sm:min-h-24 sm:w-24 sm:[--wh-cat-size:6rem]">
-          <CompanionCat
-            coat={naming ? coat : keptCoat}
-            className="wh-cat-wander absolute start-0 top-0 size-16 sm:size-24"
-          />
+          <span
+            ref={catSpot}
+            aria-hidden
+            onPointerDown={flee}
+            onPointerEnter={(event) => {
+              if (event.pointerType === "mouse") flee(event);
+            }}
+            className="absolute inset-0 z-10 block touch-manipulation motion-reduce:transition-none"
+            style={{
+              transform: dodge ? `translate(${dodge.x}px, ${dodge.y}px) rotate(${dodge.x >= 0 ? 8 : -8}deg)` : undefined,
+              transition: `transform ${dodge ? 140 : 700}ms cubic-bezier(0.2, 0.8, 0.3, 1)`,
+            }}
+          >
+            <CompanionCat
+              coat={naming ? coat : keptCoat}
+              className={`wh-cat-wander absolute start-0 top-0 size-16 sm:size-24 ${dodge ? "[animation-play-state:paused]" : ""}`}
+            />
+          </span>
         </div>
         <div className="min-w-0 flex-1 space-y-2">
           <div className="flex items-center gap-1">

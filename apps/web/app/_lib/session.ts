@@ -12,6 +12,7 @@ import { preferencesOf, type LocalePreferences } from "@wonderhome/core/i18n/pre
 import { requestFormat, requestFormatIn, requestT, setRequestLocale } from "@wonderhome/core/i18n/request";
 import { translatorFor, type Translate } from "@wonderhome/core/i18n/translate";
 import { PRIMARY_NAVIGATION } from "@wonderhome/core/navigation/primary-navigation";
+import { chatReady } from "@wonderhome/core/chat/repository";
 import { secondaryNavigationFor, SECONDARY_GROUP_ORDER, type SecondaryNavItem } from "@wonderhome/core/navigation/secondary-navigation";
 import { installBannerLabels } from "@wonderhome/core/pwa/install-labels";
 import { childStarCount } from "@wonderhome/core/school/goal-repository";
@@ -33,6 +34,8 @@ export type Session = {
   view: PersonalView;
   viewer: ShellViewer;
   secondary: SecondaryNavItem[];
+  /** Whether household chat is live on this database yet (story 12-015). */
+  chatOn: boolean;
   /** How this person reads WonderHome: their language, the household's region, their formats (story 22-002). */
   locale: { preferences: LocalePreferences; t: Translate; format: Formatter };
 };
@@ -92,13 +95,15 @@ export async function buildSession(
   // missing photo leaves the initials.
   const preferences = preferencesOf(membership.locale, membership.household.timezone);
   const isChild = membership.memberType === "child";
-  const [unread, , t, avatarUrl, stars] = await Promise.all([
+  const [unread, , t, avatarUrl, stars, chatOn] = await Promise.all([
     countUnread(supabase, membership.memberId).catch(() => 0),
     markFirstSeen(supabase, membership),
     translatorFor(preferences.language),
     ownAvatarUrl(supabase, membership.avatarPath ?? null),
     // A child's stars, counted from what they did (story 08-017); only ever read for a child.
     isChild ? childStarCount(supabase, membership.household.id, membership.memberId).catch(() => 0) : Promise.resolve(0),
+    // Chat is offered only once its tables are on this database (story 12-015).
+    chatReady(supabase).catch(() => false),
   ]);
 
   const view = buildPersonalView(membership, ageBandFor(parseDateOfBirth(membership.dateOfBirth)));
@@ -136,7 +141,10 @@ export async function buildSession(
       labels,
       ...(isChild ? { audience: "child" as const, stars: { count: stars, label: t("kids.stars.header", { count: stars }) } } : {}),
     },
-    secondary: secondaryNavigationFor({ permissions: view.permissions, tone: view.tone }).map((item) => ({
+    chatOn,
+    secondary: secondaryNavigationFor({ permissions: view.permissions, tone: view.tone })
+      .filter((item) => item.key !== "chat" || chatOn)
+      .map((item) => ({
       ...item,
       label: t(`nav.item.${item.key}`) || item.label,
       purpose: t(`nav.purpose.${item.key}`) || item.purpose,

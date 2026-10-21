@@ -11,6 +11,7 @@ import { PRIVACY_SCOPES } from "@wonderhome/core/health/repository";
 import { requireMembership } from "@wonderhome/core/identity/households";
 
 import type { ActionState } from "./actions";
+import { applyHealthSharing, sharingNotSaved } from "./health-sharing";
 
 /** Adding, editing and removing a health record by hand (story 21-005) — HomeSend's own confirm writes through `routeHomeSendItemAction` instead. */
 const createSchema = z.object({
@@ -53,8 +54,9 @@ export async function createRecordAction(_previous: ActionState, formData: FormD
       notes,
     });
 
+    const sharing = await applyHealthSharing(supabase, { householdId: parsed.data.householdId, memberId: membership.memberId }, formData, { subjectMemberId: memberId, privacyScope: privacyScope });
     revalidatePath("/health");
-    return { notice: "Filed." };
+    return { notice: sharing ? `Filed. ${sharingNotSaved(sharing)}` : "Filed." };
   } catch (thrown) {
     return { error: toErrorBody(thrown, "health-records").body.error.message };
   }
@@ -103,6 +105,7 @@ const updateSchema = z.object({
   recordType: z.enum(RECORD_TYPES).optional(),
   documentDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).optional(),
   notes: z.string().trim().max(2000).optional(),
+  privacyScope: z.enum(PRIVACY_SCOPES).optional(),
 });
 
 export async function updateRecordAction(_previous: ActionState, formData: FormData): Promise<ActionState> {
@@ -113,6 +116,7 @@ export async function updateRecordAction(_previous: ActionState, formData: FormD
     recordType: formData.get("recordType") || undefined,
     documentDate: formData.get("documentDate") || undefined,
     notes: formData.get("notes") || undefined,
+    privacyScope: formData.get("privacyScope") || undefined,
   });
   if (!parsed.success) return { error: parsed.error.issues[0]?.message ?? "Please check the details above." };
 
@@ -120,12 +124,15 @@ export async function updateRecordAction(_previous: ActionState, formData: FormD
     const supabase = await createClient();
     const membership = await requireMembership(supabase, parsed.data.householdId);
 
-    await updateRecord(supabase, { householdId: parsed.data.householdId, memberId: membership.memberId }, parsed.data.recordId, {
+    const record = await updateRecord(supabase, { householdId: parsed.data.householdId, memberId: membership.memberId }, parsed.data.recordId, {
       label: parsed.data.label,
       recordType: parsed.data.recordType,
       documentDate: parsed.data.documentDate,
       notes: parsed.data.notes,
+      privacyScope: parsed.data.privacyScope,
     });
+    const sharing = await applyHealthSharing(supabase, { householdId: parsed.data.householdId, memberId: membership.memberId }, formData, { subjectMemberId: record.memberId, privacyScope: record.privacyScope });
+    if (sharing) return { error: sharingNotSaved(sharing) };
 
     revalidatePath("/health");
     return { notice: "Saved." };

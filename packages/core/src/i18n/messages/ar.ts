@@ -14,6 +14,7 @@ import { calendarAr } from "./areas/calendar/ar";
 import { memberInviteAr } from "./areas/memberinvite/ar";
 import { whatsNewAr } from "./areas/whatsnew/ar";
 import { todayAr } from "./areas/today/ar";
+import { chatAr } from "./areas/chat/ar";
 import { amafAr } from "./areas/amaf/ar";
 import { groceryAr } from "./areas/grocery/ar";
 import { welcomeAr } from "./areas/welcome/ar";
@@ -58,6 +59,7 @@ export const ar: Catalog = {
   "nav.item.certification": "HomeBrain",
   "nav.item.homesend": "HomeSend",
   "nav.item.places": "HomePlaces",
+  "nav.item.chat": "الدردشة",
   "nav.item.notifications": "الإشعارات",
   "nav.item.manage": "إدارة المنزل",
   "nav.item.settings": "الإعدادات والملف الشخصي",
@@ -72,6 +74,7 @@ export const ar: Catalog = {
   "nav.purpose.certification": "منزلك، مفهومًا",
   "nav.purpose.homesend": "أرسل أي شيء إلى WonderHome",
   "nav.purpose.places": "الأماكن التي تحبها عائلتك",
+  "nav.purpose.chat": "تحدّثوا، والأمر نفسه مرفق",
   "nav.purpose.notifications": "قليلة ومفيدة",
   "nav.purpose.manage": "الدليل، السياسات، استقلالية الذكاء الاصطناعي",
   "nav.purpose.settings": "أنت، تفضيلاتك، خصوصيتك",
@@ -563,6 +566,7 @@ export const ar: Catalog = {
   "family.members": "أفراد العائلة",
   "family.manage": "إدارة",
   "family.inviteMember": "ادعُ فردًا",
+  "family.inviteShort": "ادعُ",
   "family.empty.members": "أنت فقط حتى الآن",
   "family.empty.membersLede": "ادعُ العائلة ليحصل كل فرد على عرضه الخاص للمنزل.",
   "family.inviteSomeone": "ادعُ شخصًا",
@@ -813,6 +817,10 @@ export const ar: Catalog = {
   "meals.card.toGet#few": "{count} مكوّنات ناقصة",
   "meals.card.toGet#other": "{count} مكوّنات ناقصة",
   "meals.card.viewRecipe": "اعرض الوصفة",
+  "meals.taste.like": "يعجبني",
+  "meals.taste.dislike": "ليس لي",
+  "meals.taste.failed": "لم يُحفظ. حاول مرة أخرى.",
+  "meals.taste.likedBy": "يعجب {names}",
   "meals.card.ingredients": "المكونات",
   "meals.card.changeMeal": "غيّر الوجبة",
   "mealForm.plan": "خطّط لوجبة",
@@ -984,6 +992,7 @@ export const ar: Catalog = {
   ...calendarAr,
   ...whatsNewAr,
   ...todayAr,
+  ...chatAr,
   ...amafAr,
   ...memberInviteAr,
   ...groceryAr,

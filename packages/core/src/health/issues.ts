@@ -173,6 +173,8 @@ export type UpdateIssueInput = {
   label?: string;
   description?: string | null;
   notes?: string | null;
+  /** Who can see it — the same three scopes a new issue offers (the owner, 2026-10-21: an edit can change it too). */
+  privacyScope?: PrivacyScope;
 };
 
 export type UpdateIssueResult = {
@@ -191,6 +193,7 @@ export async function updateIssue(
   if (input.label !== undefined) patch.label = input.label;
   if (input.description !== undefined) patch.description = input.description;
   if (input.notes !== undefined) patch.notes = input.notes;
+  if (input.privacyScope !== undefined) patch.privacy_scope = input.privacyScope;
 
   const { data, error } = await supabase.from("health_issues").update(patch).eq("id", id).eq("household_id", actor.householdId).select(SELECT).single();
 

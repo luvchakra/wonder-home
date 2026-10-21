@@ -148,6 +148,36 @@ export async function listHealthConsents(
 }
 
 /**
+ * Every consent row the caller's session can read in the household — their
+ * own sharing list, a guarded child's, and rows naming them as the viewer
+ * (RLS decides). One bounded read for a page that shows several people's
+ * lists at once, rather than one request per person.
+ */
+export async function listHouseholdHealthConsents(supabase: SupabaseClient, householdId: string): Promise<HealthConsent[]> {
+  const { data, error } = await supabase
+    .from("health_consents")
+    .select("id, household_id, subject_member_id, viewer_member_id, granted_by_member_id, created_at")
+    .eq("household_id", householdId)
+    .order("created_at", { ascending: false })
+    .limit(500);
+
+  if (error) throw new Error(`listHouseholdHealthConsents failed: ${error.code ?? "unknown"}`);
+  return (data ?? []).map((row) => toConsent(row as Row));
+}
+
+/** The children this member is a guardian of — whose sharing list they may set. Empty when it cannot be read, which only ever offers less. */
+export async function listGuardedChildIds(supabase: SupabaseClient, householdId: string, memberId: string): Promise<string[]> {
+  const { data, error } = await supabase
+    .from("member_guardians")
+    .select("child_member_id")
+    .eq("household_id", householdId)
+    .eq("guardian_member_id", memberId)
+    .limit(50);
+  if (error) return [];
+  return ((data as Row[] | null) ?? []).map((row) => row.child_member_id as string);
+}
+
+/**
  * Grants another member SELECTED_FAMILY visibility into the subject's
  * health data. Only the subject themselves, or a guardian granting on
  * behalf of the child they guard, may do this — RLS enforces it; this

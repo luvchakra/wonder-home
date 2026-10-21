@@ -14,6 +14,7 @@ import { calendarZh } from "./areas/calendar/zh";
 import { memberInviteZh } from "./areas/memberinvite/zh";
 import { whatsNewZh } from "./areas/whatsnew/zh";
 import { todayZh } from "./areas/today/zh";
+import { chatZh } from "./areas/chat/zh";
 import { amafZh } from "./areas/amaf/zh";
 import { groceryZh } from "./areas/grocery/zh";
 import { welcomeZh } from "./areas/welcome/zh";
@@ -58,6 +59,7 @@ export const zh: Catalog = {
   "nav.item.certification": "HomeBrain",
   "nav.item.homesend": "HomeSend",
   "nav.item.places": "HomePlaces",
+  "nav.item.chat": "聊天",
   "nav.item.notifications": "通知",
   "nav.item.manage": "家庭管理",
   "nav.item.settings": "设置与个人资料",
@@ -72,6 +74,7 @@ export const zh: Catalog = {
   "nav.purpose.certification": "懂你的家",
   "nav.purpose.homesend": "什么都可以发给 WonderHome",
   "nav.purpose.places": "家人喜欢的地方",
+  "nav.purpose.chat": "边聊边附上要说的那件事",
   "nav.purpose.notifications": "少而精，看了就能办",
   "nav.purpose.manage": "家庭手册、规则、AI 自主权",
   "nav.purpose.settings": "你、你的偏好、你的隐私",
@@ -547,6 +550,7 @@ export const zh: Catalog = {
   "family.members": "家庭成员",
   "family.manage": "管理",
   "family.inviteMember": "邀请成员",
+  "family.inviteShort": "邀请",
   "family.empty.members": "目前只有你",
   "family.empty.membersLede": "邀请家人加入，让每个人都有自己的家庭视图。",
   "family.inviteSomeone": "邀请一位家人",
@@ -791,6 +795,10 @@ export const zh: Catalog = {
   "meals.card.toGet#one": "还缺 {count} 样食材",
   "meals.card.toGet#other": "还缺 {count} 样食材",
   "meals.card.viewRecipe": "查看食谱",
+  "meals.taste.like": "我喜欢",
+  "meals.taste.dislike": "不适合我",
+  "meals.taste.failed": "没有保存，请再试一次。",
+  "meals.taste.likedBy": "{names} 喜欢",
   "meals.card.ingredients": "食材",
   "meals.card.changeMeal": "换一道菜",
   "mealForm.plan": "安排一顿饭",
@@ -962,6 +970,7 @@ export const zh: Catalog = {
   ...calendarZh,
   ...whatsNewZh,
   ...todayZh,
+  ...chatZh,
   ...amafZh,
   ...memberInviteZh,
   ...groceryZh,

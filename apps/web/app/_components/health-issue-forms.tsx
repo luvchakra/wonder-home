@@ -14,9 +14,7 @@ import { Sheet } from "@wonderhome/core/ui/sheet";
 import type { ActionState } from "../(auth)/actions";
 import { createIssueAction, setIssueStatusAction, updateIssueAction } from "../(auth)/health-issue-actions";
 import { withName, type HealthFormLabels } from "../_lib/health-form-labels";
-
-/** The stored values, in the order they are offered; their words come from `labels` (story 22-004). */
-const SCOPES = ["private", "selected_family", "household_operational"] as const;
+import { HealthPrivacyField } from "./health-privacy-field";
 
 /** Recording a new health issue — a household member's own observation, never a diagnosis. */
 export function AddIssueButton({
@@ -81,13 +79,7 @@ export function AddIssueButton({
           <Field label={words.detail} name="description" placeholder={words.detailPlaceholder} autoComplete="off" />
           <Field label={common.notes} name="notes" placeholder={common.notesPlaceholderElse} autoComplete="off" />
           <Field label={words.since} name="startedAt" type="date" />
-          <Select label={common.whoCanSee} name="privacyScope" defaultValue={defaultPrivacyScope}>
-            {SCOPES.map((scope) => (
-              <option key={scope} value={scope}>
-                {labels.scopes[scope]}
-              </option>
-            ))}
-          </Select>
+          <HealthPrivacyField labels={labels} defaultValue={defaultPrivacyScope} />
           <Button type="submit" disabled={pending} className="w-full">
             {pending ? common.recording : common.record}
           </Button>
@@ -104,6 +96,8 @@ export function EditIssueButton({
   label,
   description,
   notes,
+  memberId,
+  privacyScope,
   labels,
 }: {
   householdId: string;
@@ -111,6 +105,9 @@ export function EditIssueButton({
   label: string;
   description: string | null;
   notes: string | null;
+  /** Whose issue it is — whose "People I choose" list the sheet shows. */
+  memberId: string;
+  privacyScope: "private" | "selected_family" | "household_operational";
   labels: HealthFormLabels;
 }) {
   const words = labels.issue;
@@ -147,6 +144,7 @@ export function EditIssueButton({
           <Field label={words.whatsGoingOn} name="label" defaultValue={label} required autoComplete="off" />
           <Field label={words.detail} name="description" defaultValue={description ?? ""} autoComplete="off" />
           <Field label={common.notes} name="notes" defaultValue={notes ?? ""} autoComplete="off" />
+          <HealthPrivacyField labels={labels} defaultValue={privacyScope} subjectMemberId={memberId} />
           <Button type="submit" disabled={pending} className="w-full">
             {pending ? common.saving : common.save}
           </Button>

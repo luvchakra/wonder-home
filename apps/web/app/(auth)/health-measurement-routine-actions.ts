@@ -12,6 +12,7 @@ import { VITAL_TYPES } from "@wonderhome/core/health/vitals";
 import { requireMembership } from "@wonderhome/core/identity/households";
 
 import type { ActionState } from "./actions";
+import { applyHealthSharing, sharingNotSaved } from "./health-sharing";
 
 const createSchema = z.object({
   householdId: z.uuid(),
@@ -62,8 +63,9 @@ export async function createRoutineAction(_previous: ActionState, formData: Form
       notes,
     });
 
+    const sharing = await applyHealthSharing(supabase, { householdId: parsed.data.householdId, memberId: membership.memberId }, formData, { subjectMemberId: memberId, privacyScope: privacyScope });
     revalidatePath("/health");
-    return { notice: "Added." };
+    return { notice: sharing ? `Added. ${sharingNotSaved(sharing)}` : "Added." };
   } catch (thrown) {
     return { error: toErrorBody(thrown, "health-routines").body.error.message };
   }
@@ -111,6 +113,7 @@ const updateSchema = z.object({
   reminderEnabled: z.string().optional(),
   notes: z.string().trim().max(1000).optional(),
   nextDueOn: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).optional(),
+  privacyScope: z.enum(PRIVACY_SCOPES).optional(),
 });
 
 export async function updateRoutineAction(_previous: ActionState, formData: FormData): Promise<ActionState> {
@@ -122,21 +125,25 @@ export async function updateRoutineAction(_previous: ActionState, formData: Form
     reminderEnabled: formData.get("reminderEnabled") ?? undefined,
     notes: formData.get("notes") || undefined,
     nextDueOn: formData.get("nextDueOn") || undefined,
+    privacyScope: formData.get("privacyScope") || undefined,
   });
   if (!parsed.success) return { error: parsed.error.issues[0]?.message ?? "Please check the details above." };
 
   try {
     const supabase = await createClient();
     const membership = await requireMembership(supabase, parsed.data.householdId);
-    const { routineId, cadenceDays, preferredTime, notes, nextDueOn } = parsed.data;
+    const { routineId, cadenceDays, preferredTime, notes, nextDueOn, privacyScope } = parsed.data;
 
-    await updateRoutine(supabase, { householdId: parsed.data.householdId, memberId: membership.memberId }, routineId, {
+    const routine = await updateRoutine(supabase, { householdId: parsed.data.householdId, memberId: membership.memberId }, routineId, {
       cadenceDays,
       preferredTime,
       reminderEnabled: parsed.data.reminderEnabled === undefined ? undefined : parsed.data.reminderEnabled !== "false",
       notes,
       nextDueOn,
+      privacyScope,
     });
+    const sharing = await applyHealthSharing(supabase, { householdId: parsed.data.householdId, memberId: membership.memberId }, formData, { subjectMemberId: routine.memberId, privacyScope: routine.privacyScope });
+    if (sharing) return { error: sharingNotSaved(sharing) };
 
     revalidatePath("/health");
     return { notice: "Saved." };

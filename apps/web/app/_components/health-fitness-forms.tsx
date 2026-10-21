@@ -23,13 +23,7 @@ import {
   updateFitnessSessionAction,
 } from "../(auth)/health-fitness-actions";
 import { withName, type HealthFormLabels } from "../_lib/health-form-labels";
-
-/**
- * Stored values are offered in the domain's own order — the order the
- * server-built `labels` carries them in — and their words come from those
- * labels (story 22-004). The stored value itself never changes.
- */
-const SCOPES = ["private", "selected_family", "household_operational"] as const;
+import { HealthPrivacyField } from "./health-privacy-field";
 
 // ---------------------------------------------------------------------------
 // Goals
@@ -115,13 +109,7 @@ export function AddFitnessGoalButton({
           </div>
           <Field label={common.preferredTime} name="preferredTime" type="time" />
           <Field label={common.notes} name="notes" placeholder={common.notesPlaceholder} autoComplete="off" />
-          <Select label={common.whoCanSee} name="privacyScope" defaultValue={defaultPrivacyScope}>
-            {SCOPES.map((scope) => (
-              <option key={scope} value={scope}>
-                {labels.scopes[scope]}
-              </option>
-            ))}
-          </Select>
+          <HealthPrivacyField labels={labels} defaultValue={defaultPrivacyScope} />
           <Button type="submit" disabled={pending} className="w-full">
             {pending ? common.saving : words.submit}
           </Button>
@@ -138,6 +126,8 @@ function EditFitnessGoalButton({
   targetCount,
   frequencyPeriod,
   notes,
+  memberId,
+  privacyScope,
   labels,
 }: {
   householdId: string;
@@ -146,6 +136,8 @@ function EditFitnessGoalButton({
   targetCount: number;
   frequencyPeriod: FitnessFrequencyPeriod;
   notes: string | null;
+  memberId: string;
+  privacyScope: "private" | "selected_family" | "household_operational";
   labels: HealthFormLabels;
 }) {
   const words = labels.goal;
@@ -190,6 +182,7 @@ function EditFitnessGoalButton({
             </Select>
           </div>
           <Field label={common.notes} name="notes" defaultValue={notes ?? ""} autoComplete="off" />
+          <HealthPrivacyField labels={labels} defaultValue={privacyScope} subjectMemberId={memberId} />
           <Button type="submit" disabled={pending} className="w-full">
             {pending ? common.saving : common.save}
           </Button>
@@ -206,7 +199,7 @@ export function GoalActions({
   labels,
 }: {
   householdId: string;
-  goal: { id: string; label: string; targetCount: number; frequencyPeriod: FitnessFrequencyPeriod; notes: string | null; status: "active" | "dismissed" };
+  goal: { id: string; label: string; targetCount: number; frequencyPeriod: FitnessFrequencyPeriod; notes: string | null; status: "active" | "dismissed"; memberId: string; privacyScope: "private" | "selected_family" | "household_operational" };
   labels: HealthFormLabels;
 }) {
   const common = labels.common;
@@ -237,6 +230,8 @@ export function GoalActions({
         targetCount={goal.targetCount}
         frequencyPeriod={goal.frequencyPeriod}
         notes={goal.notes}
+        memberId={goal.memberId}
+        privacyScope={goal.privacyScope}
         labels={labels}
       />
       <Pill type="button" tone="quiet" disabled={dismissPending} onClick={() => submit(dismissAction)} aria-label={common.remove} title={common.remove}>
@@ -337,13 +332,7 @@ export function LogFitnessSessionButton({
           <Field label={words.distanceUnitRequired} name="distanceUnit" placeholder={words.distanceUnitPlaceholder} autoComplete="off" />
           <Field label={common.whenDefaultNow} name="startedAt" type="datetime-local" />
           <Field label={common.notes} name="notes" placeholder={common.notesPlaceholder} autoComplete="off" />
-          <Select label={common.whoCanSee} name="privacyScope" defaultValue={defaultPrivacyScope}>
-            {SCOPES.map((scope) => (
-              <option key={scope} value={scope}>
-                {labels.scopes[scope]}
-              </option>
-            ))}
-          </Select>
+          <HealthPrivacyField labels={labels} defaultValue={defaultPrivacyScope} />
           <Button type="submit" disabled={pending} className="w-full">
             {pending ? words.logging : words.submit}
           </Button>
@@ -361,6 +350,8 @@ function EditFitnessSessionButton({
   distanceValue,
   distanceUnit,
   notes,
+  memberId,
+  privacyScope,
   labels,
 }: {
   householdId: string;
@@ -370,6 +361,8 @@ function EditFitnessSessionButton({
   distanceValue: number | null;
   distanceUnit: string | null;
   notes: string | null;
+  memberId: string;
+  privacyScope: "private" | "selected_family" | "household_operational";
   labels: HealthFormLabels;
 }) {
   const words = labels.session;
@@ -409,6 +402,7 @@ function EditFitnessSessionButton({
           </div>
           <Field label={words.distanceUnit} name="distanceUnit" defaultValue={distanceUnit ?? ""} autoComplete="off" />
           <Field label={common.notes} name="notes" defaultValue={notes ?? ""} autoComplete="off" />
+          <HealthPrivacyField labels={labels} defaultValue={privacyScope} subjectMemberId={memberId} />
           <Button type="submit" disabled={pending} className="w-full">
             {pending ? common.saving : common.save}
           </Button>
@@ -425,7 +419,7 @@ export function SessionActions({
   labels,
 }: {
   householdId: string;
-  session: { id: string; label: string; durationMinutes: number; distanceValue: number | null; distanceUnit: string | null; notes: string | null; status: "active" | "archived" };
+  session: { id: string; label: string; durationMinutes: number; distanceValue: number | null; distanceUnit: string | null; notes: string | null; status: "active" | "archived"; memberId: string; privacyScope: "private" | "selected_family" | "household_operational" };
   labels: HealthFormLabels;
 }) {
   const common = labels.common;
@@ -457,6 +451,8 @@ export function SessionActions({
         distanceValue={session.distanceValue}
         distanceUnit={session.distanceUnit}
         notes={session.notes}
+        memberId={session.memberId}
+        privacyScope={session.privacyScope}
         labels={labels}
       />
       <Pill type="button" tone="quiet" disabled={archivePending} onClick={() => submit(archiveAction)} aria-label={common.remove} title={common.remove}>

@@ -19,6 +19,7 @@ import { PRIVACY_SCOPES } from "@wonderhome/core/health/repository";
 import { requireMembership } from "@wonderhome/core/identity/households";
 
 import type { ActionState } from "./actions";
+import { applyHealthSharing, sharingNotSaved } from "./health-sharing";
 
 /** Adding, editing, rescheduling, completing and removing a checkup (story 21-004). */
 const createSchema = z.object({
@@ -65,8 +66,9 @@ export async function createCheckupAction(_previous: ActionState, formData: Form
       notes,
     });
 
+    const sharing = await applyHealthSharing(supabase, { householdId: parsed.data.householdId, memberId: membership.memberId }, formData, { subjectMemberId: memberId, privacyScope: privacyScope });
     revalidatePath("/health");
-    return { notice: "Added." };
+    return { notice: sharing ? `Added. ${sharingNotSaved(sharing)}` : "Added." };
   } catch (thrown) {
     return { error: toErrorBody(thrown, "health-checkups").body.error.message };
   }
@@ -132,6 +134,7 @@ const updateSchema = z.object({
   cadenceDays: z.string().optional(),
   notes: z.string().trim().max(1000).optional(),
   nextDueOn: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).optional(),
+  privacyScope: z.enum(PRIVACY_SCOPES).optional(),
 });
 
 /** Content, cadence and the next due date, all from the one edit sheet — kept as one action so the row's edit button covers everything about a checkup at once. */
@@ -143,6 +146,7 @@ export async function updateCheckupAction(_previous: ActionState, formData: Form
     cadenceDays: formData.get("cadenceDays") ?? undefined,
     notes: formData.get("notes") || undefined,
     nextDueOn: formData.get("nextDueOn") || undefined,
+    privacyScope: formData.get("privacyScope") || undefined,
   });
   if (!parsed.success) return { error: parsed.error.issues[0]?.message ?? "Please check the details above." };
 
@@ -153,11 +157,14 @@ export async function updateCheckupAction(_previous: ActionState, formData: Form
 
     const cadenceDays = parsed.data.cadenceDays === undefined ? undefined : parsed.data.cadenceDays ? Number(parsed.data.cadenceDays) : null;
 
-    await updateCheckup(supabase, actor, parsed.data.checkupId, {
+    const checkup = await updateCheckup(supabase, actor, parsed.data.checkupId, {
       label: parsed.data.label,
       cadenceDays,
       notes: parsed.data.notes,
+      privacyScope: parsed.data.privacyScope,
     });
+    const sharing = await applyHealthSharing(supabase, actor, formData, { subjectMemberId: checkup.memberId, privacyScope: checkup.privacyScope });
+    if (sharing) return { error: sharingNotSaved(sharing) };
     if (parsed.data.nextDueOn) {
       await rescheduleCheckup(supabase, actor, parsed.data.checkupId, parsed.data.nextDueOn);
     }

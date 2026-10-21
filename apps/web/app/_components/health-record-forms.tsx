@@ -19,6 +19,7 @@ import {
   updateRecordAction,
 } from "../(auth)/health-record-actions";
 import { withName, type HealthFormLabels } from "../_lib/health-form-labels";
+import { HealthPrivacyField } from "./health-privacy-field";
 
 /** The stored values, in the order they are offered; their words come from `labels` (story 22-004). */
 const TYPES: RecordType[] = [
@@ -32,8 +33,6 @@ const TYPES: RecordType[] = [
   "visit_summary",
   "other",
 ];
-
-const SCOPES = ["private", "selected_family", "household_operational"] as const;
 
 /** Filing a health document by hand — HomeSend's own confirm writes through routeHomeSendItemAction instead (story 21-005). */
 export function AddRecordButton({
@@ -104,13 +103,7 @@ export function AddRecordButton({
           </Select>
           <Field label={words.date} name="documentDate" type="date" />
           <Field label={common.notes} name="notes" placeholder={common.notesPlaceholder} autoComplete="off" />
-          <Select label={common.whoCanSee} name="privacyScope" defaultValue={defaultPrivacyScope}>
-            {SCOPES.map((scope) => (
-              <option key={scope} value={scope}>
-                {labels.scopes[scope]}
-              </option>
-            ))}
-          </Select>
+          <HealthPrivacyField labels={labels} defaultValue={defaultPrivacyScope} />
           <Button type="submit" disabled={pending} className="w-full">
             {pending ? words.filing : words.submit}
           </Button>
@@ -128,6 +121,8 @@ export function EditRecordButton({
   recordType,
   documentDate,
   notes,
+  memberId,
+  privacyScope,
   labels,
 }: {
   householdId: string;
@@ -136,6 +131,8 @@ export function EditRecordButton({
   recordType: RecordType;
   documentDate: string | null;
   notes: string | null;
+  memberId: string;
+  privacyScope: "private" | "selected_family" | "household_operational";
   labels: HealthFormLabels;
 }) {
   const words = labels.healthRecord;
@@ -179,6 +176,7 @@ export function EditRecordButton({
           </Select>
           <Field label={words.date} name="documentDate" type="date" defaultValue={documentDate ?? ""} />
           <Field label={common.notes} name="notes" defaultValue={notes ?? ""} autoComplete="off" />
+          <HealthPrivacyField labels={labels} defaultValue={privacyScope} subjectMemberId={memberId} />
           <Button type="submit" disabled={pending} className="w-full">
             {pending ? common.saving : common.save}
           </Button>
@@ -205,6 +203,8 @@ export function RecordActions({
     documentDate: string | null;
     notes: string | null;
     status: "active" | "archived";
+    memberId: string;
+    privacyScope: "private" | "selected_family" | "household_operational";
   };
   labels: HealthFormLabels;
 }) {
@@ -236,6 +236,8 @@ export function RecordActions({
         recordType={record.recordType}
         documentDate={record.documentDate}
         notes={record.notes}
+        memberId={record.memberId}
+        privacyScope={record.privacyScope}
         labels={labels}
       />
       <Pill type="button" tone="quiet" disabled={archivePending} onClick={() => submit(archiveAction)} aria-label={common.remove} title={common.remove}>

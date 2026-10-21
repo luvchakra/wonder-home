@@ -185,6 +185,9 @@ export type HomeSendReviewLabels = {
     quantity: string;
     unit: string;
     unitPlaceholder: string;
+    addNew: string;
+    chooseExisting: string;
+    noUnit: string;
     category: string;
     categoryPlaceholder: string;
     notes: string;
@@ -531,6 +534,9 @@ export function homesendReviewLabels(t: Translate, language: string): HomeSendRe
       quantity: t("homesend.field.quantity"),
       unit: t("homesend.field.unit"),
       unitPlaceholder: t("homesend.field.unitPlaceholder"),
+      addNew: t("common.addNew"),
+      chooseExisting: t("common.chooseExisting"),
+      noUnit: t("homesend.receipt.noUnit"),
       category: t("homesend.field.category"),
       categoryPlaceholder: t("homesend.field.categoryPlaceholder"),
       notes: t("homesend.field.notes"),

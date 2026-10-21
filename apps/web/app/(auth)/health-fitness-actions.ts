@@ -23,6 +23,7 @@ import { requireMembership } from "@wonderhome/core/identity/households";
 import { householdInstant } from "@wonderhome/core/school/times";
 
 import type { ActionState } from "./actions";
+import { applyHealthSharing, sharingNotSaved } from "./health-sharing";
 
 // ---------------------------------------------------------------------------
 // Goals
@@ -74,8 +75,9 @@ export async function createFitnessGoalAction(_previous: ActionState, formData: 
       notes,
     });
 
+    const sharing = await applyHealthSharing(supabase, { householdId: parsed.data.householdId, memberId: membership.memberId }, formData, { subjectMemberId: memberId, privacyScope: privacyScope });
     revalidatePath("/health");
-    return { notice: "Goal set." };
+    return { notice: sharing ? `Goal set. ${sharingNotSaved(sharing)}` : "Goal set." };
   } catch (thrown) {
     return { error: toErrorBody(thrown, "health-fitness-goals").body.error.message };
   }
@@ -122,6 +124,7 @@ const updateGoalSchema = z.object({
   frequencyPeriod: z.enum(FITNESS_FREQUENCY_PERIODS).optional(),
   preferredTime: z.string().optional(),
   notes: z.string().trim().max(1000).optional(),
+  privacyScope: z.enum(PRIVACY_SCOPES).optional(),
 });
 
 export async function updateFitnessGoalAction(_previous: ActionState, formData: FormData): Promise<ActionState> {
@@ -132,15 +135,18 @@ export async function updateFitnessGoalAction(_previous: ActionState, formData: 
     frequencyPeriod: formData.get("frequencyPeriod") || undefined,
     preferredTime: formData.get("preferredTime") || undefined,
     notes: formData.get("notes") || undefined,
+    privacyScope: formData.get("privacyScope") || undefined,
   });
   if (!parsed.success) return { error: parsed.error.issues[0]?.message ?? "Please check the details above." };
 
   try {
     const supabase = await createClient();
     const membership = await requireMembership(supabase, parsed.data.householdId);
-    const { goalId, targetCount, frequencyPeriod, preferredTime, notes } = parsed.data;
+    const { goalId, targetCount, frequencyPeriod, preferredTime, notes, privacyScope } = parsed.data;
 
-    await updateFitnessGoal(supabase, { householdId: parsed.data.householdId, memberId: membership.memberId }, goalId, { targetCount, frequencyPeriod, preferredTime, notes });
+    const goal = await updateFitnessGoal(supabase, { householdId: parsed.data.householdId, memberId: membership.memberId }, goalId, { targetCount, frequencyPeriod, preferredTime, notes, privacyScope });
+    const sharing = await applyHealthSharing(supabase, { householdId: parsed.data.householdId, memberId: membership.memberId }, formData, { subjectMemberId: goal.memberId, privacyScope: goal.privacyScope });
+    if (sharing) return { error: sharingNotSaved(sharing) };
 
     revalidatePath("/health");
     return { notice: "Saved." };
@@ -207,8 +213,9 @@ export async function createFitnessSessionAction(_previous: ActionState, formDat
       notes,
     });
 
+    const sharing = await applyHealthSharing(supabase, { householdId: parsed.data.householdId, memberId: membership.memberId }, formData, { subjectMemberId: memberId, privacyScope: privacyScope });
     revalidatePath("/health");
-    return { notice: "Logged." };
+    return { notice: sharing ? `Logged. ${sharingNotSaved(sharing)}` : "Logged." };
   } catch (thrown) {
     return { error: toErrorBody(thrown, "health-fitness-sessions").body.error.message };
   }
@@ -255,6 +262,7 @@ const updateSessionSchema = z.object({
   distanceValue: z.coerce.number().positive().optional(),
   distanceUnit: z.string().trim().min(1).max(20).optional(),
   notes: z.string().trim().max(1000).optional(),
+  privacyScope: z.enum(PRIVACY_SCOPES).optional(),
 });
 
 export async function updateFitnessSessionAction(_previous: ActionState, formData: FormData): Promise<ActionState> {
@@ -265,6 +273,7 @@ export async function updateFitnessSessionAction(_previous: ActionState, formDat
     distanceValue: formData.get("distanceValue") || undefined,
     distanceUnit: formData.get("distanceUnit") || undefined,
     notes: formData.get("notes") || undefined,
+    privacyScope: formData.get("privacyScope") || undefined,
   });
   if (!parsed.success) return { error: parsed.error.issues[0]?.message ?? "Please check the details above." };
   if ((parsed.data.distanceValue !== undefined) !== (parsed.data.distanceUnit !== undefined)) return { error: "A distance needs both a value and a unit." };
@@ -272,9 +281,11 @@ export async function updateFitnessSessionAction(_previous: ActionState, formDat
   try {
     const supabase = await createClient();
     const membership = await requireMembership(supabase, parsed.data.householdId);
-    const { sessionId, durationMinutes, distanceValue, distanceUnit, notes } = parsed.data;
+    const { sessionId, durationMinutes, distanceValue, distanceUnit, notes, privacyScope } = parsed.data;
 
-    await updateFitnessSession(supabase, { householdId: parsed.data.householdId, memberId: membership.memberId }, sessionId, { durationMinutes, distanceValue, distanceUnit, notes });
+    const fitnessSession = await updateFitnessSession(supabase, { householdId: parsed.data.householdId, memberId: membership.memberId }, sessionId, { durationMinutes, distanceValue, distanceUnit, notes, privacyScope });
+    const sharing = await applyHealthSharing(supabase, { householdId: parsed.data.householdId, memberId: membership.memberId }, formData, { subjectMemberId: fitnessSession.memberId, privacyScope: fitnessSession.privacyScope });
+    if (sharing) return { error: sharingNotSaved(sharing) };
 
     revalidatePath("/health");
     return { notice: "Saved." };

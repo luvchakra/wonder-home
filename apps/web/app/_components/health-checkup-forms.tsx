@@ -21,6 +21,7 @@ import {
   updateCheckupAction,
 } from "../(auth)/health-checkup-actions";
 import { withName, type HealthFormLabels } from "../_lib/health-form-labels";
+import { HealthPrivacyField } from "./health-privacy-field";
 import { BookAppointmentButton } from "./health-appointment-forms";
 
 /** The stored values, in the order they are offered; their words come from `labels` (story 22-004). */
@@ -42,8 +43,6 @@ const CHECKUP_TYPE_TO_APPOINTMENT_TYPE: Record<CheckupType, AppointmentType> = {
 
 /** Days between checkups, stored as they are; "" is a one-off. */
 const CADENCES = ["", "90", "180", "365", "730"] as const;
-
-const SCOPES = ["private", "selected_family", "household_operational"] as const;
 
 /** Adding a checkup — a household-configured recurring commitment, never one WonderHome invents (story 21-004). */
 export function AddCheckupButton({
@@ -121,13 +120,7 @@ export function AddCheckupButton({
           </Select>
           <Field label={common.nextDue} name="nextDueOn" type="date" required />
           <Field label={common.notes} name="notes" placeholder={common.notesPlaceholder} autoComplete="off" />
-          <Select label={common.whoCanSee} name="privacyScope" defaultValue={defaultPrivacyScope}>
-            {SCOPES.map((scope) => (
-              <option key={scope} value={scope}>
-                {labels.scopes[scope]}
-              </option>
-            ))}
-          </Select>
+          <HealthPrivacyField labels={labels} defaultValue={defaultPrivacyScope} />
           <Button type="submit" disabled={pending} className="w-full">
             {pending ? common.adding : words.submit}
           </Button>
@@ -144,6 +137,8 @@ export function EditCheckupButton({
   label,
   notes,
   nextDueOn,
+  memberId,
+  privacyScope,
   labels,
 }: {
   householdId: string;
@@ -151,6 +146,8 @@ export function EditCheckupButton({
   label: string;
   notes: string | null;
   nextDueOn: string;
+  memberId: string;
+  privacyScope: "private" | "selected_family" | "household_operational";
   labels: HealthFormLabels;
 }) {
   const words = labels.checkup;
@@ -187,6 +184,7 @@ export function EditCheckupButton({
           <Field label={words.whatsDue} name="label" defaultValue={label} required autoComplete="off" />
           <Field label={common.nextDue} name="nextDueOn" type="date" defaultValue={nextDueOn} required />
           <Field label={common.notes} name="notes" defaultValue={notes ?? ""} autoComplete="off" />
+          <HealthPrivacyField labels={labels} defaultValue={privacyScope} subjectMemberId={memberId} />
           <Button type="submit" disabled={pending} className="w-full">
             {pending ? common.saving : common.save}
           </Button>
@@ -221,6 +219,7 @@ export function CheckupActions({
     nextDueOn: string;
     status: "active" | "dismissed";
     linkedAppointmentId: string | null;
+    privacyScope: "private" | "selected_family" | "household_operational";
   };
   members: { id: string; displayName: string }[];
   defaultPrivacyScope: "private" | "selected_family" | "household_operational";
@@ -267,7 +266,16 @@ export function CheckupActions({
           }
         />
       ) : null}
-      <EditCheckupButton householdId={householdId} checkupId={checkup.id} label={checkup.label} notes={checkup.notes} nextDueOn={checkup.nextDueOn} labels={labels} />
+      <EditCheckupButton
+        householdId={householdId}
+        checkupId={checkup.id}
+        label={checkup.label}
+        notes={checkup.notes}
+        nextDueOn={checkup.nextDueOn}
+        memberId={checkup.memberId}
+        privacyScope={checkup.privacyScope}
+        labels={labels}
+      />
       <Pill type="button" tone="quiet" disabled={dismissPending} onClick={() => submit(dismissAction)} aria-label={common.remove} title={common.remove}>
         <Ban aria-hidden className="size-3.5" />
       </Pill>

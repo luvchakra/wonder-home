@@ -19,6 +19,7 @@ import { requireMembership } from "@wonderhome/core/identity/households";
 import { householdInstant } from "@wonderhome/core/school/times";
 
 import type { ActionState } from "./actions";
+import { applyHealthSharing, sharingNotSaved } from "./health-sharing";
 
 /** Booking, confirming, completing, cancelling and rescheduling a health appointment (story 21-002). */
 const createSchema = z.object({
@@ -108,9 +109,12 @@ export async function createAppointmentAction(_previous: ActionState, formData: 
       calendarSync: parsed.data.calendarSync === "true",
     });
 
+    const sharing = await applyHealthSharing(supabase, { householdId: parsed.data.householdId, memberId: membership.memberId }, formData, { subjectMemberId: parsed.data.memberId, privacyScope: parsed.data.privacyScope });
+
     revalidatePath("/health");
 
     const warnings: string[] = [];
+    if (sharing) warnings.push(sharingNotSaved(sharing));
     if (result.duplicateOf) warnings.push("This looks similar to one already on the list — booked anyway, since a real follow-up does happen.");
     if (result.conflicts.length > 0) warnings.push(`${result.conflicts.length === 1 ? "Something else is" : "Some things are"} booked at the same time.`);
 

@@ -16,11 +16,10 @@ import { Switch } from "@wonderhome/core/ui/switch";
 import type { ActionState } from "../(auth)/actions";
 import { createAppointmentAction, setAppointmentStatusAction } from "../(auth)/health-appointment-actions";
 import type { HealthFormLabels } from "../_lib/health-form-labels";
+import { HealthPrivacyField } from "./health-privacy-field";
 
 /** The stored values, in the order they are offered; their words come from `labels` (story 22-004). */
 const TYPES: AppointmentType[] = ["doctor", "dentist", "eye_care", "physiotherapy", "dermatology", "specialist", "diagnostic", "vaccination", "mental_wellness", "other"];
-
-const SCOPES = ["private", "selected_family", "household_operational"] as const;
 
 type Step = 0 | 1 | 2 | 3 | 4 | 5;
 const STEP_COUNT = 6;
@@ -138,13 +137,7 @@ export function BookAppointmentButton({
           <div className={step === 4 ? "space-y-3" : "hidden"}>
             <Field label={words.prepare} name="preparationNotes" placeholder={words.preparePlaceholder} autoComplete="off" />
             <Field label={common.notes} name="notes" placeholder={common.notesPlaceholderElse} autoComplete="off" />
-            <Select label={common.whoCanSee} name="privacyScope" defaultValue={defaultPrivacyScope}>
-              {SCOPES.map((scope) => (
-                <option key={scope} value={scope}>
-                  {labels.scopes[scope]}
-                </option>
-              ))}
-            </Select>
+            <HealthPrivacyField labels={labels} defaultValue={defaultPrivacyScope} />
           </div>
 
           <div className={step === 5 ? "space-y-3" : "hidden"}>

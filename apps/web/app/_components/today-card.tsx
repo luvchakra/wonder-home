@@ -1,4 +1,4 @@
-import { ChevronRight, Clapperboard, CloudRain, Sun, Tv } from "lucide-react";
+import { ChevronRight, Clapperboard, CloudRain, CloudSun, Sun, Tv } from "lucide-react";
 import Link from "next/link";
 
 import { pickFew, screenLists, type ScreenPick } from "@wonderhome/core/home/screen-picks";
@@ -78,7 +78,7 @@ export async function TodayCard({ session, now, date }: { session: Session; now:
   const rainy = Boolean(today?.rainAt);
 
   return (
-    <div className="relative z-10 mx-4 mt-4 rounded-[var(--wh-radius)] bg-[var(--wh-surface)]/92 p-3 shadow-[var(--wh-shadow-card)] backdrop-blur-sm sm:absolute sm:end-4 sm:top-4 sm:m-0 sm:w-[21rem]">
+    <div data-today-card="" className="relative z-10 mx-4 mt-4 rounded-[var(--wh-radius)] bg-[var(--wh-surface)]/92 p-3 shadow-[var(--wh-shadow-card)] backdrop-blur-sm sm:absolute sm:end-4 sm:top-4 sm:m-0 sm:w-[21rem]">
       <div className="flex items-start gap-2.5">
         {rainy ? (
           <CloudRain aria-hidden className="mt-0.5 size-6 shrink-0 text-[var(--wh-tone-home)]" />
@@ -106,6 +106,13 @@ export async function TodayCard({ session, now, date }: { session: Session; now:
           <span className="break-words">{t("today.weatherIn", { place: weather.place })}</span>
         </p>
       ) : null}
+      {weather?.state === "off" && weather.reason === "no_area" && view.permissions.includes("household.manage") ? (
+        // Weather is on here but nobody has said where home is; only an Admin can, and only on Integrations.
+        <Link href="/household/integrations#weather" className="mt-2 flex items-center gap-1.5 text-xs font-medium text-[var(--wh-primary)] hover:underline">
+          <CloudSun aria-hidden className="size-4 shrink-0" />
+          <span className="break-words">{t("today.weatherArea")}</span>
+        </Link>
+      ) : null}
       {cinema || stream ? (
         <div className="mt-2 grid gap-1 border-t border-[var(--wh-border)] pt-2">
           {cinema ? <PickRow pick={cinema} label={t("today.inCinemas")} kindWord={t("today.film")} /> : null}
@@ -123,7 +130,7 @@ export async function TodayCard({ session, now, date }: { session: Session; now:
 /** What shows while the weather and films are on their way: the day and the household, as before. */
 export function TodayCardFallback({ date, household }: { date: string; household: string }) {
   return (
-    <div className="relative z-10 mx-4 mt-4 flex items-start gap-2.5 rounded-[var(--wh-radius)] bg-[var(--wh-surface)]/92 p-3 shadow-[var(--wh-shadow-card)] sm:absolute sm:end-4 sm:top-4 sm:m-0 sm:w-[21rem]">
+    <div data-today-card="" className="relative z-10 mx-4 mt-4 flex items-start gap-2.5 rounded-[var(--wh-radius)] bg-[var(--wh-surface)]/92 p-3 shadow-[var(--wh-shadow-card)] sm:absolute sm:end-4 sm:top-4 sm:m-0 sm:w-[21rem]">
       <Sun aria-hidden className="mt-0.5 size-6 shrink-0 text-[var(--wh-tone-money)]" />
       <DateLine date={date} household={household} />
     </div>

@@ -422,6 +422,17 @@
    small step-bob on the way and a rest at each end, so it reads as a cat out
    for a walk rather than a lift. `top` is relative to the column, which is as
    tall as the card's words; `--wh-cat-size` keeps it from walking off the end. */
+/* The Home header's cat breathing: a small rise and settle, a slight lean. */
+@keyframes wh-cat-bob {
+  0%,
+  100% {
+    transform: translateY(0) rotate(0deg);
+  }
+  50% {
+    transform: translateY(-4px) rotate(-1.5deg);
+  }
+}
+
 @keyframes wh-cat-wander {
   0%,
   12% {
@@ -549,6 +560,11 @@
 .wh-cat-wander {
   animation: wh-cat-wander 12s ease-in-out 1.5s infinite;
 }
+.wh-cat-bob {
+  transform-box: fill-box;
+  transform-origin: 50% 100%;
+  animation: wh-cat-bob 3.4s ease-in-out infinite;
+}
 .wh-cat-sneak {
   animation: wh-cat-sneak 2.6s cubic-bezier(0.3, 0.7, 0.4, 1) 0.4s both;
 }
@@ -622,6 +638,7 @@
   .wh-hand-wave,
   .wh-cat-sneak,
   .wh-cat-wander,
+  .wh-cat-bob,
   .wh-cat-blink,
   .wh-cat-tail {
     animation: none;
