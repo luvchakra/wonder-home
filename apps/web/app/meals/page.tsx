@@ -914,6 +914,7 @@ function MealCard({
       <ul>
         <ExpandableRow
           className="min-h-0 gap-2.5 py-1.5"
+          trailingCorner
           trailing={<DishTaste householdId={householdId} dish={meal.recipe?.name ?? meal.name} taste={taste.taste} labels={tasteLabels} />}
           summary={
             <>
@@ -925,10 +926,12 @@ function MealCard({
                   <Utensils className="size-5" />
                 </span>
               )}
-              {/* The words take every bit of width between the picture and the icons (the owner, 2026-10-21): the status sits under them, not in a column of its own. */}
+              {/* The words take the card's whole width (the owner, 2026-10-21): like, dislike and the chevron sit in the top-right corner, so only the dish's own line keeps clear of them, and the status rides the time line to keep the card short. */}
               <span className="min-w-0 flex-1 space-y-0.5">
-                <span className="block text-sm leading-snug font-semibold break-words">{meal.name}</span>
-                <span className="block text-xs leading-snug text-[var(--wh-foreground-muted)]">
+                <span className="flex min-h-9 items-center pe-[7rem] text-sm leading-snug font-semibold">
+                  <span className="min-w-0 break-words">{meal.name}</span>
+                </span>
+                <span className="block text-xs leading-relaxed text-[var(--wh-foreground-muted)]">
                   {[labels.slots[meal.slot], formatTime(timezone, meal.readyBy), toGet > 0 ? t("meals.card.toGet", { count: toGet }) : null]
                     .filter((piece): piece is string => Boolean(piece))
                     .map((piece, index, pieces) => (
@@ -939,10 +942,8 @@ function MealCard({
                           {index < pieces.length - 1 ? " ·" : null}
                         </span>
                       </Fragment>
-                    ))}
-                </span>
-                <span className="block pt-0.5">
-                  <Badge tone={tone}>{t(`meals.status.${meal.status}`)}</Badge>
+                    ))}{" "}
+                  <Badge tone={tone} className="align-middle">{t(`meals.status.${meal.status}`)}</Badge>
                 </span>
               </span>
             </>
