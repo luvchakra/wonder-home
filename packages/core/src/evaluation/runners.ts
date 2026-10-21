@@ -16,7 +16,9 @@ import { composeRoster } from "../conversation/roster";
 import { openScreenReply } from "../conversation/screens";
 import { permissionsFor } from "../identity/permissions";
 import { resolveCalendarSpan } from "../conversation/temporal";
+import { isoDateIn } from "../context/format";
 import { focusFromAnswer } from "../homebrain/focus";
+import { familyGlances } from "../homebrain/sleep/profiles";
 import { answerWithHomeBrain, type HomeBrainAnswer } from "../homebrain/turn";
 import { decideConfirmation } from "../homesend/confirmation";
 import { detectInstructionInjection } from "../homesend/injection";
@@ -276,10 +278,17 @@ async function composedAnswer(
       return { text: composeRelations(question, people, household.records.relationships ?? []).text };
     }
     if (intent.parameters.scope === "people") {
-      return { text: composeRoster(household.members.filter((m) => m.status === "active"), {
+      const active = household.members.filter((m) => m.status === "active");
+      // "What do you know about the family?": each person at a glance, from what this member may see, as the route composes it.
+      const glances =
+        intent.parameters.overview === true
+          ? familyGlances(contextItemsFor(household, c.actor), { memberIds: active.filter((m) => m.memberType !== "helper").map((m) => m.id), today: isoDateIn(household.now, household.timezone) })
+          : undefined;
+      return { text: composeRoster(active, {
         viewerMemberId: who.id,
         householdName: household.name,
         pets: (household.records.pets ?? []).filter((pet) => pet.active).map((pet) => ({ name: pet.name, species: pet.species })),
+        ...(glances ? { glances } : {}),
       }) };
     }
     const when = intent.parameters.when;

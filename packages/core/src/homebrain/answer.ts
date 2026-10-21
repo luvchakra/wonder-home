@@ -1,5 +1,6 @@
 import { inWindow, type BrainReading } from "./question";
 import type { GroundedFact } from "./grounding";
+import { sayFact } from "./say";
 import { describeViolations, validateAnswer, type ValidationContext, type Violation } from "./validate";
 
 /**
@@ -89,6 +90,10 @@ export function composeFromFacts(facts: readonly GroundedFact[], reading: BrainR
   const limit = options.limit ?? 6;
   const answering = answeringFacts(facts, reading);
   if (answering.length === 0) return null;
+  if (reading.aboutFamily) {
+    const family = familyFirst(answering);
+    if (family) return family;
+  }
   // The goal's shape (HomeBrain 4.0 §3.10). To find out, the fact comes
   // first and what the rules noticed about it after — except a count, which
   // is the fact. To decide, what the rules noticed leads: it is what decides.
@@ -112,7 +117,25 @@ export function composeFromFacts(facts: readonly GroundedFact[], reading: BrainR
   // Thursday?"); "did Kunal pay it?" or "do we have milk?" is answered by
   // what the fact says, which the reader sees for themselves.
   const lead = reading.goal === "check" && /\b(?:is there anything|are there any|is anything|anything (?:on|due|planned|happening))\b/i.test(reading.retrievalText) ? `Yes. ${plainLead}` : reading.goal === "decide" ? `Here is what WonderHome has on record that bears on it${reading.time ? ` ${reading.time.label}` : ""}:` : plainLead;
-  return `${lead}\n${pool.slice(0, limit).map((fact) => `- ${fact.statement}`).join("\n")}`;
+  // Each fact as a person reads it, with where to see it (say.ts): never a
+  // raw ISO day or an action code, which were written for a model.
+  return `${lead}\n${pool.slice(0, limit).map((fact) => `- ${sayFact(fact)}`).join("\n")}`;
+}
+
+/**
+ * "What do you know about the family?", from the facts alone: each person —
+ * at a glance where something is on record about them, else who they are —
+ * then, after the family, at most two other things. Null when no fact is
+ * about anyone.
+ */
+function familyFirst(answering: readonly GroundedFact[]): string | null {
+  const glances = answering.filter((fact) => fact.domain === "profile");
+  const glanced = new Set(glances.flatMap((fact) => fact.subjectMemberIds));
+  const members = answering.filter((fact) => fact.domain === "people" && fact.subjectMemberIds.length === 1 && !glanced.has(fact.subjectMemberIds[0]!));
+  const people = [...glances, ...members].slice(0, 10);
+  if (people.length === 0) return null;
+  const rest = answering.filter((fact) => !people.includes(fact) && fact.domain !== "people" && fact.domain !== "household").slice(0, 2);
+  return `Here is what WonderHome has on record about the family:\n${[...people, ...rest].map((fact) => `- ${sayFact(fact)}`).join("\n")}`;
 }
 
 /**

@@ -768,7 +768,7 @@ describe("Corrections and current truth (§8, §9)", () => {
 
   it("answers from a Review belief the question paraphrases, with no model", () => {
     const { reading, relevant } = ask("When do the children go to bed?", { items });
-    expect(composeFromFacts(relevant, reading)).toContain("The children are in bed by 9pm on school nights (registered).");
+    expect(composeFromFacts(relevant, reading)).toContain("The children are in bed by 9pm on school nights (registered)");
   });
 
   it("reads what the household confirmed in HomeBrain Review, and says where it came from", () => {
@@ -997,5 +997,99 @@ describe("The facts budget is tokens, not only a count (HomeBrain 4.0 §3.4, sto
     expect(chosen.length).toBeGreaterThan(0);
     expect(chosen.length).toBeLessThan(all.filter((fact) => fact.relevant).length);
     expect(chosen[0]!.statement).toBe(all.find((fact) => fact.relevant)!.statement);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// The owner's report (2026-10-21): "links are not appearing in chat anymore"
+// ---------------------------------------------------------------------------
+
+describe("An answer composed from the facts is written for a person (the owner, 2026-10-21)", () => {
+  // The owner's turn: "what do you know about the family", read as a status
+  // question; the model's drafts refused twice for an unsupported name; the
+  // facts shown as they were written for a model.
+  const records: ContextRecords = {
+    ...RECORDS,
+    agenda: {
+      needsYou: [
+        { subjectKey: "bill.e-1", title: "Electricity", status: "at_risk", riskLevel: "high", notable: true, reason: "Electricity was due 21 days ago.", action: { action: "pay_bill" }, dueOn: "2026-09-02" },
+        { subjectKey: "asset.ac-1", title: "Air Conditioners", status: "at_risk", riskLevel: "medium", notable: true, reason: "Air Conditioners is due for service in 8 days. It is covered by annual maintenance contract.", action: { action: "book_service" }, dueOn: "2026-10-01" },
+      ],
+      handled: [{ key: "home", title: "Home & upkeep" }, { key: "bills", title: "Bills" }],
+      checked: 37,
+      unavailable: [],
+    },
+  };
+  const items = itemsFor({ memberId: "kunal" }, records);
+  const inventing: HomeBrainTurn["compose"] = async () => ({ text: "Priya will sort it out.", mode: "answer", grounded: true, usedFacts: [] });
+  const ISO_DAY = /\b\d{4}-\d{2}-\d{2}\b/;
+
+  it("names each thing, says its day in words, drops the action code and links to its screen", async () => {
+    const answer = await turn("What needs attention?", inventing, { items });
+    expect(answer.source).toBe("deterministic");
+    expect(answer.text).toContain("- **Electricity** (urgent) — Electricity was due 21 days ago (due Wed 2 Sep) → [Bills](/bills)");
+    expect(answer.text).toContain("**Air Conditioners** — Air Conditioners is due for service in 8 days. It is covered by annual maintenance contract (due Thu 1 Oct) → [Home & upkeep](/household/home)");
+    expect(answer.text).toContain("WonderHome checked 37 things across home & upkeep, bills and 2 need someone → [Home](/)");
+    expect(answer.text).not.toMatch(ISO_DAY);
+    expect(answer.text).not.toMatch(/suggested:|pay_bill|book_service|Needs attention/);
+  });
+
+  it("every line it lists carries a link the chat renders", async () => {
+    const answer = await turn("Which bills are due this week?", null, { items });
+    const lines = (answer.text ?? "").split("\n").filter((line) => line.startsWith("- "));
+    expect(lines.length).toBeGreaterThan(0);
+    for (const line of lines) expect(line).toMatch(/→ \[[^\]]+\]\(\/[a-z/-]*\)$/);
+    expect(answer.text).not.toMatch(ISO_DAY);
+  });
+
+  it("'what do you know about the family' leads with the family, each at a glance, then what needs attention", async () => {
+    const answer = await turn("what do you know about the family", inventing, { items });
+    expect(answer.reading.aboutFamily).toBe(true);
+    expect(answer.reading.people).toEqual([]);
+    const text = answer.text ?? "";
+    expect(text).toMatch(/^Here is what WonderHome has on record about the family:/);
+    const lines = text.split("\n");
+    expect(lines[1]).toContain("Kunal at a glance");
+    for (const name of ["Kunal", "Upasana", "Asmi", "Manan", "Sunita"]) expect(text).toContain(name);
+    // The family first; the bills after it.
+    expect(text.indexOf("Manan")).toBeLessThan(text.indexOf("Electricity"));
+    expect(text).not.toMatch(ISO_DAY);
+    expect(text).not.toMatch(/suggested:|pay_bill/);
+    // Never health or money in a person at a glance.
+    expect(lines.filter((line) => line.includes("at a glance")).join("\n")).not.toMatch(/dentist|Dr\. Rao|₹/);
+  });
+
+  it("'my family' is the whole family, not the person asking", () => {
+    const { reading } = ask("What do you know about my family?");
+    expect(reading.aboutFamily).toBe(true);
+    expect(reading.people).toEqual([]);
+    expect(reading.focus.has("people")).toBe(true);
+  });
+
+  it("is not a question about the family's calendar or dinner", () => {
+    expect(ask("What do you know about the family calendar?").reading.aboutFamily).toBeUndefined();
+    expect(ask("Tell me about the family dinner").reading.aboutFamily).toBeUndefined();
+  });
+
+  it("a model's answer that links to the People screen is not refused as a name (the refusal behind the owner's turn)", async () => {
+    let calls = 0;
+    const answer = await turn("what do you know about the family", async (input) => {
+      calls += 1;
+      const member = input.facts.find((fact) => fact.text.startsWith("Child A is a child"))!;
+      return { text: "Two children and two adults.\n- **Child A** — a child → [People](/household/members)\n- More on the [Calendar](/calendar)", mode: "answer", grounded: true, usedFacts: [member.id] };
+    }, { items });
+    expect(calls).toBe(1);
+    expect(answer.source).toBe("model");
+    expect(answer.validation.rejected).toEqual([]);
+    expect(answer.text).toContain("**Asmi**");
+  });
+
+  it("a model's accepted answer says a day as a day, and keeps a day in a link's path", async () => {
+    const answer = await turn("Which bills are due this week?", async (input) => {
+      const electricity = input.facts.find((fact) => fact.text.includes("Electricity (utility)"))!;
+      return { text: "The **Electricity** bill of ₹2,400 is due 2026-09-25 → [Bills](/bills?due=2026-09-25)", mode: "answer", grounded: true, usedFacts: [electricity.id] };
+    }, { items });
+    expect(answer.source).toBe("model");
+    expect(answer.text).toBe("The **Electricity** bill of ₹2,400 is due Fri 25 Sep → [Bills](/bills?due=2026-09-25)");
   });
 });

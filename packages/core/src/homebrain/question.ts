@@ -69,7 +69,21 @@ export type BrainReading = {
   dependants: string[];
   /** What the person is trying to do with the answer (HomeBrain 4.0 §3.10): its shape, and how far retrieval follows links. */
   goal: Goal;
+  /**
+   * "What do you know about the family?", "tell me about us": the family
+   * itself is the answer — its people, each at a glance — the way "what do
+   * you know about Asmi?" is answered by Asmi. Absent means no.
+   */
+  aboutFamily?: boolean;
 };
+
+/**
+ * A question about the family as a whole, the way "what do you know about
+ * Asmi?" is about her: its people lead. Not "the family's calendar" or "the
+ * family dinner" — those name a part of the home.
+ */
+export const ABOUT_FAMILY =
+  /\b(?:tell me (?:all |everything |more )?about|what (?:do|did|else do) you know about|what (?:can|could) you tell me about|what do you have (?:on record )?(?:about|on)|describe)\s+(?:the |my |our |this )?(?:whole )?(?:family|household|us|everyone|everybody|family members|household members)\b(?!['’]s|\s+(?:calendar|dinner|lunch|breakfast|time|event|events|plans?|budget|bills?|trip|holiday|food|preferences?|likes))/i;
 
 /**
  * Where a question naturally reaches past the domain it names.
@@ -160,7 +174,9 @@ export function readBrainQuestion(question: string, items: readonly HouseholdCon
     }
   }
   let dependants: string[] = [];
-  if (SELF_WORDS.test(text)) {
+  // "My family" is everyone in it, not the person asking.
+  const aboutFamily = ABOUT_FAMILY.test(text);
+  if (SELF_WORDS.test(text) && !aboutFamily) {
     const self = resolvePerson("me", items, { viewerMemberId: options.viewerMemberId }).selected;
     const aboutOnlyMe = people.length === 0;
     if (self && !people.some((person) => person.memberId === self.memberId)) people.push(self);
@@ -192,6 +208,11 @@ export function readBrainQuestion(question: string, items: readonly HouseholdCon
     if (words.some((word) => !WEAK_WORDS.has(word) && said.has(word))) focus.add(domain);
   }
   for (const domain of domains) if (!read.domains.has(domain)) focus.add(domain);
+  // The family as a whole: its people are what the question is about.
+  if (aboutFamily) {
+    domains.add("people");
+    focus.add("people");
+  }
 
   const wantsConflicts = CONFLICT_WORDS.test(text);
   // What a question connects to starts from what it is unmistakably about:
@@ -228,6 +249,7 @@ export function readBrainQuestion(question: string, items: readonly HouseholdCon
     dependants,
     // The goal is the question's own: "and on Friday?" after "should we…?" is a plain question.
     goal: readGoal(question),
+    ...(aboutFamily ? { aboutFamily: true } : {}),
   };
 }
 

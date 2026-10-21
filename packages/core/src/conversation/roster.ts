@@ -41,11 +41,41 @@ export function isRosterQuestion(utterance: string): boolean {
   return [said, shorter].some((text) => ROSTER_QUESTION.test(text) || ROSTER_ALSO.some((pattern) => pattern.test(text)));
 }
 
-export function composeRoster(people: readonly RosterPerson[], options: { viewerMemberId: string; householdName: string; pets?: readonly RosterPet[] }): string {
+/**
+ * "What do you know about the family?", "tell me about us" — the family as a
+ * whole, the way "what do you know about Asmi?" is about her (the owner's
+ * report, 2026-10-21: it was read as "what's going on?" and answered with the
+ * overdue bills). Answered by the roster, each person at a glance. A bare
+ * "about us" is the same question: normalise.ts takes "tell me" off first.
+ */
+const FAMILY_OVERVIEW =
+  /^(?:(?:can|could) you )?(?:tell me (?:all |everything |more )?about|what (?:do|did|else do) you know about|what (?:can|could) you tell me about|what do you have (?:on record )?(?:about|on)|describe|about) (?:the |my |our |this )?(?:whole )?(?:family|household|us|everyone|everybody|family members|household members)(?: (?:here|at home))?$/i;
+
+export function isFamilyOverviewQuestion(utterance: string): boolean {
+  const said = utterance
+    .trim()
+    .replace(/[.!?]+$/, "")
+    .replace(/^(?:(?:ok(?:ay)?|so|hey|and|well|hi)[,.\s]+)+/i, "")
+    .trim();
+  return FAMILY_OVERVIEW.test(said);
+}
+
+export type RosterOptions = {
+  viewerMemberId: string;
+  householdName: string;
+  pets?: readonly RosterPet[];
+  /** Each person at a glance (`homebrain/sleep/profiles.ts`'s `familyGlances`), for "what do you know about the family?". */
+  glances?: ReadonlyMap<string, string>;
+  /** What needs a person around the home, counted, for the same question: the family first, then this, with where to see it. */
+  attention?: { count: number; urgent: number };
+};
+
+export function composeRoster(people: readonly RosterPerson[], options: RosterOptions): string {
   const describe = (person: RosterPerson) => {
     const goesBy = person.nickname && person.nickname.toLowerCase() !== person.displayName.split(/\s+/)[0]?.toLowerCase() ? ` (${person.nickname})` : "";
     const who = person.id === options.viewerMemberId ? "you" : person.relationship ? person.relationship.toLowerCase() : null;
-    return `- **${person.displayName}**${goesBy}${who ? ` — ${who}` : ""}`;
+    const detail = [who, options.glances?.get(person.id)].filter(Boolean).join(" · ");
+    return `- **${person.displayName}**${goesBy}${detail ? ` — ${detail}` : ""}`;
   };
   const adults = people.filter((person) => person.memberType === "adult");
   const children = people.filter((person) => person.memberType === "child");
@@ -59,6 +89,14 @@ export function composeRoster(people: readonly RosterPerson[], options: { viewer
   if (helpers.length > 0) sections.push(`**Helping at home**\n${helpers.map(describe).join("\n")}`);
   const pets = options.pets ?? [];
   if (pets.length > 0) sections.push(`And ${pets.length === 1 ? "a pet" : "the pets"}: ${pets.map((pet) => (pet.species ? `${pet.name} (${pet.species.toLowerCase()})` : pet.name)).join(", ")}.`);
+  const attention = options.attention;
+  if (attention) {
+    sections.push(
+      attention.count === 0
+        ? "Around the home, nothing needs anyone right now — see [Home](/)."
+        : `Around the home, ${count(attention.count, "thing needs", "things need")} someone${attention.urgent > 0 ? ` (${attention.urgent} urgent)` : ""} — see [Home](/).`,
+    );
+  }
   sections.push("Someone missing? Add them in [Family](/family).");
   return sections.join("\n\n");
 }
