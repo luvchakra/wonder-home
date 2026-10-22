@@ -11,11 +11,11 @@ in `docs/progress/`; for the running log of what changed when, `tracking/PROGRES
 
 ## The whole picture
 
-**368 of 393 stories done — 93.6%**
+**371 of 396 stories done — 93.7%**
 
 | Status | Stories |
 |---|---:|
-| Done | 368 |
+| Done | 371 |
 | In Progress | 8 |
 | Blocked | 1 |
 | Not Started | 12 |
@@ -52,7 +52,7 @@ in `docs/progress/`; for the running log of what changed when, `tracking/PROGRES
 | 24 HomePlaces | `██████████` | 14 | 14 | — |
 | 25 HomeFood | `████████░░` | 25 | 30 | 5 not started |
 | 26 HomeEvents | `███████░░░` | 13 | 17 | 1 in progress, 3 not started |
-| 27 Notification Channels and Events | `█████████░` | 21 | 22 | 1 blocked |
+| 27 Notification Channels and Events | `█████████░` | 24 | 25 | 1 blocked |
 
 ## What is left
 
@@ -648,7 +648,7 @@ in `docs/progress/`; for the running log of what changed when, `tracking/PROGRES
 
 ### 27 — Notification Channels and Events
 
-21 of 22 done `█████████░`
+24 of 25 done `█████████░`
 
 | Story | Priority | Status | Notes |
 |---|---|---|---|
@@ -674,5 +674,8 @@ in `docs/progress/`; for the running log of what changed when, `tracking/PROGRES
 | `27-020` Health reminders on the household's clock, at their time | P1 | Done | The owner's review, 2026-10-22: appointment and measurement reminders ran only in the 8:30 IST daily sweep and read the day in UTC, so "Today's the day" could come after an early appointment, or a day early near midnight. `dueRemindersFor` and `routineDueNow` now read the household's local day: advance and preparation from 09:00, day-of from 07:00 or two hours before an early appointment and never after it starts, a measurement from 09:00. Both sweeps run on the five-minute clock (the daily sweep stays as a backstop) and send each reminder once, whatever became of it |
 | `27-021` The clock looks where a reminder is due | P1 | Done | The owner's review, 2026-10-22 (I8, and a gap found with it): the five-minute stage pass walked every household with an open reminder, so one whose next stage needs a new row (a dismissed evening-before reminder, then "this morning") or a record written inside the five-minute claim waited for an app open or the 8:30 sweep, and every household was read each tick. Migration `20261022100000_reminder_next_check.sql` (live): `notification_reconciliations.next_due_at`, set by each pass to the next moment anything changes by itself (`nextReminderCheck`: a reminder still to land, its next stage, an expiry, the channel step's and the backup's wait; at most six hours away), and moved to now by a trigger when a record a reminder reads changes or a person marks one done or dismisses it. A marker set at the start of a pass keeps a write during it from being overwritten. `advanceDueStages` reads only the households that are due, earliest first, at most 40 a tick |
 | `27-022` A chat notice is written once per change | P2 | Done | Found in the live events, 2026-10-22: each chat message rewrote its notice three times within 200 ms (the send, the page it refreshes and the page load's pass all sweep), leaving 24 "rescheduled" events for eight messages. `createNotification` leaves a notice that already says this alone and rewrites only over the words it read, so a concurrent writer changes nothing (`create.test.ts`) |
+| `27-023` Every notification use case is tested | P0 | Done | The owner, 2026-10-22: "write test cases for each item in Excel and run them, fix if any issues found". `notifications/use-cases.test.ts`: one block per workbook row (R01–R08, H01–H03, N01–N09, D01–D05, E01–E03, X01–X02), 83 tests against the real builders, planners, gates and timings. Two bugs found and fixed: health appointment and measurement reminders were sent as ordinary alerts, so they never pushed or emailed (`health/reminders.ts`, `routine-reminders.ts` now say `reminder`; `health/reminders-delivery.test.ts`); and one held back by quiet hours was later delivered in the app only (`deliverDueNotifications` treats health's own reminders as timed, `stages.test.ts`). Where the workbook described the code wrongly (D02, N01, N08, R06, H01) the workbook was corrected |
+| `27-024` The notification center | P0 | Done | The owner, 2026-10-22: "add notification center where adult can update their notification choices". Settings → Notifications opens with one row per kind (`_components/notification-center-card.tsx`, `ExpandableRow`): the collapsed row says in words whether it comes, when and where; opened, "Get these", "When" and "Where" change it, each saving at once and only that kind (`saveReminderKindAction`), so an untouched kind keeps following the household's starting timing. It replaces the separate timing and "What goes where" cards (both removed). A kind or channel an Admin turned off for the household says so and is not offered. Words in eight languages; help ¶8 and the reminder-timing FAQ |
+| `27-025` Household notifications for Admins | P0 | Done | The owner, 2026-10-22: "notification related admin settings that can control the notification experience of all users". Manage Household → Household notifications (`/household/notifications`, Admins only): each kind on or off for everyone and its starting timing; which channels beyond the app may reach anyone; whether an unanswered reminder takes the second-channel step and the backup step; the household's quiet hours. Kept as two versioned, audited `policies` rows (`notifications/household-settings.ts`; Quiet hours keeps HomeTalk's row), written only when something changed and only real choices. Enforced on the server: `reconcile.ts` (kinds off, starting timing, both steps, quiet hours) and `deliverNotification` (a channel off holds everything but a critical alert). A person narrows these and never widens them. Help ¶15 in eight languages |
 
 _Generated 2026-10-22 from 28 backlog files._

@@ -762,4 +762,12 @@ export const settingsMr: AreaCatalog<typeof settingsEn> = {
   "location.turnedOn": "लोकेशन शेअर करणे सुरू आहे.",
   "location.turnedOff": "लोकेशन शेअर करणे बंद आहे, आणि शेवटचे लोकेशन पुसले गेले.",
   "location.quote": "दूर असूनही, जवळच.",
+  "notificationCenter.title": "सूचना केंद्र",
+  "notificationCenter.lede": "प्रत्येक प्रकारची सूचना, आणि ती तुमच्यापर्यंत कशी पोहोचते. एखादी उघडून निवडा की ती यावी का, केव्हा, आणि अ‍ॅपशिवाय कुठे.",
+  "notificationCenter.on": "या मिळवा",
+  "notificationCenter.when": "केव्हा",
+  "notificationCenter.where": "कुठे",
+  "notificationCenter.off": "तुमच्यासाठी बंद",
+  "notificationCenter.householdOff": "एका अ‍ॅडमिनने संपूर्ण घरासाठी बंद केले आहे",
+  "notificationCenter.householdChannelsOff": "लोकांपर्यंत पोहोचण्याचे काही मार्ग एका अ‍ॅडमिनने संपूर्ण घरासाठी बंद केले आहेत, म्हणून ते इथे दिसत नाहीत.",
 };

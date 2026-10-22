@@ -734,4 +734,12 @@ export const settingsZh: AreaCatalog<typeof settingsEn> = {
   "location.turnedOn": "位置共享已开启。",
   "location.turnedOff": "位置共享已关闭，最后的位置已删除。",
   "location.quote": "相隔两地，依然相近。",
+  "notificationCenter.title": "通知中心",
+  "notificationCenter.lede": "每一类通知，以及它如何送达你。打开一项，选择是否接收、何时接收，以及应用之外的渠道。",
+  "notificationCenter.on": "接收",
+  "notificationCenter.when": "何时",
+  "notificationCenter.where": "在哪里",
+  "notificationCenter.off": "已为你关闭",
+  "notificationCenter.householdOff": "管理员已为全家关闭",
+  "notificationCenter.householdChannelsOff": "管理员已为全家关闭部分联系方式，因此这里不显示它们。",
 };

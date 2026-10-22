@@ -13,20 +13,16 @@ import { loadMutes, muteKey, ROUTABLE_CHANNELS, type RoutableChannel } from "@wo
 import { loadChannelChecks } from "@wonderhome/core/notifications/channel-check";
 import { createAdminClient } from "@wonderhome/core/db/admin";
 import { emailAddressFor } from "@wonderhome/core/notifications/deliver";
-import { NOTIFICATION_CATEGORIES, REMINDER_POLICIES } from "@wonderhome/core/notifications/policies";
+import { NOTIFICATION_CATEGORIES, REMINDER_POLICIES, TUNABLE_CATEGORIES } from "@wonderhome/core/notifications/policies";
+import { loadHouseholdNotificationSettings } from "@wonderhome/core/notifications/household-settings";
 import { loadReminderPreferences } from "@wonderhome/core/notifications/reminder-preferences";
 import { atLocal, localMoment } from "@wonderhome/core/notifications/timing";
 
-import {
-  saveChannelPreferenceAction,
-  saveQuietHoursAction,
-  saveReminderPreferencesAction,
-  saveSmartRemindersAction,
-} from "../../(auth)/notification-preferences-actions";
+import { saveChannelPreferenceAction, saveQuietHoursAction, saveSmartRemindersAction } from "../../(auth)/notification-preferences-actions";
 import { ChannelPreferenceCard } from "../../_components/notification-preferences-form";
-import { ChannelRoutingCard } from "../../_components/channel-routing-card";
+import { NotificationCenterCard } from "../../_components/notification-center-card";
 import { PushDeviceCard } from "../../_components/push-device-card";
-import { QuietHoursCard, ReminderPreferencesCard, SmartRemindersCard } from "../../_components/reminder-settings-form";
+import { QuietHoursCard, SmartRemindersCard } from "../../_components/reminder-settings-form";
 import { STARTER_OUTCOMES } from "../../_lib/starter-outcomes";
 import { requireSession } from "../../_lib/session";
 import { reasonWords } from "../../_lib/channel-check-words";
@@ -49,10 +45,12 @@ export default async function NotificationSettingsPage() {
   const session = await requireSession("/settings/notifications");
   const { supabase, membership, viewer, secondary } = session;
 
+  // What the household's Admins decided for everyone comes first: it bounds everything below.
+  const household = await loadHouseholdNotificationSettings(supabase, membership.household.id);
   const [preferences, mutes, reminderPreferences, smart, { data: responsibilityData }, { data: deviceRows }] = await Promise.all([
     loadChannelPreferences(supabase, membership.memberId),
     loadMutes(supabase, membership.memberId).catch(() => []),
-    loadReminderPreferences(supabase, membership.memberId),
+    loadReminderPreferences(supabase, membership.memberId, household),
     loadSmartReminderChoices(supabase, membership.memberId),
     supabase
       .from("responsibilities")
@@ -99,6 +97,11 @@ export default async function NotificationSettingsPage() {
   // Email goes only to the confirmed address of the person's own account (story 27-001). Someone
   // with none, a helper who signs in by phone, is not offered it: WhatsApp and push are theirs (27-015).
   const emailOffered = accountEmail !== null;
+  // A channel the household turned off for everyone is not offered (a person narrows the household's choices, never widens them).
+  const householdAllows = (channel: string) => !(household.channelsOff as readonly string[]).includes(channel);
+  const routableChannels = ROUTABLE_CHANNELS.filter(
+    (channel) => (channel !== "email" || emailOffered) && adapters[channel].live && householdAllows(channel) && preferences.find((preference) => preference.channel === channel)?.enabled,
+  );
   const checkFor = (channel: RoutableChannel) => {
     const check = checks.find((row) => row.channel === channel);
     if (!check || !adapters[channel].live) return undefined;
@@ -132,21 +135,49 @@ export default async function NotificationSettingsPage() {
           <p className="mt-0.5 text-sm text-[var(--wh-foreground-muted)]">{t("settingsPage.notifications.lede")}</p>
         </header>
 
+        {/* The notification center (the owner, 2026-10-22): each kind's on/off, timing and channels in one place. */}
+        <NotificationCenterCard
+          householdId={membership.household.id}
+          kinds={NOTIFICATION_CATEGORIES.map((category) => {
+            const tunable = reminderPreferences.find((preference) => preference.category === category);
+            return {
+              category,
+              name: t(`notifications.category.${category}` as TranslationKey),
+              ...((TUNABLE_CATEGORIES as readonly string[]).includes(category) && household.kindsOff.includes(category as (typeof TUNABLE_CATEGORIES)[number]) ? { householdOff: true } : {}),
+              ...(tunable
+                ? {
+                    tunable: {
+                      preset: tunable.preset,
+                      enabled: tunable.enabled,
+                      options: REMINDER_POLICIES[tunable.category].presets.map((preset) => ({ value: preset.key, label: reminderPresetLabel(t, preset.key, preset.label) })),
+                    },
+                  }
+                : {}),
+            };
+          })}
+          channels={routableChannels.map((channel) => ({ channel, name: t(`settingsPage.notifications.channel.${channel}` as TranslationKey) }))}
+          keptOff={mutes.map((mute) => muteKey(mute.category, mute.channel))}
+          householdChannelsOff={household.channelsOff.length > 0}
+          labels={{
+            title: t("notificationCenter.title"),
+            lede: t("notificationCenter.lede"),
+            on: t("notificationCenter.on"),
+            timing: t("settingsPage.notifications.prefs.timing", { category: "{category}" }),
+            when: t("notificationCenter.when"),
+            where: t("notificationCenter.where"),
+            inApp: t("settingsPage.notifications.channel.in_app"),
+            channelFor: t("channelRouting.channelFor", { kind: "{kind}", channel: "{channel}" }),
+            off: t("notificationCenter.off"),
+            householdOff: t("notificationCenter.householdOff"),
+            householdChannelsOff: t("notificationCenter.householdChannelsOff"),
+            failed: t("channelRouting.failed"),
+          }}
+        />
+
         {/* Keyed on what is saved, so a saved change redraws the form with it. */}
         <QuietHoursCard
           key={quiet ? `${quiet.from}-${quiet.until}` : "off"}
           householdId={membership.household.id} quiet={quiet} times={times} timeZone={timeZone} save={saveQuietHoursAction} labels={reminderLabels} />
-
-        <ReminderPreferencesCard
-          key={reminderPreferences.map((preference) => `${preference.preset}:${preference.enabled}`).join(",")}
-          householdId={membership.household.id}
-          rows={reminderPreferences.map((preference) => ({
-            ...preference,
-            options: REMINDER_POLICIES[preference.category].presets.map((preset) => ({ value: preset.key, label: reminderPresetLabel(t, preset.key, preset.label) })),
-          }))}
-          save={saveReminderPreferencesAction}
-          labels={reminderLabels}
-        />
 
         <SmartRemindersCard
           key={`${smart.dailyDigest}-${smart.learnTiming}`}
@@ -208,25 +239,10 @@ export default async function NotificationSettingsPage() {
           }}
         />
 
-        {/* What goes where (story 27-002): only channels this person has on and that reach someone here. */}
-        <ChannelRoutingCard
-          householdId={membership.household.id}
-          kinds={NOTIFICATION_CATEGORIES.map((category) => ({ category, name: t(`notifications.category.${category}` as TranslationKey) }))}
-          channels={ROUTABLE_CHANNELS.filter((channel) => (channel !== "email" || emailOffered) && adapters[channel].live && preferences.find((preference) => preference.channel === channel)?.enabled).map((channel) => ({ channel, name: t(`settingsPage.notifications.channel.${channel}` as TranslationKey) }))}
-          keptOff={mutes.map((mute) => muteKey(mute.category, mute.channel))}
-          labels={{
-            title: t("channelRouting.title"),
-            lede: t("channelRouting.lede"),
-            none: t("channelRouting.none"),
-            channelFor: t("channelRouting.channelFor", { kind: "{kind}", channel: "{channel}" }),
-            failed: t("channelRouting.failed"),
-          }}
-        />
-
         <h2 className="pt-2 text-base font-semibold">{t("settingsPage.notifications.channels")}</h2>
         {emailOffered ? null : <p className="text-sm text-[var(--wh-foreground-muted)]">{t("settingsPage.notifications.noEmail")}</p>}
         <div className="space-y-4">
-          {preferences.filter((preference) => preference.channel !== "email" || emailOffered).map((preference) => (
+          {preferences.filter((preference) => (preference.channel !== "email" || emailOffered) && householdAllows(preference.channel)).map((preference) => (
             <ChannelPreferenceCard
               key={preference.channel}
               householdId={membership.household.id}

@@ -22,6 +22,7 @@ import {
 } from "./plan";
 import { REMINDER_POLICIES } from "./policies";
 import { sweepNotices } from "./notices-sweep";
+import { HOUSEHOLD_NOTIFICATIONS_POLICY, QUIET_HOURS_POLICY, parseHouseholdNotificationSettings, presetForMember, quietFromPolicy } from "./household-settings";
 import { childQuietHours } from "./child-quiet";
 import { escalateAcrossChannels } from "./channel-escalation";
 import {
@@ -63,7 +64,12 @@ import { localMoment, quietHoursFrom, type QuietHours } from "./timing";
  * can write their own reminders.
  */
 
+/** The household's own quiet-hours rule, for anyone who has not set their own (kept here for its callers). */
+export { quietFromPolicy };
+
 export const RECONCILE_EVERY_MINUTES = 5;
+/** Reminders timed for one person that are made outside this pass: HomeTalk's own, and health's. */
+const TIMED_ELSEWHERE = new Set(["reminder", "health_appointment", "health_routine"]);
 /** A reminder that fell due longer ago than this is shown in-app, not pushed late. */
 const FRESH_DELIVERY_MINUTES = 120;
 
@@ -165,7 +171,7 @@ async function reconcile(
   const horizon = (days: number) => new Date(now.getTime() + days * 86_400_000).toISOString();
   const since = (days: number) => new Date(now.getTime() - days * 86_400_000).toISOString();
 
-  const [bills, school, meals, groceries, pets, events, members, roles, responsibilities, guardians, reminderPrefs, channelPrefs, quietPolicy, open, closed] =
+  const [bills, school, meals, groceries, pets, events, members, roles, responsibilities, guardians, reminderPrefs, channelPrefs, householdPolicies, open, closed] =
     await Promise.all([
       admin
         .from("obligations")
@@ -213,14 +219,14 @@ async function reconcile(
         .select("member_id, enabled, quiet_from, quiet_until, quiet_from_minute, quiet_until_minute, learn_timing")
         .eq("household_id", householdId)
         .eq("channel", "in_app"),
+      // The household's quiet hours and what an Admin decided for everyone, in one read.
       admin
         .from("policies")
-        .select("rule")
+        .select("name, rule")
         .eq("household_id", householdId)
         .eq("category", "notifications")
-        .eq("name", "Quiet hours")
-        .eq("active", true)
-        .maybeSingle(),
+        .in("name", [QUIET_HOURS_POLICY, HOUSEHOLD_NOTIFICATIONS_POLICY])
+        .eq("active", true),
       admin
         .from("notifications")
         .select(
@@ -280,7 +286,9 @@ async function reconcile(
 
   // 2. Who is responsible, and how they like to be reminded.
   const directory = buildDirectory(memberRows, roles.data ?? [], responsibilities.data ?? [], guardians.data ?? []);
-  const householdQuiet = quietFromPolicy(quietPolicy.data?.rule);
+  const policyRows = (householdPolicies.data ?? []) as { name: string; rule: unknown }[];
+  const householdQuiet = quietFromPolicy(policyRows.find((row) => row.name === QUIET_HOURS_POLICY)?.rule);
+  const householdChoices = parseHouseholdNotificationSettings(policyRows.find((row) => row.name === HOUSEHOLD_NOTIFICATIONS_POLICY)?.rule);
   const quietByMember = new Map<string, QuietHours | null>();
   for (const row of (channelPrefs.data ?? []) as { member_id: string; enabled: boolean; quiet_from: number | null; quiet_until: number | null; quiet_from_minute: number; quiet_until_minute: number }[]) {
     quietByMember.set(
@@ -320,16 +328,19 @@ async function reconcile(
   };
   const settingsFor = (memberId: string, category: ReminderSubject["category"]) => {
     const chosen = prefs.get(`${memberId}|${category}`);
+    // The household's starting timing, until this person picks their own.
+    const householdPreset = presetForMember(householdChoices, category, null);
     return {
-      preset: chosen?.preset ?? null,
-      enabled: chosen?.enabled ?? true,
+      preset: presetForMember(householdChoices, category, chosen?.preset),
+      // A kind the household turned off reaches nobody, whatever a person chose.
+      enabled: (chosen?.enabled ?? true) && !householdChoices.kindsOff.includes(category),
       // A child's own window, else their age's (27-015), else the household's.
       quiet: quietByMember.get(memberId) ?? childQuietFor(memberId) ?? (quietByMember.has(memberId) ? null : householdQuiet),
       // A timing the person chose themselves always wins over a learned one.
       // Saving the settings writes every kind, so only a preset other than
-      // the policy's own default counts as a choice.
+      // the one they would start from counts as a choice.
       learnedMinute:
-        chosen && chosen.preset !== REMINDER_POLICIES[category].defaultPreset ? null : (learned.get(`${memberId}|${category}`) ?? null),
+        chosen && chosen.preset !== householdPreset ? null : (learned.get(`${memberId}|${category}`) ?? null),
     };
   };
 
@@ -349,7 +360,7 @@ async function reconcile(
   const openRows = (open.data ?? []) as OpenRow[];
   const openByKey = new Map(openRows.map((row) => [`${row.recipient_member_id}|${row.thread_key}`, row]));
   const escalations: { primaryRowId: string; backupId: string }[] = [];
-  for (const [key, want] of [...desired]) {
+  for (const [key, want] of householdChoices.backupStep ? [...desired] : []) {
     if (want.recipientRole !== "primary") continue;
     const primaryOpen = openByKey.get(key);
     if (!primaryOpen) continue;
@@ -376,7 +387,7 @@ async function reconcile(
   // The person's own channel step comes before the backup: a second way to reach
   // them, once, when their last reminder has gone unanswered (27-007).
   const channelSteps: { row: OpenRow; category: ReminderSubject["category"]; via: readonly DeliveryChannel[] }[] = [];
-  for (const [key, want] of desired) {
+  for (const [key, want] of householdChoices.channelStep ? desired : new Map<string, DesiredReminder>()) {
     if (want.recipientRole !== "primary") continue;
     const step = REMINDER_POLICIES[want.category].channelEscalation;
     const row = openByKey.get(key);
@@ -528,7 +539,8 @@ export async function deliverDueNotifications(
   for (const row of (due ?? []) as { id: string; recipient_member_id: string; title: string; body: string; message: unknown; priority: string; scheduled_for: string; source_type: string | null; category: string | null }[]) {
     delivered += 1;
     const fresh = now.getTime() - new Date(row.scheduled_for).getTime() <= FRESH_DELIVERY_MINUTES * 60_000;
-    const ownDelivery = row.source_type === "reminder" || (row.source_type !== null && managed.has(row.source_type));
+    // A health reminder held back by quiet hours is timed for its person too, so it goes out the same way when it lands.
+    const ownDelivery = row.source_type !== null && (managed.has(row.source_type) || TIMED_ELSEWHERE.has(row.source_type));
     if (fresh && ownDelivery) {
       await deliverNotification(
         admin,
@@ -538,7 +550,7 @@ export async function deliverDueNotifications(
           recipientMemberId: row.recipient_member_id,
           notification: { title: row.title, body: row.body, priority: row.priority === "critical" || row.priority === "high" || row.priority === "low" ? row.priority : "normal" },
           copy: parseCopy(row.message),
-          // Only reminders from a record (a bill, school work, a meal) reach here: each was timed for this person.
+          // Only reminders reach here (a record's, HomeTalk's, health's): each was timed for this person.
           reason: "reminder",
           category: row.category,
           now,
@@ -582,15 +594,6 @@ async function learnedTimes(
     if (time) learned.set(key, time.minute);
   }
   return learned;
-}
-
-/** The household's own quiet-hours rule (set through HomeTalk), for anyone who has not set their own. */
-export function quietFromPolicy(rule: unknown): QuietHours | null {
-  if (!rule || typeof rule !== "object") return null;
-  const { quietFromHour, quietUntilHour } = rule as { quietFromHour?: unknown; quietUntilHour?: unknown };
-  if (typeof quietFromHour !== "number" || typeof quietUntilHour !== "number") return null;
-  if (quietFromHour < 0 || quietFromHour > 23 || quietUntilHour < 0 || quietUntilHour > 23) return null;
-  return { fromMinute: quietFromHour * 60, untilMinute: quietUntilHour * 60 };
 }
 
 async function setStatus(admin: SupabaseClient, id: string, status: "resolved" | "expired", now: Date): Promise<boolean> {

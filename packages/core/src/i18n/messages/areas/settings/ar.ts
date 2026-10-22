@@ -780,4 +780,12 @@ export const settingsAr: AreaCatalog<typeof settingsEn> = {
   "location.turnedOn": "مشاركة الموقع مشغّلة.",
   "location.turnedOff": "مشاركة الموقع متوقفة، وحُذف آخر موقع.",
   "location.quote": "قريبون، حتى ونحن بعيدون.",
+  "notificationCenter.title": "مركز الإشعارات",
+  "notificationCenter.lede": "كل نوع من الإشعارات، وكيف يصل إليك. افتح أحدها لتختار هل يصل، ومتى، وأين بالإضافة إلى التطبيق.",
+  "notificationCenter.on": "تلقّي هذه",
+  "notificationCenter.when": "متى",
+  "notificationCenter.where": "أين",
+  "notificationCenter.off": "متوقف لك",
+  "notificationCenter.householdOff": "أوقفه مسؤول للمنزل كله",
+  "notificationCenter.householdChannelsOff": "أوقف مسؤول بعض طرق الوصول للمنزل كله، لذا لا تظهر هنا.",
 };

@@ -772,4 +772,12 @@ export const settingsDe: AreaCatalog<typeof settingsEn> = {
   "location.turnedOn": "Standort teilen ist an.",
   "location.turnedOff": "Standort teilen ist aus, und der letzte Standort wurde gelöscht.",
   "location.quote": "Nah beieinander, auch wenn getrennt.",
+  "notificationCenter.title": "Benachrichtigungszentrale",
+  "notificationCenter.lede": "Jede Art von Benachrichtigung und wie sie dich erreicht. Öffne eine, um zu wählen, ob sie kommt, wann und wo außer in der App.",
+  "notificationCenter.on": "Erhalten",
+  "notificationCenter.when": "Wann",
+  "notificationCenter.where": "Wo",
+  "notificationCenter.off": "Für dich aus",
+  "notificationCenter.householdOff": "Von einem Admin für den ganzen Haushalt ausgeschaltet",
+  "notificationCenter.householdChannelsOff": "Ein Admin hat einige Wege für den ganzen Haushalt ausgeschaltet, daher werden sie hier nicht angeboten.",
 };

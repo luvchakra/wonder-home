@@ -782,4 +782,12 @@ export const settingsEn = {
   "location.turnedOn": "Location sharing is on.",
   "location.turnedOff": "Location sharing is off, and the last location was deleted.",
   "location.quote": "Close by, even when apart.",
+  "notificationCenter.title": "Notification center",
+  "notificationCenter.lede": "Each kind of notification, and how it reaches you. Open one to choose whether it comes, when, and where beyond the app.",
+  "notificationCenter.on": "Get these",
+  "notificationCenter.when": "When",
+  "notificationCenter.where": "Where",
+  "notificationCenter.off": "Off for you",
+  "notificationCenter.householdOff": "Turned off for the whole household by an Admin",
+  "notificationCenter.householdChannelsOff": "Some ways of reaching people are turned off for the whole household by an Admin, so they are not offered here.",
 } as const;

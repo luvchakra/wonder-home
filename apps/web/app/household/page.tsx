@@ -1,4 +1,4 @@
-import { BellRing, BookOpen, Bot, ChevronRight, Cog, FileClock, ListChecks, MapPin, Plug, ShieldCheck, Users, Wand2 } from "lucide-react";
+import { Bell, BellRing, BookOpen, Bot, ChevronRight, Cog, FileClock, ListChecks, MapPin, Plug, ShieldCheck, Users, Wand2 } from "lucide-react";
 
 import { loadHouseholdAddress } from "@wonderhome/core/household/address";
 import { assessSetup } from "@wonderhome/core/household/setup";
@@ -75,6 +75,7 @@ export default async function ManageHouseholdPage() {
     { href: "/household/responsibilities", icon: ListChecks, tone: "primary", title: t("nav.item.responsibilities"), meta: t("manage.section.responsibilitiesMeta", { count: modes.length }) },
     { href: "#playbook", icon: BookOpen, tone: "home", title: t("manage.section.playbook"), meta: t("manage.section.playbookMeta", { count: items.filter((i) => i.active).length }) },
     { href: "/household/activity", icon: FileClock, tone: "neutral", title: t("manage.section.activity"), meta: t("manage.section.activityMeta") },
+    { href: "/household/notifications", icon: Bell, tone: "attention", title: t("manage.section.notifications"), meta: t("manage.section.notificationsMeta") },
     { href: "/household/delivery", icon: BellRing, tone: "attention", title: t("manage.section.delivery"), meta: t("manage.section.deliveryMeta") },
     { href: "#policies", icon: ShieldCheck, tone: "money", title: t("manage.section.policies"), meta: t("manage.section.policiesMeta", { count: rules.length }) },
     { href: "#autonomy", icon: Bot, tone: "ai", title: t("manage.section.autonomy"), meta: (["observe", "prepare", "approve", "execute"] as const).map((mode) => t(`manage.mode.${mode}`)).join(" · ") },
