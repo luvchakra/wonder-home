@@ -1,6 +1,7 @@
 import { z } from "zod";
 
 import {
+  metresBetween,
   PlacesUnavailableError,
   type LatLng,
   type NearbyQuery,
@@ -14,9 +15,17 @@ import {
 /**
  * Google Places (New) behind the `PlacesProvider` port.
  *
- * - Autocomplete: `POST places:autocomplete`. A school search is limited to
- *   school types and biased to a circle around home; `origin` makes Google
- *   say how far each one is.
+ * - Autocomplete: `POST places:autocomplete`, biased to a circle around home;
+ *   `origin` makes Google say how far each one is. A school search is never
+ *   narrowed by `includedPrimaryTypes`: that keeps a place only when its
+ *   *primary* type is one of the four school types, and Google files many
+ *   schools under others ("ICSE school", "International school"), so
+ *   "euro school thane" found nothing that Google Maps lists (2026-10-22).
+ *   Instead every prediction's own `types` are read: schools come first,
+ *   a bare city or road is dropped, any other place stays after them.
+ * - Text search fallback: when autocomplete has nothing to offer, the same
+ *   words go to `places:searchText`, the search behind the Maps search box,
+ *   so what Maps finds for a name the picker finds too.
  * - Details: `GET places/{id}` with the narrowest field mask that gives a
  *   name, an address and a point. The session token from the search is
  *   passed through so typing and choosing are one billed session.
@@ -32,8 +41,32 @@ export const GOOGLE_PLACES_PROVIDER = "google";
 const TIMEOUT_MS = 4_000;
 /** How far "near home" reaches for a school: a long school run, not the next city. */
 export const SCHOOL_RADIUS_METERS = 15_000;
-/** Places (New) table A types a school can be. At most five may be named. */
-const SCHOOL_TYPES = ["school", "primary_school", "secondary_school", "preschool"];
+/** Places (New) types that mark a place as a school, wherever they appear in its `types`. */
+const SCHOOL_TYPES = new Set(["school", "primary_school", "secondary_school", "preschool", "educational_institution"]);
+/**
+ * Types that make a prediction a stretch of map rather than a place: a city,
+ * a road, a postcode. A school search drops one carrying only these.
+ */
+const AREA_TYPES = new Set([
+  "geocode",
+  "political",
+  "locality",
+  "sublocality",
+  "sublocality_level_1",
+  "sublocality_level_2",
+  "neighborhood",
+  "administrative_area_level_1",
+  "administrative_area_level_2",
+  "administrative_area_level_3",
+  "country",
+  "postal_code",
+  "route",
+  "colloquial_area",
+]);
+/** How many places the text search fallback asks for. */
+const FALLBACK_RESULTS = 8;
+/** The text search fallback leans toward home this far, the most Google takes for a bias. */
+const FALLBACK_BIAS_METERS = 50_000;
 
 type Fetch = typeof fetch;
 
@@ -52,12 +85,42 @@ const autocompleteSchema = z.object({
               })
               .optional(),
             distanceMeters: z.number().optional(),
+            types: z.array(z.string()).optional(),
           })
           .optional(),
       }),
     )
     .optional(),
 });
+
+const fallbackSchema = z.object({
+  places: z
+    .array(
+      z.object({
+        id: z.string().min(1),
+        displayName: z.object({ text: z.string() }).optional(),
+        formattedAddress: z.string().optional(),
+        location: z.object({ latitude: z.number(), longitude: z.number() }).optional(),
+        types: z.array(z.string()).optional(),
+      }),
+    )
+    .optional(),
+});
+
+/** The fallback asks only for what a suggestion shows. */
+const FALLBACK_FIELDS = ["places.id", "places.displayName", "places.formattedAddress", "places.location", "places.types"].join(",");
+
+type Found = PlaceSuggestion & { types: readonly string[] };
+
+const isSchool = (types: readonly string[]) => types.some((type) => SCHOOL_TYPES.has(type));
+const isOnlyArea = (types: readonly string[]) => types.length > 0 && types.every((type) => AREA_TYPES.has(type));
+
+/** What a picker of this kind offers, in order: for a school, schools first and no bare areas; otherwise Google's order. */
+function forKind(found: readonly Found[], kind: PlaceSearchInput["kind"]): PlaceSuggestion[] {
+  const kept = kind === "school" ? found.filter((place) => !isOnlyArea(place.types)) : [...found];
+  const ordered = kind === "school" ? [...kept.filter((place) => isSchool(place.types)), ...kept.filter((place) => !isSchool(place.types))] : kept;
+  return ordered.map(({ types: _types, ...suggestion }) => suggestion);
+}
 
 const detailsSchema = z.object({
   id: z.string().min(1),
@@ -127,6 +190,49 @@ export function createGooglePlacesProvider(options: { apiKey: string; fetch?: Fe
     return response;
   }
 
+  /**
+   * The Maps search box's own search, for when autocomplete offered nothing:
+   * forgiving of spacing and word order ("euro school" for "EuroSchool"),
+   * leaning toward home, and saying how far each place is from it.
+   */
+  async function textSearch(input: PlaceSearchInput): Promise<Found[]> {
+    const body: Record<string, unknown> = {
+      textQuery: input.query,
+      pageSize: FALLBACK_RESULTS,
+    };
+    if (input.languageCode) body.languageCode = input.languageCode;
+    if (input.regionCode) body.regionCode = input.regionCode.toLowerCase();
+    if (input.near)
+      body.locationBias = {
+        circle: { center: point(input.near), radius: FALLBACK_BIAS_METERS },
+      };
+    const response = await call("https://places.googleapis.com/v1/places:searchText", {
+      method: "POST",
+      headers: {
+        "content-type": "application/json",
+        "x-goog-api-key": options.apiKey,
+        "x-goog-fieldmask": FALLBACK_FIELDS,
+      },
+      body: JSON.stringify(body),
+    });
+    if (!response.ok) throw new PlacesUnavailableError("unavailable");
+    const parsed = fallbackSchema.safeParse(await response.json().catch(() => null));
+    if (!parsed.success) throw new PlacesUnavailableError("unavailable");
+    const found: Found[] = [];
+    for (const place of parsed.data.places ?? []) {
+      const name = place.displayName?.text ?? "";
+      if (!name) continue;
+      found.push({
+        placeId: place.id,
+        primary: name,
+        secondary: place.formattedAddress ?? "",
+        distanceMeters: input.near && place.location ? Math.round(metresBetween(input.near, place.location)) : null,
+        types: place.types ?? [],
+      });
+    }
+    return found;
+  }
+
   return {
     name: GOOGLE_PLACES_PROVIDER,
 
@@ -134,7 +240,6 @@ export function createGooglePlacesProvider(options: { apiKey: string; fetch?: Fe
       const body: Record<string, unknown> = { input: input.query, sessionToken: input.sessionToken };
       if (input.languageCode) body.languageCode = input.languageCode;
       if (input.regionCode) body.regionCode = input.regionCode.toLowerCase();
-      if (input.kind === "school") body.includedPrimaryTypes = SCHOOL_TYPES;
       if (input.near) {
         body.origin = point(input.near);
         body.locationBias = { circle: { center: point(input.near), radius: input.kind === "school" ? SCHOOL_RADIUS_METERS : 50_000 } };
@@ -147,7 +252,7 @@ export function createGooglePlacesProvider(options: { apiKey: string; fetch?: Fe
       if (!response.ok) throw new PlacesUnavailableError("unavailable");
       const parsed = autocompleteSchema.safeParse(await response.json().catch(() => null));
       if (!parsed.success) throw new PlacesUnavailableError("unavailable");
-      const found: PlaceSuggestion[] = [];
+      const found: Found[] = [];
       for (const suggestion of parsed.data.suggestions ?? []) {
         const prediction = suggestion.placePrediction;
         if (!prediction) continue;
@@ -158,9 +263,24 @@ export function createGooglePlacesProvider(options: { apiKey: string; fetch?: Fe
           primary,
           secondary: prediction.structuredFormat?.secondaryText?.text ?? "",
           distanceMeters: prediction.distanceMeters ?? null,
+          types: prediction.types ?? [],
         });
       }
-      return found;
+      const offered = forKind(found, input.kind);
+      // A school search with no school in it, or any search with nothing at all, asks the text search too.
+      const enough = input.kind === "school" ? found.some((place) => isSchool(place.types)) : offered.length > 0;
+      if (enough) return offered;
+      let more: Found[];
+      try {
+        more = await textSearch(input);
+      } catch (error) {
+        // Autocomplete's own answer still stands when the second look fails.
+        if (offered.length > 0) return offered;
+        throw error;
+      }
+      const seen = new Set<string>();
+      const merged = [...more, ...found].filter((place) => !seen.has(place.placeId) && Boolean(seen.add(place.placeId)));
+      return forKind(merged, input.kind);
     },
 
     async details(placeId, { sessionToken, languageCode }): Promise<Place | null> {
@@ -185,48 +305,10 @@ export function createGooglePlacesProvider(options: { apiKey: string; fetch?: Fe
     },
 
     async findNearby(query: NearbyQuery): Promise<PlaceResult[]> {
-      const body: Record<string, unknown> = {
-        textQuery: query.text,
-        pageSize: Math.min(Math.max(query.max ?? 8, 1), 20),
-        ...(query.within
-          ? { locationRestriction: { rectangle: aroundBox(query.near, query.radiusMeters) } }
-          : { locationBias: { circle: { center: point(query.near), radius: Math.min(query.radiusMeters, 50_000) } } }),
-      };
-      if (query.openNow) body.openNow = true;
-      if (query.includedType) {
-        body.includedType = query.includedType;
-        body.strictTypeFiltering = true;
-      }
-      if (query.languageCode) body.languageCode = query.languageCode;
-      if (query.regionCode) body.regionCode = query.regionCode.toLowerCase();
-      const response = await call("https://places.googleapis.com/v1/places:searchText", {
-        method: "POST",
-        headers: { "content-type": "application/json", "x-goog-api-key": options.apiKey, "x-goog-fieldmask": TEXT_SEARCH_FIELDS },
-        body: JSON.stringify(body),
-      });
-      if (!response.ok) throw new PlacesUnavailableError("unavailable");
-      const parsed = textSearchSchema.safeParse(await response.json().catch(() => null));
-      if (!parsed.success) throw new PlacesUnavailableError("unavailable");
-      const found: PlaceResult[] = [];
-      for (const place of parsed.data.places ?? []) {
-        if (!place.location || !place.displayName?.text) continue;
-        found.push({
-          placeId: place.id,
-          name: place.displayName.text,
-          address: place.formattedAddress ?? "",
-          location: place.location,
-          kind: place.primaryTypeDisplayName?.text ?? null,
-          rating: place.rating ?? null,
-          ratingCount: place.userRatingCount ?? null,
-          priceLevel: place.priceLevel && place.priceLevel in PRICE_LEVELS ? PRICE_LEVELS[place.priceLevel]! : null,
-          openNow: place.currentOpeningHours?.openNow ?? null,
-          periods: (place.regularOpeningHours?.periods ?? []).map((period) => ({
-            open: { day: period.open.day, minute: (period.open.hour ?? 0) * 60 + (period.open.minute ?? 0) },
-            close: period.close ? { day: period.close.day, minute: (period.close.hour ?? 0) * 60 + (period.close.minute ?? 0) } : null,
-          })),
-          mapsUri: place.googleMapsUri ?? null,
-        });
-      }
+      const found = await nearby(query, true);
+      // A strict type filter keeps only places Google filed under that type; when it leaves
+      // nothing, the same search runs once with the type as a preference instead.
+      if (found.length === 0 && query.includedType) return nearby(query, false);
       return found;
     },
 
@@ -246,6 +328,75 @@ export function createGooglePlacesProvider(options: { apiKey: string; fetch?: Fe
       return { body: await response.arrayBuffer(), contentType };
     },
   };
+
+  async function nearby(query: NearbyQuery, strict: boolean): Promise<PlaceResult[]> {
+    const body: Record<string, unknown> = {
+      textQuery: query.text,
+      pageSize: Math.min(Math.max(query.max ?? 8, 1), 20),
+      ...(query.within
+        ? {
+            locationRestriction: {
+              rectangle: aroundBox(query.near, query.radiusMeters),
+            },
+          }
+        : {
+            locationBias: {
+              circle: {
+                center: point(query.near),
+                radius: Math.min(query.radiusMeters, 50_000),
+              },
+            },
+          }),
+    };
+    if (query.openNow) body.openNow = true;
+    if (query.includedType) {
+      body.includedType = query.includedType;
+      if (strict) body.strictTypeFiltering = true;
+    }
+    if (query.languageCode) body.languageCode = query.languageCode;
+    if (query.regionCode) body.regionCode = query.regionCode.toLowerCase();
+    const response = await call("https://places.googleapis.com/v1/places:searchText", {
+      method: "POST",
+      headers: {
+        "content-type": "application/json",
+        "x-goog-api-key": options.apiKey,
+        "x-goog-fieldmask": TEXT_SEARCH_FIELDS,
+      },
+      body: JSON.stringify(body),
+    });
+    if (!response.ok) throw new PlacesUnavailableError("unavailable");
+    const parsed = textSearchSchema.safeParse(await response.json().catch(() => null));
+    if (!parsed.success) throw new PlacesUnavailableError("unavailable");
+    const found: PlaceResult[] = [];
+    for (const place of parsed.data.places ?? []) {
+      if (!place.location || !place.displayName?.text) continue;
+      found.push({
+        placeId: place.id,
+        name: place.displayName.text,
+        address: place.formattedAddress ?? "",
+        location: place.location,
+        kind: place.primaryTypeDisplayName?.text ?? null,
+        rating: place.rating ?? null,
+        ratingCount: place.userRatingCount ?? null,
+        priceLevel: place.priceLevel && place.priceLevel in PRICE_LEVELS ? PRICE_LEVELS[place.priceLevel]! : null,
+        openNow: place.currentOpeningHours?.openNow ?? null,
+        periods: (place.regularOpeningHours?.periods ?? []).map((period) => ({
+          open: {
+            day: period.open.day,
+            minute: (period.open.hour ?? 0) * 60 + (period.open.minute ?? 0),
+          },
+          close: period.close
+            ? {
+                day: period.close.day,
+                minute: (period.close.hour ?? 0) * 60 + (period.close.minute ?? 0),
+              }
+            : null,
+        })),
+        mapsUri: place.googleMapsUri ?? null,
+      });
+    }
+    return found;
+  }
 }
 
 function point(at: LatLng) {
@@ -263,7 +414,13 @@ export function placesProviderFromEnv(env: Record<string, string | undefined> = 
 }
 
 /** A box `radiusMeters` each way around a point: the place search's restriction takes a rectangle, not a circle. */
-function aroundBox(near: LatLng, radiusMeters: number): { low: { latitude: number; longitude: number }; high: { latitude: number; longitude: number } } {
+function aroundBox(
+  near: LatLng,
+  radiusMeters: number,
+): {
+  low: { latitude: number; longitude: number };
+  high: { latitude: number; longitude: number };
+} {
   const dLat = radiusMeters / 111_320;
   const dLng = radiusMeters / (111_320 * Math.max(Math.cos((near.latitude * Math.PI) / 180), 0.01));
   return {

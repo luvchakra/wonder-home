@@ -11,6 +11,7 @@ decision that shapes later work each earns a note, written before moving on.
 
 | Date | Note |
 |---|---|
+| 2026-10-22 | [The place pickers find what Google Maps finds (24-014)](2026-10-22-place-search-finds-what-maps-finds.md) |
 | 2026-10-22 | [The nightly E2E is green again: three undocumented endpoints, one with no session](2026-10-22-e2e-nightly-email-off.md) |
 | 2026-10-21 | [Careers, powered by WonderJobs (17-010)](2026-10-21-careers-wonderjobs.md) |
 | 2026-10-21 | [Nothing on the calendar twice; HomeTalk's links back, and a tighter HomeTalk](2026-10-21-no-duplicate-events-hometalk-links.md) |

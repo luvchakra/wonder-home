@@ -24,11 +24,18 @@ describe("Google Places adapter", () => {
     expect(placesProviderFromEnv({ GOOGLE_MAPS_API_KEY: "k" })?.name).toBe("google");
   });
 
-  it("searches schools only, leaning toward home, and says how far each is", async () => {
+  it("searches for a school leaning toward home, and says how far each is", async () => {
     const { fetch, calls } = fakeFetch(() =>
       json({
         suggestions: [
-          { placePrediction: { placeId: "abc", structuredFormat: { mainText: { text: "Greenwood High" }, secondaryText: { text: "Sarjapur Road, Bengaluru" } }, distanceMeters: 2300 } },
+          {
+            placePrediction: {
+              placeId: "abc",
+              structuredFormat: { mainText: { text: "Greenwood High" }, secondaryText: { text: "Sarjapur Road, Bengaluru" } },
+              distanceMeters: 2300,
+              types: ["school", "establishment"],
+            },
+          },
           { queryPrediction: { text: { text: "greenwood" } } },
         ],
       }),
@@ -37,12 +44,88 @@ describe("Google Places adapter", () => {
     const found = await provider.search({ query: "green", kind: "school", sessionToken: "s", near: { latitude: 12.9, longitude: 77.6 }, regionCode: "IN", languageCode: "en" });
 
     expect(found).toEqual([{ placeId: "abc", primary: "Greenwood High", secondary: "Sarjapur Road, Bengaluru", distanceMeters: 2300 }]);
+    expect(calls).toHaveLength(1);
     const body = JSON.parse(String(calls[0]!.init.body));
-    expect(body.includedPrimaryTypes).toContain("school");
+    // Never narrowed by primary type: Google files many schools under types outside the four (2026-10-22).
+    expect(body.includedPrimaryTypes).toBeUndefined();
     expect(body.locationBias.circle).toEqual({ center: { latitude: 12.9, longitude: 77.6 }, radius: SCHOOL_RADIUS_METERS });
     expect(body.origin).toEqual({ latitude: 12.9, longitude: 77.6 });
     expect(body.regionCode).toBe("in");
     expect((calls[0]!.init.headers as Record<string, string>)["x-goog-api-key"]).toBe("key");
+  });
+
+  it("lists schools first and drops a bare city or road from a school search", async () => {
+    const prediction = (placeId: string, name: string, types: string[]) => ({
+      placePrediction: { placeId, structuredFormat: { mainText: { text: name } }, types },
+    });
+    const { fetch } = fakeFetch(() =>
+      json({
+        suggestions: [
+          prediction("city", "Thane", ["locality", "political", "geocode"]),
+          prediction("cafe", "Euro Cafe", ["cafe", "establishment"]),
+          prediction("euro", "EuroSchool Thane - ICSE School", ["school", "point_of_interest", "establishment"]),
+        ],
+      }),
+    );
+    const found = await createGooglePlacesProvider({ apiKey: "key", fetch }).search({ query: "euro thane", kind: "school", sessionToken: "s" });
+    expect(found.map((place) => place.placeId)).toEqual(["euro", "cafe"]);
+  });
+
+  it("asks the Maps text search when autocomplete has no school, so a school Maps lists is found", async () => {
+    const near = { latitude: 19.2, longitude: 72.97 };
+    const { fetch, calls } = fakeFetch((call) =>
+      call.url.endsWith("places:autocomplete")
+        ? json({})
+        : json({
+            places: [
+              {
+                id: "euro-thane",
+                displayName: { text: "EuroSchool Thane - ICSE School" },
+                formattedAddress: "Ghodbunder Road, Kasarvadavali, Thane",
+                location: { latitude: 19.27, longitude: 72.97 },
+                types: ["school", "establishment"],
+              },
+              { id: "no-name", formattedAddress: "Somewhere" },
+            ],
+          }),
+    );
+    const found = await createGooglePlacesProvider({ apiKey: "key", fetch }).search({ query: "euro school thane", kind: "school", sessionToken: "s", near, regionCode: "IN" });
+
+    expect(found).toEqual([
+      { placeId: "euro-thane", primary: "EuroSchool Thane - ICSE School", secondary: "Ghodbunder Road, Kasarvadavali, Thane", distanceMeters: expect.any(Number) },
+    ]);
+    expect(found[0]!.distanceMeters).toBeGreaterThan(7_000);
+    expect(calls.map((call) => call.url.split("/").pop())).toEqual(["places:autocomplete", "places:searchText"]);
+    const body = JSON.parse(String(calls[1]!.init.body));
+    expect(body).toMatchObject({ textQuery: "euro school thane", regionCode: "in", locationBias: { circle: { center: near } } });
+    expect((calls[1]!.init.headers as Record<string, string>)["x-goog-fieldmask"]).toContain("places.types");
+  });
+
+  it("every kind of picker falls back to the text search when autocomplete finds nothing", async () => {
+    for (const kind of ["address", "office", "place"] as const) {
+      const { fetch, calls } = fakeFetch((call) =>
+        call.url.endsWith("places:autocomplete")
+          ? json({ suggestions: [] })
+          : json({ places: [{ id: "p", displayName: { text: "Lodha Supremus" }, formattedAddress: "Thane West" }] }),
+      );
+      const found = await createGooglePlacesProvider({ apiKey: "key", fetch }).search({ query: "lodha supremus", kind, sessionToken: "s" });
+      expect(found).toEqual([{ placeId: "p", primary: "Lodha Supremus", secondary: "Thane West", distanceMeters: null }]);
+      expect(calls).toHaveLength(2);
+    }
+  });
+
+  it("keeps autocomplete's answer when the text search fails, and only errors when there is nothing at all", async () => {
+    const withCafe = fakeFetch((call) =>
+      call.url.endsWith("places:autocomplete")
+        ? json({ suggestions: [{ placePrediction: { placeId: "cafe", structuredFormat: { mainText: { text: "Euro Cafe" } }, types: ["cafe"] } }] })
+        : json({}, 500),
+    );
+    expect(await createGooglePlacesProvider({ apiKey: "key", fetch: withCafe.fetch }).search({ query: "euro", kind: "school", sessionToken: "s" })).toHaveLength(1);
+
+    const empty = fakeFetch((call) => (call.url.endsWith("places:autocomplete") ? json({}) : json({}, 500)));
+    await expect(createGooglePlacesProvider({ apiKey: "key", fetch: empty.fetch }).search({ query: "euro", kind: "school", sessionToken: "s" })).rejects.toBeInstanceOf(
+      PlacesUnavailableError,
+    );
   });
 
   it("an address search is not limited to a kind of place", async () => {
@@ -135,6 +218,29 @@ describe("finding places near a point", () => {
     const mask = (calls[0]!.init.headers as Record<string, string>)["x-goog-fieldmask"];
     expect(mask).toContain("places.regularOpeningHours.periods");
     expect(mask).not.toContain("reviews");
+  });
+
+  it("asks again with the type as a preference when the strict type filter leaves nothing", async () => {
+    const { fetch, calls } = fakeFetch((call) =>
+      JSON.parse(String(call.init.body)).strictTypeFiltering
+        ? json({})
+        : json({ places: [{ id: "fort", displayName: { text: "Vasai Fort" }, location: { latitude: 19.3, longitude: 72.8 } }] }),
+    );
+    const found = await createGooglePlacesProvider({ apiKey: "key", fetch }).findNearby({
+      text: "places to visit",
+      near: { latitude: 19.2, longitude: 72.97 },
+      radiusMeters: 100_000,
+      includedType: "tourist_attraction",
+    });
+    expect(found.map((place) => place.placeId)).toEqual(["fort"]);
+    expect(calls.map((call) => JSON.parse(String(call.init.body)).strictTypeFiltering)).toEqual([true, undefined]);
+    expect(JSON.parse(String(calls[1]!.init.body)).includedType).toBe("tourist_attraction");
+  });
+
+  it("a search with no type asks once", async () => {
+    const { fetch, calls } = fakeFetch(() => json({}));
+    await createGooglePlacesProvider({ apiKey: "key", fetch }).findNearby({ text: "park", near: { latitude: 1, longitude: 1 }, radiusMeters: 1000 });
+    expect(calls).toHaveLength(1);
   });
 });
 
