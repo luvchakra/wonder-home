@@ -24,7 +24,8 @@ export async function TrendingTags({ session, now }: { session: Session; now: Da
   const { supabase, membership, locale } = session;
   const { t } = locale;
   const messages = await recentTaggedMessages(supabase, membership.household.id, WEEK, now).catch(() => []);
-  const trending = trendingTags(messages, 6);
+  // The top five, each with only its count (the owner, 2026-10-22).
+  const trending = trendingTags(messages, 5);
   if (trending.length === 0) return null;
   return (
     // Compact (the owner, 2026-10-22): small chips that sit several to a line,
@@ -40,12 +41,14 @@ export async function TrendingTags({ session, now }: { session: Session; now: Da
       <ul className="flex flex-wrap gap-1.5">
         {trending.map((entry) => (
           <li key={entry.tag}>
+            {/* The chip shows the bare count; its name says it in words. */}
             <Link
               href={`/chat/${entry.threadId}`}
+              aria-label={`#${entry.tag}, ${t("chat.trending.uses", { count: entry.count })}`}
               className="inline-flex min-h-8 items-center gap-1 rounded-[var(--wh-radius-pill)] border border-[var(--wh-border)] bg-[var(--wh-surface)] px-2.5 text-xs hover:border-[var(--wh-primary)]"
             >
               <span className="font-semibold break-all text-[var(--wh-primary)]">#{entry.tag}</span>
-              <span className="text-[0.6875rem] whitespace-nowrap text-[var(--wh-foreground-subtle)]">{t("chat.trending.uses", { count: entry.count })}</span>
+              <span className="text-[0.6875rem] whitespace-nowrap text-[var(--wh-foreground-subtle)] tabular-nums">{entry.count}</span>
             </Link>
           </li>
         ))}

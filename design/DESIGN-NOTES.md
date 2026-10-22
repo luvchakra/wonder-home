@@ -48,6 +48,9 @@ reviewed dark design yet.
    takes values and never invents one. "Handled quietly" is `checked − needs`.
 4. **Tabs are URLs.** `SegmentedControl` renders links with `aria-current`, so
    a tab is deep-linkable, works without script, and survives the back button.
+   A tab's label never breaks inside its pill: when the tabs do not fit on one
+   line, whole tabs move to a second line (2026-10-22, after the six setup
+   tabs read "Who / does / what" on a phone).
 5. **Every data-driven screen has the three states** (v3 §49): `EmptyState`
    says what happens next, `ErrorState` offers a way forward and never shows
    the raw failure, `LoadingState` is a skeleton in the content's shape.

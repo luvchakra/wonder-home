@@ -31,11 +31,12 @@ export function SegmentedControl({
       {/* Fits the screen it is on (the owner, 2026-10-20: no overflow, and "the
           numeral is going in second row"): each tab is as wide as its own label
           and count, the spare room shared out, so a longer label takes the space
-          a shorter one does not need and its count stays beside it. Only on a
-          screen too narrow for every tab on one line does a count drop under its
-          label (or a label of several words wrap) — never cut; a row that cannot
-          fit even then scrolls. */}
-      <ul className="flex w-full gap-0.5 rounded-[var(--wh-radius-lg)] bg-[var(--wh-surface-muted)] p-1">
+          a shorter one does not need and its count stays beside it. A label never
+          breaks inside its tab (the owner, 2026-10-22: six setup tabs on a phone
+          read "Who / does / what"); on a screen too narrow for every tab on one
+          line, whole tabs move to a second line instead — never cut, never past
+          the edge. */}
+      <ul className="flex w-full flex-wrap gap-0.5 rounded-[var(--wh-radius-lg)] bg-[var(--wh-surface-muted)] p-1">
         {segments.map((segment) => {
           const isActive = segment.key === active;
           return (
@@ -46,13 +47,13 @@ export function SegmentedControl({
                 scroll={false}
                 aria-current={isActive ? "page" : undefined}
                 className={cn(
-                  "flex h-full min-h-9 flex-wrap items-center justify-center gap-x-1.5 gap-y-0.5 rounded-[var(--wh-radius-pill)] px-1.5 py-1 text-center text-[0.8125rem] leading-tight font-semibold transition-colors min-[400px]:px-2.5 sm:px-3.5",
+                  "flex h-full min-h-9 items-center justify-center gap-x-1.5 rounded-[var(--wh-radius-pill)] px-2.5 py-1 text-center text-[0.8125rem] leading-tight font-semibold whitespace-nowrap transition-colors",
                   isActive
                     ? "bg-[var(--wh-primary)] text-[var(--wh-primary-foreground)] shadow-[var(--wh-shadow-primary)]"
                     : "text-[var(--wh-foreground-muted)] hover:bg-[var(--wh-surface)] hover:text-[var(--wh-foreground)]",
                 )}
               >
-                <span className="text-balance">{segment.label}</span>
+                <span>{segment.label}</span>
                 {typeof segment.count === "number" && segment.count > 0 ? (
                   <span
                     className={cn(
