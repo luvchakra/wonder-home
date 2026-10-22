@@ -696,12 +696,13 @@ export async function advanceDueStages(
   const summary: SweepSummary = { households: 0, created: 0, updated: 0, resolved: 0, expired: 0, delivered: 0 };
   const { data: open, error } = await admin
     .from("notifications")
-    .select("household_id")
+    .select("household_id, expires_at")
     .in("status", ["generated", "delivered", "seen"])
-    .or(`expires_at.is.null,expires_at.gt.${now.toISOString()}`)
     .limit(5000);
   if (error) return summary;
-  const households = [...new Set(((open ?? []) as { household_id: string }[]).map((row) => row.household_id))];
+  // Expired ones are left out here rather than in a filter expression (nothing is ever interpolated into one).
+  const stillOpen = ((open ?? []) as { household_id: string; expires_at: string | null }[]).filter((row) => !row.expires_at || Date.parse(row.expires_at) > now.getTime());
+  const households = [...new Set(stillOpen.map((row) => row.household_id))];
   if (households.length === 0) return summary;
   // The longest since their last pass first, so a busy tick never starves the same households.
   const { data: passes } = await admin.from("notification_reconciliations").select("household_id, reconciled_at").in("household_id", households);

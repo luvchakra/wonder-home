@@ -31,7 +31,7 @@ describe("the delivery clock moves reminders to their next stage", () => {
   const skipped: ReconcileResult = { ran: false, created: 0, updated: 0, resolved: 0, expired: 0, delivered: 0 };
 
   /** Just enough of the two reads: open reminders, and when each household last had a pass. */
-  function fakeAdmin(openHouseholds: string[], lastPass: Record<string, string>, failOpen = false) {
+  function fakeAdmin(openHouseholds: (string | { household_id: string; expires_at: string | null })[], lastPass: Record<string, string>, failOpen = false) {
     const calls: { table: string; filters: string[] }[] = [];
     const admin = {
       from(table: string) {
@@ -41,7 +41,7 @@ describe("the delivery clock moves reminders to their next stage", () => {
           table === "notifications"
             ? failOpen
               ? { data: null, error: { code: "x" } }
-              : { data: openHouseholds.map((household_id) => ({ household_id })), error: null }
+              : { data: openHouseholds.map((row) => (typeof row === "string" ? { household_id: row, expires_at: null } : row)), error: null }
             : { data: Object.entries(lastPass).map(([household_id, reconciled_at]) => ({ household_id, reconciled_at })), error: null };
         const chain: Record<string, unknown> = {
           select: () => chain,
@@ -57,7 +57,7 @@ describe("the delivery clock moves reminders to their next stage", () => {
   }
 
   it("takes each household with an open reminder once, the longest-waiting first, and counts those that ran", async () => {
-    const { admin, calls } = fakeAdmin(["a", "b", "a", "c"], { a: "2026-10-22T01:20:00Z", b: "2026-10-22T00:10:00Z" });
+    const { admin, calls } = fakeAdmin(["a", "b", "a", "c", { household_id: "gone", expires_at: "2026-10-22T01:00:00Z" }], { a: "2026-10-22T01:20:00Z", b: "2026-10-22T00:10:00Z" });
     const order: string[] = [];
     const summary = await advanceDueStages(admin, new Date("2026-10-22T01:30:00Z"), {
       pass: async (householdId) => {
@@ -65,12 +65,12 @@ describe("the delivery clock moves reminders to their next stage", () => {
         return householdId === "a" ? skipped : ran;
       },
     });
-    // c has never had a pass, then b (00:10), then a (01:20).
+    // c has never had a pass, then b (00:10), then a (01:20); "gone" has only an expired reminder.
     expect(order).toEqual(["c", "b", "a"]);
     expect(summary).toMatchObject({ households: 2, created: 2, delivered: 2 });
     const open = calls.find((call) => call.table === "notifications")!;
     expect(open.filters).toContain('status in ["generated","delivered","seen"]');
-    expect(open.filters.some((filter) => filter.startsWith("expires_at.is.null,expires_at.gt.2026-10-22T01:30:00"))).toBe(true);
+
   });
 
   it("is bounded per tick", async () => {
