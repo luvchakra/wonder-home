@@ -7,7 +7,7 @@ import { drainJobs } from "@wonderhome/core/homesend/retry-queue";
 import { notificationJobHandlers } from "@wonderhome/core/notifications/retry-handler";
 import { sendDueDigests } from "@wonderhome/core/notifications/digest";
 import { householdsWithNoticeChanges, sweepNotices } from "@wonderhome/core/notifications/notices-sweep";
-import { deliverDueNotifications } from "@wonderhome/core/notifications/reconcile";
+import { advanceDueStages, deliverDueNotifications } from "@wonderhome/core/notifications/reconcile";
 import { whatsappConfigFromEnv } from "@wonderhome/core/notifications/whatsapp";
 import { WHATSAPP_PROCESS_KIND, whatsappJobHandler } from "@wonderhome/core/whatsapp/intake";
 import { log } from "@wonderhome/core/observability/logger";
@@ -18,6 +18,10 @@ import { log } from "@wonderhome/core/observability/logger";
  * goes out — in the app, and as a push to the devices of the one person it is
  * for, while it is still fresh. A reminder set for 7:30 lands at 7:30, not at
  * whatever moment somebody next opens the app.
+ *
+ * The same tick moves each household with an open reminder to its next
+ * stage (`advanceDueStages`: "tonight" → "this morning"), so a stage lands
+ * at its time and not when someone next opens the app.
  *
  * Authorised like every platform job, by `Authorization: Bearer $CRON_SECRET`,
  * refusing everything when no secret is set. Only households with something
@@ -42,6 +46,14 @@ async function dispatch(request: Request): Promise<Response> {
   }
   const now = new Date();
   const admin = createAdminClient();
+  // Reminders whose next stage is due ("tonight" → "this morning") move on now,
+  // not when someone next opens the app; what they make due is delivered below.
+  let advanced = 0;
+  try {
+    advanced = (await advanceDueStages(admin, now)).households;
+  } catch (thrown) {
+    log.warn("reminder stage pass failed", { reason: thrown instanceof Error ? thrown.name : "unknown" });
+  }
   const { data, error } = await admin
     .from("notifications")
     .select("household_id")
@@ -106,7 +118,7 @@ async function dispatch(request: Request): Promise<Response> {
       log.warn("homebrain sleep tick failed", { reason: thrown instanceof Error ? thrown.name : "unknown" });
     }
   });
-  return Response.json({ ok: true, households: households.length, delivered, noticed, digests, warmed }, { headers: { "cache-control": "no-store" } });
+  return Response.json({ ok: true, households: households.length, delivered, advanced, noticed, digests, warmed }, { headers: { "cache-control": "no-store" } });
 }
 
 export const POST = dispatch;

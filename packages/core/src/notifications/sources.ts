@@ -1,3 +1,4 @@
+import { sameTitledOnDay } from "../calendar/duplicates";
 import type { Formatter } from "../i18n/format";
 import { en } from "../i18n/messages/en";
 import { translator } from "../i18n/translate";
@@ -326,6 +327,24 @@ export function petSubject(row: PetCareRow, context: SourceContext): ReminderSub
 
 const OPEN_EVENT = new Set(["proposed", "planned", "confirmed"]);
 const DAY_EVENTS = new Set(["birthday", "special_occasion"]);
+
+/**
+ * Is this school entry the same occasion as a family event that day? (the
+ * owner, 2026-10-22: a school notice's "Field trip to Bounce" and the family's
+ * "Bounce School Trip" each sent a reminder for the same morning.) The same
+ * name, nearly the same, or the same occasion by another name, on the same
+ * local day: the calendar event is the record (HomeEvents' one door), so it
+ * carries the reminder and the school entry sends none of its own.
+ */
+export function sameOccasionAsEvent(row: SchoolItemRow, events: readonly FamilyEventRow[], timeZone: string): boolean {
+  if (!row.due_at || events.length === 0) return false;
+  // An entry with no time is stored at midnight UTC for its own day.
+  const date = row.due_time_known ? localMoment(new Date(row.due_at), timeZone).dateKey : row.due_at.slice(0, 10);
+  const records = events
+    .filter((event) => event.status !== "cancelled")
+    .map((event) => ({ sourceId: event.id, title: event.title, start: new Date(event.starts_at) }));
+  return sameTitledOnDay(records, { title: row.title, date, timeZone }) !== null;
+}
 
 export type FamilyEventRow = {
   id: string;
