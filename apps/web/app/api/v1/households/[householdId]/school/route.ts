@@ -6,7 +6,8 @@ import { ApiError } from "@wonderhome/core/api/errors";
 import { may } from "@wonderhome/core/billing/repository";
 import { createClient } from "@wonderhome/core/db/server";
 import { requireMembership } from "@wonderhome/core/identity/households";
-import { createSchoolItem, schoolAgenda } from "@wonderhome/core/school/repository";
+import { addSchoolItem, duplicateConflict } from "@wonderhome/core/calendar/add-event";
+import { schoolAgenda } from "@wonderhome/core/school/repository";
 import { SCHOOL_ITEM_KINDS } from "@wonderhome/core/school/items";
 
 /**
@@ -18,6 +19,8 @@ import { SCHOOL_ITEM_KINDS } from "@wonderhome/core/school/items";
  * RLS, so this route never has to decide which children the caller may see.
  */
 const createItemSchema = z.object({
+  /** Add it although the same thing is already on the calendar that day (a 409 said so). */
+  confirmDuplicate: z.boolean().optional(),
   childMemberId: z.uuid(),
   kind: z.enum(SCHOOL_ITEM_KINDS),
   title: z.string().trim().min(1).max(200),
@@ -49,12 +52,16 @@ export async function POST(request: Request, { params }: Params) {
 
   return defineRoute({ input: createItemSchema, authenticate: requireUser }, async ({ body }) => {
     const supabase = await createClient();
-    await requireMembership(supabase, householdId);
+    const membership = await requireMembership(supabase, householdId);
 
     const entitlement = await may(supabase, householdId, "school.connector");
     if (!entitlement.allowed) throw ApiError.forbidden(entitlement.reason);
 
-    const created = await createSchoolItem(supabase, { householdId, ...body });
+    // Through HomeEvents' one door: the same thing already on the calendar that day is a 409, unless confirmed.
+    const { confirmDuplicate, ...item } = body;
+    const added = await addSchoolItem(supabase, { householdId, ...item }, { timeZone: membership.household.timezone, confirmed: confirmDuplicate === true });
+    if (added.kind === "duplicate") throw duplicateConflict(added.existing);
+    const created = { id: added.id };
 
     return new Response(JSON.stringify(created), {
       status: 201,

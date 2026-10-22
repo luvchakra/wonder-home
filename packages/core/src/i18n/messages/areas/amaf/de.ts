@@ -79,6 +79,8 @@ export const amafDe: AreaCatalog<typeof amafEn> = {
   "amaf.refused": "Das kann nur ein Admin ändern, deshalb habe ich es so gelassen.",
   "amaf.failed": "Ich konnte das gerade nicht speichern – es wurde nichts geändert.",
   "amaf.undo.done": "Rückgängig gemacht – {section} ist wieder wie vorher.",
+  "amaf.redo.done": "Wiederhergestellt — {section} hat es wieder.",
+  "amaf.redo.none": "Es gibt nichts Zurückgenommenes, das ich wiederherstellen kann.",
   "amaf.undo.none": "Es gibt nichts aus Frag mich zur Familie, das sich rückgängig machen ließe.",
   "amaf.undo.cannot": "Das kann ich hier nicht rückgängig machen – du kannst es in {section} ändern.",
 

@@ -2,7 +2,7 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 
 import { auditChange } from "../api/audit";
 import { ApiError } from "../api/errors";
-import { createEvent } from "../family/repository";
+import { addFamilyEvent } from "../calendar/add-event";
 import { getCheckup } from "./checkups";
 import type { PrivacyScope } from "./repository";
 
@@ -358,16 +358,26 @@ export async function createAppointment(
   }
 
   if (input.calendarSync && input.privacyScope === "household_operational" && endsAt) {
-    const event = await createEvent(supabase, {
-      householdId: actor.householdId,
-      title: `${input.memberDisplayName} — appointment`,
-      kind: "appointment",
-      startsAt,
-      endsAt,
-      ownerMemberId: input.memberId,
-    });
-    await supabase.from("health_appointments").update({ family_event_id: event.id }).eq("id", appointment.id);
-    appointment = { ...appointment, familyEventId: event.id };
+    // Through HomeEvents' one door. The same appointment already on the calendar
+    // that day is not added again, and is not linked either: cancelling this
+    // appointment must never cancel an entry somebody else made.
+    const { data: home } = await supabase.from("households").select("timezone").eq("id", actor.householdId).maybeSingle();
+    const event = await addFamilyEvent(
+      supabase,
+      {
+        householdId: actor.householdId,
+        title: `${input.memberDisplayName} — appointment`,
+        kind: "appointment",
+        startsAt,
+        endsAt,
+        ownerMemberId: input.memberId,
+      },
+      { timeZone: (home?.timezone as string | undefined) ?? "UTC" },
+    );
+    if (event.kind === "added") {
+      await supabase.from("health_appointments").update({ family_event_id: event.id }).eq("id", appointment.id);
+      appointment = { ...appointment, familyEventId: event.id };
+    }
   }
 
   await auditChange({

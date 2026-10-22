@@ -124,6 +124,7 @@ export const ar: Catalog = {
   "home.handledLede": "هذا ما اعتنينا به.",
   "home.todaysFocus": "أولويات اليوم",
   "home.familyMoment": "لحظة عائلية",
+  "home.nextMoment": "القادم",
   "home.schoolMoment": "فعالية مدرسية",
   "home.appointmentMoment": "موعد",
 

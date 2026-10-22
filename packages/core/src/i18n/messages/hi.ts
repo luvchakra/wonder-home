@@ -124,6 +124,7 @@ export const hi: Catalog = {
   "home.handledLede": "यह वह है जिसका हमने ध्यान रखा।",
   "home.todaysFocus": "आज का ध्यान",
   "home.familyMoment": "परिवार का पल",
+  "home.nextMoment": "आगे क्या है",
   "home.schoolMoment": "स्कूल का कार्यक्रम",
   "home.appointmentMoment": "अपॉइंटमेंट",
 

@@ -14,7 +14,8 @@ import { createChildMember } from "@wonderhome/core/identity/children";
 import { requireHouseholdAdmin, type requireMembership } from "@wonderhome/core/identity/households";
 import { log } from "@wonderhome/core/observability/logger";
 import { SCHOOL_ITEM_KINDS } from "@wonderhome/core/school/items";
-import { cancelSchoolItem, createSchoolItem, listSchoolItems, updateSchoolItem } from "@wonderhome/core/school/repository";
+import { addSchoolItem } from "@wonderhome/core/calendar/add-event";
+import { cancelSchoolItem, listSchoolItems, updateSchoolItem } from "@wonderhome/core/school/repository";
 import { movedSchoolWhen, schoolWhen } from "@wonderhome/core/school/times";
 
 /**
@@ -174,17 +175,25 @@ export async function createNew(supabase: Supabase, membership: Membership, inpu
   }
   if (input.kind === "school_item") {
     if (!input.childMemberId) return { error: "Choose who this is for." };
-    const created = await createSchoolItem(supabase, {
-      householdId,
-      childMemberId: input.childMemberId,
-      kind: input.schoolKind ?? "homework",
-      title: input.title,
-      subject: input.subject || null,
-      detail: input.notes || null,
-      ...schoolWhen({ date: input.dueDate, time: input.dueTime, endTime: input.endTime, timezone: membership.household.timezone }),
-      estimatedMinutes: null,
-    });
-    return { routedTable: "school_items", routedId: created.id };
+    // Through HomeEvents' one door. Already on the calendar that day (a family
+    // event or a school entry, by this or another name) is refused with its
+    // name, never linked: undoing this item must never remove the original.
+    const added = await addSchoolItem(
+      supabase,
+      {
+        householdId,
+        childMemberId: input.childMemberId,
+        kind: input.schoolKind ?? "homework",
+        title: input.title,
+        subject: input.subject || null,
+        detail: input.notes || null,
+        ...schoolWhen({ date: input.dueDate, time: input.dueTime, endTime: input.endTime, timezone: membership.household.timezone }),
+        estimatedMinutes: null,
+      },
+      { timeZone: membership.household.timezone },
+    );
+    if (added.kind === "duplicate") return { error: `“${added.existing.title}” is already on the calendar that day, so this was not added again.` };
+    return { routedTable: "school_items", routedId: added.id };
   }
   if (input.kind === "health_document") {
     const entitlement = await may(supabase, householdId, "health.tracking");

@@ -189,6 +189,13 @@ export type AmafFact = {
   noteable?: boolean;
   /** An answer adds to what is on record (another allergy) rather than replacing it. */
   additive?: boolean;
+  /**
+   * Words that say a sentence is about this fact even while another question
+   * is waiting ("Upasana's birthday is 24 June 1986" while school hours were
+   * asked): read for the person it names, saved for them, and the waiting
+   * question asked again (the owner, 2026-10-22).
+   */
+  cue?: RegExp;
 };
 
 /** What is on record, in words to say back and a value to compare with. */
@@ -427,9 +434,19 @@ function noteFact(key: string, module: AmafModule, weight: number, scope: "house
 }
 
 /** The HomeBrain note key a note fact keeps its answer under. */
+/**
+ * The HomeBrain memory key a note is kept under. `memories.key` must match
+ * `^[a-z][a-z0-9_.]{1,60}$`: a member's full id (hyphens, 36 characters) broke
+ * that, so every note about a person was refused (2026-10-22). The row carries
+ * the member's id itself; the key keeps only enough of it (12 hex characters)
+ * to tell people apart in a household.
+ */
 export function amafMemoryKey(factKey: string, subject: AmafSubject): string {
-  return subject.kind === "person" ? `member.amaf.${factKey}.${subject.id}` : `household.amaf.${factKey}`;
+  return subject.kind === "person" ? `member.amaf.${factKey}.${(subject.id ?? "").replace(/[^0-9a-f]/gi, "").slice(0, 12).toLowerCase()}` : `household.amaf.${factKey}`;
 }
+
+/** What `memories.key` accepts (migration `20260917021114`). */
+export const MEMORY_KEY_PATTERN = /^[a-z][a-z0-9_.]{1,60}$/;
 
 /** The bills worth asking about, most universal first; each is asked only while it is not on record. */
 export const AMAF_BILLS: readonly { key: BillTypeKey; weight: number }[] = [
@@ -482,6 +499,7 @@ export const AMAF_FACTS: readonly AmafFact[] = [
   },
   {
     key: "member.birthday",
+    cue: /\b(?:birthday|b\'?day|born|date of birth|dob)\b/i,
     module: "family",
     weight: 90,
     subjects: (snapshot) => people(snapshot, ["adult", "child"]).map(personSubject),
@@ -581,6 +599,7 @@ export const AMAF_FACTS: readonly AmafFact[] = [
   },
   {
     key: "child.school_hours",
+    cue: /\bschool\b.*\b(?:starts?|ends?|hours?|timings?|day)\b|\b(?:starts?|ends?|hours?|timings?)\b.*\bschool\b/i,
     module: "school",
     weight: 66,
     refreshDays: 180,
@@ -730,6 +749,7 @@ export const AMAF_FACTS: readonly AmafFact[] = [
   },
   {
     key: "member.phone",
+    cue: /\b(?:phone|mobile|number|cell)\b/i,
     module: "family",
     weight: 52,
     adminOnly: true,
@@ -863,6 +883,7 @@ export const AMAF_FACTS: readonly AmafFact[] = [
   },
   {
     key: "member.anniversary",
+    cue: /\banniversary\b/i,
     module: "family",
     weight: 36,
     subjects: (snapshot) => {

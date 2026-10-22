@@ -79,6 +79,8 @@ export const amafEs: AreaCatalog<typeof amafEn> = {
   "amaf.refused": "Solo un Admin puede cambiar eso, así que lo he dejado.",
   "amaf.failed": "No he podido guardarlo ahora mismo; no se ha cambiado nada.",
   "amaf.undo.done": "Deshecho: {section} vuelve a estar como antes.",
+  "amaf.redo.done": "Restaurado: {section} lo tiene de nuevo.",
+  "amaf.redo.none": "No hay nada que haya deshecho y pueda restaurar.",
   "amaf.undo.none": "No hay nada de Pregúntame sobre la familia que deshacer.",
   "amaf.undo.cannot": "Eso no lo puedo deshacer desde aquí; puedes cambiarlo en {section}.",
 

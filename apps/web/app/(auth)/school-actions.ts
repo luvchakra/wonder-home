@@ -6,11 +6,12 @@ import { z } from "zod";
 import { toErrorBody } from "@wonderhome/core/api/errors";
 import { createClient } from "@wonderhome/core/db/server";
 import { requireMembership } from "@wonderhome/core/identity/households";
-import { cancelSchoolItem, createSchoolItem, updateSchoolItem } from "@wonderhome/core/school/repository";
+import { addSchoolItem } from "@wonderhome/core/calendar/add-event";
+import { cancelSchoolItem, updateSchoolItem } from "@wonderhome/core/school/repository";
 import { SCHOOL_ITEM_KINDS } from "@wonderhome/core/school/items";
 import { schoolWhen } from "@wonderhome/core/school/times";
 
-import { duplicateFor } from "../_lib/event-window";
+import { duplicateFor, duplicateLine } from "../_lib/event-window";
 import type { ActionState } from "./actions";
 
 /**
@@ -78,16 +79,22 @@ export async function createSchoolItemAction(_previous: SchoolItemActionState, f
       if (duplicate) return { duplicate };
     }
 
-    await createSchoolItem(supabase, {
-      householdId: parsed.data.householdId,
-      childMemberId: parsed.data.childMemberId,
-      kind: parsed.data.kind,
-      title: parsed.data.title,
-      subject: parsed.data.subject || null,
-      detail: parsed.data.detail || null,
-      ...when,
-      estimatedMinutes: parsed.data.estimatedMinutes === "" ? null : parsed.data.estimatedMinutes,
-    });
+    // Through HomeEvents' one door: it refuses a copy the check above could not see.
+    const added = await addSchoolItem(
+      supabase,
+      {
+        householdId: parsed.data.householdId,
+        childMemberId: parsed.data.childMemberId,
+        kind: parsed.data.kind,
+        title: parsed.data.title,
+        subject: parsed.data.subject || null,
+        detail: parsed.data.detail || null,
+        ...when,
+        estimatedMinutes: parsed.data.estimatedMinutes === "" ? null : parsed.data.estimatedMinutes,
+      },
+      { timeZone: membership.household.timezone, confirmed: formData.get("confirmDuplicate") === "on" },
+    );
+    if (added.kind === "duplicate") return { duplicate: await duplicateLine(membership, added.existing) };
 
     revalidatePath("/school");
     revalidatePath("/calendar");

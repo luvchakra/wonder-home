@@ -938,10 +938,13 @@ export function buildOpenApiDocument(): Json {
         },
         post: {
           summary: "Record an item of school work",
+          description:
+            "Added through HomeEvents' one door: when the same thing is already on the household's calendar that day — a family event or a school entry, by the same or another name for the same occasion — nothing is added and the answer is 409 naming that entry; send confirmDuplicate: true to add it anyway.",
           responses: {
             "201": { description: "The new item" },
             "400": { $ref: "#/components/responses/BadRequest" },
             "403": { $ref: "#/components/responses/Forbidden" },
+            "409": { $ref: "#/components/responses/Conflict" },
           },
         },
       },
@@ -1550,11 +1553,12 @@ export function buildOpenApiDocument(): Json {
         post: {
           summary: "Put something in the family's calendar",
           description:
-            "Protected time can be created here and is never moved here. A clash with a confirmed commitment produces a proposal for a person to decide.",
+            "Protected time can be created here and is never moved here. A clash with a confirmed commitment produces a proposal for a person to decide. Added through HomeEvents' one door: when the same thing is already on the household's calendar that day — a family event or a school entry, by the same or another name for the same occasion — nothing is added and the answer is 409 naming that entry; send confirmDuplicate: true to add it anyway.",
           responses: {
             "201": { description: "The new event" },
             "400": { $ref: "#/components/responses/BadRequest" },
             "403": { $ref: "#/components/responses/Forbidden" },
+            "409": { $ref: "#/components/responses/Conflict" },
           },
         },
       },

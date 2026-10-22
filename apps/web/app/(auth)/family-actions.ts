@@ -6,7 +6,8 @@ import { z } from "zod";
 import { toErrorBody } from "@wonderhome/core/api/errors";
 import { may } from "@wonderhome/core/billing/repository";
 import { createClient } from "@wonderhome/core/db/server";
-import { advanceGift, createEvent, GIFT_STEPS, resolveConflict, settleEventAction as settleEvent } from "@wonderhome/core/family/repository";
+import { addFamilyEvent } from "@wonderhome/core/calendar/add-event";
+import { advanceGift, GIFT_STEPS, resolveConflict, settleEventAction as settleEvent } from "@wonderhome/core/family/repository";
 import { EVENT_KINDS } from "@wonderhome/core/family/schedule";
 import { localMoment } from "@wonderhome/core/calendar/dates";
 import { EVENT_CATEGORIES, EVENT_VISIBILITIES } from "@wonderhome/core/calendar/projection";
@@ -14,7 +15,7 @@ import { parseRecurrence, RECURRENCE_FREQUENCIES } from "@wonderhome/core/calend
 import { requireMembership } from "@wonderhome/core/identity/households";
 import { log } from "@wonderhome/core/observability/logger";
 
-import { clashesFor, duplicateFor, eventWindow } from "../_lib/event-window";
+import { clashesFor, duplicateFor, duplicateLine, eventWindow } from "../_lib/event-window";
 import { eventPlaceFromForm } from "../_lib/places";
 import type { ActionState } from "./actions";
 
@@ -101,24 +102,30 @@ export async function createEventAction(_previous: EventActionState, formData: F
 
     const place = await eventPlaceFromForm(membership, formData);
 
-    await createEvent(supabase, {
-      householdId: input.householdId,
-      title: input.title,
-      kind: input.kind,
-      startsAt: when.startsAt,
-      endsAt: when.endsAt,
-      location: place.location,
-      locationPlaceId: place.locationPlaceId,
-      locationAddress: place.locationAddress,
-      protected: input.protected === "on",
-      ownerMemberId: membership.memberId,
-      participantMemberIds: input.memberIds,
-      allDay: input.allDay === "on",
-      category: input.category ?? null,
-      visibility: input.visibility,
-      recurrence: rule,
-      notes: input.notes ?? null,
-    });
+    // Through HomeEvents' one door: it refuses a copy the check above could not see (another member's entry).
+    const added = await addFamilyEvent(
+      supabase,
+      {
+        householdId: input.householdId,
+        title: input.title,
+        kind: input.kind,
+        startsAt: when.startsAt,
+        endsAt: when.endsAt,
+        location: place.location,
+        locationPlaceId: place.locationPlaceId,
+        locationAddress: place.locationAddress,
+        protected: input.protected === "on",
+        ownerMemberId: membership.memberId,
+        participantMemberIds: input.memberIds,
+        allDay: input.allDay === "on",
+        category: input.category ?? null,
+        visibility: input.visibility,
+        recurrence: rule,
+        notes: input.notes ?? null,
+      },
+      { timeZone: timezone, confirmed: Boolean(input.confirmClash) },
+    );
+    if (added.kind === "duplicate") return { clashes: [], duplicate: await duplicateLine(membership, added.existing) };
   } catch (error) {
     log.warn("event creation failed", { reason: error instanceof Error ? error.name : "unknown" });
     return { error: "We could not add that to the calendar. Please try again." };

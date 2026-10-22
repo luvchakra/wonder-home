@@ -4,6 +4,7 @@ import Link from "next/link";
 import { may } from "@wonderhome/core/billing/repository";
 import { describeCalendarHealth } from "@wonderhome/core/family/calendar-connector";
 import { familyAgenda } from "@wonderhome/core/family/repository";
+import { isFamilyMoment } from "@wonderhome/core/family/schedule";
 import { listPets } from "@wonderhome/core/home/repository";
 import { platformMailConfig } from "@wonderhome/core/email/mailer";
 import { isHouseholdAdmin, listMembers } from "@wonderhome/core/identity/households";
@@ -147,7 +148,8 @@ export default async function FamilyPage() {
   const familyMembers = members.filter((member) => member.memberType !== "helper");
   const helpers = members.filter((member) => member.memberType === "helper");
   const needs = agenda ? [...agenda.events, ...agenda.conflicts, ...agenda.gifts] : [];
-  const moment = events.find((event) => event.protected) ?? events.find((event) => event.kind === "family_time" || event.kind === "outing") ?? null;
+  // A family moment is shared family time (`isFamilyMoment`), never just the next protected event.
+  const moment = events.find((event) => event.protected && isFamilyMoment(event)) ?? events.find((event) => isFamilyMoment(event)) ?? null;
   const admin = isHouseholdAdmin(membership);
   // Admins invite the people the household keeps without an account to sign in as themselves.
   const invite = admin ? { householdName: membership.household.name, inviterName: membership.displayName, canEmail: platformMailConfig() !== null } : null;

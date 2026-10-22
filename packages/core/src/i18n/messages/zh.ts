@@ -124,6 +124,7 @@ export const zh: Catalog = {
   "home.handledLede": "这些事我们已经帮你办好了。",
   "home.todaysFocus": "今日重点",
   "home.familyMoment": "家庭时光",
+  "home.nextMoment": "即将到来",
   "home.schoolMoment": "学校活动",
   "home.appointmentMoment": "预约",
 
