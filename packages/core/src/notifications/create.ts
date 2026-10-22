@@ -96,10 +96,20 @@ export async function createNotification(
 
   if (existing) {
     const changed = existing.title !== row.title || existing.body !== row.body;
+    // A notice that already says this is left alone: several sweeps can run for one chat message at once
+    // (the send, the page it refreshes, the page load's pass), and rewriting it only moved its time.
+    if (input.refreshUnread && !changed) return { id: existing.id as string };
     // Newly changed words are news again: a thread the person had read comes back unread.
     const reopen = input.refreshUnread && changed && (existing.status === "seen" || existing.status === "delivered") ? { status: "delivered", seen_at: null } : {};
-    const { error } = await admin.from("notifications").update({ ...row, ...reopen }).eq("id", existing.id);
-    if (error) return null;
+    // Only over the words this writer read: a concurrent writer that got there first wins, and this one changes nothing.
+    const { data: written, error } = await admin
+      .from("notifications")
+      .update({ ...row, ...reopen })
+      .eq("id", existing.id)
+      .eq("title", existing.title)
+      .eq("body", existing.body)
+      .select("id");
+    if (error || !written || written.length === 0) return null;
     return { id: existing.id as string };
   }
 

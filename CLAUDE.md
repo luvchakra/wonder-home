@@ -904,9 +904,14 @@ reminders about real records, never lines of text fired and forgotten.
   daily ceiling, low never; quiet hours hold except for critical. Every five
   minutes pg_cron calls `/api/v1/notifications/dispatch`
   (`deliverDueNotifications`), so a reminder lands at its time. The same tick
-  moves each household with an open reminder to its next stage
-  (`advanceDueStages`, at most 40 a tick, under the page load's five-minute
-  claim), so "this morning" never waits for someone to open the app. An event's
+  moves reminders to their next stage (`advanceDueStages`, at most 40 a tick,
+  under the page load's five-minute claim), so "this morning" never waits for
+  someone to open the app. It takes only households whose
+  `notification_reconciliations.next_due_at` has come: each pass sets it to the
+  next moment anything changes by itself (`nextReminderCheck`, at most six
+  hours away), and a trigger moves it to now when a record a reminder reads
+  changes or a person closes a reminder. A source table a reminder reads gets
+  that trigger (`wh.mark_reminders_due`). An event's
   on-the-day reminder is Normal (it may push); the evening before stays Low. Health
   appointment and measurement reminders run on the same tick, on the household's
   clock, each sent once. Notifications offers push for this phone (`PushNudge`)

@@ -12,6 +12,7 @@ import {
   isUnansweredForChannel,
   chooseReminderRecipient,
   isUnanswered,
+  nextReminderCheck,
   planEscalation,
   planReminder,
   type ChosenRecipient,
@@ -139,6 +140,11 @@ async function reconcile(
   now: Date,
   adapters: Record<DeliveryChannel, ChannelAdapter> | undefined,
 ): Promise<ReconcileResult> {
+  // While this pass reads, a write to the records moves the household's next check to now (a database
+  // trigger); the marker is how the end of the pass knows none did. A pass that dies is retried when it lapses.
+  const marker = new Date(now.getTime() + PASS_MARKER_MINUTES * 60_000).toISOString();
+  await admin.from("notification_reconciliations").update({ next_due_at: marker }).eq("household_id", householdId);
+
   const { data: household } = await admin
     .from("households")
     .select("timezone, region, currency, measurement_system, default_language")
@@ -434,7 +440,25 @@ async function reconcile(
   //    person's other live channels when it is still fresh.
   result.delivered += await deliverDueNotifications(admin, householdId, now, adapters);
 
+  // 5. When the clock should look again: the next moment any of this changes by itself.
+  await recordNextCheck(admin, householdId, nextReminderCheck(desired.values(), openByKey, now), marker, now);
+
   return result;
+}
+
+/** How long a pass's marker stands before the clock takes the household again. */
+const PASS_MARKER_MINUTES = 10;
+
+async function recordNextCheck(admin: SupabaseClient, householdId: string, at: Date, marker: string, now: Date): Promise<void> {
+  const { data } = await admin
+    .from("notification_reconciliations")
+    .update({ next_due_at: at.toISOString() })
+    .eq("household_id", householdId)
+    .eq("next_due_at", marker)
+    .select("household_id");
+  if (data && data.length > 0) return;
+  // A forced pass for a household no page has opened yet gets its row. A row a write moved to now keeps now (the insert conflicts).
+  await admin.from("notification_reconciliations").insert({ household_id: householdId, reconciled_at: now.toISOString(), next_due_at: at.toISOString() });
 }
 
 function push(list: ReminderSubject[], subject: ReminderSubject | null): void {
@@ -680,11 +704,14 @@ export const STAGE_HOUSEHOLDS_PER_TICK = 40;
  * Reminders whose next stage is due move on with the delivery clock, not
  * only when somebody opens the app (the owner's review, 2026-10-22: a school
  * trip's "this morning" reminder, due at 7:00, was made at 7:25, when someone
- * happened to open WonderHome; the daily sweep comes at 8:30). Every five
- * minutes, each household with a reminder still open — the only ones that can
- * have a next stage — takes the same pass a page load gives it, under the same
- * five-minute claim, so a page load and the clock never both run it. The
- * longest-waiting go first, at most `STAGE_HOUSEHOLDS_PER_TICK` a tick.
+ * happened to open WonderHome; the daily sweep comes at 8:30). Each pass
+ * records when the household next needs one (`next_due_at`: a stage, an
+ * expiry, an escalation's wait — `nextReminderCheck`), and a write to the
+ * records it reads, or a person closing a reminder, moves that to now (a
+ * database trigger). Every five minutes the households that are due take the
+ * same pass a page load gives them, under the same five-minute claim, so a
+ * page load and the clock never both run it: the longest-waiting first, at
+ * most `STAGE_HOUSEHOLDS_PER_TICK` a tick, and nobody else is read.
  */
 export async function advanceDueStages(
   admin: SupabaseClient,
@@ -694,21 +721,14 @@ export async function advanceDueStages(
   const limit = options.limit ?? STAGE_HOUSEHOLDS_PER_TICK;
   const pass = options.pass ?? ((householdId: string) => reconcileHouseholdReminders(admin, householdId, { now }));
   const summary: SweepSummary = { households: 0, created: 0, updated: 0, resolved: 0, expired: 0, delivered: 0 };
-  const { data: open, error } = await admin
-    .from("notifications")
-    .select("household_id, expires_at")
-    .in("status", ["generated", "delivered", "seen"])
-    .limit(5000);
+  const { data: due, error } = await admin
+    .from("notification_reconciliations")
+    .select("household_id")
+    .lte("next_due_at", now.toISOString())
+    .order("next_due_at", { ascending: true })
+    .limit(limit);
   if (error) return summary;
-  // Expired ones are left out here rather than in a filter expression (nothing is ever interpolated into one).
-  const stillOpen = ((open ?? []) as { household_id: string; expires_at: string | null }[]).filter((row) => !row.expires_at || Date.parse(row.expires_at) > now.getTime());
-  const households = [...new Set(stillOpen.map((row) => row.household_id))];
-  if (households.length === 0) return summary;
-  // The longest since their last pass first, so a busy tick never starves the same households.
-  const { data: passes } = await admin.from("notification_reconciliations").select("household_id, reconciled_at").in("household_id", households);
-  const lastPass = new Map(((passes ?? []) as { household_id: string; reconciled_at: string }[]).map((row) => [row.household_id, Date.parse(row.reconciled_at)]));
-  households.sort((a, b) => (lastPass.get(a) ?? 0) - (lastPass.get(b) ?? 0));
-  for (const householdId of households.slice(0, limit)) {
+  for (const { household_id: householdId } of (due ?? []) as { household_id: string }[]) {
     const result = await pass(householdId);
     if (!result.ran) continue;
     summary.households += 1;
