@@ -30,6 +30,7 @@ import {
   grocerySubject,
   mealSubject,
   petSubject,
+  sameOccasionAsEvent,
   schoolDaySubject,
   schoolSubject,
   type BillRow,
@@ -245,7 +246,10 @@ async function reconcile(
   const subjects: ReminderSubject[] = [];
   const schoolRows = new Map<ReminderSubject, SchoolItemRow>();
   for (const row of (bills.data ?? []) as BillRow[]) push(subjects, billSubject(row, context));
+  const eventRows = (events.data ?? []) as FamilyEventRow[];
   for (const row of (school.data ?? []) as SchoolItemRow[]) {
+    // The same occasion as a family event that day is reminded once, by the event.
+    if (sameOccasionAsEvent(row, eventRows, timeZone)) continue;
     const subject = schoolSubject(row, displayNames.get(row.child_member_id) ?? null, context);
     // Something already past its moment is no longer worth grouping with the rest.
     if (subject && subject.expiresAt > now) {
@@ -266,7 +270,7 @@ async function reconcile(
     const pet = Array.isArray(row.pets) ? row.pets[0] : row.pets;
     if (pet?.active) push(subjects, petSubject({ ...row, pet_name: pet.name }, context));
   }
-  for (const row of (events.data ?? []) as FamilyEventRow[]) push(subjects, familySubject(row, context));
+  for (const row of eventRows) push(subjects, familySubject(row, context));
 
   // 2. Who is responsible, and how they like to be reminded.
   const directory = buildDirectory(memberRows, roles.data ?? [], responsibilities.data ?? [], guardians.data ?? []);
@@ -667,6 +671,53 @@ export function patchFor(row: OpenRow, want: DesiredReminder, now: Date): Record
 function sameInstant(a: string | null, b: string | null): boolean {
   if (a === null || b === null) return a === b;
   return new Date(a).getTime() === new Date(b).getTime();
+}
+
+/** At most this many households take a reminder pass on one tick of the delivery clock. */
+export const STAGE_HOUSEHOLDS_PER_TICK = 40;
+
+/**
+ * Reminders whose next stage is due move on with the delivery clock, not
+ * only when somebody opens the app (the owner's review, 2026-10-22: a school
+ * trip's "this morning" reminder, due at 7:00, was made at 7:25, when someone
+ * happened to open WonderHome; the daily sweep comes at 8:30). Every five
+ * minutes, each household with a reminder still open — the only ones that can
+ * have a next stage — takes the same pass a page load gives it, under the same
+ * five-minute claim, so a page load and the clock never both run it. The
+ * longest-waiting go first, at most `STAGE_HOUSEHOLDS_PER_TICK` a tick.
+ */
+export async function advanceDueStages(
+  admin: SupabaseClient,
+  now: Date = new Date(),
+  options: { limit?: number; pass?: (householdId: string) => Promise<ReconcileResult> } = {},
+): Promise<SweepSummary> {
+  const limit = options.limit ?? STAGE_HOUSEHOLDS_PER_TICK;
+  const pass = options.pass ?? ((householdId: string) => reconcileHouseholdReminders(admin, householdId, { now }));
+  const summary: SweepSummary = { households: 0, created: 0, updated: 0, resolved: 0, expired: 0, delivered: 0 };
+  const { data: open, error } = await admin
+    .from("notifications")
+    .select("household_id")
+    .in("status", ["generated", "delivered", "seen"])
+    .or(`expires_at.is.null,expires_at.gt.${now.toISOString()}`)
+    .limit(5000);
+  if (error) return summary;
+  const households = [...new Set(((open ?? []) as { household_id: string }[]).map((row) => row.household_id))];
+  if (households.length === 0) return summary;
+  // The longest since their last pass first, so a busy tick never starves the same households.
+  const { data: passes } = await admin.from("notification_reconciliations").select("household_id, reconciled_at").in("household_id", households);
+  const lastPass = new Map(((passes ?? []) as { household_id: string; reconciled_at: string }[]).map((row) => [row.household_id, Date.parse(row.reconciled_at)]));
+  households.sort((a, b) => (lastPass.get(a) ?? 0) - (lastPass.get(b) ?? 0));
+  for (const householdId of households.slice(0, limit)) {
+    const result = await pass(householdId);
+    if (!result.ran) continue;
+    summary.households += 1;
+    summary.created += result.created;
+    summary.updated += result.updated;
+    summary.resolved += result.resolved;
+    summary.expired += result.expired;
+    summary.delivered += result.delivered;
+  }
+  return summary;
 }
 
 export type SweepSummary = { households: number; created: number; updated: number; resolved: number; expired: number; delivered: number };

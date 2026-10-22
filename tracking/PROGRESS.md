@@ -368,6 +368,8 @@ disagree again.)
 | 2026-10-22 | 26 | 26-018 | Done | Every event goes through HomeEvents' one door (`calendar/add-event.ts`): the REST API, appointments and HomeSend now check for the same thing that day too, and `single-door.test.ts` fails CI on any other writer. |
 | 2026-10-22 | 26 | 26-019 | Done | A family moment is shared family time (`isFamilyMoment`): never a school trip or one person's outing, protected or not. |
 | 2026-10-22 | 04 | 04-031 | Done | Ask me about family saves a fact said about someone else for them, person notes fit `memories.key`, and "put it back" redoes an undo. |
+| 2026-10-22 | 27 | 27-016 | Done | The delivery clock moves reminders to their next stage, so "this morning" lands at its time without anyone opening the app. |
+| 2026-10-22 | 27 | 27-017 | Done | One reminder per occasion: a school entry that is the same thing as a family event that day sends none of its own. |
 | 2026-10-21 | 26 | 26-017 | Done | Nothing is added to the calendar twice: the same occasion under another name on the same day is asked about first, from the Calendar, Kids & School, HomeTalk and HomeSend. |
 | 2026-10-21 | 12 | 12-016 | Blocked | Reactions on FamilyChat messages: built and tested, waiting on its migration reaching the live project; the thread hides them until then. |
 | 2026-10-21 | 17 | 17-010 | Done | A public Careers section powered by WonderJobs: /careers, each job with Apply, the applicant's status page, and the key set by a platform admin at /platform-admin/careers (kept in Vault, audited). |

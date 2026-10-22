@@ -11,6 +11,7 @@ decision that shapes later work each earns a note, written before moving on.
 
 | Date | Note |
 |---|---|
+| 2026-10-22 | [Reminder stages move on with the clock; one reminder per occasion (27-016, 27-017)](2026-10-22-reminder-stages-on-the-clock.md) |
 | 2026-10-22 | [HomeEvents' one door, family moments that are shared, and Ask me about family saving what it hears](2026-10-22-homeevents-one-door-family-moment-amaf.md) |
 | 2026-10-22 | [The place pickers find what Google Maps finds (24-014)](2026-10-22-place-search-finds-what-maps-finds.md) |
 | 2026-10-22 | [The nightly E2E is green again: three undocumented endpoints, one with no session](2026-10-22-e2e-nightly-email-off.md) |

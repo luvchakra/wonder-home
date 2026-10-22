@@ -903,7 +903,10 @@ reminders about real records, never lines of text fired and forgotten.
   (`pushWorthSending`): critical always, high and timed reminders within a
   daily ceiling, low never; quiet hours hold except for critical. Every five
   minutes pg_cron calls `/api/v1/notifications/dispatch`
-  (`deliverDueNotifications`), so a reminder lands at its time. It is inert
+  (`deliverDueNotifications`), so a reminder lands at its time. The same tick
+  moves each household with an open reminder to its next stage
+  (`advanceDueStages`, at most 40 a tick, under the page load's five-minute
+  claim), so "this morning" never waits for someone to open the app. It is inert
   until a deployment sets `WONDERHOME_VAPID_PUBLIC_KEY` and
   `WONDERHOME_VAPID_PRIVATE_KEY` (optionally `WONDERHOME_VAPID_SUBJECT`) and
   the database holds the cron secret in Vault as `cron_secret`. A device the
