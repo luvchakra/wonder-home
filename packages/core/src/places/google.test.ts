@@ -226,7 +226,7 @@ describe("finding places near a point", () => {
         ? json({})
         : json({ places: [{ id: "fort", displayName: { text: "Vasai Fort" }, location: { latitude: 19.3, longitude: 72.8 } }] }),
     );
-    const found = await createGooglePlacesProvider({ apiKey: "key", fetch }).findNearby({
+    const found = await createGooglePlacesProvider({ apiKey: "key", fetch }).findNearby!({
       text: "places to visit",
       near: { latitude: 19.2, longitude: 72.97 },
       radiusMeters: 100_000,
@@ -239,7 +239,7 @@ describe("finding places near a point", () => {
 
   it("a search with no type asks once", async () => {
     const { fetch, calls } = fakeFetch(() => json({}));
-    await createGooglePlacesProvider({ apiKey: "key", fetch }).findNearby({ text: "park", near: { latitude: 1, longitude: 1 }, radiusMeters: 1000 });
+    await createGooglePlacesProvider({ apiKey: "key", fetch }).findNearby!({ text: "park", near: { latitude: 1, longitude: 1 }, radiusMeters: 1000 });
     expect(calls).toHaveLength(1);
   });
 });
