@@ -1665,6 +1665,22 @@ export function buildOpenApiDocument(): Json {
           },
         },
       },
+      "/households/{householdId}/voice/gemini/transcribe": {
+        parameters: [
+          { name: "householdId", in: "path", required: true, schema: { type: "string", format: "uuid" } },
+        ],
+        post: {
+          summary: "Write down one Gemini Live turn word for word, for the chat",
+          description:
+            "Body { audio }: base64 16-bit mono PCM at 16 kHz, at most a minute — the turn the session already sent to Google. Under the same gate as the session itself (rollout flag, plan, Google key, data-use agreement) and rate-limited per member (voice.transcribe). Returns { transcript }, or { transcript: null } when it could not be written down, so the page keeps Gemini's own line. Nothing is stored and nothing HomeTalk did changes.",
+          responses: {
+            "200": { description: "The transcript, or null" },
+            "400": { $ref: "#/components/responses/BadRequest" },
+            "403": { $ref: "#/components/responses/Forbidden" },
+            "429": { description: "Too many turns transcribed in a short time" },
+          },
+        },
+      },
       "/households/{householdId}/plan": {
         parameters: [
           { name: "householdId", in: "path", required: true, schema: { type: "string", format: "uuid" } },
@@ -1728,6 +1744,47 @@ export function buildOpenApiDocument(): Json {
             "200": { description: "The export, as a JSON attachment" },
             "403": { $ref: "#/components/responses/Forbidden" },
             "404": { $ref: "#/components/responses/NotFound" },
+          },
+        },
+      },
+      "/notifications/dispatch": {
+        get: {
+          summary: "The same tick, as Vercel Cron calls it",
+          description: "Vercel Cron calls a path with GET. This is the POST handler behind the same shared secret.",
+          responses: {
+            "200": { description: "Counts of households touched, notifications delivered, notices, digests and contexts warmed" },
+            "401": { $ref: "#/components/responses/Unauthenticated" },
+          },
+        },
+        post: {
+          summary: "The delivery clock: send whatever has come due (story 23-015)",
+          description:
+            "Called every five minutes by pg_cron. Delivers notifications whose scheduled time has passed, at most 200 households a run, then sweeps notices for households whose records changed, sends morning digests that are due and keeps a few HomeBrain contexts warm; retries and HomeBrain Sleep run after the response. Authorised by `Authorization: Bearer $CRON_SECRET`, never a session; refuses everything when no secret is set. Reports counts only.",
+          responses: {
+            "200": { description: "Counts of households touched, notifications delivered, notices, digests and contexts warmed" },
+            "401": { $ref: "#/components/responses/Unauthenticated" },
+            "500": { description: "What was due could not be read" },
+          },
+        },
+      },
+      "/notifications/email-off": {
+        get: {
+          summary: "Someone opened the unsubscribe address: go to the page that asks first",
+          description: "Redirects to /email-off with the same query, where a person confirms before anything changes.",
+          security: [],
+          responses: {
+            "302": { description: "Redirects to /email-off" },
+          },
+        },
+        post: {
+          summary: "One-click unsubscribe from notification email (RFC 8058, story 27-009)",
+          description:
+            "The address the List-Unsubscribe header on every notification email names; the mail app POSTs to it. Query m (member id) and t (signed token): the token is the only credential, never a session. A valid token turns notification email off for that member. No body is read and nothing is returned but the status.",
+          security: [],
+          responses: {
+            "200": { description: "Notification email is off for that member" },
+            "400": { description: "The token does not verify for that member" },
+            "500": { description: "The change could not be saved" },
           },
         },
       },

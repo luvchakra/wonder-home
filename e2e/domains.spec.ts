@@ -62,7 +62,21 @@ function requestable(template: string): string {
 // `/voice/alexa` is the Alexa skill endpoint. Amazon authenticates it with a
 // signed certificate chain, not a session, and its own rules say a request
 // that fails that check gets HTTP 400; `alexa.test.ts` covers the refusals.
-const PUBLIC_PATHS = new Set(["/health", "/health/ready", "/openapi", "/intake/share", "/oauth/voice/token", "/voice/alexa"]);
+//
+// `/notifications/email-off` is the RFC 8058 one-click unsubscribe a mail app
+// POSTs to from the List-Unsubscribe header. It has no session by design: the
+// signed token in its query is the only credential, a token that does not
+// verify gets HTTP 400, and a GET redirects to the page that asks first;
+// `unsubscribe.test.ts` covers the token.
+const PUBLIC_PATHS = new Set([
+  "/health",
+  "/health/ready",
+  "/openapi",
+  "/intake/share",
+  "/oauth/voice/token",
+  "/voice/alexa",
+  "/notifications/email-off",
+]);
 
 const SERVED = servedPaths().sort();
 const GUARDED = SERVED.filter((path) => !PUBLIC_PATHS.has(path));
