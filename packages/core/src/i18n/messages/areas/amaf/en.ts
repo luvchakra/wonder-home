@@ -85,6 +85,8 @@ export const amafEn = {
   "amaf.refused": "Only an Admin can change that, so I've left it.",
   "amaf.failed": "I couldn't save that just now — nothing was changed.",
   "amaf.undo.done": "Undone — {section} is back as it was.",
+  "amaf.redo.done": "Put back — {section} has it again.",
+  "amaf.redo.none": "There's nothing I took back that I can put back.",
   "amaf.undo.none": "There's nothing from Ask me about family to undo.",
   "amaf.undo.cannot": "I can't undo that one here — you can change it in {section}.",
 

@@ -79,6 +79,8 @@ export const amafFr: AreaCatalog<typeof amafEn> = {
   "amaf.refused": "Seul un Admin peut modifier cela, alors je l'ai laissé.",
   "amaf.failed": "Je n'ai pas pu l'enregistrer pour l'instant ; rien n'a été modifié.",
   "amaf.undo.done": "Annulé : {section} est revenu comme avant.",
+  "amaf.redo.done": "Rétabli — {section} l'a de nouveau.",
+  "amaf.redo.none": "Il n'y a rien que j'aie annulé et que je puisse rétablir.",
   "amaf.undo.none": "Il n'y a rien de Pose-moi des questions sur la famille à annuler.",
   "amaf.undo.cannot": "Je ne peux pas annuler celui-ci ici ; vous pouvez le modifier dans {section}.",
 

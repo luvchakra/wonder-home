@@ -3,7 +3,7 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 import { amafMemoryKey, clashesFor, factByKey, type AmafAnswered, type AmafClash, type AmafOutcome, type AmafPerson, type AmafSection, type AmafSnapshot, type AmafSubject, type AmafValue, type DayHours, type StoredValue } from "@wonderhome/core/amaf/facts";
 import { gapsLeft, nextQuestion, subjectFor, type AmafChoice } from "@wonderhome/core/amaf/plan";
 import { provenanceOf, provenanceWords, type ProvenanceTrail } from "@wonderhome/core/amaf/provenance";
-import { amafStep, isAmafUndo, type AmafMark, type AmafPending } from "@wonderhome/core/amaf/session";
+import { amafStep, isAmafRedo, isAmafUndo, type AmafMark, type AmafPending } from "@wonderhome/core/amaf/session";
 import { ApiError } from "@wonderhome/core/api/errors";
 import { nextOnDay } from "@wonderhome/core/conversation/bill-talk";
 import { recordMessage, remember } from "@wonderhome/core/conversation/repository";
@@ -434,6 +434,65 @@ const NOTE_STATEMENT: Record<string, string> = {
   "pet.vet": "About the pet's vet",
 };
 
+/**
+ * Puts back the answer the last undo took back ("put it back", the owner,
+ * 2026-10-22): only within the hour, only when nothing was saved since, and
+ * written again through the same service as any answer — recorded as a new
+ * answer, so "undo" can take it back once more.
+ */
+async function redoLast(
+  supabase: SupabaseClient,
+  admin: Admin,
+  input: { membership: HouseholdMembership; snapshot: AmafSnapshot; currency: string | null; sessionId: string; answer: string },
+): Promise<{ done: boolean; section: AmafSection | null }> {
+  const { membership, snapshot } = input;
+  const householdId = membership.household.id;
+  const [undoneRead, latestRead] = await Promise.all([
+    supabase
+      .from("amaf_answers")
+      .select("id, fact_key, subject_id, value, undone_at")
+      .eq("household_id", householdId)
+      .eq("member_id", membership.memberId)
+      .in("outcome", ["saved", "changed"])
+      .not("undone_at", "is", null)
+      .order("undone_at", { ascending: false })
+      .limit(1)
+      .maybeSingle(),
+    supabase
+      .from("amaf_answers")
+      .select("created_at")
+      .eq("household_id", householdId)
+      .eq("member_id", membership.memberId)
+      .in("outcome", ["saved", "changed"])
+      .order("created_at", { ascending: false })
+      .limit(1)
+      .maybeSingle(),
+  ]);
+  const row = undoneRead.data as Row | null;
+  if (!row) return { done: false, section: null };
+  const undoneAt = Date.parse(row.undone_at as string);
+  const latest = latestRead.data as Row | null;
+  // Something saved after the undo, or an undo more than an hour ago: nothing to put back.
+  if (Date.now() - undoneAt > 60 * 60 * 1000 || (latest && Date.parse(latest.created_at as string) > undoneAt)) return { done: false, section: null };
+  const fact = factByKey(row.fact_key as string);
+  const subject = fact ? subjectFor(fact, snapshot, (row.subject_id as string | null) ?? null) : null;
+  const value = row.value as AmafValue | null;
+  if (!fact || !subject || !value) return { done: false, section: null };
+  const previous = fact.stored(snapshot, subject)?.value ?? null;
+  const written = await writeValue(supabase, admin, { membership, subject, value, factKey: fact.key, previous, snapshot, currency: input.currency, sessionId: input.sessionId, answer: input.answer });
+  await supabase.from("amaf_answers").insert({
+    household_id: householdId,
+    member_id: membership.memberId,
+    fact_key: fact.key,
+    subject_id: subject.id,
+    outcome: previous === null ? "saved" : "changed",
+    value,
+    previous: written.undo,
+    record_id: written.recordId,
+  });
+  return { done: true, section: fact.section(subject) };
+}
+
 /** Takes back the last thing AMAF wrote, through the same service, from what the record said before. */
 async function undoLast(supabase: SupabaseClient, membership: HouseholdMembership): Promise<{ done: boolean; section: AmafSection | null }> {
   const householdId = membership.household.id;
@@ -646,19 +705,30 @@ export async function continueAmaf(
       );
   };
 
+  /** The waiting question, asked again after an undo, a redo or an answer about something else. */
+  const askAgain = (current: AmafSnapshot) => {
+    nextPending = pending;
+    const fact = factByKey(pending.fact);
+    const subject = fact ? subjectFor(fact, current, pending.subjectId) : null;
+    if (fact && subject) {
+      parts.push({ shown: questionText(t, { factKey: fact.key, subject, refresh: pending.step === "ask" && pending.refresh, speakerId: membership.memberId, billName: subject.kind === "bill" ? billNameFor(t, subject.id) : undefined }), english: questionText(english, { factKey: fact.key, subject, refresh: pending.step === "ask" && pending.refresh, speakerId: membership.memberId, billName: subject.kind === "bill" ? billNameFor(english, subject.id) : undefined }) });
+      mark = markFor(t, { fact, subject }, gapsLeft(current));
+    }
+  };
+
   if (isAmafUndo(input.answer)) {
     const undone = await undoLast(supabase, membership).catch(() => ({ done: false, section: null }));
     if (undone.done && undone.section) add("amaf.undo.done", { section: sectionWords(t, undone.section) });
     else if (undone.section) add("amaf.undo.cannot", { section: sectionWords(t, undone.section) });
     else add("amaf.undo.none");
     // The same question stays waiting.
-    nextPending = pending;
-    const fact = factByKey(pending.fact);
-    const subject = fact ? subjectFor(fact, snapshot, pending.subjectId) : null;
-    if (fact && subject) {
-      parts.push({ shown: questionText(t, { factKey: fact.key, subject, refresh: pending.step === "ask" && pending.refresh, speakerId: membership.memberId, billName: subject.kind === "bill" ? billNameFor(t, subject.id) : undefined }), english: questionText(english, { factKey: fact.key, subject, refresh: pending.step === "ask" && pending.refresh, speakerId: membership.memberId, billName: subject.kind === "bill" ? billNameFor(english, subject.id) : undefined }) });
-      mark = markFor(t, { fact, subject }, gapsLeft(snapshot));
-    }
+    askAgain(snapshot);
+  } else if (isAmafRedo(input.answer)) {
+    // "Put it back": the answer the last undo took back is written again, through the same service.
+    const redone = await redoLast(supabase, admin, { membership, snapshot, currency, sessionId, answer: input.answer }).catch(() => ({ done: false, section: null }));
+    if (redone.done && redone.section) add("amaf.redo.done", { section: sectionWords(t, redone.section) });
+    else add("amaf.redo.none");
+    askAgain(redone.done ? (await loadAmafSnapshot(supabase, membership)).snapshot : snapshot);
   } else {
     const step = amafStep({ pending, answer: input.answer, snapshot, people });
     const source = (factKey: string, subjectId: string | null, stored: StoredValue, tr: Translate) => sourceWords(admin, { householdId, factKey, subjectId, stored, people, t: tr, language: tr === english ? "en" : language, timezone });
@@ -752,6 +822,11 @@ export async function continueAmaf(
         }
         break;
       }
+    }
+
+    // An answer about someone or something else was saved for them; the waiting question is asked again.
+    if ((step.kind === "write" || step.kind === "confirmed") && step.aside && !nextPending) {
+      askAgain(savedNow ? (await loadAmafSnapshot(supabase, membership)).snapshot : snapshot);
     }
 
     // The next question, unless the person stopped or this one is still open.

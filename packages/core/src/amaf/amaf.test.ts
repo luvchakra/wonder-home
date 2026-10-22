@@ -1,9 +1,9 @@
 import { describe, expect, it } from "vitest";
 
-import { AMAF_FACTS, clashesFor, factByKey, readAllergies, readDiet, readPets, readRelation, readSchool, type AmafPerson, type AmafSnapshot } from "./facts";
+import { AMAF_FACTS, amafMemoryKey, clashesFor, factByKey, MEMORY_KEY_PATTERN, readAllergies, readDiet, readPets, readRelation, readSchool, type AmafPerson, type AmafSnapshot } from "./facts";
 import { candidates, gapsLeft, nextQuestion } from "./plan";
 import { provenanceOf, provenanceWords } from "./provenance";
-import { amafStep, isAmafStart, isAmafUndo, type AmafPending } from "./session";
+import { amafStep, isAmafRedo, isAmafStart, isAmafUndo, type AmafPending } from "./session";
 
 const KUNAL = "11111111-1111-1111-1111-111111111111";
 const PRIYA = "22222222-2222-2222-2222-222222222222";
@@ -231,5 +231,63 @@ describe("where a record came from", () => {
     expect(provenanceOf({ recordSource: "onboarding", recordUpdatedAt: "2026-08-01T00:00:00Z" }, names)).toEqual({ channel: "setup", by: null, at: "2026-08-01T00:00:00Z" });
     expect(provenanceWords({ channel: "screen", by: "Kunal", at: "2026-09-01T10:00:00Z", screen: "Family" }, () => "1 Sept")).toEqual({ key: "amaf.source.screenNamed.by.on", values: { name: "Kunal", date: "1 Sept", screen: "Family" } });
     expect(provenanceWords({ channel: "record", by: null, at: null }, () => "")).toEqual({ key: "amaf.source.record", values: {} });
+  });
+});
+
+describe("an answer about someone else (the owner, 2026-10-22)", () => {
+  const MANAN = "55555555-5555-5555-5555-555555555555";
+  const base = snapshot({ people: [person(KUNAL, "Kunal", "adult"), person(PRIYA, "Upasana Chakraborty", "adult"), person(MANAN, "Manan", "child")] });
+  const people: AmafPerson[] = [
+    { id: KUNAL, name: "Kunal", memberType: "adult" },
+    { id: PRIYA, name: "Upasana Chakraborty", memberType: "adult" },
+    { id: MANAN, name: "Manan", memberType: "child" },
+  ];
+  const step = (pending: AmafPending, answer: string) => amafStep({ pending, answer, snapshot: base, people });
+
+  it("saves Upasana's birthday when it is said while Manan's school hours are asked, and keeps the question", () => {
+    for (const tries of [0, 1]) {
+      expect(step(ask("child.school_hours", MANAN, { tries }), "Upasana birthday is 24 June 1986")).toMatchObject({
+        kind: "write",
+        fact: "member.birthday",
+        subject: { id: PRIYA },
+        value: { fact: "member.birthday", date: "1986-06-24" },
+        outcome: "saved",
+        aside: true,
+      });
+    }
+  });
+
+  it("never saves one person's birthday on another's question", () => {
+    expect(step(ask("member.birthday", PRIYA), "Manan's birthday is 16 December 2021")).toMatchObject({
+      kind: "write",
+      subject: { id: MANAN },
+      value: { date: "2021-12-16" },
+      aside: true,
+    });
+    // The subject's own answer is still read as theirs.
+    expect(step(ask("member.birthday", PRIYA), "24 June 1986")).toMatchObject({ kind: "write", subject: { id: PRIYA }, value: { date: "1986-06-24" } });
+  });
+
+  it("never files words about someone else as a note on this question's subject", () => {
+    const second = step(ask("child.school_hours", MANAN, { tries: 1 }), "Upasana likes long walks");
+    expect(second.kind).toBe("retry");
+  });
+
+  it("hears 'put it back' as putting back what undo took back", () => {
+    for (const said of ["put it back", "Put that back.", "redo", "undo the undo", "bring it back"]) expect(isAmafRedo(said)).toBe(true);
+    for (const said of ["put the milk back", "undo", "8 to 2:30"]) expect(isAmafRedo(said)).toBe(false);
+  });
+});
+
+describe("a note's memory key", () => {
+  it("fits memories.key for every fact and every kind of subject, and tells people apart", () => {
+    const people = [person("163e31c9-7083-470a-afab-8e87942f17e7", "Manan", "child"), person("2f534c03-53de-4c31-9300-11f372034ef3", "Upasana", "adult")];
+    for (const fact of AMAF_FACTS) {
+      for (const subject of [{ kind: "person" as const, id: people[0]!.id, name: "Manan" }, { kind: "household" as const, id: null, name: null }]) {
+        expect(amafMemoryKey(fact.key, subject), fact.key).toMatch(MEMORY_KEY_PATTERN);
+      }
+    }
+    const [a, b] = people.map((p) => amafMemoryKey("note.hobbies", { kind: "person", id: p.id, name: p.name }));
+    expect(a).not.toBe(b);
   });
 });

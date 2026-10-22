@@ -79,6 +79,8 @@ export const amafZh: AreaCatalog<typeof amafEn> = {
   "amaf.refused": "只有 Admin 才能修改这项，所以我没有改动。",
   "amaf.failed": "刚才没能保存——什么都没有改动。",
   "amaf.undo.done": "已撤销——{section}已恢复原样。",
+  "amaf.redo.done": "已恢复——{section}里又有了。",
+  "amaf.redo.none": "没有我撤销过、可以恢复的内容。",
   "amaf.undo.none": "问问我家里的事里没有可以撤销的内容。",
   "amaf.undo.cannot": "这一项我没法在这里撤销——你可以在{section}中修改。",
 

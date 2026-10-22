@@ -79,6 +79,8 @@ export const amafAr: AreaCatalog<typeof amafEn> = {
   "amaf.refused": "لا يستطيع تغيير ذلك إلا Admin، لذلك تركته.",
   "amaf.failed": "لم أستطع حفظ ذلك الآن — لم يتغيّر شيء.",
   "amaf.undo.done": "تم التراجع — عاد {section} كما كان.",
+  "amaf.redo.done": "أُعيد — {section} يحتويه مجددًا.",
+  "amaf.redo.none": "لا يوجد شيء تراجعتُ عنه يمكنني إعادته.",
   "amaf.undo.none": "لا يوجد شيء من اسألني عن العائلة للتراجع عنه.",
   "amaf.undo.cannot": "لا أستطيع التراجع عن هذا هنا — يمكنك تغييره في {section}.",
 

@@ -1,4 +1,4 @@
-import { factByKey, type AmafOutcome, type AmafPerson, type AmafSnapshot, type AmafSubject, type AmafValue, type StoredValue } from "./facts";
+import { AMAF_FACTS, factByKey, type AmafOutcome, type AmafPerson, type AmafSnapshot, type AmafSubject, type AmafValue, type StoredValue } from "./facts";
 import { isSkipQuestion, isStop, readYesNo } from "./parse";
 import { subjectFor } from "./plan";
 
@@ -37,10 +37,14 @@ export type AmafPending =
     };
 
 export type AmafStep =
-  /** Write this value through its module, then say so. */
-  | { kind: "write"; fact: string; subject: AmafSubject; value: AmafValue; outcome: "saved" | "changed" | "noted"; previous: unknown }
+  /**
+   * Write this value through its module, then say so. `aside`: the answer was
+   * about someone or something else than the waiting question, which is then
+   * asked again.
+   */
+  | { kind: "write"; fact: string; subject: AmafSubject; value: AmafValue; outcome: "saved" | "changed" | "noted"; previous: unknown; aside?: boolean }
   /** The answer agrees with what is on record. */
-  | { kind: "confirmed"; fact: string; subject: AmafSubject; stored: StoredValue }
+  | { kind: "confirmed"; fact: string; subject: AmafSubject; stored: StoredValue; aside?: boolean }
   /** The answer disagrees with what is on record: say both and where the record came from, and ask. */
   | { kind: "conflict"; fact: string; subject: AmafSubject; value: AmafValue; stored: StoredValue }
   /** "No" or "nobody" when something is on record: what is on record is said back, with its source, and left alone. */
@@ -83,6 +87,51 @@ export function isAmafUndo(utterance: string): boolean {
   return /^(?:undo(?: that| it| the last one)?|take (?:that|it) back|revert(?: that)?|that'?s wrong,? undo)[.!]*$/i.test(utterance.trim());
 }
 
+/** "Put it back", "redo", "undo the undo" — only the last answer AMAF took back. */
+export function isAmafRedo(utterance: string): boolean {
+  return /^(?:(?:please )?put (?:it|that) back|redo(?: that| it)?|undo (?:the|that) undo|bring (?:it|that) back|restore (?:it|that))[.!]*$/i.test(utterance.trim());
+}
+
+/** A household member the words name by their first name (or whole name), other than `except`. */
+function namedPerson(answer: string, people: readonly AmafPerson[], except: string | null): AmafPerson | null {
+  const said = ` ${answer.toLowerCase().replace(/[\u2018\u2019\u02bc]/g, "'").replace(/[^\p{L}\p{N}']+/gu, " ")} `;
+  const named = people.filter((person) => {
+    if (person.id === except) return false;
+    const first = person.name.trim().split(/\s+/)[0]?.toLowerCase() ?? "";
+    return first.length >= 2 && (said.includes(` ${first} `) || said.includes(` ${first}'s `));
+  });
+  return named.length === 1 ? named[0]! : null;
+}
+
+/**
+ * A sentence that states another fact about another person, while a question
+ * waits (the owner, 2026-10-22: "Upasana birthday is 24 June 1986" while
+ * Manan's school hours were asked was filed as a note on Manan's school hours,
+ * and that note failed). Only a fact whose own words appear (`cue`) is tried,
+ * only for the one person the sentence names, and only a real value counts —
+ * never the person's words as a note.
+ */
+function readAside(answer: string, pending: AmafPending, snapshot: AmafSnapshot, people: readonly AmafPerson[]): AmafStep | null {
+  for (const fact of AMAF_FACTS) {
+    if (!fact.cue?.test(answer)) continue;
+    const pendingSubject = fact.key === pending.fact ? pending.subjectId : null;
+    const person = namedPerson(answer, people, pendingSubject);
+    if (!person) continue;
+    const subject = subjectFor(fact, snapshot, person.id);
+    if (!subject) continue;
+    const reading = fact.read(answer, { people, speakerId: snapshot.speaker.memberId, subject, partial: {}, slot: null, today: snapshot.today });
+    if (reading.kind !== "value" || reading.value.fact === "note") continue;
+    const stored = fact.stored(snapshot, subject);
+    if (stored && fact.same) {
+      if (fact.same(stored, reading.value)) return { kind: "confirmed", fact: fact.key, subject, stored, aside: true };
+      // A different value on record is for that person's own question, not a side remark: left alone.
+      continue;
+    }
+    return { kind: "write", fact: fact.key, subject, value: reading.value, outcome: stored && !fact.additive ? "changed" : "saved", previous: stored?.value ?? null, aside: true };
+  }
+  return null;
+}
+
 export function amafStep(input: { pending: AmafPending; answer: string; snapshot: AmafSnapshot; people: readonly AmafPerson[] }): AmafStep {
   const { pending, snapshot } = input;
   // A phone keyboard's curly apostrophe reads the same as a straight one.
@@ -101,6 +150,12 @@ export function amafStep(input: { pending: AmafPending; answer: string; snapshot
 
   if (isSkipQuestion(answer)) return { kind: "recorded", fact: fact.key, subject, outcome: "skipped" };
 
+  // A sentence about someone else ("Manan's birthday is…" while Upasana's was asked) is theirs, never this subject's.
+  if (namedPerson(answer, input.people, subject.kind === "person" ? subject.id : null)) {
+    const aside = readAside(answer, pending, snapshot, input.people);
+    if (aside) return aside;
+  }
+
   const reading = fact.read(answer, { people: input.people, speakerId: snapshot.speaker.memberId, subject, partial: pending.partial, slot: pending.slot, today: snapshot.today });
   const stored = fact.stored(snapshot, subject);
 
@@ -114,10 +169,16 @@ export function amafStep(input: { pending: AmafPending; answer: string; snapshot
       return { kind: "recorded", fact: fact.key, subject, outcome: "none" };
     case "follow_up":
       return { kind: "follow_up", subject, pending: { step: "ask", fact: fact.key, subjectId: subject.id, refresh: pending.refresh, slot: reading.slot, partial: { ...pending.partial, ...reading.partial }, tries: 0 } };
-    case "unclear":
-      if (pending.tries < 1) return { kind: "retry", subject, pending: { ...pending, tries: pending.tries + 1 } };
+    case "unclear": {
+      // Not an answer to this question, but a fact about someone else: saved for them, and this question waits.
+      const aside = readAside(answer, pending, snapshot, input.people);
+      if (aside) return aside;
+      // Words about someone else are never kept as a note on this question's subject: asked again instead.
+      const elsewhere = namedPerson(answer, input.people, subject.kind === "person" ? subject.id : null) !== null;
+      if (pending.tries < 1 || elsewhere) return { kind: "retry", subject, pending: { ...pending, tries: pending.tries + 1 } };
       // Asked twice and still not a value: the person's words are kept rather than lost.
       return { kind: "write", fact: fact.key, subject, value: { fact: "note", text: answer.trim().replace(/\s+/g, " ").slice(0, 280) }, outcome: "noted", previous: null };
+    }
     case "value": {
       if (reading.value.fact === "note") return { kind: "write", fact: fact.key, subject, value: reading.value, outcome: "noted", previous: null };
       if (stored && fact.same) {
