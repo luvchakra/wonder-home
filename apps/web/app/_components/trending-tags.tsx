@@ -27,23 +27,25 @@ export async function TrendingTags({ session, now }: { session: Session; now: Da
   const trending = trendingTags(messages, 6);
   if (trending.length === 0) return null;
   return (
-    <Card className="space-y-3 p-4">
-      <div className="flex items-start gap-3">
-        <IconTile icon={Hash} tone="people" />
+    // Compact (the owner, 2026-10-22): small chips that sit several to a line,
+    // so the card stays short however many tags are trending.
+    <Card className="space-y-2 p-3">
+      <div className="flex items-center gap-2.5">
+        <IconTile icon={Hash} tone="people" size="sm" />
         <div className="min-w-0 flex-1">
-          <h2 className="text-base font-semibold">{t("chat.trending.title")}</h2>
-          <p className="text-sm text-[var(--wh-foreground-muted)]">{t("chat.trending.lede")}</p>
+          <h2 className="text-sm leading-tight font-semibold">{t("chat.trending.title")}</h2>
+          <p className="text-xs leading-snug text-[var(--wh-foreground-muted)]">{t("chat.trending.lede")}</p>
         </div>
       </div>
-      <ul className="flex flex-wrap gap-2">
+      <ul className="flex flex-wrap gap-1.5">
         {trending.map((entry) => (
           <li key={entry.tag}>
             <Link
               href={`/chat/${entry.threadId}`}
-              className="inline-flex min-h-11 items-center gap-1.5 rounded-[var(--wh-radius-pill)] border border-[var(--wh-border)] bg-[var(--wh-surface)] px-3 text-sm hover:border-[var(--wh-primary)]"
+              className="inline-flex min-h-8 items-center gap-1 rounded-[var(--wh-radius-pill)] border border-[var(--wh-border)] bg-[var(--wh-surface)] px-2.5 text-xs hover:border-[var(--wh-primary)]"
             >
               <span className="font-semibold break-all text-[var(--wh-primary)]">#{entry.tag}</span>
-              <span className="text-xs whitespace-nowrap text-[var(--wh-foreground-subtle)]">{t("chat.trending.uses", { count: entry.count })}</span>
+              <span className="text-[0.6875rem] whitespace-nowrap text-[var(--wh-foreground-subtle)]">{t("chat.trending.uses", { count: entry.count })}</span>
             </Link>
           </li>
         ))}
