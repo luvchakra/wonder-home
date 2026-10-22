@@ -11,6 +11,7 @@ decision that shapes later work each earns a note, written before moving on.
 
 | Date | Note |
 |---|---|
+| 2026-10-22 | [The clock looks where a reminder is due; a chat notice written once (27-021, 27-022)](2026-10-22-reminder-next-check.md) |
 | 2026-10-22 | [Event-day pushes, a push prompt, and health reminders on the household's clock (27-018 to 27-020)](2026-10-22-notifications-push-and-health-timing.md) |
 | 2026-10-22 | [Reminder stages move on with the clock; one reminder per occasion (27-016, 27-017)](2026-10-22-reminder-stages-on-the-clock.md) |
 | 2026-10-22 | [HomeEvents' one door, family moments that are shared, and Ask me about family saving what it hears](2026-10-22-homeevents-one-door-family-moment-amaf.md) |

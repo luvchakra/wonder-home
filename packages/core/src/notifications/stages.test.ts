@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 
 import { advanceDueStages, STAGE_HOUSEHOLDS_PER_TICK, type ReconcileResult } from "./reconcile";
+import { NEXT_CHECK_CAP_MINUTES, nextReminderCheck, type DesiredReminder } from "./plan";
 import { formatterFor } from "../i18n/format";
 import { DEFAULT_PREFERENCES } from "../i18n/preferences";
 import { familySubject, sameOccasionAsEvent, schoolSubject, type FamilyEventRow, type SchoolItemRow } from "./sources";
@@ -32,25 +33,19 @@ describe("the delivery clock moves reminders to their next stage", () => {
   const ran: ReconcileResult = { ran: true, created: 1, updated: 0, resolved: 0, expired: 0, delivered: 1 };
   const skipped: ReconcileResult = { ran: false, created: 0, updated: 0, resolved: 0, expired: 0, delivered: 0 };
 
-  /** Just enough of the two reads: open reminders, and when each household last had a pass. */
-  function fakeAdmin(openHouseholds: (string | { household_id: string; expires_at: string | null })[], lastPass: Record<string, string>, failOpen = false) {
+  /** Just enough of the one read: the households whose next check has come. */
+  function fakeAdmin(due: string[], fail = false) {
     const calls: { table: string; filters: string[] }[] = [];
     const admin = {
       from(table: string) {
         const call = { table, filters: [] as string[] };
         calls.push(call);
-        const result =
-          table === "notifications"
-            ? failOpen
-              ? { data: null, error: { code: "x" } }
-              : { data: openHouseholds.map((row) => (typeof row === "string" ? { household_id: row, expires_at: null } : row)), error: null }
-            : { data: Object.entries(lastPass).map(([household_id, reconciled_at]) => ({ household_id, reconciled_at })), error: null };
+        const result = fail ? { data: null, error: { code: "x" } } : { data: due.map((household_id) => ({ household_id })), error: null };
         const chain: Record<string, unknown> = {
           select: () => chain,
-          in: (column: string, values: unknown[]) => (call.filters.push(`${column} in ${JSON.stringify(values)}`), chain),
-          or: (filter: string) => (call.filters.push(filter), chain),
-          limit: async () => result,
-          then: (resolve: (value: unknown) => unknown) => resolve(result),
+          lte: (column: string, value: string) => (call.filters.push(`${column} <= ${value}`), chain),
+          order: (column: string) => (call.filters.push(`order ${column}`), chain),
+          limit: async (count: number) => (call.filters.push(`limit ${count}`), result),
         };
         return chain;
       },
@@ -58,37 +53,76 @@ describe("the delivery clock moves reminders to their next stage", () => {
     return { admin: admin as never, calls };
   }
 
-  it("takes each household with an open reminder once, the longest-waiting first, and counts those that ran", async () => {
-    const { admin, calls } = fakeAdmin(["a", "b", "a", "c", { household_id: "gone", expires_at: "2026-10-22T01:00:00Z" }], { a: "2026-10-22T01:20:00Z", b: "2026-10-22T00:10:00Z" });
+  it("takes the households that are due, earliest first, and counts those that ran", async () => {
+    const now = new Date("2026-10-22T01:30:00Z");
+    const { admin, calls } = fakeAdmin(["c", "b", "a"]);
     const order: string[] = [];
-    const summary = await advanceDueStages(admin, new Date("2026-10-22T01:30:00Z"), {
+    const summary = await advanceDueStages(admin, now, {
       pass: async (householdId) => {
         order.push(householdId);
         return householdId === "a" ? skipped : ran;
       },
     });
-    // c has never had a pass, then b (00:10), then a (01:20); "gone" has only an expired reminder.
     expect(order).toEqual(["c", "b", "a"]);
     expect(summary).toMatchObject({ households: 2, created: 2, delivered: 2 });
-    const open = calls.find((call) => call.table === "notifications")!;
-    expect(open.filters).toContain('status in ["generated","delivered","seen"]');
-
+    expect(calls).toHaveLength(1);
+    expect(calls[0]).toEqual({ table: "notification_reconciliations", filters: [`next_due_at <= ${now.toISOString()}`, "order next_due_at", `limit ${STAGE_HOUSEHOLDS_PER_TICK}`] });
   });
 
-  it("is bounded per tick", async () => {
-    const many = Array.from({ length: STAGE_HOUSEHOLDS_PER_TICK + 10 }, (_, index) => `h${index}`);
-    const { admin } = fakeAdmin(many, {});
-    let passes = 0;
-    await advanceDueStages(admin, new Date(), { pass: async () => (passes++, ran) });
-    expect(passes).toBe(STAGE_HOUSEHOLDS_PER_TICK);
-  });
-
-  it("does nothing when there is nothing open, or the read fails", async () => {
+  it("does nothing when nobody is due, or the read fails", async () => {
     let passes = 0;
     const pass = async () => (passes++, ran);
-    expect((await advanceDueStages(fakeAdmin([], {}).admin, new Date(), { pass })).households).toBe(0);
-    expect((await advanceDueStages(fakeAdmin(["a"], {}, true).admin, new Date(), { pass })).households).toBe(0);
+    expect((await advanceDueStages(fakeAdmin([]).admin, new Date(), { pass })).households).toBe(0);
+    expect((await advanceDueStages(fakeAdmin(["a"], true).admin, new Date(), { pass })).households).toBe(0);
     expect(passes).toBe(0);
+  });
+});
+
+describe("when the clock next looks at a household (the owner's review, 2026-10-22)", () => {
+  const now = new Date("2026-10-22T03:00:00Z");
+  const at = (iso: string) => new Date(iso);
+  const want = (overrides: Partial<DesiredReminder> = {}): DesiredReminder =>
+    ({
+      recipientMemberId: "kunal",
+      recipientRole: "primary",
+      threadKey: "obligation:b1",
+      category: "bills",
+      reminderSeq: 1,
+      finalStage: false,
+      scheduledFor: at("2026-10-22T02:00:00Z"),
+      latestAt: at("2026-10-23T03:30:00Z"),
+      expiresAt: at("2026-10-25T18:30:00Z"),
+      ...overrides,
+    }) as DesiredReminder;
+  const open = (row: Partial<{ reminder_seq: number; status: string; delivered_at: string | null; snooze_count: number; expires_at: string | null }> = {}) =>
+    new Map([["kunal|obligation:b1", { reminder_seq: 1, status: "delivered", delivered_at: "2026-10-22T02:00:00Z", snooze_count: 0, expires_at: null, ...row }]]);
+
+  it("is the next stage when nothing comes sooner", () => {
+    expect(nextReminderCheck([want({ latestAt: at("2026-10-22T05:00:00Z") })], open(), now)).toEqual(at("2026-10-22T05:00:00Z"));
+  });
+
+  it("is a reminder still to land", () => {
+    expect(nextReminderCheck([want({ scheduledFor: at("2026-10-22T03:20:00Z") })], new Map(), now)).toEqual(at("2026-10-22T03:20:00Z"));
+  });
+
+  it("is an open reminder's expiry", () => {
+    expect(nextReminderCheck([], open({ expires_at: "2026-10-22T04:00:00Z" }), now)).toEqual(at("2026-10-22T04:00:00Z"));
+  });
+
+  it("is the channel step's wait after the last reminder went out, then the backup's", () => {
+    // Bills: the channel step after 90 minutes, the backup after 180.
+    expect(nextReminderCheck([want({ finalStage: true })], open(), now)).toEqual(at("2026-10-22T03:30:00Z"));
+    expect(nextReminderCheck([want({ finalStage: true })], open({ snooze_count: 1 }), now)).toEqual(at("2026-10-22T05:00:00Z"));
+  });
+
+  it("counts the wait from now for a last reminder going out in this pass", () => {
+    expect(nextReminderCheck([want({ finalStage: true })], open({ status: "generated", delivered_at: null }), now)).toEqual(at("2026-10-22T04:30:00Z"));
+  });
+
+  it("is never more than the cap away, and never in the past", () => {
+    const capped = new Date(now.getTime() + NEXT_CHECK_CAP_MINUTES * 60_000);
+    expect(nextReminderCheck([], new Map(), now)).toEqual(capped);
+    expect(nextReminderCheck([want({ scheduledFor: at("2026-10-21T00:00:00Z"), latestAt: at("2026-10-29T00:00:00Z"), expiresAt: at("2026-10-30T00:00:00Z") })], new Map(), now)).toEqual(capped);
   });
 });
 

@@ -269,6 +269,46 @@ export function isUnansweredForChannel(
   return now.getTime() - new Date(open.delivered_at).getTime() >= step.afterMinutes * 60_000;
 }
 
+/** The longest a household goes without a reminder pass, so a record coming into view is never missed for long. */
+export const NEXT_CHECK_CAP_MINUTES = 6 * 60;
+
+type OpenForCheck = { reminder_seq: number; status: string; delivered_at: string | null; snooze_count: number; expires_at: string | null };
+
+/**
+ * The earliest moment a reminder pass over this household could change
+ * anything (the owner's review, 2026-10-22: the clock should go where a stage
+ * is due, not walk every household): a reminder still to land, its next
+ * stage, its expiry, an open reminder's expiry, and the moment an unanswered
+ * last reminder earns its channel step or its backup. A write to the records
+ * in between marks the household due at once (a database trigger), so this is
+ * only ever the time nothing else happens. Never later than the cap.
+ */
+export function nextReminderCheck(
+  desired: Iterable<DesiredReminder>,
+  open: ReadonlyMap<string, OpenForCheck>,
+  now: Date,
+): Date {
+  let next = now.getTime() + NEXT_CHECK_CAP_MINUTES * 60_000;
+  const consider = (at: number) => {
+    if (at > now.getTime() && at < next) next = at;
+  };
+  for (const row of open.values()) if (row.expires_at) consider(Date.parse(row.expires_at));
+  for (const want of desired) {
+    consider(want.scheduledFor.getTime());
+    consider(want.latestAt.getTime());
+    consider(want.expiresAt.getTime());
+    if (want.recipientRole !== "primary" || !want.finalStage) continue;
+    const row = open.get(`${want.recipientMemberId}|${want.threadKey}`);
+    const out = row?.delivered_at && row.reminder_seq === want.reminderSeq && (row.status === "delivered" || row.status === "seen");
+    // Not out yet, or going out in this very pass: the wait counts from when it lands.
+    const delivered = out ? Date.parse(row.delivered_at!) : Math.max(want.scheduledFor.getTime(), now.getTime());
+    const policy = REMINDER_POLICIES[want.category];
+    if (policy.escalation) consider(delivered + policy.escalation.afterMinutes * 60_000);
+    if (policy.channelEscalation && (row?.snooze_count ?? 0) === 0) consider(delivered + policy.channelEscalation.afterMinutes * 60_000);
+  }
+  return new Date(next);
+}
+
 const ENGLISH = translator("en", en);
 const PLAIN_FORMAT = formatterFor(DEFAULT_PREFERENCES);
 
