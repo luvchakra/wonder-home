@@ -906,7 +906,11 @@ reminders about real records, never lines of text fired and forgotten.
   (`deliverDueNotifications`), so a reminder lands at its time. The same tick
   moves each household with an open reminder to its next stage
   (`advanceDueStages`, at most 40 a tick, under the page load's five-minute
-  claim), so "this morning" never waits for someone to open the app. It is inert
+  claim), so "this morning" never waits for someone to open the app. An event's
+  on-the-day reminder is Normal (it may push); the evening before stays Low. Health
+  appointment and measurement reminders run on the same tick, on the household's
+  clock, each sent once. Notifications offers push for this phone (`PushNudge`)
+  only where it would work and is not on yet. It is inert
   until a deployment sets `WONDERHOME_VAPID_PUBLIC_KEY` and
   `WONDERHOME_VAPID_PRIVATE_KEY` (optionally `WONDERHOME_VAPID_SUBJECT`) and
   the database holds the cron secret in Vault as `cron_secret`. A device the

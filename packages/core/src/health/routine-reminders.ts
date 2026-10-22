@@ -2,6 +2,7 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 
 import { createNotification } from "../notifications/create";
 import { chooseRecipient, decideNotification, type HouseholdEvent } from "../notifications/decide";
+import { localMoment, shiftDate } from "../notifications/timing";
 import { candidatesFor } from "./reminders";
 
 /**
@@ -19,22 +20,58 @@ type Row = Record<string, unknown>;
 
 export type RoutineReminderSummary = { checked: number; sent: number; skipped: number };
 
-/** Finds every active, reminder-enabled routine due today, and sends it — for real, via the existing notification pipeline. */
+/** A measurement due today is asked for from this local time. */
+const ROUTINE_MINUTE = 9 * 60;
+
+/**
+ * Whether a routine due on `dueOn` is due right `now` on the household's own
+ * clock (the owner's review, 2026-10-22: the day was read in UTC). From 09:00
+ * local on its day; the sweep runs every five minutes and sends each due date
+ * once.
+ */
+export function routineDueNow(dueOn: string, now: Date, timeZone: string): boolean {
+  const local = localMoment(now, timeZone);
+  return local.dateKey === dueOn && local.minuteOfDay >= ROUTINE_MINUTE;
+}
+
+/** Finds every active, reminder-enabled routine due now on its household's clock, and sends it once — for real, via the existing notification pipeline. */
 export async function runMeasurementRoutineSweep(admin: SupabaseClient, now: Date = new Date()): Promise<RoutineReminderSummary> {
-  const todayKey = now.toISOString().slice(0, 10);
+  // Some household's "today" is UTC's yesterday or tomorrow; each row is then checked on its own clock.
+  const utcToday = now.toISOString().slice(0, 10);
 
   const { data, error } = await admin
     .from("health_measurement_routines")
-    .select("id, household_id, member_id, vital_type, custom_label, next_due_on, reminder_enabled")
+    .select("id, household_id, member_id, vital_type, custom_label, next_due_on, reminder_enabled, households(timezone)")
     .eq("status", "active")
     .eq("reminder_enabled", true)
-    .eq("next_due_on", todayKey);
+    .in("next_due_on", [shiftDate(utcToday, -1), utcToday, shiftDate(utcToday, 1)])
+    .limit(2000);
 
   if (error) throw new Error(`runMeasurementRoutineSweep failed to list routines: ${error.code ?? "unknown"}`);
 
   const summary: RoutineReminderSummary = { checked: 0, sent: 0, skipped: 0 };
+  const due = ((data as Row[] | null) ?? []).filter((row) => {
+    const household = (Array.isArray(row.households) ? row.households[0] : row.households) as { timezone?: string | null } | null;
+    return routineDueNow(row.next_due_on as string, now, household?.timezone ?? "Asia/Kolkata");
+  });
+  if (due.length === 0) return summary;
 
-  for (const row of (data as Row[] | null) ?? []) {
+  // Each due date is asked for once, whatever happened to the first one.
+  const { data: sentRows, error: sentError } = await admin
+    .from("notifications")
+    .select("thread_key")
+    .eq("source_type", "health_routine")
+    .in(
+      "source_id",
+      due.map((row) => row.id as string),
+    )
+    .limit(10000);
+  if (sentError) throw new Error(`runMeasurementRoutineSweep failed to read what was sent: ${sentError.code ?? "unknown"}`);
+  const sent = new Set(((sentRows ?? []) as { thread_key: string }[]).map((row) => row.thread_key));
+
+  for (const row of due) {
+    const todayKey = row.next_due_on as string;
+    if (sent.has(`health_routine:${row.id as string}:${todayKey}`)) continue;
     summary.checked += 1;
 
     const routineId = row.id as string;

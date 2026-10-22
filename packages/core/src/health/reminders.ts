@@ -2,7 +2,7 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 
 import { createNotification } from "../notifications/create";
 import { chooseRecipient, decideNotification, type Candidate, type HouseholdEvent } from "../notifications/decide";
-import { quietHoursFrom } from "../notifications/timing";
+import { atLocal, localMoment, quietHoursFrom, shiftDate } from "../notifications/timing";
 import type { AppointmentStatus, HealthAppointment } from "./appointments";
 
 /**
@@ -27,35 +27,47 @@ const PREPARATION_DAYS = 1;
 
 export type ReminderKind = "advance" | "preparation" | "day_of";
 
-function toUtcDateKey(date: Date): string {
-  return date.toISOString().slice(0, 10);
-}
-
-function daysBefore(date: Date, days: number): Date {
-  const result = new Date(date);
-  result.setUTCDate(result.getUTCDate() - days);
-  return result;
-}
+/** Advance and preparation reminders land from this local time on their day. */
+const DAYTIME_MINUTE = 9 * 60;
+/** A day-of reminder lands from this local time, or earlier for an early appointment. */
+const DAY_OF_MINUTE = 7 * 60;
+/** …never later than this long before the appointment starts. */
+const DAY_OF_LEAD_MS = 2 * 60 * 60 * 1000;
 
 /**
- * Which reminder kinds, if any, this appointment is due for on `today`.
- *
- * Pure and day-granular: compares calendar dates (UTC), not exact
- * timestamps, since the sweep that calls this runs once a day.
+ * Which reminder kinds this appointment is due for right `now`, on the
+ * household's own clock (the owner's review, 2026-10-22: the day was read in
+ * UTC, and the once-a-day sweep sent "Today's the day" at 8:30 IST, after an
+ * early appointment had begun). The day is the household's local day; an
+ * advance or preparation reminder lands from 09:00 local on its day; the
+ * day-of one from 07:00 local, or two hours before the appointment when that
+ * is earlier, and never once it has started. The sweep runs every five
+ * minutes and sends each kind once (`runHealthReminderSweep`).
  */
 export function dueRemindersFor(
   appointment: Pick<HealthAppointment, "startsAt" | "remindAdvance" | "remindPreparation" | "remindDayOf" | "preparationNotes">,
-  today: Date,
+  now: Date,
+  timeZone: string,
 ): ReminderKind[] {
   const startsAt = new Date(appointment.startsAt);
-  const todayKey = toUtcDateKey(today);
+  if (now >= startsAt) return [];
+  const local = localMoment(now, timeZone);
+  const day = localMoment(startsAt, timeZone).dateKey;
   const due: ReminderKind[] = [];
 
-  if (appointment.remindAdvance && toUtcDateKey(daysBefore(startsAt, ADVANCE_DAYS)) === todayKey) due.push("advance");
-  if (appointment.remindPreparation && appointment.preparationNotes && toUtcDateKey(daysBefore(startsAt, PREPARATION_DAYS)) === todayKey) {
+  if (appointment.remindAdvance && local.dateKey === shiftDate(day, -ADVANCE_DAYS) && local.minuteOfDay >= DAYTIME_MINUTE) due.push("advance");
+  if (
+    appointment.remindPreparation &&
+    appointment.preparationNotes &&
+    local.dateKey === shiftDate(day, -PREPARATION_DAYS) &&
+    local.minuteOfDay >= DAYTIME_MINUTE
+  ) {
     due.push("preparation");
   }
-  if (appointment.remindDayOf && toUtcDateKey(startsAt) === todayKey) due.push("day_of");
+  if (appointment.remindDayOf && local.dateKey === day) {
+    const from = Math.min(atLocal(day, DAY_OF_MINUTE, timeZone).getTime(), startsAt.getTime() - DAY_OF_LEAD_MS);
+    if (now.getTime() >= from) due.push("day_of");
+  }
 
   return due;
 }
@@ -111,25 +123,45 @@ export async function candidatesFor(admin: SupabaseClient, householdId: string, 
 
 export type ReminderSweepSummary = { checked: number; sent: number; skipped: number };
 
-/** Finds every open appointment with a reminder due today, and sends it — for real, via the existing notification pipeline. */
+/**
+ * Finds every open appointment with a reminder due now, and sends it — for
+ * real, via the existing notification pipeline. Runs on the five-minute
+ * delivery clock and the daily sweep alike: each kind of reminder for an
+ * appointment is sent once, so a reminder a person dismissed never returns.
+ */
 export async function runHealthReminderSweep(admin: SupabaseClient, now: Date = new Date()): Promise<ReminderSweepSummary> {
-  const windowEnd = new Date(now);
-  windowEnd.setUTCDate(windowEnd.getUTCDate() + ADVANCE_DAYS + 1);
+  const windowEnd = new Date(now.getTime() + (ADVANCE_DAYS + 1) * 86_400_000);
 
   const { data, error } = await admin
     .from("health_appointments")
     .select(
-      "id, household_id, member_id, appointment_type, status, starts_at, remind_advance, remind_preparation, remind_day_of, preparation_notes",
+      "id, household_id, member_id, appointment_type, status, starts_at, remind_advance, remind_preparation, remind_day_of, preparation_notes, households(timezone)",
     )
     .in("status", ["proposed", "confirmed"])
     .gte("starts_at", now.toISOString())
-    .lte("starts_at", windowEnd.toISOString());
+    .lte("starts_at", windowEnd.toISOString())
+    .limit(2000);
 
   if (error) throw new Error(`runHealthReminderSweep failed to list appointments: ${error.code ?? "unknown"}`);
 
   const summary: ReminderSweepSummary = { checked: 0, sent: 0, skipped: 0 };
+  const rows = (data as Row[] | null) ?? [];
+  if (rows.length === 0) return summary;
 
-  for (const row of (data as Row[] | null) ?? []) {
+  // What was already sent for these appointments, in any state: each kind goes once.
+  const { data: sentRows, error: sentError } = await admin
+    .from("notifications")
+    .select("thread_key")
+    .eq("source_type", "health_appointment")
+    .in(
+      "source_id",
+      rows.map((row) => row.id as string),
+    )
+    .limit(10000);
+  if (sentError) throw new Error(`runHealthReminderSweep failed to read what was sent: ${sentError.code ?? "unknown"}`);
+  const sent = new Set(((sentRows ?? []) as { thread_key: string }[]).map((row) => row.thread_key));
+
+  for (const row of rows) {
     const appointment = {
       startsAt: row.starts_at as string,
       remindAdvance: row.remind_advance as boolean,
@@ -138,10 +170,13 @@ export async function runHealthReminderSweep(admin: SupabaseClient, now: Date = 
       preparationNotes: row.preparation_notes as string | null,
     };
     const status = row.status as AppointmentStatus;
+    const household = (Array.isArray(row.households) ? row.households[0] : row.households) as { timezone?: string | null } | null;
+    const timeZone = household?.timezone ?? "Asia/Kolkata";
 
-    for (const kind of dueRemindersFor(appointment, now)) {
-      summary.checked += 1;
+    for (const kind of dueRemindersFor(appointment, now, timeZone)) {
       const threadKey = `health_appointment:${row.id as string}:${kind}`;
+      if (sent.has(threadKey)) continue;
+      summary.checked += 1;
 
       const candidates = await candidatesFor(admin, row.household_id as string, row.member_id as string);
       const recipient = chooseRecipient(candidates);

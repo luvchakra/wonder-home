@@ -1,6 +1,8 @@
 import { after } from "next/server";
 
 import { createAdminClient } from "@wonderhome/core/db/admin";
+import { runHealthReminderSweep } from "@wonderhome/core/health/reminders";
+import { runMeasurementRoutineSweep } from "@wonderhome/core/health/routine-reminders";
 import { keepStoresWarm } from "@wonderhome/core/homebrain/context-store";
 import { sleepDueHouseholds } from "@wonderhome/core/homebrain/sleep/run";
 import { drainJobs } from "@wonderhome/core/homesend/retry-queue";
@@ -53,6 +55,15 @@ async function dispatch(request: Request): Promise<Response> {
     advanced = (await advanceDueStages(admin, now)).households;
   } catch (thrown) {
     log.warn("reminder stage pass failed", { reason: thrown instanceof Error ? thrown.name : "unknown" });
+  }
+  // Health reminders on the household's own clock (an appointment's day-of from 7:00 or two hours
+  // before; a measurement from 9:00), each sent once; the daily sweep only catches what this missed.
+  let health = 0;
+  try {
+    const [appointments, routines] = await Promise.all([runHealthReminderSweep(admin, now), runMeasurementRoutineSweep(admin, now)]);
+    health = appointments.sent + routines.sent;
+  } catch (thrown) {
+    log.warn("health reminder pass failed", { reason: thrown instanceof Error ? thrown.name : "unknown" });
   }
   const { data, error } = await admin
     .from("notifications")
@@ -118,7 +129,7 @@ async function dispatch(request: Request): Promise<Response> {
       log.warn("homebrain sleep tick failed", { reason: thrown instanceof Error ? thrown.name : "unknown" });
     }
   });
-  return Response.json({ ok: true, households: households.length, delivered, advanced, noticed, digests, warmed }, { headers: { "cache-control": "no-store" } });
+  return Response.json({ ok: true, households: households.length, delivered, advanced, health, noticed, digests, warmed }, { headers: { "cache-control": "no-store" } });
 }
 
 export const POST = dispatch;

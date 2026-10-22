@@ -1,7 +1,9 @@
 import { describe, expect, it } from "vitest";
 
 import { advanceDueStages, STAGE_HOUSEHOLDS_PER_TICK, type ReconcileResult } from "./reconcile";
-import { sameOccasionAsEvent, type FamilyEventRow, type SchoolItemRow } from "./sources";
+import { formatterFor } from "../i18n/format";
+import { DEFAULT_PREFERENCES } from "../i18n/preferences";
+import { familySubject, sameOccasionAsEvent, schoolSubject, type FamilyEventRow, type SchoolItemRow } from "./sources";
 
 const IST = "Asia/Kolkata";
 
@@ -87,5 +89,29 @@ describe("the delivery clock moves reminders to their next stage", () => {
     expect((await advanceDueStages(fakeAdmin([], {}).admin, new Date(), { pass })).households).toBe(0);
     expect((await advanceDueStages(fakeAdmin(["a"], {}, true).admin, new Date(), { pass })).households).toBe(0);
     expect(passes).toBe(0);
+  });
+});
+
+describe("an event earns its push on the day (the owner's review, 2026-10-22)", () => {
+  const context = { timeZone: IST, format: formatterFor(DEFAULT_PREFERENCES), now: new Date("2026-10-21T10:00:00Z") };
+  const school: SchoolItemRow = { id: "s1", child_member_id: "asmi", kind: "event", title: "Field trip to Bounce", due_at: "2026-10-22T02:00:00Z", due_time_known: true, status: "pending" };
+  const event: FamilyEventRow = { id: "e1", title: "Bounce School Trip", kind: "outing", starts_at: "2026-10-22T02:30:00Z", status: "planned", owner_member_id: "kunal" };
+
+  it("is a quiet heads-up the night before and normal on the morning, so it may buzz", () => {
+    const subject = schoolSubject(school, "Asmi", context)!;
+    expect(subject.text("tonight", context.now).priority).toBe("low");
+    expect(subject.text("this_morning", context.now).priority).toBe("medium");
+  });
+
+  it("does the same for a family event", () => {
+    const subject = familySubject(event, context)!;
+    expect(subject.text("tomorrow", context.now).priority).toBe("low");
+    expect(subject.text("starts_soon", context.now).priority).toBe("medium");
+    expect(subject.text("today", context.now).priority).toBe("medium");
+  });
+
+  it("leaves other school work as it was", () => {
+    const homework = schoolSubject({ ...school, kind: "homework", title: "Maths worksheet" }, "Asmi", context)!;
+    expect(homework.text("tonight", context.now).priority).toBe("medium");
   });
 });
