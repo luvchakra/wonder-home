@@ -933,8 +933,15 @@ reminders about real records, never lines of text fired and forgotten.
   no row means allowed. `deliverNotification` is given the reminder's `category` and
   skips a muted channel, except for a critical alert, and the in-app list cannot be
   muted. Only channels that are on and reach someone here are offered, in Settings →
-  Notifications → "What goes where". The backlog for the
+  Notifications, in the Notification center: one row per kind that opens to
+  its on/off, timing and channels (`notification-center-card.tsx`). The backlog for the
   channels and the events still to come is `backlogs/27-Notification-Channels.md`.
+- **The household's own rules** (story 27-025, `household-settings.ts`). Admins set,
+  under Manage Household → Household notifications, which kinds the household uses,
+  the timing everyone starts from, which channels beyond the app may reach anyone, the
+  second-channel and backup steps, and household quiet hours. Kept as versioned
+  `policies` rows, enforced in `reconcile.ts` and `deliverNotification`. A person's own
+  choices narrow these and never widen them; a critical alert still goes.
 - **Can I trust it?** (stories 27-003, 27-009, 27-010). Under each channel
   in Settings → Notifications a person sees whether a reminder will reach them
   there and the plain reasons it may not (`channel-check.ts`, closed reasons:

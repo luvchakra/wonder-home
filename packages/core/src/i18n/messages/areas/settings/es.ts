@@ -769,4 +769,12 @@ export const settingsEs: AreaCatalog<typeof settingsEn> = {
   "location.turnedOn": "Compartir ubicación está activado.",
   "location.turnedOff": "Compartir ubicación está desactivado y la última ubicación se borró.",
   "location.quote": "Cerca, incluso a distancia.",
+  "notificationCenter.title": "Centro de notificaciones",
+  "notificationCenter.lede": "Cada tipo de notificación y cómo te llega. Abre uno para elegir si llega, cuándo y por dónde además de la app.",
+  "notificationCenter.on": "Recibirlas",
+  "notificationCenter.when": "Cuándo",
+  "notificationCenter.where": "Dónde",
+  "notificationCenter.off": "Desactivado para ti",
+  "notificationCenter.householdOff": "Un administrador lo desactivó para todo el hogar",
+  "notificationCenter.householdChannelsOff": "Un administrador desactivó algunas vías para todo el hogar, así que no aparecen aquí.",
 };

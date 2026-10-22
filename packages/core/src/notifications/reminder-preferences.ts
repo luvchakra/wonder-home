@@ -1,7 +1,8 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 
 import { ApiError } from "../api/errors";
-import { REMINDER_POLICIES, TUNABLE_CATEGORIES, isPresetFor, type TunableCategory } from "./policies";
+import { HOUSEHOLD_NOTIFICATION_DEFAULTS, presetForMember, type HouseholdNotificationSettings } from "./household-settings";
+import { TUNABLE_CATEGORIES, isPresetFor, type TunableCategory } from "./policies";
 
 /**
  * A person's own reminder timing (story 23-007): for each kind of reminder,
@@ -14,14 +15,19 @@ import { REMINDER_POLICIES, TUNABLE_CATEGORIES, isPresetFor, type TunableCategor
 
 export type ReminderPreference = { category: TunableCategory; preset: string; enabled: boolean };
 
-export async function loadReminderPreferences(supabase: SupabaseClient, memberId: string): Promise<ReminderPreference[]> {
+/** Each kind's timing as this person gets it: their own pick, else the household's starting timing (`household`). */
+export async function loadReminderPreferences(
+  supabase: SupabaseClient,
+  memberId: string,
+  household: HouseholdNotificationSettings = HOUSEHOLD_NOTIFICATION_DEFAULTS,
+): Promise<ReminderPreference[]> {
   const { data } = await supabase.from("reminder_preferences").select("category, preset, enabled").eq("member_id", memberId);
   const stored = new Map(((data ?? []) as { category: string; preset: string; enabled: boolean }[]).map((row) => [row.category, row]));
   return TUNABLE_CATEGORIES.map((category) => {
     const row = stored.get(category);
     return {
       category,
-      preset: row && isPresetFor(category, row.preset) ? row.preset : REMINDER_POLICIES[category].defaultPreset,
+      preset: presetForMember(household, category, row?.preset),
       enabled: row?.enabled ?? true,
     };
   });

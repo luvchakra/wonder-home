@@ -110,6 +110,8 @@ export async function runMeasurementRoutineSweep(admin: SupabaseClient, now: Dat
       body: decision.impact,
       category: "appointments",
       source: { type: "health_routine", id: routineId },
+      // A timed reminder for this person, like any other: it may push or email within the daily ceilings.
+      reason: "reminder",
     });
     if (created) summary.sent += 1;
     else summary.skipped += 1;

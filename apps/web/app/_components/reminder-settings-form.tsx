@@ -1,6 +1,6 @@
 "use client";
 
-import { Bell, GraduationCap, HeartHandshake, Moon, PawPrint, ShoppingBasket, Sparkles, Utensils, Wallet } from "lucide-react";
+import { Moon, Sparkles } from "lucide-react";
 import { useActionState } from "react";
 import { useFormStatus } from "react-dom";
 
@@ -8,7 +8,7 @@ import type { TunableCategory } from "@wonderhome/core/notifications/policies";
 import { Alert } from "@wonderhome/core/ui/alert";
 import { Button } from "@wonderhome/core/ui/button";
 import { Card } from "@wonderhome/core/ui/card";
-import { IconTile, type IconTone } from "@wonderhome/core/ui/icon-tile";
+import { IconTile } from "@wonderhome/core/ui/icon-tile";
 import { Select } from "@wonderhome/core/ui/select";
 
 import type { ActionState } from "../(auth)/actions";
@@ -107,79 +107,6 @@ export function QuietHoursCard({
         <p className="text-xs text-[var(--wh-foreground-subtle)]">{labels.quiet.clock.replace("{timeZone}", timeZone)}</p>
         <Feedback state={state} />
         <Submit label={labels.quiet.save} pendingLabel={labels.saving} />
-      </form>
-    </Card>
-  );
-}
-
-const CATEGORY: Record<TunableCategory, { icon: typeof Bell; tone: IconTone }> = {
-  meals: { icon: Utensils, tone: "meals" },
-  school: { icon: GraduationCap, tone: "school" },
-  groceries: { icon: ShoppingBasket, tone: "home" },
-  bills: { icon: Wallet, tone: "money" },
-  pets: { icon: PawPrint, tone: "care" },
-  family: { icon: HeartHandshake, tone: "people" },
-};
-
-export function ReminderPreferencesCard({
-  householdId,
-  rows,
-  save,
-  labels,
-}: {
-  householdId: string;
-  rows: readonly {
-    category: TunableCategory;
-    preset: string;
-    enabled: boolean;
-    options: readonly { value: string; label: string }[];
-  }[];
-  save: Save;
-  labels: ReminderSettingsLabels;
-}) {
-  const [state, action] = useActionState(save, {});
-  return (
-    <Card className="space-y-3">
-      <div>
-        <p className="text-sm font-semibold">{labels.prefs.title}</p>
-        <p className="mt-0.5 text-sm text-[var(--wh-foreground-muted)]">{labels.prefs.body}</p>
-      </div>
-      <form action={action} className="space-y-1">
-        <input type="hidden" name="householdId" value={householdId} />
-        <ul className="divide-y divide-[var(--wh-border)]">
-          {rows.map((row) => {
-            const category = CATEGORY[row.category];
-            const name = labels.prefs.categories[row.category];
-            return (
-              <li key={row.category} className="flex flex-wrap items-center gap-3 py-3">
-                <IconTile icon={category.icon} tone={category.tone} />
-                <span className="min-w-0 flex-1 text-sm font-medium">{name}</span>
-                <label className="flex min-h-11 items-center gap-2 text-sm">
-                  <input
-                    type="checkbox"
-                    name={`enabled_${row.category}`}
-                    defaultChecked={row.enabled}
-                    className="size-5 rounded accent-[var(--wh-primary)]"
-                  />
-                  <span>{labels.prefs.on}</span>
-                </label>
-                <div className="w-full sm:w-72 [&_label]:sr-only">
-                  <Select label={labels.prefs.timing.replace("{category}", name)} name={`preset_${row.category}`} defaultValue={row.preset}>
-                    {row.options.map((option) => (
-                      <option key={option.value} value={option.value}>
-                        {option.label}
-                      </option>
-                    ))}
-                  </Select>
-                </div>
-              </li>
-            );
-          })}
-        </ul>
-        <div className="space-y-2 pt-2">
-          <Feedback state={state} />
-          <Submit label={labels.prefs.save} pendingLabel={labels.saving} />
-        </div>
       </form>
     </Card>
   );

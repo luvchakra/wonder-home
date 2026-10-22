@@ -1,6 +1,8 @@
 import { describe, expect, it } from "vitest";
 
-import { advanceDueStages, STAGE_HOUSEHOLDS_PER_TICK, type ReconcileResult } from "./reconcile";
+import { CHANNEL_ADAPTERS } from "./channels";
+import { advanceDueStages, deliverDueNotifications, STAGE_HOUSEHOLDS_PER_TICK, type ReconcileResult } from "./reconcile";
+import { memoryDatabase } from "./test-support";
 import { NEXT_CHECK_CAP_MINUTES, nextReminderCheck, type DesiredReminder } from "./plan";
 import { formatterFor } from "../i18n/format";
 import { DEFAULT_PREFERENCES } from "../i18n/preferences";
@@ -147,5 +149,33 @@ describe("an event earns its push on the day (the owner's review, 2026-10-22)", 
   it("leaves other school work as it was", () => {
     const homework = schoolSubject({ ...school, kind: "homework", title: "Maths worksheet" }, "Asmi", context)!;
     expect(homework.text("tonight", context.now).priority).toBe("medium");
+  });
+});
+
+describe("a reminder held back by quiet hours goes out the same way when it lands", () => {
+  const now = new Date("2026-10-22T03:00:00Z");
+  function setup(sourceType: string) {
+    const sent: string[] = [];
+    const { client } = memoryDatabase({
+      households: [{ id: "h1", timezone: "Asia/Kolkata", region: "IN", currency: "INR", measurement_system: "metric", default_language: "en" }],
+      household_members: [{ id: "m1", profile_id: "u1", language: null, date_format: null, time_format: null, measurement_system: null, member_type: "adult" }],
+      notification_preferences: [{ member_id: "m1", channel: "email", enabled: true, quiet_from: null, quiet_until: null, target: null }],
+      notifications: [{ id: "n1", household_id: "h1", recipient_member_id: "m1", title: "Dentist", body: "Today's the day", message: null, priority: "normal", status: "generated", scheduled_for: "2026-10-22T02:30:00Z", source_type: sourceType, category: "appointments" }],
+    } as Record<string, Record<string, unknown>[]>);
+    (client as unknown as { auth: unknown }).auth = { admin: { getUserById: async () => ({ data: { user: { email: "a@b.co", email_confirmed_at: "2026-01-01" } } }) } };
+    const adapters = { ...CHANNEL_ADAPTERS, email: { channel: "email" as const, live: true, async send(notification: { title: string }) { sent.push(notification.title); return { ok: true as const }; } } };
+    return { sent, run: () => deliverDueNotifications(client, "h1", now, adapters) };
+  }
+
+  it("emails a health appointment reminder that waited for quiet hours to end", async () => {
+    const { sent, run } = setup("health_appointment");
+    expect(await run()).toBe(1);
+    expect(sent).toEqual(["Dentist"]);
+  });
+
+  it("keeps a notice that only lands in the app there", async () => {
+    const { sent, run } = setup("helper_absence");
+    expect(await run()).toBe(1);
+    expect(sent).toEqual([]);
   });
 });

@@ -375,6 +375,9 @@ disagree again.)
 | 2026-10-22 | 27 | 27-020 | Done | Health appointment and measurement reminders on the household's clock, checked every five minutes, each sent once. |
 | 2026-10-22 | 27 | 27-021 | Done | The clock takes only households whose next reminder change is due (`next_due_at`), and a write or a closed reminder makes one due at once. |
 | 2026-10-22 | 27 | 27-022 | Done | A chat notice is rewritten once per change, not once per concurrent sweep. |
+| 2026-10-22 | 27 | 27-023 | Done | Every workbook use case has its own tests (83); health reminders now push and email, including after quiet hours. |
+| 2026-10-22 | 27 | 27-024 | Done | The notification center: each kind's on/off, timing and channels in one row, in Settings → Notifications. |
+| 2026-10-22 | 27 | 27-025 | Done | Household notifications: Admins set kinds, starting timing, channels, the unanswered steps and quiet hours for everyone. |
 | 2026-10-21 | 26 | 26-017 | Done | Nothing is added to the calendar twice: the same occasion under another name on the same day is asked about first, from the Calendar, Kids & School, HomeTalk and HomeSend. |
 | 2026-10-21 | 12 | 12-016 | Blocked | Reactions on FamilyChat messages: built and tested, waiting on its migration reaching the live project; the thread hides them until then. |
 | 2026-10-21 | 17 | 17-010 | Done | A public Careers section powered by WonderJobs: /careers, each job with Apply, the applicant's status page, and the key set by a platform admin at /platform-admin/careers (kept in Vault, audited). |

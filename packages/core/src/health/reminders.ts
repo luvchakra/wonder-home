@@ -214,6 +214,8 @@ export async function runHealthReminderSweep(admin: SupabaseClient, now: Date = 
         body: decision.impact,
         category: "appointments",
         source: { type: "health_appointment", id: row.id as string },
+        // A timed reminder for this person: it may earn a push or an email by the same gates as a bill's due day.
+        reason: "reminder",
       });
       if (created) summary.sent += 1;
       else summary.skipped += 1;

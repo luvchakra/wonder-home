@@ -138,30 +138,6 @@ export async function saveQuietHoursAction(_previous: ActionState, formData: For
 }
 
 /** How early each kind of reminder comes, and whether at all (story 23-007). */
-export async function saveReminderPreferencesAction(_previous: ActionState, formData: FormData): Promise<ActionState> {
-  const householdId = String(formData.get("householdId") ?? "");
-  try {
-    const supabase = await createClient();
-    const membership = await requireMembership(supabase, householdId);
-    await saveReminderPreferences(supabase, {
-      householdId,
-      memberId: membership.memberId,
-      preferences: TUNABLE_CATEGORIES.map((category) => ({
-        category,
-        preset: String(formData.get(`preset_${category}`) ?? ""),
-        enabled: formData.get(`enabled_${category}`) === "on",
-      })),
-    });
-    // The new timing applies to reminders already waiting, not just new ones.
-    await reconcileRemindersNow(householdId, { force: true });
-  } catch (thrown) {
-    return { error: toErrorBody(thrown, "notifications").body.error.message };
-  }
-  revalidatePath("/settings/notifications");
-  revalidatePath("/notifications");
-  return { notice: "Reminder preferences saved." };
-}
-
 /** The day's summary and learned timing — each person's own choice (stories 23-011, 23-012). */
 export async function saveSmartRemindersAction(_previous: ActionState, formData: FormData): Promise<ActionState> {
   const householdId = String(formData.get("householdId") ?? "");
@@ -300,6 +276,29 @@ export async function setChannelRouteAction(input: { householdId: string; catego
     const supabase = await createClient();
     const membership = await requireMembership(supabase, parsed.data.householdId);
     await setRoute(supabase, { ...parsed.data, memberId: membership.memberId });
+  } catch (thrown) {
+    return { error: toErrorBody(thrown, "notifications").body.error.message };
+  }
+  revalidatePath("/settings/notifications");
+  return { ok: true };
+}
+
+/**
+ * One kind's own choices from the notification center (the owner, 2026-10-22):
+ * whether it comes at all and when. Only this kind is written, so a kind the
+ * person never touched keeps following the household's starting timing.
+ */
+export async function saveReminderKindAction(input: { householdId: string; category: string; preset: string; enabled: boolean }): Promise<{ ok: true } | { error: string }> {
+  const parsed = z.object({ householdId: z.uuid(), category: z.enum(TUNABLE_CATEGORIES), preset: z.string().max(60), enabled: z.boolean() }).safeParse(input);
+  if (!parsed.success) return { error: "Please try again." };
+  try {
+    const supabase = await createClient();
+    const membership = await requireMembership(supabase, parsed.data.householdId);
+    await saveReminderPreferences(supabase, {
+      householdId: parsed.data.householdId,
+      memberId: membership.memberId,
+      preferences: [{ category: parsed.data.category, preset: parsed.data.preset, enabled: parsed.data.enabled }],
+    });
   } catch (thrown) {
     return { error: toErrorBody(thrown, "notifications").body.error.message };
   }

@@ -770,4 +770,12 @@ export const settingsFr: AreaCatalog<typeof settingsEn> = {
   "location.turnedOn": "Le partage de position est activé.",
   "location.turnedOff": "Le partage de position est désactivé, et la dernière position a été effacée.",
   "location.quote": "Proches, même loin.",
+  "notificationCenter.title": "Centre de notifications",
+  "notificationCenter.lede": "Chaque type de notification, et comment il vous parvient. Ouvrez-en un pour choisir s’il arrive, quand, et par où en plus de l’app.",
+  "notificationCenter.on": "Les recevoir",
+  "notificationCenter.when": "Quand",
+  "notificationCenter.where": "Où",
+  "notificationCenter.off": "Désactivé pour vous",
+  "notificationCenter.householdOff": "Désactivé pour tout le foyer par un administrateur",
+  "notificationCenter.householdChannelsOff": "Un administrateur a désactivé certains moyens pour tout le foyer, ils ne sont donc pas proposés ici.",
 };

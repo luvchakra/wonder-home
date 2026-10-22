@@ -1,3 +1,5 @@
+import type React from "react";
+
 import { cn } from "../../lib/cn";
 
 export type ChoiceChip = { value: string; label: string };
@@ -12,6 +14,9 @@ export type ChoiceChip = { value: string; label: string };
  * group posts without script, arrows move within a radio group, and the
  * chosen chip says so in its own fill as well as to a screen reader. Chips
  * wrap; none is ever cut to fit (rule 15).
+ *
+ * Given `value` and `onValueChange` it is controlled instead, for a choice
+ * that saves the moment it is made (the notification center's "When").
  */
 export function ChoiceChips({
   legend,
@@ -19,6 +24,9 @@ export function ChoiceChips({
   options,
   type = "radio",
   defaultValue,
+  value,
+  onValueChange,
+  disabled = false,
   legendHidden = false,
   size = "md",
   className,
@@ -29,13 +37,20 @@ export function ChoiceChips({
   /** A radio group picks one; a checkbox group any number. */
   type?: "radio" | "checkbox";
   defaultValue?: string | readonly string[] | null;
+  /** The chosen value(s), when the group is controlled. */
+  value?: string | readonly string[] | null;
+  /** Called with the option and whether it is now chosen; required with `value`. */
+  onValueChange?: (value: string, checked: boolean) => void;
+  disabled?: boolean;
   /** Keep the legend for screen readers only, when a heading above already says it. */
   legendHidden?: boolean;
   /** "sm" for a row of short chips like days of the week. */
   size?: "sm" | "md";
   className?: string;
 }) {
-  const chosen = new Set(defaultValue == null ? [] : typeof defaultValue === "string" ? [defaultValue] : defaultValue);
+  const controlled = value !== undefined && onValueChange !== undefined;
+  const source = controlled ? value : defaultValue;
+  const chosen = new Set(source == null ? [] : typeof source === "string" ? [source] : source);
 
   return (
     <fieldset className={cn("min-w-0 space-y-2", className)}>
@@ -47,7 +62,10 @@ export function ChoiceChips({
               type={type}
               name={name}
               value={option.value}
-              defaultChecked={chosen.has(option.value)}
+              {...(controlled
+                ? { checked: chosen.has(option.value), onChange: (event: React.ChangeEvent<HTMLInputElement>) => onValueChange(option.value, event.target.checked) }
+                : { defaultChecked: chosen.has(option.value) })}
+              disabled={disabled}
               className="peer absolute inset-0 size-full cursor-pointer opacity-0"
             />
             <span

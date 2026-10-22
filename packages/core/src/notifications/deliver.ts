@@ -15,6 +15,7 @@ import { pauseEmailIfRejected } from "./email-health";
 import { unsubscribeUrl } from "./unsubscribe";
 import { enqueueNotificationRetry } from "./retry";
 import { childQuietHours, quietColumns } from "./child-quiet";
+import { householdAllowsChannel, loadHouseholdNotificationSettings } from "./household-settings";
 
 /**
  * Sending a notification beyond the app (stories 06-008, 17-006).
@@ -55,7 +56,7 @@ export async function deliverNotification(
 ): Promise<{ sent: DeliveryChannel[]; failed: DeliveryChannel[] }> {
   const now = input.now ?? new Date();
   try {
-    const [{ data }, { data: household }, { data: member }, { data: devices }, { data: muteRows }] = await Promise.all([
+    const [{ data }, { data: household }, { data: member }, { data: devices }, { data: muteRows }, householdChoices] = await Promise.all([
       admin
         .from("notification_preferences")
         .select("channel, enabled, quiet_from, quiet_until, quiet_from_minute, quiet_until_minute, target, digest")
@@ -67,10 +68,13 @@ export async function deliverNotification(
         ? admin.from("push_subscriptions").select("id, endpoint, p256dh, auth").eq("member_id", input.recipientMemberId)
         : Promise.resolve({ data: [] }),
       input.category ? admin.from("notification_channel_mutes").select("category, channel").eq("member_id", input.recipientMemberId) : Promise.resolve({ data: [] }),
+      // The channels the household's Admins turned off for everyone.
+      loadHouseholdNotificationSettings(admin, input.householdId),
     ]);
     // The channels this person keeps this kind of reminder off. A critical alert ignores them.
     const kept = new Set(input.notification.priority === "critical" ? [] : mutesFrom(muteRows as { category: unknown; channel: unknown }[] | null).map((mute) => muteKey(mute.category, mute.channel)));
-    const channelOn = (channel: DeliveryChannel) => channelAllowed(kept, input.category, channel);
+    const channelOn = (channel: DeliveryChannel) =>
+      channelAllowed(kept, input.category, channel) && householdAllowsChannel(householdChoices, channel, input.notification.priority);
     // Quiet hours are the household's own clock, never the server's.
     const timeZone = ((household as { timezone?: string } | null)?.timezone ?? "Asia/Kolkata") as string;
     // A child's channels hold their age's quiet hours until a guardian sets their own (story 27-015).
