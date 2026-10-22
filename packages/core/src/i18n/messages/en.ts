@@ -134,6 +134,7 @@ export const en = {
   "home.handledLede": "Here is what we have taken care of.",
   "home.todaysFocus": "Today's focus",
   "home.familyMoment": "Family moment",
+  "home.nextMoment": "Coming up",
   "home.schoolMoment": "School event",
   "home.appointmentMoment": "Appointment",
 

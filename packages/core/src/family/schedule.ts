@@ -52,6 +52,24 @@ export type FamilyEvent = {
   location?: string | null;
 };
 
+/** The kinds an event can be to count as time the family spends together. */
+export const FAMILY_MOMENT_KINDS: ReadonlySet<EventKind> = new Set(["family_time", "outing", "birthday", "gathering", "travel", "special_occasion"]);
+
+/**
+ * Is this a family moment? (the owner, 2026-10-22: a protected school trip
+ * with only one child going was called "Family moment".) It must be a family
+ * kind of thing, never a school event or an appointment, and it must be
+ * shared: at least two members going, or nobody named (then it is the whole
+ * household's). Being protected says nothing gets scheduled over it, not who
+ * it is for, so it never makes an event a family moment on its own.
+ */
+export function isFamilyMoment(event: Pick<FamilyEvent, "kind" | "participants" | "status">): boolean {
+  if (event.status === "cancelled") return false;
+  if (!FAMILY_MOMENT_KINDS.has(event.kind)) return false;
+  const going = event.participants.filter((participant) => participant.response !== "no").length;
+  return event.participants.length === 0 || going >= 2;
+}
+
 /**
  * Windows in which everybody named is free (story 12-003).
  *

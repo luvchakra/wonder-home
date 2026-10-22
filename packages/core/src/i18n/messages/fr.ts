@@ -124,6 +124,7 @@ export const fr: Catalog = {
   "home.handledLede": "Voici ce dont nous nous sommes occupés.",
   "home.todaysFocus": "L'essentiel du jour",
   "home.familyMoment": "Moment en famille",
+  "home.nextMoment": "À venir",
   "home.schoolMoment": "Événement scolaire",
   "home.appointmentMoment": "Rendez-vous",
 

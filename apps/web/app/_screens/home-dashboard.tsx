@@ -17,7 +17,7 @@ import Link from "next/link";
 import { listEvents } from "@wonderhome/core/family/repository";
 import { listPets } from "@wonderhome/core/home/repository";
 import type { Translate } from "@wonderhome/core/i18n/translate";
-import { describeAction, type FamilyEvent } from "@wonderhome/core/family/schedule";
+import { describeAction, isFamilyMoment, type FamilyEvent } from "@wonderhome/core/family/schedule";
 import { onboardingSummary, type OnboardingSummary } from "@wonderhome/core/household/onboarding";
 import { loadOnboarding, loadOnboardingSnapshot } from "@wonderhome/core/household/onboarding-repository";
 import { assessSetup } from "@wonderhome/core/household/setup";
@@ -421,8 +421,8 @@ async function DashboardBody({ session, now }: { session: Session; now: Date }) 
   const todayFocus = upcoming.filter((event) => event.startsAt <= endOfToday && event.status !== "cancelled").slice(0, 3);
   // The next family moment (the calendar's family kinds); only when there is
   // none, the next thing of any kind, said as what it is (below).
-  const FAMILY_KINDS = new Set(["family_time", "outing", "birthday", "gathering", "travel", "special_occasion"]);
-  const nextMoment = upcoming.find((event) => FAMILY_KINDS.has(event.kind)) ?? upcoming[0] ?? null;
+  // A family moment is shared family time (`isFamilyMoment`: a family kind, and two or more going).
+  const nextMoment = upcoming.find((event) => isFamilyMoment(event)) ?? upcoming[0] ?? null;
   // The card says what the event is (the owner, 2026-10-18: a school trip
   // came up as a "Family moment" with a heart and "Plan together"): when the
   // next thing is a school event or an appointment, the heading, the icon and
@@ -432,7 +432,10 @@ async function DashboardBody({ session, now }: { session: Session; now: Date }) 
       ? { heading: t("home.schoolMoment"), icon: GraduationCap, iconClass: "text-[var(--wh-tone-school)]", family: false }
       : nextMoment?.kind === "appointment"
         ? { heading: t("home.appointmentMoment"), icon: CalendarClock, iconClass: "text-[var(--wh-primary)]", family: false }
-        : { heading: t("home.familyMoment"), icon: Heart, iconClass: "text-[var(--wh-tone-people)]", family: true };
+        : nextMoment && isFamilyMoment(nextMoment)
+          ? { heading: t("home.familyMoment"), icon: Heart, iconClass: "text-[var(--wh-tone-people)]", family: true }
+          : // Anything else (one person's outing, say) is said as what is next, never as family time.
+            { heading: t("home.nextMoment"), icon: CalendarClock, iconClass: "text-[var(--wh-primary)]", family: false };
   const MomentIcon = momentLook.icon;
   const memberName = (id: string) => members.find((member) => member.id === id)?.displayName ?? null;
   const momentGoing = nextMoment ? eventGoing(nextMoment, memberName, t, session.locale.format.locale) : { names: [], words: "" };

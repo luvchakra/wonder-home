@@ -5,6 +5,7 @@ import {
   assessGift,
   commonAvailability,
   detectConflicts,
+  isFamilyMoment,
   mayScheduleOver,
   suggestActivities,
   type ActivitySuggestion,
@@ -294,5 +295,27 @@ describe("gifts", () => {
 
   it("stays quiet about something months away", () => {
     expect(assessGift(gift({ neededBy: "2026-12-25" }), NOW).notable).toBe(false);
+  });
+});
+
+describe("a family moment", () => {
+  const going = (...ids: string[]) => ids.map((memberId) => ({ memberId, response: "yes" as const, required: false }));
+
+  it("is never a school trip with one child, protected or not (the owner, 2026-10-22)", () => {
+    expect(isFamilyMoment({ kind: "school_event", status: "planned", participants: going("asmi") })).toBe(false);
+    expect(isFamilyMoment({ kind: "school_event", status: "planned", participants: going("asmi", "kunal") })).toBe(false);
+  });
+
+  it("needs two or more going, or nobody named (the whole household)", () => {
+    expect(isFamilyMoment({ kind: "outing", status: "planned", participants: going("asmi") })).toBe(false);
+    expect(isFamilyMoment({ kind: "outing", status: "planned", participants: going("asmi", "kunal") })).toBe(true);
+    expect(isFamilyMoment({ kind: "family_time", status: "planned", participants: [] })).toBe(true);
+    const declined = [...going("asmi"), { memberId: "kunal", response: "no" as const, required: false }];
+    expect(isFamilyMoment({ kind: "gathering", status: "planned", participants: declined })).toBe(false);
+  });
+
+  it("is never an appointment, nor something cancelled", () => {
+    expect(isFamilyMoment({ kind: "appointment", status: "planned", participants: [] })).toBe(false);
+    expect(isFamilyMoment({ kind: "family_time", status: "cancelled", participants: [] })).toBe(false);
   });
 });
