@@ -42,7 +42,21 @@ No product behaviour changed.
     run with `#why h2` matching two headings, then passed 10 of 10.
 
   Both look like a brief moment where two copies of an element are on the
-  page. They are worth a look if they ever turn the nightly red.
+  page.
+
+  **Resolved the same day.** The cause was React's streaming reveal. A page
+  under the root `loading.tsx` arrives with its content in a hidden
+  `div#S:0` buffer, and for a moment each element exists both there and in
+  its final place. A MutationObserver caught the overlap in 16 of 40 loads.
+  The `load` event does not wait for the reveal, so a strict locator straight
+  after `goto` could count the hidden copy.
+
+  The fix is `e2e/streaming.ts`'s `open(page, path)`: `goto`, then wait until
+  no `div[hidden][id^="S:"]` remains. Every navigation in `landing.spec.ts`
+  and `auth.spec.ts` now goes through it. Before the fix, the two tests run
+  25 times on both projects failed 5 of 100. After it, they passed 100 of
+  100, and both specs passed 138 of 138 across three repeats. A new spec
+  that locates something strictly after navigating should use `open`.
 - The runs on 18 and 20 October failed before #258 existed. Their causes
   were not investigated, because the 22 October run on current `main`
   failed only on the three tests fixed here.

@@ -1,4 +1,5 @@
 import { expect, test } from "@playwright/test";
+import { open } from "./streaming";
 
 /**
  * The signed-out account surfaces: signing in, asking for a new password,
@@ -30,12 +31,12 @@ function alertOf(page: import("@playwright/test").Page) {
  * appear yet, which showed up as a flake under parallel load.
  */
 async function openForm(page: import("@playwright/test").Page, path: string) {
-  await page.goto(path);
+  await open(page, path);
   await page.waitForLoadState("networkidle");
 }
 
 test("sign-in offers a way out when the password is forgotten", async ({ page }) => {
-  await page.goto("/sign-in");
+  await open(page, "/sign-in");
 
   const forgot = page.getByRole("link", { name: "Forgot password?" });
   await expect(forgot).toBeVisible();
@@ -104,7 +105,7 @@ test("the reset form catches two passwords that do not match", async ({ page }) 
 });
 
 test("an unusable recovery link lands on sign-in saying so, and never loops", async ({ page }) => {
-  await page.goto("/auth/callback?code=not-a-real-code");
+  await open(page, "/auth/callback?code=not-a-real-code");
 
   await expect(page).toHaveURL(/\/sign-in\?error=link$/);
   await expect(alertOf(page)).toContainText("expired or has already been used");
@@ -113,7 +114,7 @@ test("an unusable recovery link lands on sign-in saying so, and never loops", as
 test("the callback refuses to forward to another site", async ({ page }) => {
   // An open redirect here would let a phishing link finish its journey on
   // WonderHome's own domain.
-  await page.goto("/auth/callback?next=https%3A%2F%2Fexample.com%2Fphish");
+  await open(page, "/auth/callback?next=https%3A%2F%2Fexample.com%2Fphish");
 
   expect(new URL(page.url()).origin).toBe(new URL(page.url()).origin);
   await expect(page).toHaveURL(/\/sign-in\?error=link$/);
@@ -144,7 +145,7 @@ for (const [screen, path, field] of [
 
 test("no dead Google button appears while Google is not configured", async ({ page }) => {
   for (const path of ["/sign-in", "/sign-up"]) {
-    await page.goto(path);
+    await open(page, path);
     // The rule from design/DESIGN-NOTES.md: a button that goes nowhere is
     // worse than none. It appears the day the deployment configures Google.
     await expect(page.getByRole("button", { name: /Google/ })).toHaveCount(0);
