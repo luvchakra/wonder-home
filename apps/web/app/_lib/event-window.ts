@@ -3,6 +3,7 @@ import "server-only";
 import type { SupabaseClient } from "@supabase/supabase-js";
 
 import { atLocal, localMoment, shiftDate } from "@wonderhome/core/calendar/dates";
+import type { SameEntry } from "@wonderhome/core/calendar/add-event";
 import { sameEntryOnDay } from "@wonderhome/core/calendar/duplicates";
 import { clashesWith } from "@wonderhome/core/calendar/projection";
 import { calendarRange } from "@wonderhome/core/calendar/repository";
@@ -126,4 +127,16 @@ export async function duplicateFor(
   } catch {
     return null;
   }
+}
+
+/**
+ * HomeEvents' own refusal (`addFamilyEvent`/`addSchoolItem` found the entry
+ * already there), said in the same words as `duplicateFor`, so a form shows
+ * one prompt whichever check caught it.
+ */
+export async function duplicateLine(membership: HouseholdMembership, existing: SameEntry): Promise<string> {
+  const timezone = membership.household.timezone;
+  const preferences = preferencesOf(membership.locale, timezone);
+  const [t, format] = [await translatorFor(preferences.language), formatterFor(preferences)];
+  return t("calendar.form.clashEntry", { title: existing.title, time: `${format.date(existing.start)}, ${format.time(existing.start)}` });
 }

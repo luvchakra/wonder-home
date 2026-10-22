@@ -11,11 +11,11 @@ in `docs/progress/`; for the running log of what changed when, `tracking/PROGRES
 
 ## The whole picture
 
-**358 of 383 stories done — 93.5%**
+**361 of 386 stories done — 93.5%**
 
 | Status | Stories |
 |---|---:|
-| Done | 358 |
+| Done | 361 |
 | In Progress | 8 |
 | Blocked | 1 |
 | Not Started | 12 |
@@ -29,7 +29,7 @@ in `docs/progress/`; for the running log of what changed when, `tracking/PROGRES
 | 01 Identity & Family Accounts | `██████████` | 14 | 14 | — |
 | 02 Household Configuration & Playbook | `██████████` | 9 | 9 | — |
 | 03 Outcome & Routine Engine | `██████████` | 8 | 8 | — |
-| 04 Conversation, Voice & Text | `█████████░` | 28 | 30 | 1 in progress, 1 not started |
+| 04 Conversation, Voice & Text | `█████████░` | 29 | 31 | 1 in progress, 1 not started |
 | 05 Household Certification & Understanding | `██████████` | 12 | 12 | — |
 | 06 Actionable Notification Engine | `██████████` | 8 | 8 | — |
 | 07 Househelper & Home Operations | `██████████` | 10 | 10 | — |
@@ -51,7 +51,7 @@ in `docs/progress/`; for the running log of what changed when, `tracking/PROGRES
 | 23 Smart Notifications | `██████████` | 13 | 13 | — |
 | 24 HomePlaces | `██████████` | 14 | 14 | — |
 | 25 HomeFood | `████████░░` | 25 | 30 | 5 not started |
-| 26 HomeEvents | `███████░░░` | 11 | 15 | 1 in progress, 3 not started |
+| 26 HomeEvents | `███████░░░` | 13 | 17 | 1 in progress, 3 not started |
 | 27 Notification Channels and Events | `█████████░` | 14 | 15 | 1 blocked |
 
 ## What is left
@@ -159,7 +159,7 @@ in `docs/progress/`; for the running log of what changed when, `tracking/PROGRES
 
 ### 04 — Conversation, Voice & Text
 
-28 of 30 done `█████████░`
+29 of 31 done `█████████░`
 
 | Story | Priority | Status | Notes |
 |---|---|---|---|
@@ -193,6 +193,7 @@ in `docs/progress/`; for the running log of what changed when, `tracking/PROGRES
 | `04-028` Stop a reply; a long reply is heard as a short summary | P1 | Done | The owner, 2026-10-20 ("give an option to stop such a scenario"; "while reading it out, just give a concise summary"). **Stop** under the waiting bubble stops waiting for the reply (an `AbortController` on the turn's request), and HomeTalk stops by itself after 45 s (`REPLY_WAIT_MS`); either way it says so in the conversation and, since the server may already have acted, to look before asking again. **Spoken summary**: `conversation/speech.ts`'s `spokenSummary` reads a reply of 40 words or fewer whole and a longer one as its opening sentence plus what its list covers (each item's bold lead, five at most, then "N more"), then "The rest is on screen." in the reader's language — every word spoken is a word of the reply. In-app voice speaks it (`handleLiveUtterance`); Alexa and Gemini Live get it through `speechFrom` for an answer of three or more headed items. Tests: speech 3, gateway 1; `npm run eval` gates pass (voice 25/25). Words and help (Talk to WonderHome, Voice) in all eight languages. Checked at 360px: Stop appeared on a held reply and left the Stopped note. |
 | `04-029` "Tomorrow" just after midnight is the day you wake up to | P0 | Done | The owner, 2026-10-21 ("tomorrow should be 21st, why it's showing 22" — asked at 12:02 am). `conversation/temporal.ts`'s `tomorrowIn`: before 4 am (`SMALL_HOURS_END_MINUTE`) "tomorrow" is the calendar day just begun, used by `resolveTemporal` (actions), `homebrain/question.ts`'s `timeWindow` (questions, label names the date taken) and `context/resolution.ts`. Tests: temporal small hours 2, executor timezone test moved to 4:30 am to keep its intent; 3,896 unit tests pass. |
 | `04-030` Ask me about family (AMAF) | P1 | Done | The owner, 2026-10-20. "Ask me about my family" (or the HomeTalk chip) starts a rules-only interview, one question at a time, about what the household does not have yet: allergies, birthdays and anniversaries, school, class and hours, diet, address, work, relationships, phones, activities, duty owners, helper days, pets and vets, likes and dislikes, bills (`packages/core/src/amaf/`). Each answer is written through its module's own service under the person's session (`apps/web/app/_lib/hometalk-amaf.ts`), and recorded in `amaf_answers` for undo and provenance. A disagreement with the record is said back with its source and changes nothing until the person decides. An answer it cannot place is kept as a note, including a name that is nobody in the family (fixed 2026-10-21: it was read as a food). Adults only, app only. Skip, stop and undo are supported. Tests: amaf 26. Checked live on the database: birthday and address saved, a twice-unclear diet kept as a note, Stop counted 3. Help (Talk to WonderHome) in all eight languages. |
+| `04-031` Ask me about family saves what is said about someone else, and every note | P0 | Done | The owner, 2026-10-22: "Upasana birthday is 24 June 1986", said while Manan's school hours were asked, got "I couldn't save that just now". Causes: the sentence was read only against the waiting question, so on its second try it became a note on Manan's school hours; and that note was refused because `amafMemoryKey` put the member's full uuid in the key, which `memories.key` (`^[a-z][a-z0-9_.]{1,60}$`) cannot hold, so no note about a person had ever been kept. Now facts carry a `cue` (birthday, anniversary, phone, school hours): a sentence naming another household member is read against those for that person, saved for them, and the waiting question asked again; a sentence naming someone else is never saved to the question's subject ("Manan's birthday is…" while Upasana's was asked), nor kept as a note on it; the note key keeps 12 hex characters of the member id, and a test holds every fact's key to the constraint; "put it back" re-applies what the last undo took back, through the same service, within the hour and only if nothing was saved since. Help ¶17 in eight languages |
 
 ### 05 — Household Certification & Understanding
 
@@ -623,7 +624,7 @@ in `docs/progress/`; for the running log of what changed when, `tracking/PROGRES
 
 ### 26 — HomeEvents
 
-11 of 15 done `███████░░░`
+13 of 17 done `███████░░░`
 
 | Story | Priority | Status | Notes |
 |---|---|---|---|
@@ -642,6 +643,8 @@ in `docs/progress/`; for the running log of what changed when, `tracking/PROGRES
 | `26-013` "More family time!" only on family events | P1 | Done | The owner, 2026-10-18 (PR #241): Home's event card closed every event with "More family time!", a school event or an office review included. It now shows only for family kinds (family time, outing, birthday, gathering, travel, special occasion; `momentLook.family` in `_screens/home-dashboard.tsx`). Checked at 360px: a school event has no line, a movie night does |
 | `26-014` An event's "Where" is picked from Google Maps | P1 | Done | The owner, 2026-10-19 (screenshot of Edit the plan). Adding or editing an event, an adult searches Google Maps for Where (`EventPlaceField`, the same `PlaceSearchField` as the place book). The server re-reads a picked place by its id (`eventPlaceFromForm` → `decideEventPlace`, `places/event-place.ts`) and keeps its name, address and id (`family_events.location_address`, `location_place_id`, migration `20261019130000`, live). A typed place such as Home is kept as written, and a pick that cannot be read keeps the typed words. The event page shows the address with Open in Google Maps, and the guest invitation page gives directions; a typed place has no link. Help: Calendar ¶3 in 8 languages |
 | `26-016` Today's entries open their page; a meal changes and a new one is planned from Today | P1 | Done | The owner, 2026-10-20 ("make the entry card clickable, also make the meal editable to some other meal, add option to add new meal"). Each Today entry's icon, name and line open where it lives (`TimelineItem.href`): an event its page, a meal Meals, a bill Bills, school work Kids & School; the entry's own action stays beside it. A meal entry carries a pencil (`ChangeMealButton compact`, an icon with "Change {name}" for assistive technology, so the name is never squeezed — rule 11) opening the same Change sheet as Meals; **Plan a meal** under the timeline opens the Meals planner on today, with the full recipe picker (own and WonderHome dishes). Adults only. Help ¶2 of Today & Home in all eight languages. Checked at 360px and 1280px: planned "QA Khichdi" for today, changed it to "QA Veg pulao", the entry opened /meals, no overflow. |
+| `26-018` Every event goes through HomeEvents' one door | P0 | Done | The owner, 2026-10-22: "how are 2 entries created for same event, add per design every event should be created via the HomeEvents module. put guard rails in place so duplicate entries are not created from various parts of the application". 26-017's duplicate check was each caller's to remember: the Calendar sheet, Kids & School and HomeTalk asked, but the REST API (`POST …/family`, `POST …/school`), a health appointment's calendar entry and HomeSend's write did not. Now `calendar/add-event.ts`'s `addFamilyEvent` and `addSchoolItem` are the only way anything is added: they read the household's entries on that local day from both tables (family events and school entries) and refuse the same name, nearly the same name or the same occasion by another name, unless the person said add anyway (`confirmed`). Callers: the Calendar sheet and Kids & School (their Add anyway), HomeTalk ("already on the calendar"), HomeSend (refused with the entry's name, never linked, so its undo cannot remove the original), an appointment (not added and not linked), and the REST API (409 naming the entry, `confirmDuplicate: true` to add anyway; OpenAPI says so). `single-door.test.ts` fails CI if any other file calls `createEvent`/`createSchoolItem` or inserts into `family_events`/`school_items` outside their repositories (an integration's sync, keyed by the provider's id, is the one exception). Gateway tests include the owner's Bounce pair. The owner's existing pair (18 and 20 Oct, before 26-017) is left for them: "Field trip to Bounce" can be removed in Kids & School or undone in HomeSend |
+| `26-019` A family moment is shared family time | P0 | Done | The owner, 2026-10-22: "only one member of family is part of this event, why is it being called as Family moment? put checks in place". The Family page took the first protected event of any kind as its moment, so a protected school trip with one child going led the page. `isFamilyMoment` (`family/schedule.ts`) decides it for Family and Home alike: a family kind (family time, outing, birthday, gathering, travel, special occasion), not cancelled, with two or more going or nobody named. Protection alone never makes one. Home heads anything else by what it is (School event, Appointment) or "Coming up" (new key, eight languages), never with the family heart. Golden tests in `schedule.test.ts`; browser-checked at 360px and desktop on a QA household |
 
 ### 27 — Notification Channels and Events
 

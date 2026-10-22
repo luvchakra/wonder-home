@@ -7,8 +7,7 @@ import { resolveEntity, resolvePerson } from "../context/resolution";
 import { createAppointment, type AppointmentType } from "../health/appointments";
 import { createFitnessGoal, FITNESS_ACTIVITY_LABEL, type FitnessActivityType, type FitnessFrequencyPeriod } from "../health/fitness";
 import { createIssue, listIssues, setIssueStatus } from "../health/issues";
-import { sameTitledOnDay } from "../calendar/duplicates";
-import { createEvent, listEvents } from "../family/repository";
+import { addFamilyEvent } from "../calendar/add-event";
 import { setEventCancelled } from "../family/event-detail";
 import { createServiceRequest } from "../home/repository";
 import { attachIngredients, createMeal, removeMeal } from "../meals/repository";
@@ -404,7 +403,7 @@ async function raiseServiceRequest(intent: HouseholdIntent, context: ExecutionCo
 
 /**
  * "Protect Saturday evening for family time" — a real block on the family
- * calendar through `createEvent`, protected and owned by the person who
+ * calendar through HomeEvents (`addFamilyEvent`), protected and owned by the person who
  * asked (protected time always has an owner).
  */
 async function putOnCalendar(intent: HouseholdIntent, context: ExecutionContext): Promise<ExecutionResult> {
@@ -419,25 +418,31 @@ async function putOnCalendar(intent: HouseholdIntent, context: ExecutionContext)
   const what = String(intent.parameters.what ?? "Family time").trim();
   const title = what.charAt(0).toUpperCase() + what.slice(1);
   const label = (resolved.label ?? resolved.date).replace(/\s*\(.*\)$/, "");
-  // Already on the calendar that day, under this or another name — a family
-  // event or a school entry — is said back, never added a second time.
-  const existing = await sameOnCalendar(context, title, resolved.date);
-  if (existing) {
+  // Through HomeEvents' one door: already on the calendar that day, under this
+  // or another name — a family event or a school entry — is said back, never
+  // added a second time.
+  const added = await addFamilyEvent(
+    context.supabase,
+    {
+      householdId: context.householdId,
+      title,
+      kind: /family|together/i.test(what) ? "family_time" : "outing",
+      startsAt: zonedTimeToUtcIso(resolved.date, from.hour, from.minute, context.timezone),
+      endsAt: zonedTimeToUtcIso(resolved.date, to.hour, to.minute, context.timezone),
+      protected: protectedTime,
+      ownerMemberId: context.actorMemberId,
+    },
+    { timeZone: context.timezone },
+  );
+  if (added.kind === "duplicate") {
+    const existing = added.existing;
     return {
       ok: true,
       text: `**${existing.title}** is already on the family calendar ${onDay(label)}, so nothing was added. See ${linkTo("/calendar", "Calendar")}.`,
       result: { alreadyTracked: true, existingId: existing.sourceId, existingTitle: existing.title },
     };
   }
-  const { id } = await createEvent(context.supabase, {
-    householdId: context.householdId,
-    title,
-    kind: /family|together/i.test(what) ? "family_time" : "outing",
-    startsAt: zonedTimeToUtcIso(resolved.date, from.hour, from.minute, context.timezone),
-    endsAt: zonedTimeToUtcIso(resolved.date, to.hour, to.minute, context.timezone),
-    protected: protectedTime,
-    ownerMemberId: context.actorMemberId,
-  });
+  const id = added.id;
   const hours = `${formatHourMinute(from.hour, from.minute)}–${formatHourMinute(to.hour, to.minute)}`;
   return {
     ok: true,
@@ -446,43 +451,6 @@ async function putOnCalendar(intent: HouseholdIntent, context: ExecutionContext)
       : `Put **${what}** on the family calendar ${onDay(label)}, ${hours}. See ${linkTo("/family", "Family")}.`,
     result: { eventId: id, title, protected: protectedTime },
   };
-}
-
-/**
- * What the calendar already holds on that day under the same name or another
- * name for the same occasion, read through the member's own session. Not
- * being able to read it never blocks adding.
- */
-async function sameOnCalendar(context: ExecutionContext, title: string, date: string): Promise<{ sourceId: string; title: string } | null> {
-  const dayStart = new Date(zonedTimeToUtcIso(date, 0, 0, context.timezone));
-  const from = new Date(dayStart.getTime() - 86_400_000);
-  const to = new Date(dayStart.getTime() + 2 * 86_400_000);
-  try {
-    const [events, school] = await Promise.all([
-      listEvents(context.supabase, context.householdId, { from: dayStart, to: new Date(dayStart.getTime() + 86_400_000) }),
-      context.supabase
-        .from("school_items")
-        .select("id, title, due_at, due_time_known, status")
-        .eq("household_id", context.householdId)
-        .gte("due_at", from.toISOString())
-        .lte("due_at", to.toISOString())
-        .neq("status", "cancelled")
-        .limit(50),
-    ]);
-    const records = [
-      ...events.filter((event) => event.status !== "cancelled").map((event) => ({ sourceId: event.id, title: event.title, start: event.startsAt })),
-      ...((school.data ?? []) as { id: string; title: string; due_at: string; due_time_known: boolean }[]).map((item) => ({
-        sourceId: item.id,
-        title: item.title,
-        start: new Date(item.due_at),
-        // A school entry with no time is stored at midnight UTC for its own day.
-        day: item.due_time_known ? null : item.due_at.slice(0, 10),
-      })),
-    ];
-    return sameTitledOnDay(records, { title, date, timeZone: context.timezone });
-  } catch {
-    return null;
-  }
 }
 
 /** A stored instant as the household's own clock time. */
