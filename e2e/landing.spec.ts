@@ -1,4 +1,5 @@
 import { expect, test } from "@playwright/test";
+import { open } from "./streaming";
 
 /**
  * The landing page (design/UI-UX-REQUIREMENTS-v3.md §25–§45): navigation,
@@ -6,7 +7,7 @@ import { expect, test } from "@playwright/test";
  */
 
 test("the hero says what WonderHome is and offers the way in", async ({ page }) => {
-  await page.goto("/");
+  await open(page, "/");
 
   await expect(page.getByRole("heading", { level: 1 })).toContainText("WonderHome takes care");
   await expect(page.getByRole("link", { name: /Get Started Free/ }).first()).toBeVisible();
@@ -14,19 +15,19 @@ test("the hero says what WonderHome is and offers the way in", async ({ page }) 
 });
 
 test("Get Started leads to sign-up and Sign In to sign-in — the product's own authentication", async ({ page }) => {
-  await page.goto("/");
+  await open(page, "/");
 
   await page.getByRole("link", { name: /Get Started Free/ }).first().click();
   await expect(page).toHaveURL(/\/sign-up$/);
   await expect(page.getByRole("heading", { level: 1, name: "Create your account" })).toBeVisible();
 
-  await page.goto("/");
+  await open(page, "/");
   await page.getByRole("link", { name: "Sign In" }).first().click();
   await expect(page).toHaveURL(/\/sign-in$/);
 });
 
 test("every story section the requirements call for is on the page", async ({ page }) => {
-  await page.goto("/");
+  await open(page, "/");
 
   for (const id of ["why", "solution", "features", "new", "homesend", "families", "security", "stories", "pricing", "contact"]) {
     await expect(page.locator(`#${id}`)).toHaveCount(1);
@@ -39,7 +40,7 @@ test("every story section the requirements call for is on the page", async ({ pa
 });
 
 test("nothing on the page offers a video, because there is no video", async ({ page }) => {
-  await page.goto("/");
+  await open(page, "/");
 
   // The approved sheets showed a "Watch Video" call to action. There is no
   // video, and a button that opens nothing is the thing this page avoids.
@@ -48,7 +49,7 @@ test("nothing on the page offers a video, because there is no video", async ({ p
 });
 
 test("every footer link goes somewhere that exists", async ({ page, request }) => {
-  await page.goto("/");
+  await open(page, "/");
 
   const footer = page.locator("footer");
   const hrefs = await footer.locator("a[href]").evaluateAll((links) =>
@@ -74,7 +75,7 @@ test("every footer link goes somewhere that exists", async ({ page, request }) =
 });
 
 test("the header navigation reaches each section", async ({ page, isMobile }) => {
-  await page.goto("/");
+  await open(page, "/");
 
   if (isMobile) {
     await page.getByRole("button", { name: "Open menu" }).click();
@@ -85,7 +86,7 @@ test("the header navigation reaches each section", async ({ page, isMobile }) =>
 });
 
 test("pricing shows three plans, and every amount is a catalogue price with its period", async ({ page }) => {
-  await page.goto("/");
+  await open(page, "/");
   const pricing = page.locator("#pricing");
 
   for (const plan of ["Free", "Pro", "Max"]) {
@@ -99,7 +100,7 @@ test("pricing shows three plans, and every amount is a catalogue price with its 
 });
 
 test("placeholder stories are marked as illustrative", async ({ page }) => {
-  await page.goto("/");
+  await open(page, "/");
   const stories = page.locator("#stories");
 
   const figures = stories.locator("figure");
@@ -110,14 +111,14 @@ test("placeholder stories are marked as illustrative", async ({ page }) => {
 test("content is readable before any motion has run", async ({ page }) => {
   // Scroll reveal must never hide information: the pricing heading exists in
   // the DOM with its text before it has scrolled into view.
-  await page.goto("/");
+  await open(page, "/");
   await expect(page.locator("#pricing h2")).toHaveText(/Start free/);
 });
 
 test("with reduced motion, everything is shown in place with no animation", async ({ browser }) => {
   const context = await browser.newContext({ reducedMotion: "reduce" });
   const page = await context.newPage();
-  await page.goto("/");
+  await open(page, "/");
 
   const heading = page.locator("#why h2");
   await expect(heading).toBeVisible();
@@ -136,14 +137,14 @@ test("with reduced motion, everything is shown in place with no animation", asyn
 
 test("there is no horizontal overflow at phone width", async ({ page }) => {
   await page.setViewportSize({ width: 360, height: 780 });
-  await page.goto("/");
+  await open(page, "/");
 
   const overflow = await page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth);
   expect(overflow).toBeLessThanOrEqual(1);
 });
 
 test("what's new says in words what is not switched on yet", async ({ page }) => {
-  await page.goto("/");
+  await open(page, "/");
   const whatsNew = page.locator("#new");
 
   await expect(whatsNew.getByRole("heading", { level: 2 })).toContainText("Growing up alongside your family");
@@ -166,7 +167,7 @@ test("what's new says in words what is not switched on yet", async ({ page }) =>
 test("the language strip greets in every language the product speaks, and stops under reduced motion", async ({ browser }) => {
   const context = await browser.newContext({ reducedMotion: "reduce" });
   const page = await context.newPage();
-  await page.goto("/");
+  await open(page, "/");
 
   const strip = page.getByRole("region", { name: "Languages WonderHome speaks" });
   await expect(strip.locator("li[lang='hi']").first()).toContainText("नमस्ते");
