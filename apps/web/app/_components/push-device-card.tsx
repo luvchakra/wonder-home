@@ -49,31 +49,16 @@ function deviceLabel(): string {
 }
 
 /**
- * Push on this device (story 23-015). Turning it on asks the browser's
- * permission, subscribes with WonderHome's public key and keeps the
- * subscription for this member; turning it off forgets this device only.
- * Where push cannot work — not set up on this deployment, a browser without
- * it, permission blocked — the card says so in words and offers no button
- * that would do nothing (rule 10).
+ * This device's push: whether it can have push, whether it already does, and
+ * turning it on or off — one flow for every place that offers it (the
+ * settings card, and the nudge where reminders are read), so there is one way
+ * to subscribe, never two.
  */
-export function PushDeviceCard({
-  householdId,
-  publicKey,
-  myEndpoints,
-  labels,
-}: {
-  householdId: string;
-  /** Null when this deployment has no push key pair yet. */
-  publicKey: string | null;
-  /** The endpoints already kept for this member, to tell whether this device is one of them. */
-  myEndpoints: string[];
-  labels: PushDeviceLabels;
-}) {
+export function usePushDevice({ householdId, publicKey, myEndpoints, unsupportedText }: { householdId: string; publicKey: string | null; myEndpoints: string[]; unsupportedText: string }) {
   const [device, setDevice] = useState<DeviceState>("checking");
   const [endpoint, setEndpoint] = useState<string | null>(null);
   const [saveState, save, saving] = useActionState<ActionState, FormData>(savePushSubscriptionAction, {});
   const [removeState, remove, removing] = useActionState<ActionState, FormData>(removePushSubscriptionAction, {});
-  const [testState, test, testing] = useActionState<ActionState, FormData>(sendTestPushAction, {});
   const [problem, setProblem] = useState<string | null>(null);
 
   useEffect(() => {
@@ -125,7 +110,7 @@ export function PushDeviceCard({
       startTransition(() => save(data));
       setDevice("on");
     } catch {
-      setProblem(labels.unsupported);
+      setProblem(unsupportedText);
     }
   };
 
@@ -143,6 +128,33 @@ export function PushDeviceCard({
     }
     setDevice("off");
   };
+
+  return { device, endpoint, turnOn, turnOff, saving, removing, error: saveState.error ?? removeState.error ?? problem };
+}
+
+/**
+ * Push on this device (story 23-015). Turning it on asks the browser's
+ * permission, subscribes with WonderHome's public key and keeps the
+ * subscription for this member; turning it off forgets this device only.
+ * Where push cannot work — not set up on this deployment, a browser without
+ * it, permission blocked — the card says so in words and offers no button
+ * that would do nothing (rule 10).
+ */
+export function PushDeviceCard({
+  householdId,
+  publicKey,
+  myEndpoints,
+  labels,
+}: {
+  householdId: string;
+  /** Null when this deployment has no push key pair yet. */
+  publicKey: string | null;
+  /** The endpoints already kept for this member, to tell whether this device is one of them. */
+  myEndpoints: string[];
+  labels: PushDeviceLabels;
+}) {
+  const { device, endpoint, turnOn, turnOff, saving, removing, error: deviceError } = usePushDevice({ householdId, publicKey, myEndpoints, unsupportedText: labels.unsupported });
+  const [testState, test, testing] = useActionState<ActionState, FormData>(sendTestPushAction, {});
 
   const sendTest = () => {
     const data = new FormData();
@@ -164,7 +176,7 @@ export function PushDeviceCard({
           : device === "off"
             ? labels.off
             : labels.working;
-  const error = saveState.error ?? removeState.error ?? testState.error ?? problem;
+  const error = deviceError ?? testState.error;
 
   return (
     <Card className="space-y-3">

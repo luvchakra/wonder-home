@@ -8,6 +8,7 @@ import { localizeReminder } from "@wonderhome/core/notifications/message";
 import { NOTIFICATION_CATEGORIES, type NotificationCategory } from "@wonderhome/core/notifications/policies";
 import type { Translate, TranslationKey } from "@wonderhome/core/i18n/translate";
 import { atLocal, localMoment, shiftDate } from "@wonderhome/core/notifications/timing";
+import { webPushPublicKey } from "@wonderhome/core/notifications/web-push";
 import { AppShell } from "@wonderhome/core/shell/app-shell";
 import { Alert } from "@wonderhome/core/ui/alert";
 import { Card } from "@wonderhome/core/ui/card";
@@ -17,6 +18,7 @@ import { EmptyState } from "@wonderhome/core/ui/states";
 import { IconTile } from "@wonderhome/core/ui/icon-tile";
 import { cn } from "@wonderhome/core/lib/cn";
 
+import { PushNudge } from "../_components/push-nudge";
 import { ReminderDigest, ReminderRow, type ReminderRowLabels } from "../_components/reminder-row";
 import { RequestAnswer } from "../_components/request-answer";
 import { PRESET_KEYS, type SnoozePreset } from "../_lib/snooze-presets";
@@ -65,7 +67,7 @@ export default async function NotificationsPage({ searchParams }: { searchParams
 
   const endOfTomorrow = atLocal(shiftDate(localMoment(now, timeZone).dateKey, 2), 0, timeZone);
   const weekAgo = new Date(now.getTime() - 7 * 86_400_000).toISOString();
-  const [{ data: openData }, { data: closedData }, { data: digestPref }, requests] = await Promise.all([
+  const [{ data: openData }, { data: closedData }, { data: digestPref }, requests, { data: deviceRows }] = await Promise.all([
     supabase
       .from("notifications")
       .select(REMINDER_COLUMNS)
@@ -89,7 +91,10 @@ export default async function NotificationsPage({ searchParams }: { searchParams
           pendingApprovalsFor(createAdminClient(), { householdId: membership.household.id, memberId: membership.memberId, now }).catch(() => []),
         )
       : Promise.resolve([]),
+    // This member's push devices, so the nudge below knows whether this one is already on.
+    supabase.from("push_subscriptions").select("endpoint").eq("member_id", membership.memberId),
   ]);
+  const myEndpoints = ((deviceRows ?? []) as { endpoint: string }[]).map((row) => row.endpoint);
   const asked = new Set(requests.map((request) => request.id));
 
   // Each reminder in the viewer's own language; the stored English when it has no message this build can read.
@@ -211,6 +216,21 @@ export default async function NotificationsPage({ searchParams }: { searchParams
         {digest.length > 1 ? (
           <ReminderDigest title={t("notifications.digest.title")} lede={t("notifications.digest.body", { count: digest.length, name: firstName })} items={digest} />
         ) : null}
+
+        {/* Push on this phone, offered where reminders are read; nothing when it would not work or is already on. */}
+        <PushNudge
+          householdId={membership.household.id}
+          publicKey={webPushPublicKey()}
+          myEndpoints={myEndpoints}
+          labels={{
+            title: t("push.nudge.title"),
+            lede: t("push.nudge.lede"),
+            turnOn: t("push.device.turnOn"),
+            notNow: t("push.nudge.notNow"),
+            done: t("push.nudge.done"),
+            unsupported: t("push.device.unsupported"),
+          }}
+        />
 
         <SegmentedControl
           label={t("notifications.tabs.label")}

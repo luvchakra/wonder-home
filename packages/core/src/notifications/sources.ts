@@ -184,7 +184,9 @@ export function schoolSubject(row: SchoolItemRow, childName: string | null, cont
       return reminderText(
         msg("reminder.school.title", { child: { msg: childWords(childName) }, kind: { msg: kind } }),
         msg(key, { title: row.title, ...(time ? { time } : {}) }),
-        row.kind === "event" ? "low" : "medium",
+        // An event is a quiet heads-up the night before and earns its one push on the day
+        // (the owner's review, 2026-10-22: "Field trip … is today at 7:30" never reached a phone).
+        row.kind === "event" && tomorrow ? "low" : "medium",
         context.format,
       );
     },
@@ -379,7 +381,8 @@ export function familySubject(row: FamilyEventRow, context: SourceContext): Remi
         allDay
           ? msg(stage === "tomorrow" ? "reminder.isTomorrow" : "reminder.isToday", { title: row.title })
           : msg(stage === "tomorrow" ? "reminder.family.startsTomorrowAt" : "reminder.family.startsAt", { time: { time: startsAt.toISOString() } }),
-        "low",
+        // The day before stays in the app; on the day it earns its one push (the owner's review, 2026-10-22).
+        stage === "tomorrow" ? "low" : "medium",
         context.format,
       ),
   };

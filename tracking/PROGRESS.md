@@ -370,6 +370,9 @@ disagree again.)
 | 2026-10-22 | 04 | 04-031 | Done | Ask me about family saves a fact said about someone else for them, person notes fit `memories.key`, and "put it back" redoes an undo. |
 | 2026-10-22 | 27 | 27-016 | Done | The delivery clock moves reminders to their next stage, so "this morning" lands at its time without anyone opening the app. |
 | 2026-10-22 | 27 | 27-017 | Done | One reminder per occasion: a school entry that is the same thing as a family event that day sends none of its own. |
+| 2026-10-22 | 27 | 27-018 | Done | An event's on-the-day reminder is Normal, so it may push and email; the evening before stays in the app. |
+| 2026-10-22 | 27 | 27-019 | Done | Notifications offers push for this phone when it would work and is not on yet. |
+| 2026-10-22 | 27 | 27-020 | Done | Health appointment and measurement reminders on the household's clock, checked every five minutes, each sent once. |
 | 2026-10-21 | 26 | 26-017 | Done | Nothing is added to the calendar twice: the same occasion under another name on the same day is asked about first, from the Calendar, Kids & School, HomeTalk and HomeSend. |
 | 2026-10-21 | 12 | 12-016 | Blocked | Reactions on FamilyChat messages: built and tested, waiting on its migration reaching the live project; the thread hides them until then. |
 | 2026-10-21 | 17 | 17-010 | Done | A public Careers section powered by WonderJobs: /careers, each job with Apply, the applicant's status page, and the key set by a platform admin at /platform-admin/careers (kept in Vault, audited). |
