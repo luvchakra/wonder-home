@@ -13,7 +13,7 @@ import { householdMemory, setContextWriteListener } from "../context/invalidatio
 import { filterForViewer } from "../context/privacy";
 import { attachLinks, type LinkKind } from "./sleep/links";
 import { attachHomeSendEvidence } from "../context/provenance";
-import { CONTEXT_ADAPTERS, gatherHouseholdContext, HOLIDAYS_AHEAD_DAYS, listAbsences, listBeliefs, listEventGuests, listFoodPreferences, listMemories, setContextStoreReader, type ContextSnapshot, type GatherOptions } from "../context/repository";
+import { CONTEXT_ADAPTERS, mergeRecords, gatherHouseholdContext, HOLIDAYS_AHEAD_DAYS, listAbsences, listBeliefs, listEventGuests, listFoodPreferences, listMemories, setContextStoreReader, type ContextSnapshot, type GatherOptions } from "../context/repository";
 import type { ContextDomain, ContextScope, ContextViewer, HouseholdContextItem } from "../context/types";
 
 /**
@@ -139,7 +139,10 @@ export async function readStoreRecords(admin: SupabaseClient, scope: BuildScope)
   // The adapters whose reads need no window and no viewer: the same code a
   // live read runs. People are read too — every summary names its people —
   // though their items are the live read's at turn time, never the store's.
-  const plain = CONTEXT_ADAPTERS.filter((adapter) => (adapter.domain === "people" || STORE_DOMAINS.includes(adapter.domain)) && !["calendar", "absences", "meals", "preferences"].includes(adapter.domain));
+  // Registry adapters (`knowledge/registry.ts`) read with no window, so every store domain's run here too.
+  const plain = CONTEXT_ADAPTERS.filter(
+    (adapter) => (adapter.domain === "people" || STORE_DOMAINS.includes(adapter.domain)) && (adapter.registry === true || !["calendar", "absences", "meals", "preferences"].includes(adapter.domain)),
+  );
   const results = await Promise.all([
     ...plain.map((adapter) => guard(adapter.label, () => adapter.read(admin, fullScope))),
     guard("the calendar", async () => {
@@ -171,7 +174,7 @@ export async function readStoreRecords(admin: SupabaseClient, scope: BuildScope)
     if (!result) continue;
     const { homeSendChanges: changes, guardianOf: _guardianOf, ...rest } = result as ContextRecords & { homeSendChanges?: HomeSendChange[]; guardianOf?: string[] };
     if (changes) homeSendChanges.push(...changes);
-    Object.assign(records, rest);
+    mergeRecords(records, rest);
   }
   return { records, homeSendChanges, unavailable, links };
 }

@@ -153,6 +153,11 @@ jobs:
         if: env.CODE == 'true'
         run: npm run lint:embeds
 
+      # Every household table is known to HomeTalk, or excluded with a reason (the record index).
+      - name: Knowledge registry lint
+        if: env.CODE == 'true'
+        run: npm run lint:knowledge
+
       - name: Import boundary lint
         if: env.CODE == 'true'
         run: npm run lint:boundaries

@@ -11,6 +11,7 @@ decision that shapes later work each earns a note, written before moving on.
 
 | Date | Note |
 |---|---|
+| 2026-10-23 | [The household record index, Phase 1 (14-036)](2026-10-23-household-record-index-phase-1.md) |
 | 2026-10-23 | [HomeTalk knows everything the Calendar shows (26-020)](2026-10-23-hometalk-calendar-parity.md) |
 | 2026-10-23 | [Ordering the To buy list on Swiggy Instamart (25-032)](2026-10-23-instamart-ordering.md) |
 | 2026-10-23 | [The notifications page, redesigned around what to do](2026-10-23-notifications-page-redesign.md) |

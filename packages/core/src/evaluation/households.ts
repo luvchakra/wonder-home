@@ -203,6 +203,8 @@ const HOUSEHOLD_A: GoldenHousehold = {
     ],
     // Asmi's dance class on Mondays, which the Calendar shows on its days (08-012).
     activities: [activity("a-c-dance", "a-asmi", "Bharatanatyam", [1], "16:00", "17:00", "Natya Kala studio")],
+    // A table no builder reads, known through the record index's registry (Phase 1).
+    registry: { school_teachers: [{ id: "a-t-iyer", child_member_id: "a-asmi", role: "class_teacher", subject: null, name: "Mrs Iyer", contact: null, note: "Prefers notes in the diary", active: true }] },
     schoolItems: [
       schoolItem("a-s-maths", "a-asmi", "homework", "Maths worksheet", "Maths", "2026-09-24T12:30:00Z"),
       schoolItem("a-s-science", "a-manan", "project", "Science project", "Science", "2026-09-29T11:30:00Z"),

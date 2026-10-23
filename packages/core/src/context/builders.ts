@@ -27,6 +27,7 @@ import type { Meal } from "../meals/meals";
 import type { SchoolCommunication } from "../school/communications";
 import type { Enrolment } from "../school/enrolments";
 import { spokenSummary, type SpokenLanguage } from "../identity/member-languages";
+import { registryItems, type RegistryRows } from "../knowledge/describe";
 import { sessionDates, type Activity } from "../school/activities";
 import type { Exam, TimetablePeriod } from "../school/exams";
 import type { SchoolItem } from "../school/items";
@@ -198,6 +199,8 @@ export type ContextRecords = {
   timetable?: readonly TimetablePeriod[];
   /** A child's classes outside school, with their competitions and notes (story 08-012). */
   activities?: readonly Activity[];
+  /** Rows of every table the knowledge registry reads generically (`knowledge/registry.ts`). */
+  registry?: RegistryRows;
   communications?: readonly SchoolCommunication[];
   consumables?: readonly Consumable[];
   orders?: readonly Order[];
@@ -1391,6 +1394,9 @@ export function buildContextItems(records: ContextRecords, options: BuildOptions
       });
     }
   }
+
+  // --- Everything else the registry names (the household record index, Phase 1) ---
+  items.push(...registryItems(records.registry, { householdId: options.householdId, timezone: options.timezone, now: options.now, names: nameById }));
 
   return items;
 }
