@@ -1001,6 +1001,13 @@ const HOMESEND: HomeSendCase[] = [
     reading: { kind: "school_item", title: "Science project registration form", schoolKind: "notice", subject: "Science", dueDate: "2026-09-29", people: ["Manan"] },
     expected: { interpretation: "school_item", entity: "a-manan", match: { outcome: "new" } },
   },
+  {
+    id: "HS-17", surface: "homesend", household: "A", category: "time_date", actor: "a-kunal",
+    description: "An exam notice sent after the day it names: its weekday says which year, and the time comes with the day (the owner's SOF IGKO notice, 2026-10-24).",
+    source: { channel: "pasted_text", capturedAt: "2026-10-23T21:03:00Z", text: "SOF IGKO Examination on Tuesday 22nd September. Examination Time: 2:30 p.m. – 3:30 p.m." },
+    reading: { kind: "school_item", title: "SOF IGKO Examination", schoolKind: "exam", dueDate: null, dateText: "Tuesday 22nd September, 2:30 p.m. – 3:30 p.m." },
+    expected: { interpretation: "school_item", date: "2026-09-22", time: "14:30–15:30" },
+  },
 ];
 
 // --- HomeBrain (§7) ----------------------------------------------------------------

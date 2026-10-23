@@ -880,6 +880,10 @@ authorization channel:
   school, health and money are `kept_off` (its messages pass through Meta),
   and changing plans, paying and ordering stay in the app. It is never kept
   as a HomeSend item; its conversation is its own surface.
+- **A reply answers its item.** A swipe-reply (`context.id`, kept as
+  `whatsapp_messages.reply_to_provider_message_id`) that names one household
+  member (`memberNamedInReply`) sets who the quoted item is for, on the item
+  itself; nothing is applied and no new item is made.
 - **What it never does.** WhatsApp is not a second brain: it decides nothing
   itself, and never touches a domain record except through HomeTalk's gates.
 - **Telemetry.** `whatsapp_events` holds closed words and counts only.

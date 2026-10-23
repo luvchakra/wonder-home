@@ -71,6 +71,17 @@ describe("groundIntakeDate reads the time of a school item", () => {
     expect(grounded.dueTime).toBeNull();
   });
 
+  it("an older notice's weekday says which year its date was, and the time comes with it", () => {
+    // Sent on 23 Oct 2026: 22 September 2026 is a Tuesday; 22 September 2027, a Wednesday.
+    const october = { timezone: "Asia/Kolkata", now: new Date("2026-10-23T21:03:00Z") };
+    const grounded = groundIntakeDate(reading({ kind: "school_item", title: "SOF IGKO Examination", dateText: "Tuesday 22nd September, 2:30 p.m. – 3:30 p.m." }), october);
+    expect(grounded).toMatchObject({ dueDate: "2026-09-22", dueTime: "14:30", endTime: "15:30" });
+    // A weekday that fits neither year still decides nothing.
+    expect(groundIntakeDate(reading({ kind: "school_item", title: "Exam", dateText: "Friday 22nd September at 2pm" }), october)).toMatchObject({ dueDate: null, dueTime: null });
+    // A written year is never second-guessed.
+    expect(groundIntakeDate(reading({ kind: "school_item", title: "Exam", dateText: "Tuesday 22 September 2027" }), october).dueDate).toBeNull();
+  });
+
   it("keeps the model's own full date and still reads the time", () => {
     const grounded = groundIntakeDate(reading({ kind: "school_item", title: "Exam", dueDate: "2026-10-12", dateText: "the second Monday of next month, 10am" }), reference);
     expect(grounded).toMatchObject({ dueDate: "2026-10-12", dueTime: "10:00" });

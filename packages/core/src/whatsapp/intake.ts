@@ -101,6 +101,7 @@ export async function receiveWhatsAppMessages(admin: SupabaseClient, messages: r
           media_id: message.media?.id ?? null,
           media_mime_type: message.media?.mimeType ?? null,
           media_filename: message.media?.filename ?? null,
+          reply_to_provider_message_id: message.replyTo ?? null,
           received_at: message.receivedAt.toISOString(),
         },
         { onConflict: "provider_message_id", ignoreDuplicates: true },
@@ -144,6 +145,7 @@ type MessageRow = {
   text_content: string | null;
   media_id: string | null;
   media_mime_type: string | null;
+  reply_to_provider_message_id?: string | null;
   media_filename: string | null;
   received_at: string;
   processing_status: "received" | "processing" | "processed" | "failed" | "ignored";
@@ -164,7 +166,7 @@ export async function processWhatsAppMessage(admin: SupabaseClient, messageId: s
   const { data } = await admin
     .from("whatsapp_messages")
     .select(
-      "id, household_id, member_id, provider_message_id, message_type, text_content, media_id, media_mime_type, media_filename, received_at, processing_status, attempts, homesend_item_id, acknowledged_at, identity:whatsapp_identities!whatsapp_messages_identity_id_fkey(phone_number, status)",
+      "id, household_id, member_id, provider_message_id, message_type, text_content, media_id, media_mime_type, media_filename, reply_to_provider_message_id, received_at, processing_status, attempts, homesend_item_id, acknowledged_at, identity:whatsapp_identities!whatsapp_messages_identity_id_fkey(phone_number, status)",
     )
     .eq("id", messageId)
     .maybeSingle();
@@ -203,6 +205,21 @@ export async function processWhatsAppMessage(admin: SupabaseClient, messageId: s
     await say(UNSUPPORTED_REPLY);
     await recordWhatsAppEvents(admin, events);
     return "read";
+  }
+
+  // A reply to one of the person's own items that names someone in the
+  // household answers that item's "who is this for?" (the owner's "asmi",
+  // 2026-10-24): the item waits for them with that person picked, and the
+  // reply is never a new item of its own.
+  if (row.message_type === "text" && row.reply_to_provider_message_id && row.text_content) {
+    const answered = await answerWhoFor(admin, row, row.text_content);
+    if (answered) {
+      events.push({ kind: "clarification_answered", householdId: row.household_id });
+      await settle({ processing_status: "ignored" });
+      await say(`Got it — that's for ${answered}. It's waiting in HomeSend for you to check.`);
+      await recordWhatsAppEvents(admin, events);
+      return "read";
+    }
   }
 
   // A question or an everyday request is asked of WonderHome, not handed to
@@ -290,6 +307,56 @@ export function whatsappJobHandler(deps: WhatsAppIntakeDeps): JobHandler {
     if (!messageId) return "skipped";
     return processWhatsAppMessage(client, messageId, deps);
   };
+}
+
+/**
+ * The household member a short reply names, when exactly one fits: their
+ * name, their first name or their nickname, ignoring case. Pure.
+ */
+export function memberNamedInReply(text: string, members: readonly { id: string; displayName: string; nickname?: string | null }[]): { id: string; displayName: string } | null {
+  const said = text.trim().toLowerCase().replace(/^(?:for|it's for|its for|this is for)\s+/, "").replace(/[.!]+$/, "").trim();
+  if (!said || said.length > 60) return null;
+  const fits = members.filter((member) => {
+    const name = member.displayName.trim().toLowerCase();
+    return name === said || name.split(/\s+/)[0] === said || member.nickname?.trim().toLowerCase() === said;
+  });
+  return fits.length === 1 ? { id: fits[0]!.id, displayName: fits[0]!.displayName } : null;
+}
+
+/**
+ * Sets who an item the person sent is for, from their reply to it. Only
+ * their own item, in their household, still waiting for a person; the
+ * choice is written as the name the item is read as being for, so the
+ * review opens with that person picked and nothing is applied.
+ */
+async function answerWhoFor(admin: SupabaseClient, row: MessageRow, text: string): Promise<string | null> {
+  const { data: quoted } = await admin
+    .from("whatsapp_messages")
+    .select("homesend_item_id")
+    .eq("household_id", row.household_id)
+    .eq("member_id", row.member_id)
+    .eq("provider_message_id", row.reply_to_provider_message_id!)
+    .maybeSingle();
+  const itemId = (quoted as { homesend_item_id: string | null } | null)?.homesend_item_id ?? null;
+  if (!itemId) return null;
+  const [{ data: item }, { data: members }] = await Promise.all([
+    admin.from("home_send_items").select("id, status, extracted, understanding").eq("household_id", row.household_id).eq("id", itemId).maybeSingle(),
+    admin.from("household_members").select("id, display_name, nickname").eq("household_id", row.household_id).eq("status", "active").limit(50),
+  ]);
+  const waiting = item as { id: string; status: string; extracted: Record<string, unknown> | null; understanding: Record<string, unknown> | null } | null;
+  if (!waiting || waiting.status !== "classified") return null;
+  const member = memberNamedInReply(text, ((members ?? []) as { id: string; display_name: string; nickname: string | null }[]).map((entry) => ({ id: entry.id, displayName: entry.display_name, nickname: entry.nickname })));
+  if (!member) return null;
+  const extracted = { ...(waiting.extracted ?? {}), subjectMemberName: member.displayName, people: [member.displayName] };
+  // The review reads who an item is for from its understanding's references
+  // (`homesend/resolve.ts`), the same as a name the document itself said.
+  const understanding = waiting.understanding ? { ...waiting.understanding, references: [{ text: member.displayName, candidates: [], confidence: 0 }] } : null;
+  const { error } = await admin
+    .from("home_send_items")
+    .update({ extracted, ...(understanding ? { understanding } : {}) })
+    .eq("household_id", row.household_id)
+    .eq("id", waiting.id);
+  return error ? null : member.displayName;
 }
 
 export const QUESTION_REPLY =

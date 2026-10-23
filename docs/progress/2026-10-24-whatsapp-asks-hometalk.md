@@ -28,6 +28,10 @@ instead of pointing to the app (2026-10-24, "yes").
   channel-event and WhatsApp event checks (`question_answered`). The connected message mentions
   questions, help is updated in all eight languages, and CLAUDE.md is updated.
 
+## Also in this PR
+- **A swipe-reply answers its item.** The owner replied "asmi" to an exam photo and got "couldn't read anything". WhatsApp's `context.id` is now kept (`reply_to_provider_message_id`, migration `20261024110000_whatsapp_reply_to`, applied live). A reply that names one household member sets who the quoted item is for: its `subjectMemberName` and its understanding's reference. The review opens with them picked, nothing is applied, and no new item is made.
+- **An older notice's year comes from its weekday.** "Tuesday 22nd September", sent in October, was read as 22 September 2027, a Wednesday. The weekday then disagreed, so no day was decided, and the 2:30–3:30 p.m. time was dropped with it. `dayFromDateText` now tries the year before when this year's date has passed and only that weekday fits; a written year is never second-guessed. Golden case HS-17.
+
 ## Verified
 - core and web `tsc` clean.
 - 843 tests across whatsapp, voicelink, hometalk and conversation pass, including:

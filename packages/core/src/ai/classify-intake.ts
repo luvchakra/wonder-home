@@ -730,8 +730,21 @@ export function dayFromDateText(dateText: string, options: { timezone: string; n
     // "Monday 5 October" names a weekday the date should fall on, not the
     // coming Monday; "tomorrow, 26 September" names the day itself.
     const weekday = WEEKDAY_NAMES.findIndex((name) => new RegExp(`\\b${name.slice(0, 3)}`, "i").test(said));
-    const agrees = weekday >= 0 && !/\b(?:today|tonight|tomorrow|yesterday)\b/i.test(said) ? new Date(`${explicit}T12:00:00Z`).getUTCDay() === weekday : relative === null || relative === explicit;
-    return agrees ? explicit : null;
+    const named = weekday >= 0 && !/\b(?:today|tonight|tomorrow|yesterday)\b/i.test(said);
+    const agrees = named ? new Date(`${explicit}T12:00:00Z`).getUTCDay() === weekday : relative === null || relative === explicit;
+    if (agrees) return explicit;
+    // A date written without its year is read as the next one, but its
+    // weekday can say it was the last one: an older notice ("Tuesday 22nd
+    // September", sent in October) names this year's 22 September, a
+    // Tuesday, not next year's, a Wednesday. Only when this year's date has
+    // already gone by (so it was read as next year's), only when that weekday
+    // then agrees, and never when the year was written.
+    const thisYear = Number(new Intl.DateTimeFormat("en-CA", { year: "numeric", timeZone: options.timezone }).format(options.now));
+    if (named && Number(explicit.slice(0, 4)) > thisYear && !/\b\d{4}\b/.test(EXPLICIT_DATE.exec(phrase)?.[0] ?? "")) {
+      const earlier = `${Number(explicit.slice(0, 4)) - 1}${explicit.slice(4)}`;
+      if (new Date(`${earlier}T12:00:00Z`).getUTCDay() === weekday) return earlier;
+    }
+    return null;
   }
   if (explicit) return explicit;
   // A weekday or "tomorrow" alone decides the day only when it is the whole

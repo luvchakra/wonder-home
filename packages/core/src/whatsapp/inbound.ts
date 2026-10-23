@@ -27,6 +27,8 @@ export type WhatsAppInboundMessage = {
   /** A text's body, or a file's caption. */
   text: string | null;
   media: { id: string; mimeType: string | null; filename: string | null } | null;
+  /** The message this one replies to (WhatsApp's `context.id`), when the person swiped to reply. */
+  replyTo?: string | null;
 };
 
 /** WhatsApp caps a text at 4096 characters; so does the table. */
@@ -57,7 +59,8 @@ export function readInboundMessages(payload: unknown, now: Date = new Date()): W
 
       const read = readBody(kind, message);
       if (!read) continue;
-      out.push({ ...base, ...read });
+      const replyTo = stringOf((message.context as { id?: unknown } | undefined)?.id);
+      out.push({ ...base, ...read, ...(replyTo && replyTo.length <= 200 ? { replyTo } : {}) });
     }
   }
   return out;
