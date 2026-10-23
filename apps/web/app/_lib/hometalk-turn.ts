@@ -50,6 +50,7 @@ import { englishNoticeKey, EVERY_SENSITIVE_CLASS, localizeReply, mayTranslate, r
 import { composeStatusAnswer } from "@wonderhome/core/conversation/status";
 import { composeRoster } from "@wonderhome/core/conversation/roster";
 import { isAmafStart } from "@wonderhome/core/amaf/session";
+import { readsAsRequest } from "@wonderhome/core/conversation/request";
 import { normaliseUtterance } from "@wonderhome/core/conversation/normalise";
 import { isoDateIn } from "@wonderhome/core/context/format";
 import { gatherHouseholdContext } from "@wonderhome/core/context/repository";
@@ -359,12 +360,14 @@ async function turnInEnglish(input: HomeTalkInput, speaking: Speaking) {
   // Ask me about family (AMAF): "ask me about my family" starts it, and
   // while its question is the last thing HomeTalk said, an answer goes to
   // it — rules only, each write through its module's own service. A
-  // question back ("what's on today?") is not an answer: it goes through
-  // the ordinary turn, and the mode simply rests until it is asked for again.
+  // question back ("what's on today?") is not an answer, and neither is a
+  // request ("remind me to call the plumber", `readsAsRequest`): each goes
+  // through the ordinary turn, and the mode simply rests until it is asked
+  // for again.
   // Only in the app: an external voice link has its own narrower door.
   if (!body.editMessageId && !limits) {
     const amafAnswer = isAmafStart(body.utterance) ? null : await pendingAmaf(admin, sessionId);
-    if (isAmafStart(body.utterance) || (amafAnswer && !looksLikeQuestion(body.utterance))) {
+    if (isAmafStart(body.utterance) || (amafAnswer && !looksLikeQuestion(body.utterance) && !readsAsRequest(body.utterance))) {
       const step = amafAnswer
         ? await continueAmaf(supabase, { membership, sessionId, pending: amafAnswer, answer: said ?? body.utterance, channel: body.channel, transcriptConfidence: body.transcriptConfidence })
         : await startAmaf(supabase, { membership, sessionId, utterance: said ?? body.utterance, channel: body.channel, transcriptConfidence: body.transcriptConfidence });
@@ -379,7 +382,7 @@ async function turnInEnglish(input: HomeTalkInput, speaking: Speaking) {
 
   if (!body.editMessageId && !limits) {
     const welcomeTopic = await pendingWelcome(admin, sessionId);
-    if (welcomeTopic && !looksLikeQuestion(body.utterance)) {
+    if (welcomeTopic && !looksLikeQuestion(body.utterance) && !readsAsRequest(body.utterance)) {
       const step = await continueWelcome(supabase, {
         membership,
         sessionId,
