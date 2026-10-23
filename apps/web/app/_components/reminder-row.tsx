@@ -1,32 +1,32 @@
 "use client";
 
-import { Bell, GraduationCap, HeartHandshake, HeartPulse, PawPrint, ShoppingBasket, Sparkles, Utensils, Wallet, Wrench } from "lucide-react";
-import Link from "next/link";
+import { Bell, Clock, GraduationCap, HeartHandshake, HeartPulse, PawPrint, ShoppingBasket, Utensils, Wallet, Wrench, X } from "lucide-react";
 import { useActionState, useId } from "react";
 import { useFormStatus } from "react-dom";
 
+import { cn } from "@wonderhome/core/lib/cn";
 import type { NotificationCategory } from "@wonderhome/core/notifications/policies";
 import { Alert } from "@wonderhome/core/ui/alert";
-import { ChoiceChips } from "@wonderhome/core/ui/choice-chips";
-import { ExpandableRow } from "@wonderhome/core/ui/expandable-row";
 import { IconTile, type IconTone } from "@wonderhome/core/ui/icon-tile";
-import { Badge, type BadgeTone } from "@wonderhome/core/ui/pill";
-import { Button } from "@wonderhome/core/ui/button";
-import { Card } from "@wonderhome/core/ui/card";
+import { Badge } from "@wonderhome/core/ui/pill";
+import { Button, ButtonLink } from "@wonderhome/core/ui/button";
 
 import { completeReminderSourceAction, dismissReminderAction, snoozeReminderAction } from "../(auth)/notification-actions";
 import type { ActionState } from "../(auth)/actions";
 import { PRESET_KEYS, type SnoozePreset } from "../_lib/snooze-presets";
 
 /**
- * One reminder in the notification center (story 23-005).
+ * One reminder in the notification center (story 23-005), as an action card
+ * (the owner, 2026-10-23: "easy to understand, actionable options upfront").
  *
  * Rule 4's row — a tinted tile for its category, the name, one line of
- * reason — with rule 21's chevron opening it in place to everything behind
- * it: the live details from the record it is about, why it came when it
- * did, the one thing to do about the record itself, and the reminder's own
- * snooze and dismiss. The category's icon is resolved here, inside the
- * client component, because a component cannot cross the server boundary.
+ * reason — and, in view without opening anything, the live facts from the
+ * record it is about (an amount and a due date, an appointment's time and
+ * what to prepare) and every action: the one thing to do about the record
+ * itself, a way to open it, "Remind me later" with one-tap times, and "Not
+ * needed". Priority is shown only when it is urgent, in words. The category's
+ * icon is resolved here, inside the client component, because a component
+ * cannot cross the server boundary.
  */
 
 export type ReminderView = {
@@ -63,14 +63,12 @@ const CATEGORY: Record<NotificationCategory, { icon: typeof Bell; tone: IconTone
   system: { icon: Bell, tone: "primary" },
 };
 
-const PRIORITY_TONE: Record<ReminderView["priority"], BadgeTone> = { high: "attention", medium: "neutral", low: "neutral" };
-
 /**
  * The row's own words in the viewer's language, read on the server and
  * passed in — a client component has no catalog of its own (story 22-004).
  */
 export type ReminderRowLabels = {
-  priority: Record<ReminderView["priority"], string>;
+  urgent: string;
   unread: string;
   saving: string;
   snooze: {
@@ -85,46 +83,52 @@ export type ReminderRowLabels = {
   dismiss: string;
 };
 
+/** The one-tap times under "Remind me later"; a picked day and time sits after them. */
+const QUICK_PRESETS = PRESET_KEYS.filter((key) => key !== "custom");
+
 export function ReminderRow({
   view,
   householdId,
   snoozeDays,
   labels,
+  card = false,
 }: {
   view: ReminderView;
+  /** A card of its own (Needs you now), rather than a row in a shared card. */
+  card?: boolean;
   householdId: string;
   labels: ReminderRowLabels;
   /** The next week's days, worded ("Today", "Tomorrow", "Sat 27 Sep"), for a picked time. */
   snoozeDays: readonly { value: string; label: string }[];
 }) {
   const category = CATEGORY[view.category];
-  const categoryLabel = view.categoryLabel;
-
   return (
-    <ExpandableRow
-      summary={
-        <>
-          <span className="sr-only">{categoryLabel}: </span>
-          <IconTile icon={category.icon} tone={category.tone} />
-          <span className="min-w-0 flex-1">
-            <span className="flex flex-wrap items-center gap-x-2 gap-y-1">
-              <span className="font-medium">{view.title}</span>
-              {view.open ? <Badge tone={PRIORITY_TONE[view.priority]}>{labels.priority[view.priority]}</Badge> : view.closedAs ? <Badge tone="handled">{view.closedAs}</Badge> : null}
-              {view.unread ? <span className="size-2 shrink-0 rounded-full bg-[var(--wh-primary)]" aria-label={labels.unread} /> : null}
-            </span>
-            <span className="mt-0.5 block text-sm text-[var(--wh-foreground-muted)]">{view.body}</span>
-          </span>
-          <span className="shrink-0 self-start pt-0.5 text-xs text-[var(--wh-foreground-subtle)]">{view.when}</span>
-        </>
-      }
+    <li
+      className={cn(
+        "flex items-start gap-3 px-3 py-4 sm:px-4",
+        card && "rounded-[var(--wh-radius)] border border-[var(--wh-border)] bg-[var(--wh-surface)] shadow-[var(--wh-shadow-card)]",
+      )}
     >
-      <div className="space-y-3 border-t border-[var(--wh-border)] pt-3">
+      <span className="sr-only">{view.categoryLabel}: </span>
+      <IconTile icon={category.icon} tone={category.tone} />
+      <div className="min-w-0 flex-1 space-y-2">
+        <div className="flex items-start justify-between gap-3">
+          <p className="flex min-w-0 flex-wrap items-center gap-x-2 gap-y-1">
+            <span className="font-semibold break-words">{view.title}</span>
+            {view.open && view.priority === "high" ? <Badge tone="attention">{labels.urgent}</Badge> : null}
+            {!view.open && view.closedAs ? <Badge tone="handled">{view.closedAs}</Badge> : null}
+            {view.unread ? <span className="size-2 shrink-0 rounded-full bg-[var(--wh-primary)]" aria-label={labels.unread} /> : null}
+          </p>
+          <span className="shrink-0 pt-0.5 text-xs whitespace-nowrap text-[var(--wh-foreground-subtle)]">{view.when}</span>
+        </div>
+        <p className="text-sm text-[var(--wh-foreground-muted)]">{view.body}</p>
+
         {view.details.length > 0 ? (
-          <dl className="grid grid-cols-[auto_1fr] gap-x-4 gap-y-1.5 text-sm">
+          <dl className="grid grid-cols-[auto_1fr] gap-x-3 gap-y-1 rounded-[var(--wh-radius-sm)] bg-[var(--wh-surface-muted)] px-3 py-2 text-sm">
             {view.details.map((detail) => (
               <div key={detail.label} className="contents">
                 <dt className="text-[var(--wh-foreground-muted)]">{detail.label}</dt>
-                <dd className="font-medium">{detail.value}</dd>
+                <dd className="font-medium break-words">{detail.value}</dd>
               </div>
             ))}
           </dl>
@@ -133,31 +137,31 @@ export function ReminderRow({
         {view.reason ? <p className="text-xs text-[var(--wh-foreground-subtle)]">{view.reason}</p> : null}
 
         {view.open ? (
-          <div className="space-y-3">
+          <div className="space-y-2 pt-1">
             <div className="flex flex-wrap items-center gap-2">
               {view.complete ? <CompleteForm id={view.id} householdId={householdId} label={view.complete.label} savingLabel={labels.saving} /> : null}
               {view.link ? (
-                <Link
-                  href={view.link.href}
-                  className="inline-flex min-h-11 items-center rounded-[var(--wh-radius-pill)] px-4 text-sm font-semibold text-[var(--wh-primary)] hover:bg-[var(--wh-primary-soft)]"
-                >
+                <ButtonLink href={view.link.href} variant={view.complete ? "secondary" : "primary"} className="rounded-[var(--wh-radius-pill)]">
                   {view.link.label}
-                </Link>
+                </ButtonLink>
               ) : null}
             </div>
-            <SnoozeForm id={view.id} householdId={householdId} days={snoozeDays} labels={labels.snooze} />
-            <DismissForm id={view.id} householdId={householdId} label={labels.dismiss} />
+            {/* Putting it off and saying it is not needed share one quiet line under the actions. */}
+            <div className="flex items-start justify-between gap-2">
+              <SnoozeForm id={view.id} householdId={householdId} days={snoozeDays} labels={labels.snooze} />
+              <DismissForm id={view.id} householdId={householdId} label={labels.dismiss} />
+            </div>
           </div>
         ) : null}
       </div>
-    </ExpandableRow>
+    </li>
   );
 }
 
 function Pending({ children, pendingLabel, variant = "primary" }: { children: string; pendingLabel: string; variant?: "primary" | "secondary" | "quiet" }) {
   const { pending } = useFormStatus();
   return (
-    <Button type="submit" variant={variant} disabled={pending}>
+    <Button type="submit" variant={variant} disabled={pending} className="rounded-[var(--wh-radius-pill)]">
       {pending ? pendingLabel : children}
     </Button>
   );
@@ -195,111 +199,90 @@ function SnoozeForm({
   const [state, action] = useActionState(snoozeReminderAction, {});
   const fieldId = useId();
   return (
-    <details className="group rounded-[var(--wh-radius-sm)] border border-[var(--wh-border)] px-3 py-2">
-      <summary className="flex min-h-10 cursor-pointer list-none items-center text-sm font-semibold text-[var(--wh-foreground)] [&::-webkit-details-marker]:hidden">
+    <details className="group min-w-0 flex-1">
+      <summary className="inline-flex min-h-10 cursor-pointer list-none items-center gap-1.5 rounded-[var(--wh-radius-pill)] px-2 text-sm font-semibold whitespace-nowrap text-[var(--wh-primary)] hover:bg-[var(--wh-primary-soft)] [&::-webkit-details-marker]:hidden">
+        <Clock aria-hidden className="size-4" />
         {labels.open}
       </summary>
-      <form action={action} className="space-y-3 pt-2">
+      <form action={action} className="mt-2 space-y-3 rounded-[var(--wh-radius-sm)] border border-[var(--wh-border)] p-3">
         <input type="hidden" name="notificationId" value={id} />
         <input type="hidden" name="householdId" value={householdId} />
-        <ChoiceChips
-          legend={labels.when}
-          legendHidden
-          name="preset"
-          options={PRESET_KEYS.map((value) => ({ value, label: labels.presets[value] }))}
-          defaultValue="in_1_hour"
-          size="sm"
-        />
-        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-          <label htmlFor={`${fieldId}-date`} className="block space-y-1.5 text-sm">
-            <span className="font-medium">{labels.day}</span>
-            <select
-              id={`${fieldId}-date`}
-              name="date"
-              defaultValue={days[0]?.value}
-              className="block min-h-11 w-full rounded-[var(--wh-radius-sm)] border border-[var(--wh-border)] bg-[var(--wh-surface)] px-3 text-base"
-            >
-              {days.map((day) => (
-                <option key={day.value} value={day.value}>
-                  {day.label}
-                </option>
-              ))}
-            </select>
-          </label>
-          <label htmlFor={`${fieldId}-time`} className="block space-y-1.5 text-sm">
-            <span className="font-medium">{labels.time}</span>
-            <input
-              id={`${fieldId}-time`}
-              type="time"
-              name="time"
-              step={900}
-              defaultValue="18:00"
-              className="block min-h-11 w-full rounded-[var(--wh-radius-sm)] border border-[var(--wh-border)] bg-[var(--wh-surface)] px-3 text-base"
-            />
-          </label>
+        {/* One tap: each time is its own submit, carrying its preset. */}
+        <div role="group" aria-label={labels.when} className="flex flex-wrap gap-2">
+          {QUICK_PRESETS.map((value) => (
+            <QuickTime key={value} value={value} label={labels.presets[value]} />
+          ))}
         </div>
-        <Pending pendingLabel={labels.setting} variant="secondary">
-          {labels.set}
-        </Pending>
+        <details>
+          <summary className="inline-flex min-h-10 cursor-pointer list-none items-center text-sm font-medium text-[var(--wh-foreground-muted)] underline-offset-2 hover:underline [&::-webkit-details-marker]:hidden">
+            {labels.presets.custom}
+          </summary>
+          <div className="mt-2 space-y-3">
+            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+              <label htmlFor={`${fieldId}-date`} className="block space-y-1.5 text-sm">
+                <span className="font-medium">{labels.day}</span>
+                <select
+                  id={`${fieldId}-date`}
+                  name="date"
+                  defaultValue={days[0]?.value}
+                  className="block min-h-11 w-full rounded-[var(--wh-radius-sm)] border border-[var(--wh-border)] bg-[var(--wh-surface)] px-3 text-base"
+                >
+                  {days.map((day) => (
+                    <option key={day.value} value={day.value}>
+                      {day.label}
+                    </option>
+                  ))}
+                </select>
+              </label>
+              <label htmlFor={`${fieldId}-time`} className="block space-y-1.5 text-sm">
+                <span className="font-medium">{labels.time}</span>
+                <input
+                  id={`${fieldId}-time`}
+                  type="time"
+                  name="time"
+                  step={900}
+                  defaultValue="18:00"
+                  className="block min-h-11 w-full rounded-[var(--wh-radius-sm)] border border-[var(--wh-border)] bg-[var(--wh-surface)] px-3 text-base"
+                />
+              </label>
+            </div>
+            <QuickTime value="custom" label={labels.set} pendingLabel={labels.setting} />
+          </div>
+        </details>
         <Feedback state={state} />
       </form>
     </details>
   );
 }
 
+/** A snooze time that is its own submit button; the action reads the pressed button's preset. */
+function QuickTime({ value, label, pendingLabel }: { value: SnoozePreset; label: string; pendingLabel?: string }) {
+  const { pending } = useFormStatus();
+  return (
+    <Button type="submit" name="preset" value={value} variant="secondary" disabled={pending} className="min-h-10 rounded-[var(--wh-radius-pill)] px-3.5">
+      {pending && pendingLabel ? pendingLabel : label}
+    </Button>
+  );
+}
+
 function DismissForm({ id, householdId, label }: { id: string; householdId: string; label: string }) {
   const [state, action] = useActionState(dismissReminderAction, {});
   return (
-    <form action={action} className="space-y-2">
+    <form action={action}>
       <input type="hidden" name="notificationId" value={id} />
       <input type="hidden" name="householdId" value={householdId} />
-      <Pending pendingLabel="…" variant="quiet">
-        {label}
-      </Pending>
+      <DismissButton label={label} />
       <Feedback state={state} />
     </form>
   );
 }
 
-/**
- * The day in one card (story 23-011): what is waiting on this person today,
- * in the order it comes, built from the very reminders listed below it — a
- * summary, never a second source, and never a number the list does not
- * show. Shown only when there is more than one thing, and only to someone
- * who has not turned it off.
- */
-export function ReminderDigest({
-  title,
-  lede,
-  items,
-}: {
-  /** "HomeBrain summary · Today", in the viewer's language. */
-  title: string;
-  /** How many there are, and for whom, already worded. */
-  lede: string;
-  items: readonly { id: string; category: NotificationCategory; title: string; when: string }[];
-}) {
+function DismissButton({ label }: { label: string }) {
+  const { pending } = useFormStatus();
   return (
-    <Card className="space-y-3">
-      <div className="flex items-start gap-3">
-        <IconTile icon={Sparkles} tone="primary" />
-        <div className="min-w-0 flex-1">
-          <h2 className="text-sm font-semibold">{title}</h2>
-          <p className="mt-0.5 text-sm text-[var(--wh-foreground-muted)]">{lede}</p>
-        </div>
-      </div>
-      <ol className="divide-y divide-[var(--wh-border)]">
-        {items.map((item) => {
-          const category = CATEGORY[item.category];
-          return (
-            <li key={item.id} className="flex items-center gap-3 py-2">
-              <IconTile icon={category.icon} tone={category.tone} size="sm" />
-              <span className="min-w-0 flex-1 text-sm">{item.title}</span>
-              <span className="shrink-0 text-sm text-[var(--wh-foreground-muted)]">{item.when}</span>
-            </li>
-          );
-        })}
-      </ol>
-    </Card>
+    <Button type="submit" variant="quiet" disabled={pending} className="min-h-10 shrink-0 rounded-[var(--wh-radius-pill)] px-2 text-[var(--wh-foreground-muted)]">
+      <X aria-hidden className="size-4" />
+      {label}
+    </Button>
   );
 }

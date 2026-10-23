@@ -207,7 +207,7 @@ export const settingsFr: AreaCatalog<typeof settingsEn> = {
   "settingsPage.notifications.smart.title": "Des rappels plus malins",
   "settingsPage.notifications.smart.body": "Les deux ne changent que la façon dont vos propres rappels vous parviennent. Rien n’est décidé à votre place.",
   "settingsPage.notifications.smart.digest": "Le résumé du jour",
-  "settingsPage.notifications.smart.digestBody": "Une courte liste de ce qui vous attend aujourd’hui, au-dessus de vos notifications.",
+  "settingsPage.notifications.smart.digestBody": "Ce qui arrive plus tard aujourd’hui et demain, sous ce qui vous attend maintenant.",
   "settingsPage.notifications.smart.learn": "Apprendre quand j’agis d’habitude",
   "settingsPage.notifications.smart.learnBody":
     "Dès que vous avez traité un type de rappel à peu près à la même heure au moins cinq fois, le premier rappel de ce type arrive vers cette heure-là. Le moment que vous avez choisi ci-dessus l’emporte toujours, et les heures de silence s’appliquent toujours.",

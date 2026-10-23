@@ -209,7 +209,7 @@ export const settingsEn = {
   "settingsPage.notifications.smart.title": "Smarter reminders",
   "settingsPage.notifications.smart.body": "Both only change how your own reminders reach you. Nothing is decided for you.",
   "settingsPage.notifications.smart.digest": "Today’s summary",
-  "settingsPage.notifications.smart.digestBody": "A short list of what is waiting on you today, above your notifications.",
+  "settingsPage.notifications.smart.digestBody": "What is coming up later today and tomorrow, under what needs you now.",
   "settingsPage.notifications.smart.learn": "Learn when I usually act",
   "settingsPage.notifications.smart.learnBody":
     "Once you have dealt with a kind of reminder at much the same time at least five times, the first reminder of that kind moves to around then. A timing you chose above always wins, and quiet hours still apply.",

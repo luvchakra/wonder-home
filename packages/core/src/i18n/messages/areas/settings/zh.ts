@@ -200,7 +200,7 @@ export const settingsZh: AreaCatalog<typeof settingsEn> = {
   "settingsPage.notifications.smart.title": "更聪明的提醒",
   "settingsPage.notifications.smart.body": "两者都只改变你自己的提醒如何送达你。不会替你做任何决定。",
   "settingsPage.notifications.smart.digest": "今日摘要",
-  "settingsPage.notifications.smart.digestBody": "在通知列表上方，简要列出今天等你处理的事。",
+  "settingsPage.notifications.smart.digestBody": "今天稍后和明天的安排，显示在“现在需要你”下方。",
   "settingsPage.notifications.smart.learn": "学习我通常何时处理",
   "settingsPage.notifications.smart.learnBody":
     "当你至少五次在差不多同一时间处理某类提醒后，这类提醒的第一条会改到那个时间前后。你在上面选择的时间始终优先，免打扰时段也依然有效。",

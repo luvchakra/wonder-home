@@ -215,7 +215,7 @@ export const helpEn = {
   "help.guide.notifications.body.2":
     "A child's school things due on the same day arrive as one reminder. If a reminder that matters goes unanswered, its backup hears about it once, and nothing repeats beyond a sensible limit.",
   "help.guide.notifications.body.3":
-    "\"Remind me later\" snoozes for 15 minutes, an hour, later today, tomorrow morning, or a day and time you pick. You can mark a reminder done or dismiss it; you cannot change what it says.",
+    "The Notifications page starts with what needs you now, most pressing first. Each one is a card with the facts from its record — an amount and a due date, an appointment's time and what to prepare — and its actions right there: the one thing to do, such as Mark as paid or Mark as done, a button to open it, \"Remind me later\" (one tap for 15 minutes, an hour, later today or tomorrow morning, or a day and time you pick) and \"Not needed\". Only an urgent one is marked, in words. Coming up shows later today and tomorrow, and turns off with Today's summary in Settings → Notifications; Done this week keeps what was handled, folded away. You cannot change what a reminder says.",
   "help.guide.notifications.body.4":
     "Settings → Notifications sets when each kind arrives — for bills, for example, three days before and on the due day, or a week before — along with quiet hours and the day's summary. \"Learn when I usually act\" is off unless you turn it on; it moves a first reminder only after five similar actions, and never overrides the timing or quiet hours you chose.",
   "help.guide.notifications.body.5":

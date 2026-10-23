@@ -209,7 +209,7 @@ export const settingsAr: AreaCatalog<typeof settingsEn> = {
   "settingsPage.notifications.smart.title": "تذكيرات أذكى",
   "settingsPage.notifications.smart.body": "كلاهما يغيّر فقط طريقة وصول تذكيراتك أنت إليك. لا يُقرَّر شيء نيابةً عنك.",
   "settingsPage.notifications.smart.digest": "ملخص اليوم",
-  "settingsPage.notifications.smart.digestBody": "قائمة قصيرة بما ينتظرك اليوم، فوق إشعاراتك.",
+  "settingsPage.notifications.smart.digestBody": "ما هو قادم لاحقًا اليوم وغدًا، أسفل ما ينتظرك الآن.",
   "settingsPage.notifications.smart.learn": "تعلّم متى أتصرف عادةً",
   "settingsPage.notifications.smart.learnBody":
     "بعد أن تتعامل مع نوع من التذكيرات في الوقت نفسه تقريبًا خمس مرات على الأقل، يصبح أول تذكير من هذا النوع قرابة ذلك الوقت. التوقيت الذي اخترته أعلاه يغلب دائمًا، وتظل ساعات الهدوء سارية.",

@@ -31,10 +31,12 @@ export type ReminderRowData = {
   expires_at: string | null;
   decision_factors: Record<string, unknown> | null;
   updated_at: string;
+  /** Where acting on it happens, for a notice: `{ action: "open", target: "/chat/…" }`. */
+  action?: unknown;
 };
 
 export const REMINDER_COLUMNS =
-  "id, type, status, category, priority, title, body, message, source_type, source_id, scheduled_for, latest_at, expires_at, decision_factors, updated_at";
+  "id, type, status, category, priority, title, body, message, source_type, source_id, scheduled_for, latest_at, expires_at, decision_factors, updated_at, action";
 
 const OPEN = new Set(["generated", "delivered", "seen"]);
 const CLOSED_AS = new Set(["acted", "resolved", "dismissed", "expired"]);
@@ -68,7 +70,7 @@ export async function loadReminderDetails(
   // A grouped school day names each thing it stands for; they are read like any school item.
   const groupedItems = [...new Set(rows.filter((row) => row.source_type === "school_day").flatMap((row) => itemsOf(row)))];
   const schoolIds = [...new Set([...ids("school_item"), ...groupedItems])];
-  const [bills, school, meals, pets, events] = await Promise.all([
+  const [bills, school, meals, pets, events, appointments] = await Promise.all([
     ids("obligation").length
       ? supabase.from("obligations").select("id, name, payee, amount_minor, currency, due_on, recurrence").in("id", ids("obligation"))
       : Promise.resolve({ data: [] }),
@@ -83,6 +85,10 @@ export async function loadReminderDetails(
       : Promise.resolve({ data: [] }),
     ids("family_event").length
       ? supabase.from("family_events").select("id, title, starts_at, location").in("id", ids("family_event"))
+      : Promise.resolve({ data: [] }),
+    // Read through the person's own session: an appointment they may not see stays a bare reminder.
+    ids("health_appointment").length
+      ? supabase.from("health_appointments").select("id, appointment_type, starts_at, provider, facility, location, preparation_notes").in("id", ids("health_appointment"))
       : Promise.resolve({ data: [] }),
   ]);
 
@@ -178,6 +184,22 @@ export async function loadReminderDetails(
     });
   }
 
+  const CARE_TYPES = new Set(["doctor", "dentist", "eye_care", "physiotherapy", "dermatology", "specialist", "diagnostic", "vaccination", "mental_wellness", "other"]);
+  for (const visit of (appointments.data ?? []) as { id: string; appointment_type: string; starts_at: string; provider: string | null; facility: string | null; location: string | null; preparation_notes: string | null }[]) {
+    const withWhom = [visit.provider, visit.facility].map((part) => part?.trim()).filter(Boolean).join(", ");
+    map.set(`health_appointment:${visit.id}`, {
+      details: [
+        ...(CARE_TYPES.has(visit.appointment_type) ? [{ label: t("notifications.detail.appointment"), value: t(`healthForm.careType.${visit.appointment_type}` as TranslationKey) }] : []),
+        { label: t("notifications.detail.starts"), value: dateTime(visit.starts_at) },
+        ...(withWhom ? [{ label: t("notifications.detail.with"), value: withWhom }] : []),
+        ...(visit.location?.trim() ? [{ label: t("notifications.detail.where"), value: visit.location.trim() }] : []),
+        ...(visit.preparation_notes?.trim() ? [{ label: t("notifications.detail.prepare"), value: visit.preparation_notes.trim() }] : []),
+      ],
+      link: { href: "/health", label: t("notifications.link.health") },
+      complete: null,
+    });
+  }
+
   return map;
 }
 
@@ -194,7 +216,23 @@ const FALLBACK_LINKS: Record<string, { href: string; label: TranslationKey }> = 
   health_routine: { href: "/health", label: "notifications.link.health" },
   health_checkup: { href: "/health", label: "notifications.link.health" },
   approval: { href: "/household", label: "notifications.link.approval" },
+  homesend_item: { href: "/home-send", label: "notifications.link.homeSend" },
+  event_change: { href: "/calendar", label: "notifications.link.calendar" },
+  event_replies: { href: "/calendar", label: "notifications.link.calendar" },
+  weather_plan: { href: "/calendar", label: "notifications.link.calendar" },
+  helper_absence: { href: "/househelper", label: "notifications.link.househelper" },
+  grocery_order: { href: "/groceries", label: "notifications.link.groceries" },
+  goal_checkin: { href: "/school", label: "notifications.link.school" },
 };
+
+/** A notice's own place to act, when it names one inside WonderHome (a chat's thread). */
+function actionLink(row: ReminderRowData, t: Translate): ReminderView["link"] {
+  const action = row.action as { action?: unknown; target?: unknown } | null | undefined;
+  const target = typeof action?.target === "string" ? action.target : null;
+  if (!target || !target.startsWith("/") || target.startsWith("//")) return null;
+  if (row.source_type === "chat_thread") return { href: target, label: t("notifications.link.chat") };
+  return null;
+}
 
 /** Why a reminder came to this person, or when it did — only when something actually shaped it. */
 function placementReason(row: ReminderRowData, format: Formatter, t: Translate): string | null {
@@ -242,7 +280,7 @@ export function toReminderView(
     details: found?.details ?? [],
     reason: placementReason(row, format, t) ?? found?.reason ?? null,
     complete: open ? (found?.complete ?? null) : null,
-    link: found?.link ?? fallbackLink(row.source_type, t),
+    link: found?.link ?? actionLink(row, t) ?? fallbackLink(row.source_type, t),
     open,
     closedAs: open || !CLOSED_AS.has(row.status) ? null : t(`notifications.closed.${row.status}` as TranslationKey),
   };

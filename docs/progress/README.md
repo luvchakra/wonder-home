@@ -11,6 +11,7 @@ decision that shapes later work each earns a note, written before moving on.
 
 | Date | Note |
 |---|---|
+| 2026-10-23 | [The notifications page, redesigned around what to do](2026-10-23-notifications-page-redesign.md) |
 | 2026-10-23 | [Marking a monthly bill paid failed for every bill with an amount](2026-10-23-mark-paid-currency.md) |
 | 2026-10-23 | [A request is never taken as an answer; every email leaves a trace](2026-10-23-requests-past-waiting-questions-and-email-trace.md) |
 | 2026-10-22 | [Every notification use case tested; the notification center; household notifications for Admins (27-023 to 27-025)](2026-10-22-notification-center-and-household-controls.md) |

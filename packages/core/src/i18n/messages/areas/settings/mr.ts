@@ -206,7 +206,7 @@ export const settingsMr: AreaCatalog<typeof settingsEn> = {
   "settingsPage.notifications.smart.title": "अधिक हुशार रिमाइंडर",
   "settingsPage.notifications.smart.body": "दोन्ही फक्त तुमची स्वतःची रिमाइंडर तुमच्यापर्यंत कशी पोहोचतात ते बदलतात. तुमच्यासाठी काहीही ठरवले जात नाही.",
   "settingsPage.notifications.smart.digest": "आजचा सारांश",
-  "settingsPage.notifications.smart.digestBody": "आज तुमची काय वाट पाहत आहे याची छोटी यादी, तुमच्या सूचनांच्या वर.",
+  "settingsPage.notifications.smart.digestBody": "आज नंतर आणि उद्या काय येणार आहे, आत्ता तुमच्यासाठी असलेल्या गोष्टींखाली.",
   "settingsPage.notifications.smart.learn": "मी सहसा केव्हा कृती करतो ते शिका",
   "settingsPage.notifications.smart.learnBody":
     "एखाद्या प्रकारचे रिमाइंडर तुम्ही किमान पाच वेळा साधारण एकाच वेळी हाताळले की, त्या प्रकारचे पहिले रिमाइंडर त्या वेळेच्या आसपास येऊ लागते. वर तुम्ही निवडलेली वेळ नेहमी लागू राहते, आणि शांत वेळही लागू राहते.",

@@ -207,7 +207,7 @@ export const settingsEs: AreaCatalog<typeof settingsEn> = {
   "settingsPage.notifications.smart.title": "Recordatorios más inteligentes",
   "settingsPage.notifications.smart.body": "Ambos solo cambian cómo te llegan tus propios recordatorios. No se decide nada por ti.",
   "settingsPage.notifications.smart.digest": "Resumen de hoy",
-  "settingsPage.notifications.smart.digestBody": "Una lista breve de lo que te espera hoy, encima de tus notificaciones.",
+  "settingsPage.notifications.smart.digestBody": "Lo que viene más tarde hoy y mañana, debajo de lo que te necesita ahora.",
   "settingsPage.notifications.smart.learn": "Aprender cuándo suelo actuar",
   "settingsPage.notifications.smart.learnBody":
     "Cuando hayas atendido un tipo de recordatorio más o menos a la misma hora al menos cinco veces, el primer recordatorio de ese tipo pasa a llegar hacia esa hora. El momento que elegiste arriba siempre prevalece, y las horas de silencio se siguen respetando.",
