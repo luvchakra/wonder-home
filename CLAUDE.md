@@ -1157,6 +1157,15 @@ The work isn't finished until its test data is gone. Once the PR has merged into
 
 Then confirm it is gone: a SQL count, or a `qa-test-user.mjs` lookup, should find nothing left. Only delete what this session created itself, tracked by the user ids and household ids it printed along the way. When you can't prove a leftover test account or row belongs to this session, leave it in place and name it in your report, with the id and the command that would remove it. Never delete it on a guess. The progress note for the work says the cleanup ran, or lists what was left behind and why.
 
+## Files for the owner
+The owner usually reads on a phone, where downloading a file from the session fails (2026-10-23: a demo video, a diagram and a Word document all stopped at "Downloading…"). So whenever a session makes a file for the owner to read or use, the reply also gives the file's whole content in one clean HTML code block they can copy:
+- **A document** (Word, PDF, Markdown) becomes one complete HTML document with its text, headings, lists and tables.
+- **An image** becomes inline SVG. A diagram is drawn as SVG to begin with, and a small raster becomes a data URI.
+- **A table or spreadsheet** becomes an HTML table.
+- **SQL, code or config** is given in a code block of its own language.
+
+When a file can't be given that way, such as a video or a large photo, say so plainly and offer another way, such as uploading it to the owner's Google Drive. Never give a truncated or partial block. The file is still sent as usual.
+
 ## Progress
 `tracking/PROGRESS.md` is the overall source of truth. Every story status change must be reflected there and in the module file. Never fabricate completion.
 
