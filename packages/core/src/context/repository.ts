@@ -24,6 +24,7 @@ import { listMembers } from "../identity/households";
 import { listMemberLanguages } from "../identity/member-languages";
 import { listIntegrations } from "../integrations/repository";
 import { listMeals } from "../meals/repository";
+import { listActivities } from "../school/activities";
 import { listExams, listTimetable } from "../school/exams";
 import { listCommunications, listSchoolItems } from "../school/repository";
 import {
@@ -190,14 +191,16 @@ export const CONTEXT_ADAPTERS: readonly ContextAdapter[] = [
     permitted: (viewer) => may(viewer, "school.manage") || may(viewer, "school.view_own"),
     read: async (supabase, scope) => {
       const manage = may(scope.viewer, "school.manage");
-      const [schoolItems, communications, exams, timetable] = await Promise.all([
+      const [schoolItems, communications, exams, timetable, activities] = await Promise.all([
         listSchoolItems(supabase, scope.householdId, manage ? {} : { childMemberId: scope.viewer.memberId }),
         manage ? listCommunications(supabase, scope.householdId) : Promise.resolve(undefined),
         // RLS keeps exams and timetables to the child, their guardians and Admins (08-015); before the migration, none.
         listExams(supabase, scope.householdId).catch(() => []),
         listTimetable(supabase, scope.householdId).catch(() => []),
+        // A child's classes outside school (08-012), which the Calendar shows on their days; RLS keeps them to the child, guardians and Admins.
+        listActivities(supabase, scope.householdId).catch(() => []),
       ]);
-      return { schoolItems, communications, exams, timetable };
+      return { schoolItems, communications, exams, timetable, activities };
     },
   },
   {

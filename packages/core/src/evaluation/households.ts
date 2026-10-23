@@ -17,6 +17,7 @@ import { permissionsFor } from "../identity/permissions";
 import type { HouseholdRole, MemberType } from "../identity/schemas";
 import type { Meal } from "../meals/meals";
 import type { SchoolCommunication } from "../school/communications";
+import { activityEntries, type Activity } from "../school/activities";
 import type { SchoolItem } from "../school/items";
 import type { HouseholdKey } from "./types";
 
@@ -200,6 +201,8 @@ const HOUSEHOLD_A: GoldenHousehold = {
       { outcomeKey: "groceries.stocked", primaryMemberId: "a-kunal", backupMemberId: "a-upasana", aiMode: "prepare", priority: 1 },
       { outcomeKey: "bills.paid", primaryMemberId: "a-kunal", backupMemberId: null, aiMode: "approve", priority: 2 },
     ],
+    // Asmi's dance class on Mondays, which the Calendar shows on its days (08-012).
+    activities: [activity("a-c-dance", "a-asmi", "Bharatanatyam", [1], "16:00", "17:00", "Natya Kala studio")],
     schoolItems: [
       schoolItem("a-s-maths", "a-asmi", "homework", "Maths worksheet", "Maths", "2026-09-24T12:30:00Z"),
       schoolItem("a-s-science", "a-manan", "project", "Science project", "Science", "2026-09-29T11:30:00Z"),
@@ -501,7 +504,18 @@ export function calendarFor(household: GoldenHousehold, memberId: string, range:
       occasion: (name, label) => (label ? `${name}: ${label}` : `${name}'s special day`),
     }),
     holidayEntries(GOLDEN_HOLIDAYS.filter((holiday) => holiday.onDate >= range.from && holiday.onDate <= range.to), viewer),
+    // A child's classes, which RLS shows to the child, their guardians and Admins.
+    activityEntries(
+      (household.records.activities ?? []).filter((activity) => activity.childMemberId === memberId || viewer.isAdmin || (household.guardians?.[activity.childMemberId] ?? []).includes(memberId)),
+      viewer,
+      range,
+    ),
   );
+}
+
+/** A child's class outside school, as Kids & School keeps it. */
+export function activity(id: string, childMemberId: string, name: string, days: number[], startsAt: string, endsAt: string, place: string): Activity {
+  return { id, childMemberId, name, kind: "dance", description: null, teacherName: null, teacherContact: null, place: { name: place, placeId: null, address: null, location: null }, days, startsAt, endsAt, startsOn: null, endsOn: null, notes: null, items: [] };
 }
 
 /** The household's people, as the consent gate names them. */

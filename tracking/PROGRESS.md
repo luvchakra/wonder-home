@@ -367,6 +367,7 @@ disagree again.)
 | 2026-10-22 | 24 | 24-014 | Done | The school picker finds what Google Maps lists: no primary-type filter, schools first by their own types, a text-search fallback for every picker, and a non-strict retry for HomePlaces' typed searches. |
 | 2026-10-22 | 26 | 26-018 | Done | Every event goes through HomeEvents' one door (`calendar/add-event.ts`): the REST API, appointments and HomeSend now check for the same thing that day too, and `single-door.test.ts` fails CI on any other writer. |
 | 2026-10-22 | 26 | 26-019 | Done | A family moment is shared family time (`isFamilyMoment`): never a school trip or one person's outing, protected or not. |
+| 2026-10-23 | 26 | 26-020 | Done | HomeTalk knows everything the Calendar shows: a child's classes are HomeBrain facts, "what's on tomorrow / this weekend" is answered from the calendar itself, every calendar source must map to HomeBrain records, and 25 more tables mark HomeBrain's stored context stale on a write. |
 | 2026-10-22 | 04 | 04-031 | Done | Ask me about family saves a fact said about someone else for them, person notes fit `memories.key`, and "put it back" redoes an undo. |
 | 2026-10-22 | 27 | 27-016 | Done | The delivery clock moves reminders to their next stage, so "this morning" lands at its time without anyone opening the app. |
 | 2026-10-22 | 27 | 27-017 | Done | One reminder per occasion: a school entry that is the same thing as a family event that day sends none of its own. |
