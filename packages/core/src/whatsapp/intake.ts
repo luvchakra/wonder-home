@@ -8,6 +8,7 @@ import { sendWhatsAppText, type WhatsAppConfig } from "../notifications/whatsapp
 import { log } from "../observability/logger";
 import { hitRateLimit } from "../security/rate-limit";
 import { recordWhatsAppEvents, type WhatsAppEvent } from "./events";
+import { isForHomeTalk, isQuestionForWonderHome } from "./hometalk";
 import type { WhatsAppInboundMessage, WhatsAppMessageType } from "./inbound";
 import { completeLink, findActiveIdentity, LINK_REPLIES, readConnectCode, UNKNOWN_SENDER_REPLY } from "./linking";
 import { downloadWhatsAppMedia, type MediaDownload } from "./media";
@@ -43,6 +44,12 @@ export type WhatsAppIntakeDeps = {
   now?: () => Date;
   /** Media download, replaceable in tests. */
   download?: (mediaId: string) => Promise<MediaDownload>;
+  /**
+   * HomeTalk for a linked member's question or request, under their own
+   * session (`apps/web/app/_lib/whatsapp-hometalk.ts`). Returns the reply to
+   * send, or null when it could not answer.
+   */
+  ask?: (input: { householdId: string; memberId: string; text: string; requestId: string }) => Promise<string | null>;
 };
 
 export type ReceiveOutcome = { linked: number; queued: string[]; duplicates: number; unknown: number };
@@ -198,12 +205,18 @@ export async function processWhatsAppMessage(admin: SupabaseClient, messageId: s
     return "read";
   }
 
-  // A question is asked of WonderHome, not handed to it to keep: it is never
-  // a HomeSend item, and the reply says where it is answered.
-  if (row.message_type === "text" && isQuestionForWonderHome(row.text_content ?? "")) {
-    events.push({ kind: "question_redirected", householdId: row.household_id });
+  // A question or an everyday request is asked of WonderHome, not handed to
+  // it to keep: HomeTalk answers it (through `deps.ask`, the same gateway as
+  // Alexa), and it is never a HomeSend item. Without HomeTalk wired in, the
+  // reply says where to ask.
+  const text = row.message_type === "text" ? (row.text_content ?? "") : "";
+  if (text && (deps.ask ? isForHomeTalk(text) : isQuestionForWonderHome(text))) {
+    const answer = deps.ask
+      ? await deps.ask({ householdId: row.household_id, memberId: row.member_id, text, requestId: row.provider_message_id }).catch(() => null)
+      : null;
+    events.push({ kind: answer ? "question_answered" : "question_redirected", householdId: row.household_id });
     await settle({ processing_status: "ignored" });
-    await say(QUESTION_REPLY);
+    await say(answer ?? QUESTION_REPLY);
     await recordWhatsAppEvents(admin, events);
     return "read";
   }
@@ -281,21 +294,6 @@ export function whatsappJobHandler(deps: WhatsAppIntakeDeps): JobHandler {
 
 export const QUESTION_REPLY =
   "I can't answer questions on WhatsApp yet. Ask HomeTalk in the app: https://home.wonderapps.biz/ai — and send me things to keep here, like a school notice, a bill, a photo or a grocery list.";
-
-const QUESTION_OPENING =
-  /^(?:what|what's|whats|when|when's|where|where's|who|who's|whose|which|how|how's|why|is|are|am|was|were|do|does|did|can|could|should|shall|will|would|has|have|any|tell me|show me|give me)\b/i;
-
-/**
- * Whether a WhatsApp text is a question for WonderHome rather than something
- * to keep: one short line that asks ("what's the plan for the morning",
- * "is there milk?"). A forwarded notice, a list or anything with a link is
- * content, however it begins.
- */
-export function isQuestionForWonderHome(text: string): boolean {
-  const line = text.trim();
-  if (!line || line.length > 160 || /\n/.test(line) || /https?:\/\/|www\./i.test(line)) return false;
-  return line.endsWith("?") || QUESTION_OPENING.test(line);
-}
 
 export const UNSUPPORTED_REPLY = "WonderHome can take text, photos, PDFs, text files and voice notes on WhatsApp for now — that one it can't read yet.";
 

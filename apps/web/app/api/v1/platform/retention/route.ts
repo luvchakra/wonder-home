@@ -14,6 +14,8 @@ import { log } from "@wonderhome/core/observability/logger";
 import { fulfillMaturedDeletions } from "@wonderhome/core/privacy/fulfill-deletion";
 import { purgeExpired, summarise } from "@wonderhome/core/privacy/purge";
 
+import { whatsappAsk } from "@/app/_lib/whatsapp-hometalk";
+
 /**
  * Applies the retention schedule (story 15-007).
  *
@@ -134,7 +136,7 @@ export async function POST(request: Request) {
       jobsSummary = await drainJobs(admin, {
         limit: 25,
         workerId: "retention",
-        handlers: { ...notificationJobHandlers(), ...(whatsapp ? { [WHATSAPP_PROCESS_KIND]: whatsappJobHandler({ config: whatsapp.adapter }) } : {}) },
+        handlers: { ...notificationJobHandlers(), ...(whatsapp ? { [WHATSAPP_PROCESS_KIND]: whatsappJobHandler({ config: whatsapp.adapter, ask: whatsappAsk(createAdminClient()) }) } : {}) },
       });
     } catch (thrown) {
       jobsError = thrown instanceof Error ? thrown.message : "unknown";

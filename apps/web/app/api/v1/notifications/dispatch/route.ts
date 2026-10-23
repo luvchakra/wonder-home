@@ -14,6 +14,8 @@ import { whatsappConfigFromEnv } from "@wonderhome/core/notifications/whatsapp";
 import { WHATSAPP_PROCESS_KIND, whatsappJobHandler } from "@wonderhome/core/whatsapp/intake";
 import { log } from "@wonderhome/core/observability/logger";
 
+import { whatsappAsk } from "@/app/_lib/whatsapp-hometalk";
+
 /**
  * The delivery clock (story 23-015): every five minutes the database calls
  * this (pg_cron, migration `20261018280000`), and whatever has come due since
@@ -118,7 +120,7 @@ async function dispatch(request: Request): Promise<Response> {
       await drainJobs(admin, {
         limit: 10,
         workerId: "dispatch",
-        handlers: { ...notificationJobHandlers(), ...(whatsapp ? { [WHATSAPP_PROCESS_KIND]: whatsappJobHandler({ config: whatsapp.adapter }) } : {}) },
+        handlers: { ...notificationJobHandlers(), ...(whatsapp ? { [WHATSAPP_PROCESS_KIND]: whatsappJobHandler({ config: whatsapp.adapter, ask: whatsappAsk(createAdminClient()) }) } : {}) },
       });
     } catch (thrown) {
       log.warn("notification retry drain failed", { reason: thrown instanceof Error ? thrown.name : "unknown" });

@@ -594,7 +594,7 @@ WonderHome's AI layer is one pipeline with three named, real surfaces —
 
 **Voice channels are doors into HomeTalk, never second brains**
 (`design/voice-integration/`). Every channel — the app, Gemini Voice,
-Alexa — asks through one gateway (`hometalk/gateway.ts`, the canonical
+Alexa, WhatsApp — asks through one gateway (`hometalk/gateway.ts`, the canonical
 `hometalk/contract.ts`): an adapter proves who is speaking and renders the
 answer, and `completed` is only ever the executor's own record. An external
 assistant is linked to one member (`voicelink/`: OAuth with S256 PKCE,
@@ -872,9 +872,16 @@ authorization channel:
 - **Replies.** The acknowledgement (`acknowledgementFor`) is short, sent
   once, inside the 24-hour window the person opened, and never echoes an
   amount, a health detail or a number.
-- **What it never does.** WhatsApp is not a second brain: it never answers
-  questions, decides, or touches a domain record. A question (`isQuestionForWonderHome`)
-  gets one reply pointing to HomeTalk and is never kept as a HomeSend item.
+- **Questions go to HomeTalk** (the owner, 2026-10-24). A one-line question
+  or everyday request (`whatsapp/hometalk.ts`'s `isForHomeTalk`) runs through
+  the HomeTalk gateway on channel `whatsapp`, as the linked member under their
+  own session (`apps/web/app/_lib/whatsapp-hometalk.ts`), with
+  `WHATSAPP_SCOPES`: the same everyday things as a new Alexa link. A child's
+  school, health and money are `kept_off` (its messages pass through Meta),
+  and changing plans, paying and ordering stay in the app. It is never kept
+  as a HomeSend item; its conversation is its own surface.
+- **What it never does.** WhatsApp is not a second brain: it decides nothing
+  itself, and never touches a domain record except through HomeTalk's gates.
 - **Telemetry.** `whatsapp_events` holds closed words and counts only.
 - **Screens.** `/settings/whatsapp` is the one place a number is
   connected or disconnected. "I've sent the message" only looks again,

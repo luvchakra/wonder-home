@@ -96,7 +96,7 @@ export async function completeLink(
 /** What WonderHome says back on WhatsApp after a CONNECT message. Nothing here names a household or a person. */
 export const LINK_REPLIES: Record<LinkOutcome, string> = {
   linked:
-    "WhatsApp connected ✓ Send or forward messages, photos, documents and voice notes here, and WonderHome will put them in your household's HomeSend for you to check. You can disconnect any time in WonderHome.",
+    "WhatsApp connected ✓ Send or forward messages, photos, documents and voice notes here, and WonderHome will put them in your household's HomeSend for you to check. You can also ask me things, like \"what's on tomorrow?\" or \"add milk to the list\". You can disconnect any time in WonderHome.",
   already_linked: "This number is already connected to your WonderHome account ✓",
   invalid: "That code isn't one WonderHome recognises. In WonderHome, choose Connect WhatsApp and send the new code it shows.",
   expired: "That code has expired. In WonderHome, choose Connect WhatsApp again for a new one.",

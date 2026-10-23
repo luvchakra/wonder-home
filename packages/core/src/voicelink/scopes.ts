@@ -147,7 +147,19 @@ export type ChannelLimits = {
    * already in.
    */
   inApp?: boolean;
+  /** The channel is WhatsApp: its refusals say WhatsApp, not "this voice assistant". */
+  whatsapp?: boolean;
 };
+
+/**
+ * What WhatsApp may reach: the everyday things a linked adult asks, the same
+ * as a new Alexa link. Its answers pass through Meta, so a child's school,
+ * health, money and changing the home stay in the app ("kept_off" in the
+ * capability matrix); there is no way to widen this from WhatsApp.
+ */
+export const WHATSAPP_SCOPES: readonly VoiceScope[] = DEFAULT_VOICE_SCOPES;
+
+export const WHATSAPP_NOT_ALLOWED = "I can't do that on WhatsApp. You can do it in the WonderHome app: https://home.wonderapps.biz";
 
 /**
  * What a voice channel inside the app may also answer, once the household
@@ -177,6 +189,7 @@ export const IN_APP_VOICE_NOT_ALLOWED =
   "Paying and placing orders always need your own tap on screen, so I can't do that by voice here in HomeTalk. You'll find it under Bills or Groceries, ready for you.";
 
 export function channelRefusal(limits: ChannelLimits): string {
+  if (limits.whatsapp) return WHATSAPP_NOT_ALLOWED;
   return limits.inApp ? IN_APP_VOICE_NOT_ALLOWED : VOICE_NOT_ALLOWED;
 }
 

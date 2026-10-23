@@ -15,7 +15,7 @@ import type { VoiceScope } from "./scopes";
  * HomeTalk action has to be placed in it on purpose.
  */
 
-export const CAPABILITY_CHANNELS = ["app", "gemini_voice", "alexa"] as const;
+export const CAPABILITY_CHANNELS = ["app", "gemini_voice", "alexa", "whatsapp"] as const;
 export type CapabilityChannel = (typeof CAPABILITY_CHANNELS)[number];
 
 export type ChannelPolicy =
@@ -39,7 +39,13 @@ export type ChannelPolicy =
    * done when asked, or asked once in the conversation, exactly as typed.
    * A speaker elsewhere (Alexa) keeps "app_only".
    */
-  | "in_app";
+  | "in_app"
+  /**
+   * WhatsApp: not offered there at all. Its messages pass through Meta, so a
+   * child's school, health and money stay in the app (and, like a speaker,
+   * nothing that changes the home beyond the list and a reminder).
+   */
+  | "kept_off";
 
 export type CapabilityCategory = "informational" | "low_risk" | "sensitive" | "conversation";
 
@@ -60,7 +66,7 @@ export type Capability = {
   note?: string;
 };
 
-const everywhere = { app: "yes", gemini_voice: "yes", alexa: "yes" } as const;
+const everywhere = { app: "yes", gemini_voice: "yes", alexa: "yes", whatsapp: "yes" } as const;
 
 export const VOICE_CAPABILITIES: readonly Capability[] = [
   {
@@ -81,7 +87,7 @@ export const VOICE_CAPABILITIES: readonly Capability[] = [
     geminiTools: [],
     // Gemini Live in the app answers it (the places show as cards on the same
     // screen) where the household lets location reach Google; a speaker cannot show them.
-    policy: { app: "yes", gemini_voice: "consent", alexa: "app_only" },
+    policy: { app: "yes", gemini_voice: "consent", alexa: "app_only", whatsapp: "app_only" },
     note: "A speaker can't show places on a map, so Alexa leaves place questions to the WonderHome app.",
   },
   {
@@ -90,7 +96,7 @@ export const VOICE_CAPABILITIES: readonly Capability[] = [
     category: "conversation",
     actions: ["open_screen"],
     geminiTools: ["open_screen"],
-    policy: { app: "yes", gemini_voice: "yes", alexa: "on_screen" },
+    policy: { app: "yes", gemini_voice: "yes", alexa: "on_screen", whatsapp: "yes" },
     note: "A speaker has no screen to open, so Alexa says where to find it in the WonderHome app.",
   },
   {
@@ -144,7 +150,7 @@ export const VOICE_CAPABILITIES: readonly Capability[] = [
     category: "sensitive",
     actions: ["set_stock", "use_stock", "mark_bought"],
     geminiTools: [],
-    policy: { app: "yes", gemini_voice: "in_app", alexa: "app_only" },
+    policy: { app: "yes", gemini_voice: "in_app", alexa: "app_only", whatsapp: "app_only" },
     note: "Counts of what is at home are changed in the WonderHome app, where you can see the amount before it is saved.",
   },
   {
@@ -164,7 +170,7 @@ export const VOICE_CAPABILITIES: readonly Capability[] = [
     scope: "school.read",
     contentClass: "child",
     geminiTools: ["get_school_items"],
-    policy: { app: "yes", gemini_voice: "consent", alexa: "opt_in" },
+    policy: { app: "yes", gemini_voice: "consent", alexa: "opt_in", whatsapp: "kept_off" },
   },
   {
     id: "health",
@@ -174,7 +180,7 @@ export const VOICE_CAPABILITIES: readonly Capability[] = [
     scope: "health.write",
     contentClass: "health",
     geminiTools: [],
-    policy: { app: "yes", gemini_voice: "consent", alexa: "opt_in" },
+    policy: { app: "yes", gemini_voice: "consent", alexa: "opt_in", whatsapp: "kept_off" },
   },
   {
     id: "financial_status",
@@ -184,7 +190,7 @@ export const VOICE_CAPABILITIES: readonly Capability[] = [
     scope: "bills.read",
     contentClass: "financial",
     geminiTools: ["get_bill_status"],
-    policy: { app: "yes", gemini_voice: "consent", alexa: "opt_in" },
+    policy: { app: "yes", gemini_voice: "consent", alexa: "opt_in", whatsapp: "kept_off" },
   },
   {
     id: "bill_records",
@@ -196,7 +202,7 @@ export const VOICE_CAPABILITIES: readonly Capability[] = [
     // The same as typing it in HomeTalk's own screen, where Gemini Voice
     // runs; a smart speaker in a shared room leaves money records to the app.
     // Nothing here pays anything — paying stays app-only, below.
-    policy: { app: "yes", gemini_voice: "in_app", alexa: "app_only" },
+    policy: { app: "yes", gemini_voice: "in_app", alexa: "app_only", whatsapp: "app_only" },
     note: "Bills are added and marked paid in the WonderHome app, where you can see the amounts.",
   },
   {
@@ -206,7 +212,7 @@ export const VOICE_CAPABILITIES: readonly Capability[] = [
     actions: ["raise_service_request"],
     scope: "home.write",
     geminiTools: [],
-    policy: { app: "yes", gemini_voice: "yes", alexa: "opt_in" },
+    policy: { app: "yes", gemini_voice: "yes", alexa: "opt_in", whatsapp: "kept_off" },
   },
   {
     id: "payments",
@@ -217,7 +223,7 @@ export const VOICE_CAPABILITIES: readonly Capability[] = [
     // Stricter than the spec's "step-up + approval" by voice: a spoken yes
     // is not step-up authentication, and a speaker in a shared kitchen is
     // not the member alone. Paying stays in the app.
-    policy: { app: "approval", gemini_voice: "app_only", alexa: "app_only" },
+    policy: { app: "approval", gemini_voice: "app_only", alexa: "app_only", whatsapp: "app_only" },
     note: "Paying happens in the WonderHome app, where it asks for your approval.",
   },
   {
@@ -226,7 +232,7 @@ export const VOICE_CAPABILITIES: readonly Capability[] = [
     category: "sensitive",
     actions: ["order_items"],
     geminiTools: [],
-    policy: { app: "approval", gemini_voice: "app_only", alexa: "app_only" },
+    policy: { app: "approval", gemini_voice: "app_only", alexa: "app_only", whatsapp: "app_only" },
     note: "Orders are placed in the WonderHome app, where you approve them.",
   },
   {
@@ -235,7 +241,7 @@ export const VOICE_CAPABILITIES: readonly Capability[] = [
     category: "sensitive",
     actions: ["record_absence", "plan_event", "plan_meal", "adjust_schedule", "complete_school_item", "set_fitness_goal"],
     geminiTools: [],
-    policy: { app: "yes", gemini_voice: "in_app", alexa: "app_only" },
+    policy: { app: "yes", gemini_voice: "in_app", alexa: "app_only", whatsapp: "app_only" },
     note: "Changing the plan happens in the WonderHome app, where you can see what else it moves.",
   },
   {
@@ -256,7 +262,7 @@ export const VOICE_CAPABILITIES: readonly Capability[] = [
     category: "sensitive",
     actions: ["assign_responsibility", "check_agents"],
     geminiTools: [],
-    policy: { app: "yes", gemini_voice: "in_app", alexa: "app_only" },
+    policy: { app: "yes", gemini_voice: "in_app", alexa: "app_only", whatsapp: "app_only" },
     note: "Changing who does what, and running WonderHome's checks, happen in the app.",
   },
   {
@@ -265,7 +271,7 @@ export const VOICE_CAPABILITIES: readonly Capability[] = [
     category: "conversation",
     actions: [],
     geminiTools: ["answer_pending_question"],
-    policy: { app: "yes", gemini_voice: "yes", alexa: "session" },
+    policy: { app: "yes", gemini_voice: "yes", alexa: "session", whatsapp: "session" },
   },
 ];
 
@@ -288,6 +294,7 @@ export function channelSummary(channel: CapabilityChannel): { available: Capabil
     const policy = capability.policy[channel];
     if (policy === "yes" || policy === "session" || policy === "in_app") available.push(capability);
     else if (policy === "consent" || policy === "opt_in" || policy === "approval") conditional.push(capability);
+    // "kept_off" (WhatsApp) lands with the app-only things: the app is where they are.
     else appOnly.push(capability);
   }
   return { available, conditional, appOnly };

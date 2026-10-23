@@ -91,11 +91,11 @@ export function replyShownFrom(metadata: unknown): ReplyShown | null {
  * across surfaces; what a conversation is waiting on is not — a question the
  * app asked is never answered by something said to Alexa.
  */
-export type ConversationSurface = "app" | "alexa";
+export type ConversationSurface = "app" | "alexa" | "whatsapp";
 
 /** The surface a HomeTalk channel talks on: every in-app channel shares the app's conversation. */
 export function surfaceForChannel(channel: string | undefined): ConversationSurface {
-  return channel === "alexa" ? "alexa" : "app";
+  return channel === "alexa" ? "alexa" : channel === "whatsapp" ? "whatsapp" : "app";
 }
 
 export async function openSession(
