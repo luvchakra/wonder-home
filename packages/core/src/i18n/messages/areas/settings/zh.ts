@@ -683,6 +683,8 @@ export const settingsZh: AreaCatalog<typeof settingsEn> = {
   "settingsHome.ai.meta": "{source} · 家庭密钥与数据使用",
   "settingsHome.privacy.title": "隐私与安全",
   "settingsHome.privacy.meta": "数据使用、导出和删除",
+  "settingsHome.instamart.connected": "已连接 · 订购你的待买清单",
+  "settingsHome.instamart.meta": "在 Instamart 订购你的待买清单",
   "settingsHome.whatsapp.connected": "已连接 · 把内容转发到 HomeSend",
   "settingsHome.whatsapp.meta": "把消息、照片和文档转发到 HomeSend",
   "settingsHome.connected.title": "已连接的账户",

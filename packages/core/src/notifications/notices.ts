@@ -224,7 +224,8 @@ export function orderNotices(rows: readonly OrderRow[], directory: Directory, no
       priority: row.status === "failed" ? "high" : "normal",
       title: msg(`reminder.order.title.${row.status}` as "reminder.order.title.placed"),
       body: amount ? msg("reminder.order.bodyAmount", { provider: row.provider, amount }) : msg("reminder.order.body", { provider: row.provider }),
-      action: { action: "open", target: "/groceries" },
+      // An Instamart order opens where it is followed (story 25-032).
+      action: { action: "open", target: row.provider === "Swiggy Instamart" ? "/groceries/order" : "/groceries" },
       expiresAt: new Date(new Date(row.updated_at).getTime() + 3 * DAY_MS),
     });
   }

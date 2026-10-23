@@ -70,6 +70,10 @@ export const RATE_LIMITS = {
   "careers.status": { max: 30, windowSeconds: 3600 },
   /** Partner API requests, per key (story 18-008): an integration syncing, not a scraper. */
   "partner.request": { max: 120, windowSeconds: 60 },
+  /** Matching the list on Instamart, per member (story 25-032): each pass is a Swiggy search per line, so a few a quarter hour. */
+  "instamart.match": { max: 6, windowSeconds: 900 },
+  /** Cart reviews and order placements on Instamart, per member: a person shopping, never a loop against Swiggy. */
+  "instamart.cart": { max: 30, windowSeconds: 900 },
 } as const;
 
 export type RateLimitBucket = keyof typeof RATE_LIMITS;

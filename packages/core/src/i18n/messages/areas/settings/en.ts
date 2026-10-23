@@ -731,6 +731,8 @@ export const settingsEn = {
   "settingsHome.ai.meta": "{source} · household key and data use",
   "settingsHome.privacy.title": "Privacy & security",
   "settingsHome.privacy.meta": "Data use, export and deletion",
+  "settingsHome.instamart.connected": "Connected · order your To buy list",
+  "settingsHome.instamart.meta": "Order your To buy list on Instamart",
   "settingsHome.whatsapp.connected": "Connected · forward things into HomeSend",
   "settingsHome.whatsapp.meta": "Forward messages, photos and documents into HomeSend",
   "settingsHome.connected.title": "Connected accounts",

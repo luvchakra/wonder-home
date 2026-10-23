@@ -1,8 +1,9 @@
-import { Bell, Bot, ChevronRight, CreditCard, Languages, Link2, LogOut, MapPin, MessageCircle, MicVocal, ShieldCheck, Speaker, UserRound } from "lucide-react";
+import { Bell, Bot, ChevronRight, CreditCard, Languages, Link2, LogOut, MapPin, MessageCircle, MicVocal, ShieldCheck, Speaker, Store, UserRound } from "lucide-react";
 import Link from "next/link";
 import type { ComponentType } from "react";
 
 import { credentialStatus } from "@wonderhome/core/ai/credentials";
+import { instamartMode } from "@wonderhome/core/commerce/instamart/config";
 import { describeKeySource, platformKey, resolveModelKey } from "@wonderhome/core/ai/model-key";
 import { listPlans, loadSubscription } from "@wonderhome/core/billing/repository";
 import { getVerifiedUser } from "@wonderhome/core/db/server";
@@ -75,7 +76,8 @@ export default async function SettingsPage() {
   const { supabase, membership, view, viewer, secondary } = session;
   const householdId = membership.household.id;
   const whatsappReady = whatsappConfigFromEnv() !== null && whatsappBusinessNumber() !== null;
-  const [user, { data: preferenceRows }, credential, voiceSettings, members, subscription, plans, whatsappLinks, myOffice, mySharing] = await Promise.all([
+  const instamartReady = instamartMode() !== "off" && membership.memberType === "adult";
+  const [user, { data: preferenceRows }, credential, voiceSettings, members, subscription, plans, whatsappLinks, myOffice, mySharing, myInstamart] = await Promise.all([
     getVerifiedUser(),
     supabase.from("notification_preferences").select("channel, enabled, quiet_from, quiet_until").eq("member_id", membership.memberId),
     credentialStatus(supabase, householdId).catch(() => ({ configured: false, provider: null, updatedAt: null })),
@@ -88,6 +90,10 @@ export default async function SettingsPage() {
     loadWorkPlace(supabase, householdId, membership.memberId).catch(() => null),
     // Whether they share where they are (their own row; RLS lets every member read who shares).
     supabase.from("member_location_sharing").select("enabled").eq("member_id", membership.memberId).maybeSingle().then((result) => Boolean((result.data as { enabled?: boolean } | null)?.enabled), () => false),
+    // Their own Swiggy connection for Instamart orders (25-032); only where the deployment has it and for an adult.
+    instamartReady
+      ? supabase.from("instamart_connections").select("status").eq("member_id", membership.memberId).maybeSingle().then((result) => (result.data as { status?: string } | null)?.status === "connected", () => false)
+      : Promise.resolve(false),
   ]);
   const me = members.find((member) => member.id === membership.memberId) ?? null;
 
@@ -133,6 +139,10 @@ export default async function SettingsPage() {
     // WhatsApp only once the deployment has a number to connect to.
     ...(whatsappReady
       ? [{ icon: MessageCircle, tone: "handled" as IconTone, title: "WhatsApp", meta: myWhatsApp ? t("settingsHome.whatsapp.connected") : t("settingsHome.whatsapp.meta"), href: "/settings/whatsapp" }]
+      : []),
+    // Swiggy Instamart: its one editor is the order page, where it is connected and disconnected (rule 23).
+    ...(instamartReady
+      ? [{ icon: Store, tone: "home" as IconTone, title: "Swiggy Instamart", meta: myInstamart ? t("settingsHome.instamart.connected") : t("settingsHome.instamart.meta"), href: "/groceries/order" }]
       : []),
     ...(view.permissions.includes("integrations.manage")
       ? [{ icon: Link2, tone: "care" as IconTone, title: t("settingsHome.connected.title"), meta: t("settingsHome.connected.meta"), href: "/household/integrations" }]

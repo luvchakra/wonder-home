@@ -3,12 +3,14 @@ import {
   ChevronRight,
   PackageCheck,
   ShoppingBasket,
+  Store,
   TriangleAlert,
 } from "lucide-react";
 import Link from "next/link";
 
 import { may } from "@wonderhome/core/billing/repository";
 import { cardNutrition, stepperOf } from "@wonderhome/core/commerce/catalog";
+import { instamartMode } from "@wonderhome/core/commerce/instamart/config";
 import {
   listGroceries,
   listRetiredGroceries,
@@ -165,7 +167,7 @@ export default async function GroceriesPage({
               {t("grocery.lede")}
             </p>
           </div>
-          {/* One way to add; To buy is the shopping list itself (the owner retired the cart, 2026-10-20). */}
+          {/* One way to add; To buy is the shopping list itself. Ordering it on Instamart is its own page (25-032). */}
           <div className="flex w-full items-center gap-3">
           <AddItemButton
             householdId={householdId}
@@ -183,6 +185,16 @@ export default async function GroceriesPage({
             categories={categories}
             words={words}
           />
+          {/* Ordering the list on Instamart (25-032): an adult's, only where the deployment has it on. */}
+          {canMarkBought && instamartMode() !== "off" ? (
+            <Link
+              href="/groceries/order"
+              className="ml-auto inline-flex min-h-11 shrink-0 items-center gap-2 rounded-[var(--wh-radius-pill)] border border-[var(--wh-border)] bg-[var(--wh-surface)] px-4 text-sm font-semibold text-[var(--wh-primary)] hover:bg-[var(--wh-primary-soft)]"
+            >
+              <Store aria-hidden className="size-4" />
+              {t("instamart.entry")}
+            </Link>
+          ) : null}
           </div>
         </header>
 

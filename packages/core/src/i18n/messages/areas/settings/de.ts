@@ -721,6 +721,8 @@ export const settingsDe: AreaCatalog<typeof settingsEn> = {
   "settingsHome.ai.meta": "{source} · Haushaltsschlüssel und Datennutzung",
   "settingsHome.privacy.title": "Datenschutz & Sicherheit",
   "settingsHome.privacy.meta": "Datennutzung, Export und Löschung",
+  "settingsHome.instamart.connected": "Verbunden · bestelle deine Einkaufsliste",
+  "settingsHome.instamart.meta": "Bestelle deine Einkaufsliste bei Instamart",
   "settingsHome.whatsapp.connected": "Verbunden · Dinge an HomeSend weiterleiten",
   "settingsHome.whatsapp.meta": "Nachrichten, Fotos und Dokumente an HomeSend weiterleiten",
   "settingsHome.connected.title": "Verbundene Konten",
