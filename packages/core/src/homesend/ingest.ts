@@ -3,7 +3,7 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 import { rateLimitMessage } from "../security/rate-limit";
 import type { IntakeContext, IntakeExtraction, IntakeSource } from "../ai/classify-intake";
 import type { AudioClip } from "../voice/provider";
-import { gateTranscript, uncertainTranscriptPrompt } from "./audio";
+import { gateTranscript, GEMINI_TRANSCRIPT_CONFIDENCE, geminiMayTranscribe, uncertainTranscriptPrompt } from "./audio";
 import { detectInstructionInjection, type InjectionScan } from "./injection";
 import type { HomeSendExtraction, HomeSendFailureReason, HomeSendKind, HomeSendSource } from "./items";
 import { FAILURE_REASON_COPY } from "./items";
@@ -142,14 +142,56 @@ const defaultTranscribe: NonNullable<IngestDeps["transcribe"]> = async (supabase
   // A voice note needs a server-side speech service whatever the household
   // picked for live conversation — the browser cannot transcribe a file.
   const provider = await resolveProvider({ ...settings, provider: "google" }, householdId);
-  if (!provider.live) return { status: "unavailable" };
+  if (provider.live) {
+    try {
+      const heard = await provider.listen({ clip, settings });
+      return { status: "transcribed", text: heard.text, confidence: heard.confidence };
+    } catch {
+      return { status: "failed" };
+    }
+  }
+  return transcribeWithGemini(supabase, householdId, clip, settings);
+};
+
+/**
+ * No Cloud Speech key: the household's Gemini key writes the note down
+ * instead (its Gemini voice key, else the assistant's key when that is
+ * Google's), only where its data-use agreement lets content reach Google.
+ */
+async function transcribeWithGemini(
+  supabase: SupabaseClient,
+  householdId: string,
+  clip: AudioClip,
+  settings: Awaited<ReturnType<typeof import("../voice/repository").loadVoiceSettings>>,
+): Promise<TranscribeResult> {
+  const [{ readGeminiVoiceKey, readHouseholdKey }, { platformKey, resolveModelKey }, { loadDataUse }, { listMembers }, { listeningLanguage }, live] = await Promise.all([
+    import("../ai/credentials"),
+    import("../ai/model-key"),
+    import("../ai/privacy-repository"),
+    import("../identity/households"),
+    import("../voice/settings"),
+    import("../voicelink/live-transcribe"),
+  ]);
+  const [voiceKey, householdKey, policy, members] = await Promise.all([
+    readGeminiVoiceKey(householdId).catch(() => null),
+    readHouseholdKey(householdId).catch(() => null),
+    loadDataUse(supabase, householdId).catch(() => null),
+    listMembers(supabase, householdId, null).catch(() => []),
+  ]);
+  const key = resolveModelKey(voiceKey ?? householdKey, platformKey());
+  if (!policy || !geminiMayTranscribe(key, policy) || !key.key) return { status: "unavailable" };
   try {
-    const heard = await provider.listen({ clip, settings });
-    return { status: "transcribed", text: heard.text, confidence: heard.confidence };
+    const text = await live.transcribeAudioFile(key.key, {
+      base64: clip.base64,
+      mimeType: clip.mimeType,
+      languageCode: listeningLanguage(settings),
+      vocabulary: live.transcriptionVocabulary(members.map((member) => member.displayName)),
+    });
+    return { status: "transcribed", text: text ?? "", confidence: GEMINI_TRANSCRIPT_CONFIDENCE };
   } catch {
     return { status: "failed" };
   }
-};
+}
 
 const defaultScan: NonNullable<IngestDeps["scan"]> = (bytes, contentType) => scanForMalware(bytes, contentType, platformMalwareScanConfig());
 

@@ -672,7 +672,13 @@ export async function Landing() {
           </div>
 
           <div className="mt-10 flex flex-col gap-3 border-t border-[var(--wh-border)] pt-6 text-xs text-[var(--wh-foreground-subtle)] sm:flex-row sm:items-center sm:justify-between">
-            <p>© {new Date().getFullYear()} WonderHome. Made for families.</p>
+            <p>
+              © {new Date().getFullYear()} WonderApps. WonderHome is a product of{" "}
+              <a href="https://wonderapps.biz" className="underline-offset-2 hover:text-[var(--wh-foreground)] hover:underline">
+                WonderApps
+              </a>
+              . Made for families.
+            </p>
             <p className="flex items-center gap-1.5">
               <Lock aria-hidden className="size-3.5" />
               Your household is never training data.

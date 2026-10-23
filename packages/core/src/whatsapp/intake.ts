@@ -198,6 +198,16 @@ export async function processWhatsAppMessage(admin: SupabaseClient, messageId: s
     return "read";
   }
 
+  // A question is asked of WonderHome, not handed to it to keep: it is never
+  // a HomeSend item, and the reply says where it is answered.
+  if (row.message_type === "text" && isQuestionForWonderHome(row.text_content ?? "")) {
+    events.push({ kind: "question_redirected", householdId: row.household_id });
+    await settle({ processing_status: "ignored" });
+    await say(QUESTION_REPLY);
+    await recordWhatsAppEvents(admin, events);
+    return "read";
+  }
+
   const externalId = `whatsapp:${row.provider_message_id}`.slice(0, 200);
   let outcome: IngestOutcome;
   try {
@@ -267,6 +277,24 @@ export function whatsappJobHandler(deps: WhatsAppIntakeDeps): JobHandler {
     if (!messageId) return "skipped";
     return processWhatsAppMessage(client, messageId, deps);
   };
+}
+
+export const QUESTION_REPLY =
+  "I can't answer questions on WhatsApp yet. Ask HomeTalk in the app: https://home.wonderapps.biz/ai — and send me things to keep here, like a school notice, a bill, a photo or a grocery list.";
+
+const QUESTION_OPENING =
+  /^(?:what|what's|whats|when|when's|where|where's|who|who's|whose|which|how|how's|why|is|are|am|was|were|do|does|did|can|could|should|shall|will|would|has|have|any|tell me|show me|give me)\b/i;
+
+/**
+ * Whether a WhatsApp text is a question for WonderHome rather than something
+ * to keep: one short line that asks ("what's the plan for the morning",
+ * "is there milk?"). A forwarded notice, a list or anything with a link is
+ * content, however it begins.
+ */
+export function isQuestionForWonderHome(text: string): boolean {
+  const line = text.trim();
+  if (!line || line.length > 160 || /\n/.test(line) || /https?:\/\/|www\./i.test(line)) return false;
+  return line.endsWith("?") || QUESTION_OPENING.test(line);
 }
 
 export const UNSUPPORTED_REPLY = "WonderHome can take text, photos, PDFs, text files and voice notes on WhatsApp for now — that one it can't read yet.";

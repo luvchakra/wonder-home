@@ -18,6 +18,16 @@ const nextConfig: NextConfig = {
     // request-body ceiling is 4.5 MB, so larger files need a direct upload).
     serverActions: { bodySizeLimit: "4.5mb" },
   },
+  // The addresses Meta, app stores and people type for a privacy policy or
+  // terms land on the one public page that says both. Redirects run before
+  // the sign-in gate, so these never ask anyone to sign in.
+  async redirects() {
+    return [
+      { source: "/privacy", destination: "/legal#your-information", permanent: true },
+      { source: "/privacy-policy", destination: "/legal#your-information", permanent: true },
+      { source: "/terms", destination: "/legal", permanent: true },
+    ];
+  },
   async headers() {
     // The user guide is for signed-in members: never stored by a shared
     // cache or the browser's back-forward cache, and never indexed.

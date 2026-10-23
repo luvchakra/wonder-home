@@ -445,7 +445,9 @@ WonderHome's AI layer is one pipeline with three named, real surfaces —
   A file's type is decided from its bytes (`normalize.ts`), a link is only
   ever fetched through `link-fetch.ts` (public addresses only, DNS checked
   and pinned, every redirect re-checked), an uncertain voice transcript is
-  shown and confirmed, never acted on (`audio.ts`), and all of it is
+  shown and confirmed, never acted on (`audio.ts`; with no Cloud Speech key,
+  a voice note is written down by the household's Gemini key where its
+  data-use agreement allows Google), and all of it is
   untrusted content: `injection.ts` fences it for the model and flags
   instructions aimed at WonderHome, which are ignored and said so.
   Whatever cannot go on is kept and shown under "Failed safely", never
@@ -871,7 +873,8 @@ authorization channel:
   once, inside the 24-hour window the person opened, and never echoes an
   amount, a health detail or a number.
 - **What it never does.** WhatsApp is not a second brain: it never answers
-  questions, decides, or touches a domain record.
+  questions, decides, or touches a domain record. A question (`isQuestionForWonderHome`)
+  gets one reply pointing to HomeTalk and is never kept as a HomeSend item.
 - **Telemetry.** `whatsapp_events` holds closed words and counts only.
 - **Screens.** `/settings/whatsapp` is the one place a number is
   connected or disconnected. "I've sent the message" only looks again,

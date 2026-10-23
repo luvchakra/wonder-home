@@ -1,4 +1,6 @@
 import type { Transcript } from "../voice/provider";
+import type { KeySource, ModelProvider } from "../ai/model-key";
+import { routeToProvider, type DataUsePolicy } from "../ai/privacy";
 
 /**
  * Voice notes in HomeSend (Wave 3 §3, §17).
@@ -18,6 +20,19 @@ const CONSEQUENTIAL = /\b(?:pay|paid|payment|transfer|send\s+money|order|buy|pur
 
 /** Where a consequential voice note must sit before it is read on. */
 export const CONSEQUENTIAL_CONFIDENCE_FLOOR = 0.9;
+
+/**
+ * Gemini writes a voice note down without saying how sure it is. Its line is
+ * taken as clear enough for everyday things, never for paying or ordering:
+ * those are shown back to be checked, as an unsure transcript always is.
+ */
+export const GEMINI_TRANSCRIPT_CONFIDENCE = 0.8;
+
+/** Whether a voice note may go to Gemini to be written down: a Google key, and a data-use agreement that lets content reach Google. */
+export function geminiMayTranscribe(key: { provider: ModelProvider | null; source: KeySource }, policy: DataUsePolicy): boolean {
+  if (key.provider !== "google" || key.source === "none") return false;
+  return routeToProvider({ provider: "google", keySource: key.source, policy, hasContent: true }).ok;
+}
 
 export type TranscriptGate =
   | { outcome: "confident"; text: string; confidence: number }

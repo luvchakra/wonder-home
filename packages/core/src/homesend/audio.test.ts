@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 
-import { CONSEQUENTIAL_CONFIDENCE_FLOOR, gateTranscript, isConsequentialInstruction, TRANSCRIPT_CONFIDENCE_FLOOR, uncertainTranscriptPrompt } from "./audio";
+import { DEFAULT_DATA_USE, type DataUsePolicy } from "../ai/privacy";
+import { CONSEQUENTIAL_CONFIDENCE_FLOOR, gateTranscript, GEMINI_TRANSCRIPT_CONFIDENCE, geminiMayTranscribe, isConsequentialInstruction, TRANSCRIPT_CONFIDENCE_FLOOR, uncertainTranscriptPrompt } from "./audio";
 
 describe("voice-note safety (Wave 3 §17)", () => {
   it("reads on from a clean, confident note", () => {
@@ -44,5 +45,21 @@ describe("voice-note safety (Wave 3 §17)", () => {
   it("uses a floor that sits below the consequential one", () => {
     expect(TRANSCRIPT_CONFIDENCE_FLOOR).toBeLessThan(CONSEQUENTIAL_CONFIDENCE_FLOOR);
     expect(gateTranscript({ text: "Match on Saturday", confidence: TRANSCRIPT_CONFIDENCE_FLOOR }).outcome).toBe("confident");
+  });
+});
+
+describe("a voice note written down by Gemini", () => {
+  const consent: DataUsePolicy = { ...DEFAULT_DATA_USE, allowProviderContent: true };
+
+  it("goes to Gemini only on a Google key the household may send content with", () => {
+    expect(geminiMayTranscribe({ provider: "google", source: "household" }, consent)).toBe(true);
+    expect(geminiMayTranscribe({ provider: "google", source: "household" }, { ...consent, allowProviderContent: false })).toBe(false);
+    expect(geminiMayTranscribe({ provider: "anthropic", source: "household" }, consent)).toBe(false);
+    expect(geminiMayTranscribe({ provider: null, source: "none" }, consent)).toBe(false);
+  });
+
+  it("is clear enough for everyday things, never for paying or ordering", () => {
+    expect(gateTranscript({ text: "Add milk and eggs to the list", confidence: GEMINI_TRANSCRIPT_CONFIDENCE }).outcome).toBe("confident");
+    expect(gateTranscript({ text: "Order milk and pay the electricity bill", confidence: GEMINI_TRANSCRIPT_CONFIDENCE }).outcome).toBe("uncertain");
   });
 });

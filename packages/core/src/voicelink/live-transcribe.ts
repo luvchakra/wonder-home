@@ -83,6 +83,25 @@ export function cleanTranscript(text: string | null | undefined): string | null 
   return line ? line.slice(0, 1000) : null;
 }
 
+/**
+ * A recorded voice note (a WhatsApp or emailed clip, ogg, mp3, m4a or wav),
+ * written down by the same model and instruction as a live turn. It is how
+ * HomeSend hears a voice note when the household has a Gemini key but no
+ * Cloud Speech key.
+ */
+export async function transcribeAudioFile(
+  apiKey: string,
+  input: { base64: string; mimeType: string; languageCode: string; vocabulary: readonly string[] },
+): Promise<string | null> {
+  if (!input.base64) return null;
+  const response = await geminiClient(apiKey, "transcribe").models.generateContent({
+    model: LIVE_TRANSCRIBE_MODEL,
+    contents: [{ role: "user", parts: [{ text: transcriptionInstruction(input) }, { inlineData: { mimeType: input.mimeType, data: input.base64 } }] }],
+    config: { temperature: 0, maxOutputTokens: 800 },
+  });
+  return cleanTranscript(response.text);
+}
+
 export async function transcribeLiveTurn(apiKey: string, input: { pcm: Uint8Array; languageCode: string; vocabulary: readonly string[] }): Promise<string | null> {
   if (input.pcm.byteLength < LIVE_TRANSCRIBE_RATE / 5) return null; // under 0.1 s: nothing was said
   const wav = pcmToWav(input.pcm.byteLength > LIVE_TRANSCRIBE_MAX_BYTES ? input.pcm.slice(input.pcm.byteLength - LIVE_TRANSCRIBE_MAX_BYTES) : input.pcm);
