@@ -8,6 +8,7 @@ import { DELIVERY_CHANNELS, type DeliveryChannel } from "@wonderhome/core/notifi
 import { DEFAULT_DIGEST_MINUTE, loadChannelPreferences, saveChannelPreference, saveSmartReminderChoices } from "@wonderhome/core/notifications/preferences";
 import { TUNABLE_CATEGORIES } from "@wonderhome/core/notifications/policies";
 import { saveReminderPreferences } from "@wonderhome/core/notifications/reminder-preferences";
+import { firstName } from "@wonderhome/core/email/layout";
 import { sendTestNotification } from "@wonderhome/core/notifications/channel-check";
 import { ROUTABLE_CHANNELS, setRoute, type RoutableChannel } from "@wonderhome/core/notifications/routing";
 
@@ -237,11 +238,24 @@ async function testChannel(householdId: string, channel: RoutableChannel): Promi
     const membership = await requireMembership(supabase, householdId);
     const admin = createAdminClient();
     if (!(await hitRateLimit(admin, "notification.test", membership.memberId))) return { error: rateLimitMessage("notification.test") };
-    const { t } = await memberLocale(membership);
+    const { t, language } = await memberLocale(membership);
+    const name = firstName(membership.displayName);
     const result = await sendTestNotification(admin, {
       memberId: membership.memberId,
       channel,
-      notification: { title: t("push.device.testTitle"), body: t("push.device.testBody"), emailWords: { open: t("notificationEmail.open"), why: t("notificationEmail.why") } },
+      notification: {
+        title: t("push.device.testTitle"),
+        body: t("push.device.testBody"),
+        // The same words, greeting and footer a real reminder's email carries.
+        emailWords: {
+          open: t("notificationEmail.open"),
+          why: t("notificationEmail.why"),
+          ...(name ? { hello: t("notificationEmail.hello", { name }) } : {}),
+          settings: t("notificationEmail.settings"),
+          privacy: t("notificationEmail.privacy"),
+          lang: language,
+        },
+      },
     });
     if (result.ok) return { notice: "sent" };
     return { error: reasonWords(t, result.reason, channel) };

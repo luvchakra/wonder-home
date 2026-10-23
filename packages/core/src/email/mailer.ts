@@ -68,6 +68,10 @@ export function smtpMailer(config: MailConfig): Mailer {
         const code = (error as { responseCode?: unknown }).responseCode;
         log.warn("email not sent", { code: typeof code === "number" ? code : null });
         return { ok: false, reason: typeof code === "number" ? "rejected" : "unreachable" };
+      } finally {
+        // Say goodbye to the server after each message, as WonderJobs' mailer does on the same
+        // GoDaddy mailbox: a serverless function may be frozen before an idle connection is closed.
+        transport.close();
       }
     },
   };
