@@ -207,7 +207,7 @@ export const settingsDe: AreaCatalog<typeof settingsEn> = {
   "settingsPage.notifications.smart.title": "Klügere Erinnerungen",
   "settingsPage.notifications.smart.body": "Beides ändert nur, wie Ihre eigenen Erinnerungen Sie erreichen. Nichts wird für Sie entschieden.",
   "settingsPage.notifications.smart.digest": "Zusammenfassung für heute",
-  "settingsPage.notifications.smart.digestBody": "Eine kurze Liste dessen, was heute auf Sie wartet, über Ihren Benachrichtigungen.",
+  "settingsPage.notifications.smart.digestBody": "Was später heute und morgen ansteht, unter dem, was jetzt auf dich wartet.",
   "settingsPage.notifications.smart.learn": "Lernen, wann ich meistens handle",
   "settingsPage.notifications.smart.learnBody":
     "Sobald Sie eine Art von Erinnerung mindestens fünfmal zu ungefähr derselben Zeit erledigt haben, kommt die erste Erinnerung dieser Art ungefähr zu dieser Zeit. Ein Zeitpunkt, den Sie oben gewählt haben, hat immer Vorrang, und Ruhezeiten gelten weiterhin.",
