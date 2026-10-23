@@ -1,6 +1,6 @@
 import { assessConsumable, type Consumable } from "../commerce/consumables";
 import type { Order } from "../commerce/orders";
-import type { HolidayRecord } from "../calendar/projection";
+import type { CalendarSource, HolidayRecord } from "../calendar/projection";
 import type { FamilyEvent } from "../family/schedule";
 import type { Obligation } from "../finance/payments";
 import { billPeriods } from "../finance/periods";
@@ -27,6 +27,7 @@ import type { Meal } from "../meals/meals";
 import type { SchoolCommunication } from "../school/communications";
 import type { Enrolment } from "../school/enrolments";
 import { spokenSummary, type SpokenLanguage } from "../identity/member-languages";
+import { sessionDates, type Activity } from "../school/activities";
 import type { Exam, TimetablePeriod } from "../school/exams";
 import type { SchoolItem } from "../school/items";
 import { capitalize, describeValue, formatDate, formatTime, humanKey, isoDateIn, money, words } from "./format";
@@ -195,6 +196,8 @@ export type ContextRecords = {
   /** A child's exams with their papers, and their weekly timetable (story 08-015). */
   exams?: readonly Exam[];
   timetable?: readonly TimetablePeriod[];
+  /** A child's classes outside school, with their competitions and notes (story 08-012). */
+  activities?: readonly Activity[];
   communications?: readonly SchoolCommunication[];
   consumables?: readonly Consumable[];
   orders?: readonly Order[];
@@ -223,6 +226,27 @@ export type ContextRecords = {
   address?: HouseholdAddress | null;
   foodPreferences?: readonly FoodPreferenceRecord[];
   agenda?: AgendaInput;
+};
+
+/**
+ * Where each thing the Calendar shows lives in HomeBrain's records. Typed over
+ * every calendar source, so a new source on the Calendar cannot ship without
+ * HomeBrain reading it too: HomeTalk once answered "what's happening
+ * tomorrow?" without a child's classes the Calendar showed (2026-10-23).
+ */
+export const CALENDAR_SOURCE_RECORDS: Record<CalendarSource, readonly (keyof ContextRecords)[]> = {
+  event: ["events"],
+  occasion: ["members"],
+  holiday: ["holidays"],
+  school: ["schoolItems", "exams"],
+  activity: ["activities"],
+  meal: ["meals"],
+  bill: ["obligations"],
+  health: ["healthAppointments"],
+  helper: ["absences"],
+  upkeep: ["serviceRequests"],
+  outcome: ["outcomes"],
+  order: ["orders"],
 };
 
 export type BuildOptions = {
@@ -804,6 +828,67 @@ export function buildContextItems(records: ContextRecords, options: BuildOptions
         tier: 3,
         aliases: [`${dayName} timetable`, "timetable", ...sorted.map((period) => period.subject)],
       });
+    }
+  }
+
+  // A child's classes outside school (08-012): what each one is, and each
+  // session over the next fortnight on its own day — the same days the
+  // Calendar shows them on (`sessionDates`), so "what's on tomorrow?" finds them.
+  if (records.activities) {
+    const fortnight = { from: today, to: shiftDay(today, ACTIVITY_SESSION_DAYS - 1) };
+    for (const activity of records.activities) {
+      const child = name(activity.childMemberId) ?? "A child";
+      const hours = activity.startsAt ? ` ${clock(activity.startsAt)}${activity.endsAt ? ` to ${clock(activity.endsAt)}` : ""}` : "";
+      const where = activity.place?.name ? ` at ${activity.place.name}` : "";
+      const teacher = activity.teacherName ? ` with ${activity.teacherName}` : "";
+      const days = activity.days.map((day) => WEEKDAY_NAMES[day - 1]).filter(Boolean);
+      add({
+        domain: "school",
+        entityType: "activity",
+        entityId: activity.id,
+        summary: `${child} has ${activity.name} (${words(activity.kind)})${days.length > 0 ? ` on ${days.map((day) => `${day}s`).join(", ")}` : ", with no fixed days"}${hours}${where}${teacher}.`,
+        need: "what classes a child goes to outside school",
+        privacyClass: "child",
+        subjectMemberIds: [activity.childMemberId],
+        attributes: { title: activity.name, kind: activity.kind, days: activity.days, startsAt: activity.startsAt, endsAt: activity.endsAt, place: activity.place?.name ?? null, teacher: activity.teacherName, childMemberId: activity.childMemberId },
+        source: { type: "child_activities", sourceId: activity.id },
+        tier: 2,
+        aliases: [activity.name, `${activity.name} class`, words(activity.kind), activity.teacherName],
+      });
+      for (const day of sessionDates(activity, fortnight)) {
+        add({
+          domain: "school",
+          entityType: "activity_session",
+          entityId: `${activity.id}:${day}`,
+          summary: `${child} has ${activity.name} on ${formatDate(new Date(`${day}T12:00:00Z`), "UTC")}${hours}${where}.`,
+          need: "what is on a day",
+          privacyClass: "child",
+          subjectMemberIds: [activity.childMemberId],
+          attributes: { title: activity.name, kind: "activity", date: day, startsAt: activity.startsAt, endsAt: activity.endsAt, place: activity.place?.name ?? null, childMemberId: activity.childMemberId },
+          source: { type: "child_activities", sourceId: activity.id },
+          freshness: "current",
+          tier: 2,
+          validUntil: day,
+          aliases: [activity.name, `${activity.name} class`],
+        });
+      }
+      for (const competition of activity.items.filter((item) => item.kind === "competition" && item.onDate !== null && item.onDate >= today)) {
+        add({
+          domain: "school",
+          entityType: "activity_competition",
+          entityId: competition.id,
+          summary: `${child} has the ${competition.title} (${activity.name}) on ${formatDate(new Date(`${competition.onDate}T12:00:00Z`), "UTC")}.${competition.detail ? ` ${competition.detail.replace(/\s+/g, " ").slice(0, 200)}` : ""}`,
+          need: "what is on a day",
+          privacyClass: "child",
+          subjectMemberIds: [activity.childMemberId],
+          attributes: { title: competition.title, kind: "competition", date: competition.onDate, activity: activity.name, childMemberId: activity.childMemberId },
+          source: { type: "child_activity_notes", sourceId: competition.id },
+          freshness: "current",
+          tier: 2,
+          validUntil: competition.onDate,
+          aliases: [competition.title, `${activity.name} competition`],
+        });
+      }
     }
   }
 
@@ -1437,6 +1522,14 @@ function objectOf(value: unknown): string | null {
 }
 
 const WEEKDAY_NAMES = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"];
+
+/** How far ahead each class's sessions are facts of their own: a fortnight, enough for "this week" and "next week". */
+export const ACTIVITY_SESSION_DAYS = 14;
+
+/** The ISO day `days` after `isoDate`. */
+function shiftDay(isoDate: string, days: number): string {
+  return new Date(Date.parse(`${isoDate}T12:00:00Z`) + days * 86_400_000).toISOString().slice(0, 10);
+}
 
 /** "14:30" → "2:30pm": a local time as a timetable says it. */
 function clock(hhmm: string): string {

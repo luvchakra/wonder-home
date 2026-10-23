@@ -11,11 +11,11 @@ in `docs/progress/`; for the running log of what changed when, `tracking/PROGRES
 
 ## The whole picture
 
-**372 of 399 stories done — 93.2%**
+**373 of 400 stories done — 93.3%**
 
 | Status | Stories |
 |---|---:|
-| Done | 372 |
+| Done | 373 |
 | In Progress | 8 |
 | Blocked | 1 |
 | Not Started | 14 |
@@ -51,7 +51,7 @@ in `docs/progress/`; for the running log of what changed when, `tracking/PROGRES
 | 23 Smart Notifications | `██████████` | 13 | 13 | — |
 | 24 HomePlaces | `██████████` | 14 | 14 | — |
 | 25 HomeFood | `███████░░░` | 26 | 33 | 7 not started |
-| 26 HomeEvents | `███████░░░` | 13 | 17 | 1 in progress, 3 not started |
+| 26 HomeEvents | `███████░░░` | 14 | 18 | 1 in progress, 3 not started |
 | 27 Notification Channels and Events | `█████████░` | 24 | 25 | 1 blocked |
 
 ## What is left
@@ -629,7 +629,7 @@ in `docs/progress/`; for the running log of what changed when, `tracking/PROGRES
 
 ### 26 — HomeEvents
 
-13 of 17 done `███████░░░`
+14 of 18 done `███████░░░`
 
 | Story | Priority | Status | Notes |
 |---|---|---|---|
@@ -650,6 +650,7 @@ in `docs/progress/`; for the running log of what changed when, `tracking/PROGRES
 | `26-016` Today's entries open their page; a meal changes and a new one is planned from Today | P1 | Done | The owner, 2026-10-20 ("make the entry card clickable, also make the meal editable to some other meal, add option to add new meal"). Each Today entry's icon, name and line open where it lives (`TimelineItem.href`): an event its page, a meal Meals, a bill Bills, school work Kids & School; the entry's own action stays beside it. A meal entry carries a pencil (`ChangeMealButton compact`, an icon with "Change {name}" for assistive technology, so the name is never squeezed — rule 11) opening the same Change sheet as Meals; **Plan a meal** under the timeline opens the Meals planner on today, with the full recipe picker (own and WonderHome dishes). Adults only. Help ¶2 of Today & Home in all eight languages. Checked at 360px and 1280px: planned "QA Khichdi" for today, changed it to "QA Veg pulao", the entry opened /meals, no overflow. |
 | `26-018` Every event goes through HomeEvents' one door | P0 | Done | The owner, 2026-10-22: "how are 2 entries created for same event, add per design every event should be created via the HomeEvents module. put guard rails in place so duplicate entries are not created from various parts of the application". 26-017's duplicate check was each caller's to remember: the Calendar sheet, Kids & School and HomeTalk asked, but the REST API (`POST …/family`, `POST …/school`), a health appointment's calendar entry and HomeSend's write did not. Now `calendar/add-event.ts`'s `addFamilyEvent` and `addSchoolItem` are the only way anything is added: they read the household's entries on that local day from both tables (family events and school entries) and refuse the same name, nearly the same name or the same occasion by another name, unless the person said add anyway (`confirmed`). Callers: the Calendar sheet and Kids & School (their Add anyway), HomeTalk ("already on the calendar"), HomeSend (refused with the entry's name, never linked, so its undo cannot remove the original), an appointment (not added and not linked), and the REST API (409 naming the entry, `confirmDuplicate: true` to add anyway; OpenAPI says so). `single-door.test.ts` fails CI if any other file calls `createEvent`/`createSchoolItem` or inserts into `family_events`/`school_items` outside their repositories (an integration's sync, keyed by the provider's id, is the one exception). Gateway tests include the owner's Bounce pair. The owner's existing pair (18 and 20 Oct, before 26-017) is left for them: "Field trip to Bounce" can be removed in Kids & School or undone in HomeSend |
 | `26-019` A family moment is shared family time | P0 | Done | The owner, 2026-10-22: "only one member of family is part of this event, why is it being called as Family moment? put checks in place". The Family page took the first protected event of any kind as its moment, so a protected school trip with one child going led the page. `isFamilyMoment` (`family/schedule.ts`) decides it for Family and Home alike: a family kind (family time, outing, birthday, gathering, travel, special occasion), not cancelled, with two or more going or nobody named. Protection alone never makes one. Home heads anything else by what it is (School event, Appointment) or "Coming up" (new key, eight languages), never with the family heart. Golden tests in `schedule.test.ts`; browser-checked at 360px and desktop on a QA household |
+| `26-020` HomeTalk knows everything the Calendar shows | P0 | Done | The owner, 2026-10-23: "there are events on calendar for tomorrow 24 Oct, but HomeTalk doesn't know about some of them, they added recently. check root cause… check all similar issues and put in broader fix". Root cause: a child's classes outside school (`child_activities`, 08-012) are on the Calendar but were never a HomeBrain record, and a day-sized question ("what is happening tomorrow?") was answered from HomeBrain's facts, so Asmi's Vocal and Piano were left out while her parent–teacher meeting (a school entry) was named. Fixes: (1) HomeBrain reads the classes (`context/repository.ts`'s school adapter) and `context/builders.ts` makes each one a fact, each session over the next fortnight a fact on its day (`sessionDates`, the Calendar's own), and each upcoming competition a fact; (2) "what's on tomorrow / on Saturday / this weekend / next week" (`asksWhatIsOn`, `scheduleSpanOf`, up to 14 days) is answered by rules from `calendarRange` with every module, exactly as the Calendar screen reads it, hidden Filters respected, a part of the day kept and one named person narrowed to (`scheduleReply`); "what does Asmi have tomorrow?" stays HomeBrain's, since it also means to-dos and notices; (3) `CALENDAR_SOURCE_RECORDS` maps every calendar source to HomeBrain records, typed over `CalendarSource`, so a new Calendar source cannot ship without HomeBrain reading it; (4) the stale trigger (`wh.mark_context_stale`) was missing on 25 tables HomeBrain reads, among them `event_exceptions`, health, outcomes, orders and school notices; migration `20261023160000_context_stale_everywhere` adds it (applied live). Tests: `calendar/schedule-answer.test.ts`, `context/calendar-parity.test.ts`; eval HT-138 to HT-140 (158/158) |
 
 ### 27 — Notification Channels and Events
 

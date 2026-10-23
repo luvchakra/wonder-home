@@ -95,9 +95,9 @@ import { placeRequestForTurn, placeRequestFrom, type PlaceRequest } from "@wonde
 import { tripDestinationRequest, withDestinations } from "@wonderhome/core/homeplaces/trip";
 import { minuteOf } from "@wonderhome/core/household/day-hours";
 import { householdNow, suggestPlaces, type PlaceSuggestion, type PlacesOutcome } from "@wonderhome/core/homeplaces/service";
-import { asksTheCalendar, calendarSpanReply, lookAheadReply, lookAheadSpan, readLookAhead } from "@wonderhome/core/calendar/answer";
+import { asksTheCalendar, asksWhatIsOn, calendarSpanReply, lookAheadReply, lookAheadSpan, memberNamedIn, readLookAhead, scheduleReply, scheduleSpanOf } from "@wonderhome/core/calendar/answer";
 import { calendarRange, readCalendarPreferences } from "@wonderhome/core/calendar/repository";
-import { resolveCalendarSpan, type CalendarSpan } from "@wonderhome/core/conversation/temporal";
+import { resolveCalendarSpan } from "@wonderhome/core/conversation/temporal";
 import { listWorkPlaces } from "@wonderhome/core/household/work-place";
 import { placesProviderFromEnv } from "@wonderhome/core/places/google";
 import { modeFor, type BrainMode } from "@wonderhome/core/homebrain/answer";
@@ -996,6 +996,32 @@ async function turnInEnglish(input: HomeTalkInput, speaking: Speaking) {
     ((result.intent.action === "ask_status" && result.proposal.kind === "answer" && typeof result.intent.parameters.explain !== "string") ||
       (result.intent.action === "unknown" && result.proposal.kind === "clarify" && !result.intent.understanding?.failure && typeof result.intent.parameters.clarify !== "string")) &&
     (!limits || (limits.scopes as readonly string[]).includes("calendar.read")) &&
+    asksWhatIsOn(body.utterance) &&
+    scheduleSpanOf(result.intent.parameters.when, body.utterance, { timezone: membership.household.timezone, now: new Date() })
+  ) {
+    // "What's happening tomorrow?", "anything on this weekend?": a day or a
+    // week, answered from the calendar itself — every module the Calendar
+    // screen shows this person, by rules. HomeBrain's facts once left out a
+    // child's classes that were right there on the Calendar (2026-10-23).
+    const span = scheduleSpanOf(result.intent.parameters.when, body.utterance, { timezone: membership.household.timezone, now: new Date() })!;
+    const read = await readCalendarSpan(supabase, membership, span, { permissions: view.permissions });
+    const firstNames = people.map((person) => ({ id: person.id, firstName: person.displayName.split(/\s+/)[0] ?? person.displayName }));
+    composedAt = Date.now();
+    text = scheduleReply({
+      span,
+      entries: read.entries,
+      failedSources: read.failedSources,
+      timeZone: membership.household.timezone,
+      names: new Map(firstNames.map((person) => [person.id, person.firstName])),
+      forMemberId: memberNamedIn(body.utterance, firstNames),
+    });
+    carry(speaking, people.some((person) => person.memberType === "child") ? ["child"] : []);
+    brain = { source: "deterministic", factsSent: 0 };
+  } else if (
+    result.kind === "reply" &&
+    ((result.intent.action === "ask_status" && result.proposal.kind === "answer" && typeof result.intent.parameters.explain !== "string") ||
+      (result.intent.action === "unknown" && result.proposal.kind === "clarify" && !result.intent.understanding?.failure && typeof result.intent.parameters.clarify !== "string")) &&
+    (!limits || (limits.scopes as readonly string[]).includes("calendar.read")) &&
     readLookAhead(body.utterance)
   ) {
     // "What's the next upcoming event?", "how about the public holiday?":
@@ -1529,8 +1555,13 @@ function calendarSpanOf(when: unknown, timezone: string) {
   return typeof when === "string" && when.trim() ? resolveCalendarSpan(when, { timezone, now: new Date() }) : null;
 }
 
-/** The calendar for a span, as this person may see it: events, birthdays and occasions, and their holiday list. */
-async function readCalendarSpan(supabase: Supabase, membership: HouseholdMembership, span: CalendarSpan) {
+/**
+ * The calendar for a span, as this person may see it: events, birthdays and
+ * occasions, their holiday list, classes and exams. Given `modules`, every
+ * other module too, exactly as the Calendar screen reads them — the sources
+ * this person hides in Filters stay hidden here as well.
+ */
+async function readCalendarSpan(supabase: Supabase, membership: HouseholdMembership, span: { from: string; to: string }, modules?: { permissions: readonly string[] }) {
   const timeZone = membership.household.timezone;
   const preferences = await readCalendarPreferences(supabase, membership.memberId).catch(() => null);
   const locale = preferencesOf(membership.locale, timeZone);
@@ -1542,6 +1573,22 @@ async function readCalendarSpan(supabase: Supabase, membership: HouseholdMembers
     to: span.to,
     holidayRegion: preferences?.holidayRegion ?? null,
     words: { birthday: (name) => `${name}'s birthday`, occasion: (name, label) => (label ? `${name}: ${label}` : `${name}'s special day`) },
+    ...(modules
+      ? {
+          modules: {
+            hidden: preferences?.filters.hiddenSources ?? [],
+            financeView: modules.permissions.includes("finance.view"),
+            adult: membership.memberType === "adult",
+            // English, as every reply is composed; `reply-language.ts` puts it into the person's language.
+            words: {
+              appointment: (type) => `${type.replace(/_/g, " ").replace(/^./, (first) => first.toUpperCase())} appointment`,
+              busy: "Busy",
+              helperAway: (name) => `${name} away`,
+              delivery: (provider) => `Delivery · ${provider}`,
+            },
+          },
+        }
+      : {}),
   }).catch(() => ({ entries: [], failedSources: ["event" as const] }));
 }
 

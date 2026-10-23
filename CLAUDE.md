@@ -410,6 +410,15 @@ WonderHome's AI layer is one pipeline with three named, real surfaces —
     marks the store stale.
   - **Household understanding** counts the household's own records per
     category (`withRecords`), not only what HomeTalk was told.
+  HomeBrain reads everything the Calendar shows (26-020):
+  - **One map.** `CALENDAR_SOURCE_RECORDS` (`context/builders.ts`) names the
+    HomeBrain records behind every calendar source. A new source does not
+    compile until it is mapped and read.
+  - **Every table it reads marks it stale.** A table HomeBrain reads gets the
+    `wh.mark_context_stale` trigger in the same migration that adds the read.
+  - **A day or a week comes from the Calendar.** "What's on tomorrow?" is
+    answered by rules from `calendarRange`, as the screen reads it
+    (`scheduleReply`).
 - **HomeSend** (`packages/core/src/homesend/`, `ai/classify-intake.ts`,
   the composer's paperclip button, and its own screen at `/home-send` —
   a drop zone plus an inbox of what is waiting on a confirm) is the

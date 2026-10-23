@@ -422,6 +422,26 @@ const CONNECTED: HomeTalkCase[] = [
       { utterance: "What is for dinner tonight?", expected: { answer: { includes: ["Pasta arrabbiata"], excludes: ["Internet", "concert"] } } },
     ],
   },
+  // --- A day or a week, from the calendar itself (the owner's report, 2026-10-23: a child's classes left out of "tomorrow") ---
+  {
+    id: "HT-138", surface: "hometalk", household: "A", category: "time_date", actor: "a-kunal",
+    description: "A day is everything the Calendar shows for it: Thursday is Manan's karate; Monday is Asmi's Bharatanatyam class, kept by Kids & School and not an event.",
+    utterance: "What is happening tomorrow?",
+    expected: { answer: { includes: ["Karate", "Thu 24 Sep"], excludes: ["Sports Day", "Bharatanatyam"] } },
+    followUps: [{ utterance: "What's on Monday?", expected: { answer: { includes: ["Bharatanatyam", "4:00 pm – 5:00 pm", "Natya Kala studio"], excludes: ["Karate"] } } }],
+  },
+  {
+    id: "HT-139", surface: "hometalk", household: "A", category: "time_date", actor: "a-kunal",
+    description: "Asked about one child, only that child's day: Asmi's class on Monday, and nothing of Manan's.",
+    utterance: "What is Asmi doing on Monday?",
+    expected: { answer: { includes: ["Bharatanatyam", "Asmi"], excludes: ["Karate", "Manan"] } },
+  },
+  {
+    id: "HT-140", surface: "hometalk", household: "A", category: "cross_domain", actor: "a-kunal",
+    description: "HomeBrain knows a child's classes too: what Asmi has on Monday is her Bharatanatyam class, from Kids & School.",
+    utterance: "What does Asmi have on Monday?",
+    expected: { answer: { includes: ["Bharatanatyam"], excludes: ["Karate"] } },
+  },
   // --- Looking ahead on the calendar (the "your week is clear" defect) ---
   {
     id: "HT-76", surface: "hometalk", household: "A", category: "time_date", actor: "a-kunal",

@@ -1,7 +1,7 @@
 import { groundIntakeDate, type IntakeExtraction } from "../ai/classify-intake";
 import { DEFAULT_DATA_USE } from "../ai/privacy";
 import type { AnswerComposer } from "../ai/model-client";
-import { asksTheCalendar, calendarSpanReply, lookAheadReply, lookAheadSpan, readLookAhead } from "../calendar/answer";
+import { asksTheCalendar, asksWhatIsOn, calendarSpanReply, lookAheadReply, lookAheadSpan, memberNamedIn, readLookAhead, scheduleReply, scheduleSpanOf } from "../calendar/answer";
 import type { PendingClarification } from "../conversation/clarify";
 import { applyCorrection, describeCorrection, readCorrection, type CorrectableAction } from "../conversation/corrections";
 import { converse, pendingFrom, type ConversationTurn, type Understanding } from "../conversation/engine";
@@ -349,6 +349,8 @@ async function composedAnswer(
     }
     // "Why?" is answered from recorded evidence the route reads at the time; not composed here.
     if (typeof intent.parameters.explain === "string") return null;
+    const day = schedule(household, who.id, when, utterance);
+    if (day) return { text: day };
     const ahead = lookAhead(household, who.id, utterance);
     if (ahead) return { text: ahead };
     const answered = await brainAnswer(c, utterance, previousQuestion, models);
@@ -356,6 +358,8 @@ async function composedAnswer(
     return { text: answered.text ?? answered.facts.map((fact) => fact.statement).join("\n"), brain: answered };
   }
   if (intent.action === "unknown" && proposal.kind === "clarify" && !intent.understanding?.failure && typeof intent.parameters.clarify !== "string") {
+    const day = schedule(household, who.id, intent.parameters.when, utterance);
+    if (day) return { text: day };
     const ahead = lookAhead(household, who.id, utterance);
     if (ahead) return { text: ahead };
     const answered = await brainAnswer(c, utterance, previousQuestion, models);
@@ -365,6 +369,21 @@ async function composedAnswer(
     return usable && answered.text ? { text: answered.text, brain: answered } : null;
   }
   return null;
+}
+
+/** "What's happening tomorrow?": a day or a week from the calendar, as the route answers it. */
+function schedule(household: (typeof GOLDEN_HOUSEHOLDS)[HomeTalkCase["household"]], memberId: string, when: unknown, utterance: string): string | null {
+  const span = asksWhatIsOn(utterance) ? scheduleSpanOf(when, utterance, { timezone: household.timezone, now: household.now }) : null;
+  if (!span) return null;
+  const firstNames = household.members.map((m) => ({ id: m.id, firstName: m.displayName.split(/\s+/)[0] ?? m.displayName }));
+  return scheduleReply({
+    span,
+    entries: calendarFor(household, memberId, span),
+    failedSources: [],
+    timeZone: household.timezone,
+    names: new Map(firstNames.map((person) => [person.id, person.firstName])),
+    forMemberId: memberNamedIn(utterance, firstNames),
+  });
 }
 
 /** "What's next on the calendar?" — the route's look-ahead, over the golden calendar. */
