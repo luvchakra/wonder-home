@@ -91,7 +91,8 @@ async function createObligationImpl(
       kind: input.kind,
       payee: input.payee ?? null,
       amount_minor: input.amountMinor ?? null,
-      currency: input.currency ?? null,
+      // A currency goes with an amount, never alone (obligations_amount_has_currency).
+      currency: input.amountMinor == null ? null : input.currency ?? null,
       due_on: input.dueOn ?? null,
       recurrence: input.recurrence ?? null,
       responsible_member_id: input.responsibleMemberId ?? null,
@@ -139,6 +140,8 @@ async function updateObligationImpl(
   if (input.payee !== undefined) patch.payee = input.payee;
   if (input.amountMinor !== undefined) patch.amount_minor = input.amountMinor;
   if (input.currency !== undefined) patch.currency = input.currency;
+  // A bill without an amount has no currency either (obligations_amount_has_currency).
+  if (input.amountMinor === null) patch.currency = null;
   if (input.dueOn !== undefined) patch.due_on = input.dueOn;
   if (input.recurrence !== undefined) patch.recurrence = input.recurrence;
   if (input.responsibleMemberId !== undefined) patch.responsible_member_id = input.responsibleMemberId;
@@ -436,8 +439,10 @@ async function markObligationPaidImpl(
             due_on: nextDueOn,
             status: "expected",
             // Next period's amount is what was given for it, else not in yet — never last month's carried over.
+            // With no amount there is no currency either (obligations_amount_has_currency): carrying the
+            // currency alone made every recurring bill with an amount fail to be marked paid.
             amount_minor: nextAmount?.amountMinor ?? null,
-            currency: nextAmount?.currency ?? (bill.currency as string | null) ?? null,
+            currency: nextAmount?.currency ?? null,
           }
         : { status: "paid" },
     )
