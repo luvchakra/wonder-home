@@ -1,5 +1,7 @@
 import { createTransport } from "nodemailer";
 
+import { log } from "../observability/logger";
+
 /**
  * WonderHome's own outgoing email, behind a provider-neutral seam.
  *
@@ -53,14 +55,28 @@ export function smtpMailer(config: MailConfig): Mailer {
   return {
     async send(mail) {
       try {
-        await transport.sendMail({ from: config.from, to: mail.to, subject: mail.subject, text: mail.text, html: mail.html, ...(mail.headers ? { headers: mail.headers } : {}) });
-        return { ok: true };
+        const info = await transport.sendMail({ from: config.from, to: mail.to, subject: mail.subject, text: mail.text, html: mail.html, ...(mail.headers ? { headers: mail.headers } : {}) });
+        // A server can take the message and still refuse the one recipient;
+        // that is a rejection, never "sent".
+        const refused = Array.isArray(info?.rejected) && info.rejected.length > 0;
+        // What the mail server said, without the address or its prose: the
+        // id it gave the message and its reply code, so "it never arrived"
+        // can be followed into the provider's own logs.
+        log.info(refused ? "email refused" : "email accepted", { messageId: typeof info?.messageId === "string" ? info.messageId : null, code: replyCode(info?.response) });
+        return refused ? { ok: false, reason: "rejected" } : { ok: true };
       } catch (error) {
         const code = (error as { responseCode?: unknown }).responseCode;
+        log.warn("email not sent", { code: typeof code === "number" ? code : null });
         return { ok: false, reason: typeof code === "number" ? "rejected" : "unreachable" };
       }
     },
   };
+}
+
+/** The three-digit reply code at the start of an SMTP response, or null. */
+function replyCode(response: unknown): number | null {
+  const match = typeof response === "string" ? /^(\d{3})\b/.exec(response) : null;
+  return match ? Number(match[1]) : null;
 }
 
 /** The deployment's mailer, or null when no mail is configured. */

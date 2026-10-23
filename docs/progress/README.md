@@ -11,6 +11,7 @@ decision that shapes later work each earns a note, written before moving on.
 
 | Date | Note |
 |---|---|
+| 2026-10-23 | [A request is never taken as an answer; every email leaves a trace](2026-10-23-requests-past-waiting-questions-and-email-trace.md) |
 | 2026-10-22 | [Every notification use case tested; the notification center; household notifications for Admins (27-023 to 27-025)](2026-10-22-notification-center-and-household-controls.md) |
 | 2026-10-22 | [The clock looks where a reminder is due; a chat notice written once (27-021, 27-022)](2026-10-22-reminder-next-check.md) |
 | 2026-10-22 | [Event-day pushes, a push prompt, and health reminders on the household's clock (27-018 to 27-020)](2026-10-22-notifications-push-and-health-timing.md) |
