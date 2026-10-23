@@ -4,6 +4,8 @@ import { createAdminClient } from "@wonderhome/core/db/admin";
 import { whatsappConfigFromEnv } from "@wonderhome/core/notifications/whatsapp";
 import { handleWhatsAppWebhook } from "@wonderhome/core/notifications/whatsapp-webhook";
 
+import { whatsappAsk } from "@/app/_lib/whatsapp-hometalk";
+
 /**
  * WhatsApp's webhook (story 17-006; inbound HomeSend intake, 14-015/14-016). Everything it does is
  * `handleWhatsAppWebhook` (`packages/core/src/notifications/whatsapp-webhook.ts`).
@@ -16,7 +18,7 @@ import { handleWhatsAppWebhook } from "@wonderhome/core/notifications/whatsapp-w
 async function handle(request: Request): Promise<Response> {
   // Processing (fetching a file, understanding it) runs after the response,
   // so WhatsApp gets its 200 quickly; the daily cron drains anything left.
-  return handleWhatsAppWebhook(request, { config: whatsappConfigFromEnv(), admin: createAdminClient, defer: (work) => after(work) });
+  return handleWhatsAppWebhook(request, { config: whatsappConfigFromEnv(), admin: createAdminClient, defer: (work) => after(work), ask: whatsappAsk(createAdminClient()) });
 }
 
 export const GET = handle;

@@ -43,6 +43,7 @@
 | 37 | P0 | 14-037 | Record index Phase 2: facts written when records are written | Not Started | `household_facts` (deny-all RLS) with a generic trigger into `knowledge_outbox`; a worker describes and upserts each change after the response; a turn drains its household's queue before answering. Replaces whole-snapshot rebuilds of `household_context`. Spec §4 |
 | 38 | P1 | 14-038 | Record index Phase 3: the Calendar and HomeTalk read one projection | Not Started | Time questions become one query over facts by time and people; the Calendar screen reads the same facts; `calendar/modules.ts` adapters become registry describers and `CALENDAR_SOURCE_RECORDS` goes away. Spec §5 |
 | 39 | P1 | 14-039 | Record index Phase 4: structure-first retrieval and coverage misses | Not Started | Questions read into time/people/kind filters by rules; list questions get every match, not the top 12; a "nothing on record" answer that the index can find by words is logged as a coverage miss (table name only). Spec §6 |
+| 40 | P1 | 14-040 | WhatsApp asks HomeTalk | Done | A linked adult's one-line question or everyday request on WhatsApp is answered by HomeTalk through the same gateway as Alexa (channel `whatsapp`, own conversation surface, `WHATSAPP_SCOPES`); school, health and money kept off; never a HomeSend item. Voice notes written down by the household's Gemini key when there is no Cloud Speech key. PRs #319, #320 |
 
 **Status flow:** `Not Started` → `In Progress` → `Blocked` → `Done`
 

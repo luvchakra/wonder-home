@@ -11,11 +11,11 @@ in `docs/progress/`; for the running log of what changed when, `tracking/PROGRES
 
 ## The whole picture
 
-**374 of 404 stories done — 92.6%**
+**375 of 405 stories done — 92.6%**
 
 | Status | Stories |
 |---|---:|
-| Done | 374 |
+| Done | 375 |
 | In Progress | 8 |
 | Blocked | 1 |
 | Not Started | 17 |
@@ -39,7 +39,7 @@ in `docs/progress/`; for the running log of what changed when, `tracking/PROGRES
 | 11 Bills, Fees & Finance | `█████████░` | 14 | 15 | 1 not started |
 | 12 Family Time & Social Activities | `██████████` | 9 | 9 | — |
 | 13 Maintenance, Laundry & Pet Care | `█████████░` | 10 | 11 | 1 in progress |
-| 14 AI Orchestration & Learning | `███████░░░` | 31 | 39 | 2 in progress, 3 not started, 3 deferred |
+| 14 AI Orchestration & Learning | `████████░░` | 32 | 40 | 2 in progress, 3 not started, 3 deferred |
 | 15 Privacy, Security & Governance | `██████████` | 9 | 9 | — |
 | 16 Platform Admin & Operations | `██████████` | 8 | 8 | — |
 | 17 External Integrations | `██████████` | 9 | 9 | — |
@@ -380,7 +380,7 @@ in `docs/progress/`; for the running log of what changed when, `tracking/PROGRES
 
 ### 14 — AI Orchestration & Learning
 
-31 of 39 done `███████░░░`
+32 of 40 done `████████░░`
 
 | Story | Priority | Status | Notes |
 |---|---|---|---|
@@ -423,6 +423,7 @@ in `docs/progress/`; for the running log of what changed when, `tracking/PROGRES
 | `14-037` Record index Phase 2: facts written when records are written | P0 | Not Started | `household_facts` (deny-all RLS) with a generic trigger into `knowledge_outbox`; a worker describes and upserts each change after the response; a turn drains its household's queue before answering. Replaces whole-snapshot rebuilds of `household_context`. Spec §4 |
 | `14-038` Record index Phase 3: the Calendar and HomeTalk read one projection | P1 | Not Started | Time questions become one query over facts by time and people; the Calendar screen reads the same facts; `calendar/modules.ts` adapters become registry describers and `CALENDAR_SOURCE_RECORDS` goes away. Spec §5 |
 | `14-039` Record index Phase 4: structure-first retrieval and coverage misses | P1 | Not Started | Questions read into time/people/kind filters by rules; list questions get every match, not the top 12; a "nothing on record" answer that the index can find by words is logged as a coverage miss (table name only). Spec §6 |
+| `14-040` WhatsApp asks HomeTalk | P1 | Done | A linked adult's one-line question or everyday request on WhatsApp is answered by HomeTalk through the same gateway as Alexa (channel `whatsapp`, own conversation surface, `WHATSAPP_SCOPES`); school, health and money kept off; never a HomeSend item. Voice notes written down by the household's Gemini key when there is no Cloud Speech key. PRs #319, #320 |
 
 ### 15 — Privacy, Security & Governance
 

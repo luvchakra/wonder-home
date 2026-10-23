@@ -8,6 +8,7 @@ import { sendWhatsAppText, type WhatsAppConfig } from "../notifications/whatsapp
 import { log } from "../observability/logger";
 import { hitRateLimit } from "../security/rate-limit";
 import { recordWhatsAppEvents, type WhatsAppEvent } from "./events";
+import { isForHomeTalk, isQuestionForWonderHome } from "./hometalk";
 import type { WhatsAppInboundMessage, WhatsAppMessageType } from "./inbound";
 import { completeLink, findActiveIdentity, LINK_REPLIES, readConnectCode, UNKNOWN_SENDER_REPLY } from "./linking";
 import { downloadWhatsAppMedia, type MediaDownload } from "./media";
@@ -43,6 +44,12 @@ export type WhatsAppIntakeDeps = {
   now?: () => Date;
   /** Media download, replaceable in tests. */
   download?: (mediaId: string) => Promise<MediaDownload>;
+  /**
+   * HomeTalk for a linked member's question or request, under their own
+   * session (`apps/web/app/_lib/whatsapp-hometalk.ts`). Returns the reply to
+   * send, or null when it could not answer.
+   */
+  ask?: (input: { householdId: string; memberId: string; text: string; requestId: string }) => Promise<string | null>;
 };
 
 export type ReceiveOutcome = { linked: number; queued: string[]; duplicates: number; unknown: number };
@@ -94,6 +101,7 @@ export async function receiveWhatsAppMessages(admin: SupabaseClient, messages: r
           media_id: message.media?.id ?? null,
           media_mime_type: message.media?.mimeType ?? null,
           media_filename: message.media?.filename ?? null,
+          reply_to_provider_message_id: message.replyTo ?? null,
           received_at: message.receivedAt.toISOString(),
         },
         { onConflict: "provider_message_id", ignoreDuplicates: true },
@@ -137,6 +145,7 @@ type MessageRow = {
   text_content: string | null;
   media_id: string | null;
   media_mime_type: string | null;
+  reply_to_provider_message_id?: string | null;
   media_filename: string | null;
   received_at: string;
   processing_status: "received" | "processing" | "processed" | "failed" | "ignored";
@@ -157,7 +166,7 @@ export async function processWhatsAppMessage(admin: SupabaseClient, messageId: s
   const { data } = await admin
     .from("whatsapp_messages")
     .select(
-      "id, household_id, member_id, provider_message_id, message_type, text_content, media_id, media_mime_type, media_filename, received_at, processing_status, attempts, homesend_item_id, acknowledged_at, identity:whatsapp_identities!whatsapp_messages_identity_id_fkey(phone_number, status)",
+      "id, household_id, member_id, provider_message_id, message_type, text_content, media_id, media_mime_type, media_filename, reply_to_provider_message_id, received_at, processing_status, attempts, homesend_item_id, acknowledged_at, identity:whatsapp_identities!whatsapp_messages_identity_id_fkey(phone_number, status)",
     )
     .eq("id", messageId)
     .maybeSingle();
@@ -198,12 +207,33 @@ export async function processWhatsAppMessage(admin: SupabaseClient, messageId: s
     return "read";
   }
 
-  // A question is asked of WonderHome, not handed to it to keep: it is never
-  // a HomeSend item, and the reply says where it is answered.
-  if (row.message_type === "text" && isQuestionForWonderHome(row.text_content ?? "")) {
-    events.push({ kind: "question_redirected", householdId: row.household_id });
+  // A reply to one of the person's own items that names someone in the
+  // household answers that item's "who is this for?" (the owner's "asmi",
+  // 2026-10-24): the item waits for them with that person picked, and the
+  // reply is never a new item of its own.
+  if (row.message_type === "text" && row.text_content && (row.reply_to_provider_message_id || row.text_content.trim().length <= 60)) {
+    const answered = await answerWhoFor(admin, row, row.text_content, now);
+    if (answered) {
+      events.push({ kind: "clarification_answered", householdId: row.household_id });
+      await settle({ processing_status: "ignored" });
+      await say(`Got it — that's for ${answered}. It's waiting in HomeSend for you to check.`);
+      await recordWhatsAppEvents(admin, events);
+      return "read";
+    }
+  }
+
+  // A question or an everyday request is asked of WonderHome, not handed to
+  // it to keep: HomeTalk answers it (through `deps.ask`, the same gateway as
+  // Alexa), and it is never a HomeSend item. Without HomeTalk wired in, the
+  // reply says where to ask.
+  const text = row.message_type === "text" ? (row.text_content ?? "") : "";
+  if (text && (deps.ask ? isForHomeTalk(text) : isQuestionForWonderHome(text))) {
+    const answer = deps.ask
+      ? await deps.ask({ householdId: row.household_id, memberId: row.member_id, text, requestId: row.provider_message_id }).catch(() => null)
+      : null;
+    events.push({ kind: answer ? "question_answered" : "question_redirected", householdId: row.household_id });
     await settle({ processing_status: "ignored" });
-    await say(QUESTION_REPLY);
+    await say(answer ?? QUESTION_REPLY);
     await recordWhatsAppEvents(admin, events);
     return "read";
   }
@@ -263,7 +293,7 @@ export async function processWhatsAppMessage(admin: SupabaseClient, messageId: s
   await settle({ processing_status: "processed", failure_reason: null, homesend_item_id: outcome.itemId });
   events.push({ kind: "message_processed", householdId: row.household_id, latencyMs: now.getTime() - new Date(row.received_at).getTime() });
   if (!outcome.duplicate) events.push({ kind: "homesend_created", householdId: row.household_id });
-  const ack = acknowledgementFor(outcome);
+  const ack = acknowledgementFor(outcome, { whoFor: await whoForChoices(admin, row.household_id, outcome).catch(() => []) });
   if (ack.asks) events.push({ kind: "clarification_requested", householdId: row.household_id });
   await say(ack.text);
   await recordWhatsAppEvents(admin, events);
@@ -279,23 +309,98 @@ export function whatsappJobHandler(deps: WhatsAppIntakeDeps): JobHandler {
   };
 }
 
-export const QUESTION_REPLY =
-  "I can't answer questions on WhatsApp yet. Ask HomeTalk in the app: https://home.wonderapps.biz/ai — and send me things to keep here, like a school notice, a bill, a photo or a grocery list.";
-
-const QUESTION_OPENING =
-  /^(?:what|what's|whats|when|when's|where|where's|who|who's|whose|which|how|how's|why|is|are|am|was|were|do|does|did|can|could|should|shall|will|would|has|have|any|tell me|show me|give me)\b/i;
+/**
+ * The household member a short reply names, when exactly one fits: their
+ * name, their first name or their nickname, ignoring case. Pure.
+ */
+export function memberNamedInReply(text: string, members: readonly { id: string; displayName: string; nickname?: string | null }[]): { id: string; displayName: string } | null {
+  const said = text.trim().toLowerCase().replace(/^(?:for|it's for|its for|this is for)\s+/, "").replace(/[.!]+$/, "").trim();
+  if (!said || said.length > 60) return null;
+  const fits = members.filter((member) => {
+    const name = member.displayName.trim().toLowerCase();
+    return name === said || name.split(/\s+/)[0] === said || member.nickname?.trim().toLowerCase() === said;
+  });
+  return fits.length === 1 ? { id: fits[0]!.id, displayName: fits[0]!.displayName } : null;
+}
 
 /**
- * Whether a WhatsApp text is a question for WonderHome rather than something
- * to keep: one short line that asks ("what's the plan for the morning",
- * "is there milk?"). A forwarded notice, a list or anything with a link is
- * content, however it begins.
+ * Sets who an item the person sent is for, from their reply to it. Only
+ * their own item, in their household, still waiting for a person; the
+ * choice is written as the name the item is read as being for, so the
+ * review opens with that person picked and nothing is applied.
  */
-export function isQuestionForWonderHome(text: string): boolean {
-  const line = text.trim();
-  if (!line || line.length > 160 || /\n/.test(line) || /https?:\/\/|www\./i.test(line)) return false;
-  return line.endsWith("?") || QUESTION_OPENING.test(line);
+async function answerWhoFor(admin: SupabaseClient, row: MessageRow, text: string, now: Date): Promise<string | null> {
+  // The item it answers: the one the person swiped to reply to, or else the
+  // last thing they sent in the past half hour that is still waiting to
+  // know who it is for (a plain "asmi" straight after the photo).
+  const replying = Boolean(row.reply_to_provider_message_id);
+  let quotedQuery = admin
+    .from("whatsapp_messages")
+    .select("homesend_item_id")
+    .eq("household_id", row.household_id)
+    .eq("member_id", row.member_id);
+  quotedQuery = replying
+    ? quotedQuery.eq("provider_message_id", row.reply_to_provider_message_id!)
+    : quotedQuery.neq("id", row.id).not("homesend_item_id", "is", null).gte("received_at", new Date(now.getTime() - WHO_FOR_WINDOW_MS).toISOString()).order("received_at", { ascending: false }).limit(1);
+  const { data: quotedRows } = await quotedQuery;
+  const quoted = (Array.isArray(quotedRows) ? quotedRows[0] : quotedRows) as { homesend_item_id: string | null } | undefined;
+  const itemId = quoted?.homesend_item_id ?? null;
+  if (!itemId) return null;
+  const [{ data: item }, { data: members }] = await Promise.all([
+    admin.from("home_send_items").select("id, status, classified_kind, extracted, understanding").eq("household_id", row.household_id).eq("id", itemId).maybeSingle(),
+    admin.from("household_members").select("id, display_name, nickname, member_type").eq("household_id", row.household_id).eq("status", "active").limit(50),
+  ]);
+  const waiting = item as { id: string; status: string; classified_kind: string | null; extracted: Record<string, unknown> | null; understanding: Record<string, unknown> | null } | null;
+  if (!waiting || waiting.status !== "classified" || !PERSONAL_KINDS.has(waiting.classified_kind ?? "")) return null;
+  // Without a swipe-reply, only an item that does not know yet.
+  if (!replying && personOf(waiting.extracted)) return null;
+  const eligible = ((members ?? []) as { id: string; display_name: string; nickname: string | null; member_type: string }[])
+    .filter((entry) => (waiting.classified_kind === "school_item" ? entry.member_type === "child" : entry.member_type !== "helper"))
+    .map((entry) => ({ id: entry.id, displayName: entry.display_name, nickname: entry.nickname }));
+  const member = memberNamedInReply(text, eligible);
+  if (!member) return null;
+  const extracted = { ...(waiting.extracted ?? {}), subjectMemberName: member.displayName, people: [member.displayName] };
+  // The review reads who an item is for from its understanding's references
+  // (`homesend/resolve.ts`), the same as a name the document itself said.
+  const understanding = waiting.understanding ? { ...waiting.understanding, references: [{ text: member.displayName, candidates: [], confidence: 0 }] } : null;
+  const { error } = await admin
+    .from("home_send_items")
+    .update({ extracted, ...(understanding ? { understanding } : {}) })
+    .eq("household_id", row.household_id)
+    .eq("id", waiting.id);
+  return error ? null : member.displayName;
 }
+
+/** How long after sending something a plain name still answers who it is for. */
+const WHO_FOR_WINDOW_MS = 30 * 60 * 1000;
+
+/** The kinds that are about one person: a school item is a child's, a health document someone's. */
+const PERSONAL_KINDS = new Set(["school_item", "health_document"]);
+
+function personOf(extracted: Record<string, unknown> | null): string | null {
+  const named = typeof extracted?.subjectMemberName === "string" ? extracted.subjectMemberName : null;
+  const people = Array.isArray(extracted?.people) ? (extracted!.people as unknown[]).filter((entry): entry is string => typeof entry === "string") : [];
+  return named ?? people[0] ?? null;
+}
+
+/**
+ * Who a new item could be for, when it says nobody and more than one person
+ * fits: the household's children for a school item, its people (not
+ * helpers) for a health document. Asked on WhatsApp straight away, so a
+ * plain reply settles it.
+ */
+async function whoForChoices(admin: SupabaseClient, householdId: string, outcome: IngestOutcome): Promise<string[]> {
+  if (outcome.state === "failed" || outcome.duplicate || !PERSONAL_KINDS.has(outcome.item.classifiedKind ?? "")) return [];
+  if (personOf((outcome.item.extracted ?? null) as Record<string, unknown> | null)) return [];
+  const { data } = await admin.from("household_members").select("display_name, member_type").eq("household_id", householdId).eq("status", "active").limit(50);
+  const names = ((data ?? []) as { display_name: string; member_type: string }[])
+    .filter((entry) => (outcome.item.classifiedKind === "school_item" ? entry.member_type === "child" : entry.member_type !== "helper"))
+    .map((entry) => entry.display_name.split(/\s+/)[0]!);
+  return names.length >= 2 && names.length <= 6 ? names : [];
+}
+
+export const QUESTION_REPLY =
+  "I can't answer questions on WhatsApp yet. Ask HomeTalk in the app: https://home.wonderapps.biz/ai — and send me things to keep here, like a school notice, a bill, a photo or a grocery list.";
 
 export const UNSUPPORTED_REPLY = "WonderHome can take text, photos, PDFs, text files and voice notes on WhatsApp for now — that one it can't read yet.";
 
@@ -306,7 +411,7 @@ export const UNSUPPORTED_REPLY = "WonderHome can take text, photos, PDFs, text f
  * because saying back what was understood is the point. When the item names
  * someone WonderHome can't place, the question is asked here too.
  */
-export function acknowledgementFor(outcome: IngestOutcome): { text: string; asks: boolean } {
+export function acknowledgementFor(outcome: IngestOutcome, options: { whoFor?: readonly string[] } = {}): { text: string; asks: boolean } {
   if (outcome.duplicate) return { text: "Got it — that's already in HomeSend.", asks: false };
   if (outcome.state === "failed") {
     const why = outcome.failureReason ? FAILURE_REASON_COPY[outcome.failureReason] : "WonderHome couldn't read it.";
@@ -351,6 +456,11 @@ export function acknowledgementFor(outcome: IngestOutcome): { text: string; asks
     const options = question.candidates.slice(0, 3);
     const who = options.length === 2 ? `${options[0]} or ${options[1]}` : `${options.slice(0, -1).join(", ")} or ${options[options.length - 1]}`;
     return { text: `Got it 👍 ${found} I'm not sure whether it's for ${who} — you can choose in HomeSend.`, asks: true };
+  }
+  const whoFor = options.whoFor ?? [];
+  if (whoFor.length >= 2) {
+    const choices = `${whoFor.slice(0, -1).join(", ")} or ${whoFor[whoFor.length - 1]}`;
+    return { text: `Got it 👍 ${found} Who is it for — ${choices}? Reply with their name.`, asks: true };
   }
   return { text: `Got it 👍 ${found} ${closing}`, asks: false };
 }

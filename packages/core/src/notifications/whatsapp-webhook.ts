@@ -5,7 +5,7 @@ import type { IngestDeps } from "../homesend/ingest";
 import { log } from "../observability/logger";
 import { recordWhatsAppEvents } from "../whatsapp/events";
 import { readInboundMessages } from "../whatsapp/inbound";
-import { receiveWhatsAppMessages, WHATSAPP_PROCESS_KIND, whatsappJobHandler } from "../whatsapp/intake";
+import { receiveWhatsAppMessages, WHATSAPP_PROCESS_KIND, whatsappJobHandler, type WhatsAppIntakeDeps } from "../whatsapp/intake";
 import {
   isOptOut,
   OPT_OUT_REPLY,
@@ -41,9 +41,10 @@ export const MAX_WHATSAPP_WEBHOOK_BYTES = 256 * 1024;
  *     link is told how to connect and nothing it sent is kept. Processing
  *     runs after the response (`defer`), and on the job queue if that is cut
  *     short, so WhatsApp gets its 200 quickly.
- * WhatsApp is still not a second brain: nothing here decides, answers
- * questions or touches a domain record. What arrives becomes a HomeSend item,
- * reviewed and confirmed under the same gates as any other.
+ * WhatsApp is still not a second brain: a question or an everyday request is
+ * answered by HomeTalk through `ask` (the same gateway as Alexa, under the
+ * member's own session); anything else becomes a HomeSend item, reviewed and
+ * confirmed under the same gates as any other.
  */
 export async function handleWhatsAppWebhook(
   request: Request,
@@ -54,6 +55,8 @@ export async function handleWhatsAppWebhook(
     /** Runs work after the response has gone (Next's `after`). Without it, processing waits for the job queue. */
     defer?: (work: () => Promise<unknown>) => void;
     ingest?: IngestDeps;
+    /** HomeTalk for a linked member's question (`WhatsAppIntakeDeps.ask`). */
+    ask?: WhatsAppIntakeDeps["ask"];
   },
 ): Promise<Response> {
   const config = deps.config;
@@ -137,7 +140,7 @@ export async function handleWhatsAppWebhook(
 
   // Intake: everything that isn't a STOP. A failure to record is a 500, so
   // WhatsApp delivers again; recording is idempotent by message id.
-  const intakeDeps = { config: config.adapter, fetch: deps.fetch, ingest: deps.ingest };
+  const intakeDeps = { config: config.adapter, fetch: deps.fetch, ingest: deps.ingest, ask: deps.ask };
   const inbound = readInboundMessages(payload).filter((message) => !(message.type === "text" && isOptOut(message.text ?? "")));
   let queued = 0;
   if (inbound.length > 0) {

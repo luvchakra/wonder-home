@@ -3,7 +3,7 @@ import { describe, expect, it } from "vitest";
 import { INTENT_ACTIONS } from "../conversation/intent";
 import { CAPABILITY_CHANNELS, capabilityForAction, channelSummary, VOICE_CAPABILITIES } from "./capabilities";
 import { GEMINI_LIVE_TOOL_NAMES, inAppVoiceScopes } from "./gemini-live";
-import { channelAllowsAction, channelRefusal, DEFAULT_VOICE_SCOPES, SENSITIVE_VOICE_SCOPES, VOICE_SCOPES, voiceAllowsAction } from "./scopes";
+import { channelAllowsAction, channelRefusal, DEFAULT_VOICE_SCOPES, SENSITIVE_VOICE_SCOPES, VOICE_SCOPES, voiceAllowsAction, WHATSAPP_SCOPES } from "./scopes";
 
 /**
  * The capability matrix (voice phase 5) is policy written down; these tests
@@ -33,7 +33,7 @@ describe("every HomeTalk action is placed in the matrix on purpose", () => {
 describe("what the matrix promises a voice channel, the voice gate allows — and nothing more", () => {
   it("an app-only capability is refused over any voice link, whatever scopes it holds", () => {
     for (const capability of VOICE_CAPABILITIES) {
-      for (const channel of ["gemini_voice", "alexa"] as const) {
+      for (const channel of ["gemini_voice", "alexa", "whatsapp"] as const) {
         if (capability.policy[channel] !== "app_only") continue;
         for (const action of capability.actions) expect(voiceAllowsAction(action, ALL_SCOPES), `${capability.id}/${channel}/${action}`).toBe(false);
         expect(capability.note, `${capability.id} says where it can be done`).toMatch(/app/);
@@ -56,7 +56,7 @@ describe("what the matrix promises a voice channel, the voice gate allows — an
   it("paying and ordering always wait for approval in the app, and are never done by voice", () => {
     for (const id of ["payments", "orders"]) {
       const capability = VOICE_CAPABILITIES.find((entry) => entry.id === id)!;
-      expect(capability.policy).toEqual({ app: "approval", gemini_voice: "app_only", alexa: "app_only" });
+      expect(capability.policy).toEqual({ app: "approval", gemini_voice: "app_only", alexa: "app_only", whatsapp: "app_only" });
     }
   });
 });
@@ -71,6 +71,30 @@ describe("Alexa: everyday things by default, sensitive things only when the memb
         expect(DEFAULT_VOICE_SCOPES, capability.id).not.toContain(capability.scope);
       }
     }
+  });
+});
+
+describe("WhatsApp: everyday things, while school, health, money and the home stay in the app", () => {
+  const whatsapp = { scopes: WHATSAPP_SCOPES, whatsapp: true };
+
+  it("every 'yes' is allowed with WhatsApp's scopes, every 'kept_off' and 'app_only' is refused", () => {
+    for (const capability of VOICE_CAPABILITIES) {
+      const policy = capability.policy.whatsapp;
+      for (const action of capability.actions) {
+        if (policy === "yes") expect(channelAllowsAction(action, whatsapp), `${capability.id}/${action}`).toBe(true);
+        if (policy === "kept_off" || policy === "app_only") expect(channelAllowsAction(action, whatsapp), `${capability.id}/${action}`).toBe(false);
+      }
+      if (policy === "yes" && capability.scope) expect(WHATSAPP_SCOPES, capability.id).toContain(capability.scope);
+      if (policy === "kept_off" && capability.scope) expect(WHATSAPP_SCOPES, capability.id).not.toContain(capability.scope);
+    }
+  });
+
+  it("a child's school, health and money are never reachable", () => {
+    for (const scope of ["school.read", "health.read", "health.write", "bills.read"] as const) expect(WHATSAPP_SCOPES).not.toContain(scope);
+  });
+
+  it("its refusal says WhatsApp and where to do it", () => {
+    expect(channelRefusal(whatsapp)).toMatch(/WhatsApp.*WonderHome app/);
   });
 });
 

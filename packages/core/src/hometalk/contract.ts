@@ -14,7 +14,7 @@ import { parseReply } from "../conversation/reply-format";
 
 import { appPath } from "../navigation/app-path";
 
-export const HOMETALK_CHANNELS = ["web", "mobile", "gemini_voice", "alexa"] as const;
+export const HOMETALK_CHANNELS = ["web", "mobile", "gemini_voice", "alexa", "whatsapp"] as const;
 export type HomeTalkChannel = (typeof HOMETALK_CHANNELS)[number];
 
 export type HomeTalkRequest = {
