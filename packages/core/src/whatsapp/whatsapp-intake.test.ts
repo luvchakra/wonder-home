@@ -73,6 +73,12 @@ async function post(body: string, deps: Parameters<typeof handleWhatsAppWebhook>
   );
 }
 
+const FAMILY = () => [
+  { id: "kid-asmi", household_id: HOUSEHOLD, display_name: "Asmi Chakraborty", nickname: null, member_type: "child", status: "active" },
+  { id: "kid-manan", household_id: HOUSEHOLD, display_name: "Manan", nickname: null, member_type: "child", status: "active" },
+  { id: "adult-kunal", household_id: HOUSEHOLD, display_name: "Kunal Chakraborty", nickname: null, member_type: "adult", status: "active" },
+];
+
 describe("reading what was sent", () => {
   it("keeps the message id, sender, time, kind, words and media id — nothing else", () => {
     const messages = readInboundMessages(
@@ -314,11 +320,8 @@ describe("processing into HomeSend", () => {
     row.text_content = "asmi";
     row.reply_to_provider_message_id = "wamid.photo";
     h.tables.whatsapp_messages!.push({ id: "m-photo", household_id: HOUSEHOLD, member_id: MEMBER, provider_message_id: "wamid.photo", homesend_item_id: "item-exam", processing_status: "processed" });
-    h.tables.home_send_items = [{ id: "item-exam", household_id: HOUSEHOLD, status: "classified", extracted: { title: "SOF IGKO Examination", people: [] }, understanding: { references: [] } }];
-    h.tables.household_members = [
-      { id: "kid-asmi", household_id: HOUSEHOLD, display_name: "Asmi Chakraborty", nickname: null, status: "active" },
-      { id: "kid-manan", household_id: HOUSEHOLD, display_name: "Manan", nickname: null, status: "active" },
-    ];
+    h.tables.home_send_items = [{ id: "item-exam", household_id: HOUSEHOLD, status: "classified", classified_kind: "school_item", extracted: { title: "SOF IGKO Examination", people: [] }, understanding: { references: [] } }];
+    h.tables.household_members = FAMILY();
     const out = replies();
     expect(await processWhatsAppMessage(h.client, id, { config: CONFIG, fetch: out.fetchImpl, ingest: { classify }, ask: async () => "not asked" })).toBe("read");
     const item = h.tables.home_send_items![0]!;
@@ -326,6 +329,38 @@ describe("processing into HomeSend", () => {
     expect(item.understanding).toMatchObject({ references: [{ text: "Asmi Chakraborty" }] });
     expect(h.tables.home_send_items).toHaveLength(1);
     expect(out.sent[0]!.text).toBe("Got it — that's for Asmi Chakraborty. It's waiting in HomeSend for you to check.");
+  });
+
+  it("a plain name straight after an item that names nobody answers it too, and only that one", async () => {
+    const { h, id } = await received("text");
+    const row = h.tables.whatsapp_messages![0]!;
+    row.text_content = "Asmi";
+    const sentAt = new Date(Date.now() - 5 * 60 * 1000).toISOString();
+    h.tables.whatsapp_messages!.push({ id: "m-photo", household_id: HOUSEHOLD, member_id: MEMBER, provider_message_id: "wamid.photo", homesend_item_id: "item-exam", received_at: sentAt, processing_status: "processed" });
+    h.tables.home_send_items = [{ id: "item-exam", household_id: HOUSEHOLD, status: "classified", classified_kind: "school_item", extracted: { title: "Exam", people: [] }, understanding: { references: [] } }];
+    h.tables.household_members = FAMILY();
+    const out = replies();
+    await processWhatsAppMessage(h.client, id, { config: CONFIG, fetch: out.fetchImpl, ingest: { classify } });
+    expect(h.tables.home_send_items![0]!.extracted).toMatchObject({ subjectMemberName: "Asmi Chakraborty" });
+    expect(out.sent[0]!.text).toMatch(/that's for Asmi Chakraborty/);
+  });
+
+  it("a plain name never changes an item that already knows who it is for, and never names an adult for a school item", async () => {
+    const { h, id } = await received("text");
+    h.tables.whatsapp_messages![0]!.text_content = "Kunal";
+    h.tables.whatsapp_messages!.push({ id: "m-photo", household_id: HOUSEHOLD, member_id: MEMBER, provider_message_id: "wamid.photo", homesend_item_id: "item-exam", received_at: new Date().toISOString(), processing_status: "processed" });
+    h.tables.home_send_items = [{ id: "item-exam", household_id: HOUSEHOLD, status: "classified", classified_kind: "school_item", extracted: { title: "Exam", people: [] }, understanding: { references: [] } }];
+    h.tables.household_members = FAMILY();
+    await processWhatsAppMessage(h.client, id, { config: CONFIG, fetch: replies().fetchImpl, ingest: { classify } });
+    expect(h.tables.home_send_items![0]!.extracted).not.toHaveProperty("subjectMemberName");
+  });
+
+  it("asks who a school item is for right away, when it names nobody and there is more than one child", async () => {
+    const { h, id } = await received("text");
+    h.tables.household_members = FAMILY();
+    const out = replies();
+    await processWhatsAppMessage(h.client, id, { config: CONFIG, fetch: out.fetchImpl, ingest: { classify } });
+    expect(out.sent[0]!.text).toBe("Got it 👍 I found a school item: *Sports Day*. Who is it for — Asmi or Manan? Reply with their name.");
   });
 
   it("treats an instruction inside a forwarded message as content, never as a command", async () => {

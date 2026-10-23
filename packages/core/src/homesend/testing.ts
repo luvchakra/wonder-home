@@ -82,6 +82,18 @@ export function fakeSupabase(seed: Record<string, Row[]> = {}): FakeSupabase {
         filters.push((row) => row[column] === value);
         return builder;
       },
+      neq(column: string, value: unknown) {
+        filters.push((row) => row[column] !== value);
+        return builder;
+      },
+      not(column: string, operator: string, value: unknown) {
+        if (operator === "is" && value === null) filters.push((row) => row[column] !== null && row[column] !== undefined);
+        return builder;
+      },
+      gte(column: string, value: unknown) {
+        filters.push((row) => row[column] !== null && row[column] !== undefined && String(row[column]) >= String(value));
+        return builder;
+      },
       in(column: string, values: unknown[]) {
         filters.push((row) => values.includes(row[column]));
         return builder;

@@ -677,7 +677,7 @@ function hhmm(value: Clock, meridiem: "am" | "pm" | null = value.meridiem): stri
  * whose end is not after its start keeps only the start.
  */
 export function timeFromDateText(dateText: string): { start: string; end: string | null } | null {
-  const text = dateText.replace(/\b(?:12\s*)?noon\b|\bmidday\b/gi, "12:00");
+  const text = dateText.replace(/\b(?:12\s*)?noon\b|\bmidday\b/gi, "12:00 pm");
   const range = CLOCK_RANGE.exec(text);
   if (range) {
     const first = clock(range[1], range[2], range[3], range[4]);
@@ -703,6 +703,54 @@ const EXPLICIT_DATE = new RegExp(`\\b\\d{1,2}(?:st|nd|rd|th)?\\s+(?:of\\s+)?${MO
 const SAID_DAY = new RegExp(`\\b${TEMPORAL_PHRASE}\\b`, "i");
 
 /**
+ * A numeric date as a household writes it: "22/09", "31/10/2026",
+ * "22-09-2026", "22.09.26". Day first, as in India and most of the world;
+ * month first only for a household on an American clock, and only when the
+ * numbers alone cannot say (a 13 or more can only be a day). With a dash or
+ * a dot the year must be written, so "3-4 pm" or "2.30" is never a date.
+ */
+const NUMERIC_DATE = /(?<![\d:.])(\d{1,2})(?:(\/)(\d{1,2})(?:\/(\d{4}|\d{2}))?|([.-])(\d{1,2})\5(\d{4}|\d{2}))(?![\d:])(?!\s*(?:a\.?\s?m|p\.?\s?m|hrs?\b|h\b))/i;
+
+type WrittenDate = { day: number; month: number; year: number | null };
+
+function explicitDate(phrase: string, options: { timezone: string; now: Date }): WrittenDate | null {
+  const named = EXPLICIT_DATE.exec(phrase)?.[0];
+  if (named) {
+    const month = MONTH_INDEX.findIndex((prefix) => new RegExp(`\\b${prefix}`, "i").test(named.replace(/\b\d{1,2}(?:st|nd|rd|th)?\b/gi, " ")));
+    const day = Number(/\b(\d{1,2})(?:st|nd|rd|th)?\b(?!\d)/i.exec(named)?.[1]);
+    const year = /\b(\d{4})\b/.exec(named)?.[1];
+    if (month >= 0 && day >= 1 && day <= 31) return { day, month: month + 1, year: year ? Number(year) : null };
+  }
+  const numeric = NUMERIC_DATE.exec(phrase);
+  if (!numeric) return null;
+  const first = Number(numeric[1]);
+  const second = Number(numeric[3] ?? numeric[6]);
+  const yearText = numeric[4] ?? numeric[7] ?? null;
+  const year = yearText ? (yearText.length === 2 ? 2000 + Number(yearText) : Number(yearText)) : null;
+  const monthFirst = options.timezone.startsWith("America/") && first <= 12 && second <= 12 ? true : first <= 12 && second > 12;
+  const [day, month] = monthFirst ? [second, first] : [first, second];
+  if (month < 1 || month > 12 || day < 1 || day > 31) return null;
+  return { day, month, year };
+}
+
+const MONTH_INDEX = ["jan", "feb", "mar", "apr", "may", "jun", "jul", "aug", "sep", "oct", "nov", "dec"];
+
+function isoDate(year: number, month: number, day: number): string | null {
+  const date = new Date(Date.UTC(year, month - 1, day));
+  if (date.getUTCFullYear() !== year || date.getUTCMonth() !== month - 1 || date.getUTCDate() !== day) return null;
+  return date.toISOString().slice(0, 10);
+}
+
+function localToday(options: { timezone: string; now: Date }): string {
+  return new Intl.DateTimeFormat("en-CA", { year: "numeric", month: "2-digit", day: "2-digit", timeZone: options.timezone }).format(options.now);
+}
+
+function daysBetween(from: string, to: string): number {
+  return Math.round((Date.parse(`${to}T00:00:00Z`) - Date.parse(`${from}T00:00:00Z`)) / 86_400_000);
+}
+
+
+/**
  * The one day a date phrase from source content names — "this Saturday,
  * 26 September at 9:00 am" as a school writes it, not only the tidy
  * "26 September". An explicit date is the most specific thing said; a
@@ -721,32 +769,41 @@ export function dayFromDateText(dateText: string, options: { timezone: string; n
     }
   };
   const phrase = dateText.replace(/^(?:due|until|till|before|by|on)\s+/i, "").trim();
-  const whole = resolve(phrase);
-  if (whole) return whole;
-  const explicit = resolve(EXPLICIT_DATE.exec(phrase)?.[0]);
+  const written = explicitDate(phrase, options);
   const said = SAID_DAY.exec(phrase)?.[0] ?? null;
+  if (!written) {
+    const whole = resolve(phrase);
+    if (whole) return whole;
+  }
   const relative = resolve(said);
-  if (explicit && said) {
+  if (written) {
     // "Monday 5 October" names a weekday the date should fall on, not the
     // coming Monday; "tomorrow, 26 September" names the day itself.
-    const weekday = WEEKDAY_NAMES.findIndex((name) => new RegExp(`\\b${name.slice(0, 3)}`, "i").test(said));
-    const named = weekday >= 0 && !/\b(?:today|tonight|tomorrow|yesterday)\b/i.test(said);
-    const agrees = named ? new Date(`${explicit}T12:00:00Z`).getUTCDay() === weekday : relative === null || relative === explicit;
-    if (agrees) return explicit;
-    // A date written without its year is read as the next one, but its
-    // weekday can say it was the last one: an older notice ("Tuesday 22nd
-    // September", sent in October) names this year's 22 September, a
-    // Tuesday, not next year's, a Wednesday. Only when this year's date has
-    // already gone by (so it was read as next year's), only when that weekday
-    // then agrees, and never when the year was written.
-    const thisYear = Number(new Intl.DateTimeFormat("en-CA", { year: "numeric", timeZone: options.timezone }).format(options.now));
-    if (named && Number(explicit.slice(0, 4)) > thisYear && !/\b\d{4}\b/.test(EXPLICIT_DATE.exec(phrase)?.[0] ?? "")) {
-      const earlier = `${Number(explicit.slice(0, 4)) - 1}${explicit.slice(4)}`;
-      if (new Date(`${earlier}T12:00:00Z`).getUTCDay() === weekday) return earlier;
+    const weekday = said ? WEEKDAY_NAMES.findIndex((name) => new RegExp(`\\b${name.slice(0, 3)}`, "i").test(said)) : -1;
+    const named = weekday >= 0 && !/\b(?:today|tonight|tomorrow|yesterday)\b/i.test(said ?? "");
+    const fits = (iso: string) => !named || new Date(`${iso}T12:00:00Z`).getUTCDay() === weekday;
+    if (written.year !== null) {
+      const iso = isoDate(written.year, written.month, written.day);
+      if (!iso || !fits(iso)) return null;
+      return said && !named && relative !== null && relative !== iso ? null : iso;
     }
-    return null;
+    // No year written: the nearest such day to when it was sent, last
+    // year's, this year's or next — an older notice ("22nd September",
+    // forwarded in October) means the one just gone, a January date sent in
+    // October the one coming. A weekday it names must then fit that day:
+    // "Tuesday 22nd September" sent in October is 2026's (a Tuesday), and
+    // "Friday, 26 September" sent on the 23rd still decides nothing (the
+    // 26th is a Saturday), never last year's Friday.
+    const today = localToday(options);
+    const thisYear = Number(today.slice(0, 4));
+    const nearest = [thisYear - 1, thisYear, thisYear + 1]
+      .map((year) => isoDate(year, written.month, written.day))
+      .filter((iso): iso is string => iso !== null)
+      .sort((a, b) => Math.abs(daysBetween(today, a)) - Math.abs(daysBetween(today, b)) || b.localeCompare(a))[0];
+    const chosen = nearest && fits(nearest) ? nearest : null;
+    if (!chosen) return null;
+    return said && !named && relative !== null && relative !== chosen ? null : chosen;
   }
-  if (explicit) return explicit;
   // A weekday or "tomorrow" alone decides the day only when it is the whole
   // phrase, give or take a time of day ("Saturday at 9am") — never the
   // "Monday" inside "the second Monday of next month".

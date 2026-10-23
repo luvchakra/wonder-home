@@ -1008,6 +1008,20 @@ const HOMESEND: HomeSendCase[] = [
     reading: { kind: "school_item", title: "SOF IGKO Examination", schoolKind: "exam", dueDate: null, dateText: "Tuesday 22nd September, 2:30 p.m. – 3:30 p.m." },
     expected: { interpretation: "school_item", date: "2026-09-22", time: "14:30–15:30" },
   },
+  {
+    id: "HS-18", surface: "homesend", household: "A", category: "time_date", actor: "a-kunal",
+    description: "A date written the Indian way, day first with slashes, is that day — not the weekday beside it read as the coming Saturday.",
+    source: { channel: "pasted_text", capturedAt: "2026-10-23T09:00:00Z", text: "Inter-house quiz: Sat 31/10 at 9 am in the main hall." },
+    reading: { kind: "school_item", title: "Inter-house quiz", schoolKind: "event", dueDate: null, dateText: "Sat 31/10 at 9 am" },
+    expected: { interpretation: "school_item", date: "2026-10-31", time: "09:00" },
+  },
+  {
+    id: "HS-19", surface: "homesend", household: "A", category: "time_date", actor: "a-kunal",
+    description: "A day and month with no year and no weekday is the nearest one: a notice forwarded a month later means the day just gone, not next year's.",
+    source: { channel: "pasted_text", capturedAt: "2026-10-23T09:00:00Z", text: "PTM on 22nd September from 10 am to 12 noon." },
+    reading: { kind: "school_item", title: "PTM", schoolKind: "event", dueDate: null, dateText: "22nd September from 10 am to 12 noon" },
+    expected: { interpretation: "school_item", date: "2026-09-22", time: "10:00–12:00" },
+  },
 ];
 
 // --- HomeBrain (§7) ----------------------------------------------------------------

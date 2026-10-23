@@ -32,6 +32,18 @@ instead of pointing to the app (2026-10-24, "yes").
 - **A swipe-reply answers its item.** The owner replied "asmi" to an exam photo and got "couldn't read anything". WhatsApp's `context.id` is now kept (`reply_to_provider_message_id`, migration `20261024110000_whatsapp_reply_to`, applied live). A reply that names one household member sets who the quoted item is for: its `subjectMemberName` and its understanding's reference. The review opens with them picked, nothing is applied, and no new item is made.
 - **An older notice's year comes from its weekday.** "Tuesday 22nd September", sent in October, was read as 22 September 2027, a Wednesday. The weekday then disagreed, so no day was decided, and the 2:30–3:30 p.m. time was dropped with it. `dayFromDateText` now tries the year before when this year's date has passed and only that weekday fits; a written year is never second-guessed. Golden case HS-17.
 
+## Every way a date and "who is it for" can go wrong (the owner: "fix for all similar usecases")
+A battery of 35 real date phrases and 13 time phrases was run through the reader. Fixed:
+- **A day and month with no year** is the nearest such day to when the content was sent. Before, it was always the next one, so a notice forwarded in October about 22 September became 2027.
+- **A weekday is checked against that nearest day.** "Tuesday 22nd September" is 2026's. "Friday, 26 September", sent on the 23rd, still decides nothing (the 26th is a Saturday) rather than reaching back to last year's Friday.
+- **Numeric dates** are read: "22/09", "31/10/2026", "22-09-2026", "22.09.26". They are day first, and month first only on an American clock when the numbers can't tell. With a dash or a dot the year must be written, so "3-4 pm" and "2.30" are never dates. "Sat 31/10 at 9" was tomorrow; it is now 31 October.
+- **"12 noon" ends a range** ("10 am to 12 noon" kept no end time).
+- **Who it is for, on WhatsApp:**
+  - The acknowledgement asks straight away when a school item or health document names nobody and more than one person fits: "Who is it for — Asmi or Manan? Reply with their name."
+  - A plain name sent within 30 minutes answers the person's last such item, as a swipe-reply does.
+  - A plain name never overrides an item that already knows, and a school item only takes a child.
+- Golden cases HS-17 to HS-19.
+
 ## Verified
 - core and web `tsc` clean.
 - 843 tests across whatsapp, voicelink, hometalk and conversation pass, including:
