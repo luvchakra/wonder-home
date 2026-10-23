@@ -1,5 +1,6 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 
+import { firstName } from "../email/layout";
 import { formatterFor } from "../i18n/format";
 import { parseHouseholdSettings, parseMemberChoices, resolvePreferences } from "../i18n/preferences";
 import { translatorFor } from "../i18n/translate";
@@ -63,7 +64,7 @@ export async function deliverNotification(
         .eq("member_id", input.recipientMemberId)
         .neq("channel", "in_app"),
       admin.from("households").select("timezone, region, currency, measurement_system, default_language").eq("id", input.householdId).maybeSingle(),
-      admin.from("household_members").select("language, date_format, time_format, measurement_system, member_type, date_of_birth").eq("id", input.recipientMemberId).maybeSingle(),
+      admin.from("household_members").select("display_name, language, date_format, time_format, measurement_system, member_type, date_of_birth").eq("id", input.recipientMemberId).maybeSingle(),
       adapters.push?.live
         ? admin.from("push_subscriptions").select("id, endpoint, p256dh, auth").eq("member_id", input.recipientMemberId)
         : Promise.resolve({ data: [] }),
@@ -223,11 +224,23 @@ export async function translatorForRecipient(household: Record<string, unknown> 
 }
 
 /** The email's few words in the recipient's language; English whenever that cannot be done. */
-export async function emailWordsFor(household: Record<string, unknown> | null, member: Record<string, unknown> | null): Promise<{ open: string; why: string; off: string } | undefined> {
+export async function emailWordsFor(
+  household: Record<string, unknown> | null,
+  member: Record<string, unknown> | null,
+): Promise<{ open: string; why: string; off: string; hello?: string; settings: string; privacy: string; lang: string } | undefined> {
   const found = await translatorForRecipient(household, member);
   if (!found) return undefined;
-  const { t } = found;
-  return { open: t("notificationEmail.open"), why: t("notificationEmail.why"), off: t("notificationEmail.off") };
+  const { t, preferences } = found;
+  const name = firstName(member?.display_name);
+  return {
+    open: t("notificationEmail.open"),
+    why: t("notificationEmail.why"),
+    off: t("notificationEmail.off"),
+    ...(name ? { hello: t("notificationEmail.hello", { name }) } : {}),
+    settings: t("notificationEmail.settings"),
+    privacy: t("notificationEmail.privacy"),
+    lang: preferences.language,
+  };
 }
 
 /** A device that took the push is marked; one its push service says is gone is forgotten. */

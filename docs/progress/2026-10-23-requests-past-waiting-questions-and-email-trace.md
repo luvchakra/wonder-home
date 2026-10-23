@@ -43,3 +43,18 @@
 - **Where the test went.** The owner's WonderHome account signs in with Google as a different Gmail address from the one first checked. "Send a test" goes to the confirmed email of the account that pressed it.
 - **Compared with WonderJobs.** `server/notify.ts` uses the same library, host, port and From pattern, and closes the connection after every message. `email/mailer.ts` now does the same (`transport.close()` in `finally`), so a serverless function never leaves an idle session open.
 - **DKIM.** No DKIM key was found under any common selector. Turning it on in GoDaddy remains the step that makes Gmail trust these messages most.
+
+## Follow-up: WonderHome emails went to spam, WonderJobs' did not
+- **What the owner saw:** every WonderHome email was in the spam folder of the account's own address. WonderJobs mail from the same connect@wonderapps.biz mailbox and the same GoDaddy setup reaches the inbox.
+- **The difference:** with the same sender and the same authentication, the difference was the message itself.
+  - WonderJobs (`server/email/layout.ts`) sends a whole HTML document (language, charset, title), a hidden preview line, a greeting by name, a logo, and a footer naming the sender, why the person got it, and links to notification settings and privacy.
+  - WonderHome sent a bare card with no `<head>`, no charset and no footer naming anyone.
+- **The fix:**
+  - New `email/layout.ts` (`renderEmailLayout`, `emailButton`, `firstName`), modelled on WonderJobs'.
+  - Both the notification email and the invitation email now go through it.
+  - The notification email greets the reader by first name. It links to Notification settings and Privacy, plus the one-tap email off where there is one, in the reader's language. Three new phrases exist in all eight catalogs: `notificationEmail.hello`, `.settings`, `.privacy`.
+  - "Send a test" carries the same words, greeting and footer as a real reminder.
+- **Verified:**
+  - `email/layout.test.ts`: the document head, the preview line, the sender and the footer, the greeting, escaping, the invitation, and first names.
+  - The email, notifications, identity, i18n and app action suites pass (497 tests). Typecheck and lint pass.
+- **To confirm after deploy:** the owner presses Send a test and checks whether it lands in the inbox. DKIM for wonderapps.biz remains the further step.

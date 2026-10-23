@@ -1,3 +1,4 @@
+import { emailButton, renderEmailLayout } from "../email/layout";
 import { escapeHtml, singleRecipient, type Mailer, type OutgoingMail } from "../email/mailer";
 import type { ChannelAdapter, ChannelNotification, ChannelSendResult } from "./channels";
 
@@ -15,6 +16,8 @@ import type { ChannelAdapter, ChannelNotification, ChannelSendResult } from "./c
 const DEFAULT_WORDS: NonNullable<ChannelNotification["emailWords"]> = {
   open: "Open in WonderHome",
   why: "You are getting this because email is on in your WonderHome notification settings. You can change that any time under Settings → Notifications.",
+  settings: "Notification settings",
+  privacy: "Privacy",
 };
 
 /** Where WonderHome lives, for the link in the message. */
@@ -24,26 +27,41 @@ export function siteOrigin(env: Record<string, string | undefined> = process.env
   return env.VERCEL_ENV !== "production" && env.VERCEL_URL ? `https://${env.VERCEL_URL}` : "https://home.wonderapps.biz";
 }
 
+/**
+ * The notification in the shared email frame (`email/layout.ts`): a greeting
+ * by name when one is known, the title, the body, one button, and a footer
+ * that names WonderHome, says why it came and links to the settings that
+ * control it — the shape of WonderJobs' emails, which the same mailbox gets
+ * into the inbox.
+ */
 export function notificationMail(notification: ChannelNotification, to: string, origin: string): OutgoingMail {
-  const words = notification.emailWords ?? DEFAULT_WORDS;
+  const words = { ...DEFAULT_WORDS, ...notification.emailWords };
   const path = notification.url && notification.url.startsWith("/") ? notification.url : "/notifications";
   const link = `${origin}${path}`;
-  const off = notification.emailOff && words.off ? { url: notification.emailOff, label: words.off } : null;
-  const text = [notification.title, "", notification.body, "", `${words.open}: ${link}`, "", words.why, ...(off ? ["", `${off.label}: ${off.url}`] : [])].join("\n");
-  const html = `<!doctype html>
-<html><body style="margin:0;background:#FDFAF3;font-family:Sora,Segoe UI,Arial,sans-serif;color:#111A2F">
-<table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="background:#FDFAF3;padding:24px 12px"><tr><td align="center">
-<table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="max-width:520px;background:#FFFFFF;border-radius:20px;padding:28px">
-<tr><td style="font-size:14px;font-weight:600;color:#515E72;padding-bottom:12px">WonderHome</td></tr>
-<tr><td style="font-size:18px;font-weight:600;line-height:1.4;padding-bottom:8px">${escapeHtml(notification.title)}</td></tr>
-<tr><td style="font-size:16px;line-height:1.5;padding-bottom:20px">${escapeHtml(notification.body)}</td></tr>
-<tr><td style="padding-bottom:20px"><a href="${escapeHtml(link)}" style="display:inline-block;background:#6162F6;color:#FFFFFF;text-decoration:none;font-weight:600;border-radius:12px;padding:12px 20px">${escapeHtml(words.open)}</a></td></tr>
-<tr><td style="font-size:12px;line-height:1.5;color:#76818F">${escapeHtml(words.why)}${off ? ` <a href="${escapeHtml(off.url)}" style="color:#76818F">${escapeHtml(off.label)}</a>` : ""}</td></tr>
-</table>
-</td></tr></table>
-</body></html>`;
+  const off = notification.emailOff && words.off ? { href: notification.emailOff, label: words.off } : null;
+  const hello = words.hello?.trim() || null;
+  const bodyHtml = [
+    hello ? `<p style="margin:0 0 10px">${escapeHtml(hello)}</p>` : "",
+    `<div style="font-size:18px;font-weight:700;line-height:1.4;margin:0 0 8px">${escapeHtml(notification.title)}</div>`,
+    `<p style="margin:0 0 20px;white-space:pre-wrap">${escapeHtml(notification.body)}</p>`,
+    `<p style="margin:0">${emailButton(words.open, link)}</p>`,
+  ].join("");
+  const bodyText = [...(hello ? [hello] : []), notification.title, notification.body, `${words.open}: ${link}`].join("\n\n");
+  const { html, text } = renderEmailLayout({
+    origin,
+    lang: words.lang,
+    preheader: notification.body.slice(0, 120),
+    bodyHtml,
+    bodyText,
+    reason: words.why,
+    links: [
+      { label: words.settings ?? DEFAULT_WORDS.settings!, href: "/settings/notifications" },
+      { label: words.privacy ?? DEFAULT_WORDS.privacy!, href: "/legal" },
+      ...(off ? [off] : []),
+    ],
+  });
   // A mail app can offer its own unsubscribe from these two headers (RFC 8058).
-  const headers = off ? { "List-Unsubscribe": `<${off.url}>`, "List-Unsubscribe-Post": "List-Unsubscribe=One-Click" } : undefined;
+  const headers = off ? { "List-Unsubscribe": `<${off.href}>`, "List-Unsubscribe-Post": "List-Unsubscribe=One-Click" } : undefined;
   return { to, subject: notification.title, text, html, ...(headers ? { headers } : {}) };
 }
 

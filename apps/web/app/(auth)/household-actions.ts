@@ -170,7 +170,8 @@ export async function emailMemberInviteAction(householdId: string, memberId: str
     const incoming = await headers();
     const host = incoming.get("host") ?? "localhost:3000";
     const origin = incoming.get("origin") ?? `${host.startsWith("localhost") || host.startsWith("127.0.0.1") ? "http" : "https"}://${host}`;
-    const t = await translatorFor(preferencesOf(created.membership.locale, created.membership.household.timezone).language);
+    const language = preferencesOf(created.membership.locale, created.membership.household.timezone).language;
+    const t = await translatorFor(language);
     const household = created.membership.household.name;
     const mail = inviteEmail({
       to,
@@ -181,6 +182,8 @@ export async function emailMemberInviteAction(householdId: string, memberId: str
       action: t("memberInvite.emailAction", { household }),
       expiry: t("memberInvite.emailExpiry"),
       footer: t("memberInvite.emailFooter"),
+      privacy: t("notificationEmail.privacy"),
+      lang: language,
     });
     const outcome = await mailer.send(mail);
     if (!outcome.ok) log.warn("member invitation email failed", { reason: outcome.reason });

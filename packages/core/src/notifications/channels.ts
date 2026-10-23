@@ -51,7 +51,8 @@ export type ChannelNotification = {
   /** One thread, one notification on the device: a newer word replaces the older (push). */
   tag?: string;
   /** The email's own few words, in the recipient's language (story 27-001). */
-  emailWords?: { open: string; why: string; off?: string };
+  /** An email's own words in the recipient's language: the greeting by name, the button, why it came, and the footer links. */
+  emailWords?: { open: string; why: string; off?: string; hello?: string; settings?: string; privacy?: string; lang?: string };
   /** The signed link that turns this person's email off with one tap (story 27-009). */
   emailOff?: string;
 };

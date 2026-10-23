@@ -928,6 +928,10 @@ reminders about real records, never lines of text fired and forgotten.
   12 a day, a reminder timed for the person up to 6, low never) and holds for quiet
   hours except critical. Each attempt is a closed-word `notification_events` row. Never
   mail a notification from anywhere but `deliverNotification`.
+  Every WonderHome email, an invitation included, goes through `email/layout.ts`'s
+  `renderEmailLayout`: a whole document with its language and charset, a preview line, a
+  greeting by first name, and a footer naming WonderHome, why it came and where to change
+  that. A bare card from the same mailbox went to Gmail's spam (2026-10-23).
 - **What goes where** (story 27-002, `notifications/routing.ts`). A person keeps one
   kind of reminder off one channel (`notification_channel_mutes`, their own rows only);
   no row means allowed. `deliverNotification` is given the reminder's `category` and
