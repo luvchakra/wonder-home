@@ -129,6 +129,8 @@ export async function reviseExisting(
       householdId,
       dueOn: input.dueDate || existing.dueOn,
       amountMinor: input.amount ? Math.round(Number(input.amount) * 100) : existing.amountMinor,
+      // An amount needs its currency: the document's, else the one the bill already had.
+      ...(input.amount ? { currency: input.currency || existing.currency || null } : {}),
     });
     return { routedTable: "obligations", routedId: existing.id, changeType: "updated", previous, domain: "bill" };
   }
