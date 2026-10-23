@@ -1,5 +1,6 @@
 import Link from "next/link";
 
+import { contactEmail } from "@wonderhome/core/config/contact";
 import { englishInstallBannerLabels } from "@wonderhome/core/pwa/install-labels";
 import { InstallBanner } from "@wonderhome/core/shell/install-banner";
 import { BrandMark, Wordmark } from "@wonderhome/core/ui/brand";
@@ -18,6 +19,7 @@ export const metadata = { title: "Terms and privacy", robots: { index: true, fol
  * against the product and the source.
  */
 export default function LegalPage() {
+  const mailTo = contactEmail();
   return (
     <>
       <InstallBanner labels={englishInstallBannerLabels()} />
@@ -116,6 +118,27 @@ export default function LegalPage() {
             </p>
           </Card>
 
+          <Card id="who-we-are" className="scroll-mt-6 space-y-3 p-5">
+            <h2 className="text-base font-semibold tracking-tight">Who runs WonderHome</h2>
+            <p className="text-sm leading-relaxed text-[var(--wh-foreground-muted)]">
+              WonderHome is a product of{" "}
+              <a href="https://wonderapps.biz" className="font-medium text-[var(--wh-primary)] underline-offset-2 hover:underline">
+                WonderApps
+              </a>
+              . WonderApps builds and runs it, and is responsible for the information your household keeps in it,
+              including what WonderHome receives on its WhatsApp number.
+              {mailTo ? (
+                <>
+                  {" "}Write to us at{" "}
+                  <a href={`mailto:${mailTo}`} className="font-medium text-[var(--wh-primary)] underline-offset-2 hover:underline">
+                    {mailTo}
+                  </a>
+                  .
+                </>
+              ) : null}
+            </p>
+          </Card>
+
           <p className="text-sm text-[var(--wh-foreground-muted)]">
             Members can read the user guide in the app, under More → Get Help:{" "}
             <Link href="/sign-in?next=%2Fhelp" className="font-medium text-[var(--wh-primary)] underline-offset-2 hover:underline">
@@ -127,6 +150,8 @@ export default function LegalPage() {
           <footer className="flex items-center gap-2 border-t border-[var(--wh-border)] pt-6 text-xs text-[var(--wh-foreground-subtle)]">
             <BrandMark size={16} />
             <Link href="/" className="hover:text-[var(--wh-foreground)]">Back to WonderHome</Link>
+            <span aria-hidden>·</span>
+            <span>© {new Date().getFullYear()} WonderApps</span>
           </footer>
         </div>
       </main>

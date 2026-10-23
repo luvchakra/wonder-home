@@ -25,6 +25,7 @@ export const WHATSAPP_EVENT_KINDS = [
   "signature_failed",
   "rate_limited",
   "retry_queued",
+  "question_redirected",
 ] as const;
 export type WhatsAppEventKind = (typeof WHATSAPP_EVENT_KINDS)[number];
 
