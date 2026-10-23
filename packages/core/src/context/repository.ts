@@ -24,6 +24,8 @@ import { listMembers } from "../identity/households";
 import { listMemberLanguages } from "../identity/member-languages";
 import { listIntegrations } from "../integrations/repository";
 import { listMeals } from "../meals/repository";
+import { readRegistryRows } from "../knowledge/describe";
+import { REGISTRY_READ, type RegistryTable } from "../knowledge/registry";
 import { listActivities } from "../school/activities";
 import { listExams, listTimetable } from "../school/exams";
 import { listCommunications, listSchoolItems } from "../school/repository";
@@ -73,6 +75,8 @@ export type ContextAdapter = {
   label: string;
   permitted: (viewer: ContextViewer) => boolean;
   read: (supabase: Supabase, scope: ContextScope) => Promise<ContextRecords & { homeSendChanges?: HomeSendChange[]; guardianOf?: string[] }>;
+  /** Reads the knowledge registry's generic tables for its domain, rather than the domain's own records. */
+  registry?: true;
 };
 
 const may = (viewer: ContextViewer, permission: string) => viewer.permissions.includes(permission);
@@ -87,7 +91,7 @@ function horizon(scope: ContextScope): { from: Date; to: Date; fromDay: string; 
   return { from: scope.now, to, fromDay: isoDateIn(scope.now, scope.timezone), toDay: isoDateIn(to, scope.timezone) };
 }
 
-export const CONTEXT_ADAPTERS: readonly ContextAdapter[] = [
+const DOMAIN_ADAPTERS: readonly ContextAdapter[] = [
   {
     domain: "people",
     label: "who is in the household",
@@ -247,6 +251,39 @@ export const CONTEXT_ADAPTERS: readonly ContextAdapter[] = [
   { domain: "integrations", label: "connections", permitted: (viewer) => viewer.tone === "adult", read: async (supabase, scope) => ({ integrations: await listIntegrations(supabase, scope.householdId) }) },
 ];
 
+/**
+ * The tables the knowledge registry reads generically (`knowledge/registry.ts`),
+ * one adapter per domain, gated exactly as that domain's own adapter is: a
+ * viewer who may not read a domain never has its registered tables read either.
+ */
+function registryAdapters(domainAdapters: readonly ContextAdapter[]): ContextAdapter[] {
+  const byDomain = new Map<ContextDomain, RegistryTable[]>();
+  for (const spec of REGISTRY_READ) byDomain.set(spec.domain, [...(byDomain.get(spec.domain) ?? []), spec.table]);
+  return [...byDomain.entries()].map(([domain, tables]) => {
+    const own = domainAdapters.find((adapter) => adapter.domain === domain);
+    return {
+      domain,
+      label: own?.label ?? domain,
+      permitted: own?.permitted ?? ((viewer: ContextViewer) => viewer.tone === "adult"),
+      registry: true,
+      read: async (supabase, scope) => {
+        const { rows, failed } = await readRegistryRows(supabase, scope.householdId, { now: scope.now, viewer: scope.viewer, tables });
+        if (failed.length === tables.length && tables.length > 0) throw new Error("registry read failed");
+        return { registry: rows };
+      },
+    } satisfies ContextAdapter;
+  });
+}
+
+export const CONTEXT_ADAPTERS: readonly ContextAdapter[] = [...DOMAIN_ADAPTERS, ...registryAdapters(DOMAIN_ADAPTERS)];
+
+/** Records from several adapters, with each adapter's registry rows kept rather than overwritten. */
+export function mergeRecords(into: ContextRecords, from: ContextRecords): void {
+  const { registry, ...rest } = from;
+  Object.assign(into, rest);
+  if (registry) into.registry = { ...into.registry, ...registry };
+}
+
 export type ContextSnapshot = {
   scope: ContextScope;
   /** Authorized, provenance-linked, freshness-marked items. */
@@ -323,7 +360,7 @@ export async function gatherHouseholdContext(supabase: Supabase, scope: ContextS
     const { homeSendChanges: changes, guardianOf: guarded, ...rest } = result;
     if (changes) homeSendChanges.push(...changes);
     if (guarded) guardianOf = Array.from(new Set([...guardianOf, ...guarded]));
-    Object.assign(records, rest);
+    mergeRecords(records, rest);
   }
 
   const agenda = options.agenda ? { ...options.agenda, unavailable: [...options.agenda.unavailable, ...unavailable] } : undefined;

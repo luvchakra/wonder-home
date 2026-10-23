@@ -410,6 +410,18 @@ WonderHome's AI layer is one pipeline with three named, real surfaces —
     marks the store stale.
   - **Household understanding** counts the household's own records per
     category (`withRecords`), not only what HomeTalk was told.
+  The household record index (spec `design/HOUSEHOLD-RECORD-INDEX.md`, story
+  14-036) makes every saved record knowledge by default:
+  - **One registry.** `knowledge/registry.ts` names every table with a
+    `household_id` once. It is `builder` (a hand-written builder reads it,
+    naming its `ContextRecords` list), `registry` (the generic describer in
+    `knowledge/describe.ts` reads it and says every field) or `excluded` (with
+    the reason). A new table goes in the same pull request that creates it.
+  - **CI enforces it.** `npm run lint:knowledge` fails on an unnamed table, a
+    stale entry, or a table read as knowledge without the
+    `wh.mark_context_stale` trigger.
+  - **It tests itself.** Each `registry` entry's `example` row is run through
+    the describer by `knowledge/registry.test.ts`, with no case to write.
   HomeBrain reads everything the Calendar shows (26-020):
   - **One map.** `CALENDAR_SOURCE_RECORDS` (`context/builders.ts`) names the
     HomeBrain records behind every calendar source. A new source does not

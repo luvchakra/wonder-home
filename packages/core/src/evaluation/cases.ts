@@ -442,6 +442,12 @@ const CONNECTED: HomeTalkCase[] = [
     utterance: "What does Asmi have on Monday?",
     expected: { answer: { includes: ["Bharatanatyam"], excludes: ["Karate"] } },
   },
+  {
+    id: "HT-141", surface: "hometalk", household: "A", category: "cross_domain", actor: "a-kunal",
+    description: "A table no hand-written builder reads is still known: Asmi's class teacher, from the record index's registry.",
+    utterance: "Who is Asmi's class teacher?",
+    expected: { answer: { includes: ["Mrs Iyer"], excludes: ["Karate"] } },
+  },
   // --- Looking ahead on the calendar (the "your week is clear" defect) ---
   {
     id: "HT-76", surface: "hometalk", household: "A", category: "time_date", actor: "a-kunal",
