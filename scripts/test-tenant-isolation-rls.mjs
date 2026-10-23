@@ -46,6 +46,7 @@ const NON_TENANT_TABLES = new Set([
   "companion_sayings", // the cat's sayings (08-021): WonderHome's own list every member reads and none writes
   "careers_settings", // the one WonderJobs career-site key setting (17-010); platform-level, service role only
   "careers_key_events", // every save and clear of that key; platform-level like the setting, service role only
+  "instamart_oauth_clients", // the OAuth client Swiggy registered for this deployment's redirect URI (25-032); service role only
 ]);
 
 const ALICE = "11111111-1111-4111-8111-111111111111";

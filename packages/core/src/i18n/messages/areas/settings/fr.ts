@@ -719,6 +719,8 @@ export const settingsFr: AreaCatalog<typeof settingsEn> = {
   "settingsHome.ai.meta": "{source} · clé du foyer et utilisation des données",
   "settingsHome.privacy.title": "Confidentialité et sécurité",
   "settingsHome.privacy.meta": "Utilisation des données, export et suppression",
+  "settingsHome.instamart.connected": "Connecté · commandez votre liste À acheter",
+  "settingsHome.instamart.meta": "Commandez votre liste À acheter sur Instamart",
   "settingsHome.whatsapp.connected": "Connecté · transférez des éléments vers HomeSend",
   "settingsHome.whatsapp.meta": "Transférez messages, photos et documents vers HomeSend",
   "settingsHome.connected.title": "Comptes connectés",

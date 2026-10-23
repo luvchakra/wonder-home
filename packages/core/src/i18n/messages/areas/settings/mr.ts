@@ -711,6 +711,8 @@ export const settingsMr: AreaCatalog<typeof settingsEn> = {
   "settingsHome.ai.meta": "{source} · घराची की आणि डेटा वापर",
   "settingsHome.privacy.title": "गोपनीयता आणि सुरक्षा",
   "settingsHome.privacy.meta": "डेटा वापर, एक्सपोर्ट आणि हटवणे",
+  "settingsHome.instamart.connected": "जोडलेले · तुमची 'घ्यायचे' यादी ऑर्डर करा",
+  "settingsHome.instamart.meta": "तुमची 'घ्यायचे' यादी Instamart वर ऑर्डर करा",
   "settingsHome.whatsapp.connected": "जोडलेले · गोष्टी HomeSend मध्ये पाठवा",
   "settingsHome.whatsapp.meta": "संदेश, फोटो आणि दस्तऐवज HomeSend मध्ये पाठवा",
   "settingsHome.connected.title": "जोडलेली खाती",

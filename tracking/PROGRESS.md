@@ -50,7 +50,7 @@ disagree again.)
 | 22 | Internationalization & Localization | 8 | 6 | 2 | 0 | 7 | In Progress (22-008 deferred) |
 | 23 | Smart Notifications | 12 | 6 | 6 | 0 | 12 | Done |
 | 24 | HomePlaces | 13 | 4 | 7 | 2 | 13 | In Progress |
-| 25 | HomeFood | 25 | 12 | 8 | 5 | 20 | In Progress |
+| 25 | HomeFood | 34 | 16 | 12 | 6 | 26 | In Progress |
 | 26 | HomeEvents | 15 | 2 | 11 | 2 | 11 | In Progress |
 
 ## Execution Log
@@ -382,3 +382,4 @@ disagree again.)
 | 2026-10-21 | 12 | 12-016 | Blocked | Reactions on FamilyChat messages: built and tested, waiting on its migration reaching the live project; the thread hides them until then. |
 | 2026-10-21 | 17 | 17-010 | Done | A public Careers section powered by WonderJobs: /careers, each job with Apply, the applicant's status page, and the key set by a platform admin at /platform-admin/careers (kept in Vault, audited). |
 | 2026-10-21 | 12 | 12-016 | Done | Reactions on FamilyChat messages are on: the migration reached the live project, and the Chat help describes them again in every language. |
+| 2026-10-23 | 25 | 25-032 | Done | Order the To buy list on Swiggy Instamart (Builders Club MCP server): connect your own Swiggy account, products matched per line, Swiggy's cart and bill, placed once only on a tap, followed by order notices, put into stock. Off until `WONDERHOME_INSTAMART=on`; production waits on Swiggy allowlisting the redirect URI (25-034). UPI is 25-033. |
