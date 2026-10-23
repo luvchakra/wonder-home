@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
-const server = vi.hoisted(() => ({ sendMail: vi.fn() }));
+const server = vi.hoisted(() => ({ sendMail: vi.fn(), close: vi.fn() }));
 vi.mock("nodemailer", () => ({ createTransport: () => server }));
 
 import { log } from "../observability/logger";

@@ -37,3 +37,9 @@
 - `conversation/request.test.ts`: 35 cases, requests and answers.
 - `email/mailer-send.test.ts`: 3 cases, against a faked mail server.
 - The conversation, Ask me about family, email, notification and identity suites pass (693 and 463 tests). Typecheck passes.
+
+## Follow-up: GoDaddy checked from a Vercel sandbox, and the same pattern as WonderJobs
+- **The mailbox works.** Logging in to `smtpout.secureserver.net` as connect@wonderapps.biz succeeds on 465 and on 587. GoDaddy accepted a test to the mailbox itself and one to the owner's account address ("250 mail accepted for delivery").
+- **Where the test went.** The owner's WonderHome account signs in with Google as a different Gmail address from the one first checked. "Send a test" goes to the confirmed email of the account that pressed it.
+- **Compared with WonderJobs.** `server/notify.ts` uses the same library, host, port and From pattern, and closes the connection after every message. `email/mailer.ts` now does the same (`transport.close()` in `finally`), so a serverless function never leaves an idle session open.
+- **DKIM.** No DKIM key was found under any common selector. Turning it on in GoDaddy remains the step that makes Gmail trust these messages most.
