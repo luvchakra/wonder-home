@@ -58,3 +58,14 @@
   - `email/layout.test.ts`: the document head, the preview line, the sender and the footer, the greeting, escaping, the invitation, and first names.
   - The email, notifications, identity, i18n and app action suites pass (497 tests). Typecheck and lint pass.
 - **To confirm after deploy:** the owner presses Send a test and checks whether it lands in the inbox. DKIM for wonderapps.biz remains the further step.
+
+## Follow-up: a family-friendly look (the owner, 2026-10-23)
+- **The look:** bright pastels, round edges, a nice font and some art.
+- **The palette** (`EMAIL_COLORS` in `email/layout.ts`):
+  - a soft peach page and a white card with 28px corners;
+  - blush, butter, sky and mint accents;
+  - the brand's indigo kept for the one button (DESIGN rule 3), as a shadowed pill.
+- **The art.** `apps/web/public/email/hello-home.png` (1120×440, shown at 538 wide) is the landing page's `HomeIllustration` on a pastel sky with hearts, a star and dots. It was rendered once to PNG because mail apps show neither SVG nor CSS backgrounds reliably. PNGs are outside the middleware matcher, so mail apps fetch it without a session.
+- **The fonts.** Sora for the text and Caveat for the closing "Less mental load. More family time!" come from Google Fonts in the email's head. Apple Mail and iOS honour them, and other clients fall back to friendly system faces. The tagline is decoration: everything a reader needs is also said in the body.
+- **Footer links** are small rounded pills.
+- **Checked** at 360px and 720px: no sideways scroll, the art scales, and the pills wrap.

@@ -15,7 +15,9 @@ describe("every WonderHome email is a complete, signed-off message", () => {
     expect(html).toContain('src="https://home.wonderapps.biz/icon-192.png"');
     expect(html).toContain("WonderHome · home.wonderapps.biz");
     expect(html).toContain('href="https://home.wonderapps.biz/legal"');
-    expect(text).toBe("Body\n\n—\nWonderHome · home.wonderapps.biz\nBecause email is on.\nPrivacy: https://home.wonderapps.biz/legal");
+    expect(text).toBe("Body\n\nLess mental load. More family time!\n\n—\nWonderHome · home.wonderapps.biz\nBecause email is on.\nPrivacy: https://home.wonderapps.biz/legal");
+    expect(html).toContain('src="https://home.wonderapps.biz/email/hello-home.png"');
+    expect(html).toContain("border-radius:28px");
   });
 
   it("greets a notification's reader by name and links to the settings that control it", () => {

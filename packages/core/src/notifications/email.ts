@@ -1,4 +1,4 @@
-import { emailButton, renderEmailLayout } from "../email/layout";
+import { EMAIL_COLORS, emailButton, renderEmailLayout } from "../email/layout";
 import { escapeHtml, singleRecipient, type Mailer, type OutgoingMail } from "../email/mailer";
 import type { ChannelAdapter, ChannelNotification, ChannelSendResult } from "./channels";
 
@@ -42,8 +42,8 @@ export function notificationMail(notification: ChannelNotification, to: string, 
   const hello = words.hello?.trim() || null;
   const bodyHtml = [
     hello ? `<p style="margin:0 0 10px">${escapeHtml(hello)}</p>` : "",
-    `<div style="font-size:18px;font-weight:700;line-height:1.4;margin:0 0 8px">${escapeHtml(notification.title)}</div>`,
-    `<p style="margin:0 0 20px;white-space:pre-wrap">${escapeHtml(notification.body)}</p>`,
+    `<div style="font-size:22px;font-weight:700;line-height:1.35;margin:0 0 8px;color:${EMAIL_COLORS.ink}">${escapeHtml(notification.title)}</div>`,
+    `<p style="margin:0 0 22px;white-space:pre-wrap;color:${EMAIL_COLORS.muted}">${escapeHtml(notification.body)}</p>`,
     `<p style="margin:0">${emailButton(words.open, link)}</p>`,
   ].join("");
   const bodyText = [...(hello ? [hello] : []), notification.title, notification.body, `${words.open}: ${link}`].join("\n\n");
