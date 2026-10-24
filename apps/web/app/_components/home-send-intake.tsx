@@ -96,6 +96,7 @@ export type HomeSendExtractionFields = {
   schoolKind: string | null;
   subject: string | null;
   activityKind?: string | null;
+  location?: string | null;
   quantity: number | null;
   unit: string | null;
   category: string | null;
@@ -613,6 +614,8 @@ export function HomeSendConfirmFields({
             <Field label={words.starts} name="dueTime" type="time" defaultValue={prefill?.dueTime ?? ""} hint={words.startsHint} />
             <Field label={words.ends} name="endTime" type="time" defaultValue={prefill?.endTime ?? ""} />
           </div>
+          {/* The calendar's own "Where", as the content wrote it. */}
+          <Field label={words.where} name="location" defaultValue={prefill?.location ?? ""} autoComplete="off" />
         </>
       ) : kind === "health_document" ? (
         <>

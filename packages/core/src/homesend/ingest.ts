@@ -97,6 +97,8 @@ function toStoredExtraction(extraction: IntakeExtraction): HomeSendExtraction {
     endTime: extraction.endTime ?? null,
     schoolKind: extraction.schoolKind,
     subject: extraction.subject,
+    activityKind: extraction.activityKind ?? null,
+    location: extraction.location ?? null,
     quantity: extraction.quantity,
     unit: extraction.unit,
     category: extraction.category,

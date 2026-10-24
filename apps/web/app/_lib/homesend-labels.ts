@@ -200,6 +200,7 @@ export type HomeSendReviewLabels = {
     categoryPlaceholder: string;
     notes: string;
     notesPlaceholder: string;
+    where: string;
   };
   receipt: {
     shop: string;
@@ -583,6 +584,7 @@ export function homesendReviewLabels(t: Translate, language: string): HomeSendRe
       categoryPlaceholder: t("homesend.field.categoryPlaceholder"),
       notes: t("homesend.field.notes"),
       notesPlaceholder: t("homesend.field.notesPlaceholder"),
+      where: t("homesend.field.where"),
     },
     receipt: {
       shop: t("homesend.receipt.shop"),

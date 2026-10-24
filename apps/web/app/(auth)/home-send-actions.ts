@@ -32,7 +32,7 @@ import { standDownActivity, standDownActivityNote } from "@wonderhome/core/schoo
 import { setEventCancelled } from "@wonderhome/core/family/event-detail";
 
 import { prepareReview } from "./home-send-review";
-import { addChildFromNotice, createNew, reviseExisting, routeSchema, type RouteInput } from "./home-send-writes";
+import { addChildFromNotice, addGrocery, createNew, reviseExisting, routeSchema, type RouteInput } from "./home-send-writes";
 
 /**
  * HomeSend's entry points (Wave 3): upload a photo, PDF, text file or voice
@@ -124,6 +124,7 @@ async function autoApply(
     kind: item.kind,
     title: title.slice(0, 160),
     notes: extracted?.notes ?? undefined,
+    location: extracted?.location ?? undefined,
     dueDate: extracted?.dueDate ?? undefined,
     dueTime: extracted?.dueTime ?? undefined,
     endTime: extracted?.endTime ?? undefined,
@@ -148,6 +149,7 @@ async function autoApply(
     domain: item.kind,
     entityId: created.routedId,
     createdByMemberId: membership.memberId,
+    ...(created.changeType === "updated" ? { changeType: "updated" as const, previous: created.previous ?? {} } : {}),
   });
   return { changeId: change.id, title, where: item.kind === "grocery_item" ? "Groceries" : "Kids & School" };
 }
@@ -473,6 +475,7 @@ export async function routeHomeSendItemAction(_previous: RouteHomeItemState, for
     kind: formData.get("kind"),
     title: formData.get("title"),
     notes: formData.get("notes") || undefined,
+    location: formData.get("location") || undefined,
     billKind: formData.get("billKind") || undefined,
     payee: formData.get("payee") || undefined,
     amount: formData.get("amount") || undefined,
@@ -590,6 +593,7 @@ export async function routeHomeSendItemAction(_previous: RouteHomeItemState, for
         domain: input.kind,
         entityId: routedId,
         createdByMemberId: membership.memberId,
+        ...(created.changeType === "updated" ? { changeType: "updated" as const, previous: created.previous ?? {} } : {}),
       });
       // Anything it had to add first (a class the child did not have yet) is its own change, undone with it.
       for (const also of created.also ?? []) {
@@ -601,20 +605,16 @@ export async function routeHomeSendItemAction(_previous: RouteHomeItemState, for
     // grocery row and its own change, so each can be undone on its own.
     let needsAdded = 0;
     if (input.kind !== "grocery_item") {
-      for (const title of [...new Set(input.needs)]) {
-        const consumable = await createConsumable(supabase, {
-          householdId: input.householdId,
-          name: title,
-          category: CONSUMABLE_CATEGORIES[0],
-          unit: "unit",
-          typicalQuantity: 1,
-        });
+      for (const [n, title] of [...new Set(input.needs)].entries()) {
+        // On To buy, as Groceries' own Add files it: an item already tracked is the one put on the list.
+        const need = await addGrocery(supabase, input.householdId, { title }, `${input.itemId}:need:${n}`);
         await recordHomeSendChange(supabase, {
           householdId: input.householdId,
           intakeId: input.itemId,
           domain: "grocery_item",
-          entityId: consumable.id,
+          entityId: need.routedId,
           createdByMemberId: membership.memberId,
+          ...(need.changeType === "updated" ? { changeType: "updated" as const, previous: need.previous ?? {} } : {}),
         });
         needsAdded += 1;
       }
@@ -692,7 +692,12 @@ async function reverseChange(supabase: Awaited<ReturnType<typeof createClient>>,
         householdId,
         dueOn: (previous.dueOn as string | null | undefined) ?? null,
         amountMinor: (previous.amountMinor as number | null | undefined) ?? null,
-      });
+      });    } else if (change.domain === "grocery_item" && typeof previous.listKey === "string") {
+      // A grocery already tracked was put on To buy: take back exactly what that added, nothing else.
+      const listed = await recordedChange(supabase, householdId, "shopping_list_events", previous.listKey);
+      if (listed && listed.delta > 0) {
+        await adjustListEntry(supabase, { householdId, itemId: listed.itemId, kind: "subtract", amount: { quantity: listed.delta, unit: listed.unit }, source: "manual", idempotencyKey: `${previous.listKey}:undo` });
+      }
     }
   } else if (change.changeType === "cancelled") {
     const status = typeof previous.status === "string" ? previous.status : null;

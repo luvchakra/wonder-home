@@ -74,6 +74,9 @@ export type HomeSendExtraction = {
   endTime?: string | null;
   schoolKind: string | null;
   subject: string | null;
+  /** What a class outside school has on the day (exam, competition, event, note), and where a day-shaped item happens. Absent on items read before them. */
+  activityKind?: string | null;
+  location?: string | null;
   quantity: number | null;
   unit: string | null;
   category: string | null;

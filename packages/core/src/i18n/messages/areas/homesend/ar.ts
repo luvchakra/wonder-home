@@ -244,6 +244,7 @@ export const homesendAr: AreaCatalog<typeof homesendEn> = {
   "homesend.option.kindGroup.health": "الصحة",
   "homesend.option.kindGroup.food": "الطعام والبقالة",
   "homesend.field.notesPlaceholder": "1. نقطة واحدة في كل سطر",
+  "homesend.field.where": "أين (اختياري)",
 
   "homesend.receipt.shop": "المتجر (اختياري)",
   "homesend.receipt.boughtOn": "تاريخ الشراء",

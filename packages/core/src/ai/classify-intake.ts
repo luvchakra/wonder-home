@@ -139,6 +139,8 @@ const IntakeExtractionSchema = z.object({
   subject: z.string().trim().max(60).nullable(),
   // activity_item fields
   activityKind: z.enum(ACTIVITY_ITEM_KINDS).nullish(),
+  /** Where it happens, as written: for a school_item, activity_item or event; the calendar's "Where". */
+  location: z.string().trim().max(200).nullish(),
   // grocery fields
   quantity: z.number().min(0).max(10_000).nullable(),
   unit: z.string().trim().max(40).nullable(),
@@ -278,10 +280,12 @@ export function sanitizeIntakeExtraction(reading: RawIntakeExtraction | IntakeEx
     : [];
 
   // What kind of thing a class has on the day is only ever an activity_item's.
-  const { activityKind, ...rest } = raw;
+  const { activityKind, location, ...rest } = raw;
   return {
     ...rest,
     ...(raw.kind === "activity_item" ? { activityKind: activityKind ?? null } : {}),
+    // Where it happens is only ever a day-shaped thing's (the calendar's "Where").
+    ...(TIMED_INTAKE_KINDS.has(raw.kind) && location ? { location: withoutIds(location) } : {}),
     title: withoutIds(raw.title),
     notes: numberedNotes(withoutIds(raw.notes)),
     billKind: raw.kind === "bill" ? raw.billKind : null,
@@ -376,6 +380,7 @@ const EXTRACTION_JSON_SCHEMA = {
     schoolKind: { type: "string", enum: SCHOOL_ITEM_KINDS, nullable: true },
     subject: { type: "string", nullable: true },
     activityKind: { type: "string", enum: ACTIVITY_ITEM_KINDS, nullable: true },
+    location: { type: "string", nullable: true },
     quantity: { type: "number", nullable: true },
     unit: { type: "string", nullable: true },
     category: { type: "string", nullable: true },
@@ -446,7 +451,7 @@ const EXTRACTION_JSON_SCHEMA = {
   },
   required: [
     "readable", "kind", "title", "notes", "billKind", "payee", "amount", "currency", "dueDate",
-    "schoolKind", "subject", "activityKind", "quantity", "unit", "category", "healthRecordType", "documentDate",
+    "schoolKind", "subject", "activityKind", "location", "quantity", "unit", "category", "healthRecordType", "documentDate",
     "dateText", "merchant", "lines", "subjectMemberName", "summary", "people", "facts", "needs", "change", "confidence",
     "issuedOn", "pages", "records",
   ],
@@ -544,7 +549,7 @@ To decide, ask what it asks the household to do: pay for something still owed �
 
 Never invent a title, amount, date, name or note the source does not show. If it is blurry, unrelated, or you cannot make out any actionable content, set readable to false, kind to "unknown", leave every other field null or empty, and set confidence to "low".
 
-Fields that only apply to one kind stay null for the others. billKind is one of: ${OBLIGATION_KINDS.join(", ")}. schoolKind is one of: ${SCHOOL_ITEM_KINDS.join(", ")}. amount is the number only, in the currency's major unit (e.g. 450.50), never combined with a currency symbol. dueDate is for a bill (when it is due), a school_item (when it is due, or the day the event or exam happens), an activity_item or an event (the day it happens), as a calendar date in YYYY-MM-DD form, only when the source writes out a full date with its year. Whenever the content names the day in any other way — "tomorrow", "Saturday", "next Friday", "5 October", "27/09" — copy those exact words into dateText and leave the calendar arithmetic to WonderHome; never work out a date yourself from a weekday or a date without a year. quantity and unit are for a grocery_item only (e.g. quantity 2, unit "kg"). For an activity_item, subject is the class or activity's name as written ("Karate", "Bharatanatyam", "Piano") and activityKind is one of: ${ACTIVITY_ITEM_KINDS.join(", ")} — exam for a grading, belt or level test; competition for a competition or tournament; event for a performance, recital, show, match or any other day the class has; note for anything else about the class. For an event, where it happens, the host and anything to bring or wear go in notes, as notes says below.
+Fields that only apply to one kind stay null for the others. billKind is one of: ${OBLIGATION_KINDS.join(", ")}. schoolKind is one of: ${SCHOOL_ITEM_KINDS.join(", ")}. amount is the number only, in the currency's major unit (e.g. 450.50), never combined with a currency symbol. dueDate is for a bill (when it is due), a school_item (when it is due, or the day the event or exam happens), an activity_item or an event (the day it happens), as a calendar date in YYYY-MM-DD form, only when the source writes out a full date with its year. Whenever the content names the day in any other way — "tomorrow", "Saturday", "next Friday", "5 October", "27/09" — copy those exact words into dateText and leave the calendar arithmetic to WonderHome; never work out a date yourself from a weekday or a date without a year. quantity and unit are for a grocery_item only (e.g. quantity 2, unit "kg"). For an activity_item, subject is the class or activity's name as written ("Karate", "Bharatanatyam", "Piano") and activityKind is one of: ${ACTIVITY_ITEM_KINDS.join(", ")} — exam for a grading, belt or level test; competition for a competition or tournament; event for a performance, recital, show, match or any other day the class has; note for anything else about the class. location is for a school_item, activity_item or event: where it happens, exactly as written (a venue, a society, an address, "Clubhouse, Splendora CHS"); null when the content names no place and always null for other kinds. For an event, the host and anything to bring or wear go in notes, as notes says below.
 
 For a receipt: merchant is the shop's name as printed; amount and currency are the total paid (the number only, and the currency as printed or its three-letter code); documentDate is the day of the purchase in YYYY-MM-DD form only when a full date with its year is printed, otherwise its words go in dateText; lines lists each item bought, in order — name exactly as printed ("Amul Toned Milk 1L"), quantity as a number when printed (null otherwise, never assumed), unit when printed ("kg", "pc"), and lineTotal as the line's total price in the major unit. Leave out taxes, discounts, bag charges, subtotals and payment lines. For every other kind, merchant is null and lines is empty.
 
@@ -555,7 +560,7 @@ dateText: for a bill, school_item, activity_item, event, health_document or rece
 
 summary: one short plain sentence saying what this is and what it asks of the household ("Asmi's school moved the Science Exhibition to 29 September"). Null when readable is false.
 
-notes: the details the household needs beyond the title, the day and the person — where it happens, what to bring or wear, who to contact, a fee, an instruction, a deadline before the day — as short numbered points, one per line, numbered from 1 ("1. Wear the white uniform", "2. Report by 9:00 am at the main hall"). For a price list or a set of offers, one point per offer with its price ("3. HbA1c ₹199"). At most ten, each under 100 characters, in the order the content gives them. Only what the content says, never a guess or advice of your own. Null when there is nothing beyond the title, the day and the person.
+notes: the details the household needs beyond the title, the day, the place and the person — what to bring or wear, who to contact, a fee, an instruction, a deadline before the day — as short numbered points, one per line, numbered from 1 ("1. Wear the white uniform", "2. Report by 9:00 am at the main hall"). For a price list or a set of offers, one point per offer with its price ("3. HbA1c ₹199"). At most ten, each under 100 characters, in the order the content gives them. Only what the content says, never a guess or advice of your own. Null when there is nothing beyond the title, the day and the person.
 
 people: every person the content names, exactly as written ("Asmi", "Mr. Rao", "Dr. Mehta") — names only, never a guess at who they are in the household.
 

@@ -139,7 +139,8 @@ function writerFor(supabase: Supabase, membership: Membership, itemId: string): 
     async create(entry) {
       const created = await createNew(supabase, membership, routeInputFor(entry, householdId, itemId));
       if ("error" in created) throw new Error(created.error);
-      return { entityId: created.routedId };
+      // A grocery already tracked is put on To buy rather than added twice; undo then takes back only that.
+      return { entityId: created.routedId, ...(created.changeType === "updated" ? { previous: created.previous } : {}) };
     },
     async update(entry) {
       if (!entry.existing) throw new Error("nothing to update");
@@ -159,7 +160,7 @@ function writerFor(supabase: Supabase, membership: Membership, itemId: string): 
         domain: entry.domain,
         entityId: result.entityId,
         createdByMemberId: membership.memberId,
-        changeType,
+        changeType: changeType === "created" && result.previous ? "updated" : changeType,
         previous: result.previous ?? null,
         planKey: entry.key,
         fields: entry.changes,

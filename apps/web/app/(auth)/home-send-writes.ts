@@ -3,7 +3,13 @@ import { z } from "zod";
 
 import { may } from "@wonderhome/core/billing/repository";
 import { CONSUMABLE_CATEGORIES } from "@wonderhome/core/commerce/consumables";
+import { catalogItemFor } from "@wonderhome/core/commerce/catalog";
+import { baseOf } from "@wonderhome/core/commerce/buying-sizes";
+import { adjustListEntry, listGroceries } from "@wonderhome/core/commerce/inventory";
 import { createConsumable } from "@wonderhome/core/commerce/repository";
+import { compatible } from "@wonderhome/core/commerce/units";
+import { similarity } from "@wonderhome/core/context/normalize";
+import { billShape, eventShape, groceryShape } from "@wonderhome/core/homesend/record-types";
 import type { createClient } from "@wonderhome/core/db/server";
 import { OBLIGATION_KINDS } from "@wonderhome/core/finance/payments";
 import { cancelObligation, createObligation, listObligations, updateObligation } from "@wonderhome/core/finance/repository";
@@ -47,6 +53,8 @@ export const routeSchema = z.object({
   kind: z.enum(["bill", "school_item", "activity_item", "event", "grocery_item", "health_document"]),
   title: z.string().trim().min(1, { error: "What is it?" }).max(160),
   notes: z.string().trim().max(2000).optional(),
+  // event — where it happens, the calendar's "Where".
+  location: z.string().trim().max(200).optional(),
   // bill
   billKind: z.enum(OBLIGATION_KINDS).optional(),
   payee: z.string().trim().max(120).optional(),
@@ -169,8 +177,49 @@ export async function addChildFromNotice(supabase: Supabase, input: RouteInput):
   }
 }
 
-/** What a confirm wrote: its record, and anything it had to add first for it (a class the child did not have yet), each undone on its own. */
-export type Created = { routedTable: string; routedId: string; also?: { domain: HomeSendChangeDomain; entityId: string }[] };
+/**
+ * What a confirm wrote: its record, and anything it had to add first for it
+ * (a class the child did not have yet), each undone on its own. `previous` is
+ * set when it changed a record already there instead of adding one (a
+ * grocery already tracked, put on To buy), so undo takes back only that.
+ */
+export type Created = {
+  routedTable: string;
+  routedId: string;
+  also?: { domain: HomeSendChangeDomain; entityId: string }[];
+  changeType?: "created" | "updated";
+  previous?: Record<string, unknown>;
+};
+
+/**
+ * A grocery as Groceries' own Add files it (the owner, 2026-10-25: aligned to
+ * the entity already there): an item already tracked by that name is the one
+ * put on To buy, never a second copy; a new one gets the catalog's entry
+ * (picture, nutrition) when its name is in the catalog and it is counted the
+ * same way, then goes on To buy. The list change carries a key, so undo takes
+ * back exactly what this added.
+ */
+export async function addGrocery(
+  supabase: Supabase,
+  householdId: string,
+  said: { title: string; quantity?: number | string | null; unit?: string | null; category?: string | null },
+  key: string,
+): Promise<Created> {
+  const shape = groceryShape(said);
+  const listKey = `hs:${key}:list`;
+  const tracked = (await listGroceries(supabase, householdId)).find((item) => [item.name, ...item.aliases].some((known) => similarity(known, shape.name) >= 0.8));
+  if (tracked) {
+    const amount = compatible(shape.unit, tracked.unit) ? { quantity: shape.toBuy, unit: shape.unit } : { quantity: 1, unit: tracked.unit };
+    await adjustListEntry(supabase, { householdId, itemId: tracked.id, kind: "add", amount, source: "manual", idempotencyKey: listKey });
+    return { routedTable: "consumables", routedId: tracked.id, changeType: "updated", previous: { listKey } };
+  }
+  const named = await catalogItemFor(supabase, shape.name).catch(() => null);
+  const catalogId = named?.catalogId && baseOf(named.unit).unit === baseOf(shape.unit).unit ? named.catalogId : null;
+  const category = said.category && (CONSUMABLE_CATEGORIES as readonly string[]).includes(said.category) ? said.category : CONSUMABLE_CATEGORIES[0];
+  const { id } = await createConsumable(supabase, { householdId, name: shape.name, category, unit: shape.unit, typicalQuantity: 1, catalogId });
+  await adjustListEntry(supabase, { householdId, itemId: id, kind: "add", amount: { quantity: shape.toBuy, unit: shape.unit }, source: "manual", idempotencyKey: listKey });
+  return { routedTable: "consumables", routedId: id, changeType: "created" };
+}
 
 export async function createNew(supabase: Supabase, membership: Membership, input: RouteInput): Promise<Created | { error: string }> {
   const householdId = input.householdId;
@@ -218,17 +267,21 @@ export async function createNew(supabase: Supabase, membership: Membership, inpu
         : new Date(new Date(startsAt).getTime() + 60 * 60_000).toISOString()
       : new Date(new Date(startsAt).getTime() + 24 * 60 * 60_000).toISOString();
     // Through HomeEvents' one door: the same thing already on the calendar
-    // that day is said back, never added a second time.
+    // that day is said back, never added a second time. Filed the way the
+    // calendar's own Add files it: its kind and category, and where it is.
+    const shape = eventShape({ title: input.title, notes: input.notes });
     const added = await addFamilyEvent(
       supabase,
       {
         householdId,
         title: input.title,
-        kind: "gathering",
+        kind: shape.kind,
+        category: shape.category,
         startsAt,
         endsAt,
         allDay: !input.dueTime,
         timeZone,
+        location: input.location || null,
         ownerMemberId: membership.memberId,
         notes: input.notes || null,
       },
@@ -238,10 +291,14 @@ export async function createNew(supabase: Supabase, membership: Membership, inpu
     return { routedTable: "family_events", routedId: added.id };
   }
   if (input.kind === "bill") {
+    // The type and cadence the Bills screen's picker would give it.
+    const shape = billShape({ title: input.title, payee: input.payee, kind: input.billKind ?? null });
     const created = await createObligation(supabase, {
       householdId,
       name: input.title,
-      kind: input.billKind ?? "other",
+      kind: shape.kind,
+      billType: shape.billType,
+      recurrence: shape.recurrence,
       payee: input.payee || null,
       amountMinor: input.amount ? Math.round(Number(input.amount) * 100) : null,
       currency: input.currency || null,
@@ -304,13 +361,6 @@ export async function createNew(supabase: Supabase, membership: Membership, inpu
     });
     return { routedTable: "health_records", routedId: created.id };
   }
-  const created = await createConsumable(supabase, {
-    householdId,
-    name: input.title,
-    category: input.category || CONSUMABLE_CATEGORIES[0],
-    unit: input.unit || "unit",
-    typicalQuantity: input.quantity ? Number(input.quantity) : 1,
-  });
-  return { routedTable: "consumables", routedId: created.id };
+  return addGrocery(supabase, householdId, { title: input.title, quantity: input.quantity, unit: input.unit, category: input.category }, input.itemId);
 }
 

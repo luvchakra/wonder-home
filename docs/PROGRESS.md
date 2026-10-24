@@ -11,11 +11,11 @@ in `docs/progress/`; for the running log of what changed when, `tracking/PROGRES
 
 ## The whole picture
 
-**376 of 406 stories done — 92.6%**
+**378 of 408 stories done — 92.6%**
 
 | Status | Stories |
 |---|---:|
-| Done | 376 |
+| Done | 378 |
 | In Progress | 8 |
 | Blocked | 1 |
 | Not Started | 17 |
@@ -50,8 +50,8 @@ in `docs/progress/`; for the running log of what changed when, `tracking/PROGRES
 | 22 Internationalization and Localization | `████████░░` | 7 | 8 | 1 deferred |
 | 23 Smart Notifications | `██████████` | 13 | 13 | — |
 | 24 HomePlaces | `██████████` | 14 | 14 | — |
-| 25 HomeFood | `███████░░░` | 26 | 33 | 7 not started |
-| 26 HomeEvents | `███████░░░` | 14 | 18 | 1 in progress, 3 not started |
+| 25 HomeFood | `███████░░░` | 27 | 34 | 7 not started |
+| 26 HomeEvents | `███████░░░` | 15 | 19 | 1 in progress, 3 not started |
 | 27 Notification Channels and Events | `█████████░` | 24 | 25 | 1 blocked |
 
 ## What is left
@@ -598,7 +598,7 @@ in `docs/progress/`; for the running log of what changed when, `tracking/PROGRES
 
 ### 25 — HomeFood
 
-26 of 33 done `███████░░░`
+27 of 34 done `███████░░░`
 
 | Story | Priority | Status | Notes |
 |---|---|---|---|
@@ -635,10 +635,11 @@ in `docs/progress/`; for the running log of what changed when, `tracking/PROGRES
 | `25-032` Order the To buy list on Swiggy Instamart | P0 | Done | The owner, 2026-10-23 ("integrate shopping cart with Swiggy Instamart to place the grocery order if user decides so"). Swiggy's Builders Club Instamart MCP server (`mcp.swiggy.com/im`, OAuth 2.1 + PKCE S256, dynamic client registration, phone + OTP on Swiggy's own page) replaces the retired partner seam of 25-021. `commerce/instamart/`: `oauth.ts`, `mcp.ts` (JSON-RPC over Streamable HTTP, JSON or event stream), `client.ts` (`InstamartPort`: addresses, search, set cart, cart, checkout, order details; `liveInstamart` and a deterministic `fixtureInstamart`), `match.ts` (rules pick a product and packs per list line: in stock, the item's name, least left over, Swiggy's cap), `service.ts` (sign-in, tokens refreshed a minute early, a 401 means connect again, placing, following). `/groceries/order`: Connect Swiggy (adults only, each their own account), Deliver to from Swiggy's addresses, Find my list on Instamart, change a product or packs or leave a line out, Review cart shows Swiggy's cart and bill and where it goes, Place order only on a tap with cash on delivery or Swiggy Money — placed once (the reviewed cart's fingerprint must still match, the household's idempotency key stops a double tap, an unanswered checkout is never retried and says to look in Swiggy), Swiggy's own success message, cancellation by Swiggy's customer care. Orders are `orders` rows (provider Swiggy Instamart) so the existing order notices follow them; Check status moves them forward only; Put into stock marks each line bought once through `markBought`. Migration `20261023120000` (live): `instamart_connections` (own row), `instamart_tokens`, `instamart_oauth_clients`, `instamart_oauth_states` (service role; no session reads a token), `orders.placed_by_member_id`/`stocked_at`, `order_items.list_entry_id`/`list_quantity`/`list_unit`. No Swiggy address, phone or response body is stored. Rate limits `instamart.match`, `instamart.cart`. Never by voice. Powered by Instamart with Swiggy's square logo. Groceries → Order on Instamart, Settings → Swiggy Instamart. Off unless `WONDERHOME_INSTAMART=on` (or `fixture` for QA); production needs Swiggy to allowlist `https://home.wonderapps.biz/groceries/order/callback` (25-034). Words and help ¶21 in all eight languages; 15 core tests; browser-checked in fixture mode at 360px and 1280px. |
 | `25-033` Pay an Instamart order with UPI | P1 | Not Started | Left open by 25-032: Swiggy's UPI flow returns PENDING_PAYMENT with an intent link or QR, then `check_payment_status` polling and `confirm_order`. Until then a cart Swiggy offers only UPI for says to order in the Swiggy app. |
 | `25-034` Instamart live on home.wonderapps.biz | P0 | Not Started | A person's errand, not code: apply at mcp.swiggy.com/builders/access (or builders@swiggy.in) with a short demo video of 25-032 on localhost, asking for Instamart with the redirect URI `https://home.wonderapps.biz/groceries/order/callback`; once allowlisted (staging first, production after 48 green hours), set `WONDERHOME_INSTAMART=on` in Vercel. Swiggy's guidelines ask for 7 days' notice before a launch. |
+| `25-035` A grocery sent in through HomeSend lands on To buy, like Groceries' own Add | P0 | Done | The owner, 2026-10-25 ("when user clicks on Add, it should create WonderHome specific data structure … aligned to existing entity structure"). HomeSend's Add (and each ticked need, and a document plan's grocery line) now goes through `addGrocery` in `home-send-writes.ts`, the same steps as Groceries' Add: an item already tracked by that name (similarity ≥ 0.8) is put on To buy rather than added a second time; a new one gets a counted unit (`normalizeUnit`, else pcs), the catalog entry when its name is in the catalog and it is counted the same way, and its amount on To buy (`homesend/record-types.ts` `groceryShape`). Before, it made a bare item with unit "unit", no catalog link and nothing on the list. Undo takes back only the list change for an item that was already there (recorded as "updated" with its list key) and retires an item it created. PR #329. |
 
 ### 26 — HomeEvents
 
-14 of 18 done `███████░░░`
+15 of 19 done `███████░░░`
 
 | Story | Priority | Status | Notes |
 |---|---|---|---|
@@ -660,6 +661,7 @@ in `docs/progress/`; for the running log of what changed when, `tracking/PROGRES
 | `26-018` Every event goes through HomeEvents' one door | P0 | Done | The owner, 2026-10-22: "how are 2 entries created for same event, add per design every event should be created via the HomeEvents module. put guard rails in place so duplicate entries are not created from various parts of the application". 26-017's duplicate check was each caller's to remember: the Calendar sheet, Kids & School and HomeTalk asked, but the REST API (`POST …/family`, `POST …/school`), a health appointment's calendar entry and HomeSend's write did not. Now `calendar/add-event.ts`'s `addFamilyEvent` and `addSchoolItem` are the only way anything is added: they read the household's entries on that local day from both tables (family events and school entries) and refuse the same name, nearly the same name or the same occasion by another name, unless the person said add anyway (`confirmed`). Callers: the Calendar sheet and Kids & School (their Add anyway), HomeTalk ("already on the calendar"), HomeSend (refused with the entry's name, never linked, so its undo cannot remove the original), an appointment (not added and not linked), and the REST API (409 naming the entry, `confirmDuplicate: true` to add anyway; OpenAPI says so). `single-door.test.ts` fails CI if any other file calls `createEvent`/`createSchoolItem` or inserts into `family_events`/`school_items` outside their repositories (an integration's sync, keyed by the provider's id, is the one exception). Gateway tests include the owner's Bounce pair. The owner's existing pair (18 and 20 Oct, before 26-017) is left for them: "Field trip to Bounce" can be removed in Kids & School or undone in HomeSend |
 | `26-019` A family moment is shared family time | P0 | Done | The owner, 2026-10-22: "only one member of family is part of this event, why is it being called as Family moment? put checks in place". The Family page took the first protected event of any kind as its moment, so a protected school trip with one child going led the page. `isFamilyMoment` (`family/schedule.ts`) decides it for Family and Home alike: a family kind (family time, outing, birthday, gathering, travel, special occasion), not cancelled, with two or more going or nobody named. Protection alone never makes one. Home heads anything else by what it is (School event, Appointment) or "Coming up" (new key, eight languages), never with the family heart. Golden tests in `schedule.test.ts`; browser-checked at 360px and desktop on a QA household |
 | `26-020` HomeTalk knows everything the Calendar shows | P0 | Done | The owner, 2026-10-23: "there are events on calendar for tomorrow 24 Oct, but HomeTalk doesn't know about some of them, they added recently. check root cause… check all similar issues and put in broader fix". Root cause: a child's classes outside school (`child_activities`, 08-012) are on the Calendar but were never a HomeBrain record, and a day-sized question ("what is happening tomorrow?") was answered from HomeBrain's facts, so Asmi's Vocal and Piano were left out while her parent–teacher meeting (a school entry) was named. Fixes: (1) HomeBrain reads the classes (`context/repository.ts`'s school adapter) and `context/builders.ts` makes each one a fact, each session over the next fortnight a fact on its day (`sessionDates`, the Calendar's own), and each upcoming competition a fact; (2) "what's on tomorrow / on Saturday / this weekend / next week" (`asksWhatIsOn`, `scheduleSpanOf`, up to 14 days) is answered by rules from `calendarRange` with every module, exactly as the Calendar screen reads it, hidden Filters respected, a part of the day kept and one named person narrowed to (`scheduleReply`); "what does Asmi have tomorrow?" stays HomeBrain's, since it also means to-dos and notices; (3) `CALENDAR_SOURCE_RECORDS` maps every calendar source to HomeBrain records, typed over `CalendarSource`, so a new Calendar source cannot ship without HomeBrain reading it; (4) the stale trigger (`wh.mark_context_stale`) was missing on 25 tables HomeBrain reads, among them `event_exceptions`, health, outcomes, orders and school notices; migration `20261023160000_context_stale_everywhere` adds it (applied live). Tests: `calendar/schedule-answer.test.ts`, `context/calendar-parity.test.ts`; eval HT-138 to HT-140 (158/158) |
+| `26-021` An event from HomeSend is filed like the calendar's own Add | P1 | Done | The owner, 2026-10-25. An event confirmed in HomeSend was always a "gathering" with no category and its place lost in the notes. It now gets the calendar's kind and category from its words (`homesend/record-types.ts` `eventShape`: birthday, special occasion, travel, appointment/health — a blood-test camp —, school event, outing, household gathering; otherwise a family gathering) and its Where: the AI reads the place into `location`, the review shows a Where field, and it is saved to `family_events.location`. Still through `addFamilyEvent`, so the duplicate check holds. PR #329. |
 
 ### 27 — Notification Channels and Events
 
