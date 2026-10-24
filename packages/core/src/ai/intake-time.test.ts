@@ -82,6 +82,31 @@ describe("groundIntakeDate reads the time of a school item", () => {
     expect(groundIntakeDate(reading({ kind: "school_item", title: "Exam", dateText: "Tuesday 22 September 2027" }), october).dueDate).toBeNull();
   });
 
+  it("reads a time the way people write it: morning, afternoon, night, hrs, noon", () => {
+    const at = (dateText: string) => groundIntakeDate(reading({ kind: "school_item", title: "Exam", dateText: `Saturday, ${dateText}` }), reference);
+    expect(at("9.30 morning")).toMatchObject({ dueTime: "09:30" });
+    expect(at("4 in the afternoon")).toMatchObject({ dueTime: "16:00" });
+    expect(at("7 at night")).toMatchObject({ dueTime: "19:00" });
+    expect(at("14.30 hrs")).toMatchObject({ dueTime: "14:30" });
+    expect(at("10 am to 12 noon")).toMatchObject({ dueTime: "10:00", endTime: "12:00" });
+  });
+
+  it("reads a numeric date day first, and never a time as a date", () => {
+    const october = { timezone: "Asia/Kolkata", now: new Date("2026-10-23T09:00:00Z") };
+    const day = (dateText: string) => groundIntakeDate(reading({ kind: "school_item", title: "Quiz", dateText }), october).dueDate;
+    expect(day("Sat 31/10 at 9 am")).toBe("2026-10-31");
+    expect(day("22-09-2026")).toBe("2026-09-22");
+    expect(day("02/11")).toBe("2026-11-02");
+    expect(day("3-4 pm")).toBeNull();
+  });
+
+  it("a day and month with no year is the nearest one to when it was sent", () => {
+    const october = { timezone: "Asia/Kolkata", now: new Date("2026-10-23T09:00:00Z") };
+    const day = (dateText: string) => groundIntakeDate(reading({ kind: "school_item", title: "PTM", dateText }), october).dueDate;
+    expect(day("22nd September")).toBe("2026-09-22");
+    expect(day("15th January")).toBe("2027-01-15");
+  });
+
   it("keeps the model's own full date and still reads the time", () => {
     const grounded = groundIntakeDate(reading({ kind: "school_item", title: "Exam", dueDate: "2026-10-12", dateText: "the second Monday of next month, 10am" }), reference);
     expect(grounded).toMatchObject({ dueDate: "2026-10-12", dueTime: "10:00" });
