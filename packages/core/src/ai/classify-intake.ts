@@ -510,6 +510,7 @@ For a receipt: merchant is the shop's name as printed; amount and currency are t
 
 healthRecordType, documentDate and subjectMemberName are for a health_document only. healthRecordType is one of: ${RECORD_TYPES.join(", ")}. documentDate is the date printed on the document itself (a test date, a visit date, an appointment date), in YYYY-MM-DD form, only when a full date with its year is shown; otherwise put the words used for it in dateText. subjectMemberName is the person's name exactly as printed or written on the document — never guess whose it is from context alone; leave it null when no name appears anywhere on the document.
 
+A paragraph that starts "The sender added:" is the household member's own note about the content above it (a forward and what they typed straight after it, or a photo's caption). Read it as part of the same item: a name there is who the item is for (subjectMemberName and people); a word like "Karate" or "Maths" says what it is (use it in title and subject, e.g. "Karate exam"); a day or time there ("Sunday", "on 5 Nov at 10") is its date, copied into dateText together with any time the content gives. Where the note and the content disagree, the note wins.
 dateText: for a bill, school_item, health_document or receipt, the words the content uses for its date, copied exactly ("tomorrow", "Saturday", "on 5 October", "27 Sep") — also when you filled dueDate or documentDate. When the content gives a time or a time range for it, copy that too, as written, in the same field ("this Saturday, 26 September, from 9:00 am to 11:30 am", "Friday at 4pm"); never convert or work out a time yourself. Null when the content names no date, and always null for grocery_item and unknown.
 
 summary: one short plain sentence saying what this is and what it asks of the household ("Asmi's school moved the Science Exhibition to 29 September"). Null when readable is false.
@@ -677,7 +678,13 @@ function hhmm(value: Clock, meridiem: "am" | "pm" | null = value.meridiem): stri
  * whose end is not after its start keeps only the start.
  */
 export function timeFromDateText(dateText: string): { start: string; end: string | null } | null {
-  const text = dateText.replace(/\b(?:12\s*)?noon\b|\bmidday\b/gi, "12:00 pm");
+  // Times as people write them: "9.30 morning", "4 in the afternoon",
+  // "7 at night", "14.30 hrs" — read as the clock they mean.
+  const text = dateText
+    .replace(/\b(?:12\s*)?noon\b|\bmidday\b/gi, "12:00 pm")
+    .replace(/(\d)\s*(?:o'?clock\s*)?(?:in the\s+)?morning\b/gi, "$1 am")
+    .replace(/(\d)\s*(?:o'?clock\s*)?(?:in the\s+|at\s+)?(?:afternoon|evening|night)\b/gi, "$1 pm")
+    .replace(/\b(\d{1,2})[.:](\d{2})\s*hrs?\b/gi, "$1:$2");
   const range = CLOCK_RANGE.exec(text);
   if (range) {
     const first = clock(range[1], range[2], range[3], range[4]);
@@ -807,8 +814,9 @@ export function dayFromDateText(dateText: string, options: { timezone: string; n
   // A weekday or "tomorrow" alone decides the day only when it is the whole
   // phrase, give or take a time of day ("Saturday at 9am") — never the
   // "Monday" inside "the second Monday of next month".
-  const rest = said ? phrase.replace(said, " ").replace(/\b(?:at|from|by)?\s*\d{1,2}(?::\d{2})?\s*(?:a\.?m\.?|p\.?m\.?)?(?:\s*[-–]\s*\d{1,2}(?::\d{2})?\s*(?:a\.?m\.?|p\.?m\.?)?)?/gi, " ") : phrase;
-  return /[a-z]{2,}/i.test(rest.replace(/\b(?:on|this|the|at|by|in|morning|afternoon|evening|noon)\b/gi, " ")) ? null : relative;
+  const rest = said ? phrase.replace(said, " ").replace(/\b\d{1,2}(?:[:.]\d{2})?\s*(?:a\.?\s?m\.?|p\.?\s?m\.?|hrs?\b)?/gi, " ") : phrase;
+  const TIME_WORDS = /\b(?:on|this|the|at|by|in|from|to|till|until|and|between|onwards|morning|afternoon|evening|night|noon|midday|hrs?|o.?clock)\b/gi;
+  return /[a-z]{2,}/i.test(rest.replace(TIME_WORDS, " ")) ? null : relative;
 }
 
 /**

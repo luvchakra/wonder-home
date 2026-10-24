@@ -11,6 +11,7 @@ decision that shapes later work each earns a note, written before moving on.
 
 | Date | Note |
 |---|---|
+| 2026-10-24 | [WhatsApp: a forward and the note after it are one item](2026-10-24-whatsapp-messages-sent-together.md) |
 | 2026-10-24 | [WhatsApp asks HomeTalk (14-040)](2026-10-24-whatsapp-asks-hometalk.md) |
 | 2026-10-24 | [WhatsApp live on the test number; voice notes, questions and "a product of WonderApps"](2026-10-24-whatsapp-live-voice-notes-questions.md) |
 | 2026-10-23 | [The household record index, Phase 1 (14-036)](2026-10-23-household-record-index-phase-1.md) |

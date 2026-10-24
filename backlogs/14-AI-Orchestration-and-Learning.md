@@ -419,6 +419,8 @@ Implement AI Orchestration & Learning as a first-class WonderHome domain. The mo
 **Priority:** P0
 **Goal:** The mockup flow, end to end, in the app.
 
+**Follow-up (2026-10-24):** a forward or photo and the texts the same person sends within 30 s are one item ("The sender added: …"), with one reply — see `docs/progress/2026-10-24-whatsapp-messages-sent-together.md`.
+
 **Acceptance criteria**
 - Connect WhatsApp: an intro, the official number with copy and an "Open WhatsApp" link carrying the CONNECT message, and a confirmation shown only once the server has actually linked the number.
 - Manage Household shows who has WhatsApp connected, never another member's number; Settings lets a member see, reconnect and disconnect their own, and an admin disconnect anyone's.

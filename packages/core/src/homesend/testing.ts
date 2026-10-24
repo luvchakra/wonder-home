@@ -90,6 +90,10 @@ export function fakeSupabase(seed: Record<string, Row[]> = {}): FakeSupabase {
         if (operator === "is" && value === null) filters.push((row) => row[column] !== null && row[column] !== undefined);
         return builder;
       },
+      lte(column: string, value: unknown) {
+        filters.push((row) => row[column] !== null && row[column] !== undefined && String(row[column]) <= String(value));
+        return builder;
+      },
       gte(column: string, value: unknown) {
         filters.push((row) => row[column] !== null && row[column] !== undefined && String(row[column]) >= String(value));
         return builder;

@@ -1022,6 +1022,13 @@ const HOMESEND: HomeSendCase[] = [
     reading: { kind: "school_item", title: "PTM", schoolKind: "event", dueDate: null, dateText: "22nd September from 10 am to 12 noon" },
     expected: { interpretation: "school_item", date: "2026-09-22", time: "10:00–12:00" },
   },
+  {
+    id: "HS-20", surface: "homesend", household: "A", category: "entity_resolution", actor: "a-kunal",
+    description: "A forwarded school message and the note typed straight after it are one item: the note says whose it is, what it is and which day; the forward says the time (the owner's 'asmi Karate Sunday', 2026-10-24).",
+    source: { channel: "pasted_text", capturedAt: "2026-10-24T01:55:10Z", text: "Dear parents and students, exam time is 9.30 morning\n\nThe sender added: asmi Karate Sunday" },
+    reading: { kind: "school_item", title: "Karate exam", schoolKind: "exam", subject: "Karate", dueDate: null, dateText: "Sunday, 9.30 morning", subjectMemberName: "Asmi", people: ["Asmi"] },
+    expected: { interpretation: "school_item", entity: "a-asmi", date: "2026-10-25", time: "09:30" },
+  },
 ];
 
 // --- HomeBrain (§7) ----------------------------------------------------------------
