@@ -1026,8 +1026,16 @@ const HOMESEND: HomeSendCase[] = [
     id: "HS-20", surface: "homesend", household: "A", category: "entity_resolution", actor: "a-kunal",
     description: "A forwarded school message and the note typed straight after it are one item: the note says whose it is, what it is and which day; the forward says the time (the owner's 'asmi Karate Sunday', 2026-10-24).",
     source: { channel: "pasted_text", capturedAt: "2026-10-24T01:55:10Z", text: "Dear parents and students, exam time is 9.30 morning\n\nThe sender added: asmi Karate Sunday" },
-    reading: { kind: "school_item", title: "Karate exam", schoolKind: "exam", subject: "Karate", dueDate: null, dateText: "Sunday, 9.30 morning", subjectMemberName: "Asmi", people: ["Asmi"] },
-    expected: { interpretation: "school_item", entity: "a-asmi", date: "2026-10-25", time: "09:30" },
+    // A karate exam is a class outside school, never school work (the owner, 2026-10-24).
+    reading: { kind: "activity_item", title: "Karate exam", activityKind: "exam", subject: "Karate", dueDate: null, dateText: "Sunday, 9.30 morning", people: ["Asmi"] },
+    expected: { interpretation: "activity_item", entity: "a-asmi", date: "2026-10-25", time: "09:30" },
+  },
+  {
+    id: "HS-21", surface: "homesend", household: "A", category: "time_date", actor: "a-kunal",
+    description: "A birthday party invitation is a family event, with its day and time — not school work and not a class.",
+    source: { channel: "pasted_text", capturedAt: "2026-10-22T05:00:00Z", text: "You're invited to Riya's 8th birthday party this Saturday, 4 to 7 pm at Fun City, Koramangala!" },
+    reading: { kind: "event", title: "Riya's birthday party", dueDate: null, dateText: "this Saturday, 4 to 7 pm", notes: "At Fun City, Koramangala", people: ["Riya"] },
+    expected: { interpretation: "event", date: "2026-10-24", time: "16:00–19:00" },
   },
 ];
 

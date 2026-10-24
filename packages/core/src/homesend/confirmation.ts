@@ -51,6 +51,8 @@ const CONSEQUENTIAL: Partial<Record<HomeSendKind, string>> = {
 const KIND_LABEL: Record<HomeSendKind, string> = {
   bill: "a bill",
   school_item: "school work",
+  activity_item: "a class outside school",
+  event: "an event",
   grocery_item: "something to buy",
   health_document: "a health document",
   receipt: "a receipt",
@@ -86,7 +88,7 @@ export function decideConfirmation(input: ConfirmationInput): ConfirmationDecisi
     return { mode: "ask", reason: "WonderHome isn't sure it read this right.", question };
   }
   if (input.subject?.question) return { mode: "ask", reason: "It doesn't say who it's for.", question: input.subject.question };
-  if (kind === "school_item" && !input.subject?.selected) return { mode: "ask", reason: "It doesn't say who it's for.", question: "Who is this for?" };
+  if ((kind === "school_item" || kind === "activity_item") && !input.subject?.selected) return { mode: "ask", reason: "It doesn't say who it's for.", question: "Who is this for?" };
 
   if (input.reconciliation) return { mode: "prepare", reason: input.reconciliation.message, question: null };
   if (confidence === "medium") return { mode: "prepare", reason: "WonderHome read it, but not surely enough to act on its own.", question: null };

@@ -150,6 +150,7 @@ export type HomeSendReviewLabels = {
     kind: Record<string, string>;
     bill: Record<string, string>;
     school: Record<string, string>;
+    activity: Record<string, string>;
     record: Record<string, string>;
   };
   child: {
@@ -173,6 +174,9 @@ export type HomeSendReviewLabels = {
     due: string;
     schoolKind: string;
     subject: string;
+    activityKind: string;
+    activityName: string;
+    on: string;
     starts: string;
     startsHint: string;
     ends: string;
@@ -466,6 +470,8 @@ export function homesendReviewLabels(t: Translate, language: string): HomeSendRe
       kind: {
         bill: t("homesend.option.kind.bill"),
         school_item: t("homesend.option.kind.schoolItem"),
+        activity_item: t("homesend.option.kind.activityItem"),
+        event: t("homesend.option.kind.event"),
         grocery_item: t("homesend.option.kind.groceryItem"),
         health_document: t("homesend.option.kind.healthDocument"),
         receipt: t("homesend.option.kind.receipt"),
@@ -488,6 +494,12 @@ export function homesendReviewLabels(t: Translate, language: string): HomeSendRe
         project: t("homesend.option.school.project"),
         event: t("homesend.option.school.event"),
         notice: t("homesend.option.school.notice"),
+      },
+      activity: {
+        exam: t("homesend.option.activity.exam"),
+        competition: t("homesend.option.activity.competition"),
+        event: t("homesend.option.activity.event"),
+        note: t("homesend.option.activity.note"),
       },
       record: {
         lab_result: t("homesend.option.record.labResult"),
@@ -522,6 +534,9 @@ export function homesendReviewLabels(t: Translate, language: string): HomeSendRe
       due: t("homesend.field.due"),
       schoolKind: t("homesend.field.schoolKind"),
       subject: t("homesend.field.subject"),
+      activityKind: t("homesend.field.activityKind"),
+      activityName: t("homesend.field.activityName"),
+      on: t("homesend.field.on"),
       starts: t("homesend.field.starts"),
       startsHint: t("homesend.field.startsHint"),
       ends: t("homesend.field.ends"),
@@ -685,6 +700,8 @@ export function homesendPageLabels(t: Translate, language: string): HomeSendPage
       kind: {
         bill: t("homesend.kind.bill"),
         school_item: t("homesend.kind.school"),
+        activity_item: t("homesend.kind.activity"),
+        event: t("homesend.kind.event"),
         grocery_item: t("homesend.kind.grocery"),
         health_document: t("homesend.kind.health"),
         receipt: t("homesend.kind.receipt"),

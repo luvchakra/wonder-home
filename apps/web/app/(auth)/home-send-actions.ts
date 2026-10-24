@@ -28,6 +28,8 @@ import { log } from "@wonderhome/core/observability/logger";
 import { hitRateLimit, rateLimitMessage } from "@wonderhome/core/security/rate-limit";
 import { SCHOOL_ITEM_KINDS } from "@wonderhome/core/school/items";
 import { cancelSchoolItem, restoreSchoolItem, updateSchoolItem } from "@wonderhome/core/school/repository";
+import { standDownActivity, standDownActivityNote } from "@wonderhome/core/school/activities";
+import { setEventCancelled } from "@wonderhome/core/family/event-detail";
 
 import { prepareReview } from "./home-send-review";
 import { addChildFromNotice, createNew, reviseExisting, routeSchema, type RouteInput } from "./home-send-writes";
@@ -483,6 +485,8 @@ export async function routeHomeSendItemAction(_previous: RouteHomeItemState, for
     newChildDob: formData.get("newChildDob") ?? undefined,
     schoolKind: formData.get("schoolKind") || undefined,
     subject: formData.get("subject") || undefined,
+    activityKind: formData.get("activityKind") || undefined,
+    activityName: formData.get("activityName") || undefined,
     quantity: formData.get("quantity") || undefined,
     unit: formData.get("unit") || undefined,
     category: formData.get("category") || undefined,
@@ -550,7 +554,14 @@ export async function routeHomeSendItemAction(_previous: RouteHomeItemState, for
             date: input.kind === "health_document" ? input.documentDate || null : input.dueDate || null,
             amount: input.amount ? Number(input.amount) : null,
             payee: input.payee || null,
-            subjectMemberId: input.kind === "school_item" ? (input.childMemberId && input.childMemberId !== "new" ? input.childMemberId : null) : input.kind === "health_document" ? input.subjectMemberId || null : null,
+            subjectMemberId:
+              input.kind === "school_item" || input.kind === "activity_item"
+                ? input.childMemberId && input.childMemberId !== "new"
+                  ? input.childMemberId
+                  : null
+                : input.kind === "health_document"
+                  ? input.subjectMemberId || null
+                  : null,
             capturedAt: intake?.createdAt ?? null,
             change: intake?.extracted?.change ?? "new",
           },
@@ -562,7 +573,7 @@ export async function routeHomeSendItemAction(_previous: RouteHomeItemState, for
       // A child the notice names who is not on record yet (story 08-009):
       // added the way the Family screen adds one — an Admin, who becomes the
       // child's guardian — and the notice is confirmed for them straight after.
-      if (input.kind === "school_item" && input.childMemberId === "new") {
+      if ((input.kind === "school_item" || input.kind === "activity_item") && input.childMemberId === "new") {
         const added = await addChildFromNotice(supabase, input);
         if ("error" in added) return { error: added.error };
         input.childMemberId = added.memberId;
@@ -580,6 +591,10 @@ export async function routeHomeSendItemAction(_previous: RouteHomeItemState, for
         entityId: routedId,
         createdByMemberId: membership.memberId,
       });
+      // Anything it had to add first (a class the child did not have yet) is its own change, undone with it.
+      for (const also of created.also ?? []) {
+        await recordHomeSendChange(supabase, { householdId: input.householdId, intakeId: input.itemId, domain: also.domain, entityId: also.entityId, createdByMemberId: membership.memberId });
+      }
     }
 
     // What else the same content asked for (§11) — each ticked need its own
@@ -690,6 +705,12 @@ async function reverseChange(supabase: Awaited<ReturnType<typeof createClient>>,
     await cancelObligation(supabase, { id: change.entityId, householdId });
   } else if (change.domain === "school_item") {
     await cancelSchoolItem(supabase, householdId, change.entityId);
+  } else if (change.domain === "activity_item") {
+    await standDownActivityNote(supabase, { householdId, id: change.entityId });
+  } else if (change.domain === "activity") {
+    await standDownActivity(supabase, { householdId, id: change.entityId });
+  } else if (change.domain === "event") {
+    await setEventCancelled(supabase, { householdId, eventId: change.entityId, cancelled: true });
   } else if (change.domain === "purchase") {
     // What the line added at home and took off the list comes back out
     // first — exactly those changes, found by the keys they were written

@@ -485,7 +485,12 @@ WonderHome's AI layer is one pipeline with three named, real surfaces —
   (§12): a clear, new grocery or school item a member sent may apply on its
   own only where the household set that outcome's autonomy to "execute";
   bills, health documents and receipts always wait for a person, whatever
-  the confidence. A paid receipt is its own kind, never a bill: each line
+  the confidence. A class outside school is its own kind, never school work
+  (`activity_item`, story 08-027): a karate exam or a dance show is filed under
+  the child's class of that name in Kids & School (the class is added in the
+  same step when the child has none, and undone with it), and an event or
+  invitation (`event`) goes on the family calendar through `addFamilyEvent`.
+  A paid receipt is its own kind, never a bill: each line
   a person keeps becomes a `consumable_purchases` row (`commerce/receipts.ts`
   matches a line to a tracked item only when plain, never guesses) and
   undoes on its own. What each review decided is kept in closed words on the item

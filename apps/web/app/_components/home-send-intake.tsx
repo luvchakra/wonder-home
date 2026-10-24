@@ -22,7 +22,9 @@ const OBLIGATION_KIND_VALUES = ["utility", "rent", "school_fee", "subscription",
 
 const SCHOOL_KIND_VALUES = ["homework", "worksheet", "exam", "project", "event", "notice"];
 
-const KIND_VALUES = ["bill", "school_item", "grocery_item", "health_document", "receipt"];
+const KIND_VALUES = ["bill", "school_item", "activity_item", "event", "grocery_item", "health_document", "receipt"];
+
+const ACTIVITY_KIND_VALUES = ["exam", "competition", "event", "note"];
 
 const RECORD_TYPE_VALUES = [
   "lab_result",
@@ -76,6 +78,7 @@ export type HomeSendExtractionFields = {
   endTime?: string | null;
   schoolKind: string | null;
   subject: string | null;
+  activityKind?: string | null;
   quantity: number | null;
   unit: string | null;
   category: string | null;
@@ -558,6 +561,33 @@ export function HomeSendConfirmFields({
           </div>
           <Field label={words.subject} name="subject" defaultValue={prefill?.subject ?? ""} autoComplete="off" />
           <Field label={words.due} name="dueDate" type="date" defaultValue={prefill?.dueDate ?? ""} />
+          <div className="grid grid-cols-2 gap-3">
+            <Field label={words.starts} name="dueTime" type="time" defaultValue={prefill?.dueTime ?? ""} hint={words.startsHint} />
+            <Field label={words.ends} name="endTime" type="time" defaultValue={prefill?.endTime ?? ""} />
+          </div>
+        </>
+      ) : kind === "activity_item" ? (
+        <>
+          <SchoolChildField kids={kids} subject={subject} defaultValue={schoolDefault} canAddChild={canAddChild} labels={labels.child} />
+          {/* The class it is for, by name: one of the child's own, or a new one added with it. */}
+          <Field label={words.activityName} name="activityName" required defaultValue={prefill?.subject ?? ""} autoComplete="off" maxLength={120} />
+          <div className="space-y-1.5">
+            <label htmlFor="activityKind" className="block text-sm font-medium">{words.activityKind}</label>
+            <select id="activityKind" name="activityKind" defaultValue={prefill?.activityKind ?? "event"} className={selectClass}>
+              {ACTIVITY_KIND_VALUES.map((value) => (
+                <option key={value} value={value}>{options.activity[value]}</option>
+              ))}
+            </select>
+          </div>
+          <Field label={words.on} name="dueDate" type="date" defaultValue={prefill?.dueDate ?? ""} />
+          <div className="grid grid-cols-2 gap-3">
+            <Field label={words.starts} name="dueTime" type="time" defaultValue={prefill?.dueTime ?? ""} hint={words.startsHint} />
+            <Field label={words.ends} name="endTime" type="time" defaultValue={prefill?.endTime ?? ""} />
+          </div>
+        </>
+      ) : kind === "event" ? (
+        <>
+          <Field label={words.on} name="dueDate" type="date" required defaultValue={prefill?.dueDate ?? ""} />
           <div className="grid grid-cols-2 gap-3">
             <Field label={words.starts} name="dueTime" type="time" defaultValue={prefill?.dueTime ?? ""} hint={words.startsHint} />
             <Field label={words.ends} name="endTime" type="time" defaultValue={prefill?.endTime ?? ""} />

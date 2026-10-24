@@ -19,6 +19,9 @@ import type { HouseholdContextItem, SourceRef } from "./types";
 const TABLE_FOR_DOMAIN: Record<HomeSendChange["domain"], string> = {
   bill: "bill",
   school_item: "school_item",
+  activity_item: "activity_note",
+  activity: "activity",
+  event: "event",
   grocery_item: "consumable",
   health_document: "health_record",
   purchase: "purchase",

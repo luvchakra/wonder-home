@@ -105,7 +105,7 @@ const SECTIONS: readonly SectionShape[] = [
   {
     id: "home-send",
     group: "Everyday use",
-    updated: "2026-10-16",
+    updated: "2026-10-24",
     keywords: ["homesend", "upload", "photo", "pdf", "screenshot", "forward", "email", "share", "paperclip", "school notice", "receipt", "whatsapp", "voice note", "link", "undo"],
   },
   {
@@ -141,7 +141,7 @@ const SECTIONS: readonly SectionShape[] = [
   {
     id: "school",
     group: "Everyday use",
-    updated: "2026-10-21",
+    updated: "2026-10-24",
     keywords: ["goals", "goal", "stars", "streak", "badges", "reward", "level", "fun", "child home", "game", "school", "homework", "exam", "child", "study", "deadline", "portal", "teacher", "screenshot", "notice", "class teacher", "subject teacher", "activity", "class", "music", "piano", "karate", "competition", "medal", "award", "timetable", "time table", "period", "exam", "exams", "unit test", "mid-term", "finals", "syllabus", "study material", "cat", "companion", "pet", "cat name", "earn stars", "ways to earn stars", "score", "scores", "goal from class", "goal from homework", "start from", "rewards earned", "show me"],
   },
   {

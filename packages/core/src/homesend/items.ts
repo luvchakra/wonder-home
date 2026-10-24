@@ -39,15 +39,19 @@ export const FAILURE_REASON_COPY: Record<HomeSendFailureReason, string> = {
   transcription_failed: "WonderHome couldn't make out the voice note.",
 };
 
-export const HOME_SEND_KINDS = ["bill", "school_item", "grocery_item", "health_document", "receipt", "unknown"] as const;
+export const HOME_SEND_KINDS = ["bill", "school_item", "activity_item", "event", "grocery_item", "health_document", "receipt", "unknown"] as const;
 export type HomeSendKind = (typeof HOME_SEND_KINDS)[number];
 
 /** Whether a manual_upload's bytes actually matched the content type it claimed. Pasted text has no file, so it is always not_applicable. */
 export const HOME_SEND_SECURITY_STATUSES = ["not_applicable", "clean", "rejected"] as const;
 export type HomeSendSecurityStatus = (typeof HOME_SEND_SECURITY_STATUSES)[number];
 
-/** The one domain the HomeSend confirm form may write into (bill, school work, a grocery item or a health record). */
-export const HOME_SEND_CHANGE_DOMAINS = ["bill", "school_item", "grocery_item", "health_document", "purchase"] as const;
+/**
+ * What a HomeSend confirm may write: a bill, school work, a class's exam or
+ * event (`activity_item`, with `activity` for a class added in the same
+ * step), a family event, a grocery item, a health record or a purchase.
+ */
+export const HOME_SEND_CHANGE_DOMAINS = ["bill", "school_item", "activity_item", "activity", "event", "grocery_item", "health_document", "purchase"] as const;
 export type HomeSendChangeDomain = (typeof HOME_SEND_CHANGE_DOMAINS)[number];
 
 /** A second, different-domain need the same content also implies — see `ai/classify-intake.ts`'s `SecondaryProposalSchema`. Always a grocery suggestion; never written until the household confirms it too. */

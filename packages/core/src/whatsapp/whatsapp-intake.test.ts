@@ -445,6 +445,17 @@ describe("telling a question from something to keep", () => {
   });
 });
 
+describe("saying what it found", () => {
+  const outcome = (classifiedKind: string, title: string) =>
+    ({ itemId: "i", duplicate: false, state: "needs_review", notice: "", item: { id: "i", classifiedKind, extracted: { title, needs: [] }, understanding: { references: [] } } }) as unknown as Parameters<typeof acknowledgementFor>[0];
+  it("names a class outside school and an event for what they are, never school work", () => {
+    expect(acknowledgementFor(outcome("activity_item", "Karate exam"), { whoFor: ["Asmi", "Manan"] }).text).toBe(
+      "Got it 👍 I found something for a class outside school: *Karate exam*. Who is it for — Asmi or Manan? Reply with their name.",
+    );
+    expect(acknowledgementFor(outcome("event", "Riya's birthday party")).text).toBe("Got it 👍 I found an event: *Riya's birthday party*. It's waiting in HomeSend for you to check.");
+  });
+});
+
 describe("messages sent together", () => {
   it("are one piece of content, the later ones as what the sender added", () => {
     expect(withAdded("Exam time is 9.30 morning", ["asmi Karate Sunday"])).toBe("Exam time is 9.30 morning\n\nThe sender added: asmi Karate Sunday");

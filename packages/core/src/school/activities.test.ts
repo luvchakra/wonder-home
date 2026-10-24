@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { activityEntries, isoWeekday, orderedNotes, sessionDates, type Activity } from "./activities";
+import { activityEntries, isoWeekday, orderedNotes, sameActivityName, sessionDates, type Activity } from "./activities";
 
 const activity = (extra: Partial<Activity> = {}): Activity => ({
   id: "piano",
@@ -45,6 +45,26 @@ describe("sessionDates", () => {
 });
 
 describe("activityEntries", () => {
+  it("puts a class's exam on the Calendar once, at its own time, beside its sessions (the owner's karate exam, 2026-10-24)", () => {
+    const karate = activity({
+      id: "karate",
+      name: "Karate",
+      days: [],
+      startsAt: null,
+      endsAt: null,
+      items: [
+        { id: "belt", activityId: "karate", kind: "exam", title: "Karate belt exam", onDate: "2026-10-25", startsAt: "09:30", endsAt: null, detail: null, result: null },
+        { id: "gold", activityId: "karate", kind: "award", title: "Gold", onDate: "2026-10-25", startsAt: null, endsAt: null, detail: null, result: "Gold" },
+      ],
+    });
+    const entries = activityEntries([karate], viewer, { from: "2026-10-19", to: "2026-10-31" });
+    expect(entries).toHaveLength(1);
+    expect(entries[0]).toMatchObject({ id: "activity-note:belt", title: "Karate belt exam", detail: "Karate", allDay: false, repeats: false, memberIds: ["anya"] });
+    expect(entries[0]!.start.toISOString()).toBe("2026-10-25T04:00:00.000Z");
+    // Outside the range it is not there.
+    expect(activityEntries([karate], viewer, { from: "2026-10-26", to: "2026-10-31" })).toEqual([]);
+  });
+
   it("puts each session on the calendar at its local time, for that child, opening on Kids & School", () => {
     const [first] = activityEntries([activity()], viewer, { from: "2026-10-20", to: "2026-10-20" });
     expect(first).toEqual(
@@ -72,13 +92,29 @@ describe("activityEntries", () => {
 });
 
 describe("orderedNotes", () => {
+    const note = (id: string, kind: "competition" | "exam" | "event" | "award" | "note", onDate: string | null) => ({ id, activityId: "piano", kind, title: id, onDate, startsAt: null, endsAt: null, detail: null, result: null });
+
   it("lists competitions still to come soonest first, and the rest newest first", () => {
-    const note = (id: string, kind: "competition" | "award" | "note", onDate: string | null) => ({ id, activityId: "piano", kind, title: id, onDate, detail: null, result: null });
     const { upcoming, past } = orderedNotes(
       [note("recital", "competition", "2026-12-05"), note("fest", "competition", "2026-11-02"), note("old", "competition", "2026-05-01"), note("gold", "award", "2026-06-01"), note("tip", "note", null)],
       "2026-10-18",
     );
     expect(upcoming.map((item) => item.id)).toEqual(["fest", "recital"]);
     expect(past.map((item) => item.id)).toEqual(["gold", "old", "tip"]);
+  });
+
+  it("an exam or an event still to come is coming up too", () => {
+    const { upcoming } = orderedNotes([note("belt", "exam", "2026-10-25"), note("show", "event", "2026-11-01"), note("tip", "note", "2026-10-30")], "2026-10-24");
+    expect(upcoming.map((item) => item.id)).toEqual(["belt", "show"]);
+  });
+});
+
+describe("sameActivityName", () => {
+  it("finds the child's class by its name, however it is written", () => {
+    expect(sameActivityName("Karate", "karate")).toBe(true);
+    expect(sameActivityName("Karate class", "Karate")).toBe(true);
+    expect(sameActivityName("Shotokan Karate", "Karate")).toBe(true);
+    expect(sameActivityName("Karate", "Kathak")).toBe(false);
+    expect(sameActivityName("Piano", "")).toBe(false);
   });
 });

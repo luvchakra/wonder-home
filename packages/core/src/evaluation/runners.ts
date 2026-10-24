@@ -428,7 +428,7 @@ export const BLANK_READING: IntakeExtraction = {
   merchant: null, lines: [], subjectMemberName: null, summary: null, people: [], facts: [], needs: [], change: "new", confidence: "high", secondary: null,
 };
 
-const CHANGE_DOMAIN = { bill: "bill", school_item: "school_item", grocery_item: "grocery_item", health_document: "health_document" } as const;
+const CHANGE_DOMAIN = { bill: "bill", school_item: "school_item", activity_item: "activity_item", event: "event", grocery_item: "grocery_item", health_document: "health_document" } as const;
 
 export async function observeHomeSend(c: HomeSendCase, models: Models = {}): Promise<Observation> {
   const household = GOLDEN_HOUSEHOLDS[c.household];

@@ -28,7 +28,7 @@ import type { SchoolCommunication } from "../school/communications";
 import type { Enrolment } from "../school/enrolments";
 import { spokenSummary, type SpokenLanguage } from "../identity/member-languages";
 import { registryItems, type RegistryRows } from "../knowledge/describe";
-import { sessionDates, type Activity } from "../school/activities";
+import { isDatedNote, sessionDates, type Activity } from "../school/activities";
 import type { Exam, TimetablePeriod } from "../school/exams";
 import type { SchoolItem } from "../school/items";
 import { capitalize, describeValue, formatDate, formatTime, humanKey, isoDateIn, money, words } from "./format";
@@ -875,21 +875,23 @@ export function buildContextItems(records: ContextRecords, options: BuildOptions
           aliases: [activity.name, `${activity.name} class`],
         });
       }
-      for (const competition of activity.items.filter((item) => item.kind === "competition" && item.onDate !== null && item.onDate >= today)) {
+      // What the class has coming up on a day: a competition, an exam, an event (with its time when one was given).
+      for (const coming of activity.items.filter((item) => isDatedNote(item.kind) && item.onDate !== null && item.onDate >= today)) {
+        const at = coming.startsAt ? ` at ${clock(coming.startsAt)}${coming.endsAt ? ` to ${clock(coming.endsAt)}` : ""}` : "";
         add({
           domain: "school",
-          entityType: "activity_competition",
-          entityId: competition.id,
-          summary: `${child} has the ${competition.title} (${activity.name}) on ${formatDate(new Date(`${competition.onDate}T12:00:00Z`), "UTC")}.${competition.detail ? ` ${competition.detail.replace(/\s+/g, " ").slice(0, 200)}` : ""}`,
+          entityType: "activity_note",
+          entityId: coming.id,
+          summary: `${child} has the ${coming.title} (${activity.name}) on ${formatDate(new Date(`${coming.onDate}T12:00:00Z`), "UTC")}${at}.${coming.detail ? ` ${coming.detail.replace(/\s+/g, " ").slice(0, 200)}` : ""}`,
           need: "what is on a day",
           privacyClass: "child",
           subjectMemberIds: [activity.childMemberId],
-          attributes: { title: competition.title, kind: "competition", date: competition.onDate, activity: activity.name, childMemberId: activity.childMemberId },
-          source: { type: "child_activity_notes", sourceId: competition.id },
+          attributes: { title: coming.title, kind: coming.kind, date: coming.onDate, startsAt: coming.startsAt, endsAt: coming.endsAt, activity: activity.name, childMemberId: activity.childMemberId },
+          source: { type: "child_activity_notes", sourceId: coming.id },
           freshness: "current",
           tier: 2,
-          validUntil: competition.onDate,
-          aliases: [competition.title, `${activity.name} competition`],
+          validUntil: coming.onDate,
+          aliases: [coming.title, `${activity.name} ${coming.kind}`],
         });
       }
     }

@@ -14,7 +14,11 @@ import { createChildMember } from "@wonderhome/core/identity/children";
 import { requireHouseholdAdmin, type requireMembership } from "@wonderhome/core/identity/households";
 import { log } from "@wonderhome/core/observability/logger";
 import { SCHOOL_ITEM_KINDS } from "@wonderhome/core/school/items";
-import { addSchoolItem } from "@wonderhome/core/calendar/add-event";
+import { ACTIVITY_ITEM_KINDS } from "@wonderhome/core/ai/classify-intake";
+import { addFamilyEvent, addSchoolItem } from "@wonderhome/core/calendar/add-event";
+import { zonedTimeToUtcIso } from "@wonderhome/core/conversation/executor";
+import type { HomeSendChangeDomain } from "@wonderhome/core/homesend/items";
+import { listActivities, sameActivityName, saveActivity, saveActivityNote } from "@wonderhome/core/school/activities";
 import { cancelSchoolItem, listSchoolItems, updateSchoolItem } from "@wonderhome/core/school/repository";
 import { movedSchoolWhen, schoolWhen } from "@wonderhome/core/school/times";
 
@@ -40,7 +44,7 @@ export const routeSchema = z.object({
    */
   decision: z.enum(["add", "update", "cancel", "keep"]).default("add"),
   existingId: z.uuid().optional(),
-  kind: z.enum(["bill", "school_item", "grocery_item", "health_document"]),
+  kind: z.enum(["bill", "school_item", "activity_item", "event", "grocery_item", "health_document"]),
   title: z.string().trim().min(1, { error: "What is it?" }).max(160),
   notes: z.string().trim().max(2000).optional(),
   // bill
@@ -59,6 +63,10 @@ export const routeSchema = z.object({
   newChildDob: z.union([z.iso.date(), z.literal("")]).optional(),
   schoolKind: z.enum(SCHOOL_ITEM_KINDS).optional(),
   subject: z.string().trim().max(60).optional(),
+  // activity_item — what the class has on the day, and which class it is
+  // (one of the child's own, picked; or a new one, added in the same step).
+  activityKind: z.enum(ACTIVITY_ITEM_KINDS).optional(),
+  activityName: z.string().trim().max(120).optional(),
   // grocery
   quantity: z.union([z.coerce.number().min(0.01).max(10_000), z.literal("")]).optional(),
   unit: z.string().trim().max(40).optional(),
@@ -161,8 +169,74 @@ export async function addChildFromNotice(supabase: Supabase, input: RouteInput):
   }
 }
 
-export async function createNew(supabase: Supabase, membership: Membership, input: RouteInput): Promise<{ routedTable: string; routedId: string } | { error: string }> {
+/** What a confirm wrote: its record, and anything it had to add first for it (a class the child did not have yet), each undone on its own. */
+export type Created = { routedTable: string; routedId: string; also?: { domain: HomeSendChangeDomain; entityId: string }[] };
+
+export async function createNew(supabase: Supabase, membership: Membership, input: RouteInput): Promise<Created | { error: string }> {
   const householdId = input.householdId;
+  if (input.kind === "activity_item") {
+    if (!input.childMemberId || input.childMemberId === "new") return { error: "Choose who this is for." };
+    const childMemberId = input.childMemberId;
+    const name = (input.activityName || input.subject || "").trim();
+    if (!name) return { error: "Which class or activity is it?" };
+    // Filed under the child's own class of that name, through Kids & School's
+    // services; a class the child does not have yet is added in the same step
+    // and undone with it.
+    const classes = (await listActivities(supabase, householdId)).filter((activity) => activity.childMemberId === childMemberId);
+    const existing = classes.find((activity) => sameActivityName(activity.name, name));
+    const kind = input.activityKind ?? "event";
+    if (existing && input.dueDate && existing.items.some((item) => item.onDate === input.dueDate && item.title.trim().toLowerCase() === input.title.trim().toLowerCase())) {
+      return { error: `“${input.title}” is already on ${existing.name} that day, so this was not added again.` };
+    }
+    const also: NonNullable<Created["also"]> = [];
+    let activityId = existing?.id;
+    if (!activityId) {
+      const added = await saveActivity(supabase, { householdId, childMemberId, name, kind: "other", days: [], startsAt: null, endsAt: null });
+      activityId = added.id;
+      also.push({ domain: "activity", entityId: added.id });
+    }
+    const note = await saveActivityNote(supabase, {
+      householdId,
+      activityId,
+      kind,
+      title: input.title,
+      onDate: input.dueDate || null,
+      startsAt: kind === "note" ? null : input.dueTime || null,
+      endsAt: kind === "note" ? null : input.endTime || null,
+      detail: input.notes || null,
+    });
+    return { routedTable: "child_activity_notes", routedId: note.id, also };
+  }
+  if (input.kind === "event") {
+    if (!input.dueDate) return { error: "Which day is it?" };
+    const timeZone = membership.household.timezone;
+    const at = (time: string) => zonedTimeToUtcIso(input.dueDate!, Number(time.slice(0, 2)), Number(time.slice(3, 5)), timeZone);
+    const startsAt = at(input.dueTime || "00:00");
+    const endsAt = input.dueTime
+      ? input.endTime && input.endTime > input.dueTime
+        ? at(input.endTime)
+        : new Date(new Date(startsAt).getTime() + 60 * 60_000).toISOString()
+      : new Date(new Date(startsAt).getTime() + 24 * 60 * 60_000).toISOString();
+    // Through HomeEvents' one door: the same thing already on the calendar
+    // that day is said back, never added a second time.
+    const added = await addFamilyEvent(
+      supabase,
+      {
+        householdId,
+        title: input.title,
+        kind: "gathering",
+        startsAt,
+        endsAt,
+        allDay: !input.dueTime,
+        timeZone,
+        ownerMemberId: membership.memberId,
+        notes: input.notes || null,
+      },
+      { timeZone },
+    );
+    if (added.kind === "duplicate") return { error: `“${added.existing.title}” is already on the calendar that day, so this was not added again.` };
+    return { routedTable: "family_events", routedId: added.id };
+  }
   if (input.kind === "bill") {
     const created = await createObligation(supabase, {
       householdId,

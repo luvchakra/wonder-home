@@ -109,7 +109,7 @@ export function ChildClasses({
                             icon={Trophy}
                             tone="attention"
                             title={note.title}
-                            meta={[note.onDate ? dateWord(note.onDate) : null, note.detail].filter(Boolean).join(" · ")}
+                            meta={[words.note.kinds[note.kind], note.onDate ? dateWord(note.onDate) : null, note.startsAt ? [note.startsAt, note.endsAt].filter(Boolean).join("–") : null, note.detail].filter(Boolean).join(" · ")}
                             action={canChange ? <StandDownButton kind="note" householdId={householdId} id={note.id} label={t("school.notes.remove", { name: note.title })} /> : undefined}
                           />
                         ))}
@@ -123,7 +123,7 @@ export function ChildClasses({
                         {notes.past.map((note) => (
                           <ActionRow
                             key={note.id}
-                            icon={note.kind === "award" ? Trophy : note.kind === "competition" ? CalendarDays : BookOpen}
+                            icon={note.kind === "award" ? Trophy : note.kind === "note" ? BookOpen : CalendarDays}
                             tone={note.kind === "award" ? "handled" : "school"}
                             title={note.title}
                             meta={[words.note.kinds[note.kind], note.result, note.onDate ? dateWord(note.onDate) : null, note.detail].filter(Boolean).join(" · ")}

@@ -8,6 +8,7 @@ import { findPotentialMatches, needsReconciliation } from "../context/matching";
 import type { ContextDomain, HouseholdContextItem, IncomingFact, MatchResult, MatchVerdict } from "../context/types";
 import { listObligations } from "../finance/repository";
 import { listRecords } from "../health/records";
+import { listActivities } from "../school/activities";
 import { listSchoolItems } from "../school/repository";
 import type { HomeSendChangeDomain } from "./items";
 
@@ -53,11 +54,13 @@ export type HomeSendReconciliation = {
  * purchase — a receipt line is a new fact about what was bought, never a
  * second copy of a record (09-009), so there is nothing to reconcile it with.
  */
-export type ReconcilableDomain = Exclude<HomeSendChangeDomain, "purchase">;
+export type ReconcilableDomain = Exclude<HomeSendChangeDomain, "purchase" | "activity">;
 
 const DOMAIN_FOR_KIND: Record<ReconcilableDomain, ContextDomain> = {
   bill: "bills",
   school_item: "school",
+  activity_item: "school",
+  event: "calendar",
   grocery_item: "groceries",
   health_document: "health",
 };
@@ -94,6 +97,10 @@ async function readDomain(supabase: SupabaseClient, householdId: string, candida
       ]);
       return { schoolItems, events };
     }
+    case "activity_item":
+      return { activities: await listActivities(supabase, householdId) };
+    case "event":
+      return { events: await listEvents(supabase, householdId, { from: new Date(Date.now() - 2 * 86_400_000) }) };
     case "grocery_item":
       return { consumables: await listConsumables(supabase, householdId) };
     case "health_document":
@@ -101,7 +108,7 @@ async function readDomain(supabase: SupabaseClient, householdId: string, candida
   }
 }
 
-const NOUN: Record<ReconcilableDomain, string> = { bill: "bill", school_item: "one", grocery_item: "item", health_document: "document" };
+const NOUN: Record<ReconcilableDomain, string> = { bill: "bill", school_item: "one", activity_item: "one", event: "event", grocery_item: "item", health_document: "document" };
 
 /** What to call the record in the question: the school item's own kind ("event", "exam", "homework") when it has one. */
 function nounFor(kind: ReconcilableDomain, item: HouseholdContextItem): string {
@@ -262,7 +269,10 @@ export function reconcileAgainstRecords(
 ): HomeSendReconciliation | null {
   if (!candidate.title.trim()) return null;
   const now = options.now ?? new Date();
-  const items = applyFreshness(buildContextItems(records, { householdId, householdName: "", timezone: options.timezone, now, viewerMemberId: "" }), now);
+  const built = applyFreshness(buildContextItems(records, { householdId, householdName: "", timezone: options.timezone, now, viewerMemberId: "" }), now);
+  // A class's exam is compared with what the class has on a day, never with
+  // the class itself or its weekly sessions.
+  const items = candidate.kind === "activity_item" ? built.filter((item) => item.source?.type === "child_activity_notes") : built;
   const incoming: IncomingFact = {
     domain: DOMAIN_FOR_KIND[candidate.kind],
     title: candidate.title,
