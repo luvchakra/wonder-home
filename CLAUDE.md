@@ -163,7 +163,8 @@ All SQL against the Supabase project, including `mcp__Supabase__execute_sql`, `a
 
 ## Opening and merging pull requests
 - Every change reaches `main` through a PR, never a direct push. Open a PR for finished work pushed to a story or feature branch; never leave pushed commits with no PR against them.
-- Turn on auto-merge (squash) as soon as the PR opens. Where auto-merge is refused, or there are no required checks, merge yourself once CI is green with no conflict. Never ask first. This applies to every PR against the repo, whether or not this session opened it.
+- Turn on auto-merge (squash) for every PR, as soon as it opens, whether or not this session opened it. Never ask first.
+- The repo must allow auto-merge (Settings → General → Pull Requests). If the enable call is refused, say so once in the PR thread or to the owner, then merge yourself once CI is green with no conflict.
 - Only four things hold a merge: an open unaddressed review thread; a draft or WIP PR; red CI (fix it, don't wait); a red nightly E2E on `main` (`e2e-nightly.yml`), which is fixed before other work merges. "Flaky" is not a root cause.
 - Squash-merge. Docs, trackers, progress notes and test updates go in the PR for the code they describe.
 
