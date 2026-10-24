@@ -1045,6 +1045,14 @@ const HOMESEND: HomeSendCase[] = [
     reading: { kind: "grocery_item", title: "Blood Test Camp at Splendora CHS", notes: "1. Sugar ₹20\n2. TSH ₹99\n3. HbA1c ₹199", confidence: "medium" },
     expected: { interpretation: "event" },
   },
+  {
+    id: "HS-23", surface: "homesend", household: "A", category: "time_date", actor: "a-kunal",
+    description: "A flyer read as a grocery, its day and time only in its notes (\"Sunday, 25th Oct'26, 7:30 AM – 1:30 PM\"), becomes an event on that day at that time — never one with an empty date (the owner, 2026-10-25).",
+    source: { channel: "pasted_text", capturedAt: "2026-10-22T05:00:00Z", text: "Health check camp on Sunday, 25th Oct'26, 7:30 AM – 1:30 PM at Splendora CHS (Club House). Sugar ₹20, TSH ₹99." },
+    // What the model gave: a grocery, no date words, the day only in the notes.
+    reading: { kind: "grocery_item", title: "Blood Test Camp at Splendora CHS", notes: "Caption announces a health check camp on Sunday, 25th Oct'26, 7:30 AM – 1:30 PM at Splendora CHS (Club House).", confidence: "medium" },
+    expected: { interpretation: "event", date: "2026-10-25", time: "07:30–13:30" },
+  },
 ];
 
 // --- HomeBrain (§7) ----------------------------------------------------------------

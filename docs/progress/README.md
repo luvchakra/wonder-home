@@ -11,6 +11,7 @@ decision that shapes later work each earns a note, written before moving on.
 
 | Date | Note |
 |---|---|
+| 2026-10-25 | [HomeSend: the day and time a flyer names are always found](2026-10-25-homesend-dates-everywhere.md) |
 | 2026-10-25 | [HomeSend: Add creates WonderHome's own record, aligned to the entity](2026-10-25-homesend-entity-aligned-add.md) |
 | 2026-10-25 | [HomeSend: a camp or test is never a grocery; numbered notes](2026-10-25-homesend-kind-check.md) |
 | 2026-10-25 | [HomeSend: categories you pick from, the AI's choice pre-selected, notes as bullet points](2026-10-25-homesend-category-picker.md) |

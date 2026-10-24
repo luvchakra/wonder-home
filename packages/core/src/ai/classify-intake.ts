@@ -300,7 +300,9 @@ export function sanitizeIntakeExtraction(reading: RawIntakeExtraction | IntakeEx
     category: raw.kind === "grocery_item" ? raw.category : null,
     healthRecordType: raw.kind === "health_document" ? raw.healthRecordType : null,
     documentDate: raw.kind === "health_document" || raw.kind === "receipt" ? raw.documentDate : null,
-    dateText: raw.kind === "unknown" || raw.kind === "grocery_item" ? null : withoutIds(raw.dateText ?? null),
+    // Kept whatever the kind: a reading moved to an event at review (a camp
+    // read as a grocery) still has its day. Only a dated kind is grounded on it.
+    dateText: withoutIds(raw.dateText ?? null),
     merchant: raw.kind === "receipt" ? withoutIds(raw.merchant ?? null) : null,
     lines: raw.kind === "receipt" ? (raw.lines ?? []).filter((line) => !UUID_LIKE.test(line.name)).slice(0, 40) : [],
     subjectMemberName: raw.kind === "health_document" ? withoutIds(raw.subjectMemberName) : null,
@@ -556,7 +558,7 @@ For a receipt: merchant is the shop's name as printed; amount and currency are t
 healthRecordType, documentDate and subjectMemberName are for a health_document only. healthRecordType is one of: ${RECORD_TYPES.join(", ")}. documentDate is the date printed on the document itself (a test date, a visit date, an appointment date), in YYYY-MM-DD form, only when a full date with its year is shown; otherwise put the words used for it in dateText. subjectMemberName is the person's name exactly as printed or written on the document — never guess whose it is from context alone; leave it null when no name appears anywhere on the document.
 
 A paragraph that starts "The sender added:" is the household member's own note about the content above it (a forward and what they typed straight after it, or a photo's caption). Read it as part of the same item: a name there is who the item is for (subjectMemberName and people); a word like "Karate" or "Maths" says what it is (use it in title and subject, e.g. "Karate exam"); a day or time there ("Sunday", "on 5 Nov at 10") is its date, copied into dateText together with any time the content gives. Where the note and the content disagree, the note wins.
-dateText: for a bill, school_item, activity_item, event, health_document or receipt, the words the content uses for its date, copied exactly ("tomorrow", "Saturday", "on 5 October", "27 Sep") — also when you filled dueDate or documentDate. When the content gives a time or a time range for it, copy that too, as written, in the same field ("this Saturday, 26 September, from 9:00 am to 11:30 am", "Friday at 4pm"); never convert or work out a time yourself. Null when the content names no date, and always null for grocery_item and unknown.
+dateText: the words the content uses for the day it happens, is due or is dated, copied exactly ("tomorrow", "Saturday", "on 5 October", "27 Sep") — also when you filled dueDate or documentDate. When the content gives a time or a time range for it, copy that too, as written, in the same field ("this Saturday, 26 September, from 9:00 am to 11:30 am", "Friday at 4pm"); never convert or work out a time yourself. Look for the day and time everywhere the content shows them — the flyer or poster itself, its caption, a forwarded line, "The sender added:" — and in every way they are written ("Sunday, 25th Oct'26, 7:30 AM – 1:30 PM", "31/10", "Nov 3rd 8am onwards"). Copy it whatever the kind — also for a grocery_item or unknown whose content names a day (a flyer, an offer with dates): WonderHome decides where it applies. Null when the content names no date.
 
 summary: one short plain sentence saying what this is and what it asks of the household ("Asmi's school moved the Science Exhibition to 29 September"). Null when readable is false.
 
@@ -657,8 +659,13 @@ function attachmentPrompt(context: IntakeContext | undefined): string {
  * if the model gave one. Without a timezone nothing is grounded, and the
  * reading is returned unchanged.
  */
-export function groundIntakeDate(extraction: IntakeExtraction, context: Pick<IntakeContext, "now" | "timezone"> | undefined): IntakeExtraction {
-  if (!context?.timezone || !extraction.readable) return extraction;
+export function groundIntakeDate(reading: IntakeExtraction, context: Pick<IntakeContext, "now" | "timezone"> | undefined): IntakeExtraction {
+  if (!context?.timezone || !reading.readable) return reading;
+  // A dated kind whose model wrote no date words still has them if its own
+  // title, notes or summary do: read them from there, never from a guess.
+  const dated = reading.kind === "bill" || TIMED_INTAKE_KINDS.has(reading.kind);
+  const recovered = dated && !reading.dateText && !reading.dueDate ? (findDatePhrase(reading.title) ?? findDatePhrase(reading.notes) ?? findDatePhrase(reading.summary)) : null;
+  const extraction = recovered ? { ...reading, dateText: recovered } : reading;
   const records = extraction.records?.map((record) => groundRecordDate(record, { timezone: context.timezone!, now: context.now ?? new Date() }));
   const withRecords = records ? { ...extraction, records } : extraction;
   return groundHeadlineDate(withRecords, context);
@@ -754,7 +761,17 @@ export function timeFromDateText(dateText: string): { start: string; end: string
 }
 
 const MONTH_NAME = "(?:jan(?:uary)?|feb(?:ruary)?|mar(?:ch)?|apr(?:il)?|may|june?|july?|aug(?:ust)?|sept?(?:ember)?|oct(?:ober)?|nov(?:ember)?|dec(?:ember)?)";
-const EXPLICIT_DATE = new RegExp(`\\b\\d{1,2}(?:st|nd|rd|th)?\\s+(?:of\\s+)?${MONTH_NAME}\\b(?:,?\\s+\\d{4})?|\\b${MONTH_NAME}\\s+\\d{1,2}(?:st|nd|rd|th)?\\b(?:,?\\s+\\d{4})?`, "i");
+/**
+ * A written-out date as people write it: "25 October", "25th Oct, 2026",
+ * "25-Oct-2026", "25th Oct'26", "Oct 25", "Oct. 25th '26". The year, when
+ * written, is four digits or two after an apostrophe or a dash.
+ */
+// "-26" is a year only after a day and month ("25-Oct-26"); after "Oct 25" it is a range of days ("Oct 25-26").
+const WRITTEN_YEAR = String.raw`(?:(?:,?\s*|\s*-\s*)\d{4}\b|\s*['’]\s?\d{2}\b)`;
+const EXPLICIT_DATE = new RegExp(
+  `\\b\\d{1,2}(?:st|nd|rd|th)?(?:\\s+|\\s*-\\s*)(?:of\\s+)?${MONTH_NAME}\\b\\.?(?:${WRITTEN_YEAR}|-\\d{2}\\b)?|\\b${MONTH_NAME}\\b\\.?\\s+\\d{1,2}(?:st|nd|rd|th)?\\b(?:${WRITTEN_YEAR})?`,
+  "i",
+);
 const SAID_DAY = new RegExp(`\\b${TEMPORAL_PHRASE}\\b`, "i");
 
 /**
@@ -773,8 +790,10 @@ function explicitDate(phrase: string, options: { timezone: string; now: Date }):
   if (named) {
     const month = MONTH_INDEX.findIndex((prefix) => new RegExp(`\\b${prefix}`, "i").test(named.replace(/\b\d{1,2}(?:st|nd|rd|th)?\b/gi, " ")));
     const day = Number(/\b(\d{1,2})(?:st|nd|rd|th)?\b(?!\d)/i.exec(named)?.[1]);
-    const year = /\b(\d{4})\b/.exec(named)?.[1];
-    if (month >= 0 && day >= 1 && day <= 31) return { day, month: month + 1, year: year ? Number(year) : null };
+    const four = /\b(\d{4})\b/.exec(named)?.[1];
+    const two = /(?:['’]\s?|-)(\d{2})$/.exec(named)?.[1];
+    const year = four ? Number(four) : two ? 2000 + Number(two) : null;
+    if (month >= 0 && day >= 1 && day <= 31) return { day, month: month + 1, year };
   }
   const numeric = NUMERIC_DATE.exec(phrase);
   if (!numeric) return null;
@@ -865,6 +884,37 @@ export function dayFromDateText(dateText: string, options: { timezone: string; n
   const rest = said ? phrase.replace(said, " ").replace(/\b\d{1,2}(?:[:.]\d{2})?\s*(?:a\.?\s?m\.?|p\.?\s?m\.?|hrs?\b)?/gi, " ") : phrase;
   const TIME_WORDS = /\b(?:on|this|the|at|by|in|from|to|till|until|and|between|onwards|morning|afternoon|evening|night|noon|midday|hrs?|o.?clock)\b/gi;
   return /[a-z]{2,}/i.test(rest.replace(TIME_WORDS, " ")) ? null : relative;
+}
+
+const WEEKDAY_BEFORE = /\b(?:mon|tues?|wed(?:nes)?|thu(?:rs?)?|fri|sat(?:ur)?|sun)(?:day)?\.?,?\s*(?:the\s+)?$/i;
+const CLOCK_WORDS = /\d{1,2}(?:[:.]\d{2})?\s*(?:a\.?\s?m\.?|p\.?\s?m\.?|hrs?\b)|\d{1,2}:\d{2}|\bnoon\b|\bmidday\b/i;
+
+/**
+ * The words that name a day, found in free text a reading carries — a
+ * title, a summary, the notes — when the model wrote no `dateText` (the
+ * owner, 2026-10-25: a camp flyer read as a grocery kept "Sunday, 25th
+ * Oct'26, 7:30 AM – 1:30 PM" only in its notes). A written-out date wins
+ * ("25th Oct'26", "31/10/2026"), with a weekday just before it and the time
+ * on the same line; otherwise a said day ("this Sunday", "tomorrow") with
+ * its time. Returns the phrase for `dayFromDateText` and `timeFromDateText`
+ * to decide, never a day itself; null when nothing names one.
+ */
+export function findDatePhrase(text: string | null | undefined): string | null {
+  if (!text?.trim()) return null;
+  for (const line of text.split(/\r?\n/)) {
+    const named = EXPLICIT_DATE.exec(line) ?? NUMERIC_DATE.exec(line);
+    const said = named ? null : SAID_DAY.exec(line);
+    const hit = named ?? said;
+    if (!hit) continue;
+    const before = WEEKDAY_BEFORE.exec(line.slice(Math.max(0, hit.index - 14), hit.index))?.[0] ?? "";
+    const date = `${before}${hit[0]}`.trim();
+    // The time is whatever clock the same line gives, before or after the date ("7:30 AM – 1:30 PM").
+    const rest = `${line.slice(0, hit.index - before.length)} ${line.slice(hit.index + hit[0].length)}`;
+    const time = CLOCK_WORDS.test(rest) ? timeFromDateText(rest) : null;
+    const clockText = time ? (time.end ? `from ${time.start} to ${time.end}` : `at ${time.start}`) : "";
+    return [date, clockText].filter(Boolean).join(", ");
+  }
+  return null;
 }
 
 /**
