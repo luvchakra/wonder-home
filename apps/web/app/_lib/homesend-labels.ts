@@ -146,8 +146,12 @@ export type HomeSendReviewLabels = {
     add: string;
   };
   /** Option labels by their stored value; the value itself never changes. */
+  picker: { suggested: string; suggestedLine: string; chosenLine: string; change: string };
   options: {
     kind: Record<string, string>;
+    /** One line of what belongs in each category, under its name in the picker. */
+    kindDetail: Record<string, string>;
+    kindGroup: Record<string, string>;
     bill: Record<string, string>;
     school: Record<string, string>;
     activity: Record<string, string>;
@@ -195,6 +199,7 @@ export type HomeSendReviewLabels = {
     category: string;
     categoryPlaceholder: string;
     notes: string;
+    notesPlaceholder: string;
   };
   receipt: {
     shop: string;
@@ -466,7 +471,29 @@ export function homesendReviewLabels(t: Translate, language: string): HomeSendRe
       recordPurchases: t("homesend.confirm.recordPurchases"),
       add: t("homesend.confirm.add"),
     },
+    picker: {
+      suggested: t("homesend.picker.suggested"),
+      suggestedLine: t("homesend.picker.suggestedLine"),
+      chosenLine: t("homesend.picker.chosenLine"),
+      change: t("homesend.picker.change"),
+    },
     options: {
+      kindDetail: {
+        school_item: t("homesend.option.kindDetail.schoolItem"),
+        activity_item: t("homesend.option.kindDetail.activityItem"),
+        event: t("homesend.option.kindDetail.event"),
+        bill: t("homesend.option.kindDetail.bill"),
+        receipt: t("homesend.option.kindDetail.receipt"),
+        health_document: t("homesend.option.kindDetail.healthDocument"),
+        grocery_item: t("homesend.option.kindDetail.groceryItem"),
+      },
+      kindGroup: {
+        school: t("homesend.option.kindGroup.school"),
+        calendar: t("homesend.option.kindGroup.calendar"),
+        money: t("homesend.option.kindGroup.money"),
+        health: t("homesend.option.kindGroup.health"),
+        food: t("homesend.option.kindGroup.food"),
+      },
       kind: {
         bill: t("homesend.option.kind.bill"),
         school_item: t("homesend.option.kind.schoolItem"),
@@ -555,6 +582,7 @@ export function homesendReviewLabels(t: Translate, language: string): HomeSendRe
       category: t("homesend.field.category"),
       categoryPlaceholder: t("homesend.field.categoryPlaceholder"),
       notes: t("homesend.field.notes"),
+      notesPlaceholder: t("homesend.field.notesPlaceholder"),
     },
     receipt: {
       shop: t("homesend.receipt.shop"),

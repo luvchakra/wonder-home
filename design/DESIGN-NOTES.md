@@ -632,3 +632,16 @@ tab bar and its raised button (`.wh-chat-composer` in `ui-theme.css`, rule
 15); while its box has focus on a phone the tab bar steps aside
 (`data-wh-typing`) so the keyboard, the composer and the conversation have
 the screen.
+
+### `CategoryPicker`: what something is, picked and pre-chosen (rules 19, 20, 21)
+`@wonderhome/core/ui/category-picker` is how a person says what a thing is
+when there are more categories than fit a short select (HomeSend's "This is",
+2026-10-24). Closed, it is one row: the category's `IconTile`, its name and a
+**Suggested** badge when it is the AI's own reading, with a chevron that opens
+every category in place. Open, the categories sit under the part of the home
+they belong to (Children, Family calendar, Money, Health, Food and groceries),
+each a tile with its icon, name and one line of what belongs there. Tiles are
+stacked on a phone and two to a row from `sm`: at half of a 360 px card the
+names wrapped word by word, which rule 19 says makes them full width. Every
+tile is a real radio, so arrows move between them and the choice posts with
+or without the panel open. Nothing chosen yet opens it straight away.

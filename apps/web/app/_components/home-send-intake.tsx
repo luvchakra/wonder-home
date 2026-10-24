@@ -1,6 +1,6 @@
 "use client";
 
-import { Mic, ShieldCheck, Sparkles } from "lucide-react";
+import { GraduationCap, HeartPulse, Medal, Mic, PartyPopper, ReceiptText, ShieldCheck, ShoppingBasket, Sparkles, Wallet } from "lucide-react";
 import { useState } from "react";
 
 import { isConsequentialInstruction } from "@wonderhome/core/homesend/audio";
@@ -9,6 +9,7 @@ import type { IntakeUnderstanding } from "@wonderhome/core/homesend/understandin
 import { Alert } from "@wonderhome/core/ui/alert";
 import { Button } from "@wonderhome/core/ui/button";
 import { UNIT_CHOICES } from "@wonderhome/core/commerce/units";
+import { CategoryPicker, type CategoryOption } from "@wonderhome/core/ui/category-picker";
 import { ComboboxField } from "@wonderhome/core/ui/combobox-field";
 import { Field } from "@wonderhome/core/ui/field";
 import { Pill } from "@wonderhome/core/ui/pill";
@@ -25,6 +26,22 @@ const SCHOOL_KIND_VALUES = ["homework", "worksheet", "exam", "project", "event",
 const KIND_VALUES = ["bill", "school_item", "activity_item", "event", "grocery_item", "health_document", "receipt"];
 
 const ACTIVITY_KIND_VALUES = ["exam", "competition", "event", "note"];
+
+/** Every category a confirm can file into, grouped by the part of the home it belongs to; the words come from the labels. */
+const CATEGORIES: readonly Omit<CategoryOption, "label" | "detail">[] = [
+  { value: "school_item", icon: GraduationCap, tone: "school", group: "school" },
+  { value: "activity_item", icon: Medal, tone: "school", group: "school" },
+  { value: "event", icon: PartyPopper, tone: "people", group: "calendar" },
+  { value: "bill", icon: Wallet, tone: "money", group: "money" },
+  { value: "receipt", icon: ReceiptText, tone: "money", group: "money" },
+  { value: "health_document", icon: HeartPulse, tone: "health", group: "health" },
+  { value: "grocery_item", icon: ShoppingBasket, tone: "meals", group: "food" },
+];
+const CATEGORY_GROUPS = ["school", "calendar", "money", "health", "food"] as const;
+
+/** One line per point: the notes the reading wrote as "- " bullets, kept as they are. */
+const NOTES_CLASS =
+  "block w-full rounded-[var(--wh-radius-sm)] border border-[var(--wh-border)] bg-[var(--wh-surface)] p-3 text-base outline-none focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-[var(--wh-primary)]";
 
 const RECORD_TYPE_VALUES = [
   "lab_result",
@@ -374,14 +391,16 @@ export function HomeSendConfirmStep({
         </div>
       ) : null}
 
-      <div className="space-y-1.5">
-        <label htmlFor="kind" className="block text-sm font-medium">{words.thisIs}</label>
-        <select id="kind" name="kind" value={kind} onChange={(event) => setKind(event.target.value)} className={selectClass}>
-          {KIND_VALUES.map((value) => (
-            <option key={value} value={value}>{labels.options.kind[value]}</option>
-          ))}
-        </select>
-      </div>
+      <CategoryPicker
+        name="kind"
+        legend={words.thisIs}
+        value={kind}
+        suggested={KIND_VALUES.includes(defaultKind) ? defaultKind : null}
+        onChange={setKind}
+        options={CATEGORIES.map((category) => ({ ...category, label: labels.options.kind[category.value] ?? category.value, detail: labels.options.kindDetail[category.value] ?? "" }))}
+        groups={CATEGORY_GROUPS.map((group) => ({ id: group, label: labels.options.kindGroup[group] ?? group }))}
+        words={labels.picker}
+      />
 
       <HomeSendConfirmFields kind={kind} prefill={prefill} kids={kids} subject={subject ?? null} householdId={householdId} canAddChild={canAddChild} labels={labels} />
 
@@ -639,7 +658,10 @@ export function HomeSendConfirmFields({
         </div>
       )}
 
-      <Field label={words.notes} name="notes" defaultValue={prefill?.notes ?? ""} autoComplete="off" />
+      <div className="space-y-1.5">
+        <label htmlFor="notes" className="block text-sm font-medium">{words.notes}</label>
+        <textarea id="notes" name="notes" rows={Math.min(8, Math.max(3, (prefill?.notes ?? "").split("\n").length + 1))} maxLength={2000} defaultValue={prefill?.notes ?? ""} placeholder={words.notesPlaceholder} className={NOTES_CLASS} />
+      </div>
     </>
   );
 }
