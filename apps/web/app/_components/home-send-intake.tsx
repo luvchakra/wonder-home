@@ -39,7 +39,7 @@ const CATEGORIES: readonly Omit<CategoryOption, "label" | "detail">[] = [
 ];
 const CATEGORY_GROUPS = ["school", "calendar", "money", "health", "food"] as const;
 
-/** One line per point: the notes the reading wrote as "- " bullets, kept as they are. */
+/** One numbered point per line ("1. …"), as the reading wrote them; the person may edit them freely. */
 const NOTES_CLASS =
   "block w-full rounded-[var(--wh-radius-sm)] border border-[var(--wh-border)] bg-[var(--wh-surface)] p-3 text-base outline-none focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-[var(--wh-primary)]";
 
@@ -280,7 +280,8 @@ export function HomeSendConfirmStep({
 }: {
   labels: HomeSendReviewLabels;
   item: { id: string };
-  defaultKind: string;
+  /** The category the review opens on, marked Suggested; null when nothing suggested one, so the person picks. */
+  defaultKind: string | null;
   prefill: HomeSendExtractionFields;
   kids: { id: string; displayName: string }[];
   householdId: string;
@@ -307,7 +308,7 @@ export function HomeSendConfirmStep({
   /** Told once a plan has been applied, so the surrounding screen can drop its "Not worth adding". */
   onApplied?: () => void;
 }) {
-  const [kind, setKind] = useState(defaultKind);
+  const [kind, setKind] = useState(defaultKind ?? "");
   const [byHand, setByHand] = useState(false);
   const [planApplied, setPlanApplied] = useState(false);
   const needs = (kind !== "grocery_item" && kind !== "receipt" ? (prefill?.needs?.length ? prefill.needs : prefill?.secondary ? [prefill.secondary] : []) : []).filter(
@@ -395,14 +396,15 @@ export function HomeSendConfirmStep({
         name="kind"
         legend={words.thisIs}
         value={kind}
-        suggested={KIND_VALUES.includes(defaultKind) ? defaultKind : null}
+        suggested={defaultKind && KIND_VALUES.includes(defaultKind) ? defaultKind : null}
         onChange={setKind}
         options={CATEGORIES.map((category) => ({ ...category, label: labels.options.kind[category.value] ?? category.value, detail: labels.options.kindDetail[category.value] ?? "" }))}
         groups={CATEGORY_GROUPS.map((group) => ({ id: group, label: labels.options.kindGroup[group] ?? group }))}
         words={labels.picker}
       />
 
-      <HomeSendConfirmFields kind={kind} prefill={prefill} kids={kids} subject={subject ?? null} householdId={householdId} canAddChild={canAddChild} labels={labels} />
+      {/* Nothing is asked until the person says what it is. */}
+      {kind ? <HomeSendConfirmFields kind={kind} prefill={prefill} kids={kids} subject={subject ?? null} householdId={householdId} canAddChild={canAddChild} labels={labels} /> : null}
 
       {needs.length > 0 ? (
         <fieldset className="space-y-2 rounded-[var(--wh-radius-sm)] border border-[var(--wh-border)] bg-[var(--wh-surface-muted)] p-3">
@@ -444,7 +446,7 @@ export function HomeSendConfirmStep({
           </Button>
         </div>
       ) : (
-        <Button type="submit" disabled={busy} className="w-full">
+        <Button type="submit" disabled={busy || !kind} className="w-full">
           {kind === "receipt" ? words.recordPurchases : words.add}
         </Button>
       )}
