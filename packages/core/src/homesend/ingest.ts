@@ -1,6 +1,7 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 
 import { rateLimitMessage } from "../security/rate-limit";
+import { recoverWhen } from "./when";
 import type { IntakeContext, IntakeExtraction, IntakeSource } from "../ai/classify-intake";
 import type { AudioClip } from "../voice/provider";
 import { gateTranscript, GEMINI_TRANSCRIPT_CONFIDENCE, geminiMayTranscribe, uncertainTranscriptPrompt } from "./audio";
@@ -95,6 +96,7 @@ function toStoredExtraction(extraction: IntakeExtraction): HomeSendExtraction {
     dueDate: extraction.dueDate,
     dueTime: extraction.dueTime ?? null,
     endTime: extraction.endTime ?? null,
+    dateText: extraction.dateText ?? null,
     schoolKind: extraction.schoolKind,
     subject: extraction.subject,
     activityKind: extraction.activityKind ?? null,
@@ -305,7 +307,8 @@ export async function understand(
   }
 
   const understanding = buildUnderstanding(result, meta(injection));
-  const extracted = toStoredExtraction(result);
+  // Its day and time, from its own words, whatever kind it was read as — so moving it to an event at review keeps them.
+  const extracted = recoverWhen(toStoredExtraction(result), { timezone: context.timezone ?? null, now: context.now ?? new Date() });
   await setHomeSendClassification(supabase, householdId, itemId, {
     classifiedKind: result.kind,
     extracted,

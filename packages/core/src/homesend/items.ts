@@ -72,6 +72,8 @@ export type HomeSendExtraction = {
   /** A school item's local start and end ("HH:MM"), read from the notice's own words (14-014). Absent on items read before it. */
   dueTime?: string | null;
   endTime?: string | null;
+  /** The words the content used for its day, kept whatever the kind, so a reading moved to an event at review still has them. Absent on items read before it. */
+  dateText?: string | null;
   schoolKind: string | null;
   subject: string | null;
   /** What a class outside school has on the day (exam, competition, event, note), and where a day-shaped item happens. Absent on items read before them. */

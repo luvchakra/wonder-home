@@ -9,6 +9,7 @@ import { listHomeSendChanges } from "@wonderhome/core/homesend/changes";
 import { inboxSegments, inChannel, readInboxChannel } from "@wonderhome/core/homesend/channels";
 import { ingestFile, ingestText } from "@wonderhome/core/homesend/ingest";
 import { listHomeSendItems } from "@wonderhome/core/homesend/repository";
+import { recoverWhen } from "@wonderhome/core/homesend/when";
 import { consumeShareHandoff } from "@wonderhome/core/homesend/share-handoff";
 import { isHouseholdAdmin, listMembers } from "@wonderhome/core/identity/households";
 import { whatsappConfigFromEnv } from "@wonderhome/core/notifications/whatsapp";
@@ -135,7 +136,12 @@ export default async function HomeSendPage({
   // A tab that isn't offered (a hand-typed ?channel=email with no email) reads as All.
   const requested = readInboxChannel(channelParam);
   const channel = segments.some((segment) => segment.key === requested) ? requested : "all";
-  const items = inChannel(allItems, channel);
+  // A waiting item's day and time, from its own words, whatever kind it was
+  // read as: items read before dates were kept for every kind open with them too.
+  const timezone = membership.household.timezone;
+  const items = inChannel(allItems, channel).map((item) =>
+    item.extracted && (item.status === "received" || item.status === "classified") ? { ...item, extracted: recoverWhen(item.extracted, { timezone, now: new Date(item.createdAt) }) } : item,
+  );
   const senders = Object.fromEntries(members.map((member) => [member.id, member.displayName]));
   const myWhatsApp = whatsappLinks.find((link) => link.memberId === membership.memberId) ?? null;
 
