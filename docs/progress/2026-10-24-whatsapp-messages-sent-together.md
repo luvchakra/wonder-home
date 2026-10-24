@@ -31,3 +31,13 @@ The owner forwarded a school message ("exam time is 9.30 morning") and typed "as
 
 ## Still open
 - The owner's two earlier items were read before this; their person and date are set in the review.
+
+## Second pass (same day): it still made two items
+The owner's live test still made two items and sent two replies. The rows showed why:
+- WhatsApp stamped both messages with the same second (02:32:55), and delivered the note before the forward.
+- Both runs started together. "Is there an earlier one?" was false for each, and each claimed only the other's *later* messages, so neither took the other.
+
+The fix:
+- **One claim for the whole burst** (`claimBurst`). After the wait, a run claims its own message and the person's other fresh messages within 30 s either side, in one conditional update (`processing_status = 'received'`). The run whose update lands first reads them all; any other run finds its own message taken and stops. Order and timing no longer matter.
+- **The item is about the right message** (`leadOf`): the photo or file; else the forwarded text, now kept from WhatsApp's `context.forwarded` (migration `20261024120000_whatsapp_forwarded.sql`, applied live); else the longest text. The person's own texts become "The sender added: …".
+- **Tests:** the owner's exact case run note-first, forward-first, and with both runs at the same moment — each gives one item and one reply.

@@ -29,6 +29,8 @@ export type WhatsAppInboundMessage = {
   media: { id: string; mimeType: string | null; filename: string | null } | null;
   /** The message this one replies to (WhatsApp's `context.id`), when the person swiped to reply. */
   replyTo?: string | null;
+  /** WhatsApp marked it forwarded (`context.forwarded`): someone else's words, passed on. */
+  forwarded?: boolean;
 };
 
 /** WhatsApp caps a text at 4096 characters; so does the table. */
@@ -59,8 +61,10 @@ export function readInboundMessages(payload: unknown, now: Date = new Date()): W
 
       const read = readBody(kind, message);
       if (!read) continue;
-      const replyTo = stringOf((message.context as { id?: unknown } | undefined)?.id);
-      out.push({ ...base, ...read, ...(replyTo && replyTo.length <= 200 ? { replyTo } : {}) });
+      const context = message.context as { id?: unknown; forwarded?: unknown; frequently_forwarded?: unknown } | undefined;
+      const replyTo = stringOf(context?.id);
+      const forwarded = context?.forwarded === true || context?.frequently_forwarded === true;
+      out.push({ ...base, ...read, ...(replyTo && replyTo.length <= 200 ? { replyTo } : {}), ...(forwarded ? { forwarded } : {}) });
     }
   }
   return out;

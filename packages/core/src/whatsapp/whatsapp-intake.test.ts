@@ -6,7 +6,7 @@ import { fakeSupabase } from "../homesend/testing";
 import { handleWhatsAppWebhook } from "../notifications/whatsapp-webhook";
 import { readInboundMessages } from "./inbound";
 import { isForHomeTalk, isQuestionForWonderHome, whatsappReplyText } from "./hometalk";
-import { acknowledgementFor, memberNamedInReply, processWhatsAppMessage, QUESTION_REPLY, receiveWhatsAppMessages, WHATSAPP_PROCESS_KIND, withAdded } from "./intake";
+import { acknowledgementFor, leadOf, memberNamedInReply, processWhatsAppMessage, QUESTION_REPLY, receiveWhatsAppMessages, WHATSAPP_PROCESS_KIND, withAdded } from "./intake";
 import { CONNECT_CODE_LENGTH, connectMessage, generateConnectCode, hashConnectCode, readConnectCode, whatsappBusinessNumber, whatsappChatLink } from "./linking";
 
 /** The WhatsApp HomeSend spec: WhatsApp as an intake channel, never an authorization channel. */
@@ -363,14 +363,14 @@ describe("processing into HomeSend", () => {
     expect(out.sent[0]!.text).toBe("Got it 👍 I found a school item: *Sports Day*. Who is it for — Asmi or Manan? Reply with their name.");
   });
 
-  it("reads a forward and the note typed straight after it as one item, with one reply", async () => {
+  /** The owner's test (2026-10-24): a forward and a note, stamped the same second, delivered note first. */
+  async function forwardAndNote() {
     const { h, id } = await received("text");
-    const leader = h.tables.whatsapp_messages![0]!;
-    leader.text_content = "Dear parents and students, exam time is 9.30 morning";
-    leader.received_at = "2026-10-24T01:55:10.000Z";
+    const forward = h.tables.whatsapp_messages![0]!;
+    Object.assign(forward, { text_content: "Dear parents and students,exam time is 9.30 morning", forwarded: true, received_at: "2026-10-24T02:32:55.000Z", created_at: "2026-10-24T02:32:58.230Z" });
     h.tables.whatsapp_messages!.push({
-      id: "m-note", household_id: HOUSEHOLD, member_id: MEMBER, provider_message_id: "wamid.note", message_type: "text", text_content: "asmi Karate Sunday",
-      received_at: "2026-10-24T01:55:14.000Z", processing_status: "received", attempts: 0, homesend_item_id: null, acknowledged_at: null, identity: { phone_number: `+${PRIYA}`, status: "active" },
+      id: "m-note", household_id: HOUSEHOLD, member_id: MEMBER, provider_message_id: "wamid.note", message_type: "text", text_content: "asmi Karate Sunday", forwarded: false,
+      received_at: "2026-10-24T02:32:55.000Z", created_at: "2026-10-24T02:32:57.336Z", processing_status: "received", attempts: 0, homesend_item_id: null, acknowledged_at: null, identity: { phone_number: `+${PRIYA}`, status: "active" },
     });
     const seen: string[] = [];
     const reading: IngestDeps["classify"] = async (_household, source) => {
@@ -378,33 +378,31 @@ describe("processing into HomeSend", () => {
       return extraction({ title: "Karate exam", people: ["Asmi"], dateText: "Sunday at 9.30 am" });
     };
     const out = replies();
-    const deps = { config: CONFIG, fetch: out.fetchImpl, ingest: { classify: reading }, now: () => new Date("2026-10-24T01:56:00.000Z") };
-    expect(await processWhatsAppMessage(h.client, id, deps)).toBe("read");
-    expect(seen[0]).toContain("exam time is 9.30 morning");
-    expect(seen[0]).toContain("The sender added: asmi Karate Sunday");
+    const deps = { config: CONFIG, fetch: out.fetchImpl, ingest: { classify: reading }, now: () => new Date("2026-10-24T02:33:30.000Z") };
+    return { h, forwardId: id, deps, seen, out };
+  }
+
+  it.each([["the forward", "forward"], ["the note", "note"]])("reads a forward and the note sent with it as one item with one reply, when %s runs first", async (_label, first) => {
+    const { h, forwardId, deps, seen, out } = await forwardAndNote();
+    const [one, two] = first === "forward" ? [forwardId, "m-note"] : ["m-note", forwardId];
+    expect(await processWhatsAppMessage(h.client, one, deps)).toBe("read");
+    // The other run finds its message already read with the first, and says nothing.
+    expect(await processWhatsAppMessage(h.client, two, deps)).toBe("skipped");
+    expect(seen).toEqual(["Dear parents and students,exam time is 9.30 morning\n\nThe sender added: asmi Karate Sunday"]);
     expect(h.tables.home_send_items).toHaveLength(1);
-    const note = h.tables.whatsapp_messages!.find((entry) => entry.id === "m-note")!;
-    expect(note).toMatchObject({ processing_status: "processed", homesend_item_id: h.tables.home_send_items![0]!.id });
-    // The note's own job finds it already read, and says nothing.
-    expect(await processWhatsAppMessage(h.client, "m-note", deps)).toBe("skipped");
+    const itemId = h.tables.home_send_items![0]!.id;
+    for (const message of h.tables.whatsapp_messages!) expect(message).toMatchObject({ processing_status: "processed", homesend_item_id: itemId });
+    // The item is keyed by the forward, whichever run read it.
+    expect(h.tables.home_send_items![0]!.external_id).toBe("whatsapp:wamid.T1");
     expect(out.sent).toHaveLength(1);
   });
 
-  it("a note whose forward has not been read yet leaves itself for the forward to read", async () => {
-    const { h, id } = await received("text");
-    const leader = h.tables.whatsapp_messages![0]!;
-    leader.received_at = "2026-10-24T01:55:10.000Z";
-    h.tables.whatsapp_messages!.push({
-      id: "m-note", household_id: HOUSEHOLD, member_id: MEMBER, provider_message_id: "wamid.note", message_type: "text", text_content: "asmi Karate Sunday",
-      received_at: "2026-10-24T01:55:14.000Z", processing_status: "received", attempts: 0, homesend_item_id: null, acknowledged_at: null, identity: { phone_number: `+${PRIYA}`, status: "active" },
-    });
-    const out = replies();
-    const deps = { config: CONFIG, fetch: out.fetchImpl, ingest: { classify }, now: () => new Date("2026-10-24T01:56:00.000Z") };
-    expect(await processWhatsAppMessage(h.client, "m-note", deps)).toBe("skipped");
-    expect(h.tables.home_send_items).toEqual([]);
-    expect(await processWhatsAppMessage(h.client, id, deps)).toBe("read");
+  it("two runs at the same moment: the one whose claim lands first reads both, the other stops", async () => {
+    const { h, forwardId, deps, out } = await forwardAndNote();
+    const results = await Promise.all([processWhatsAppMessage(h.client, forwardId, deps), processWhatsAppMessage(h.client, "m-note", deps)]);
+    expect([...results].sort()).toEqual(["read", "skipped"]);
     expect(h.tables.home_send_items).toHaveLength(1);
-    expect(h.tables.whatsapp_messages!.find((entry) => entry.id === "m-note")).toMatchObject({ processing_status: "processed" });
+    expect(out.sent).toHaveLength(1);
   });
 
   it("a fresh message waits a moment for what the person sends next", async () => {
@@ -450,6 +448,25 @@ describe("telling a question from something to keep", () => {
 describe("messages sent together", () => {
   it("are one piece of content, the later ones as what the sender added", () => {
     expect(withAdded("Exam time is 9.30 morning", ["asmi Karate Sunday"])).toBe("Exam time is 9.30 morning\n\nThe sender added: asmi Karate Sunday");
+  });
+
+  const message = (id: string, over: Partial<{ message_type: string; text_content: string | null; forwarded: boolean; received_at: string; created_at: string }> = {}) => ({
+    id, message_type: "text", text_content: id, forwarded: false, received_at: "2026-10-24T02:32:55.000Z", created_at: "2026-10-24T02:32:57.000Z", ...over,
+  });
+
+  it("are about their photo or file, else the forward, else the longest text", () => {
+    expect(leadOf([message("asmi"), message("img", { message_type: "image", text_content: null })]).id).toBe("img");
+    expect(leadOf([message("asmi Karate Sunday"), message("exam", { forwarded: true })]).id).toBe("exam");
+    expect(leadOf([message("asmi"), message("Exam time is 9.30 morning")]).id).toBe("Exam time is 9.30 morning");
+  });
+
+  it("knows a forward when WhatsApp says so", () => {
+    const [forward, own] = readInboundMessages(
+      JSON.parse(delivery([{ ...TEXT, context: { forwarded: true } }, { ...TEXT, id: "wamid.T2", context: { frequently_forwarded: true } }])),
+    );
+    expect(forward!.forwarded).toBe(true);
+    expect(own!.forwarded).toBe(true);
+    expect(readInboundMessages(JSON.parse(delivery([TEXT])))[0]!.forwarded).toBeUndefined();
   });
 });
 
