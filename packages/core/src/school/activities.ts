@@ -22,8 +22,12 @@ export type TeacherRole = (typeof TEACHER_ROLES)[number];
 /** The kinds a picker offers first (rule 20); a household's own word is kept as it is. */
 export const ACTIVITY_KINDS = ["music", "dance", "sport", "martial_arts", "art", "language", "academic", "other"] as const;
 
-export const ACTIVITY_NOTE_KINDS = ["competition", "award", "note"] as const;
+export const ACTIVITY_NOTE_KINDS = ["competition", "exam", "event", "award", "note"] as const;
 export type ActivityNoteKind = (typeof ACTIVITY_NOTE_KINDS)[number];
+
+/** What a class has coming up on a day: a competition, an exam (a grading, a belt test) or an event (a performance, a match). On the Calendar. */
+export const DATED_NOTE_KINDS = ["competition", "exam", "event"] as const satisfies readonly ActivityNoteKind[];
+export const isDatedNote = (kind: ActivityNoteKind): boolean => (DATED_NOTE_KINDS as readonly string[]).includes(kind);
 
 export type Teacher = {
   id: string;
@@ -41,6 +45,9 @@ export type ActivityNote = {
   kind: ActivityNoteKind;
   title: string;
   onDate: string | null;
+  /** "HH:MM" on the household's clock, for something coming up; null is all day. */
+  startsAt: string | null;
+  endsAt: string | null;
   detail: string | null;
   result: string | null;
 };
@@ -68,7 +75,7 @@ export type Activity = {
 const TEACHER_COLUMNS = "id, child_member_id, role, subject, name, contact, note";
 const ACTIVITY_COLUMNS =
   "id, child_member_id, name, kind, description, teacher_name, teacher_contact, place_name, place_id, place_address, latitude, longitude, days, starts_at, ends_at, starts_on, ends_on, notes";
-const NOTE_COLUMNS = "id, activity_id, kind, title, on_date, detail, result";
+const NOTE_COLUMNS = "id, activity_id, kind, title, on_date, starts_at, ends_at, detail, result";
 
 type Row = Record<string, unknown>;
 const text = (value: unknown): string | null => (typeof value === "string" && value.trim() ? value : null);
@@ -93,6 +100,8 @@ function toNote(row: Row): ActivityNote {
     kind: (ACTIVITY_NOTE_KINDS as readonly string[]).includes(row.kind as string) ? (row.kind as ActivityNoteKind) : "note",
     title: row.title as string,
     onDate: text(row.on_date),
+    startsAt: hhmm(row.starts_at),
+    endsAt: hhmm(row.ends_at),
     detail: text(row.detail),
     result: text(row.result),
   };
@@ -285,6 +294,8 @@ export type ActivityNoteInput = {
   kind: ActivityNoteKind;
   title: string;
   onDate: string | null;
+  startsAt?: string | null;
+  endsAt?: string | null;
   detail?: string | null;
   result?: string | null;
 };
@@ -292,12 +303,18 @@ export type ActivityNoteInput = {
 async function saveActivityNoteImpl(supabase: SupabaseClient, input: ActivityNoteInput): Promise<{ id: string }> {
   const title = input.title.trim().slice(0, 200);
   if (!title) throw ApiError.badRequest("What is it?");
+  const dated = isDatedNote(input.kind);
+  const startsAt = dated ? input.startsAt || null : null;
+  const endsAt = dated && startsAt ? input.endsAt || null : null;
+  if (startsAt && endsAt && startsAt >= endsAt) throw ApiError.badRequest("It has to end after it starts.");
   const row = {
     household_id: input.householdId,
     activity_id: input.activityId,
     kind: input.kind,
     title,
     on_date: input.onDate,
+    starts_at: startsAt,
+    ends_at: endsAt,
     detail: input.detail?.trim().slice(0, 1000) || null,
     result: input.kind === "award" ? input.result?.trim().slice(0, 120) || null : null,
   };
@@ -381,13 +398,54 @@ export function activityEntries(activities: readonly Activity[], viewer: Calenda
         can: { edit: false },
       });
     }
+    // What the class has on one day (a competition, an exam, an event): once, at its own time.
+    for (const note of activity.items) {
+      if (!isDatedNote(note.kind) || !note.onDate || note.onDate < range.from || note.onDate > range.to) continue;
+      const timed = Boolean(note.startsAt);
+      const start = atLocal(note.onDate, timed ? minutesOf(note.startsAt!) : 0, viewer.timeZone);
+      const end = timed
+        ? note.endsAt
+          ? atLocal(note.onDate, minutesOf(note.endsAt), viewer.timeZone)
+          : new Date(start.getTime() + 60 * 60_000)
+        : atLocal(note.onDate, 24 * 60, viewer.timeZone);
+      entries.push({
+        id: `activity-note:${note.id}`,
+        source: "activity",
+        sourceId: activity.id,
+        title: note.title,
+        detail: activity.name,
+        start,
+        end,
+        allDay: !timed,
+        timeZone: viewer.timeZone,
+        kind: "block",
+        category: "school",
+        memberIds: [activity.childMemberId],
+        ownerMemberId: null,
+        status: "confirmed",
+        visibility: "participants",
+        occurrenceDate: note.onDate,
+        repeats: false,
+        protected: false,
+        href: `/school?child=${activity.childMemberId}`,
+        can: { edit: false },
+      });
+    }
   }
   return entries;
 }
 
+/** The same class by name: "Karate" and "karate class" are one class; "Karate" and "Kathak" are not. */
+export function sameActivityName(a: string, b: string): boolean {
+  const plain = (value: string) => value.toLowerCase().replace(/\b(?:class|classes|lessons?|coaching|academy|club)\b/g, " ").replace(/[^\p{L}\p{N}]+/gu, " ").trim();
+  const left = plain(a);
+  const right = plain(b);
+  return Boolean(left && right) && (left === right || left.split(" ").includes(right) || right.split(" ").includes(left));
+}
+
 /** Upcoming competitions first by date, then awards and notes newest first: what a class's opened row lists. */
 export function orderedNotes(notes: readonly ActivityNote[], today: string): { upcoming: ActivityNote[]; past: ActivityNote[] } {
-  const upcoming = notes.filter((note) => note.kind === "competition" && note.onDate !== null && note.onDate >= today).sort((a, b) => a.onDate!.localeCompare(b.onDate!));
+  const upcoming = notes.filter((note) => isDatedNote(note.kind) && note.onDate !== null && note.onDate >= today).sort((a, b) => a.onDate!.localeCompare(b.onDate!));
   const ids = new Set(upcoming.map((note) => note.id));
   const past = notes.filter((note) => !ids.has(note.id)).sort((a, b) => (b.onDate ?? "").localeCompare(a.onDate ?? ""));
   return { upcoming, past };

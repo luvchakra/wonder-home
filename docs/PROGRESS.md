@@ -11,11 +11,11 @@ in `docs/progress/`; for the running log of what changed when, `tracking/PROGRES
 
 ## The whole picture
 
-**375 of 405 stories done — 92.6%**
+**376 of 406 stories done — 92.6%**
 
 | Status | Stories |
 |---|---:|
-| Done | 375 |
+| Done | 376 |
 | In Progress | 8 |
 | Blocked | 1 |
 | Not Started | 17 |
@@ -33,7 +33,7 @@ in `docs/progress/`; for the running log of what changed when, `tracking/PROGRES
 | 05 Household Certification & Understanding | `██████████` | 12 | 12 | — |
 | 06 Actionable Notification Engine | `██████████` | 8 | 8 | — |
 | 07 Househelper & Home Operations | `██████████` | 10 | 10 | — |
-| 08 Kids & School Intelligence | `████████░░` | 21 | 25 | 3 in progress, 1 not started |
+| 08 Kids & School Intelligence | `████████░░` | 22 | 26 | 3 in progress, 1 not started |
 | 09 Commerce, Groceries & Pet Supplies | `██████████` | 9 | 9 | — |
 | 10 Meals & Cooking | `██████████` | 16 | 16 | — |
 | 11 Bills, Fees & Finance | `█████████░` | 14 | 15 | 1 not started |
@@ -253,7 +253,7 @@ in `docs/progress/`; for the running log of what changed when, `tracking/PROGRES
 
 ### 08 — Kids & School Intelligence
 
-21 of 25 done `████████░░`
+22 of 26 done `████████░░`
 
 | Story | Priority | Status | Notes |
 |---|---|---|---|
@@ -282,6 +282,7 @@ in `docs/progress/`; for the running log of what changed when, `tracking/PROGRES
 | `08-024` One stray tap never takes a tick back | P1 | Done | The owner, 2026-10-21 ("yesterday it was showing 1 star and 1 streak, but today is showing 0"). The API log showed Asmi's check-in for 20 Oct (17:28 UTC) taken back at 18:12 by the done button's second tap (`undoCheckIn`, not a grown-up's Not yet). The done button now asks first: one tap on a done tick shows "Tap again to take it back", which lapses after four seconds; only a second tap takes it back (`kid-done-button.tsx`). Asmi's 20 Oct tick was restored on the live project (1 star, the streak resumes with today's). Words in all eight languages; help ¶10. Browser QA at 360px: one tap asks, the question lapses, the check-in stays on record. |
 | `08-025` Add homework and Connect school sit under the child picker | P2 | Done | The owner, 2026-10-21 ("bring this row in between these lines, these should specific to each child"). The two actions moved out of the page header to a row between the child picker and the Overview/Homework/Calendar/Goals tabs (`school/page.tsx`). Add homework opens on the child picked above (`defaultChildId` on `AddHomeworkButton`); Connect school still opens Integrations, because a school portal is connected for the household. Help (Kids & School ¶1) in all eight languages. Browser QA at 360px and 1280px: the row sits between the pills and the tabs, no horizontal scroll, and picking the second child then Add homework shows that child in For. |
 | `08-026` Touch the cat and it darts away | P2 | Done | The owner, 2026-10-21 ("if you try to touch the cat, it should quickly move away!"). A touch on the companion cat (or a mouse coming near it) sends it to the far side of its card from the finger in 140 ms, with a sideways skip, never past the card's edge (worked out from where it rests, so a second tap moves on from there rather than off the card); it strolls back after 1.5 s (`companion-card.tsx`, `flee`). A touch that arrives as two pointer events counts once. Still under reduced motion. Browser QA at 360px: the cat moved about 370px inside a card of 466px and came back. |
+| `08-027` A class's exam or event, from HomeSend, on the Calendar | P0 | Done | The owner, 2026-10-24 ("this particular activity is actual Extra Curricular not school work. add more types so categorisation can be done properly"), on a WhatsApp forward about Asmi's karate exam that HomeSend filed as school work. A class's entries gain an exam (grading, belt test) and an event (a show, a match), each with a start and end time (migration `20261024130000_activity_note_exams_events`, applied live); every dated one is on the Calendar once on its day (`activityEntries`) and a HomeBrain fact with its time. HomeSend reads two new kinds — a class or activity outside school (`activity_item`, filed under the child's class of that name, the class added in the same step if the child has none) and an event or invitation (`event`, on the family calendar through `addFamilyEvent`); both are reviewed, reconciled and undoable (migration `20261024140000_homesend_activity_event_kinds`, applied live). Eval HS-20 (now an activity) and HS-21 (an invitation) |
 
 ### 09 — Commerce, Groceries & Pet Supplies
 

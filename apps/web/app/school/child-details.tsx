@@ -69,10 +69,12 @@ export type ChildDetailWords = {
     add: string;
     sheetTitle: string;
     kind: string;
-    kinds: { competition: string; award: string; note: string };
+    kinds: { competition: string; exam: string; event: string; award: string; note: string };
     title: string;
     titlePlaceholder: string;
     onDate: string;
+    startsAt: string;
+    endsAt: string;
     result: string;
     resultPlaceholder: string;
     detail: string;
@@ -278,7 +280,8 @@ export function ActivitySheet({ householdId, child, activity, words }: { househo
 /** A competition coming up, a medal or award won, or a note, on one class. */
 export function ActivityNoteSheet({ householdId, activity, words }: { householdId: string; activity: { id: string; name: string }; words: ChildDetailWords }) {
   const { open, setOpen, state, formAction } = useSheetForm(saveActivityNoteAction);
-  const [kind, setKind] = useState<"competition" | "award" | "note">("competition");
+  const [kind, setKind] = useState<"competition" | "exam" | "event" | "award" | "note">("competition");
+  const dated = kind === "competition" || kind === "exam" || kind === "event";
   const w = words.note;
   return (
     <>
@@ -290,11 +293,19 @@ export function ActivityNoteSheet({ householdId, activity, words }: { householdI
           <input type="hidden" name="activityId" value={activity.id} />
           <Select label={w.kind} name="kind" value={kind} onChange={(event) => setKind(event.target.value as typeof kind)}>
             <option value="competition">{w.kinds.competition}</option>
+            <option value="exam">{w.kinds.exam}</option>
+            <option value="event">{w.kinds.event}</option>
             <option value="award">{w.kinds.award}</option>
             <option value="note">{w.kinds.note}</option>
           </Select>
           <Field label={w.title} name="title" required placeholder={w.titlePlaceholder} autoComplete="off" maxLength={200} />
           <Field label={w.onDate} name="onDate" type="date" />
+          {dated ? (
+            <div className="grid grid-cols-2 gap-3">
+              <Field label={w.startsAt} name="startsAt" type="time" />
+              <Field label={w.endsAt} name="endsAt" type="time" />
+            </div>
+          ) : null}
           {kind === "award" ? <Field label={w.result} name="result" placeholder={w.resultPlaceholder} autoComplete="off" maxLength={120} /> : null}
           <label className="block space-y-1.5">
             <span className="text-sm font-medium">{w.detail}</span>

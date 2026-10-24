@@ -11,6 +11,7 @@ decision that shapes later work each earns a note, written before moving on.
 
 | Date | Note |
 |---|---|
+| 2026-10-24 | [HomeSend: a class outside school and an event are their own kinds](2026-10-24-homesend-classes-and-events.md) |
 | 2026-10-24 | [Token economy: a 62% smaller CLAUDE.md, narrower reads, a UI check script](2026-10-24-token-economy.md) |
 | 2026-10-24 | [WhatsApp: a forward and the note after it are one item](2026-10-24-whatsapp-messages-sent-together.md) |
 | 2026-10-24 | [WhatsApp asks HomeTalk (14-040)](2026-10-24-whatsapp-asks-hometalk.md) |

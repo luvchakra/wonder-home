@@ -68,7 +68,7 @@ describe("a child's classes outside school are HomeBrain facts", () => {
   const items = build([
     activity("vocal", "Vocal", [6], "10:00", "11:00", "Solus building"),
     activity("piano", "Piano", [6], "18:00", "19:00", "Club Splendora", {
-      items: [{ id: "comp", activityId: "piano", kind: "competition", title: "Junior recital", onDate: "2026-11-07", detail: null, result: null }],
+      items: [{ id: "comp", activityId: "piano", kind: "competition", title: "Junior recital", onDate: "2026-11-07", startsAt: null, endsAt: null, detail: null, result: null }],
     }),
   ]);
 
@@ -90,7 +90,7 @@ describe("a child's classes outside school are HomeBrain facts", () => {
   });
 
   it("names an upcoming competition on its day", () => {
-    const competition = items.find((item) => item.entityType === "activity_competition");
+    const competition = items.find((item) => item.entityType === "activity_note");
     expect(competition?.attributes.date).toBe("2026-11-07");
     expect(competition?.summary).toContain("Junior recital");
   });

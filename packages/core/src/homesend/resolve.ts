@@ -39,7 +39,10 @@ export type IntakeResolution = {
 };
 
 /** Kinds that belong to one specific person, so "who is this for" must be answered. */
-const PERSONAL_KINDS: ReadonlySet<HomeSendKind> = new Set(["school_item", "health_document"]);
+const PERSONAL_KINDS: ReadonlySet<HomeSendKind> = new Set(["school_item", "activity_item", "health_document"]);
+
+/** A child's things — school work and a class outside school — are only ever for a child. */
+const CHILD_KINDS: ReadonlySet<HomeSendKind> = new Set(["school_item", "activity_item"]);
 
 function toPerson(ref: PersonRef): IntakePerson {
   return { memberId: ref.memberId, displayName: ref.displayName, memberType: ref.memberType };
@@ -64,7 +67,7 @@ export function resolveIntakePeople(
   const people = items.filter((item) => item.entityType === "member");
   const children = people.filter((item) => item.attributes.memberType === "child");
   const eligible = (person: IntakePerson): boolean =>
-    understanding.kind === "school_item" ? person.memberType === "child" : understanding.kind === "health_document" ? person.memberType !== "helper" : true;
+    CHILD_KINDS.has(understanding.kind) ? person.memberType === "child" : understanding.kind === "health_document" ? person.memberType !== "helper" : true;
 
   const references = understanding.references.map((reference) => {
     const resolution = resolvePerson(reference.text, items, { viewerMemberId: options.viewerMemberId });
@@ -86,7 +89,7 @@ export function resolveIntakePeople(
     if (candidates.length === 0) {
       // A school notice's untitled name that matches nobody at all is most
       // likely the child it is about ("Mr. Rao" is the teacher, not them).
-      if (understanding.kind === "school_item" && resolution.candidates.length === 0 && !unmatchedChild && !TITLED.test(reference.text.trim())) {
+      if (CHILD_KINDS.has(understanding.kind) && resolution.candidates.length === 0 && !unmatchedChild && !TITLED.test(reference.text.trim())) {
         unmatchedChild = reference.text.trim();
       }
       continue;
@@ -102,7 +105,7 @@ export function resolveIntakePeople(
   // No name in the content. A school item in a household with one child
   // can only be for that child — that is not a guess. With more than one,
   // the household is asked.
-  if (understanding.kind === "school_item") {
+  if (CHILD_KINDS.has(understanding.kind)) {
     const kids = children.map((item) => ({ memberId: item.entityId, displayName: String(item.attributes.displayName), memberType: "child" as const }));
     // It named a child the household does not have on record (story 08-009):
     // never assume it is the one child who is — say who it named, and let
@@ -156,7 +159,7 @@ export function adoptMatchedSubject(
     displayName: String(item.attributes.displayName ?? item.summary),
     memberType: (item.attributes.memberType as IntakePerson["memberType"]) ?? "adult",
   };
-  if (kind === "school_item" && person.memberType !== "child") return subject;
+  if (CHILD_KINDS.has(kind) && person.memberType !== "child") return subject;
   if (kind === "health_document" && person.memberType === "helper") return subject;
   return { said: null, selected: person, candidates: [person], question: null };
 }

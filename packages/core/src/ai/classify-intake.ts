@@ -26,8 +26,19 @@ import { resolveDay, TEMPORAL_PHRASE } from "../conversation/temporal";
  * show comes back null, never guessed.
  */
 
-export const INTAKE_KINDS = ["bill", "school_item", "grocery_item", "health_document", "receipt", "unknown"] as const;
+export const INTAKE_KINDS = ["bill", "school_item", "activity_item", "event", "grocery_item", "health_document", "receipt", "unknown"] as const;
 export type IntakeKind = (typeof INTAKE_KINDS)[number];
+
+/**
+ * What an activity_item is (the owner's karate exam, 2026-10-24): something
+ * a class outside school has on a day — a grading or belt exam, a
+ * competition, a performance or match — or a note about the class.
+ */
+export const ACTIVITY_ITEM_KINDS = ["exam", "competition", "event", "note"] as const;
+export type ActivityItemKind = (typeof ACTIVITY_ITEM_KINDS)[number];
+
+/** The kinds that happen on a day and may keep a time of day (14-014). */
+export const TIMED_INTAKE_KINDS: ReadonlySet<IntakeKind> = new Set(["school_item", "activity_item", "event"]);
 
 /**
  * A second, different-domain need the same content also implies — the
@@ -123,7 +134,10 @@ const IntakeExtractionSchema = z.object({
   dueDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).nullable(),
   // school fields
   schoolKind: z.enum(SCHOOL_ITEM_KINDS).nullable(),
+  /** A school item's subject, or an activity_item's class ("Karate"). */
   subject: z.string().trim().max(60).nullable(),
+  // activity_item fields
+  activityKind: z.enum(ACTIVITY_ITEM_KINDS).nullish(),
   // grocery fields
   quantity: z.number().min(0).max(10_000).nullable(),
   unit: z.string().trim().max(40).nullable(),
@@ -240,22 +254,25 @@ export function sanitizeIntakeExtraction(raw: RawIntakeExtraction | IntakeExtrac
     };
   }
 
-  const needsAllowed = raw.kind === "bill" || raw.kind === "school_item";
+  const needsAllowed = raw.kind === "bill" || raw.kind === "school_item" || raw.kind === "activity_item" || raw.kind === "event";
   const needs = needsAllowed
     ? (raw.needs ?? []).filter((need) => !UUID_LIKE.test(need.title) && !UUID_LIKE.test(need.reason)).slice(0, 5)
     : [];
 
+  // What kind of thing a class has on the day is only ever an activity_item's.
+  const { activityKind, ...rest } = raw;
   return {
-    ...raw,
+    ...rest,
+    ...(raw.kind === "activity_item" ? { activityKind: activityKind ?? null } : {}),
     title: withoutIds(raw.title),
     notes: withoutIds(raw.notes),
     billKind: raw.kind === "bill" ? raw.billKind : null,
     payee: raw.kind === "bill" ? withoutIds(raw.payee) : null,
     amount: raw.kind === "bill" || raw.kind === "receipt" ? raw.amount : null,
     currency: raw.kind === "bill" || raw.kind === "receipt" ? raw.currency : null,
-    dueDate: raw.kind === "bill" || raw.kind === "school_item" ? raw.dueDate : null,
+    dueDate: raw.kind === "bill" || TIMED_INTAKE_KINDS.has(raw.kind) ? raw.dueDate : null,
     schoolKind: raw.kind === "school_item" ? raw.schoolKind : null,
-    subject: raw.kind === "school_item" ? raw.subject : null,
+    subject: raw.kind === "school_item" || raw.kind === "activity_item" ? withoutIds(raw.subject) : null,
     quantity: raw.kind === "grocery_item" ? raw.quantity : null,
     unit: raw.kind === "grocery_item" ? raw.unit : null,
     category: raw.kind === "grocery_item" ? raw.category : null,
@@ -340,6 +357,7 @@ const EXTRACTION_JSON_SCHEMA = {
     dueDate: { type: "string", nullable: true },
     schoolKind: { type: "string", enum: SCHOOL_ITEM_KINDS, nullable: true },
     subject: { type: "string", nullable: true },
+    activityKind: { type: "string", enum: ACTIVITY_ITEM_KINDS, nullable: true },
     quantity: { type: "number", nullable: true },
     unit: { type: "string", nullable: true },
     category: { type: "string", nullable: true },
@@ -410,7 +428,7 @@ const EXTRACTION_JSON_SCHEMA = {
   },
   required: [
     "readable", "kind", "title", "notes", "billKind", "payee", "amount", "currency", "dueDate",
-    "schoolKind", "subject", "quantity", "unit", "category", "healthRecordType", "documentDate",
+    "schoolKind", "subject", "activityKind", "quantity", "unit", "category", "healthRecordType", "documentDate",
     "dateText", "merchant", "lines", "subjectMemberName", "summary", "people", "facts", "needs", "change", "confidence",
     "issuedOn", "pages", "records",
   ],
@@ -497,21 +515,23 @@ export const INTAKE_SYSTEM_PROMPT = `You read one thing a household sent to Wond
 kind is exactly one of:
 - bill: something the household still has to pay — an invoice, a payment reminder, a utility/subscription/fee statement. A receipt or payment confirmation for something already paid ("PAID", "Thank you for your payment", a shop till receipt) is never a bill: it asks nothing to be paid.
 - receipt: proof of a purchase already paid for — a shop or supermarket till receipt, an online order invoice marked paid, a delivery receipt. It records what was bought; it asks for nothing.
-- school_item: homework, a worksheet, an exam notice, a school event or a notice from a school.
+- school_item: homework, a worksheet, a school exam or test, a school event or a notice from a school — something about school itself.
+- activity_item: something about a class or activity outside school — karate, dance, music, swimming, a sports club, a tuition or hobby class: its grading or belt exam, a competition or tournament, a performance, recital or match, or a note about the class. A karate exam is an activity_item, never a school_item, even when it is called an exam.
+- event: an event, plan or invitation that is neither school nor a class outside school — a birthday party invitation, a wedding, a family function, a society or community meeting, a get-together, a trip or outing, an appointment that is not about health.
 - grocery_item: a single product, a shopping-list line, or a photo of one item to buy or restock.
 - health_document: a lab result, prescription, imaging report, vaccination certificate, discharge summary, referral, insurance document or appointment/visit summary — anything about one person's health.
 - unknown: anything else, or content you cannot make out well enough to classify. A payment confirmation that lists no items bought (a bill paid online) is unknown, not a receipt; summarise it.
 
 Never invent a title, amount, date, name or note the source does not show. If it is blurry, unrelated, or you cannot make out any actionable content, set readable to false, kind to "unknown", leave every other field null or empty, and set confidence to "low".
 
-Fields that only apply to one kind stay null for the others. billKind is one of: ${OBLIGATION_KINDS.join(", ")}. schoolKind is one of: ${SCHOOL_ITEM_KINDS.join(", ")}. amount is the number only, in the currency's major unit (e.g. 450.50), never combined with a currency symbol. dueDate is for a bill (when it is due) or a school_item (when it is due, or the day the event or exam happens), as a calendar date in YYYY-MM-DD form, only when the source writes out a full date with its year. Whenever the content names the day in any other way — "tomorrow", "Saturday", "next Friday", "5 October", "27/09" — copy those exact words into dateText and leave the calendar arithmetic to WonderHome; never work out a date yourself from a weekday or a date without a year. quantity and unit are for a grocery_item only (e.g. quantity 2, unit "kg").
+Fields that only apply to one kind stay null for the others. billKind is one of: ${OBLIGATION_KINDS.join(", ")}. schoolKind is one of: ${SCHOOL_ITEM_KINDS.join(", ")}. amount is the number only, in the currency's major unit (e.g. 450.50), never combined with a currency symbol. dueDate is for a bill (when it is due), a school_item (when it is due, or the day the event or exam happens), an activity_item or an event (the day it happens), as a calendar date in YYYY-MM-DD form, only when the source writes out a full date with its year. Whenever the content names the day in any other way — "tomorrow", "Saturday", "next Friday", "5 October", "27/09" — copy those exact words into dateText and leave the calendar arithmetic to WonderHome; never work out a date yourself from a weekday or a date without a year. quantity and unit are for a grocery_item only (e.g. quantity 2, unit "kg"). For an activity_item, subject is the class or activity's name as written ("Karate", "Bharatanatyam", "Piano") and activityKind is one of: ${ACTIVITY_ITEM_KINDS.join(", ")} — exam for a grading, belt or level test; competition for a competition or tournament; event for a performance, recital, show, match or any other day the class has; note for anything else about the class. For an event, put where it happens and anything to bring or wear in notes.
 
 For a receipt: merchant is the shop's name as printed; amount and currency are the total paid (the number only, and the currency as printed or its three-letter code); documentDate is the day of the purchase in YYYY-MM-DD form only when a full date with its year is printed, otherwise its words go in dateText; lines lists each item bought, in order — name exactly as printed ("Amul Toned Milk 1L"), quantity as a number when printed (null otherwise, never assumed), unit when printed ("kg", "pc"), and lineTotal as the line's total price in the major unit. Leave out taxes, discounts, bag charges, subtotals and payment lines. For every other kind, merchant is null and lines is empty.
 
 healthRecordType, documentDate and subjectMemberName are for a health_document only. healthRecordType is one of: ${RECORD_TYPES.join(", ")}. documentDate is the date printed on the document itself (a test date, a visit date, an appointment date), in YYYY-MM-DD form, only when a full date with its year is shown; otherwise put the words used for it in dateText. subjectMemberName is the person's name exactly as printed or written on the document — never guess whose it is from context alone; leave it null when no name appears anywhere on the document.
 
 A paragraph that starts "The sender added:" is the household member's own note about the content above it (a forward and what they typed straight after it, or a photo's caption). Read it as part of the same item: a name there is who the item is for (subjectMemberName and people); a word like "Karate" or "Maths" says what it is (use it in title and subject, e.g. "Karate exam"); a day or time there ("Sunday", "on 5 Nov at 10") is its date, copied into dateText together with any time the content gives. Where the note and the content disagree, the note wins.
-dateText: for a bill, school_item, health_document or receipt, the words the content uses for its date, copied exactly ("tomorrow", "Saturday", "on 5 October", "27 Sep") — also when you filled dueDate or documentDate. When the content gives a time or a time range for it, copy that too, as written, in the same field ("this Saturday, 26 September, from 9:00 am to 11:30 am", "Friday at 4pm"); never convert or work out a time yourself. Null when the content names no date, and always null for grocery_item and unknown.
+dateText: for a bill, school_item, activity_item, event, health_document or receipt, the words the content uses for its date, copied exactly ("tomorrow", "Saturday", "on 5 October", "27 Sep") — also when you filled dueDate or documentDate. When the content gives a time or a time range for it, copy that too, as written, in the same field ("this Saturday, 26 September, from 9:00 am to 11:30 am", "Friday at 4pm"); never convert or work out a time yourself. Null when the content names no date, and always null for grocery_item and unknown.
 
 summary: one short plain sentence saying what this is and what it asks of the household ("Asmi's school moved the Science Exhibition to 29 September"). Null when readable is false.
 
@@ -519,7 +539,7 @@ people: every person the content names, exactly as written ("Asmi", "Mr. Rao", "
 
 facts: up to eight household facts the content states, each a short statement plus the exact short quote it came from as evidence. Only facts actually written in the source.
 
-needs: only when kind is "bill" or "school_item", and only when the content clearly asks the household to buy or bring something specific — a school notice asking for a white T-shirt and sports shoes, a bill that comes with a required purchase. One entry per item, title being the item and reason one short sentence saying why (e.g. "Sports day asks for a white T-shirt"). Leave it empty far more often than not: most bills and school notices ask for nothing else, and a vague or uncertain guess is worse than none.
+needs: only when kind is "bill", "school_item", "activity_item" or "event", and only when the content clearly asks the household to buy or bring something specific — a school notice asking for a white T-shirt and sports shoes, a bill that comes with a required purchase. One entry per item, title being the item and reason one short sentence saying why (e.g. "Sports day asks for a white T-shirt"). Leave it empty far more often than not: most bills and school notices ask for nothing else, and a vague or uncertain guess is worse than none.
 
 change: "update" when the content says something announced before has changed (moved, rescheduled, postponed, revised amount), "cancellation" when it says something is cancelled or called off, otherwise "new".
 
@@ -632,14 +652,15 @@ function groundRecordDate<R extends NonNullable<IntakeExtraction["records"]>[num
 
 function groundHeadlineDate(extraction: IntakeExtraction, context: Pick<IntakeContext, "now" | "timezone">): IntakeExtraction {
   if (!context.timezone || !extraction.dateText) return extraction;
-  const field = extraction.kind === "bill" || extraction.kind === "school_item" ? "dueDate" : extraction.kind === "health_document" || extraction.kind === "receipt" ? "documentDate" : null;
+  const field = extraction.kind === "bill" || TIMED_INTAKE_KINDS.has(extraction.kind) ? "dueDate" : extraction.kind === "health_document" || extraction.kind === "receipt" ? "documentDate" : null;
   if (!field) return extraction;
   const day = dayFromDateText(extraction.dateText, { timezone: context.timezone, now: context.now ?? new Date() });
   const grounded = day ? { ...extraction, [field]: day } : extraction;
-  // The time of day (14-014): only a school item keeps one (a bill is due on
-  // a day, a document is dated), and only once its day is known — a time on
+  // The time of day (14-014): only what happens on a day keeps one — a
+  // school item, a class's exam or event, a family event (a bill is due on a
+  // day, a document is dated) — and only once its day is known: a time on
   // its own never invents a day, and a day with no time stays all-day.
-  const time = grounded.kind === "school_item" && grounded.dueDate ? timeFromDateText(extraction.dateText) : null;
+  const time = TIMED_INTAKE_KINDS.has(grounded.kind) && grounded.dueDate ? timeFromDateText(extraction.dateText) : null;
   return { ...grounded, dueTime: time?.start ?? null, endTime: time?.end ?? null };
 }
 

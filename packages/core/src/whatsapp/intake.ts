@@ -392,7 +392,7 @@ async function answerWhoFor(admin: SupabaseClient, row: MessageRow, text: string
   // Without a swipe-reply, only an item that does not know yet.
   if (!replying && personOf(waiting.extracted)) return null;
   const eligible = ((members ?? []) as { id: string; display_name: string; nickname: string | null; member_type: string }[])
-    .filter((entry) => (waiting.classified_kind === "school_item" ? entry.member_type === "child" : entry.member_type !== "helper"))
+    .filter((entry) => (CHILD_KINDS.has(waiting.classified_kind ?? "") ? entry.member_type === "child" : entry.member_type !== "helper"))
     .map((entry) => ({ id: entry.id, displayName: entry.display_name, nickname: entry.nickname }));
   const member = memberNamedInReply(text, eligible);
   if (!member) return null;
@@ -411,8 +411,11 @@ async function answerWhoFor(admin: SupabaseClient, row: MessageRow, text: string
 /** How long after sending something a plain name still answers who it is for. */
 const WHO_FOR_WINDOW_MS = 30 * 60 * 1000;
 
-/** The kinds that are about one person: a school item is a child's, a health document someone's. */
-const PERSONAL_KINDS = new Set(["school_item", "health_document"]);
+/** The kinds that are about one person: a school item or a class outside school is a child's, a health document someone's. */
+const PERSONAL_KINDS = new Set(["school_item", "activity_item", "health_document"]);
+
+/** A child's things: school work and classes outside school. */
+const CHILD_KINDS = new Set(["school_item", "activity_item"]);
 
 function personOf(extracted: Record<string, unknown> | null): string | null {
   const named = typeof extracted?.subjectMemberName === "string" ? extracted.subjectMemberName : null;
@@ -431,7 +434,7 @@ async function whoForChoices(admin: SupabaseClient, householdId: string, outcome
   if (personOf((outcome.item.extracted ?? null) as Record<string, unknown> | null)) return [];
   const { data } = await admin.from("household_members").select("display_name, member_type").eq("household_id", householdId).eq("status", "active").limit(50);
   const names = ((data ?? []) as { display_name: string; member_type: string }[])
-    .filter((entry) => (outcome.item.classifiedKind === "school_item" ? entry.member_type === "child" : entry.member_type !== "helper"))
+    .filter((entry) => (CHILD_KINDS.has(outcome.item.classifiedKind ?? "") ? entry.member_type === "child" : entry.member_type !== "helper"))
     .map((entry) => entry.display_name.split(/\s+/)[0]!);
   return names.length >= 2 && names.length <= 6 ? names : [];
 }
@@ -539,6 +542,16 @@ export function acknowledgementFor(outcome: IngestOutcome, options: { whoFor?: r
     case "school_item": {
       const title = shortTitle(extracted?.title);
       found = title ? `I found a school item: *${title}*.` : "I found a school item.";
+      break;
+    }
+    case "activity_item": {
+      const title = shortTitle(extracted?.title);
+      found = title ? `I found something for a class outside school: *${title}*.` : "I found something for a class outside school.";
+      break;
+    }
+    case "event": {
+      const title = shortTitle(extracted?.title);
+      found = title ? `I found an event: *${title}*.` : "I found an event.";
       break;
     }
     case "grocery_item": {

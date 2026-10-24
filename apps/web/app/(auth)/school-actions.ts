@@ -436,14 +436,16 @@ const noteSchema = z.object({
   householdId: z.uuid(),
   activityId: z.uuid(),
   id: z.union([z.uuid(), z.literal("")]).optional(),
-  kind: z.enum(["competition", "award", "note"]),
+  kind: z.enum(["competition", "exam", "event", "award", "note"]),
   title: z.string().trim().min(1, { error: "What is it?" }).max(200),
   onDate: dateField,
+  startsAt: z.union([z.string().regex(/^([01]\d|2[0-3]):[0-5]\d$/), z.literal("")]).optional(),
+  endsAt: z.union([z.string().regex(/^([01]\d|2[0-3]):[0-5]\d$/), z.literal("")]).optional(),
   detail: optionalText(1000),
   result: optionalText(120),
 });
 
-/** A competition coming up, a medal or award won, or a note, on one class. */
+/** A competition, exam or event coming up, a medal or award won, or a note, on one class. */
 export async function saveActivityNoteAction(_previous: ActionState, formData: FormData): Promise<ActionState> {
   const parsed = noteSchema.safeParse({
     householdId: field(formData, "householdId"),
@@ -452,12 +454,16 @@ export async function saveActivityNoteAction(_previous: ActionState, formData: F
     kind: field(formData, "kind"),
     title: field(formData, "title"),
     onDate: field(formData, "onDate"),
+    startsAt: field(formData, "startsAt"),
+    endsAt: field(formData, "endsAt"),
     detail: field(formData, "detail"),
     result: field(formData, "result"),
   });
   if (!parsed.success) return { error: parsed.error.issues[0]?.message ?? "Please check the details above." };
   const { saveActivityNote } = await import("@wonderhome/core/school/activities");
-  return inHousehold(parsed.data.householdId, (supabase) => saveActivityNote(supabase, { ...parsed.data, id: parsed.data.id || null }));
+  return inHousehold(parsed.data.householdId, (supabase) =>
+    saveActivityNote(supabase, { ...parsed.data, id: parsed.data.id || null, startsAt: parsed.data.startsAt || null, endsAt: parsed.data.endsAt || null }),
+  );
 }
 
 export async function removeActivityNoteAction(input: { householdId: string; id: string }): Promise<ActionState> {

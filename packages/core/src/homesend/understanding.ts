@@ -16,7 +16,7 @@ import type { HomeSendKind, HomeSendSource } from "./items";
  * `sanitizeIntakeExtraction`.
  */
 
-export const CANDIDATE_ACTION_TYPES = ["add_bill", "add_school_item", "add_grocery_item", "file_health_document", "record_purchases", "add_household_need"] as const;
+export const CANDIDATE_ACTION_TYPES = ["add_bill", "add_school_item", "add_activity_item", "add_event", "add_grocery_item", "file_health_document", "record_purchases", "add_household_need"] as const;
 export type CandidateActionType = (typeof CANDIDATE_ACTION_TYPES)[number];
 
 export type ConfidenceWord = "high" | "medium" | "low";
@@ -104,6 +104,8 @@ export function confidenceWord(value: number): ConfidenceWord {
 const ACTION_FOR_KIND: Partial<Record<HomeSendKind, CandidateActionType>> = {
   bill: "add_bill",
   school_item: "add_school_item",
+  activity_item: "add_activity_item",
+  event: "add_event",
   grocery_item: "add_grocery_item",
   health_document: "file_health_document",
   receipt: "record_purchases",
@@ -167,6 +169,7 @@ export function buildUnderstanding(extraction: IntakeExtraction, meta: Understan
         dueDate: extraction.dueDate,
         schoolKind: extraction.schoolKind,
         subject: extraction.subject,
+        activityKind: extraction.activityKind ?? null,
         quantity: extraction.quantity,
         unit: extraction.unit,
         category: extraction.category,

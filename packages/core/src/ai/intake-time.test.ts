@@ -117,6 +117,21 @@ describe("groundIntakeDate reads the time of a school item", () => {
     expect(groundIntakeDate(reading({ kind: "health_document", title: "Dentist", dateText: "27 September at 4pm" }), reference)).toMatchObject({ documentDate: "2026-09-27", dueTime: null });
   });
 
+  it("a class's exam and a family event keep their day and time too (the owner's karate exam, 2026-10-24)", () => {
+    const october = { timezone: "Asia/Kolkata", now: new Date("2026-10-24T02:30:00Z") };
+    expect(groundIntakeDate(reading({ kind: "activity_item", title: "Karate exam", activityKind: "exam", subject: "Karate", dateText: "Sunday, 9.30 morning" }), october)).toMatchObject({ dueDate: "2026-10-25", dueTime: "09:30" });
+    expect(groundIntakeDate(reading({ kind: "event", title: "Birthday party", dateText: "Saturday 31 October, 4 to 7 pm" }), october)).toMatchObject({ dueDate: "2026-10-31", dueTime: "16:00", endTime: "19:00" });
+  });
+
+  it("only a class outside school keeps what kind of thing it is, and its class", () => {
+    const raw = { ...reading({ readable: true, kind: "school_item", title: "Maths test", subject: "Maths" }), activityKind: "exam" as const };
+    expect(sanitizeIntakeExtraction(raw)).toMatchObject({ subject: "Maths" });
+    expect(sanitizeIntakeExtraction(raw)).not.toHaveProperty("activityKind");
+    expect(sanitizeIntakeExtraction({ ...raw, kind: "activity_item", subject: "Karate" })).toMatchObject({ activityKind: "exam", subject: "Karate", schoolKind: null });
+    expect(sanitizeIntakeExtraction({ ...raw, kind: "event", subject: "Karate" })).toMatchObject({ subject: null });
+    expect(sanitizeIntakeExtraction({ ...raw, kind: "event" })).not.toHaveProperty("activityKind");
+  });
+
   it("a time is never a model's to set", () => {
     const smuggled = { ...reading({ readable: true, kind: "school_item", title: "Sports Day", dueDate: "2026-09-26" }), dueTime: "03:00", endTime: "04:00" };
     expect(sanitizeIntakeExtraction(smuggled)).toMatchObject({ dueTime: null, endTime: null });

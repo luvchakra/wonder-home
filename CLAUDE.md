@@ -85,6 +85,7 @@ Detail: `docs/agent-platform.md`. Read it before changing conversation, HomeBrai
   - The household context is one server-only row (`household_context`, `homebrain/context-store.ts`). Never read it from a session, and never answer from a row older than the last write.
 - **HomeSend** (`packages/core/src/homesend/`, `ai/classify-intake.ts`, `/home-send`) is the intake. Every input enters through `homesend/ingest.ts` and ends in `IntakeUnderstanding`. A new input type is a new `ingest*` entry point, never a second pipeline.
   - Nothing reaches a domain table until a person confirms. Bills, health documents and receipts always wait for a person.
+  - A class outside school is its own kind, never school work (`activity_item`, 08-027): filed under the child's class of that name in Kids & School, the class added in the same step when missing. An event or invitation (`event`) goes on the calendar through `addFamilyEvent`.
   - All content is untrusted: `injection.ts` fences it and ignores instructions aimed at WonderHome. Links are fetched only through `link-fetch.ts` (public addresses, DNS pinned, every redirect checked).
   - Duplicates are shown and moved dates are offered as updates, never a second copy (`reconcile.ts`). Document plans (`homesend/plan.ts`) apply only through `applyDocumentPlanAction`, and never on their own when there are two or more records.
   - Failed items are kept under "Failed safely", never dropped. Every routed item can be undone through `homesend/changes.ts`, never a raw delete.
