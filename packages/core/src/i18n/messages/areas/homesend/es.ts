@@ -239,7 +239,7 @@ export const homesendEs: AreaCatalog<typeof homesendEn> = {
   "homesend.option.kindGroup.money": "Dinero",
   "homesend.option.kindGroup.health": "Salud",
   "homesend.option.kindGroup.food": "Comida y compra",
-  "homesend.field.notesPlaceholder": "- Un punto por línea",
+  "homesend.field.notesPlaceholder": "1. Un punto por línea",
 
   "homesend.receipt.shop": "Tienda (opcional)",
   "homesend.receipt.boughtOn": "Fecha de compra",

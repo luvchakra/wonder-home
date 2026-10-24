@@ -239,7 +239,7 @@ export const homesendMr: AreaCatalog<typeof homesendEn> = {
   "homesend.option.kindGroup.money": "पैसे",
   "homesend.option.kindGroup.health": "आरोग्य",
   "homesend.option.kindGroup.food": "अन्न आणि किराणा",
-  "homesend.field.notesPlaceholder": "- प्रत्येक ओळीत एक मुद्दा",
+  "homesend.field.notesPlaceholder": "1. प्रत्येक ओळीत एक मुद्दा",
 
   "homesend.receipt.shop": "दुकान (ऐच्छिक)",
   "homesend.receipt.boughtOn": "खरेदीची तारीख",

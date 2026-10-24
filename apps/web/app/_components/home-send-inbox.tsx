@@ -3,6 +3,7 @@
 import { Camera, ClipboardPaste, GraduationCap, HeartPulse, HelpCircle, Link2, Mic, PenLine, Receipt, ShieldAlert, ShoppingBasket, UploadCloud, Wallet, X } from "lucide-react";
 import { useActionState, useRef, useState, type ReactNode } from "react";
 
+import { suggestedIntakeKind } from "@wonderhome/core/ai/intake-kind-check";
 import { gateTranscript } from "@wonderhome/core/homesend/audio";
 import type { HomeSendChange } from "@wonderhome/core/homesend/items";
 import { ACCEPTED_UPLOAD_TYPES } from "@wonderhome/core/homesend/normalize";
@@ -245,7 +246,7 @@ export function HomeSendInbox({
   }
 
   const prefill = openItem?.extracted ?? null;
-  const defaultKind = openItem?.classifiedKind && openItem.classifiedKind !== "unknown" ? openItem.classifiedKind : "grocery_item";
+  const defaultKind = suggestedIntakeKind(openItem?.classifiedKind, prefill);
   const pendingOthers = pending.filter((item) => item.id !== openItem?.id);
   const failedOthers = failed.filter((item) => item.id !== openItem?.id);
   const changesByIntakeId = new Map<string, HomeSendChange[]>();

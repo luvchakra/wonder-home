@@ -8,6 +8,7 @@ import { RECORD_TYPES } from "../health/records";
 import { SCHOOL_ITEM_KINDS } from "../school/items";
 import { CLAUDE_MODEL, GEMINI_MODEL, OPENAI_MODEL } from "./model-client";
 import type { ModelProvider } from "./model-key";
+import { reviewIntakeKind } from "./intake-kind-check";
 import { anthropicClient, geminiClient, openaiClient } from "./provider-clients";
 import { fenceUntrusted, UNTRUSTED_CONTENT_RULE } from "../homesend/injection";
 import { isoDateIn } from "../context/format";
@@ -206,6 +207,21 @@ function withoutIds(value: string | null): string | null {
   return value && UUID_LIKE.test(value) ? null : value;
 }
 
+const NOTE_MARK = /^\s*(?:[-*•–—]|\d{1,2}[.)])\s+/;
+
+/**
+ * Notes read as numbered points (the owner, 2026-10-24): "1. …", one per
+ * line, whatever marks the model used. A single line with no mark of its own
+ * stays as written.
+ */
+export function numberedNotes(notes: string | null): string | null {
+  if (!notes) return notes;
+  const lines = notes.split(/\r?\n/).map((line) => line.trim()).filter(Boolean);
+  if (lines.length === 0) return null;
+  if (lines.length === 1 && !NOTE_MARK.test(lines[0]!)) return lines[0]!;
+  return lines.map((line, index) => `${index + 1}. ${line.replace(NOTE_MARK, "")}`).join("\n");
+}
+
 /**
  * Enforces, in code, the cross-field invariants the system prompt only
  * *asks* the model to follow — a schema-valid response can still set
@@ -214,9 +230,11 @@ function withoutIds(value: string | null): string | null {
  * backstop: never trusted to classify, only to null out whatever a kind
  * doesn't own, so the confirm screen never shows a field that makes no
  * sense for what it's confirming. See `classify-intake-evaluations.ts` for
- * the golden cases this runs against.
+ * the golden cases this runs against. One second look at the kind runs
+ * first (`reviewIntakeKind`): a service or a gathering is never a grocery.
  */
-export function sanitizeIntakeExtraction(raw: RawIntakeExtraction | IntakeExtraction): IntakeExtraction {
+export function sanitizeIntakeExtraction(reading: RawIntakeExtraction | IntakeExtraction): IntakeExtraction {
+  const raw = reviewIntakeKind(reading);
   if (!raw.readable) {
     return {
       readable: false,
@@ -265,7 +283,7 @@ export function sanitizeIntakeExtraction(raw: RawIntakeExtraction | IntakeExtrac
     ...rest,
     ...(raw.kind === "activity_item" ? { activityKind: activityKind ?? null } : {}),
     title: withoutIds(raw.title),
-    notes: withoutIds(raw.notes),
+    notes: numberedNotes(withoutIds(raw.notes)),
     billKind: raw.kind === "bill" ? raw.billKind : null,
     payee: raw.kind === "bill" ? withoutIds(raw.payee) : null,
     amount: raw.kind === "bill" || raw.kind === "receipt" ? raw.amount : null,
@@ -517,10 +535,12 @@ kind is exactly one of:
 - receipt: proof of a purchase already paid for — a shop or supermarket till receipt, an online order invoice marked paid, a delivery receipt. It records what was bought; it asks for nothing.
 - school_item: homework, a worksheet, a school exam or test, a school event or a notice from a school — something about school itself.
 - activity_item: something about a class or activity outside school — karate, dance, music, swimming, a sports club, a tuition or hobby class: its grading or belt exam, a competition or tournament, a performance, recital or match, or a note about the class. A karate exam is an activity_item, never a school_item, even when it is called an exam.
-- event: an event, plan or invitation that is neither school nor a class outside school — a birthday party invitation, a wedding, a family function, a society or community meeting, a get-together, a trip or outing, an appointment that is not about health.
-- grocery_item: a single product, a shopping-list line, or a photo of one item to buy or restock.
+- event: an event, plan or invitation that is neither school nor a class outside school — a birthday party invitation, a wedding, a family function, a society or community meeting, a get-together, a trip or outing, an appointment that is not about health, and a camp, drive or offer someone holds on a day for the household to go to: a blood-test or health check-up camp in the society, a vaccination drive, an eye-screening day, a workshop.
+- grocery_item: a single product, a shopping-list line, or a photo of one item to buy or restock from a shop — food, drink, a household supply. A service is never a grocery_item, even when a price list comes with it: blood tests, check-ups, lab packages, classes and repairs are things someone does for you, not things you buy off a shelf.
 - health_document: a lab result, prescription, imaging report, vaccination certificate, discharge summary, referral, insurance document or appointment/visit summary — anything about one person's health.
 - unknown: anything else, or content you cannot make out well enough to classify. A payment confirmation that lists no items bought (a bill paid online) is unknown, not a receipt; summarise it.
+
+To decide, ask what it asks the household to do: pay for something still owed → bill; a record of something already bought → receipt; go somewhere or be somewhere on a day → school_item, activity_item or event, by who runs it; buy a product → grocery_item; keep a record of one person's health → health_document. A flyer from a lab or clinic advertising a camp or a test package is an event when it names a day or a place, never a health_document (it is about no one's health yet) and never a grocery_item.
 
 Never invent a title, amount, date, name or note the source does not show. If it is blurry, unrelated, or you cannot make out any actionable content, set readable to false, kind to "unknown", leave every other field null or empty, and set confidence to "low".
 
@@ -535,7 +555,7 @@ dateText: for a bill, school_item, activity_item, event, health_document or rece
 
 summary: one short plain sentence saying what this is and what it asks of the household ("Asmi's school moved the Science Exhibition to 29 September"). Null when readable is false.
 
-notes: the details the household needs beyond the title, the day and the person — where it happens, what to bring or wear, who to contact, a fee, an instruction, a deadline before the day — as short bullet points, one per line, each starting with "- " ("- Wear the white uniform", "- Report by 9:00 am at the main hall"). At most six, each under 100 characters, in the order the content gives them. Only what the content says, never a guess or advice of your own. Null when there is nothing beyond the title, the day and the person.
+notes: the details the household needs beyond the title, the day and the person — where it happens, what to bring or wear, who to contact, a fee, an instruction, a deadline before the day — as short numbered points, one per line, numbered from 1 ("1. Wear the white uniform", "2. Report by 9:00 am at the main hall"). For a price list or a set of offers, one point per offer with its price ("3. HbA1c ₹199"). At most ten, each under 100 characters, in the order the content gives them. Only what the content says, never a guess or advice of your own. Null when there is nothing beyond the title, the day and the person.
 
 people: every person the content names, exactly as written ("Asmi", "Mr. Rao", "Dr. Mehta") — names only, never a guess at who they are in the household.
 

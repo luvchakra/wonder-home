@@ -1037,6 +1037,14 @@ const HOMESEND: HomeSendCase[] = [
     reading: { kind: "event", title: "Riya's birthday party", dueDate: null, dateText: "this Saturday, 4 to 7 pm", notes: "At Fun City, Koramangala", people: ["Riya"] },
     expected: { interpretation: "event", date: "2026-10-24", time: "16:00–19:00" },
   },
+  {
+    id: "HS-22", surface: "homesend", household: "A", category: "entity_resolution", actor: "a-kunal",
+    description: "A lab's blood-test camp in the society, with a price list, is an event to go to — never a grocery, whatever the model read it as (the owner, 2026-10-24).",
+    source: { channel: "pasted_text", capturedAt: "2026-10-22T05:00:00Z", text: "Blood Test Camp at Splendora CHS this Sunday, 7 to 11 am. LiveWell full body packages from ₹799. Weekend offers: Sugar ₹20, TSH ₹99, HbA1c ₹199, Vitamin D3 ₹449." },
+    // The reading a model gave it on 2026-10-24: a grocery item, because of the prices.
+    reading: { kind: "grocery_item", title: "Blood Test Camp at Splendora CHS", notes: "1. Sugar ₹20\n2. TSH ₹99\n3. HbA1c ₹199", confidence: "medium" },
+    expected: { interpretation: "event" },
+  },
 ];
 
 // --- HomeBrain (§7) ----------------------------------------------------------------

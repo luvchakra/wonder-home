@@ -3,6 +3,7 @@
 import { Camera, ClipboardPaste } from "lucide-react";
 import { useActionState, useEffect, useRef, useState } from "react";
 
+import { suggestedIntakeKind } from "@wonderhome/core/ai/intake-kind-check";
 import { ACCEPTED_UPLOAD_TYPES } from "@wonderhome/core/homesend/normalize";
 import { Alert } from "@wonderhome/core/ui/alert";
 import { Button } from "@wonderhome/core/ui/button";
@@ -114,7 +115,7 @@ export function HomeSendSheet({
   };
 
   const prefill = item?.extracted ?? null;
-  const defaultKind = item?.classifiedKind && item.classifiedKind !== "unknown" ? item.classifiedKind : "grocery_item";
+  const defaultKind = suggestedIntakeKind(item?.classifiedKind, prefill);
 
   return (
     <Sheet
