@@ -248,6 +248,7 @@ export const homesendEn = {
   "homesend.option.kindGroup.health": "Health",
   "homesend.option.kindGroup.food": "Food and groceries",
   "homesend.field.notesPlaceholder": "1. One point per line",
+  "homesend.field.where": "Where (optional)",
 
   // A paid receipt's lines.
   "homesend.receipt.shop": "Shop (optional)",

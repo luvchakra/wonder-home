@@ -240,6 +240,7 @@ export const homesendZh: AreaCatalog<typeof homesendEn> = {
   "homesend.option.kindGroup.health": "健康",
   "homesend.option.kindGroup.food": "食物和杂货",
   "homesend.field.notesPlaceholder": "1. 每行一点",
+  "homesend.field.where": "地点（可选）",
 
   "homesend.receipt.shop": "商店（可选）",
   "homesend.receipt.boughtOn": "购买日期",
