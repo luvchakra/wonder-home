@@ -104,6 +104,7 @@ export async function receiveWhatsAppMessages(admin: SupabaseClient, messages: r
           media_mime_type: message.media?.mimeType ?? null,
           media_filename: message.media?.filename ?? null,
           reply_to_provider_message_id: message.replyTo ?? null,
+          forwarded: message.forwarded ?? false,
           received_at: message.receivedAt.toISOString(),
         },
         { onConflict: "provider_message_id", ignoreDuplicates: true },
@@ -149,7 +150,9 @@ type MessageRow = {
   media_mime_type: string | null;
   reply_to_provider_message_id?: string | null;
   media_filename: string | null;
+  forwarded?: boolean | null;
   received_at: string;
+  created_at?: string;
   processing_status: "received" | "processing" | "processed" | "failed" | "ignored";
   attempts: number;
   homesend_item_id: string | null;
@@ -168,13 +171,15 @@ export async function processWhatsAppMessage(admin: SupabaseClient, messageId: s
   const { data } = await admin
     .from("whatsapp_messages")
     .select(
-      "id, household_id, member_id, provider_message_id, message_type, text_content, media_id, media_mime_type, media_filename, reply_to_provider_message_id, received_at, processing_status, attempts, homesend_item_id, acknowledged_at, identity:whatsapp_identities!whatsapp_messages_identity_id_fkey(phone_number, status)",
+      `${MESSAGE_COLUMNS}, identity:whatsapp_identities!whatsapp_messages_identity_id_fkey(phone_number, status)`,
     )
     .eq("id", messageId)
     .maybeSingle();
-  const row = data as MessageRow | null;
-  if (!row || row.processing_status === "processed" || row.processing_status === "ignored") return "skipped";
-  if (row.attempts >= MAX_PROCESS_ATTEMPTS) return "skipped";
+  const found = data as MessageRow | null;
+  if (!found || found.processing_status === "processed" || found.processing_status === "ignored") return "skipped";
+  if (found.attempts >= MAX_PROCESS_ATTEMPTS) return "skipped";
+  // The message this run reads: this one, or the one its burst is about.
+  let row: MessageRow = found;
 
   const now = deps.now?.() ?? new Date();
   const to = row.identity?.phone_number ?? null;
@@ -191,19 +196,27 @@ export async function processWhatsAppMessage(admin: SupabaseClient, messageId: s
 
   // Messages sent together are one thing (the owner's forward followed by
   // "asmi Karate Sunday", 2026-10-24): a forward, a photo or a note and what
-  // the person types straight after. Wait a moment for the rest, and let the
-  // first message of the burst read them all.
-  const receivedAt = new Date(row.received_at).getTime();
-  const wait = Math.max(0, receivedAt + BURST_SETTLE_MS - now.getTime());
-  if (wait > 0 && row.attempts === 0) await (deps.sleep ?? defaultSleep)(Math.min(wait, BURST_SETTLE_MS));
-  if (wait > 0 && row.attempts === 0) {
-    // While it waited, the burst's first message may have claimed it.
-    const { data: fresh } = await admin.from("whatsapp_messages").select("processing_status").eq("id", row.id).maybeSingle();
-    if ((fresh as { processing_status: string } | null)?.processing_status !== row.processing_status) return "skipped";
+  // the person types straight after. WhatsApp stamps them to the second and
+  // may deliver them in either order, often at the same moment, so a fresh
+  // message waits for the rest, then claims the whole burst in one update.
+  // Whichever run's update lands first reads it; every other run finds its
+  // own message already taken and stops.
+  let burst: MessageRow[] = [];
+  if (row.attempts === 0 && row.processing_status === "received") {
+    const wait = Math.max(0, new Date(row.received_at).getTime() + BURST_SETTLE_MS - now.getTime());
+    if (wait > 0) await (deps.sleep ?? defaultSleep)(Math.min(wait, BURST_SETTLE_MS));
+    const claimed = await claimBurst(admin, row);
+    if (!claimed) return "skipped";
+    row = claimed.lead;
+    burst = claimed.rest;
+    await settle({ attempts: row.attempts + 1 });
+  } else {
+    await settle({ processing_status: "processing", attempts: row.attempts + 1 });
   }
-  if (await earlierInBurst(admin, row)) return "skipped";
-
-  await settle({ processing_status: "processing", attempts: row.attempts + 1 });
+  const together = burst.length > 0;
+  const settleBurst = async (patch: Record<string, unknown>) => {
+    if (together) await admin.from("whatsapp_messages").update(patch).in("id", burst.map((entry) => entry.id));
+  };
 
   // Too many from one member in an hour: kept, and picked up again when the
   // job queue retries it — slower, never lost, and nothing is said until it
@@ -211,6 +224,7 @@ export async function processWhatsAppMessage(admin: SupabaseClient, messageId: s
   if (row.attempts === 0 && !(await hitRateLimit(admin, "homesend.whatsapp", row.member_id))) {
     events.push({ kind: "rate_limited", householdId: row.household_id });
     await settle({ processing_status: "received" });
+    await settleBurst({ processing_status: "received" });
     await recordWhatsAppEvents(admin, events);
     return "failed";
   }
@@ -218,16 +232,11 @@ export async function processWhatsAppMessage(admin: SupabaseClient, messageId: s
   if (row.message_type === "video" || row.message_type === "unsupported") {
     events.push({ kind: "unsupported_type", householdId: row.household_id });
     await settle({ processing_status: "ignored" });
+    await settleBurst({ processing_status: "received" });
     await say(UNSUPPORTED_REPLY);
     await recordWhatsAppEvents(admin, events);
     return "read";
   }
-
-  const burst = await claimBurst(admin, row);
-  const together = burst.length > 0;
-  const settleBurst = async (patch: Record<string, unknown>) => {
-    if (together) await admin.from("whatsapp_messages").update(patch).in("id", burst.map((entry) => entry.id));
-  };
 
   // A reply to one of the person's own items that names someone in the
   // household answers that item's "who is this for?" (the owner's "asmi",
@@ -263,9 +272,12 @@ export async function processWhatsAppMessage(admin: SupabaseClient, messageId: s
   const externalId = `whatsapp:${row.provider_message_id}`.slice(0, 200);
   let outcome: IngestOutcome;
   try {
-    const added = burst.map((entry) => entry.text_content?.trim() ?? "").filter(Boolean);
+    // Other forwarded texts are more of the content; the person's own texts are their note on it.
+    const passedOn = burst.filter((entry) => entry.forwarded).map((entry) => entry.text_content?.trim() ?? "").filter(Boolean);
+    const added = burst.filter((entry) => !entry.forwarded || row.message_type !== "text").map((entry) => entry.text_content?.trim() ?? "").filter(Boolean);
     if (row.message_type === "text") {
-      outcome = await ingestWhatsAppText(admin, { householdId: row.household_id, memberId: row.member_id, externalId, text: withAdded(row.text_content ?? "", added) }, deps.ingest);
+      const content = [row.text_content?.trim() ?? "", ...passedOn].filter(Boolean).join("\n\n");
+      outcome = await ingestWhatsAppText(admin, { householdId: row.household_id, memberId: row.member_id, externalId, text: withAdded(content, added) }, deps.ingest);
     } else {
       const download = deps.download ?? ((id: string) => downloadWhatsAppMedia(deps.config, id, { fetch: deps.fetch }));
       const file = await download(row.media_id ?? "");
@@ -431,54 +443,64 @@ export const BURST_SETTLE_MS = 8_000;
 
 const defaultSleep = (ms: number) => new Promise<void>((resolve) => setTimeout(resolve, ms));
 
-/**
- * Whether an earlier message from the same person, in the same burst, has
- * not started yet: it will read this one with it, so this one leaves it.
- */
-async function earlierInBurst(admin: SupabaseClient, row: MessageRow): Promise<boolean> {
-  const at = new Date(row.received_at).getTime();
-  const { data } = await admin
-    .from("whatsapp_messages")
-    .select("id, processing_status, received_at, attempts")
-    .eq("household_id", row.household_id)
-    .eq("member_id", row.member_id)
-    .neq("id", row.id)
-    .gte("received_at", new Date(at - BURST_WINDOW_MS).toISOString())
-    .lte("received_at", row.received_at)
-    .limit(10);
-  return ((data ?? []) as { id: string; processing_status: string; received_at: string; attempts: number }[]).some(
-    // Only one not yet started: it will claim this one when it runs. One
-    // already running has claimed what it saw, so this one goes on alone.
-    (entry) => entry.processing_status === "received" && entry.received_at < row.received_at && entry.attempts < MAX_PROCESS_ATTEMPTS,
-  );
-}
+/** Every column a run reads of a message, apart from the sender's identity. */
+const MESSAGE_COLUMNS =
+  "id, household_id, member_id, provider_message_id, message_type, text_content, media_id, media_mime_type, media_filename, reply_to_provider_message_id, forwarded, received_at, created_at, processing_status, attempts, homesend_item_id, acknowledged_at";
 
 /**
- * The later messages of this one's burst, claimed so nothing else reads
- * them: texts the person sent within the window after it. A second photo or
- * file is its own item, so a burst with one is not joined.
+ * Claims this message and the rest of its burst in one update, so two runs
+ * can never each take a part: the person's other fresh messages within the
+ * window either side of it. A burst holding more than one photo or file is
+ * not joined (each file is its own item), and neither is an empty text.
+ * Null when another run already took this message.
  */
-async function claimBurst(admin: SupabaseClient, row: MessageRow): Promise<MessageRow[]> {
+async function claimBurst(admin: SupabaseClient, row: MessageRow): Promise<{ lead: MessageRow; rest: MessageRow[] } | null> {
   const at = new Date(row.received_at).getTime();
   const { data } = await admin
     .from("whatsapp_messages")
-    .select("id, message_type, text_content, received_at, processing_status")
+    .select(MESSAGE_COLUMNS)
     .eq("household_id", row.household_id)
     .eq("member_id", row.member_id)
+    .eq("processing_status", "received")
+    .eq("attempts", 0)
     .neq("id", row.id)
-    .gte("received_at", row.received_at)
+    .gte("received_at", new Date(at - BURST_WINDOW_MS).toISOString())
     .lte("received_at", new Date(at + BURST_WINDOW_MS).toISOString())
-    .order("received_at", { ascending: true })
     .limit(10);
-  const later = ((data ?? []) as MessageRow[]).filter((entry) => entry.processing_status === "received");
-  if (later.length === 0 || later.some((entry) => entry.message_type !== "text" || !entry.text_content?.trim())) return [];
+  const others = ((data ?? []) as MessageRow[]).filter((entry) => entry.message_type !== "unsupported" && entry.message_type !== "video" && (entry.message_type !== "text" || entry.text_content?.trim()));
+  const files = [row, ...others].filter((entry) => entry.message_type !== "text").length;
+  const ids = [row.id, ...(files <= 1 ? others.map((entry) => entry.id) : [])];
   const { data: claimed } = await admin
     .from("whatsapp_messages")
     .update({ processing_status: "processing" })
-    .in("id", later.map((entry) => entry.id))
+    .in("id", ids)
     .eq("processing_status", "received")
-    .select("id, message_type, text_content, received_at, processing_status");
-  return ((claimed ?? []) as MessageRow[]).sort((a, b) => a.received_at.localeCompare(b.received_at));
+    .select(MESSAGE_COLUMNS);
+  const taken = (claimed ?? []) as MessageRow[];
+  if (!taken.some((entry) => entry.id === row.id)) return null;
+  const lead = leadOf(taken);
+  return {
+    lead: { ...lead, identity: row.identity },
+    rest: taken.filter((entry) => entry.id !== lead.id).sort(sentOrder),
+  };
+}
+
+/** Sent order: WhatsApp's time to the second, then the order they arrived in. */
+function sentOrder(a: MessageRow, b: MessageRow): number {
+  return a.received_at.localeCompare(b.received_at) || (a.created_at ?? "").localeCompare(b.created_at ?? "") || a.id.localeCompare(b.id);
+}
+
+/**
+ * What a burst is about: its photo or file, else the first forwarded text,
+ * else its longest text (a short note is about something longer). Pure.
+ */
+export function leadOf<T extends { id: string; message_type: string; text_content: string | null; forwarded?: boolean | null; received_at: string; created_at?: string }>(messages: readonly T[]): T {
+  const ordered = [...messages].sort((a, b) => sentOrder(a as unknown as MessageRow, b as unknown as MessageRow));
+  return (
+    ordered.find((entry) => entry.message_type !== "text") ??
+    ordered.find((entry) => entry.forwarded) ??
+    ordered.reduce((best, entry) => ((entry.text_content?.trim().length ?? 0) > (best.text_content?.trim().length ?? 0) ? entry : best))
+  );
 }
 
 /** A message and what the person added straight after it, as one piece of content. */

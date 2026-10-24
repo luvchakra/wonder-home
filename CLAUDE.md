@@ -884,10 +884,14 @@ authorization channel:
   `whatsapp_messages.reply_to_provider_message_id`) that names one household
   member (`memberNamedInReply`) sets who the quoted item is for, on the item
   itself; nothing is applied and no new item is made.
-- **Messages sent together are one item.** A forward or a photo and the texts
-  the same person sends within `BURST_WINDOW_MS` (30 s) are read as one: the
-  first message waits `BURST_SETTLE_MS`, claims the later texts, and passes
-  them on as "The sender added: …" (a photo's caption), with one reply.
+- **Messages sent together are one item.** WhatsApp stamps messages to the
+  second and delivers them in any order, often at once. A fresh message waits
+  `BURST_SETTLE_MS`, then claims itself and the person's other fresh messages
+  within `BURST_WINDOW_MS` in one conditional update (`claimBurst`); the run
+  whose update lands first reads them all, every other run stops. The item is
+  about the photo or file, else the forwarded text (`forwarded`, from
+  `context.forwarded`), else the longest text (`leadOf`); the person's own
+  texts are "The sender added: …", with one reply.
 - **What it never does.** WhatsApp is not a second brain: it decides nothing
   itself, and never touches a domain record except through HomeTalk's gates.
 - **Telemetry.** `whatsapp_events` holds closed words and counts only.
