@@ -168,24 +168,12 @@ export function SetupProgressCard({
       </div>
 
       {variant === "full" ? (
-        // The whole checklist, grouped by what each step is about (the owner, 2026-10-25).
-        <div className="mt-4 space-y-4">
-          {groupSetupSteps(shown).map((group) => (
-            <section key={group.key} aria-labelledby={`setup-group-${group.key}`}>
-              <h3 id={`setup-group-${group.key}`} className="flex flex-wrap items-baseline justify-between gap-x-3 gap-y-0.5 border-b border-[var(--wh-border)] pb-1.5 text-sm font-semibold">
-                <span>{words.groups[group.key]}</span>
-                <span className="text-xs font-medium text-[var(--wh-foreground-subtle)]">
-                  {words.groupDone.replace("{done}", String(group.steps.filter((step) => step.done).length)).replace("{total}", String(group.steps.length))}
-                </span>
-              </h3>
-              <ul className="divide-y divide-[var(--wh-border)]">
-                {group.steps.map((step) => (
-                  <StepRow key={step.key} step={step} />
-                ))}
-              </ul>
-            </section>
+        // The whole checklist in one card, in the order its groups already sort it.
+        <ul className="mt-4 divide-y divide-[var(--wh-border)]">
+          {groupSetupSteps(shown).flatMap((group) => group.steps).map((step) => (
+            <StepRow key={step.key} step={step} />
           ))}
-        </div>
+        </ul>
       ) : (
         <ul className="mt-4 divide-y divide-[var(--wh-border)]">
           {shown.map((step) => (
