@@ -3,6 +3,7 @@ import type { HomeSendExtraction, HomeSendKind } from "./items";
 import type { HomeSendReconciliation } from "./reconcile";
 import type { SubjectResolution } from "./resolve";
 import type { IntakeUnderstanding } from "./understanding";
+import { AUTO_APPLY_FLOOR } from "./verify";
 
 /**
  * How HomeSend confirms what it read (Wave 3 §12):
@@ -62,7 +63,7 @@ const KIND_LABEL: Record<HomeSendKind, string> = {
 export type ConfirmationInput = {
   kind: HomeSendKind | null;
   extracted: Pick<HomeSendExtraction, "title" | "needs" | "confidence"> | null;
-  understanding: Pick<IntakeUnderstanding, "readable" | "confidence" | "safety"> | null;
+  understanding: Pick<IntakeUnderstanding, "readable" | "confidence" | "safety" | "score" | "check"> | null;
   reconciliation: Pick<HomeSendReconciliation, "message" | "proposal"> | null;
   subject: Pick<SubjectResolution, "question" | "selected"> | null;
   /** A member sent it in themselves; an email arrives with nobody in the household acting. */
@@ -70,6 +71,13 @@ export type ConfirmationInput = {
   /** The household's own setting for this kind's outcome; "observe" when nothing is configured. */
   autonomy: AutonomyMode;
 };
+
+/** Why a clear reading still waits: what WonderHome could not find in what was sent. */
+function notSureEnough(unverified: readonly string[]): string {
+  if (unverified.length === 0) return "WonderHome adds things on its own only when it is more than 95% sure, so a person looks first.";
+  const listed = unverified.length === 1 ? unverified[0] : `${unverified.slice(0, -1).join(", ")} and ${unverified.at(-1)}`;
+  return `WonderHome couldn't check ${listed} against what was sent, so a person looks first.`;
+}
 
 export function decideConfirmation(input: ConfirmationInput): ConfirmationDecision {
   const kind = input.kind;
@@ -104,6 +112,11 @@ export function decideConfirmation(input: ConfirmationInput): ConfirmationDecisi
 
   const outcome = AUTO_APPLY_OUTCOMES[kind];
   if (!outcome) return { mode: "prepare", reason: "Ready for you to check.", question: null };
+
+  // More than 95% sure, or a person confirms (the owner, 2026-10-25): the
+  // right kind and every detail found in what was sent (`verify.ts`).
+  const score = input.understanding?.score ?? null;
+  if (score === null || score <= AUTO_APPLY_FLOOR) return { mode: "prepare", reason: notSureEnough(input.understanding?.check?.unverified ?? []), question: null };
 
   const decision = decideAutonomy(input.autonomy, { outcomeKey: outcome.outcomeKey, kind: "schedule", reversible: true });
   if (decision.outcome === "execute") {

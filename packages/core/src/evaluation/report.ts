@@ -13,7 +13,7 @@ import type { CaseResult, EvalCase, EvaluationRun } from "./types";
  * what does not yet; it never claims a dashboard nobody built.
  */
 
-export type Gate = { name: "functional" | "security" | "privacy" | "reliability" | "product" | "voice" | "operations"; pass: boolean; blocking: boolean; evidence: string };
+export type Gate = { name: "functional" | "security" | "privacy" | "reliability" | "product" | "understanding" | "voice" | "operations"; pass: boolean; blocking: boolean; evidence: string };
 
 export function releaseGates(
   run: EvaluationRun,
@@ -63,9 +63,32 @@ export function releaseGates(
       blocking: true,
       evidence: "HomeTalk grounding, HomeSend reconciliation and HomeBrain answers are all built from the one context engine (`context/builders.ts`), which is what the golden households are run through.",
     },
+    understandingGate(run, metrics),
     { name: "voice", pass: voice.pass, blocking: true, evidence: voice.evidence },
     { name: "operations", pass: operations.pass, blocking: false, evidence: operations.evidence },
   ];
+}
+
+/** The bar HomeSend's understanding must clear (the owner, 2026-10-25): more than 95%. */
+export const UNDERSTANDING_BAR = 0.95;
+
+/**
+ * HomeSend understands what it is sent (the owner, 2026-10-25): more than
+ * 95% of its cases right end to end (category, date, who it's for, the
+ * match and what it does), and more than 95% in the right category.
+ */
+function understandingGate(run: EvaluationRun, metrics: ReturnType<typeof measure>): Gate {
+  const cases = metrics.bySurface.homesend;
+  const category = metrics.accuracy.extraction;
+  const above = (value: { count: number; of: number }) => value.of > 0 && value.count / value.of > UNDERSTANDING_BAR;
+  return {
+    name: "understanding",
+    pass: above(cases) && above(category),
+    blocking: true,
+    evidence:
+      `HomeSend understood ${formatRatio(cases)} of its cases end to end and ${formatRatio(category)} in the right category; the bar is more than ${UNDERSTANDING_BAR * 100}%.` +
+      (run.provider === "deterministic" ? " This run scores everything after the classifier against recorded readings; a provider run scores the model's own reading." : ""),
+  };
 }
 
 export function releasable(gates: readonly Gate[]): boolean {

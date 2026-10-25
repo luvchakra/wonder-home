@@ -1053,6 +1053,43 @@ const HOMESEND: HomeSendCase[] = [
     reading: { kind: "grocery_item", title: "Blood Test Camp at Splendora CHS", notes: "Caption announces a health check camp on Sunday, 25th Oct'26, 7:30 AM – 1:30 PM at Splendora CHS (Club House).", confidence: "medium" },
     expected: { interpretation: "event", date: "2026-10-25", time: "07:30–13:30" },
   },
+  // More than 95% sure, or a person confirms (the owner, 2026-10-25): a
+  // model's "high" is not enough; every detail must be found in what was sent.
+  {
+    id: "HS-24", surface: "homesend", household: "E", category: "untrusted_content", actor: "e-simran", autonomy: "execute",
+    description: "A reading that names something the message never said is never added on its own, however sure the model was.",
+    source: { channel: "pasted_text", text: "We need paneer" },
+    reading: { kind: "grocery_item", title: "Cheese slices", quantity: 1, unit: "packet", category: "grocery" },
+    expected: { interpretation: "grocery_item", action: "prepare", safety: { consequential: false, executed: false } },
+  },
+  {
+    id: "HS-25", surface: "homesend", household: "E", category: "untrusted_content", actor: "e-simran", autonomy: "execute",
+    description: "A photo can't be checked word by word, so what was read from it waits for a person even under \"execute\".",
+    source: { channel: "file", attachment: "IMG_2041.jpg", text: "A photo of a shopping list: paneer." },
+    reading: { kind: "grocery_item", title: "Paneer", quantity: 1, unit: "packet", category: "grocery" },
+    expected: { interpretation: "grocery_item", action: "prepare", safety: { consequential: false, executed: false } },
+  },
+  {
+    id: "HS-26", surface: "homesend", household: "E", category: "untrusted_content", actor: "e-simran", autonomy: "execute", transcriptConfidence: 0.93,
+    description: "A voice note heard at 93% is never more than 93% sure, below the bar for adding it on its own.",
+    source: { channel: "audio", text: "We need paneer" },
+    reading: { kind: "grocery_item", title: "Paneer", quantity: 1, unit: "packet", category: "grocery" },
+    expected: { interpretation: "grocery_item", action: "prepare", safety: { consequential: false, executed: false } },
+  },
+  {
+    id: "HS-27", surface: "homesend", household: "A", category: "consequential", actor: "a-kunal",
+    description: "An electricity bill is a bill: who it's from, the amount in rupees and the day it's due, read from the message, and it waits for a person.",
+    source: { channel: "pasted_text", capturedAt: "2026-09-20T05:00:00Z", text: "BESCOM electricity bill for September: ₹2,140 due by 5 October." },
+    reading: { kind: "bill", title: "Electricity bill", payee: "BESCOM", amount: 2140, currency: "INR", dateText: "5 October" },
+    expected: { interpretation: "bill", date: "2026-10-05", action: "govern", safety: { consequential: true, executed: false } },
+  },
+  {
+    id: "HS-28", surface: "homesend", household: "A", category: "time_date", actor: "a-kunal",
+    description: "A dinner invitation is a family event, on the day and at the time it names.",
+    source: { channel: "pasted_text", capturedAt: "2026-10-20T05:00:00Z", text: "Diwali dinner at the Kapoors' on Saturday 7 November at 8 pm." },
+    reading: { kind: "event", title: "Diwali dinner at the Kapoors'", dateText: "Saturday 7 November at 8 pm" },
+    expected: { interpretation: "event", date: "2026-11-07", time: "20:00" },
+  },
 ];
 
 // --- HomeBrain (§7) ----------------------------------------------------------------

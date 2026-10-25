@@ -2,6 +2,7 @@ import type { IntakeExtraction } from "../ai/classify-intake";
 import { documentReading, type DocumentReading } from "./document";
 import type { InjectionScan } from "./injection";
 import type { HomeSendKind, HomeSendSource } from "./items";
+import { checkReading, VERIFIED_CONFIDENCE, type ReadingCheck } from "./verify";
 
 /**
  * The canonical result every HomeSend input produces (Wave 3 §8) — a photo,
@@ -49,6 +50,14 @@ export type IntakeUnderstanding = {
   kind: HomeSendKind;
   contentSummary: string;
   confidence: ConfidenceWord;
+  /**
+   * How sure, 0–1, after WonderHome checked the reading against what was sent
+   * (`verify.ts`). Only above `AUTO_APPLY_FLOOR` (95%) may it add an entry on
+   * its own. Absent on items read before 2026-10-25, which never auto-apply.
+   */
+  score?: number;
+  /** What that check could not confirm, in the household's words. */
+  check?: ReadingCheck;
   entities: UnderstandingEntity[];
   facts: UnderstandingFact[];
   candidateActions: CandidateAction[];
@@ -87,6 +96,12 @@ export type UnderstandingMeta = {
   sender?: string | null;
   filename?: string | null;
   contentType?: string | null;
+  /**
+   * The text the reading came from — pasted text, an email, a voice note's
+   * transcript, a linked page — so every detail can be checked against it.
+   * Null for a photo or a file.
+   */
+  sourceText?: string | null;
   /** Pages the file itself has, from its bytes — a fallback when the model gives no count. */
   pageCount?: number | null;
   injection: InjectionScan;
@@ -129,9 +144,22 @@ export function overallConfidence(extraction: IntakeExtraction, transcriptConfid
   return Math.round(value * 100) / 100;
 }
 
+/**
+ * The reading's confidence once it has been checked against what was sent:
+ * a model's "high" whose every detail was found there is `VERIFIED_CONFIDENCE`
+ * (never more sure than a voice note's transcript); anything else stays at
+ * most the 0.9 a model's own word is worth, below the bar for acting alone.
+ */
+export function checkedConfidence(extraction: IntakeExtraction, check: ReadingCheck, transcriptConfidence: number | null = null): number {
+  const base = overallConfidence(extraction, transcriptConfidence);
+  if (!check.verified || extraction.confidence !== "high" || base < CONFIDENCE_VALUE.high) return Math.min(base, CONFIDENCE_VALUE.high);
+  return transcriptConfidence === null ? VERIFIED_CONFIDENCE : Math.min(VERIFIED_CONFIDENCE, Math.round(transcriptConfidence * 100) / 100);
+}
+
 export function buildUnderstanding(extraction: IntakeExtraction, meta: UnderstandingMeta): IntakeUnderstanding {
   const transcriptConfidence = meta.transcriptConfidence ?? null;
-  const confidence = overallConfidence(extraction, transcriptConfidence);
+  const check = checkReading(extraction, meta.sourceText ?? null);
+  const confidence = checkedConfidence(extraction, check, transcriptConfidence);
   const facts = extraction.facts;
 
   const entities: UnderstandingEntity[] = [];
@@ -190,6 +218,8 @@ export function buildUnderstanding(extraction: IntakeExtraction, meta: Understan
     kind: extraction.kind,
     contentSummary: extraction.summary ?? extraction.title ?? "",
     confidence: confidenceWord(confidence),
+    score: confidence,
+    check,
     entities,
     facts: facts.map((fact) => ({ statement: fact.statement, confidence, sourceEvidence: fact.evidence ? [fact.evidence] : [] })),
     candidateActions,
