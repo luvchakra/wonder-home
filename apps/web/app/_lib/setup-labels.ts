@@ -48,6 +48,14 @@ export function setupProgressLabels(assessment: SetupAssessment, t: Translate, d
     progress: t("homeScreen.setup.progress", { done: assessment.done, total: assessment.total }),
     firstWeek: daysLeft !== undefined && daysLeft > 0 ? t("homeScreen.setup.firstWeek", { count: daysLeft }) : null,
     seeAll: t("homeScreen.setup.seeAll", { count: assessment.total }),
+    groups: {
+      household: t("homeScreen.setup.group.household"),
+      running: t("homeScreen.setup.group.running"),
+      home_money: t("homeScreen.setup.group.home_money"),
+      everyday: t("homeScreen.setup.group.everyday"),
+    },
+    // Filled in per group by the card; the words keep their place in each language.
+    groupDone: t("homeScreen.setup.doneOf", { done: "{done}", total: "{total}" }),
   };
 }
 

@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { assessSetup, milestoneFor, setupWindow, type SetupFacts } from "./setup";
+import { assessSetup, groupSetupSteps, milestoneFor, SETUP_GROUPS, setupWindow, type SetupFacts } from "./setup";
 
 const bare: SetupFacts = {
   householdName: "Chakraborty Family",
@@ -145,5 +145,21 @@ describe("whose week it is", () => {
     const window = setupWindow({ firstSeenAt: "2026-09-17T09:00:00.000Z", adminSince: "not a date", now });
 
     expect(window.prominent).toBe(true);
+  });
+});
+
+describe("the checklist grouped by what each step is about (the owner, 2026-10-25)", () => {
+  it("puts every step in exactly one group, in the order the checklist reads", () => {
+    const keys = assessSetup(full).steps.map((step) => step.key);
+    expect(SETUP_GROUPS.flatMap((group) => group.steps)).toEqual(keys);
+    expect(groupSetupSteps(assessSetup(full).steps).flatMap((group) => group.steps.map((step) => step.key))).toEqual(keys);
+  });
+
+  it("leaves out only the steps that do not apply, and a group left with none", () => {
+    const groups = groupSetupSteps(assessSetup(bare).steps);
+    const keys = groups.flatMap((group) => group.steps.map((step) => step.key));
+    expect(keys).not.toContain("children");
+    expect(keys).not.toContain("school");
+    expect(groups.every((group) => group.steps.length > 0)).toBe(true);
   });
 });
