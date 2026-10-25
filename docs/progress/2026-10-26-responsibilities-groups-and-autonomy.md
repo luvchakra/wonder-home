@@ -38,6 +38,18 @@ Date: 2026-10-26 · PRs #342, #345, #346, #347, #348 and this one
 - Not verified: a save against the live database. The container has no Supabase keys, so the signed-in path was not driven. The write is covered by the repository and action tests.
 - `npm run lint:help-links`, both typechecks, and the household, help and i18n suites pass. The production build and `check:bundle` results are in the PR.
 
+## Round two: one row (owner, 2026-10-26)
+
+The owner asked to drop the line under the dropdown, put the dropdown next to the label, and keep everything in one row.
+
+- **The row:** label and count, then the dropdown, then the chevron that opens the list. Tapping the label also opens the list; the chevron is the one button for it.
+- **Removed:** the "It notices a problem…" line under the closed dropdown. The explanations stay in the opened choices.
+- **Short label:** the closed dropdown shows each mode's short form, the same words as the row badges ("WonderHome watches", "WonderHome asks first"). A mixed group shows "Mixed — choose one" (`manage.resp.modeMixed`, eight languages). The opened choices keep the owner's full wording. The full sentences cannot fit beside a label at 360 px: in a browser check, "WonderHome does the groundwork, and waits for you" stacked five lines high.
+- **Two icons:** the dropdown uses the select icon (up and down), so it never reads as a second chevron next to the list's.
+- **Long names:** a person's name is capped at 38% of the row and wraps at its spaces. The count stays whole, so it never shows as "· 1 / 3".
+- **Doc comment:** `AcceptRebalanceButton`'s doc comment had been pushed off its function in #346. It is back above it.
+- **Checked** in Chromium on a temporary page with the real page's side padding: each card is one row, in that order. At 360 px, Laundry, Kids and Meals are one line each; "Kunal Chakrabarty · 13" is two lines and nothing is cut. Toggles, choosing (mode, keys and household posted; choices close; the error shows; the stored choice stays), the read-only row, and no overflow at 360 px or desktop all check out.
+
 ## Open
 
 - The seven non-English texts (choices, help paragraphs, the owner reason) are drafts for a native speaker.

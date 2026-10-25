@@ -169,6 +169,7 @@ export const householdEs: AreaCatalog<typeof householdEn> = {
   "manage.resp.setUpPlaybook": "Preparar el manual",
   "manage.resp.unowned": "Sin responsable",
   "manage.resp.needsOwner": "Primero asigna un responsable a cada tarea de aquí.",
+  "manage.resp.modeMixed": "Mixto: elige uno",
   "manage.resp.howMuch": "Cuánto hace WonderHome por su cuenta",
   "manage.resp.howMuchLede": "Para cada resultado de arriba, decides hasta dónde puede llegar WonderHome sin preguntar:",
   "manage.resp.how.observe": "detecta un problema y te avisa. No hace nada más.",

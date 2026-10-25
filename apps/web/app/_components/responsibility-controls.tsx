@@ -1,6 +1,6 @@
 "use client";
 
-import { ChevronDown, Plus, Trash2 } from "lucide-react";
+import { ChevronDown, ChevronsUpDown, Plus, Trash2 } from "lucide-react";
 import { startTransition, useActionState, useEffect, useRef, useState, type ReactNode } from "react";
 
 import { AUTONOMY_MODES, type AutonomyMode } from "@wonderhome/core/household/autonomy";
@@ -283,18 +283,16 @@ function ReadOnlyDetail({ card, labels }: { card: Omit<ResponsibilityCardProps, 
   );
 }
 
-/**
- * Accepting one suggested swap (story 03-008). A single tap: the swap is one
- * the household already half-made — the person taking it is its named
- * backup — and it can be swapped straight back from the row itself.
- */
 /** The explainer's "what it does" line follows a dash, so it starts in lower case; on its own it opens a sentence. */
 const sentence = (text: string) => text.charAt(0).toUpperCase() + text.slice(1);
 
 /** The words for the group card's dropdown, in the viewer's language: each mode's heading and what it lets WonderHome do. */
 export type GroupAutonomyLabels = {
   title: string;
-  options: Record<AutonomyMode, { heading: string; how: string }>;
+  /** `short` is the closed dropdown's word for it, the same as each row's badge; `heading` and `how` are the opened choice. */
+  options: Record<AutonomyMode, { heading: string; short: string; how: string }>;
+  /** The closed dropdown when the group's responsibilities differ. */
+  mixed: string;
   /** Why the two choices that need an owner are not offered for a group with an unowned outcome. */
   needsOwner: string;
 };
@@ -303,11 +301,13 @@ export type GroupAutonomyLabels = {
 const NEEDS_AN_OWNER: ReadonlySet<AutonomyMode> = new Set(["approve", "execute"]);
 
 /**
- * A group label on Responsibilities: a thin card. Its first row is the label
- * and count, and toggles the responsibilities under it, which start hidden.
- * The card itself carries the dropdown of the four autonomy choices, always
- * in view: choosing one sets every responsibility in the group to it (admins
- * only; others read the group's mode).
+ * A group label on Responsibilities: a thin card, one row. The label and
+ * count; the group's autonomy dropdown beside them, showing its choice in
+ * full; and the chevron that opens the responsibilities under it, which
+ * start hidden (tapping the label does the same). The dropdown opens the four
+ * choices under the row, each with what it lets WonderHome do, and choosing
+ * one sets every responsibility in the group (admins only; others read the
+ * group's mode in the same place).
  */
 export function ResponsibilityGroup({
   title,
@@ -333,35 +333,89 @@ export function ResponsibilityGroup({
   children: ReactNode;
 }) {
   const [open, setOpen] = useState(false);
-
+  const [choosing, setChoosing] = useState(false);
+  const [state, formAction, pending] = useActionState<ActionState, FormData>(setGroupAutonomyAction, {});
   const listId = `group-${title.replace(/\W+/g, "-").toLowerCase()}`;
+  // Spoken in full; shown short, so the label, the dropdown and the chevron fit one row on a phone.
+  const heading = currentMode ? labels.options[currentMode].heading : labels.title;
+  const shown = currentMode ? labels.options[currentMode].short : labels.mixed;
+  const toggleList = () => setOpen((value) => !value);
+
+  const row = (
+    <div className="flex min-h-12 items-center gap-1.5">
+      {/* Capped so the dropdown keeps room; a long name wraps at its spaces, never cut. */}
+      <span onClick={toggleList} className="max-w-[38%] shrink-0 cursor-pointer text-[0.6875rem] font-medium tracking-wide break-words text-[var(--wh-foreground-subtle)] uppercase">
+        {title} {/* The count stays whole, and never breaks off on its own. */}
+        <span className="whitespace-nowrap">· {count}</span>
+      </span>
+      {editable ? (
+        <button
+          type="button"
+          aria-expanded={choosing}
+          aria-label={`${labels.title}: ${heading}`}
+          onClick={() => setChoosing((value) => !value)}
+          disabled={pending}
+          className="flex min-h-9 min-w-0 flex-1 items-center justify-between gap-1 rounded-[var(--wh-radius-sm)] border border-[var(--wh-border)] px-2 py-1.5 text-left text-xs font-medium transition-colors hover:bg-[var(--wh-surface-muted)] disabled:opacity-60"
+        >
+          <span>{shown}</span>
+          {/* The select icon, so it never reads as a second list chevron beside the one at the end. */}
+          <ChevronsUpDown aria-hidden className="size-3.5 shrink-0 text-[var(--wh-foreground-subtle)]" />
+        </button>
+      ) : (
+        <span className="min-w-0 flex-1 text-xs text-[var(--wh-foreground-muted)]">{currentMode ? shown : null}</span>
+      )}
+      <button
+        type="button"
+        aria-expanded={open}
+        aria-controls={listId}
+        aria-label={`${title} · ${count}`}
+        onClick={toggleList}
+        className="grid size-8 shrink-0 place-items-center rounded-[var(--wh-radius-sm)] text-[var(--wh-foreground-subtle)] transition-colors hover:bg-[var(--wh-surface-muted)]"
+      >
+        <ChevronDown aria-hidden className={cn("size-4 transition-transform", open && "rotate-180")} />
+      </button>
+    </div>
+  );
 
   return (
     <div className="space-y-2">
-      <div className="rounded-[var(--wh-radius)] border border-[var(--wh-border)] bg-[var(--wh-surface)] px-4 py-2">
-        <button
-          type="button"
-          aria-expanded={open}
-          aria-controls={listId}
-          onClick={() => setOpen((value) => !value)}
-          className="flex min-h-11 w-full items-center justify-between gap-3 text-left text-xs font-medium tracking-wide text-[var(--wh-foreground-subtle)] uppercase"
-        >
-          <span>
-            {title} · {count}
-          </span>
-          <ChevronDown aria-hidden className={cn("size-4 shrink-0 transition-transform", open && "rotate-180")} />
-        </button>
-        {/* Keyed by the group's mode, so a saved change (or a refused one) shows what is really stored. */}
-        <GroupAutonomyChooser
-          key={currentMode ?? "mixed"}
-          outcomeKeys={outcomeKeys}
-          currentMode={currentMode}
-          unowned={unowned}
-          editable={editable}
-          householdId={householdId}
-          labels={labels}
-        />
-      </div>
+      {editable ? (
+        // The choice closes the list of options as it is sent; the saved page then shows it.
+        <form action={formAction} onSubmit={() => setChoosing(false)} className="rounded-[var(--wh-radius)] border border-[var(--wh-border)] bg-[var(--wh-surface)] px-2.5 py-1">
+          <input type="hidden" name="householdId" value={householdId} />
+          <input type="hidden" name="outcomeKeys" value={outcomeKeys.join(",")} />
+          {row}
+          {choosing ? (
+            <div className="mb-2 divide-y divide-[var(--wh-border)] rounded-[var(--wh-radius-sm)] border border-[var(--wh-border)]">
+              {AUTONOMY_MODES.map((mode) => {
+                const blocked = unowned && NEEDS_AN_OWNER.has(mode);
+                return (
+                  <button
+                    key={mode}
+                    type="submit"
+                    name="aiMode"
+                    value={mode}
+                    disabled={pending || blocked}
+                    aria-pressed={currentMode === mode}
+                    className={cn(
+                      "block w-full px-3 py-2.5 text-left transition-colors hover:bg-[var(--wh-surface-muted)] disabled:opacity-60",
+                      currentMode === mode && "bg-[var(--wh-primary-soft)]/40",
+                    )}
+                  >
+                    <span className="block text-sm font-semibold">{labels.options[mode].heading}</span>
+                    <span className="block text-xs text-[var(--wh-foreground-muted)]">{sentence(labels.options[mode].how)}</span>
+                    {blocked ? <span className="mt-0.5 block text-xs text-[var(--wh-attention)]">{labels.needsOwner}</span> : null}
+                  </button>
+                );
+              })}
+            </div>
+          ) : null}
+          {state.error ? <p className="pb-2 text-xs text-[var(--wh-attention)]" role="alert">{state.error}</p> : null}
+          {state.notice && !state.error ? <p className="pb-2 text-xs text-[var(--wh-handled)]" role="status">{state.notice}</p> : null}
+        </form>
+      ) : (
+        <div className="rounded-[var(--wh-radius)] border border-[var(--wh-border)] bg-[var(--wh-surface)] px-2.5 py-1">{row}</div>
+      )}
 
       {open ? <div id={listId}>{children}</div> : null}
     </div>
@@ -369,82 +423,10 @@ export function ResponsibilityGroup({
 }
 
 /**
- * The card's dropdown. Its button shows the group's choice in full (a native
- * select would cut a long one off), and opens the four choices under it, each
- * with what it lets WonderHome do. Choosing one saves it for the whole group;
- * the saved page then shows it. When the group's responsibilities differ,
- * nothing is chosen yet and the button asks the question.
+ * Accepting one suggested swap (story 03-008). A single tap: the swap is one
+ * the household already half-made — the person taking it is its named
+ * backup — and it can be swapped straight back from the row itself.
  */
-function GroupAutonomyChooser({
-  outcomeKeys,
-  currentMode,
-  unowned,
-  editable,
-  householdId,
-  labels,
-}: {
-  outcomeKeys: readonly string[];
-  currentMode: AutonomyMode | null;
-  unowned: boolean;
-  editable: boolean;
-  householdId: string;
-  labels: GroupAutonomyLabels;
-}) {
-  const [state, formAction, pending] = useActionState<ActionState, FormData>(setGroupAutonomyAction, {});
-  const [open, setOpen] = useState(false);
-
-  if (!editable) {
-    return currentMode ? <p className="pb-2 text-sm">{labels.options[currentMode].heading}</p> : null;
-  }
-
-  return (
-    <form action={formAction} className="space-y-1.5 pb-2">
-      <input type="hidden" name="householdId" value={householdId} />
-      <input type="hidden" name="outcomeKeys" value={outcomeKeys.join(",")} />
-      <button
-        type="button"
-        aria-expanded={open}
-        aria-label={`${labels.title}: ${currentMode ? labels.options[currentMode].heading : labels.title}`}
-        onClick={() => setOpen((value) => !value)}
-        disabled={pending}
-        className="flex min-h-11 w-full items-center justify-between gap-3 rounded-[var(--wh-radius-sm)] border border-[var(--wh-border)] px-3 py-2 text-left text-sm font-medium transition-colors hover:bg-[var(--wh-surface-muted)] disabled:opacity-60"
-      >
-        <span>{currentMode ? labels.options[currentMode].heading : labels.title}</span>
-        <ChevronDown aria-hidden className={cn("size-4 shrink-0 text-[var(--wh-foreground-subtle)] transition-transform", open && "rotate-180")} />
-      </button>
-      {open ? (
-        <div className="divide-y divide-[var(--wh-border)] rounded-[var(--wh-radius-sm)] border border-[var(--wh-border)]">
-          {AUTONOMY_MODES.map((mode) => {
-            const blocked = unowned && NEEDS_AN_OWNER.has(mode);
-            return (
-              <button
-                key={mode}
-                type="submit"
-                name="aiMode"
-                value={mode}
-                disabled={pending || blocked}
-                aria-pressed={currentMode === mode}
-                className={cn(
-                  "block w-full px-3 py-2.5 text-left transition-colors hover:bg-[var(--wh-surface-muted)] disabled:opacity-60",
-                  currentMode === mode && "bg-[var(--wh-primary-soft)]/40",
-                )}
-              >
-                <span className="block text-sm font-semibold">{labels.options[mode].heading}</span>
-                <span className="block text-xs text-[var(--wh-foreground-muted)]">{sentence(labels.options[mode].how)}</span>
-                {blocked ? <span className="mt-0.5 block text-xs text-[var(--wh-attention)]">{labels.needsOwner}</span> : null}
-              </button>
-            );
-          })}
-        </div>
-      ) : currentMode ? (
-        <p className="text-xs text-[var(--wh-foreground-muted)]">{sentence(labels.options[currentMode].how)}</p>
-      ) : null}
-      {state.error ? <p className="text-xs text-[var(--wh-attention)]" role="alert">{state.error}</p> : null}
-      {state.notice && !state.error ? <p className="text-xs text-[var(--wh-handled)]" role="status">{state.notice}</p> : null}
-    </form>
-  );
-}
-
 export function AcceptRebalanceButton({
   householdId,
   outcomeKey,
