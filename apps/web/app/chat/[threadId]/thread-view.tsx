@@ -52,6 +52,17 @@ type Attachment = { kind: Option["kind"]; id: string; label: string; kindLabel: 
 
 const ICON_BUTTON =
   "grid size-9 shrink-0 place-items-center rounded-full text-[var(--wh-foreground-muted)] transition-colors hover:bg-[var(--wh-surface-muted)] hover:text-[var(--wh-primary)] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--wh-primary)] disabled:opacity-50";
+/** A record named inside a message: a link in the reader's own words, underlined so it reads as one. */
+const LINK_WORDS = "font-semibold text-[var(--wh-primary)] underline underline-offset-2 hover:text-[var(--wh-primary-hover)]";
+
+/** Plain words with their mentions and tags shown apart, as the message is written. */
+function bodyPieces(text: string, names: readonly string[]) {
+  return piecesOf(text, names).map((piece, index) =>
+    piece.kind === "text" ? piece.text : (
+      <span key={index} className="font-semibold text-[var(--wh-primary)]">{piece.text}</span>
+    ),
+  );
+}
 
 /** How often an open chat looks for what others have said, while it is on screen. */
 const REFRESH_MS = 10_000;
@@ -125,6 +136,8 @@ export function ThreadView({
   const [dockHeight, setDockHeight] = useState(0);
   const [caret, setCaret] = useState(0);
   const [closedAt, setClosedAt] = useState<number | null>(null);
+  // A linked record counts only while its words are still in the message.
+  const linked = attachment && body.includes(attachment.label) ? attachment : null;
   const found = activeTrigger(body, caret);
   const trigger = found && found.start !== closedAt ? found : null;
   const names = mentionables.map((entry) => entry.name);
@@ -136,8 +149,8 @@ export function ThreadView({
     ? []
     : trigger.char === "/"
       ? [
-          ...options.filter((option) => matches(option.label)).map((option) => ({ key: `${option.kind}-${option.id}`, label: option.label, meta: option.kindLabel, attach: option as Attachment, text: "" })),
-          ...pages.filter((page) => matches(page.label)).map((page) => ({ key: `page-${page.key}`, label: page.label, meta: "", attach: { kind: "page" as const, key: page.key, label: page.label, kindLabel: "" }, text: "" })),
+          ...options.filter((option) => matches(option.label)).map((option) => ({ key: `${option.kind}-${option.id}`, label: option.label, meta: option.kindLabel, attach: option as Attachment, text: option.label })),
+          ...pages.filter((page) => matches(page.label)).map((page) => ({ key: `page-${page.key}`, label: page.label, meta: "", attach: { kind: "page" as const, key: page.key, label: page.label, kindLabel: "" }, text: page.label })),
         ].slice(0, PICKS)
       : trigger.char === "@"
         ? mentionables.filter((entry) => matches(entry.name)).slice(0, PICKS).map((entry) => ({ key: `${entry.kind}-${entry.name}`, label: entry.name, meta: entry.kind === "helper" ? labels.helper : entry.kind === "pet" ? labels.pet : "", attach: null, text: `@${entry.name}` }))
@@ -147,7 +160,12 @@ export function ThreadView({
             const fresh = typed && !known.includes(typed) ? [{ key: `new-${typed}`, label: `#${typed}`, meta: labels.newTag, attach: null, text: `#${typed}` }] : [];
             return [...fresh, ...known.map((tag) => ({ key: `tag-${tag}`, label: `#${tag}`, meta: "", attach: null, text: `#${tag}` }))];
           })();
-  // A pick goes in where the trigger was: a "/" pick becomes the attachment, the others become text.
+  // A record picked from the paperclip sheet goes in as its words, at the end, the same as a "/" pick.
+  const attachInline = (picked: Attachment) => {
+    setAttachment(picked);
+    setBody((current) => `${current && !/\s$/.test(current) ? `${current} ` : current}${picked.label} `);
+  };
+  // A pick goes in where the trigger was, as its words: a "/" pick also remembers what it links to, until its words are taken out.
   const choose = (pick: Pick) => {
     if (!trigger) return;
     if (pick.attach) setAttachment(pick.attach);
@@ -206,7 +224,7 @@ export function ThreadView({
     if (!body.trim()) return;
     setError(null);
     startTransition(async () => {
-      const choice = attachment ? (attachment.kind === "page" ? { kind: "page" as const, key: attachment.key } : { kind: attachment.kind, id: attachment.id }) : null;
+      const choice = linked ? (linked.kind === "page" ? { kind: "page" as const, key: linked.key } : { kind: linked.kind, id: linked.id }) : null;
       const result = await sendChatMessageAction({ householdId, threadId, body, attachment: choice as never });
       if ("error" in result) {
         setError(labels.failed);
@@ -283,17 +301,6 @@ export function ThreadView({
             <Info aria-hidden className="mt-px size-3 shrink-0" />
             <span>{notice.join(" · ")}</span>
           </p>
-        ) : null}
-        {attachment ? (
-          <div className="flex items-center gap-2 rounded-[var(--wh-radius-sm)] bg-[var(--wh-primary-soft)] px-3 py-1 text-sm">
-            <Paperclip aria-hidden className="size-4 shrink-0 text-[var(--wh-primary)]" />
-            <span className="min-w-0 flex-1 break-words">
-              <span className="text-xs font-semibold text-[var(--wh-foreground-subtle)] uppercase">{attachment.kindLabel}</span> {attachment.label}
-            </span>
-            <button type="button" onClick={() => setAttachment(null)} aria-label={labels.attachRemove} title={labels.attachRemove} className={ICON_BUTTON}>
-              <X aria-hidden className="size-4" />
-            </button>
-          </div>
         ) : null}
         {trigger ? (
           // What "/", "@" or "#" asks for, narrowed by what follows it; a tap puts it in (the owner, 2026-10-21).
@@ -390,7 +397,7 @@ export function ThreadView({
                     <button
                       type="button"
                       onClick={() => {
-                        setAttachment(option);
+                        attachInline(option);
                         setAttachOpen(false);
                       }}
                       className="flex min-h-12 w-full items-center gap-3 px-3 py-2 text-left hover:bg-[var(--wh-primary-soft)]/30"
@@ -412,7 +419,7 @@ export function ThreadView({
                     key={page.key}
                     type="button"
                     onClick={() => {
-                      setAttachment({ kind: "page", key: page.key, label: page.label, kindLabel: "" });
+                      attachInline({ kind: "page", key: page.key, label: page.label, kindLabel: "" });
                       setAttachOpen(false);
                     }}
                     className="min-h-11 rounded-[var(--wh-radius-pill)] border border-[var(--wh-border)] px-3 text-sm whitespace-nowrap hover:bg-[var(--wh-primary-soft)]/30"
@@ -561,19 +568,27 @@ function MessageBubble({
       ) : (
         <>
           <p className="whitespace-pre-wrap break-words">
-            {piecesOf(message.body, names).map((piece, index) =>
-              piece.kind === "text" ? piece.text : (
-                <span key={index} className="font-semibold text-[var(--wh-primary)]">{piece.text}</span>
-              ),
-            )}
-            {message.link ? (
+            {message.link && message.body.includes(message.link.label) ? (
               <>
-                {message.body ? " " : null}
-                <Link href={message.link.path} className="font-semibold text-[var(--wh-primary)] underline underline-offset-2 hover:text-[var(--wh-primary-hover)]">
+                {bodyPieces(message.body.slice(0, message.body.indexOf(message.link.label)), names)}
+                <Link href={message.link.path} className={LINK_WORDS}>
                   {message.link.label}
                 </Link>
+                {bodyPieces(message.body.slice(message.body.indexOf(message.link.label) + message.link.label.length), names)}
               </>
-            ) : null}
+            ) : (
+              <>
+                {bodyPieces(message.body, names)}
+                {message.link ? (
+                  <>
+                    {message.body ? " " : null}
+                    <Link href={message.link.path} className={LINK_WORDS}>
+                      {message.link.label}
+                    </Link>
+                  </>
+                ) : null}
+              </>
+            )}
             {time}
           </p>
         </>
