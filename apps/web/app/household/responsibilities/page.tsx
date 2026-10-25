@@ -1,4 +1,4 @@
-import { ListChecks, Scale } from "lucide-react";
+import { ChevronDown, ListChecks, Scale } from "lucide-react";
 import Link from "next/link";
 
 import { listConfigurationConflicts, listPlaybookOutcomes } from "@wonderhome/core/household/configuration-repository";
@@ -368,10 +368,13 @@ function renderResponsibilities({
         ) : (
           <div className="space-y-4">
             {(grouping === "outcome" ? groupByArea(shown, t) : groupByOwner(shown, members, nobodyYet)).map((group) => (
-              <div key={`${group.ownerId ?? "area"}:${group.ownerName}`} className="space-y-2">
-                <p className="px-1 text-xs font-medium tracking-wide text-[var(--wh-foreground-subtle)] uppercase">
-                  {group.ownerName} · {group.rows.length}
-                </p>
+              <details key={`${group.ownerId ?? "area"}:${group.ownerName}`} open className="group space-y-2">
+                <summary className="flex min-h-11 cursor-pointer list-none items-center justify-between gap-3 px-1 text-xs font-medium tracking-wide text-[var(--wh-foreground-subtle)] uppercase [&::-webkit-details-marker]:hidden">
+                  <span>
+                    {group.ownerName} · {group.rows.length}
+                  </span>
+                  <ChevronDown aria-hidden className="size-4 shrink-0 transition-transform group-open:rotate-180" />
+                </summary>
                 <Card className="p-2">
                   <ul className="divide-y divide-[var(--wh-border)]">
                     {group.rows.map((row) => {
@@ -410,7 +413,7 @@ function renderResponsibilities({
                     })}
                   </ul>
                 </Card>
-              </div>
+              </details>
             ))}
           </div>
         )}
