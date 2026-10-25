@@ -13,11 +13,12 @@ const { ResponsibilityGroup } = await import("./responsibility-controls");
 const LABELS = {
   title: "How much WonderHome does on its own",
   options: {
-    observe: { heading: "WonderHome will notify only", how: "it notices a problem and tells you." },
-    prepare: { heading: "WonderHome does the groundwork, and waits for you", how: "it gets everything ready." },
-    approve: { heading: "WonderHome will ask before acting", how: "it asks first." },
-    execute: { heading: "WonderHome does it, and tells you afterwards", how: "it acts and reports back." },
+    observe: { heading: "WonderHome will notify only", short: "WonderHome watches", how: "it notices a problem and tells you." },
+    prepare: { heading: "WonderHome does the groundwork, and waits for you", short: "WonderHome prepares", how: "it gets everything ready." },
+    approve: { heading: "WonderHome will ask before acting", short: "WonderHome asks first", how: "it asks first." },
+    execute: { heading: "WonderHome does it, and tells you afterwards", short: "WonderHome handles it", how: "it acts and reports back." },
   },
+  mixed: "Mixed — choose one",
   needsOwner: "Give every responsibility here an owner first.",
 };
 
@@ -41,21 +42,33 @@ function render({ editable = true, currentMode = null as Mode | null } = {}) {
 }
 
 describe("ResponsibilityGroup", () => {
-  it("shows the label and its count as a collapsed header", () => {
+  it("shows the label and its count, with a collapsed toggle for the list", () => {
     const html = render();
-    expect(html).toContain("HOME · 3");
-    expect(html).toMatch(/aria-expanded="false"[^>]*>.*HOME · 3/);
+    expect(html).toContain('HOME <span class="whitespace-nowrap">· 3</span>');
+    expect(html).toMatch(/aria-expanded="false" aria-controls="group-home" aria-label="HOME · 3"/);
+  });
+
+  it("keeps the label, the dropdown and the list toggle in one row, in that order", () => {
+    const html = render({ currentMode: "observe" });
+    const label = html.indexOf('HOME <span class="whitespace-nowrap">· 3</span>');
+    const dropdown = html.indexOf('aria-label="How much WonderHome does on its own: WonderHome will notify only"');
+    const toggle = html.indexOf('aria-label="HOME · 3"');
+    expect(label).toBeGreaterThan(-1);
+    expect(dropdown).toBeGreaterThan(label);
+    expect(toggle).toBeGreaterThan(dropdown);
   });
 
   it("starts with the responsibilities hidden", () => {
     expect(render()).not.toContain("CHILD ROW");
   });
 
-  it("carries the dropdown on the card while collapsed, showing the group's choice in full", () => {
+  it("carries the dropdown on the card while collapsed, showing the group's choice in full and nothing under it", () => {
     const html = render({ currentMode: "prepare" });
     expect(html).toContain('aria-label="How much WonderHome does on its own: WonderHome does the groundwork, and waits for you"');
-    // What the choice lets WonderHome do, as a sentence.
-    expect(html).toContain("It gets everything ready.");
+    // Shown short, like each row's badge, so it fits beside the label on a phone.
+    expect(html).toContain("<span>WonderHome prepares</span>");
+    // The "what it does" line lives only in the opened choices, not under the closed dropdown.
+    expect(html).not.toContain("It gets everything ready.");
     // The four choices open from the button; closed, they are not in the page.
     expect(html).not.toContain('name="aiMode"');
   });
@@ -63,6 +76,7 @@ describe("ResponsibilityGroup", () => {
   it("asks the question when the group's modes differ", () => {
     const html = render({ currentMode: null });
     expect(html).toContain('aria-label="How much WonderHome does on its own: How much WonderHome does on its own"');
+    expect(html).toContain("<span>Mixed — choose one</span>");
   });
 
   it("sends the whole group and the household with the choice", () => {
@@ -74,6 +88,6 @@ describe("ResponsibilityGroup", () => {
   it("shows someone who cannot change it the group's mode, with no dropdown", () => {
     const html = render({ editable: false, currentMode: "approve" });
     expect(html).not.toContain("<form");
-    expect(html).toContain("WonderHome will ask before acting");
+    expect(html).toContain("WonderHome asks first");
   });
 });

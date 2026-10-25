@@ -159,7 +159,10 @@ function renderResponsibilities({
   const labels = responsibilityLabels(t);
   const groupAutonomy = {
     title: t("manage.resp.howMuch"),
-    options: Object.fromEntries(AUTONOMY_MODES.map((mode) => [mode, { heading: t(`manage.aiMode.${mode}`), how: t(`manage.resp.how.${mode}`) }])) as GroupAutonomyLabels["options"],
+    options: Object.fromEntries(
+      AUTONOMY_MODES.map((mode) => [mode, { heading: t(`manage.aiMode.${mode}`), short: t(`manage.aiModeShort.${mode}`), how: t(`manage.resp.how.${mode}`) }]),
+    ) as GroupAutonomyLabels["options"],
+    mixed: t("manage.resp.modeMixed"),
     needsOwner: t("manage.resp.needsOwner"),
   };
   // Links keep the other choice: switching the tab keeps the grouping, and vice versa.
