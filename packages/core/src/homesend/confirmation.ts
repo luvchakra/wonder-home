@@ -3,7 +3,7 @@ import type { HomeSendExtraction, HomeSendKind } from "./items";
 import type { HomeSendReconciliation } from "./reconcile";
 import type { SubjectResolution } from "./resolve";
 import type { IntakeUnderstanding } from "./understanding";
-import { AUTO_APPLY_FLOOR } from "./verify";
+import { AUTO_APPLY_FLOOR, FROM_A_FILE } from "./verify";
 
 /**
  * How HomeSend confirms what it read (Wave 3 §12):
@@ -75,6 +75,7 @@ export type ConfirmationInput = {
 /** Why a clear reading still waits: what WonderHome could not find in what was sent. */
 function notSureEnough(unverified: readonly string[]): string {
   if (unverified.length === 0) return "WonderHome adds things on its own only when it is more than 95% sure, so a person looks first.";
+  if (unverified.includes(FROM_A_FILE)) return "This was read from a photo or a file, which can't be checked word by word, so a person looks first.";
   const listed = unverified.length === 1 ? unverified[0] : `${unverified.slice(0, -1).join(", ")} and ${unverified.at(-1)}`;
   return `WonderHome couldn't check ${listed} against what was sent, so a person looks first.`;
 }

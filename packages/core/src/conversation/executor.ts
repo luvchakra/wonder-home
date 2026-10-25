@@ -117,6 +117,8 @@ export function canExecute(intent: HouseholdIntent): boolean {
       return typeof intent.parameters.label === "string" && intent.parameters.label.trim().length > 0;
     case "log_vital":
       return typeof intent.parameters.vital === "string" && typeof intent.parameters.reading === "string";
+    case "file_with_homesend":
+      return intent.utterance.trim().length > 0;
     case "set_fitness_goal":
       return (
         typeof intent.parameters.activity === "string" &&
@@ -128,6 +130,35 @@ export function canExecute(intent: HouseholdIntent): boolean {
     default:
       return false;
   }
+}
+
+/** What HomeSend read a sentence as, in the review's own words. */
+const HOMESEND_KIND_WORDS: Record<string, string> = {
+  bill: "a bill",
+  school_item: "school work",
+  activity_item: "something for a class outside school",
+  event: "an event for the family calendar",
+  grocery_item: "something to buy",
+  health_document: "a health document",
+  receipt: "a receipt",
+};
+
+/**
+ * Being told about a new dated thing (the owner, 2026-10-25): the sentence
+ * goes through HomeSend's own text entry point — the same reading, the same
+ * check against what was said, the same review — and waits there for a
+ * person. Nothing reaches a domain table from here.
+ */
+async function fileWithHomeSend(intent: HouseholdIntent, context: ExecutionContext): Promise<ExecutionResult> {
+  const { ingestText } = await import("../homesend/ingest");
+  const outcome = await ingestText(context.supabase, { householdId: context.householdId, memberId: context.actorMemberId }, { text: intent.utterance });
+  const review = linkTo("/home-send", "HomeSend");
+  if (outcome.duplicate) return { ok: true, text: `That's already waiting in ${review} for you to check.`, result: { homeSendItemId: outcome.itemId } };
+  if (outcome.state === "failed") return { ok: true, text: `I kept that in ${review} under Failed safely: ${outcome.notice}`, result: { homeSendItemId: outcome.itemId } };
+  const title = outcome.item.extracted?.title?.trim();
+  const kind = HOMESEND_KIND_WORDS[outcome.item.classifiedKind];
+  const read = title && kind ? ` I read it as ${kind}: **${title}**.` : "";
+  return { ok: true, text: `It's in ${review} for you to check before anything is added.${read}`, result: { homeSendItemId: outcome.itemId } };
 }
 
 /** Why an approved intent still cannot be done by WonderHome itself — said plainly, never as "on its way". */
@@ -197,6 +228,8 @@ async function runIntent(intent: HouseholdIntent, context: ExecutionContext): Pr
         return await raiseServiceRequest(intent, context);
       case "adjust_schedule":
         return await moveSchoolItem(intent, context);
+      case "file_with_homesend":
+        return await fileWithHomeSend(intent, context);
       case "plan_event":
         return await putOnCalendar(intent, context);
       case "record_absence":

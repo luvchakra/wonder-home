@@ -190,6 +190,9 @@ function stockLines(said: string): string[] | null {
   return parts;
 }
 
+/** A day in words or numbers: a weekday, a month, "today"/"tomorrow", "next week", or a day of the month. */
+const SAYS_A_DAY = /\b(?:mon|tues?|wed(?:nes)?|thu(?:rs)?|fri|sat(?:ur)?|sun)(?:day)?\b|\b(?:jan(?:uary)?|feb(?:ruary)?|mar(?:ch)?|apr(?:il)?|may|june?|july?|aug(?:ust)?|sep(?:t(?:ember)?)?|oct(?:ober)?|nov(?:ember)?|dec(?:ember)?)\b|\b(?:today|tomorrow|tonight|next week)\b|\b\d{1,2}(?:st|nd|rd|th)\b|\b\d{1,2}\/\d{1,2}\b/i;
+
 const RULES: readonly Rule[] = [
   // --- "Why?" — answered from what was recorded (HomeBrain 2.0, Wave 2 §10) --
   {
@@ -837,6 +840,18 @@ const RULES: readonly Rule[] = [
     read: (match) => preference(`${match[1]} at ${match[2]}`, true),
   },
   {
+    // "Asmi's karate grading is on Sunday 1 November at 9.30 am", "Asmi has a
+    // Maths test on Friday 30 October" — being told about a new dated thing.
+    // It goes to HomeSend to be read and checked like anything sent there
+    // (the owner, 2026-10-25: a model read it as a move). Never a question,
+    // never a move (those read above), and only with a day said in it.
+    pattern: /^(?!(?:what|when|where|who|whom|which|how|why|is|are|am|was|were|do|does|did|can|could|will|would|should|any|move|shift|reschedule|change|push)\b)(.+?\s(?:is|are|will be)\s(?:on|this|next|tomorrow|today)\b.+|.+?\s(?:has|have)\s(?:a|an|her|his|their|our)\s.+?\s(?:on|this|next|tomorrow|today)\b.*)$/i,
+    read: (_match, utterance) =>
+      SAYS_A_DAY.test(utterance) && !/\b(?:moved|postponed|cancel(?:led|ed)?|rescheduled|instead)\b/i.test(utterance)
+        ? { action: "file_with_homesend", target: { kind: "unspecified" }, parameters: {}, confidence: 0.86 }
+        : null,
+  },
+  {
     // "Asmi doesn't like mushrooms", "Dad is allergic to peanuts", "actually
     // Asmi is okay with mushrooms now" — one person's stance on one thing,
     // keyed so a later change of mind replaces the earlier one (Wave 2 §8).
@@ -1022,6 +1037,7 @@ export function resolveRuleIntent(
 
 /** The actions the rules can produce — for tests that assert coverage. */
 export const RULE_ACTIONS: readonly IntentAction[] = [
+  "file_with_homesend",
   "greet",
   "ask_status",
   "check_agents",

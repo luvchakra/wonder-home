@@ -239,7 +239,7 @@ export const VOICE_CAPABILITIES: readonly Capability[] = [
     id: "planning_changes",
     label: "Changing plans, meals, schedules and school items",
     category: "sensitive",
-    actions: ["record_absence", "plan_event", "plan_meal", "adjust_schedule", "complete_school_item", "set_fitness_goal"],
+    actions: ["record_absence", "plan_event", "plan_meal", "adjust_schedule", "complete_school_item", "set_fitness_goal", "file_with_homesend"],
     geminiTools: [],
     policy: { app: "yes", gemini_voice: "in_app", alexa: "app_only", whatsapp: "app_only" },
     note: "Changing the plan happens in the WonderHome app, where you can see what else it moves.",

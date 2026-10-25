@@ -12,6 +12,7 @@ import { listHomeSendItems } from "@wonderhome/core/homesend/repository";
 import { recoverWhen } from "@wonderhome/core/homesend/when";
 import { consumeShareHandoff } from "@wonderhome/core/homesend/share-handoff";
 import { isHouseholdAdmin, listMembers } from "@wonderhome/core/identity/households";
+import { childrenWithClasses, listActivities } from "@wonderhome/core/school/activities";
 import { whatsappConfigFromEnv } from "@wonderhome/core/notifications/whatsapp";
 import { AppShell } from "@wonderhome/core/shell/app-shell";
 import { Alert } from "@wonderhome/core/ui/alert";
@@ -119,12 +120,14 @@ export default async function HomeSendPage({
   // to show; before that no card, tab or link offers it (story 14-016).
   const whatsappNumber = whatsappConfigFromEnv() ? whatsappBusinessNumber() : null;
   const emailConfigured = platformHomeSendEmailDomain() !== null;
-  const [allItems, members, changes, address, whatsappLinks] = await Promise.all([
+  const [allItems, members, changes, address, whatsappLinks, activities] = await Promise.all([
     listHomeSendItems(supabase, householdId).catch(() => []),
     listMembers(supabase, householdId, membership.household.ownerMemberId).catch(() => []),
     listHomeSendChanges(supabase, householdId).catch(() => []),
     getHomeSendAddress(supabase, householdId).catch(() => null),
     whatsappNumber ? listWhatsAppLinks(supabase, householdId).catch(() => []) : Promise.resolve([]),
+    // Each child's own classes, so a class outside school is picked, not typed (rule 20).
+    listActivities(supabase, householdId).catch(() => []),
   ]);
 
   // "All | WhatsApp | Email | Uploads": the tabs filter what is listed, never
@@ -145,7 +148,7 @@ export default async function HomeSendPage({
   const senders = Object.fromEntries(members.map((member) => [member.id, member.displayName]));
   const myWhatsApp = whatsappLinks.find((link) => link.memberId === membership.memberId) ?? null;
 
-  const kids = members.filter((member) => member.memberType === "child").map((kid) => ({ id: kid.id, displayName: kid.displayName }));
+  const kids = childrenWithClasses(members, activities);
   // Pending intake survives closing the page (Wave 3 §14): whatever is
   // waiting on a person, and whatever failed safely, is read back from the
   // table every time — never held only in the page that sent it.

@@ -14,6 +14,9 @@ import type { IntakeExtraction } from "../ai/classify-intake";
  * Pure: the same reading and text always give the same answer.
  */
 
+/** What a photo or a file leaves unchecked: there are no words of its own to check the reading against. */
+export const FROM_A_FILE = "the original, which can't be checked word by word";
+
 /** The bar for adding an entry on its own: strictly above 95%. */
 export const AUTO_APPLY_FLOOR = 0.95;
 /** A high reading whose every detail was found in what was sent. */
@@ -110,7 +113,7 @@ function missingFor(reading: IntakeExtraction): string[] {
 export function checkReading(reading: IntakeExtraction, sourceText: string | null): ReadingCheck {
   if (!reading.readable) return { verified: false, unverified: ["what it is"] };
   const unverified = missingFor(reading);
-  if (!sourceText?.trim()) return { verified: false, unverified: [...unverified, "the original, which can't be checked word by word"] };
+  if (!sourceText?.trim()) return { verified: false, unverified: [...unverified, FROM_A_FILE] };
 
   const found = new Set(words(sourceText));
   const written = numbers(sourceText);
