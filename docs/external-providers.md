@@ -1,6 +1,18 @@
 # External providers and payments
 
-Reference detail moved verbatim from CLAUDE.md (2026-10-24, token-economy pass). Summary rules stay in `CLAUDE.md` under *External providers*. Read this file only when you change weather, films, careers, billing, payments, WhatsApp or partner-key code.
+Reference detail moved verbatim from CLAUDE.md (2026-10-24, token-economy pass). The summary rules followed on 2026-10-25 and are the next section; `CLAUDE.md` keeps only the invariants. Read this file only when you change weather, films, careers, billing, payments, WhatsApp or partner-key code.
+
+## Summary rules (from CLAUDE.md)
+
+Detail: `docs/external-providers.md`.
+- Never invent credentials or claim a live integration. Build provider-neutral ports and deterministic mocks first. A provider is live only after credentials, authentication, contract behaviour and integration tests are configured.
+- **Weather** (`home/weather-service.ts` `householdWeather`) is off unless `WONDERHOME_WEATHER_PROVIDER=open-meteo`. It speaks only when it changes a decision, and appears only on Home's date card.
+- **Films and shows** on the date card (`home/screen-picks.ts`) come from TMDB, off unless `TMDB_API_KEY` is set. Never show a title no provider sent.
+- **Careers** (`packages/core/src/careers/`) belongs to WonderJobs (jobs.wonderapps.biz). WonderHome shows what it returns, forwards applications, and keeps no applicant data. The key is in Vault, set at `/platform-admin/careers`.
+- **Billing and payments.** `BillingProvider` port; the provider is never the source of truth; prices are ours (`plan_prices`). Money converts only inside the adapter (`billing/money.ts`). Webhooks are HMAC-verified and applied once. Only `applyBillingEvent` moves a subscription. Cancellation waits for period end. A household never moves to a paid plan without a verified payment; `plans.requires_payment` is refused by RLS and `changePlan`. Every plan is unmarked today ("Free during early access"). Marking plans paid and setting prices are a person's decision, never invented.
+- **WhatsApp** (`packages/core/src/whatsapp/`, `notifications/whatsapp.ts`) is a delivery channel, a HomeSend intake and a HomeTalk surface. It is an input channel, never an authorization channel. The household and member come from the verified link, never from the message. Replies never echo an amount, health detail or number. Inert until its `WHATSAPP_*` variables are set.
+- **Partner keys** (`/api/v1/partner/*`, `packages/core/src/developer/`) are off unless `WONDERHOME_DEVELOPER_API=on`. Scopes only narrow. A sandbox key (`whk_test_`) writes nothing. Writes go through the same domain service a screen uses.
+
 
 ## External providers
 Never invent credentials or claim a live integration. Build provider-neutral interfaces and deterministic mocks/fixtures first. A real provider is considered live only after credentials, authentication, contract behavior and integration tests are configured.

@@ -13,6 +13,12 @@ import { runEvaluation, type RunTarget } from "./run";
  *   npm run eval                        deterministic run of the golden set
  *   npm run eval -- --provider configured   the provider WONDERHOME_AI_KEY is for
  *   npm run eval -- --write             also write the release artifact to docs/ai-releases/
+ *   npm run eval -- --cases HT-117,HS-24 [--runs 3]   only those cases, each run that many times
+ *   npm run eval -- --utterance "Asmi has a test on Friday"   how one HomeTalk sentence is read
+ *
+ * The last two are for finding a defect cheaply: they never write an
+ * artifact and say nothing about the release gates, which only mean
+ * something over the whole golden set (CLAUDE.md, "Token economy").
  *
  * Exits non-zero when a blocking release gate fails, so it can gate a
  * release in CI the same way the test suite does.
@@ -43,8 +49,47 @@ function targetFrom(args: readonly string[]): RunTarget {
   return { provider: configured.provider, key: configured.key };
 }
 
+function valueOf(args: readonly string[], flag: string): string | null {
+  const index = args.indexOf(flag);
+  return index >= 0 && args[index + 1] && !args[index + 1]!.startsWith("--") ? args[index + 1]! : null;
+}
+
+/** Only the named cases, each run `runs` times: every failing stage printed, no gates. */
+async function focusedRun(target: RunTarget, ids: readonly string[], runs: number): Promise<number> {
+  const unknown = ids.filter((id) => !GOLDEN_CASES.some((c) => c.id === id));
+  if (unknown.length > 0) throw new Error(`No golden case ${unknown.join(", ")}.`);
+  const cases = GOLDEN_CASES.filter((c) => ids.includes(c.id));
+  let failed = 0;
+  for (let round = 1; round <= runs; round += 1) {
+    const run = await runEvaluation(target, cases);
+    for (const result of run.results) {
+      if (!result.pass) failed += 1;
+      const stages = result.stages.filter((stage) => !stage.pass).map((stage) => `${stage.stage}: expected ${JSON.stringify(stage.expected)}, got ${JSON.stringify(stage.actual)}`);
+      console.log(`run ${round} ${result.caseId} ${result.pass ? "pass" : `FAIL (${result.errors.join(", ")})`}${stages.length ? `\n    ${stages.join("\n    ")}` : ""}`);
+    }
+  }
+  console.log(`${cases.length * runs - failed}/${cases.length * runs} passed`);
+  return failed === 0 ? 0 : 1;
+}
+
+/** How one HomeTalk sentence is read, by the target's model or the rules, in golden household A as Kunal. */
+async function readUtterance(target: RunTarget, utterance: string): Promise<number> {
+  const [{ modelsFor }, { observeHomeTalk }] = await Promise.all([import("./run"), import("./runners")]);
+  const { models } = modelsFor(target);
+  const observed = await observeHomeTalk({ id: "ad-hoc", surface: "hometalk", household: "A", category: "cross_domain", actor: "a-kunal", description: "", utterance, expected: {} }, models);
+  console.log(`interpretation ${observed.interpretation ?? "none"} · action ${observed.action ?? "none"}${observed.entity ? ` · entity ${observed.entity}` : ""}${observed.date ? ` · date ${observed.date}` : ""}`);
+  console.log(observed.answer);
+  return 0;
+}
+
 export async function main(args: readonly string[], repoRoot: string): Promise<number> {
-  const run = await runEvaluation(targetFrom(args));
+  const target = targetFrom(args);
+  const utterance = valueOf(args, "--utterance");
+  if (utterance) return readUtterance(target, utterance);
+  const picked = valueOf(args, "--cases");
+  if (picked) return focusedRun(target, picked.split(",").map((id) => id.trim()).filter(Boolean), Math.max(1, Number(valueOf(args, "--runs") ?? 1) || 1));
+
+  const run = await runEvaluation(target);
   const metrics = measure(run.results);
   const gates = releaseGates(run, GOLDEN_CASES, OPERATIONS);
 
