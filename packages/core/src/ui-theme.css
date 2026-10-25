@@ -670,15 +670,22 @@
     transform: translateY(calc(100% + var(--wh-tabbar-raised-overhang) + 0.5rem));
   }
 }
-/* FamilyChat's composer (the owner, 2026-10-21) sticks just above the tab bar
-   and its raised assistant button (rule 15). When the bar slides away, or
-   steps aside while a person types (data-wh-typing, set by the chat while its
-   message box has focus), the composer drops to the bottom edge with it. */
+/* FamilyChat's composer (the owner, 2026-10-21) sits just above the tab bar
+   and its raised assistant button (rule 15). On a phone it is fixed there, so
+   a short conversation still ends with the composer at the bottom edge rather
+   than mid-screen; the chat keeps a spacer as tall as it (ThreadView). When the
+   bar slides away, or steps aside while a person types (data-wh-typing, set by
+   the chat while its message box has focus), the composer drops to the bottom
+   edge with it. On desktop it stays sticky in the sidebar layout. */
 .wh-chat-composer {
+  position: fixed;
+  inset-inline: 0.75rem;
   bottom: calc(var(--wh-tabbar-height) + var(--wh-tabbar-raised-overhang) + var(--wh-live-bar-clearance) + env(safe-area-inset-bottom) + 0.25rem);
 }
 @media (min-width: 1024px) {
   .wh-chat-composer {
+    position: sticky;
+    inset-inline: auto;
     bottom: 1rem;
   }
 }
