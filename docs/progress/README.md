@@ -11,6 +11,7 @@ decision that shapes later work each earns a note, written before moving on.
 
 | Date | Note |
 |---|---|
+| 2026-10-26 | [Branch sync: why squash merges kept conflicting, and the fix](2026-10-26-branch-sync.md) |
 | 2026-10-25 | [HomeSend: corrections by kind, and why a voice note is not written down](2026-10-25-homesend-correction-by-kind-and-voice-logging.md) |
 | 2026-10-25 | [Token habits: what this session's cost taught](2026-10-25-token-habits.md) |
 | 2026-10-25 | [HomeSend: the owner's test round, and what it fixed](2026-10-25-homesend-owner-test-round.md) |

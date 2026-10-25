@@ -3,7 +3,7 @@
 Read on every turn, so keep it short. Mechanics live in `docs/` (pointers below). Rule numbers and headings are cited from code; keep them stable.
 
 ## Mandatory startup
-0. **Fetch `main` before anything else:** `git fetch origin main`, then `git merge origin/main` (or start from it if the branch has no unmerged work). Repeat after any resume or context reset.
+0. **Sync with `main` before anything else:** `scripts/branch-sync.sh`. Never `git merge origin/main` into a branch whose work was squash-merged: it conflicts (`docs/progress/2026-10-26-branch-sync.md`). Repeat after any resume or context reset.
 1. Empty repo → start with `backlogs/00-Project-Bootstrap-and-Architecture.md`.
 2. Read `TECH-STACK-AND-NFR.md`.
 3. Find the work: `tracking/IMPLEMENTATION-ORDER.md`, then the first **Next** / **Not Started** row of `tracking/PRIORITY-ITEMS-REPORT.md`. Don't read `tracking/PROGRESS.md` whole (129 KB); `grep -n` the story id.
@@ -128,6 +128,7 @@ All SQL against the Supabase project, including `mcp__Supabase__execute_sql`, `a
 
 ## Opening and merging pull requests
 - Every change reaches `main` through a PR, never a direct push. Open a PR for finished work pushed to a story or feature branch; never leave pushed commits with no PR against them.
+- **Before every push, run `scripts/branch-sync.sh`.** Auto-merge can land a PR between two of your pushes. When the script says a PR from the branch merged, the next push needs a new PR; never add commits to a branch whose PR merged and leave them without one.
 - Turn on auto-merge (squash) for every PR, as soon as it opens, whether or not this session opened it. Never ask first.
 - The repo must allow auto-merge (Settings → General → Pull Requests). If the enable call is refused, say so once in the PR thread or to the owner, then merge yourself once CI is green with no conflict.
 - Only four things hold a merge: an open unaddressed review thread; a draft or WIP PR; red CI (fix it, don't wait); a red nightly E2E on `main` (`e2e-nightly.yml`), which is fixed before other work merges. "Flaky" is not a root cause.
