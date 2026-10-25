@@ -1,6 +1,6 @@
 "use client";
 
-import { ArrowUpRight, ChevronDown, Info, LogOut, Paperclip, Pencil, SendHorizontal, SmilePlus, Undo2, UserPlus, Users, X } from "lucide-react";
+import { ChevronDown, Info, LogOut, Paperclip, Pencil, SendHorizontal, SmilePlus, Undo2, UserPlus, Users, X } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useLayoutEffect, useOptimistic, useRef, useState, useTransition, type MouseEvent, type ReactNode } from "react";
@@ -566,25 +566,16 @@ function MessageBubble({
                 <span key={index} className="font-semibold text-[var(--wh-primary)]">{piece.text}</span>
               ),
             )}
-            {message.link ? null : time}
+            {message.link ? (
+              <>
+                {message.body ? " " : null}
+                <Link href={message.link.path} className="font-semibold text-[var(--wh-primary)] underline underline-offset-2 hover:text-[var(--wh-primary-hover)]">
+                  {message.link.label}
+                </Link>
+              </>
+            ) : null}
+            {time}
           </p>
-          {message.link ? (
-            <>
-              <Link
-                href={message.link.path}
-                className="mt-1 flex items-center gap-2 rounded-[var(--wh-radius-xs)] border border-[var(--wh-border)] bg-[var(--wh-surface)] px-2 py-1 text-start hover:border-[var(--wh-primary)]"
-              >
-                <span className="min-w-0 flex-1">
-                  {message.link.kind ? <span className="block text-[0.625rem] font-semibold text-[var(--wh-foreground-subtle)] uppercase">{message.link.kind}</span> : null}
-                  <span className="block font-medium break-words">{message.link.label}</span>
-                </span>
-                <span className="flex shrink-0 items-center gap-0.5 text-xs font-semibold whitespace-nowrap text-[var(--wh-primary)]">
-                  {labels.open} <ArrowUpRight aria-hidden className="size-3.5" />
-                </span>
-              </Link>
-              <p className="h-3.5">{time}</p>
-            </>
-          ) : null}
         </>
       )}
     </div>
