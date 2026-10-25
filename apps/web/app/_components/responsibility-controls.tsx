@@ -288,23 +288,33 @@ function ReadOnlyDetail({ card, labels }: { card: Omit<ResponsibilityCardProps, 
  * the household already half-made — the person taking it is its named
  * backup — and it can be swapped straight back from the row itself.
  */
+/** The explainer's "what it does" line follows a dash, so it starts in lower case; on its own it opens a sentence. */
+const sentence = (text: string) => text.charAt(0).toUpperCase() + text.slice(1);
+
 /** The words for the group card's dropdown, in the viewer's language: each mode's heading and what it lets WonderHome do. */
 export type GroupAutonomyLabels = {
   title: string;
   options: Record<AutonomyMode, { heading: string; how: string }>;
+  /** Why the two choices that need an owner are not offered for a group with an unowned outcome. */
+  needsOwner: string;
 };
 
+/** The choices that hand the outcome to somebody (to approve, or to answer for it), so every outcome needs an owner first. */
+const NEEDS_AN_OWNER: ReadonlySet<AutonomyMode> = new Set(["approve", "execute"]);
+
 /**
- * A group label on Responsibilities: a thin card that starts collapsed. Opened,
- * it shows the dropdown of the four autonomy choices (admins only) above the
- * responsibilities under that label. Choosing one sets every responsibility in
- * the group to that choice.
+ * A group label on Responsibilities: a thin card. Its first row is the label
+ * and count, and toggles the responsibilities under it, which start hidden.
+ * The card itself carries the dropdown of the four autonomy choices, always
+ * in view: choosing one sets every responsibility in the group to it (admins
+ * only; others read the group's mode).
  */
 export function ResponsibilityGroup({
   title,
   count,
   outcomeKeys,
   currentMode,
+  unowned,
   editable,
   householdId,
   labels,
@@ -315,6 +325,8 @@ export function ResponsibilityGroup({
   outcomeKeys: readonly string[];
   /** The mode every responsibility in the group shares, or null when they differ. */
   currentMode: AutonomyMode | null;
+  /** Some responsibility in the group has no owner yet. */
+  unowned: boolean;
   editable: boolean;
   householdId: string;
   labels: GroupAutonomyLabels;
@@ -322,72 +334,114 @@ export function ResponsibilityGroup({
 }) {
   const [open, setOpen] = useState(false);
 
+  const listId = `group-${title.replace(/\W+/g, "-").toLowerCase()}`;
+
   return (
     <div className="space-y-2">
-      {/* The label and its dropdown are one card; the responsibilities under it are the list below. */}
-      <div className="overflow-hidden rounded-[var(--wh-radius)] border border-[var(--wh-border)] bg-[var(--wh-surface)]">
+      <div className="rounded-[var(--wh-radius)] border border-[var(--wh-border)] bg-[var(--wh-surface)] px-4 py-2">
         <button
           type="button"
           aria-expanded={open}
+          aria-controls={listId}
           onClick={() => setOpen((value) => !value)}
-          className="flex min-h-11 w-full items-center justify-between gap-3 px-4 py-2 text-left text-xs font-medium tracking-wide text-[var(--wh-foreground-subtle)] uppercase transition-colors hover:bg-[var(--wh-surface-muted)]"
+          className="flex min-h-11 w-full items-center justify-between gap-3 text-left text-xs font-medium tracking-wide text-[var(--wh-foreground-subtle)] uppercase"
         >
           <span>
             {title} · {count}
           </span>
           <ChevronDown aria-hidden className={cn("size-4 shrink-0 transition-transform", open && "rotate-180")} />
         </button>
-        {open && editable ? <GroupAutonomyChooser outcomeKeys={outcomeKeys} currentMode={currentMode} householdId={householdId} labels={labels} /> : null}
+        {/* Keyed by the group's mode, so a saved change (or a refused one) shows what is really stored. */}
+        <GroupAutonomyChooser
+          key={currentMode ?? "mixed"}
+          outcomeKeys={outcomeKeys}
+          currentMode={currentMode}
+          unowned={unowned}
+          editable={editable}
+          householdId={householdId}
+          labels={labels}
+        />
       </div>
 
-      {open ? children : null}
+      {open ? <div id={listId}>{children}</div> : null}
     </div>
   );
 }
 
+/**
+ * The card's dropdown. Its button shows the group's choice in full (a native
+ * select would cut a long one off), and opens the four choices under it, each
+ * with what it lets WonderHome do. Choosing one saves it for the whole group;
+ * the saved page then shows it. When the group's responsibilities differ,
+ * nothing is chosen yet and the button asks the question.
+ */
 function GroupAutonomyChooser({
   outcomeKeys,
   currentMode,
+  unowned,
+  editable,
   householdId,
   labels,
 }: {
   outcomeKeys: readonly string[];
   currentMode: AutonomyMode | null;
+  unowned: boolean;
+  editable: boolean;
   householdId: string;
   labels: GroupAutonomyLabels;
 }) {
   const [state, formAction, pending] = useActionState<ActionState, FormData>(setGroupAutonomyAction, {});
+  const [open, setOpen] = useState(false);
+
+  if (!editable) {
+    return currentMode ? <p className="pb-2 text-sm">{labels.options[currentMode].heading}</p> : null;
+  }
 
   return (
-    <details className="group border-t border-[var(--wh-border)]">
-      <summary className="flex min-h-11 cursor-pointer list-none items-center justify-between gap-3 px-4 py-2 text-sm font-medium [&::-webkit-details-marker]:hidden">
-        <span>{labels.title}</span>
-        <ChevronDown aria-hidden className="size-4 shrink-0 text-[var(--wh-foreground-subtle)] transition-transform group-open:rotate-180" />
-      </summary>
-      <form action={formAction} className="divide-y divide-[var(--wh-border)] border-t border-[var(--wh-border)]">
-        <input type="hidden" name="householdId" value={householdId} />
-        <input type="hidden" name="outcomeKeys" value={outcomeKeys.join(",")} />
-        {AUTONOMY_MODES.map((mode) => (
-          <button
-            key={mode}
-            type="submit"
-            name="aiMode"
-            value={mode}
-            disabled={pending}
-            aria-pressed={currentMode === mode}
-            className={cn(
-              "block w-full px-4 py-3 text-left transition-colors hover:bg-[var(--wh-surface-muted)] disabled:opacity-60",
-              currentMode === mode && "bg-[var(--wh-primary-soft)]/40",
-            )}
-          >
-            <span className="block text-sm font-semibold">{labels.options[mode].heading}</span>
-            <span className="block text-xs text-[var(--wh-foreground-muted)]">{labels.options[mode].how}</span>
-          </button>
-        ))}
-      </form>
-      {state.error ? <p className="px-4 pb-3 text-xs text-[var(--wh-attention)]" role="alert">{state.error}</p> : null}
-      {state.notice && !state.error ? <p className="px-4 pb-3 text-xs text-[var(--wh-handled)]" role="status">{state.notice}</p> : null}
-    </details>
+    <form action={formAction} className="space-y-1.5 pb-2">
+      <input type="hidden" name="householdId" value={householdId} />
+      <input type="hidden" name="outcomeKeys" value={outcomeKeys.join(",")} />
+      <button
+        type="button"
+        aria-expanded={open}
+        aria-label={`${labels.title}: ${currentMode ? labels.options[currentMode].heading : labels.title}`}
+        onClick={() => setOpen((value) => !value)}
+        disabled={pending}
+        className="flex min-h-11 w-full items-center justify-between gap-3 rounded-[var(--wh-radius-sm)] border border-[var(--wh-border)] px-3 py-2 text-left text-sm font-medium transition-colors hover:bg-[var(--wh-surface-muted)] disabled:opacity-60"
+      >
+        <span>{currentMode ? labels.options[currentMode].heading : labels.title}</span>
+        <ChevronDown aria-hidden className={cn("size-4 shrink-0 text-[var(--wh-foreground-subtle)] transition-transform", open && "rotate-180")} />
+      </button>
+      {open ? (
+        <div className="divide-y divide-[var(--wh-border)] rounded-[var(--wh-radius-sm)] border border-[var(--wh-border)]">
+          {AUTONOMY_MODES.map((mode) => {
+            const blocked = unowned && NEEDS_AN_OWNER.has(mode);
+            return (
+              <button
+                key={mode}
+                type="submit"
+                name="aiMode"
+                value={mode}
+                disabled={pending || blocked}
+                aria-pressed={currentMode === mode}
+                className={cn(
+                  "block w-full px-3 py-2.5 text-left transition-colors hover:bg-[var(--wh-surface-muted)] disabled:opacity-60",
+                  currentMode === mode && "bg-[var(--wh-primary-soft)]/40",
+                )}
+              >
+                <span className="block text-sm font-semibold">{labels.options[mode].heading}</span>
+                <span className="block text-xs text-[var(--wh-foreground-muted)]">{sentence(labels.options[mode].how)}</span>
+                {blocked ? <span className="mt-0.5 block text-xs text-[var(--wh-attention)]">{labels.needsOwner}</span> : null}
+              </button>
+            );
+          })}
+        </div>
+      ) : currentMode ? (
+        <p className="text-xs text-[var(--wh-foreground-muted)]">{sentence(labels.options[currentMode].how)}</p>
+      ) : null}
+      {state.error ? <p className="text-xs text-[var(--wh-attention)]" role="alert">{state.error}</p> : null}
+      {state.notice && !state.error ? <p className="text-xs text-[var(--wh-handled)]" role="status">{state.notice}</p> : null}
+    </form>
   );
 }
 

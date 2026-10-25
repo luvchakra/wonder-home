@@ -27,6 +27,6 @@ A scratch repo reproduced the case: a squash-merged first commit, then a follow-
 - The script rebased cleanly, kept only the follow-up, and reported the merged PR.
 - After the follow-up was also squash-merged, the script moved the branch to main and kept an uncommitted file.
 
-## Open
+## Done since
 
-- Turning on GitHub's "Automatically delete head branches" (Settings → General) would make a reused branch name start fresh on GitHub's side too. It is a repository setting for the owner.
+- The owner turned on GitHub's "Automatically delete head branches" (2026-10-26). A merged PR's branch is now deleted, so a reused branch name starts fresh on GitHub's side too. Push a new branch after a merge without `--force-with-lease`; the old remote ref is gone.

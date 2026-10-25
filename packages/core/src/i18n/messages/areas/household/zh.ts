@@ -168,6 +168,7 @@ export const householdZh: AreaCatalog<typeof householdEn> = {
   "manage.resp.nothingMatches": "没有符合这个视图的内容。",
   "manage.resp.setUpPlaybook": "设置家务手册",
   "manage.resp.unowned": "无人负责",
+  "manage.resp.needsOwner": "请先为这里的每项职责指定负责人。",
   "manage.resp.howMuch": "WonderHome 自主做多少",
   "manage.resp.howMuchLede": "对上面的每个目标，你都可以决定 WonderHome 不经询问能做到哪一步：",
   "manage.resp.how.observe": "发现问题就告诉你，其他什么都不做。",

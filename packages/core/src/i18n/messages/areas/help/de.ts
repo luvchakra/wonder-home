@@ -347,6 +347,7 @@ export const helpDe: AreaCatalog<typeof helpEn> = {
   "help.guide.outcomes.body.3":
     "Richtlinien regeln Ausgabegrenzen, wer was freigibt, Ruhezeiten und Datenschutz. Bis du sie festlegst, fragt WonderHome vor allem, was Folgen hat – sicher, aber langsamer.",
   "help.guide.outcomes.body.4": "Last verteilen, unter Haushalt verwalten → Zuständigkeiten, zeigt, wie oft pro Woche die Zuständigkeiten jeder Person anfallen. Trägt eine Person weit mehr als eine andere, kann es vorschlagen, dass die bereits benannte Vertretung eine davon übernimmt; nichts ändert sich, bis ein Admin zustimmt.",
+  "help.guide.outcomes.body.5": "Unter „Haushalt verwalten → Zuständigkeiten“ sortiert „Gruppieren nach“ die Liste nach „Person“ oder nach „Ergebnis“. Jede Gruppe ist eine Karte: Tippe auf ihren Namen, um ihre Zuständigkeiten zu sehen. Das Auswahlmenü der Karte zeigt, wie viel WonderHome bei dieser Gruppe selbst erledigt, und ein Admin kann dort für alle Zuständigkeiten der Gruppe auf einmal wählen.",
 
   "help.guide.plan.title": "Dein Tarif",
   "help.guide.plan.summary": "Free, Pro und Max – und während des Early Access ist Wechseln kostenlos.",
@@ -361,7 +362,7 @@ export const helpDe: AreaCatalog<typeof helpEn> = {
   "help.guide.ai-autonomy.title": "Wie viel WonderHome selbst tun darf",
   "help.guide.ai-autonomy.summary": "Vier Stufen, je Zuständigkeit festgelegt, und du wählst sie.",
   "help.guide.ai-autonomy.body.1":
-    "Jede Verantwortung hat eine Selbstständigkeitsstufe, die ein Admin unter „Haushalt verwalten → KI-Selbstständigkeit“ festlegt: Vorschlagen (beobachten und dir Bescheid geben), Vorbereiten (alles bereitlegen und warten), Um Freigabe bitten (handeln, sobald du Ja sagst) oder Ausführen (es erledigen und dir sagen, was getan wurde). WonderHome setzt das im Hintergrund durch – nicht nur auf dem Bildschirm.",
+    "Jede Verantwortung hat eine Selbstständigkeitsstufe. Ein Admin legt sie unter „Haushalt verwalten → Zuständigkeiten“ fest, einzeln oder für eine ganze Gruppe auf einmal: „WonderHome wird nur benachrichtigen“, „WonderHome bereitet alles vor und wartet auf dich“, „WonderHome wird vor dem Handeln fragen“ oder „WonderHome erledigt es und sagt dir danach Bescheid“. Die letzten beiden brauchen eine zuständige Person; eine Gruppe mit einem Ergebnis ohne Zuständige bietet daher nur die ersten beiden an. WonderHome setzt die Stufe im Hintergrund durch – nicht nur auf dem Bildschirm.",
   "help.guide.ai-autonomy.body.2":
     "Zahlungen, geänderte Berechtigungen und Löschungen brauchen immer einen Menschen, egal wie die Einstellung ist, und beim Bezahlen musst du im Moment der Freigabe bestätigen, dass du es bist.",
 

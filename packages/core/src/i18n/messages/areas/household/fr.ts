@@ -168,6 +168,7 @@ export const householdFr: AreaCatalog<typeof householdEn> = {
   "manage.resp.nothingMatches": "Rien ne correspond à cet affichage.",
   "manage.resp.setUpPlaybook": "Préparer le guide du foyer",
   "manage.resp.unowned": "Sans responsable",
+  "manage.resp.needsOwner": "Donnez d’abord un responsable à chaque responsabilité ici.",
   "manage.resp.howMuch": "Ce que WonderHome fait de lui-même",
   "manage.resp.howMuchLede": "Pour chaque objectif ci-dessus, vous choisissez jusqu’où WonderHome peut aller sans demander :",
   "manage.resp.how.observe": "il repère un problème et vous prévient. Rien de plus.",
