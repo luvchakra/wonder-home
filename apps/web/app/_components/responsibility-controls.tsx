@@ -324,24 +324,23 @@ export function ResponsibilityGroup({
 
   return (
     <div className="space-y-2">
-      <button
-        type="button"
-        aria-expanded={open}
-        onClick={() => setOpen((value) => !value)}
-        className="flex min-h-11 w-full items-center justify-between gap-3 rounded-[var(--wh-radius-sm)] border border-[var(--wh-border)] bg-[var(--wh-surface)] px-4 text-left text-xs font-medium tracking-wide text-[var(--wh-foreground-subtle)] uppercase transition-colors hover:bg-[var(--wh-surface-muted)]"
-      >
-        <span>
-          {title} · {count}
-        </span>
-        <ChevronDown aria-hidden className={cn("size-4 shrink-0 transition-transform", open && "rotate-180")} />
-      </button>
+      {/* The label and its dropdown are one card; the responsibilities under it are the list below. */}
+      <div className="overflow-hidden rounded-[var(--wh-radius)] border border-[var(--wh-border)] bg-[var(--wh-surface)]">
+        <button
+          type="button"
+          aria-expanded={open}
+          onClick={() => setOpen((value) => !value)}
+          className="flex min-h-11 w-full items-center justify-between gap-3 px-4 py-2 text-left text-xs font-medium tracking-wide text-[var(--wh-foreground-subtle)] uppercase transition-colors hover:bg-[var(--wh-surface-muted)]"
+        >
+          <span>
+            {title} · {count}
+          </span>
+          <ChevronDown aria-hidden className={cn("size-4 shrink-0 transition-transform", open && "rotate-180")} />
+        </button>
+        {open && editable ? <GroupAutonomyChooser outcomeKeys={outcomeKeys} currentMode={currentMode} householdId={householdId} labels={labels} /> : null}
+      </div>
 
-      {open ? (
-        <div className="space-y-2">
-          {editable ? <GroupAutonomyChooser outcomeKeys={outcomeKeys} currentMode={currentMode} householdId={householdId} labels={labels} /> : null}
-          {children}
-        </div>
-      ) : null}
+      {open ? children : null}
     </div>
   );
 }
@@ -360,8 +359,8 @@ function GroupAutonomyChooser({
   const [state, formAction, pending] = useActionState<ActionState, FormData>(setGroupAutonomyAction, {});
 
   return (
-    <details className="group rounded-[var(--wh-radius-sm)] border border-[var(--wh-border)] bg-[var(--wh-surface)]">
-      <summary className="flex min-h-11 cursor-pointer list-none items-center justify-between gap-3 px-4 text-sm font-medium [&::-webkit-details-marker]:hidden">
+    <details className="group border-t border-[var(--wh-border)]">
+      <summary className="flex min-h-11 cursor-pointer list-none items-center justify-between gap-3 px-4 py-2 text-sm font-medium [&::-webkit-details-marker]:hidden">
         <span>{labels.title}</span>
         <ChevronDown aria-hidden className="size-4 shrink-0 text-[var(--wh-foreground-subtle)] transition-transform group-open:rotate-180" />
       </summary>
