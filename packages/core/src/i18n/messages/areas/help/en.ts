@@ -378,6 +378,7 @@ export const helpEn = {
   "help.guide.outcomes.body.3":
     "Policies cover spending limits, who approves what, quiet hours and privacy. Until you set them, WonderHome asks before anything consequential — safe, but slower.",
   "help.guide.outcomes.body.4": "Share the load, on Manage Household → Responsibilities, shows how many times a week each person's responsibilities come round. When one person carries far more than another, it can suggest that the backup already named takes one over; nothing changes until an Admin accepts.",
+  "help.guide.outcomes.body.5": "On Manage Household → Responsibilities, \"Group by\" sorts the list by \"Person\" or by \"Outcome\". Each group is a card: tap its name to see its responsibilities. The card's dropdown shows how much WonderHome does on its own for that group, and an Admin can choose there to set every responsibility in the group at once.",
 
   // Your plan
   "help.guide.plan.title": "Your plan",
@@ -394,7 +395,7 @@ export const helpEn = {
   "help.guide.ai-autonomy.title": "How much WonderHome may do on its own",
   "help.guide.ai-autonomy.summary": "Four levels, set per responsibility, and you choose them.",
   "help.guide.ai-autonomy.body.1":
-    "Each responsibility carries an autonomy level, which an Admin sets in Manage Household → AI autonomy: Suggest (watch and tell you), Prepare (get things ready and wait), Ask approval (do the work once you say yes) or Execute (handle it and tell you what was done). WonderHome enforces it behind the scenes — not just on the screen.",
+    "Each responsibility carries an autonomy level, which an Admin sets on Manage Household → Responsibilities, one responsibility at a time or for a whole group at once: \"WonderHome will notify only\", \"WonderHome does the groundwork, and waits for you\", \"WonderHome will ask before acting\" or \"WonderHome does it, and tells you afterwards\". The last two need an owner, so a group with an outcome nobody owns offers only the first two. WonderHome enforces the level behind the scenes — not just on the screen.",
   "help.guide.ai-autonomy.body.2":
     "Payments, permission changes and deletions always need a person, whatever the setting, and paying money needs you to confirm it is you at the moment you approve.",
 

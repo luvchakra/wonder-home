@@ -347,6 +347,7 @@ export const helpFr: AreaCatalog<typeof helpEn> = {
   "help.guide.outcomes.body.3":
     "Les règles couvrent les plafonds de dépense, qui approuve quoi, les heures calmes et la confidentialité. Tant que vous ne les avez pas définies, WonderHome demande avant toute chose importante — c’est sûr, mais plus lent.",
   "help.guide.outcomes.body.4": "Répartir la charge, dans Gérer le foyer → Responsabilités, montre combien de fois par semaine reviennent les responsabilités de chacun. Quand une personne en porte bien plus qu'une autre, il peut proposer que le remplaçant déjà désigné en reprenne une ; rien ne change tant qu'un Admin n'a pas accepté.",
+  "help.guide.outcomes.body.5": "Dans « Gérer le foyer → Responsabilités », « Regrouper par » trie la liste par « Personne » ou par « Résultat ». Chaque groupe est une carte : touchez son nom pour voir ses responsabilités. Le menu déroulant de la carte indique ce que WonderHome fait seul pour ce groupe, et un Admin peut y choisir pour toutes les responsabilités du groupe à la fois.",
 
   "help.guide.plan.title": "Votre formule",
   "help.guide.plan.summary": "Free, Pro et Max — et changer est gratuit pendant l’accès anticipé.",
@@ -361,7 +362,7 @@ export const helpFr: AreaCatalog<typeof helpEn> = {
   "help.guide.ai-autonomy.title": "Ce que WonderHome peut faire de lui-même",
   "help.guide.ai-autonomy.summary": "Quatre niveaux, fixés par responsabilité, et c’est vous qui les choisissez.",
   "help.guide.ai-autonomy.body.1":
-    "Chaque responsabilité a un niveau d’autonomie, qu’un Admin règle dans Gérer le foyer → Autonomie de l’IA : Suggérer (observer et vous prévenir), Préparer (tout préparer et attendre), Demander l’accord (agir dès que vous dites oui) ou Exécuter (s’en charger et vous dire ce qui a été fait). WonderHome l’applique en coulisses — pas seulement à l’écran.",
+    "Chaque responsabilité a un niveau d’autonomie, qu’un Admin règle dans « Gérer le foyer → Responsabilités », une par une ou pour tout un groupe à la fois : « WonderHome se contentera de vous prévenir », « WonderHome prépare tout et attend votre accord », « WonderHome vous demandera avant d’agir » ou « WonderHome agit, et vous le dit ensuite ». Les deux derniers demandent un responsable : un groupe dont un résultat n’a personne ne propose donc que les deux premiers. WonderHome applique ce niveau en coulisses, pas seulement à l’écran.",
   "help.guide.ai-autonomy.body.2":
     "Les paiements, les changements de droits et les suppressions demandent toujours une personne, quel que soit le réglage, et payer exige que vous confirmiez que c’est bien vous au moment où vous approuvez.",
 

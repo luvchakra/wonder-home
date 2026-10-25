@@ -347,6 +347,7 @@ export const helpEs: AreaCatalog<typeof helpEn> = {
   "help.guide.outcomes.body.3":
     "Las políticas cubren los límites de gasto, quién aprueba qué, las horas de silencio y la privacidad. Hasta que las fijes, WonderHome pregunta antes de cualquier cosa importante: seguro, pero más lento.",
   "help.guide.outcomes.body.4": "Repartir la carga, en Gestionar el hogar → Responsabilidades, muestra cuántas veces por semana le tocan a cada persona sus responsabilidades. Cuando alguien lleva mucho más que otra persona, puede sugerir que el suplente ya nombrado se encargue de una; nada cambia hasta que un Admin lo acepta.",
+  "help.guide.outcomes.body.5": "En «Gestionar el hogar → Responsabilidades», «Agrupar por» ordena la lista por «Persona» o por «Resultado». Cada grupo es una tarjeta: toca su nombre para ver sus responsabilidades. El desplegable de la tarjeta muestra cuánto hace WonderHome por su cuenta en ese grupo, y un Admin puede elegir ahí para todas las responsabilidades del grupo a la vez.",
 
   "help.guide.plan.title": "Tu plan",
   "help.guide.plan.summary": "Free, Pro y Max, y cambiar es gratis durante el acceso anticipado.",
@@ -361,7 +362,7 @@ export const helpEs: AreaCatalog<typeof helpEn> = {
   "help.guide.ai-autonomy.title": "Cuánto puede hacer WonderHome por su cuenta",
   "help.guide.ai-autonomy.summary": "Cuatro niveles, fijados por responsabilidad, y los eliges tú.",
   "help.guide.ai-autonomy.body.1":
-    "Cada responsabilidad tiene un nivel de autonomía, que un Admin fija en Gestionar el hogar → Autonomía de la IA: Sugerir (observar y avisarte), Preparar (dejarlo listo y esperar), Pedir aprobación (hacerlo cuando digas que sí) o Ejecutar (encargarse y contarte qué se hizo). WonderHome lo hace cumplir por detrás, no solo en la pantalla.",
+    "Cada responsabilidad tiene un nivel de autonomía, que un Admin fija en «Gestionar el hogar → Responsabilidades», de una en una o para todo un grupo a la vez: «WonderHome solo te avisará», «WonderHome lo prepara todo y espera tu visto bueno», «WonderHome te preguntará antes de actuar» o «WonderHome lo hace y te lo cuenta después». Las dos últimas necesitan un responsable, así que un grupo con un resultado sin responsable solo ofrece las dos primeras. WonderHome aplica el nivel en segundo plano, no solo en la pantalla.",
   "help.guide.ai-autonomy.body.2":
     "Los pagos, los cambios de permisos y las eliminaciones siempre necesitan a una persona, sea cual sea el ajuste, y pagar requiere que confirmes que eres tú en el momento de aprobarlo.",
 

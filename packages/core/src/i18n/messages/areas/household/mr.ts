@@ -168,6 +168,7 @@ export const householdMr: AreaCatalog<typeof householdEn> = {
   "manage.resp.nothingMatches": "या दृश्याशी काहीही जुळत नाही.",
   "manage.resp.setUpPlaybook": "प्लेबुक सेट करा",
   "manage.resp.unowned": "जबाबदाराविना",
+  "manage.resp.needsOwner": "आधी इथल्या प्रत्येक जबाबदारीला कोणीतरी मालक ठरवा.",
   "manage.resp.howMuch": "WonderHome स्वतःहून किती करते",
   "manage.resp.howMuchLede": "वरील प्रत्येक परिणामासाठी, WonderHome न विचारता कुठपर्यंत जाऊ शकते हे तुम्ही ठरवता:",
   "manage.resp.how.observe": "ते समस्या पाहून तुम्हाला सांगते. यापलीकडे काहीही करत नाही.",

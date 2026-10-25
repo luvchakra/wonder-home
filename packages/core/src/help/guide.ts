@@ -183,7 +183,7 @@ const SECTIONS: readonly SectionShape[] = [
   {
     id: "outcomes",
     group: "Your household",
-    updated: "2026-10-16",
+    updated: "2026-10-26",
     keywords: ["outcome", "responsibility", "playbook", "routine", "policy", "owner", "who does what", "backup", "workload", "share the load", "fair", "balance"],
   },
   {
@@ -195,7 +195,7 @@ const SECTIONS: readonly SectionShape[] = [
   {
     id: "ai-autonomy",
     group: "Privacy and trust",
-    updated: "2026-10-16",
+    updated: "2026-10-26",
     keywords: ["autonomy", "permission", "approve", "execute", "automation", "control", "ai settings"],
   },
   {

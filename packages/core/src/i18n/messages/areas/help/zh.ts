@@ -319,6 +319,7 @@ export const helpZh: AreaCatalog<typeof helpEn> = {
     "职责说明谁负责什么，以及他们做不了时由谁顶上。有负责人的结果就有人可以问；没有负责人的就是一个缺口，WonderHome 会给你看这些缺口，以及负担分配不均的地方。",
   "help.guide.outcomes.body.3": "规则涵盖支出上限、谁批准什么、免打扰时段和隐私。在你设定之前，WonderHome 在做任何有影响的事之前都会先问——安全，但慢一些。",
   "help.guide.outcomes.body.4": "“家庭管理 → 职责分工”里的“分担负担”会显示每个人的职责每周轮到几次。当一个人承担的远多于另一个人时，它可以建议由已经指定的后备人接手其中一项；在管理员（Admin）同意之前，什么都不会改变。",
+  "help.guide.outcomes.body.5": "在“家庭管理 → 职责分工”中，“分组方式”可以选择“按人”或“按结果”。每个组是一张卡片：点它的名字就能看到其中的职责。卡片上的下拉菜单显示 WonderHome 对这一组自己做多少，管理员可以在那里一次为整组的职责选择。",
 
   "help.guide.plan.title": "你的套餐",
   "help.guide.plan.summary": "Free、Pro 和 Max——抢先体验期间切换免费。",
@@ -331,7 +332,7 @@ export const helpZh: AreaCatalog<typeof helpEn> = {
   "help.guide.ai-autonomy.title": "WonderHome 可以自己做多少",
   "help.guide.ai-autonomy.summary": "四个级别，按每项职责设定，由你来选。",
   "help.guide.ai-autonomy.body.1":
-    "每项职责都有一个自主程度，由管理员在“家庭管理 → AI 自主程度”中设置：建议（观察并告诉你）、准备（准备好并等你）、征求同意（你同意后就去做）或执行（处理好并告诉你做了什么）。WonderHome 会在后台强制执行——不只是在屏幕上。",
+    "每项职责都有一个自主程度，由管理员在“家庭管理 → 职责分工”中设置，可以逐项设置，也可以一次为整组设置：“WonderHome 只通知你”、“WonderHome 把一切准备好，等你确认”、“WonderHome 行动前会先问你”或“WonderHome 直接去做，事后告诉你”。后两种需要有负责人，所以组里只要有一项没人负责，就只提供前两种。WonderHome 会在后台强制执行这个程度——不只是在屏幕上。",
   "help.guide.ai-autonomy.body.2":
     "付款、权限变更和删除操作，无论如何设置，都始终需要一个人来决定；付款时还需要你在批准的那一刻确认是你本人。",
 

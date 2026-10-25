@@ -166,6 +166,7 @@ export const householdEn = {
   "manage.resp.nothingMatches": "Nothing matches this view.",
   "manage.resp.setUpPlaybook": "Set up the playbook",
   "manage.resp.unowned": "Unowned",
+  "manage.resp.needsOwner": "Give every responsibility here an owner first.",
   "manage.resp.howMuch": "How much WonderHome does on its own",
   "manage.resp.howMuchLede": "For each outcome above, you choose how far WonderHome may go without asking:",
   "manage.resp.how.observe": "it notices a problem and tells you. It does nothing else.",

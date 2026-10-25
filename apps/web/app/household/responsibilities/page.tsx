@@ -160,6 +160,7 @@ function renderResponsibilities({
   const groupAutonomy = {
     title: t("manage.resp.howMuch"),
     options: Object.fromEntries(AUTONOMY_MODES.map((mode) => [mode, { heading: t(`manage.aiMode.${mode}`), how: t(`manage.resp.how.${mode}`) }])) as GroupAutonomyLabels["options"],
+    needsOwner: t("manage.resp.needsOwner"),
   };
   // Links keep the other choice: switching the tab keeps the grouping, and vice versa.
   const listHref = (params: { tab?: string; group?: string }) => {
@@ -316,6 +317,7 @@ function renderResponsibilities({
                 count={group.rows.length}
                 outcomeKeys={group.rows.map((row) => row.outcome_key)}
                 currentMode={sharedMode(group.rows)}
+                unowned={group.rows.some((row) => !row.primary_member_id)}
                 editable={admin}
                 householdId={householdId}
                 labels={groupAutonomy}
