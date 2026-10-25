@@ -447,6 +447,8 @@ export async function observeHomeSend(c: HomeSendCase, models: Models = {}): Pro
     transcriptConfidence: c.transcriptConfidence ?? null,
     subject: c.source.subject ?? null,
     filename: c.source.attachment ?? null,
+    // What was read, as the product passes it: a file's reading has no text to check against.
+    sourceText: c.source.channel === "file" ? null : [c.source.subject, c.source.text].filter(Boolean).join("\n"),
     injection,
   });
 

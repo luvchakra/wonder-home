@@ -178,6 +178,14 @@ WonderHome's AI layer is one pipeline with three named, real surfaces —
   normalize → understand), and ends in the same canonical
   `IntakeUnderstanding` (`homesend/understanding.ts`) — a new input type
   is a new `ingest*` entry point into that pipeline, never a second one.
+  Nothing is added on its own (a household's "execute" setting; never a
+  bill, health document or receipt) unless HomeSend is more than 95% sure
+  (`homesend/verify.ts`, the owner 2026-10-25). A model's own "high" counts
+  as 0.9. A reading earns 0.97 only when its kind has what that kind needs
+  and its name, amount, date, payee and shop are all found in the text that
+  was sent; the review says which detail it could not check. A photo or a
+  file has no text to check against, so it always waits for a person, and a
+  voice note is never surer than its transcript.
   A file's type is decided from its bytes (`normalize.ts`), a link is only
   ever fetched through `link-fetch.ts` (public addresses only, DNS checked
   and pinned, every redirect re-checked), an uncertain voice transcript is
@@ -377,6 +385,9 @@ production data. Every stage a case states is compared, and each mismatch
 gets a §10 error type. Metrics are counts out of counts, and every run
 records its prompt, context and dataset versions. The blocking release
 gates fail CI, and an Unsafe Action Rate above zero is one of them.
+The `understanding` gate blocks a release unless HomeSend gets more than
+95% of its cases right end to end and more than 95% in the right category
+(the owner, 2026-10-25); only a provider run measures the model's own reading.
 `--provider configured` runs the same cases through the configured model,
 and `--write` records the release artifact in `docs/ai-releases/`. When the
 golden set catches a defect, fix the product. Never loosen an expectation

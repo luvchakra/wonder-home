@@ -5,7 +5,8 @@ import { decideConfirmation, type ConfirmationInput } from "./confirmation";
 const CLEAR: ConfirmationInput = {
   kind: "grocery_item",
   extracted: { title: "Milk", needs: [], confidence: "high" },
-  understanding: { readable: true, confidence: "high", safety: { instructionsIgnored: false, signals: [] } },
+  // Checked against what was sent: every detail found there (verify.ts).
+  understanding: { readable: true, confidence: "high", score: 0.97, check: { verified: true, unverified: [] }, safety: { instructionsIgnored: false, signals: [] } },
   reconciliation: null,
   subject: null,
   memberInitiated: true,
@@ -32,6 +33,19 @@ describe("HomeSend confirmation strategy (Wave 3 §12)", () => {
     const asmi = { memberId: "asmi", displayName: "Asmi", memberType: "child" as const };
     expect(decide({ ...worksheet, subject: { question: null, selected: asmi } }).mode).toBe("auto_apply");
     expect(decide({ ...worksheet, subject: null })).toMatchObject({ mode: "ask", question: "Who is this for?" });
+  });
+
+  it("adds nothing on its own unless it is more than 95% sure, and says what it couldn't check (the owner, 2026-10-25)", () => {
+    const unchecked = { readable: true, confidence: "high" as const, score: 0.9, check: { verified: false, unverified: ["the name"] }, safety: { instructionsIgnored: false, signals: [] } };
+    expect(decide({ understanding: unchecked })).toMatchObject({ mode: "prepare", reason: "WonderHome couldn't check the name against what was sent, so a person looks first." });
+    const twoThings = { ...unchecked, check: { verified: false, unverified: ["the amount", "the date"] } };
+    expect(decide({ understanding: twoThings }).reason).toBe("WonderHome couldn't check the amount and the date against what was sent, so a person looks first.");
+    // Exactly 95% is not more than 95%.
+    expect(decide({ understanding: { ...unchecked, score: 0.95, check: { verified: true, unverified: [] } } })).toMatchObject({ mode: "prepare", reason: "WonderHome adds things on its own only when it is more than 95% sure, so a person looks first." });
+    // An item read before the check existed has no score, and never applies on its own.
+    const { score: _score, check: _check, ...old } = unchecked;
+    expect(decide({ understanding: old }).mode).toBe("prepare");
+    expect(decide({ understanding: { ...unchecked, score: 0.96, check: { verified: true, unverified: [] } } }).mode).toBe("auto_apply");
   });
 
   it("never applies a bill or a health document on its own, whatever the confidence or setting (consequential)", () => {

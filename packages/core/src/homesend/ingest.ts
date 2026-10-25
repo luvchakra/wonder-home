@@ -251,6 +251,8 @@ export async function understand(
     filename: input.context?.filename ?? null,
     contentType: input.contentType ?? null,
     pageCount: input.pageCount ?? null,
+    // Only text that was itself what got read: a photo's caption is not the photo.
+    sourceText: "text" in input.source ? [input.context?.subject, input.source.text].filter(Boolean).join("\n") : null,
     injection,
   });
 
