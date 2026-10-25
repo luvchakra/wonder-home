@@ -425,7 +425,7 @@ function renderResponsibilities({
             <div className="space-y-2.5">
               {(["observe", "prepare", "approve", "execute"] as const).map((mode) => (
                 <p key={mode}>
-                  <span className="font-semibold text-[var(--wh-foreground)]">{t(`manage.resp.howHeading.${mode}`)}</span> — {t(`manage.resp.how.${mode}`)}
+                  <span className="font-semibold text-[var(--wh-foreground)]">{t(`manage.aiMode.${mode}`)}</span> — {t(`manage.resp.how.${mode}`)}
                   <span className="mt-0.5 block text-xs text-[var(--wh-foreground-subtle)]">{t(`manage.resp.example.${mode}`)}</span>
                 </p>
               ))}
