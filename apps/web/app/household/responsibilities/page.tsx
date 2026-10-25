@@ -62,13 +62,37 @@ function groupByOwner(
   return groups;
 }
 
+/** The outcome areas the starter outcomes name; any other prefix is shown as written. */
+const KNOWN_AREAS = new Set(["laundry", "meals", "groceries", "finance", "school", "home", "pets", "kids"]);
+
+/** An outcome's area is the part of its key before the dot: "laundry.ready" is laundry. */
+function areaOf(outcomeKey: string): string {
+  return outcomeKey.split(".")[0] ?? outcomeKey;
+}
+
+/** Groups rows by outcome area, in the order the first row of each area appears (priority order). */
+function groupByArea(rows: Row[], t: Translate): { ownerId: null; ownerName: string; rows: Row[] }[] {
+  const byArea = new Map<string, Row[]>();
+  for (const row of rows) {
+    const area = areaOf(row.outcome_key);
+    const existing = byArea.get(area);
+    if (existing) existing.push(row);
+    else byArea.set(area, [row]);
+  }
+  return [...byArea].map(([area, areaRows]) => ({
+    ownerId: null,
+    ownerName: KNOWN_AREAS.has(area) ? t(`manage.resp.area.${area}` as Parameters<Translate>[0]) : area.replace(/_/g, " "),
+    rows: areaRows,
+  }));
+}
+
 /**
  * Responsibilities (requirements §14): outcomes, not micro-task sequences.
  * Each has an owner, a backup, a cadence and an AI involvement level. An
  * unowned outcome is shown as a gap — the most useful thing the matrix can say.
  */
-export default async function ResponsibilitiesPage({ searchParams }: { searchParams: Promise<{ tab?: string; outcome?: string }> }) {
-  const [{ tab, outcome }, session] = await Promise.all([searchParams, requireSession("/household/responsibilities")]);
+export default async function ResponsibilitiesPage({ searchParams }: { searchParams: Promise<{ tab?: string; outcome?: string; group?: string }> }) {
+  const [{ tab, outcome, group }, session] = await Promise.all([searchParams, requireSession("/household/responsibilities")]);
   const { supabase, membership, view, viewer, secondary, locale } = session;
   const { t } = locale;
   const householdId = membership.household.id;
@@ -120,7 +144,7 @@ export default async function ResponsibilitiesPage({ searchParams }: { searchPar
   // the platform's own bare error page (requirements §49: error is always
   // one of the three states a screen shows, never a raw crash).
   try {
-    return renderResponsibilities({ shell, membership, active, responsibilityRows, members, conflicts, playbook, admin: isHouseholdAdmin(membership), householdId, openOutcomeKey: outcome ?? null, t });
+    return renderResponsibilities({ shell, membership, active, grouping: group === "outcome" ? "outcome" : "person", responsibilityRows, members, conflicts, playbook, admin: isHouseholdAdmin(membership), householdId, openOutcomeKey: outcome ?? null, t });
   } catch (thrown) {
     console.error("Responsibilities page failed to render", thrown);
     return (
@@ -135,6 +159,7 @@ function renderResponsibilities({
   shell,
   membership,
   active,
+  grouping,
   responsibilityRows,
   members,
   conflicts,
@@ -148,6 +173,8 @@ function renderResponsibilities({
   shell: { active: "more"; viewer: Session["viewer"]; secondary: Session["secondary"]; pathname: string; back: { href: string; label: string }; title: string };
   membership: Session["membership"];
   active: "all" | "mine" | "family";
+  /** Who the list is grouped under: the person who owns each outcome, or its area. */
+  grouping: "person" | "outcome";
   responsibilityRows: { data: unknown; failed: boolean };
   members: Awaited<ReturnType<typeof listMembers>>;
   conflicts: Awaited<ReturnType<typeof listConfigurationConflicts>>;
@@ -192,6 +219,14 @@ function renderResponsibilities({
   const imbalances = findImbalances(memberLoads(workloadMembers, workloadOutcomes));
   const titleOf = (key: string) => workloadOutcomes.find((outcome) => outcome.outcomeKey === key)?.name ?? key;
   const labels = responsibilityLabels(t);
+  // Links keep the other choice: switching the tab keeps the grouping, and vice versa.
+  const listHref = (params: { tab?: string; group?: string }) => {
+    const query = new URLSearchParams(Object.entries(params).filter((entry): entry is [string, string] => Boolean(entry[1])));
+    const text = query.toString();
+    return `/household/responsibilities${text ? `?${text}` : ""}`;
+  };
+  const groupParam = grouping === "outcome" ? "outcome" : undefined;
+  const tabParam = active === "all" ? undefined : active;
   const nobodyYet = t("manage.resp.nobodyYet");
   const theBackup = t("manage.resp.theBackup");
   const perWeek = (value: number) => perWeekWords(value, t);
@@ -217,9 +252,18 @@ function renderResponsibilities({
           label={t("manage.resp.whose")}
           active={active}
           segments={[
-            { key: "all", label: t("manage.resp.tab.all"), href: "/household/responsibilities", count: rows.length },
-            { key: "mine", label: t("manage.resp.tab.mine"), href: "/household/responsibilities?tab=mine", count: rows.filter(isMine).length },
-            { key: "family", label: t("manage.resp.tab.family"), href: "/household/responsibilities?tab=family" },
+            { key: "all", label: t("manage.resp.tab.all"), href: listHref({ group: groupParam }), count: rows.length },
+            { key: "mine", label: t("manage.resp.tab.mine"), href: listHref({ tab: "mine", group: groupParam }), count: rows.filter(isMine).length },
+            { key: "family", label: t("manage.resp.tab.family"), href: listHref({ tab: "family", group: groupParam }) },
+          ]}
+        />
+
+        <SegmentedControl
+          label={t("manage.resp.groupBy")}
+          active={grouping}
+          segments={[
+            { key: "person", label: t("manage.resp.group.person"), href: listHref({ tab: tabParam }) },
+            { key: "outcome", label: t("manage.resp.group.outcome"), href: listHref({ tab: tabParam, group: "outcome" }) },
           ]}
         />
 
@@ -323,8 +367,8 @@ function renderResponsibilities({
           <EmptyState icon={ListChecks} title={rows.length === 0 ? t("manage.resp.emptyTitle") : t("manage.resp.nothingHere")} description={rows.length === 0 ? t("manage.resp.emptyLede") : t("manage.resp.nothingMatches")} action={admin && rows.length === 0 ? <PillLink href="/household">{t("manage.resp.setUpPlaybook")}</PillLink> : null} />
         ) : (
           <div className="space-y-4">
-            {groupByOwner(shown, members, nobodyYet).map((group) => (
-              <div key={group.ownerId ?? "unowned"} className="space-y-2">
+            {(grouping === "outcome" ? groupByArea(shown, t) : groupByOwner(shown, members, nobodyYet)).map((group) => (
+              <div key={`${group.ownerId ?? "area"}:${group.ownerName}`} className="space-y-2">
                 <p className="px-1 text-xs font-medium tracking-wide text-[var(--wh-foreground-subtle)] uppercase">
                   {group.ownerName} · {group.rows.length}
                 </p>
