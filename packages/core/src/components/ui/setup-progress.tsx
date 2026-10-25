@@ -1,6 +1,7 @@
 import {
   BookOpen,
   CalendarHeart,
+  ChevronDown,
   ChevronRight,
   CircleCheck,
   Clock3,
@@ -168,12 +169,18 @@ export function SetupProgressCard({
       </div>
 
       {variant === "full" ? (
-        // The whole checklist in one card, in the order its groups already sort it.
-        <ul className="mt-4 divide-y divide-[var(--wh-border)]">
-          {groupSetupSteps(shown).flatMap((group) => group.steps).map((step) => (
-            <StepRow key={step.key} step={step} />
-          ))}
-        </ul>
+        // The whole checklist sits under one chevron, closed until opened, in the order its groups already sort it.
+        <details className="group mt-4 border-t border-[var(--wh-border)] pt-3">
+          <summary className="flex min-h-11 cursor-pointer list-none items-center justify-between gap-3 rounded-[var(--wh-radius-sm)] text-sm font-medium transition-colors hover:bg-[var(--wh-surface-muted)] [&::-webkit-details-marker]:hidden">
+            <span>{words.seeAll}</span>
+            <ChevronDown aria-hidden className="size-4 shrink-0 text-[var(--wh-foreground-subtle)] transition-transform group-open:rotate-180" />
+          </summary>
+          <ul className="mt-2 divide-y divide-[var(--wh-border)]">
+            {groupSetupSteps(shown).flatMap((group) => group.steps).map((step) => (
+              <StepRow key={step.key} step={step} />
+            ))}
+          </ul>
+        </details>
       ) : (
         <ul className="mt-4 divide-y divide-[var(--wh-border)]">
           {shown.map((step) => (
