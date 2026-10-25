@@ -32,6 +32,12 @@ export type HomeSendMetrics = {
   proposalAcceptance: Ratio;
   /** The person changed what was read before confirming it, out of confirmed items WonderHome had read. */
   correction: Ratio;
+  /**
+   * The same correction count, split by what WonderHome read the item as, so
+   * a kind whose readings need fixing shows before the 95% bar is changed
+   * for it. Kinds with no confirmed items are left out.
+   */
+  correctionByKind: Record<string, Ratio>;
   /** Writes into a domain that stood, out of every write HomeSend made (the rest were undone). */
   downstreamWriteSuccess: Ratio;
   /** Kept and shown under "Failed safely" instead of acted on, out of everything that arrived. */
@@ -111,6 +117,14 @@ export function summarizeHomeSend(
   const personal = reviewed.filter((row) => row.review_subject === "resolved" || row.review_subject === "asked");
   const confirmed = reviewed.filter((row) => CONFIRMED_BY_A_PERSON.has(row.review_decision!) && row.review_corrected !== null);
 
+  const correctionByKind: Record<string, Ratio> = {};
+  for (const row of confirmed) {
+    const kind = row.classified_kind ?? "unknown";
+    const entry = (correctionByKind[kind] ??= { count: 0, of: 0 });
+    entry.of += 1;
+    if (row.review_corrected === true) entry.count += 1;
+  }
+
   const minutes = rows
     .filter((row) => row.status === "routed" && row.routed_at)
     .map((row) => (Date.parse(row.routed_at!) - Date.parse(row.created_at)) / 60_000)
@@ -126,6 +140,7 @@ export function summarizeHomeSend(
     duplicateDetection: { count: reviewed.filter((row) => row.review_proposal !== null).length, of: reviewed.length },
     proposalAcceptance: { count: reviewed.filter((row) => ACTED.has(row.review_decision!)).length, of: reviewed.length },
     correction: { count: confirmed.filter((row) => row.review_corrected === true).length, of: confirmed.length },
+    correctionByKind,
     downstreamWriteSuccess: { count: changes.filter((change) => change.undone_at === null).length, of: changes.length },
     safeRejection: { count: rows.filter((row) => row.status === "failed").length, of: rows.length },
     queueDepth: options.queueDepth,
