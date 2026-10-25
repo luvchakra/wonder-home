@@ -13,7 +13,7 @@ The owner asked why four autonomy options exist when there are really two possib
   - Background agents are not switched on.
   - Its one live effect was refusing a child's or helper's request outright. Under prepare, that request goes to an adult instead.
 
-The owner chose two: **prepare** ("WonderHome prepares, and waits for your OK") and **execute** ("WonderHome does it, and tells you afterwards").
+The owner chose two, and named them: **Wait for Approval** (stored as `prepare`) and **Pre Approved** (stored as `execute`). The same name is used in the picker, the group dropdown, the row badges, Manage Household and the help, in eight languages. The HomeSend review reason ("set to “Wait for Approval”") and HomeTalk's settings preview use it too.
 
 ## What changed
 

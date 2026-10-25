@@ -13,8 +13,8 @@ const { ResponsibilityGroup } = await import("./responsibility-controls");
 const LABELS = {
   title: "How much WonderHome does on its own",
   options: {
-    prepare: { heading: "WonderHome prepares, and waits for your OK", short: "WonderHome asks first", how: "it gets everything ready." },
-    execute: { heading: "WonderHome does it, and tells you afterwards", short: "WonderHome handles it", how: "it acts and reports back." },
+    prepare: { heading: "Wait for Approval", short: "Wait for Approval", how: "it gets everything ready." },
+    execute: { heading: "Pre Approved", short: "Pre Approved", how: "it acts and reports back." },
   },
   mixed: "Mixed — choose one",
   needsOwner: "Give every responsibility here an owner first.",
@@ -49,7 +49,7 @@ describe("ResponsibilityGroup", () => {
   it("keeps the label, the dropdown and the list toggle in one row, in that order", () => {
     const html = render({ currentMode: "prepare" });
     const label = html.indexOf('HOME <span class="whitespace-nowrap">· 3</span>');
-    const dropdown = html.indexOf('aria-label="How much WonderHome does on its own: WonderHome prepares, and waits for your OK"');
+    const dropdown = html.indexOf('aria-label="How much WonderHome does on its own: Wait for Approval"');
     const toggle = html.indexOf('aria-label="HOME · 3"');
     expect(label).toBeGreaterThan(-1);
     expect(dropdown).toBeGreaterThan(label);
@@ -62,9 +62,9 @@ describe("ResponsibilityGroup", () => {
 
   it("carries the dropdown on the card while collapsed, showing the group's choice in full and nothing under it", () => {
     const html = render({ currentMode: "prepare" });
-    expect(html).toContain('aria-label="How much WonderHome does on its own: WonderHome prepares, and waits for your OK"');
+    expect(html).toContain('aria-label="How much WonderHome does on its own: Wait for Approval"');
     // Shown short, like each row's badge, so it fits beside the label on a phone.
-    expect(html).toContain("<span>WonderHome asks first</span>");
+    expect(html).toContain("<span>Wait for Approval</span>");
     // The "what it does" line lives only in the opened choices, not under the closed dropdown.
     expect(html).not.toContain("It gets everything ready.");
     // The two choices open from the button; closed, they are not in the page.
@@ -86,6 +86,6 @@ describe("ResponsibilityGroup", () => {
   it("shows someone who cannot change it the group's mode, with no dropdown", () => {
     const html = render({ editable: false, currentMode: "prepare" });
     expect(html).not.toContain("<form");
-    expect(html).toContain("WonderHome asks first");
+    expect(html).toContain("Wait for Approval");
   });
 });

@@ -24,7 +24,7 @@ describe("HomeSend confirmation strategy (Wave 3 §12)", () => {
     for (const autonomy of ["prepare"] as const) {
       const decision = decide({ autonomy });
       expect(decision.mode).toBe("prepare");
-      expect(decision.reason).toContain(`“${autonomy}”`);
+      expect(decision.reason).toContain("“Wait for Approval”");
     }
   });
 

@@ -63,8 +63,8 @@ export type ResponsibilityCardProps = {
 
 /** The same wording wherever an autonomy level is shown, not one phrasing per screen. */
 export const AI_MODE_LABEL: Record<ResponsibilityCardProps["aiMode"], string> = {
-  prepare: "WonderHome asks first",
-  execute: "WonderHome handles it",
+  prepare: "Wait for Approval",
+  execute: "Pre Approved",
 };
 
 export function ResponsibilityCard({ icon, tone, title, owner, backup, frequency, aiMode, aiModeLabel, backupLabel, action, onExpand, className }: ResponsibilityCardProps) {

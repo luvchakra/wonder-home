@@ -123,5 +123,5 @@ export function decideConfirmation(input: ConfirmationInput): ConfirmationDecisi
   if (decision.outcome === "execute") {
     return { mode: "auto_apply", reason: `Your household lets WonderHome handle ${outcome.label} on its own, and this was clear. Undo it any time.`, question: null };
   }
-  return { mode: "prepare", reason: `Your household has ${outcome.label} set to “${input.autonomy}”, so WonderHome asks first.`, question: null };
+  return { mode: "prepare", reason: `Your household has ${outcome.label} set to “Wait for Approval”, so WonderHome asks first.`, question: null };
 }

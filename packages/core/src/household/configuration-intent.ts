@@ -367,7 +367,7 @@ function proposeAutonomy(
 
   return {
     kind: "change",
-    summary: `${describeMode(intent.mode)} for ${intent.outcomeLabel}.`,
+    summary: `“${describeMode(intent.mode)}” for ${intent.outcomeLabel}.`,
     downstream: downstreamOf({
       kind: "responsibility",
       outcomeKey: intent.outcomeKey,
@@ -399,9 +399,9 @@ function readAutonomy(text: string): AutonomyMode | null {
 function describeMode(mode: AutonomyMode): string {
   switch (mode) {
     case "prepare":
-      return "Get it ready, and wait for your OK";
+      return "Wait for Approval";
     case "execute":
-      return "Act, then tell you";
+      return "Pre Approved";
   }
 }
 
