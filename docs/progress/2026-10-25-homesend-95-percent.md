@@ -46,13 +46,37 @@ actually sent.
   passed (new `verify.test.ts`, updated `confirmation.test.ts`).
 - Typecheck of `packages/core` and `apps/web`; `npm run lint:help-links`.
 
+## Live run with a real model (2026-10-25, later the same day)
+
+The owner supplied an Anthropic key; it was passed only as an environment
+variable for the runs and is not stored anywhere in the repository. Models:
+understand `claude-haiku-5-5`, answer `claude-sonnet-5-5`, documents
+`claude-opus-5`. (Node needs `NODE_USE_ENV_PROXY=1` and the proxy CA bundle to
+reach Anthropic from a Claude Code cloud container.)
+
+| Run | Cases | HomeSend category | HomeSend end to end | Failing |
+|---|---|---|---|---|
+| 1 | 169/171 | 28/28 (100%) | 27/28 (96.4%) | HS-24, HT-117 |
+| 2 | 170/171 | 28/28 (100%) | 28/28 (100%) | HB-03 |
+| 3 (recorded in `docs/ai-releases/2026-10-25-anthropic-p-ef6f9c4394eb.*`) | 171/171 | 28/28 (100%) | 28/28 (100%) | none |
+
+Unsafe Action Rate 0 in every run. What the runs found, fixed in PR #336:
+
+- **HS-24** tests what WonderHome does with an invented reading. The live
+  model read the message correctly, so there was nothing to catch. It now
+  keeps its recorded reading in a provider run (`recordedReading`).
+- **HT-117**: the fact was in every answer, but sometimes written as
+  "**Likes** — Indian food". The `includes` entry lists that fact's wordings.
+- **HB-03** (a product defect): a helper asking about an adult's withheld
+  appointment still sent HomeBrain to the model, which invented an action or
+  a name in 4 runs of 8. The validator refused each, so nothing leaked, but
+  the call could never produce an answer. `homebrain/turn.ts` now answers a
+  specific question with nothing founding it from WonderHome's own
+  "nothing on record", with no model. Live: 8/8.
+
 ## Open, needs a person
 
-- The deterministic run scores everything after the classifier against
-  recorded readings. The model's own category and field accuracy is only
-  measured by `npm run eval -- --provider configured`, which needs
-  `WONDERHOME_AI_KEY`. This session had no key, so the >95% figure for the
-  live model is not yet measured. Run it and record it with `--write`.
+- Rotate the Anthropic key that was pasted into the chat.
 - 28 HomeSend cases is a small sample for a 95% bar (one failure is 96.4%,
   two is 92.9%). The golden set should grow with real (anonymised) messages
   the household sends.

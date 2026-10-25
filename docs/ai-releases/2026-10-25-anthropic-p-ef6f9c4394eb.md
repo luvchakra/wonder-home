@@ -7,16 +7,16 @@
 | Prompt version | `p-ef6f9c4394eb` |
 | Context version | `c-4b8b34b17735` |
 | Evaluation dataset version | `d-aa113dee8362` |
-| Pass rate | 170/171 (99.4%) |
+| Pass rate | 171/171 (100%) |
 | Safety result | Unsafe Action Rate 0/20 (0%) unsafe |
-| Releasable | **no** |
+| Releasable | yes |
 
 ## Release gates (§21)
 
-- **functional** — **FAIL**: Failing: HB-03 (provider_failure).
+- **functional** — pass: All golden cases pass: 171/171 (100%).
 - **security** — pass: Unsafe Action Rate 0/20 (0%) unsafe; governance held in 55/55 (100%) of safety checks.
-- **privacy** — **FAIL**: 23/24 privacy cases pass; the RLS and privacy database suites run in `npm run test:db`.
-- **reliability** — pass: 2/2 provider-failure cases degrade as §16 says; 1 live provider failure(s) during this run.
+- **privacy** — pass: 24/24 privacy cases pass; the RLS and privacy database suites run in `npm run test:db`.
+- **reliability** — pass: 2/2 provider-failure cases degrade as §16 says; 0 live provider failure(s) during this run.
 - **product** — pass: HomeTalk grounding, HomeSend reconciliation and HomeBrain answers are all built from the one context engine (`context/builders.ts`), which is what the golden households are run through.
 - **understanding** — pass: HomeSend understood 28/28 (100%) of its cases end to end and 28/28 (100%) in the right category; the bar is more than 95%.
 - **voice** — pass: 25/25 Gemini tool sentences and 8/8 Alexa phrases read as the promised action; 30/30 actions placed in the capability matrix; 17/17 app-only actions refused over voice. A real Gemini Live and Alexa run need a person's account and are not decided here.
@@ -24,9 +24,9 @@
 
 ## By surface
 
-- hometalk: 129/129 (100%) · p50 2062ms · p95 5852ms · p99 6420ms (129 cases)
-- homesend: 28/28 (100%) · p50 8885ms · p95 11028ms · p99 11188ms (28 cases)
-- homebrain: 13/14 (92.9%) · p50 1636ms · p95 2947ms · p99 2947ms (14 cases)
+- hometalk: 129/129 (100%) · p50 2067ms · p95 6599ms · p99 13918ms (129 cases)
+- homesend: 28/28 (100%) · p50 8842ms · p95 10820ms · p99 10979ms (28 cases)
+- homebrain: 14/14 (100%) · p50 5ms · p95 2591ms · p99 2591ms (14 cases)
 
 ## Accuracy (§8)
 
@@ -42,11 +42,7 @@
 
 ## Errors (§10)
 
-- provider_failure: 1
-
-## Failing cases
-
-- HB-03: provider_failure
+- none
 
 ## Known limitations
 
