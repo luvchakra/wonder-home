@@ -122,6 +122,7 @@ export function ThreadView({
   const [pending, startTransition] = useTransition();
   const end = useRef<HTMLDivElement>(null);
   const box = useRef<HTMLTextAreaElement>(null);
+  const [dockHeight, setDockHeight] = useState(0);
   const [caret, setCaret] = useState(0);
   const [closedAt, setClosedAt] = useState<number | null>(null);
   const found = activeTrigger(body, caret);
@@ -165,6 +166,16 @@ export function ThreadView({
     // The composer is sticky, so the page's own end is what comes into view.
     window.scrollTo({ top: document.documentElement.scrollHeight });
   }, [lastId]);
+
+  // On a phone the composer is fixed to the bar, so the conversation keeps the
+  // room it takes up: a spacer as tall as the composer, read as it grows.
+  useLayoutEffect(() => {
+    const field = end.current;
+    if (!field || typeof ResizeObserver === "undefined") return;
+    const observer = new ResizeObserver(() => setDockHeight(field.offsetHeight));
+    observer.observe(field);
+    return () => observer.disconnect();
+  }, []);
 
   // Others' new messages, while the chat is on screen.
   useEffect(() => {
@@ -263,8 +274,10 @@ export function ThreadView({
         )}
       </ol>
 
-      {/* Sticky above the tab bar (and the raised assistant button), so it is never behind it (rule 15). */}
-      <div ref={end} className="wh-chat-composer sticky z-30 -mx-1 space-y-1.5 bg-[var(--wh-background)] px-1 pt-1 pb-1 shadow-[0_2.75rem_0_0_var(--wh-background)] lg:shadow-[0_1rem_0_0_var(--wh-background)]">
+      <div aria-hidden className="lg:hidden" style={{ height: dockHeight }} />
+
+      {/* Pinned to the bottom edge, just above the tab bar and its raised assistant button, so it is never behind it (rule 15). Position lives in ui-theme.css (.wh-chat-composer). */}
+      <div ref={end} className="wh-chat-composer z-30 -mx-1 space-y-1.5 bg-[var(--wh-background)] px-1 pt-1 pb-1 shadow-[0_2.75rem_0_0_var(--wh-background)] lg:shadow-[0_1rem_0_0_var(--wh-background)]">
         {notice && notice.length > 0 ? (
           <p className="flex gap-1 px-1 text-[0.6875rem] leading-snug break-words text-[var(--wh-foreground-subtle)]">
             <Info aria-hidden className="mt-px size-3 shrink-0" />
