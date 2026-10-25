@@ -13,15 +13,20 @@ Read on every turn, so keep it short. Mechanics live in `docs/` (pointers below)
 7. Pick the first dependency-ready incomplete story, weighted by step 6.
 
 ## Token economy
-Cost ≈ context size × turns. Every turn re-reads this file, the conversation and every tool result. Measured baseline and results: `docs/progress/2026-10-24-token-economy.md`.
-- **Short sessions.** One batch of finished work per session. `/compact` or a new session after each batch. State lives in `docs/` and PRs, not in chat.
+Cost ≈ context size × turns. Every turn re-reads this file, the whole conversation and every tool result, so the costliest thing is a turn that didn't need to happen. Measured baseline: `docs/progress/2026-10-24-token-economy.md`; this section's habits: `docs/progress/2026-10-25-token-habits.md`.
+- **One request, one session.** After a PR merges, end with "Start a new session for the next request." Never take a new, unrelated request into a session that has already merged one; `/compact` if a request must continue. State lives in `docs/` and PRs, not in chat.
+- **Don't wake for PR noise.** With auto-merge on, open the PR, enable auto-merge and end the turn; don't subscribe to PR activity. Subscribe only when the owner asks to watch a PR or CI has already failed on it. A Vercel bot comment, "subscription created" or "check suite completed" with nothing failing needs no reply beyond one line. A red PR left open is caught at the next session's startup.
 - **Batch.** Group small related requests into one branch and one PR. Add to the open PR while CI runs.
 - **CI waits.** On a CI-completed event, read the check results once and act (merge or fix) in that same turn. No polling, `sleep` loops or repeated status checks.
+- **Ask before investigating** when a request has two plausible readings: one question, before reading any code.
+- **Smallest model that fits.** Haiku or Sonnet for questions, small fixes and doc edits; Opus for multi-file stories, defects with no known cause and live-model evaluation work.
+- **Delegate wide searches.** When finding something needs more than about three greps, hand it to a search subagent; only its summary enters the conversation.
+- **Live model runs are cheapest first.** `npm run eval -- --utterance "…"` reads one sentence; `npm run eval -- --cases HT-117,HS-24 --runs 3` repeats only the cases in question. The full provider run (`--provider configured`, 172 cases, about 15 minutes and real API spend) runs at most once per PR, last. Never write throwaway scripts for what these do. From a Claude Code cloud container, Node reaches a provider only with `NODE_USE_ENV_PROXY=1 NODE_EXTRA_CA_CERTS=/root/.ccr/ca-bundle.crt` and `ANTHROPIC_BASE_URL` unset.
 - **Text before pixels.** For UI, run `node scripts/ui-check.mjs <path> [--click role:name] [--find role:name] [--shot out.jpg]` (Playwright; prints each element's text and box, and flags horizontal overflow at 360 px). Screenshots only when the look matters: one per change, cropped, JPEG at quality 60. Never read full traces, videos or full-page screenshots; read the error summary.
 - **Read narrowly.** `grep -n` first, then read only the line range needed. Don't re-read a file already in context or just edited. Never read these whole: `docs/PROGRESS.md` (236 KB), `tracking/PROGRESS.md` (129 KB), `design/DESIGN-NOTES.md` (73 KB), `design/PRODUCT-DIRECTION-v4-talk-to-wonderhome.md` (50 KB), `package-lock.json` (365 KB), `packages/core/src/i18n/messages/areas/**/*.ts` (locale files up to 254 KB), `apps/web/app/_lib/hometalk-turn.ts` (123 KB), `docs/testing/HOMETALK-HOMEBRAIN-INTEGRATION-TEST-CASES.md` (87 KB), `supabase/seed/**/*.csv`, `supabase/migrations/20261020231000_companion_sayings.sql` (174 KB), `packages/core/src/school/companion-sayings.json`, `docs/ai-releases/*.json`, and the mockup PNGs in `design/` (about 2 MB each; open only the screen you change).
 - **Quiet output.** Pipe through `tail -n 40` or `grep -E "error|fail"`. Use `git -q` and `npm --silent`. Run only the touched area's tests (`npx vitest run <path>`, `npx playwright test <spec>`), never the full suite unless asked.
 - **Short replies.** The outcome and what the owner should check. Don't narrate each step.
-- **End every message with the IST time to the second**, on its own last line, read fresh from `TZ=Asia/Kolkata date '+%Y-%m-%d %H:%M:%S IST'` (e.g. `2026-10-25 01:33:08 IST`). Every reply, never a reused time (owner, 2026-10-25).
+- **End every message with the IST time to the second**, on its own last line (e.g. `2026-10-25 01:33:08 IST`), never a time reused from an earlier message (owner, 2026-10-25). When this turn already has the current time (a notice's `current-time`, or a command just run), convert that; otherwise read it with `TZ=Asia/Kolkata date '+%Y-%m-%d %H:%M:%S IST'`, in the same call as other work where there is one.
 
 ## Mission
 Build **WonderHome**, an AI-driven Household Operating System, on the stack below. Greenfield. Mobile-first responsive Next.js/PWA, not React Native.
@@ -35,93 +40,47 @@ Next.js 16 App Router · React 19 · TypeScript 5.9.x · Tailwind CSS 4 · Radix
 No React Native, other backend framework, Clerk, Prisma or other ORM without an explicit architecture decision.
 
 ## Design principles — keep every screen close to the mockups
-Approved sheets in `design/` are the look. Read the UI contract (Mandatory startup 5) before UI work.
+Full rules, the owner's exceptions and the Brand section: `docs/design-principles.md`. **Read it before any UI work** (with Mandatory startup 5). The titles, as code cites them:
+1. Warm, never clinical.
+2. One handwritten line per screen, closing it.
+3. Blue commits, domains colour, state speaks in words.
+4. Every row: tinted `IconTile`, name, one line of reason, then the single thing to do.
+5. Botanical framing: faint `LeafDecor`, behind content.
+6. Five primary areas at every size
+7. A human sentence opens every screen
+8. Imagery is warm family life
+9. Numbers are arithmetic someone can explain.
+10. Mobile-first and real.
+11. A name is never truncated
+12. Every entity can be added, updated and removed.
+13. One door to the assistant.
+14. No two buttons for the same job.
+15. Show the whole thing.
+16. Swipe moves between the five areas
+17. Group by what the reader is deciding
+18. A stat tile takes the width its label needs.
+19. Two cards per row on a phone, never three.
+20. A choice is picked, not typed.
+21. A card opens to its full detail.
+22. Money is decimal.
+23. Every setting has one editor.
 
-1. **Warm, never clinical.** Cream page, white cards, soft shadows, generous rounding and whitespace. Never grey, never pure-white page, never a dense dashboard.
-2. **One handwritten line per screen**, closing it: `ScriptAccent` or `QuoteCard`, once, decoration only. Nothing a household must read is said only in script.
-3. **Blue commits, domains colour, state speaks in words.** Primary Blue for every committing action and the active nav state. A domain colour sits on its `IconTile` only, never on text. Amber = attention; red = genuinely critical only; green = handled. Colour never carries meaning alone: wording and the offered action do.
-4. **Every row:** tinted `IconTile`, name, one line of reason, then the single thing to do. Nothing to do → no action.
-5. **Botanical framing:** `LeafDecor` in corners of the signed-out frame, landing hero and closing section. Faint, behind content, never over readable text.
-6. **Five primary areas at every size**, assistant raised in the middle of the phone tab bar: Home, Calendar, HomeTalk, Family, More. Calendar replaced Today on 2026-10-18 (D1 of `design/FAMILY-CALENDAR-PHASE0.md`); Today's plan is one tap from the Calendar's day view. Domains live in the desktop sidebar and behind More.
-7. **A human sentence opens every screen** (greeting with the person's name, plain-language lede) and a warm one closes it. No bare table dropped on the page.
-8. **Imagery is warm family life**, illustrated in the household's tones. Never stock photography or stretched screenshots; product visuals are real components in device frames.
-9. **Numbers are arithmetic someone can explain.** A ring, metric or percentage counts things the system evaluated. Never invent one; never show a figure without a source.
-10. **Mobile-first and real.** Every screen works at 360px with no horizontal scroll, honours `prefers-reduced-motion`, has empty, error and loading states, and never offers a button that does nothing because its provider isn't live.
-11. **A name is never truncated** (person, household, grocery item, outcome): no `truncate`/ellipsis. Wrap to a second line first. Row actions are icons with `aria-label` (not tooltip-only), not full-width text buttons.
-12. **Every entity can be added, updated and removed.** A change can revise what it said and undo the add. "Removed" fits the entity (retire, deactivate, stand down, cancel) and is never a hard delete that orphans history. "Add" stays reachable once a first instance exists, not only from the empty state.
-13. **One door to the assistant.** HomeTalk is the one door, reachable wherever the mic icon is. No screen adds its own "Ask AI", "HomeTalk" or "Assign with AI" shortcut. Manual add/update/remove is the screen's own job. HomeSend's paperclip is a second input modality of the same door. `/home-send` is the one deliberate second surface (drop zone plus inbox awaiting confirm) on the same pipeline; no future screen may cite it as precedent.
-14. **No two buttons for the same job.** Before a header or empty state gets a second action, ask what each does. Two "add this" pills (manual and `/ai`) is a duplicate; the AI-routed one goes. A second control earns its place only if it does something different a reader would name.
-15. **Show the whole thing.** Names, amounts, dates and status words are never cut to fit. Fixed chrome (tab bar, raised assistant button, sticky header) reserves clearance so the last row or closing `QuoteCard` never sits behind it. When you resize fixed chrome, re-check the page's padding.
-16. **Swipe moves between the five areas** in `PRIMARY_NAVIGATION` order. A full-width horizontal swipe on a primary screen goes to the next or previous area. It is additive: tabs and sidebar stay. Ignore it when a horizontal scroller, carousel or swipeable row underneath wants it, and never fire it inside a sheet, dialog or form. Respect `prefers-reduced-motion`.
-17. **Group by what the reader is deciding**: the thing most likely to need them first, then what they'd do next, then the record of what happened. Put a control beside what it acts on, even if that moves existing content.
-18. **A stat tile takes the width its label needs.** `MetricGrid`/`StatChips` never squeeze three or four tiles into a phone row. On a narrow screen a tile is full width or one of two (rule 19); widen only at `sm` and up with room for every label. Same test for any new row of small cards.
-19. **Two cards per row on a phone, never three.** Hard constraint for every card grid:
-    - at most two per row; ~48% width each with one consistent gap;
-    - stack vertically when the content needs more width (rule 15 wins);
-    - primary information is a full-width card, never one of a pair;
-    - secondary shortcuts (domain tiles, quick links, at-a-glance counts) use the two-column grid;
-    - never shrink type or tap area to make a row fit.
-    - **Owner's exceptions, not precedent:** Kids & School Overview counts (2026-10-18) and Bills & Finance Overview counts Need you / Upcoming / Settled (2026-10-20) sit three across as `ExpandableMetricRow` (stacked, labels wrap, open tile's entries in a full-width panel below). Groceries' To buy cards At home / Not counted yet / Mark as bought (2026-10-20) and HomeBrain's Registered / Learned / Need review (2026-10-21) sit three across as `MetricCard stacked`. Any other three-across grid is the owner's call.
-20. **A choice is picked, not typed.** A known set (category, relationship, unit, status, frequency) is a dropdown, tag picker, radio group or checkbox list. Free text only for names, notes and amounts. Before adding a text input, ask whether its answers are a known set. Units use `ComboboxField` backed by `VITAL_UNITS` (`health/vitals.ts`). Every picker has an inline Add-new… for a value not yet listed.
-21. **A card opens to its full detail.** A summary card carries a down chevron that expands in place to every field and action. The chevron is the only way in; no second "view more" link. Use `ExpandableRow` (one list row), `AgendaExpandableRow` (any domain's `HomeAssessment` row), or `ExpandableMetricGrid` with `MetricDetailList`/`MetricDetailRow`/`MetricDetailEmpty` (stat-card grid). Never hand-roll open/close.
-22. **Money is decimal.** Amounts in the currency's major unit everywhere entered or shown (42.50, never 4250). Convert to minor units only at a provider's API boundary, and convert back before showing anyone anything.
-23. **Every setting has one editor.** `/settings` holds the profile and one chevron row per setting, each opening its own page: Language & Region, Notifications, Voice and Voice assistants, AI Assistant (`/settings/ai`), Privacy and Location sharing (`/settings/location`; a child's is set by a guardian in Family), WhatsApp, Connected accounts, Your plan (`/settings/plan`). Other screens may show a value and link there, but never keep a second form, write path or default. Onboarding writes through the same repositories Settings uses. A person's own profile is edited only in Settings; an Admin changes someone else's in Family. A row appears only when this person can use what it opens; nothing unbuilt is listed.
-
-**Brand.** The sheet is `design/WonderHome-brand-guidelines.png`. The wordmark is WonderHome, one word, in the brand ink, solid colour (`WORDMARK_LETTERS` in `packages/core/src/brand/mark.ts` is the one source). The mark is the rounded tile in `mark.ts`; `npm run brand` writes the icons and CI checks they match. Tagline: "Less mental load. More family time!" Tokens live in `packages/core/src/ui-theme.css`; typeface Sora; hexes in `docs/design-brand.md`. Never hand-draw a second logo, paste a raster of the logo, or reach for a hex the tokens don't carry. Use the shared kit `@wonderhome/core/ui/*`. No screen invents its own card, row, pill or tile. A new pattern goes into the kit, with a note in `design/DESIGN-NOTES.md` naming the rule it encodes.
+Brand: tokens in `packages/core/src/ui-theme.css`, the shared kit `@wonderhome/core/ui/*`, the one wordmark in `brand/mark.ts`. Never a second logo, a raster of it, or a hex the tokens don't carry.
 
 ## The agent platform: HomeTalk, HomeBrain, HomeSend
-Detail: `docs/agent-platform.md`. Read it before changing conversation, HomeBrain, HomeSend, HomePlaces, voice or evaluation code. One pipeline, three real surfaces, each wired end to end.
-
-- **HomeTalk** (`/ai`, `packages/core/src/components/ui/talk-composer.tsx`) is the one door (rule 13). Spoken and typed turns both run through `conversation/engine.ts`.
-  - Every action is grounded before a proposal exists (`conversation/grounding.ts`): names via the Wave 1 resolver, dates via `conversation/temporal.ts` (code decides the day, in household time), references via `conversation/references.ts`. Still uncertain → one focused question, never a guess.
-  - A correction replaces a pending proposal or undoes an executed write through its domain service, both kept on the record (`conversation/corrections.ts`).
-  - Multi-request sentences are split (`conversation/decompose.ts`); a dependent part runs only if its earlier part happened.
-  - Consent (`conversation/consent.ts`): an adult's everyday, undoable change is done at once ("Say undo to take it back"). Changes touching someone else are asked once. Paying and ordering always wait for a tap on screen. Child, helper and agent actions follow autonomy. An Admin's "Ask before acting" makes every act a question.
-  - A reminder is a notification to the speaker alone, held until `scheduled_for`. An add that changed nothing says "Nothing to change", never "Done".
-  - Models see facts only. `withoutServerOnly` strips anything the server decides (ids, grounded dates, undo records). Replies are composed in English, the record; other languages go through `conversation/reply-language.ts`. A new action needs a `REPLY_CLASSES` entry.
-  - Extend `conversation/evaluation.test.ts` when an understanding changes; never loosen it.
-- **HomeBrain** (`conversation/brain.ts`, `ai/model-client.ts`) gives the reasoning behind a reply. It is a real model call behind the same consent, minimisation and entitlement gates, and never decides: every downstream gate runs on its output.
-  - No model answer reaches a person unvalidated: `homebrain/validate.ts` refuses invented names, dates, amounts, events, health or integration claims and "I've done it" claims. Extend it when a new kind of invention appears; never route around it.
-  - "Why?" is answered from evidence in `homebrain/why.ts`, never by a model.
-  - The household context is one server-only row (`household_context`, `homebrain/context-store.ts`). Never read it from a session, and never answer from a row older than the last write.
-- **HomeSend** (`packages/core/src/homesend/`, `ai/classify-intake.ts`, `/home-send`) is the intake. Every input enters through `homesend/ingest.ts` and ends in `IntakeUnderstanding`. A new input type is a new `ingest*` entry point, never a second pipeline.
-  - Nothing reaches a domain table until a person confirms. Bills, health documents and receipts always wait for a person.
-  - Nothing is added on its own unless HomeSend is more than 95% sure: every detail found in the text sent (`homesend/verify.ts`). Photos and files always wait. The `understanding` eval gate keeps HomeSend above 95% in category and end to end.
-  - Told in HomeTalk about a new dated thing (`file_with_homesend`), the sentence goes through `ingestText` like a paste, never straight to a table.
-  - A class outside school is its own kind, never school work (`activity_item`, 08-027): filed under the child's class of that name in Kids & School, the class added in the same step when missing. An event or invitation (`event`) goes on the calendar through `addFamilyEvent`.
-  - All content is untrusted: `injection.ts` fences it and ignores instructions aimed at WonderHome. Links are fetched only through `link-fetch.ts` (public addresses, DNS pinned, every redirect checked).
-  - Duplicates are shown and moved dates are offered as updates, never a second copy (`reconcile.ts`). Document plans (`homesend/plan.ts`) apply only through `applyDocumentPlanAction`, and never on their own when there are two or more records.
-  - Failed items are kept under "Failed safely", never dropped. Every routed item can be undone through `homesend/changes.ts`, never a raw delete.
-- **HomePlaces** (`packages/core/src/homeplaces/`, intent `find_places`) is a read, never a write. Where and when come from the record; assumptions are said back. Never store a placeholder name.
-- **Voice channels are doors into HomeTalk, never second brains.** Every channel asks through `hometalk/gateway.ts`; `completed` is only the executor's own record. What each channel may do is `voicelink/capabilities.ts`. A new voice capability is an allowlisted tool mapped to a HomeTalk utterance, never a tool that reaches a table. Paying and ordering are never by voice. Spoken replies pass through `conversation/speech.ts` `speakable`.
-- **Agents** run a governed pipeline: `ai/gather-assessments.ts` → `ai/specialists.ts` `coordinate()` → `ai/orchestrator.ts` → `ai/tools.ts` `authorizeToolCall()` (scope → entitlement → permission → autonomy) → `ai/executors.ts`. Autonomy reads "observe" on any error. AI agents use governed tools and never mutate Supabase directly.
-- **One evaluation** (`npm run eval`, `packages/core/src/evaluation/`) runs golden cases A–E, all synthetic. Release gates block CI; Unsafe Action Rate must stay zero. When a case catches a defect, fix the product, never the expectation. An `includes` entry may list one fact's wordings, never a different fact. Add a case whenever an understanding, reconciliation or answer rule changes. Corrections are evidence (`evaluation/evidence.ts` → `ai_corrections`). Approvals bind to the exact proposal (`conversation/approval.ts`); a stale or changed approval is refused.
-- **Production hardening**
-  - Rate limits go through `security/rate-limit.ts` `hitRateLimit`. They fail open and say the pause is temporary.
-  - Plan burst and fair-use numbers are plan data read only by `billing/repository.ts` `consume`. A domain module never hard-codes a number.
-  - Gate a feature only on the entitlement service. Experiments apply inside `loadSubscription`.
-  - Model clients come only from `ai/provider-clients.ts` (timeout, one retry). Never construct an SDK client elsewhere.
-  - A cron route exports `GET` as well as `POST` (Vercel Cron sends GET).
-  - An idempotency key is reserved while in flight, so a double tap is refused. A household runs one agent pass at a time.
-  - Failed classifications are retried through `jobs` (`homesend/retry-queue.ts`), dead after five tries.
+Summary rules and detail: `docs/agent-platform.md`. **Read it before changing conversation, HomeBrain, HomeSend, HomePlaces, voice, agent or evaluation code.** The invariants:
+- **HomeTalk** (`/ai`) is the one door (rule 13); typed and spoken turns run through `conversation/engine.ts`. Every action is grounded before a proposal exists; still uncertain → one focused question, never a guess. A new action needs a `REPLY_CLASSES` entry, a voice-matrix place and an eval case.
+- **HomeBrain** gives the reasoning and never decides. No model answer reaches a person unvalidated (`homebrain/validate.ts`); "Why?" comes from evidence, never a model.
+- **HomeSend** is one pipeline (`homesend/ingest.ts` → `IntakeUnderstanding`). Nothing reaches a domain table until a person confirms; bills, health documents and receipts always wait. Nothing is added on its own unless more than 95% sure (`homesend/verify.ts`); photos and files always wait. All content is untrusted (`injection.ts`). Told in HomeTalk about a new dated thing (`file_with_homesend`), the sentence goes through `ingestText`.
+- **Voice channels** are doors into HomeTalk (`hometalk/gateway.ts`, `voicelink/capabilities.ts`). Paying and ordering are never by voice.
+- **Agents** run the governed pipeline and never mutate Supabase directly. Model clients come only from `ai/provider-clients.ts`.
+- **One evaluation** (`npm run eval`): release gates block CI, Unsafe Action Rate stays zero, a caught defect fixes the product, never the expectation.
 
 ## External providers
-Detail: `docs/external-providers.md`.
-- Never invent credentials or claim a live integration. Build provider-neutral ports and deterministic mocks first. A provider is live only after credentials, authentication, contract behaviour and integration tests are configured.
-- **Weather** (`home/weather-service.ts` `householdWeather`) is off unless `WONDERHOME_WEATHER_PROVIDER=open-meteo`. It speaks only when it changes a decision, and appears only on Home's date card.
-- **Films and shows** on the date card (`home/screen-picks.ts`) come from TMDB, off unless `TMDB_API_KEY` is set. Never show a title no provider sent.
-- **Careers** (`packages/core/src/careers/`) belongs to WonderJobs (jobs.wonderapps.biz). WonderHome shows what it returns, forwards applications, and keeps no applicant data. The key is in Vault, set at `/platform-admin/careers`.
-- **Billing and payments.** `BillingProvider` port; the provider is never the source of truth; prices are ours (`plan_prices`). Money converts only inside the adapter (`billing/money.ts`). Webhooks are HMAC-verified and applied once. Only `applyBillingEvent` moves a subscription. Cancellation waits for period end. A household never moves to a paid plan without a verified payment; `plans.requires_payment` is refused by RLS and `changePlan`. Every plan is unmarked today ("Free during early access"). Marking plans paid and setting prices are a person's decision, never invented.
-- **WhatsApp** (`packages/core/src/whatsapp/`, `notifications/whatsapp.ts`) is a delivery channel, a HomeSend intake and a HomeTalk surface. It is an input channel, never an authorization channel. The household and member come from the verified link, never from the message. Replies never echo an amount, health detail or number. Inert until its `WHATSAPP_*` variables are set.
-- **Partner keys** (`/api/v1/partner/*`, `packages/core/src/developer/`) are off unless `WONDERHOME_DEVELOPER_API=on`. Scopes only narrow. A sandbox key (`whk_test_`) writes nothing. Writes go through the same domain service a screen uses.
+Summary rules and detail: `docs/external-providers.md`, read before touching weather, films, careers, billing, WhatsApp or partner keys. The invariants: never invent credentials or claim a live integration (ports and deterministic mocks first); every provider is off until its own variables are set; prices are ours and a household never moves to a paid plan without a verified payment; WhatsApp is an input channel, never an authorization channel, and its replies never echo an amount, health detail or number.
 
 ## Smart notifications (module 23)
-Detail: `docs/notifications.md`. Reminders are about real records, never fired-and-forgotten text.
-- Derived from records (`sources.ts`) and reconciled idempotently (`reconcile.ts`). Timing is on the household's clock (`timing.ts`); never read `getUTCHours()` for a person's day.
-- One recipient per reminder (`plan.ts`). A recipient changes only its state (seen, done, dismissed, snooze), never its content; a trigger enforces this.
-- Acting on the thing goes through the domain's own service, never a notification write.
-- Only `deliverNotification` pushes (`notifications/web-push.ts`, `push-gate.ts`), mails (`notifications/email.ts`, to the account's confirmed email) or sends anything. Every email uses `email/layout.ts` `renderEmailLayout`. Muting (`notification_channel_mutes`) is honoured, but critical always goes.
-- Notices (`notices.ts`) are one thread per record, built with a test. A new kind is a new source plus a policy entry, with `reminder.*` wording in every language, never a new writer of `notifications`.
+Summary rules and detail: `docs/notifications.md`, read before touching `packages/core/src/notifications/`. The invariants: reminders are derived from real records and reconciled idempotently, on the household's clock; one recipient per reminder, who changes only its state; only `deliverNotification` pushes, mails or sends; a new kind is a new source plus a policy entry with `reminder.*` wording in every language.
 
 ## Product rules
 - Manage outcomes, not micro-task checklists. Normal routines are silent. Househelpers don't update every chore.

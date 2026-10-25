@@ -1,6 +1,16 @@
 # Smart notifications
 
-Reference detail moved verbatim from CLAUDE.md (2026-10-24, token-economy pass). Summary rules stay in `CLAUDE.md` under *Notifications*. Read this file only when you change `packages/core/src/notifications/` or a source a reminder reads.
+Reference detail moved verbatim from CLAUDE.md (2026-10-24, token-economy pass). The summary rules followed on 2026-10-25 and are the next section; `CLAUDE.md` keeps only the invariants. Read this file only when you change `packages/core/src/notifications/` or a source a reminder reads.
+
+## Summary rules (from CLAUDE.md)
+
+Detail: `docs/notifications.md`. Reminders are about real records, never fired-and-forgotten text.
+- Derived from records (`sources.ts`) and reconciled idempotently (`reconcile.ts`). Timing is on the household's clock (`timing.ts`); never read `getUTCHours()` for a person's day.
+- One recipient per reminder (`plan.ts`). A recipient changes only its state (seen, done, dismissed, snooze), never its content; a trigger enforces this.
+- Acting on the thing goes through the domain's own service, never a notification write.
+- Only `deliverNotification` pushes (`notifications/web-push.ts`, `push-gate.ts`), mails (`notifications/email.ts`, to the account's confirmed email) or sends anything. Every email uses `email/layout.ts` `renderEmailLayout`. Muting (`notification_channel_mutes`) is honoured, but critical always goes.
+- Notices (`notices.ts`) are one thread per record, built with a test. A new kind is a new source plus a policy entry, with `reminder.*` wording in every language, never a new writer of `notifications`.
+
 
 Smart notifications (module 23, `packages/core/src/notifications/`) are
 reminders about real records, never lines of text fired and forgotten.

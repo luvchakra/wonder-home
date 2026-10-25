@@ -1,6 +1,44 @@
 # Agent platform: HomeTalk, HomeBrain, HomeSend
 
-Reference detail moved verbatim from CLAUDE.md (2026-10-24, token-economy pass). Summary rules stay in `CLAUDE.md` under *The agent platform*. Read this file only when you change conversation, HomeBrain, HomeSend, HomePlaces, voice or evaluation code.
+Reference detail moved verbatim from CLAUDE.md (2026-10-24, token-economy pass); the summary rules followed on 2026-10-25 and are the next section. `CLAUDE.md` keeps only the invariants. Read this file before you change conversation, HomeBrain, HomeSend, HomePlaces, voice or evaluation code.
+
+## Summary rules (from CLAUDE.md)
+
+Detail: `docs/agent-platform.md`. Read it before changing conversation, HomeBrain, HomeSend, HomePlaces, voice or evaluation code. One pipeline, three real surfaces, each wired end to end.
+
+- **HomeTalk** (`/ai`, `packages/core/src/components/ui/talk-composer.tsx`) is the one door (rule 13). Spoken and typed turns both run through `conversation/engine.ts`.
+  - Every action is grounded before a proposal exists (`conversation/grounding.ts`): names via the Wave 1 resolver, dates via `conversation/temporal.ts` (code decides the day, in household time), references via `conversation/references.ts`. Still uncertain → one focused question, never a guess.
+  - A correction replaces a pending proposal or undoes an executed write through its domain service, both kept on the record (`conversation/corrections.ts`).
+  - Multi-request sentences are split (`conversation/decompose.ts`); a dependent part runs only if its earlier part happened.
+  - Consent (`conversation/consent.ts`): an adult's everyday, undoable change is done at once ("Say undo to take it back"). Changes touching someone else are asked once. Paying and ordering always wait for a tap on screen. Child, helper and agent actions follow autonomy. An Admin's "Ask before acting" makes every act a question.
+  - A reminder is a notification to the speaker alone, held until `scheduled_for`. An add that changed nothing says "Nothing to change", never "Done".
+  - Models see facts only. `withoutServerOnly` strips anything the server decides (ids, grounded dates, undo records). Replies are composed in English, the record; other languages go through `conversation/reply-language.ts`. A new action needs a `REPLY_CLASSES` entry.
+  - Extend `conversation/evaluation.test.ts` when an understanding changes; never loosen it.
+- **HomeBrain** (`conversation/brain.ts`, `ai/model-client.ts`) gives the reasoning behind a reply. It is a real model call behind the same consent, minimisation and entitlement gates, and never decides: every downstream gate runs on its output.
+  - No model answer reaches a person unvalidated: `homebrain/validate.ts` refuses invented names, dates, amounts, events, health or integration claims and "I've done it" claims. Extend it when a new kind of invention appears; never route around it.
+  - "Why?" is answered from evidence in `homebrain/why.ts`, never by a model.
+  - The household context is one server-only row (`household_context`, `homebrain/context-store.ts`). Never read it from a session, and never answer from a row older than the last write.
+- **HomeSend** (`packages/core/src/homesend/`, `ai/classify-intake.ts`, `/home-send`) is the intake. Every input enters through `homesend/ingest.ts` and ends in `IntakeUnderstanding`. A new input type is a new `ingest*` entry point, never a second pipeline.
+  - Nothing reaches a domain table until a person confirms. Bills, health documents and receipts always wait for a person.
+  - Nothing is added on its own unless HomeSend is more than 95% sure: every detail found in the text sent (`homesend/verify.ts`). Photos and files always wait. The `understanding` eval gate keeps HomeSend above 95% in category and end to end.
+  - Told in HomeTalk about a new dated thing (`file_with_homesend`), the sentence goes through `ingestText` like a paste, never straight to a table.
+  - A class outside school is its own kind, never school work (`activity_item`, 08-027): filed under the child's class of that name in Kids & School, the class added in the same step when missing. An event or invitation (`event`) goes on the calendar through `addFamilyEvent`.
+  - All content is untrusted: `injection.ts` fences it and ignores instructions aimed at WonderHome. Links are fetched only through `link-fetch.ts` (public addresses, DNS pinned, every redirect checked).
+  - Duplicates are shown and moved dates are offered as updates, never a second copy (`reconcile.ts`). Document plans (`homesend/plan.ts`) apply only through `applyDocumentPlanAction`, and never on their own when there are two or more records.
+  - Failed items are kept under "Failed safely", never dropped. Every routed item can be undone through `homesend/changes.ts`, never a raw delete.
+- **HomePlaces** (`packages/core/src/homeplaces/`, intent `find_places`) is a read, never a write. Where and when come from the record; assumptions are said back. Never store a placeholder name.
+- **Voice channels are doors into HomeTalk, never second brains.** Every channel asks through `hometalk/gateway.ts`; `completed` is only the executor's own record. What each channel may do is `voicelink/capabilities.ts`. A new voice capability is an allowlisted tool mapped to a HomeTalk utterance, never a tool that reaches a table. Paying and ordering are never by voice. Spoken replies pass through `conversation/speech.ts` `speakable`.
+- **Agents** run a governed pipeline: `ai/gather-assessments.ts` → `ai/specialists.ts` `coordinate()` → `ai/orchestrator.ts` → `ai/tools.ts` `authorizeToolCall()` (scope → entitlement → permission → autonomy) → `ai/executors.ts`. Autonomy reads "observe" on any error. AI agents use governed tools and never mutate Supabase directly.
+- **One evaluation** (`npm run eval`, `packages/core/src/evaluation/`) runs golden cases A–E, all synthetic. Release gates block CI; Unsafe Action Rate must stay zero. When a case catches a defect, fix the product, never the expectation. An `includes` entry may list one fact's wordings, never a different fact. Add a case whenever an understanding, reconciliation or answer rule changes. Corrections are evidence (`evaluation/evidence.ts` → `ai_corrections`). Approvals bind to the exact proposal (`conversation/approval.ts`); a stale or changed approval is refused.
+- **Production hardening**
+  - Rate limits go through `security/rate-limit.ts` `hitRateLimit`. They fail open and say the pause is temporary.
+  - Plan burst and fair-use numbers are plan data read only by `billing/repository.ts` `consume`. A domain module never hard-codes a number.
+  - Gate a feature only on the entitlement service. Experiments apply inside `loadSubscription`.
+  - Model clients come only from `ai/provider-clients.ts` (timeout, one retry). Never construct an SDK client elsewhere.
+  - A cron route exports `GET` as well as `POST` (Vercel Cron sends GET).
+  - An idempotency key is reserved while in flight, so a double tap is refused. A household runs one agent pass at a time.
+  - Failed classifications are retried through `jobs` (`homesend/retry-queue.ts`), dead after five tries.
+
 
 ## The agent platform: HomeTalk, HomeBrain, HomeSend
 WonderHome's AI layer is one pipeline with three named, real surfaces —
