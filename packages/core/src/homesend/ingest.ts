@@ -184,7 +184,10 @@ async function transcribeWithGemini(
     listMembers(supabase, householdId, null).catch(() => []),
   ]);
   const key = resolveModelKey(voiceKey ?? householdKey, platformKey());
-  if (!policy || !geminiMayTranscribe(key, policy) || !key.key) return { status: "unavailable" };
+  if (!policy || !geminiMayTranscribe(key, policy) || !key.key) {
+    logNotTranscribed("gemini", clip, !key.key ? "no_gemini_key" : !policy ? "no_data_use_policy" : "data_use_excludes_google");
+    return { status: "unavailable" };
+  }
   try {
     const text = await live.transcribeAudioFile(key.key, {
       base64: clip.base64,
@@ -205,9 +208,14 @@ async function transcribeWithGemini(
  * WhatsApp voice note failed and nothing said why). The error and the
  * audio's type and size only — never the audio or any words from it.
  */
-function logTranscriptionFailure(service: "cloud_speech" | "gemini", clip: AudioClip, error: unknown): void {
+function logTranscriptionFailure(service: "cloud_speech" | "gemini" | "unknown", clip: AudioClip, error: unknown): void {
   // A key can ride in a request URL ("?key=…"); it never reaches a log.
   const reason = error instanceof Error ? `${error.name}: ${error.message}`.replace(/([?&]key=)[^&\s"']+/gi, "$1[redacted]").replace(/AIza[0-9A-Za-z_-]{20,}/g, "[redacted]").slice(0, 300) : "unknown error";
+  logNotTranscribed(service, clip, reason);
+}
+
+/** Why a voice note was not written down, with no words, audio or key in it. */
+function logNotTranscribed(service: "cloud_speech" | "gemini" | "unknown", clip: AudioClip, reason: string): void {
   console.warn("[homesend] voice note not transcribed", { service, mimeType: clip.mimeType, approxBytes: Math.round((clip.base64.length * 3) / 4), reason });
 }
 
@@ -603,7 +611,10 @@ async function ingestFileFor(supabase: SupabaseClient, owner: FileOwner, input: 
 
 async function hearVoiceNote(supabase: SupabaseClient, actor: IngestActor, itemId: string, clip: AudioClip, deps: IngestDeps): Promise<IngestOutcome> {
   const transcribe = deps.transcribe ?? defaultTranscribe;
-  const heard = await transcribe(supabase, actor.householdId, clip).catch((): TranscribeResult => ({ status: "failed" }));
+  const heard = await transcribe(supabase, actor.householdId, clip).catch((error: unknown): TranscribeResult => {
+    logTranscriptionFailure("unknown", clip, error);
+    return { status: "failed" };
+  });
   if (heard.status !== "transcribed") {
     const reason = heard.status === "unavailable" ? "transcription_unavailable" : "transcription_failed";
     await markHomeSendFailed(supabase, actor.householdId, itemId, reason);

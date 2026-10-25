@@ -67,6 +67,13 @@ describe("HomeSend metrics (Wave 3 §19)", () => {
     expect(metrics.correction).toEqual({ count: 1, of: 3 });
   });
 
+  it("splits corrections by the kind each confirmed item was read as", () => {
+    expect(metrics.correctionByKind).toEqual({
+      // The auto-added grocery had nobody to confirm it, so it is not counted.
+      school_item: { count: 1, of: 3 },
+    });
+  });
+
   it("counts writes that stood, rejections kept safely and the queue waiting on a person", () => {
     expect(metrics.downstreamWriteSuccess).toEqual({ count: 3, of: 4 });
     expect(metrics.safeRejection).toEqual({ count: 1, of: 10 });
