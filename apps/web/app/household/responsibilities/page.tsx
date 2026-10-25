@@ -14,7 +14,8 @@ import { SectionHeader } from "@wonderhome/core/ui/section-header";
 import { SegmentedControl } from "@wonderhome/core/ui/segmented-control";
 import { EmptyState } from "@wonderhome/core/ui/states";
 
-import { AUTONOMY_MODES, type AutonomyMode } from "@wonderhome/core/household/autonomy";
+import { AUTONOMY_MODES } from "@wonderhome/core/household/autonomy";
+import { groupByArea, groupByOwner, sharedMode, type Row } from "../../_lib/responsibility-groups";
 import { AcceptRebalanceButton, AddResponsibilityButton, ResponsibilityGroup, ResponsibilityRow, type GroupAutonomyLabels } from "../../_components/responsibility-controls";
 import { cadenceLabel } from "../../_lib/cadence";
 import { perWeekWords, responsibilityLabels, starterOutcomes } from "../../_lib/manage-labels";
@@ -22,70 +23,6 @@ import { requireSession, type Session } from "../../_lib/session";
 
 export const metadata = { title: "Responsibilities" };
 export const dynamic = "force-dynamic";
-
-type Row = {
-  id: string;
-  outcome_key: string;
-  primary_member_id: string | null;
-  backup_member_id: string | null;
-  ai_mode: "observe" | "prepare" | "approve" | "execute";
-  priority: number;
-  playbook_items: { name: string; outcome_definition: string; cadence: Record<string, unknown> } | { name: string; outcome_definition: string; cadence: Record<string, unknown> }[] | null;
-};
-
-/**
- * Groups rows by who owns them, in household-member order, with a final
- * "Unowned" group for outcomes nobody owns yet — the group the household
- * most needs to notice, so it goes last rather than getting lost among
- * named owners (design rule 17: the thing to decide first reads first, and
- * an unassigned outcome is a decision, not a record of one already made).
- */
-function groupByOwner(
-  rows: Row[],
-  members: { id: string; displayName: string }[],
-  nobodyYet: string,
-): { ownerId: string | null; ownerName: string; rows: Row[] }[] {
-  const byOwner = new Map<string | null, Row[]>();
-  for (const row of rows) {
-    const key = row.primary_member_id;
-    const existing = byOwner.get(key);
-    if (existing) existing.push(row);
-    else byOwner.set(key, [row]);
-  }
-
-  const groups: { ownerId: string | null; ownerName: string; rows: Row[] }[] = members
-    .map((member) => ({ ownerId: member.id, ownerName: member.displayName, rows: byOwner.get(member.id) ?? [] }))
-    .filter((group) => group.rows.length > 0);
-
-  const unowned = byOwner.get(null) ?? [];
-  if (unowned.length > 0) groups.push({ ownerId: null, ownerName: nobodyYet, rows: unowned });
-
-  return groups;
-}
-
-/** The outcome areas the starter outcomes name; any other prefix is shown as written. */
-const KNOWN_AREAS = new Set(["laundry", "meals", "groceries", "finance", "school", "home", "pets", "kids"]);
-
-/** An outcome's area is the part of its key before the dot: "laundry.ready" is laundry. */
-function areaOf(outcomeKey: string): string {
-  return outcomeKey.split(".")[0] ?? outcomeKey;
-}
-
-/** Groups rows by outcome area, in the order the first row of each area appears (priority order). */
-function groupByArea(rows: Row[], t: Translate): { ownerId: null; ownerName: string; rows: Row[] }[] {
-  const byArea = new Map<string, Row[]>();
-  for (const row of rows) {
-    const area = areaOf(row.outcome_key);
-    const existing = byArea.get(area);
-    if (existing) existing.push(row);
-    else byArea.set(area, [row]);
-  }
-  return [...byArea].map(([area, areaRows]) => ({
-    ownerId: null,
-    ownerName: KNOWN_AREAS.has(area) ? t(`manage.resp.area.${area}` as Parameters<Translate>[0]) : area.replace(/_/g, " "),
-    rows: areaRows,
-  }));
-}
 
 /**
  * Responsibilities (requirements §14): outcomes, not micro-task sequences.
@@ -223,11 +160,6 @@ function renderResponsibilities({
   const groupAutonomy = {
     title: t("manage.resp.howMuch"),
     options: Object.fromEntries(AUTONOMY_MODES.map((mode) => [mode, { heading: t(`manage.aiMode.${mode}`), how: t(`manage.resp.how.${mode}`) }])) as GroupAutonomyLabels["options"],
-  };
-  // The one mode every responsibility in a group shares, so its dropdown can show it chosen.
-  const sharedMode = (groupRows: Row[]): AutonomyMode | null => {
-    const first = groupRows[0]?.ai_mode ?? null;
-    return first && groupRows.every((row) => row.ai_mode === first) ? first : null;
   };
   // Links keep the other choice: switching the tab keeps the grouping, and vice versa.
   const listHref = (params: { tab?: string; group?: string }) => {

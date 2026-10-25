@@ -190,10 +190,11 @@ async function setPlaybookItemActiveImpl(
  */
 /**
  * How far WonderHome goes for every listed responsibility at once (the group
- * card on Responsibilities). Each one is saved through `saveResponsibility`,
- * so each change is validated and audited on its own. This is not one
- * transaction: if a write fails part-way, the ones before it stay changed and
- * the error is raised so the person can see it.
+ * card on Responsibilities). Every row is validated first, so a refusal (an
+ * unowned outcome that may not act alone, say) changes nothing. Then each is
+ * saved through `saveResponsibility`, so each change is audited on its own.
+ * The writes are not one transaction: a database failure part-way leaves the
+ * earlier ones changed, and the error is raised so the person can see it.
  */
 async function setAutonomyForOutcomesImpl(
   supabase: SupabaseClient,
@@ -201,21 +202,25 @@ async function setAutonomyForOutcomesImpl(
 ): Promise<number> {
   const wanted = new Set(input.outcomeKeys);
   const rows = (await listResponsibilities(supabase, input.householdId)).filter((row) => wanted.has(row.outcomeKey));
-  for (const row of rows) {
-    await saveResponsibilityImpl(supabase, {
-      householdId: input.householdId,
-      actorMemberId: input.actorMemberId,
-      members: input.members,
-      responsibility: {
-        outcomeKey: row.outcomeKey,
-        primaryMemberId: row.primaryMemberId,
-        backupMemberId: row.backupMemberId,
-        aiMode: input.aiMode,
-        priority: row.priority,
-      },
-    });
+  const changes = rows.map((row) => ({
+    outcomeKey: row.outcomeKey,
+    primaryMemberId: row.primaryMemberId,
+    backupMemberId: row.backupMemberId,
+    aiMode: input.aiMode,
+    priority: row.priority,
+  }));
+
+  for (const responsibility of changes) {
+    const validation = validateResponsibility(responsibility, input.members);
+    if (!validation.ok) {
+      throw ApiError.badRequest(`${responsibility.outcomeKey}: ${validation.problems[0]!.message}`, { problems: validation.problems });
+    }
   }
-  return rows.length;
+
+  for (const responsibility of changes) {
+    await saveResponsibilityImpl(supabase, { householdId: input.householdId, actorMemberId: input.actorMemberId, members: input.members, responsibility });
+  }
+  return changes.length;
 }
 
 async function removeResponsibilityImpl(
