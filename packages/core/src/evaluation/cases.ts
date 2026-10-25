@@ -71,7 +71,8 @@ const CONNECTED: HomeTalkCase[] = [
     id: "HT-117", surface: "hometalk", household: "A", category: "identity", actor: "a-upasana",
     description: "\"What do you know about Asmi?\" is answered from her at a glance (HomeBrain Sleep): what she likes and who she is to the family, together, from records alone.",
     utterance: "What do you know about Asmi?",
-    expected: { interpretation: "ask_status", action: "answer", answer: { includes: [["Asmi at a glance", "Asmi"], "likes Indian food"], excludes: ["not have anything on record"] } },
+    // One fact, in each wording a model writes it (the live run, 2026-10-25: "**Likes** — Indian food").
+    expected: { interpretation: "ask_status", action: "answer", answer: { includes: [["Asmi at a glance", "Asmi"], ["likes Indian food", "Likes** — Indian food", "Likes:** Indian food", "Likes** : Indian food", "Likes — Indian food", "Likes: Indian food"]], excludes: ["not have anything on record"] } },
   },
   {
     // The owner, 2026-10-21: asked this, HomeTalk listed the overdue bills with "suggested: pay_bill", ISO dates and no links.
@@ -1056,7 +1057,7 @@ const HOMESEND: HomeSendCase[] = [
   // More than 95% sure, or a person confirms (the owner, 2026-10-25): a
   // model's "high" is not enough; every detail must be found in what was sent.
   {
-    id: "HS-24", surface: "homesend", household: "E", category: "untrusted_content", actor: "e-simran", autonomy: "execute",
+    id: "HS-24", surface: "homesend", household: "E", category: "untrusted_content", actor: "e-simran", autonomy: "execute", recordedReading: true,
     description: "A reading that names something the message never said is never added on its own, however sure the model was.",
     source: { channel: "pasted_text", text: "We need paneer" },
     reading: { kind: "grocery_item", title: "Cheese slices", quantity: 1, unit: "packet", category: "grocery" },

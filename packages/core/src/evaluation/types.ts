@@ -156,6 +156,12 @@ export type HomeSendCase = CaseBase & {
    * run replaces it with the provider's own reading.
    */
   reading: Partial<import("../ai/classify-intake").IntakeExtraction>;
+  /**
+   * The case is about what WonderHome does with this exact reading (a model
+   * that invented a detail), so a live-provider run uses it too: a model that
+   * reads the message correctly has nothing to catch.
+   */
+  recordedReading?: boolean;
   memberInitiated?: boolean;
   autonomy?: "observe" | "prepare" | "approve" | "execute";
   transcriptConfidence?: number;
