@@ -117,6 +117,11 @@ function lookedEverywhere(text: string): string {
   return text.replace(/^WonderHome does not have anything on record about that/, "I looked through everything WonderHome has, and there is nothing on record about that");
 }
 
+/** A fact an answer to this question may rest on: an insight, a profile, or one from the part of the home it asks about (or one connected to it). */
+function founding(fact: GroundedFact, reading: { focus: ReadonlySet<string>; connected: ReadonlySet<string> }): boolean {
+  return fact.domain === "insight" || fact.domain === "profile" || (fact.domain !== "conflict" && (reading.focus.has(fact.domain) || reading.connected.has(fact.domain)));
+}
+
 async function answerOnce(turn: HomeBrainTurn): Promise<HomeBrainAnswer> {
   const reading = readBrainQuestion(turn.question, turn.items, {
     viewerMemberId: turn.viewer.memberId,
@@ -156,7 +161,14 @@ async function answerOnce(turn: HomeBrainTurn): Promise<HomeBrainAnswer> {
     // 23 Sep 2026). A broad question with no day ("what time is the
     // meeting?") keeps the model, which answers from what it may see.
     const withheld = (!reading.broad || reading.time !== null) && answering.some((fact) => !sentIds.has(fact.contextId));
-    if (sent.length > 0 && !withheld && !answeredByArithmetic(answering)) {
+    // A specific question nothing the model may see could answer is
+    // WonderHome's own "nothing on record": every answer a model gave would be
+    // unfounded (below) and every "unknown" is replaced anyway, so it is not
+    // asked. Asked anyway, a real one (Anthropic, live eval 2026-10-25, HB-03:
+    // a helper asking about an adult's withheld appointment) invented an
+    // action or a name in 4 runs of 8, each refused by the validator.
+    const nothingToGoOn = !reading.broad && reading.focus.size > 0 && answering.length === 0 && !facts.some((fact) => sentIds.has(fact.contextId) && founding(fact, reading));
+    if (sent.length > 0 && !withheld && !nothingToGoOn && !answeredByArithmetic(answering)) {
       const compose = turn.compose;
       const localNow = describeLocalNow(turn.now, turn.timezone);
       // The question goes out with the same placeholders as the facts, whoever
@@ -201,7 +213,7 @@ async function answerOnce(turn: HomeBrainTurn): Promise<HomeBrainAnswer> {
         !reading.broad &&
         reading.focus.size > 0 &&
         answering.length === 0 &&
-        !facts.some((fact) => outcome.draft.usedFacts.includes(fact.contextId) && (fact.domain === "insight" || fact.domain === "profile" || (fact.domain !== "conflict" && (reading.focus.has(fact.domain) || reading.connected.has(fact.domain)))));
+        !facts.some((fact) => outcome.draft.usedFacts.includes(fact.contextId) && founding(fact, reading));
       if (unfounded) validation.rejected = [...new Set([...validation.rejected, "unfounded_answer" as const])];
       // "Nothing on record" is WonderHome's to say, in its own words. A real
       // model (Anthropic, 21 Oct 2026), asked by a helper about school fees she

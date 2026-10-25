@@ -329,3 +329,26 @@ describe("2026-10-21 Anthropic run: what HomeBrain lets a model see and say", ()
     expect(pseudonymiseText("What does Asmi have tomorrow?", peopleOf(A))).not.toMatch(/Asmi/);
   });
 });
+
+describe("2026-10-25 Anthropic run: what the live model taught HomeBrain and HomeSend", () => {
+  it("a question nothing the asker may see could answer is WonderHome's own 'nothing on record', no model asked (HB-03)", async () => {
+    const seen: AnswerInput[] = [];
+    // What the live model wrote, 4 runs in 8: an action it cannot take, refused by the validator.
+    const compose: AnswerComposer = async (input) => {
+      seen.push(input);
+      return { text: "I can ask Neha to share her appointment with you.", mode: "answer", grounded: false, usedFacts: [] };
+    };
+    const result = await runCase(goldenTalk("HB-03"), { compose });
+    expect(seen).toHaveLength(0);
+    expect(result.errors).not.toContain("provider_failure");
+    expect(result.pass).toBe(true);
+  });
+
+  it("a case about an invented reading keeps it in a provider run, and it still waits for a person (HS-24)", async () => {
+    const hs24 = GOLDEN_CASES.find((c) => c.id === "HS-24")!;
+    // A live model reads "We need paneer" correctly: on its own reading there would be nothing to catch.
+    const classify = async () => reading({ kind: "grocery_item", title: "Paneer", quantity: 1, unit: "packet", category: "grocery" });
+    const result = await runCase(hs24, { classify });
+    expect(result.pass).toBe(true);
+  });
+});
