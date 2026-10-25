@@ -438,7 +438,7 @@ export async function observeHomeSend(c: HomeSendCase, models: Models = {}): Pro
   // A recorded reading goes through the same second look at its kind and
   // the same grounding a live one does:
   // the model names the date phrase, WonderHome decides the day and time.
-  const reading = models.classify ? await models.classify(c.source, reference) : groundIntakeDate(reviewIntakeKind({ ...BLANK_READING, ...c.reading }), reference);
+  const reading = models.classify && !c.recordedReading ? await models.classify(c.source, reference) : groundIntakeDate(reviewIntakeKind({ ...BLANK_READING, ...c.reading }), reference);
   if (!reading) return { ...EMPTY, providerFailure: "unparseable", answer: "" };
 
   const injection = detectInstructionInjection(c.source.text, c.source.subject);
