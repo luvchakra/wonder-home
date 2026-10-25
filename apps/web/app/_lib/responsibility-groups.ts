@@ -12,7 +12,7 @@ export type Row = {
   outcome_key: string;
   primary_member_id: string | null;
   backup_member_id: string | null;
-  ai_mode: "observe" | "prepare" | "approve" | "execute";
+  ai_mode: "prepare" | "execute";
   priority: number;
   playbook_items: { name: string; outcome_definition: string; cadence: Record<string, unknown> } | { name: string; outcome_definition: string; cadence: Record<string, unknown> }[] | null;
 };

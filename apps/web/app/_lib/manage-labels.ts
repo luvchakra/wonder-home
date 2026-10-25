@@ -17,7 +17,7 @@ import { STARTER_OUTCOMES } from "./starter-outcomes";
  * the household typed.
  */
 
-export const AUTONOMY_MODES = ["observe", "prepare", "approve", "execute"] as const;
+export const AUTONOMY_MODES = ["prepare", "execute"] as const;
 export type AutonomyModeKey = (typeof AUTONOMY_MODES)[number];
 
 const POLICY_CATEGORY_KEYS = ["spending", "privacy", "family_time", "notifications", "ai_autonomy", "safety"] as const;
@@ -56,9 +56,7 @@ export function configFormLabels(t: Translate): ConfigFormLabels {
     backupHint: t("manage.form.backupHint"),
     aiMode: t("manage.form.aiMode"),
     aiModes: {
-      observe: t("manage.aiMode.observe"),
       prepare: t("manage.aiMode.prepare"),
-      approve: t("manage.aiMode.approve"),
       execute: t("manage.aiMode.execute"),
     },
     aiModeHint: t("manage.form.aiModeHint"),

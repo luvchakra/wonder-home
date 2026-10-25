@@ -73,13 +73,13 @@ export async function planFor(
 /**
  * The household's own autonomy setting for the outcome a kind belongs to
  * (§12), read from its responsibilities — the same row the Manage Household
- * screen writes. Anything unconfigured, or unreadable, is "observe".
+ * screen writes. Anything unconfigured, or unreadable, is "prepare": a person looks first.
  */
 async function autonomyFor(supabase: SupabaseClient, householdId: string, kind: HomeSendKind): Promise<AutonomyMode> {
   const outcome = AUTO_APPLY_OUTCOMES[kind];
-  if (!outcome) return "observe";
+  if (!outcome) return "prepare";
   const rows = await listResponsibilities(supabase, householdId).catch(() => []);
-  return rows.find((row) => row.outcomeKey === outcome.outcomeKey)?.aiMode ?? "observe";
+  return rows.find((row) => row.outcomeKey === outcome.outcomeKey)?.aiMode === "execute" ? "execute" : "prepare";
 }
 
 async function householdPeople(supabase: SupabaseClient, membership: HouseholdMembership): Promise<HouseholdContextItem[]> {
@@ -117,7 +117,7 @@ export async function prepareReview(
   // A receipt is matched line by line on its own confirm form (09-009): it is
   // for nobody in particular and never a second copy of a record.
   if (!kind || kind === "unknown" || kind === "receipt" || !item.extracted?.title) {
-    return { subject: null, reconciliation: null, understanding: item.understanding, confirmation: confirm(null, null, item.understanding, "observe") };
+    return { subject: null, reconciliation: null, understanding: item.understanding, confirmation: confirm(null, null, item.understanding, "prepare") };
   }
 
   const people = await householdPeople(supabase, membership).catch(() => []);
@@ -151,7 +151,7 @@ export async function prepareReview(
 
   // Who it is for: what the content said, or else whose record it matched.
   const subject = resolution ? adoptMatchedSubject(kind, resolution.subject, reconciliation?.existing.subjectMemberId, people) : null;
-  const autonomy = checked ? await autonomyFor(supabase, membership.household.id, kind) : "observe";
+  const autonomy = checked ? await autonomyFor(supabase, membership.household.id, kind) : "prepare";
   // A document with several records is reviewed as a plan (DDU 2.0), and
   // never applied on its own: every record in it waits for a person.
   const plan = wantsPlan(understanding) ? await planFor(supabase, membership, { understanding, createdAt: item.createdAt }, { people }).catch(() => null) : null;

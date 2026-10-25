@@ -360,9 +360,9 @@ export const helpDe: AreaCatalog<typeof helpEn> = {
   "help.guide.plan.body.4": "Wenn kostenpflichtige Tarife starten, bezahlst du auf der Seite des Zahlungsanbieters – WonderHome sieht deine Karte nie – und Einstellungen → Ihr Tarif → Abrechnung bewahrt jede Zahlung und jede Rechnung auf. Eine Kündigung oder der Wechsel zu einem kleineren Tarif gilt erst zum Ende des bezahlten Zeitraums.",
 
   "help.guide.ai-autonomy.title": "Wie viel WonderHome selbst tun darf",
-  "help.guide.ai-autonomy.summary": "Vier Stufen, je Zuständigkeit festgelegt, und du wählst sie.",
+  "help.guide.ai-autonomy.summary": "Zwei Stufen, je Zuständigkeit festgelegt, und du wählst sie.",
   "help.guide.ai-autonomy.body.1":
-    "Jede Verantwortung hat eine Selbstständigkeitsstufe. Ein Admin legt sie unter „Haushalt verwalten → Zuständigkeiten“ fest, einzeln oder für eine ganze Gruppe auf einmal: „WonderHome wird nur benachrichtigen“, „WonderHome bereitet alles vor und wartet auf dich“, „WonderHome wird vor dem Handeln fragen“ oder „WonderHome erledigt es und sagt dir danach Bescheid“. Die letzten beiden brauchen eine zuständige Person; eine Gruppe mit einem Ergebnis ohne Zuständige bietet daher nur die ersten beiden an. WonderHome setzt die Stufe im Hintergrund durch – nicht nur auf dem Bildschirm.",
+    "Jede Verantwortung hat eine Selbstständigkeitsstufe. Ein Admin legt sie unter „Haushalt verwalten → Zuständigkeiten“ fest, einzeln oder für eine ganze Gruppe auf einmal: „WonderHome bereitet alles vor und wartet auf dein OK“ oder „WonderHome erledigt es und sagt dir danach Bescheid“. Bei der ersten passiert nichts, bevor eine Person zustimmt; sie gilt auch für jede Verantwortung, die noch niemand eingerichtet hat. Die zweite braucht eine zuständige Person; eine Gruppe mit einem Ergebnis ohne Zuständige bietet daher nur die erste an. WonderHome setzt die Stufe im Hintergrund durch – nicht nur auf dem Bildschirm.",
   "help.guide.ai-autonomy.body.2":
     "Zahlungen, geänderte Berechtigungen und Löschungen brauchen immer einen Menschen, egal wie die Einstellung ist, und beim Bezahlen musst du im Moment der Freigabe bestätigen, dass du es bist.",
 

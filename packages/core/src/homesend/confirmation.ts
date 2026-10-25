@@ -68,7 +68,7 @@ export type ConfirmationInput = {
   subject: Pick<SubjectResolution, "question" | "selected"> | null;
   /** A member sent it in themselves; an email arrives with nobody in the household acting. */
   memberInitiated: boolean;
-  /** The household's own setting for this kind's outcome; "observe" when nothing is configured. */
+  /** The household's own setting for this kind's outcome; "prepare" when nothing is configured. */
   autonomy: AutonomyMode;
 };
 

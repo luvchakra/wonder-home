@@ -94,7 +94,7 @@ describe("the template engine", () => {
 
   it("never gives a child money, and every suggestion passes the same validation a person's own would", () => {
     for (const entry of suggestions) {
-      expect(validateResponsibility({ outcomeKey: entry.key, primaryMemberId: entry.primaryMemberId, backupMemberId: entry.backupMemberId, aiMode: "observe", priority: 3 }, members).ok, entry.key).toBe(true);
+      expect(validateResponsibility({ outcomeKey: entry.key, primaryMemberId: entry.primaryMemberId, backupMemberId: entry.backupMemberId, aiMode: "prepare", priority: 3 }, members).ok, entry.key).toBe(true);
       if (entry.adultOnly) expect(["kunal", "priya"]).toContain(entry.primaryMemberId);
     }
   });

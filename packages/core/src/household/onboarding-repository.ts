@@ -247,7 +247,7 @@ export async function acceptSuggestion(
       outcomeKey: input.suggestion.key,
       primaryMemberId: input.primaryMemberId,
       backupMemberId: input.backupMemberId === input.primaryMemberId ? null : input.backupMemberId,
-      aiMode: "observe",
+      aiMode: "prepare",
       priority: 3,
     },
   });

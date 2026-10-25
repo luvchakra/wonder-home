@@ -182,7 +182,7 @@ describe("the conversation from the screenshot, end to end", () => {
       channel: "voice",
       actor: { memberId: "member-1", roles: ["head"], memberType: "adult" },
       pending: null,
-      autonomyFor: () => "approve",
+      autonomyFor: () => "prepare",
       entitledFor: () => true,
       executable: () => false,
       sessionId: "session-1",
@@ -267,7 +267,7 @@ describe("answering a place question HomeTalk left open (the owner's report, 202
       actor: { memberId: "member-1", roles: ["adult"], memberType: "adult" },
       pending: null,
       clarifying: narrowing,
-      autonomyFor: () => "approve",
+      autonomyFor: () => "prepare",
       entitledFor: () => true,
       sessionId: "s",
     });

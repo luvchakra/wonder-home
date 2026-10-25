@@ -75,7 +75,7 @@ async function turn(utterance: string, over: Partial<TurnInput> & { references?:
     channel: "text",
     actor: HEAD,
     pending: null,
-    autonomyFor: () => "approve",
+    autonomyFor: () => "prepare",
     entitledFor: () => true,
     executable: canExecute,
     sessionId: "s-1",
@@ -127,7 +127,7 @@ describe("§21 required examples — each is understood, and nothing is claimed 
     it(`"${example.say}" → ${example.action}, ${example.kind}`, async () => {
       // Autonomy "execute" for the harmless ones, as a household would set
       // it; consequential ones still wait for a yes whatever it says.
-      const result = await kindOf(example.say, { autonomyFor: () => (example.kind === "executed" ? "execute" : "approve") });
+      const result = await kindOf(example.say, { autonomyFor: () => (example.kind === "executed" ? "execute" : "prepare") });
       expect({ action: result.action, kind: result.kind }).toEqual({ action: example.action, kind: example.kind });
     });
   }

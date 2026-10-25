@@ -199,7 +199,7 @@ const HOUSEHOLD_A: GoldenHousehold = {
     holidays: [{ id: "a-h-gandhi", onDate: "2026-10-02", name: "Gandhi Jayanti", source: "golden" }],
     responsibilities: [
       { outcomeKey: "groceries.stocked", primaryMemberId: "a-kunal", backupMemberId: "a-upasana", aiMode: "prepare", priority: 1 },
-      { outcomeKey: "bills.paid", primaryMemberId: "a-kunal", backupMemberId: null, aiMode: "approve", priority: 2 },
+      { outcomeKey: "bills.paid", primaryMemberId: "a-kunal", backupMemberId: null, aiMode: "prepare", priority: 2 },
     ],
     // Asmi's dance class on Mondays, which the Calendar shows on its days (08-012).
     activities: [activity("a-c-dance", "a-asmi", "Bharatanatyam", [1], "16:00", "17:00", "Natya Kala studio")],

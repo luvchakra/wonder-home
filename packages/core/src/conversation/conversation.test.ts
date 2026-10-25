@@ -13,7 +13,7 @@ import { proposeFromIntent, type ProposalContext } from "./proposal";
 
 const ctx = (over: Partial<ProposalContext> = {}): ProposalContext => ({
   actor: { roles: ["head"] },
-  autonomy: "approve",
+  autonomy: "prepare",
   entitled: true,
   ...over,
 });
@@ -163,13 +163,13 @@ describe("proposals are decided by policy, never by the model", () => {
     expect(clear.kind === "refused" && clear.reason).toMatch(/current plan/i);
   });
 
-  it("changes nothing when the outcome is set to observe", () => {
-    const proposal = proposeFromIntent(intentFor("Add coriander to the grocery list."), ctx({ autonomy: "observe" }));
-    // Drafting is harmless, so it still happens — observe restricts change, not thought.
+  it("waits for a yes before any change when the outcome is set to prepare", () => {
+    const proposal = proposeFromIntent(intentFor("Add coriander to the grocery list."), ctx({ autonomy: "prepare" }));
+    // Drafting is harmless, so it still happens — prepare restricts change, not thought.
     expect(proposal.kind).toBe("executed");
 
-    const scheduling = proposeFromIntent(intentFor("Sunita won't be here tomorrow."), ctx({ autonomy: "observe" }));
-    expect(scheduling.kind).toBe("refused");
+    const scheduling = proposeFromIntent(intentFor("Sunita won't be here tomorrow."), ctx({ autonomy: "prepare" }));
+    expect(scheduling.kind).toBe("needs_approval");
   });
 
   it("answers a question without proposing anything", () => {

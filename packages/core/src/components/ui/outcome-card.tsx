@@ -50,7 +50,7 @@ export type ResponsibilityCardProps = {
   owner: string;
   backup?: string | null;
   frequency?: string;
-  aiMode: "observe" | "prepare" | "approve" | "execute";
+  aiMode: "prepare" | "execute";
   /** The autonomy level in the reader's language; `AI_MODE_LABEL` otherwise. */
   aiModeLabel?: string;
   /** "backup Priya" in the reader's language; the English otherwise. */
@@ -63,9 +63,7 @@ export type ResponsibilityCardProps = {
 
 /** The same wording wherever an autonomy level is shown, not one phrasing per screen. */
 export const AI_MODE_LABEL: Record<ResponsibilityCardProps["aiMode"], string> = {
-  observe: "WonderHome watches",
-  prepare: "WonderHome prepares",
-  approve: "WonderHome asks first",
+  prepare: "WonderHome asks first",
   execute: "WonderHome handles it",
 };
 

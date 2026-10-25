@@ -121,8 +121,8 @@ export type HomeTalkCase = CaseBase & {
   utterance: string;
   channel?: "text" | "voice";
   transcriptConfidence?: number;
-  /** The household's autonomy for the outcome the turn touches; "approve" when unset. */
-  autonomy?: "observe" | "prepare" | "approve" | "execute";
+  /** The household's autonomy for the outcome the turn touches; "prepare" when unset. */
+  autonomy?: "prepare" | "execute";
   /** The household turned on "Ask before acting on what I say" (HomeBrain 4.0 §3.9). */
   confirmRequestedChanges?: boolean;
   /** What the conversation was just about, for "it", "that" and "the same one". */
@@ -163,7 +163,7 @@ export type HomeSendCase = CaseBase & {
    */
   recordedReading?: boolean;
   memberInitiated?: boolean;
-  autonomy?: "observe" | "prepare" | "approve" | "execute";
+  autonomy?: "prepare" | "execute";
   transcriptConfidence?: number;
 };
 

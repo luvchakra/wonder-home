@@ -582,7 +582,7 @@ export async function addResponsibilityAction(_previous: OnboardingActionState, 
       householdId,
       actorMemberId: membership.memberId,
       members: snapshot.configMembers,
-      responsibility: { outcomeKey: key, primaryMemberId: owners.primary, backupMemberId: owners.backup, aiMode: "observe", priority: 3 },
+      responsibility: { outcomeKey: key, primaryMemberId: owners.primary, backupMemberId: owners.backup, aiMode: "prepare", priority: 3 },
     });
     await recordOnboardingEvent(supabase, { householdId, event: "responsibility_accepted", step: "review", detail: { category, custom: true } });
   } catch (error) {

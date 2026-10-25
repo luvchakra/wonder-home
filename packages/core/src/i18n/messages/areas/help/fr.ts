@@ -360,9 +360,9 @@ export const helpFr: AreaCatalog<typeof helpEn> = {
   "help.guide.plan.body.4": "Quand les forfaits payants commenceront, vous paierez sur la page du prestataire de paiement — WonderHome ne voit jamais votre carte — et Paramètres → Votre formule → Facturation conserve chaque paiement et chaque facture. Une résiliation ou un passage à un forfait plus petit attend la fin de la période payée.",
 
   "help.guide.ai-autonomy.title": "Ce que WonderHome peut faire de lui-même",
-  "help.guide.ai-autonomy.summary": "Quatre niveaux, fixés par responsabilité, et c’est vous qui les choisissez.",
+  "help.guide.ai-autonomy.summary": "Deux niveaux, fixés par responsabilité, et c’est vous qui les choisissez.",
   "help.guide.ai-autonomy.body.1":
-    "Chaque responsabilité a un niveau d’autonomie, qu’un Admin règle dans « Gérer le foyer → Responsabilités », une par une ou pour tout un groupe à la fois : « WonderHome se contentera de vous prévenir », « WonderHome prépare tout et attend votre accord », « WonderHome vous demandera avant d’agir » ou « WonderHome agit, et vous le dit ensuite ». Les deux derniers demandent un responsable : un groupe dont un résultat n’a personne ne propose donc que les deux premiers. WonderHome applique ce niveau en coulisses, pas seulement à l’écran.",
+    "Chaque responsabilité a un niveau d’autonomie, qu’un Admin règle dans « Gérer le foyer → Responsabilités », une par une ou pour tout un groupe à la fois : « WonderHome prépare tout et attend votre accord » ou « WonderHome agit, et vous le dit ensuite ». Avec le premier, rien ne se passe tant qu’une personne n’a pas dit oui ; c’est aussi celui de toute responsabilité que personne n’a réglée. Le second demande un responsable : un groupe dont un résultat n’a personne ne propose donc que le premier. WonderHome applique ce niveau en coulisses, pas seulement à l’écran.",
   "help.guide.ai-autonomy.body.2":
     "Les paiements, les changements de droits et les suppressions demandent toujours une personne, quel que soit le réglage, et payer exige que vous confirmiez que c’est bien vous au moment où vous approuvez.",
 

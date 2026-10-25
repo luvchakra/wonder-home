@@ -8,7 +8,7 @@ function row(over: Partial<Row>): Row {
     outcome_key: "home.cleaning",
     primary_member_id: null,
     backup_member_id: null,
-    ai_mode: "observe",
+    ai_mode: "prepare",
     priority: 3,
     playbook_items: null,
     ...over,
@@ -56,11 +56,11 @@ describe("groupByOwner", () => {
 
 describe("sharedMode", () => {
   it("returns the one mode every responsibility shares", () => {
-    expect(sharedMode([row({ ai_mode: "approve" }), row({ ai_mode: "approve" })])).toBe("approve");
+    expect(sharedMode([row({ ai_mode: "prepare" }), row({ ai_mode: "prepare" })])).toBe("prepare");
   });
 
   it("returns null when the group's modes differ, so no option shows as chosen", () => {
-    expect(sharedMode([row({ ai_mode: "approve" }), row({ ai_mode: "observe" })])).toBeNull();
+    expect(sharedMode([row({ ai_mode: "prepare" }), row({ ai_mode: "execute" })])).toBeNull();
   });
 
   it("returns null for an empty group", () => {

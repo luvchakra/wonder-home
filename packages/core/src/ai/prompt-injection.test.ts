@@ -108,20 +108,20 @@ describe("even when the attacker gets the intent they wanted", () => {
     // "Disregard the autonomy setting" is text. The setting is a row.
     const proposal = proposeFromIntent(intent({ utterance: INJECTIONS[5]! }), {
       actor: ADULT,
-      autonomy: "observe",
+      autonomy: "prepare",
       entitled: true,
     });
-    expect(proposal.kind).toBe("refused");
+    expect(proposal.kind).not.toBe("executed");
   });
 
-  it("still only prepares when autonomy says prepare, whatever the text asked for", () => {
+  it("still waits for a person when autonomy says prepare, whatever the text asked for", () => {
     // A scheduling action, not a draft: reading and drafting change nothing and
     // are allowed to complete under any setting, so they would prove nothing.
     const proposal = proposeFromIntent(
       intent({ action: "record_absence", target: { kind: "member", reference: "sunita" } }),
       { actor: ADULT, autonomy: "prepare", entitled: true },
     );
-    expect(proposal.kind).toBe("prepared");
+    expect(proposal.kind).toBe("needs_approval");
   });
 
   it("sends a payment to a person even when autonomy is set to execute", () => {

@@ -9,20 +9,24 @@
  * Two rules sit above the household's configuration and cannot be turned off
  * from a settings screen:
  *
- *   * An unconfigured outcome resolves to `observe`. Anything nobody has
- *     thought about is watched, never acted on.
+ *   * An unconfigured outcome resolves to `prepare`. Anything nobody has
+ *     thought about waits for a person, never acted on.
  *   * Some action classes always need a person, whatever the mode says.
  *     Spending money, changing who can act, and anything irreversible are not
  *     things a household should be able to hand over by ticking a box.
  */
 
-export const AUTONOMY_MODES = ["observe", "prepare", "approve", "execute"] as const;
+/**
+ * Two modes (the owner, 2026-10-26). There were four, but "approve" and
+ * "prepare" were enforced identically and "observe" only refused to prepare
+ * anything; migration `20261026090000_two_autonomy_modes` moved both to
+ * "prepare".
+ */
+export const AUTONOMY_MODES = ["prepare", "execute"] as const;
 export type AutonomyMode = (typeof AUTONOMY_MODES)[number];
 
 export const AUTONOMY_DESCRIPTIONS: Record<AutonomyMode, string> = {
-  observe: "Watch and tell you. WonderHome changes nothing on its own.",
-  prepare: "Get things ready — a draft order, a suggested plan — and wait for you.",
-  approve: "Do the work once you say yes.",
+  prepare: "Get it ready, and do it once you say yes.",
   execute: "Handle it, and tell you what was done.",
 };
 
@@ -50,11 +54,7 @@ export type ProposedAction = {
   amountMinor?: number;
 };
 
-export type AutonomyDecision =
-  | { outcome: "observe_only"; reason: string }
-  | { outcome: "prepare_only"; reason: string }
-  | { outcome: "needs_approval"; reason: string }
-  | { outcome: "execute"; reason: string };
+export type AutonomyDecision = { outcome: "needs_approval"; reason: string } | { outcome: "execute"; reason: string };
 
 /** Action classes that always need a person, whatever the household configured. */
 const ALWAYS_NEEDS_A_PERSON: ReadonlySet<ProposedAction["kind"]> = new Set([
@@ -72,14 +72,7 @@ export function decideAutonomy(mode: AutonomyMode, action: ProposedAction): Auto
   }
 
   if (ALWAYS_NEEDS_A_PERSON.has(action.kind)) {
-    // Observe still means observe: a household that asked for nothing to happen
-    // gets a proposal, not an approval prompt it never invited.
-    return mode === "observe"
-      ? { outcome: "observe_only", reason: "This outcome is set to observe only." }
-      : {
-          outcome: "needs_approval",
-          reason: `${labelFor(action.kind)} always needs a person, whatever the autonomy setting.`,
-        };
+    return { outcome: "needs_approval", reason: `${labelFor(action.kind)} always needs a person, whatever the autonomy setting.` };
   }
 
   if (!action.reversible && mode !== "execute") {
@@ -90,11 +83,7 @@ export function decideAutonomy(mode: AutonomyMode, action: ProposedAction): Auto
   }
 
   switch (mode) {
-    case "observe":
-      return { outcome: "observe_only", reason: "This outcome is set to observe only." };
     case "prepare":
-      return { outcome: "prepare_only", reason: "Prepared and waiting for you." };
-    case "approve":
       return { outcome: "needs_approval", reason: "Ready to go once you approve." };
     case "execute":
       return { outcome: "execute", reason: "Handled automatically, as configured." };

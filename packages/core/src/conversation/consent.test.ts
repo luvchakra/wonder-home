@@ -37,7 +37,7 @@ describe("conversational consent (HomeBrain 4.0 §3.9)", () => {
 
   it("a child's request follows the household's autonomy, as before", () => {
     expect(consentTier(intent("plan_event"), child)).toBeNull();
-    const asked = proposeFromIntent(intent("plan_event", { what: "sleepover" }), { actor: child, autonomy: "observe", entitled: true, requestedBy: "person" });
+    const asked = proposeFromIntent(intent("plan_event", { what: "sleepover" }), { actor: child, autonomy: "prepare", entitled: true, requestedBy: "person" });
     expect(asked.kind).not.toBe("executed");
   });
 
@@ -49,18 +49,18 @@ describe("conversational consent (HomeBrain 4.0 §3.9)", () => {
   });
 
   it("a plan the person asked for runs, whatever the outcome's autonomy says", () => {
-    const planned = proposeFromIntent(intent("plan_event", { what: "movie night" }, { kind: "event", reference: "movie_night" }), { actor: adult, autonomy: "observe", entitled: true, requestedBy: "person" });
+    const planned = proposeFromIntent(intent("plan_event", { what: "movie night" }, { kind: "event", reference: "movie_night" }), { actor: adult, autonomy: "prepare", entitled: true, requestedBy: "person" });
     expect(planned.kind).toBe("executed");
   });
 
-  it("an agent's step still follows autonomy alone", () => {
-    const step = proposeFromIntent(intent("plan_event", { what: "movie night" }, { kind: "event", reference: "movie_night" }), { actor: adult, autonomy: "observe", entitled: true });
-    expect(step.kind).toBe("refused");
+  it("an agent's step still follows autonomy alone: on prepare it waits for a yes", () => {
+    const step = proposeFromIntent(intent("plan_event", { what: "movie night" }, { kind: "event", reference: "movie_night" }), { actor: adult, autonomy: "prepare", entitled: true });
+    expect(step.kind).toBe("needs_approval");
   });
 
   it("'Ask before acting on what I say' turns every act into one question", () => {
-    expect(decideForRequest({ tier: "act", mode: "observe", action: { outcomeKey: "x", kind: "schedule", reversible: true }, confirmRequested: true }).outcome).toBe("needs_approval");
-    expect(decideForRequest({ tier: "act", mode: "observe", action: { outcomeKey: "x", kind: "schedule", reversible: true }, confirmRequested: false }).outcome).toBe("execute");
+    expect(decideForRequest({ tier: "act", mode: "prepare", action: { outcomeKey: "x", kind: "schedule", reversible: true }, confirmRequested: true }).outcome).toBe("needs_approval");
+    expect(decideForRequest({ tier: "act", mode: "prepare", action: { outcomeKey: "x", kind: "schedule", reversible: true }, confirmRequested: false }).outcome).toBe("execute");
     // The floor stays: a payment always needs a person.
     expect(decideForRequest({ tier: "act", mode: "execute", action: { outcomeKey: "x", kind: "payment", reversible: false }, confirmRequested: false }).outcome).toBe("needs_approval");
   });

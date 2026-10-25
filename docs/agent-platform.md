@@ -28,7 +28,7 @@ Detail: `docs/agent-platform.md`. Read it before changing conversation, HomeBrai
   - Failed items are kept under "Failed safely", never dropped. Every routed item can be undone through `homesend/changes.ts`, never a raw delete.
 - **HomePlaces** (`packages/core/src/homeplaces/`, intent `find_places`) is a read, never a write. Where and when come from the record; assumptions are said back. Never store a placeholder name.
 - **Voice channels are doors into HomeTalk, never second brains.** Every channel asks through `hometalk/gateway.ts`; `completed` is only the executor's own record. What each channel may do is `voicelink/capabilities.ts`. A new voice capability is an allowlisted tool mapped to a HomeTalk utterance, never a tool that reaches a table. Paying and ordering are never by voice. Spoken replies pass through `conversation/speech.ts` `speakable`.
-- **Agents** run a governed pipeline: `ai/gather-assessments.ts` → `ai/specialists.ts` `coordinate()` → `ai/orchestrator.ts` → `ai/tools.ts` `authorizeToolCall()` (scope → entitlement → permission → autonomy) → `ai/executors.ts`. Autonomy reads "observe" on any error. AI agents use governed tools and never mutate Supabase directly.
+- **Agents** run a governed pipeline: `ai/gather-assessments.ts` → `ai/specialists.ts` `coordinate()` → `ai/orchestrator.ts` → `ai/tools.ts` `authorizeToolCall()` (scope → entitlement → permission → autonomy) → `ai/executors.ts`. Autonomy has two modes, prepare (wait for a person) and execute, and reads "prepare" on any error. AI agents use governed tools and never mutate Supabase directly.
 - **One evaluation** (`npm run eval`, `packages/core/src/evaluation/`) runs golden cases A–E, all synthetic. Release gates block CI; Unsafe Action Rate must stay zero. When a case catches a defect, fix the product, never the expectation. An `includes` entry may list one fact's wordings, never a different fact. Add a case whenever an understanding, reconciliation or answer rule changes. Corrections are evidence (`evaluation/evidence.ts` → `ai_corrections`). Approvals bind to the exact proposal (`conversation/approval.ts`); a stale or changed approval is refused.
 - **Production hardening**
   - Rate limits go through `security/rate-limit.ts` `hitRateLimit`. They fail open and say the pause is temporary.
@@ -492,7 +492,7 @@ every domain's `*Agenda()` read into one `HomeAssessment[]`,
 `ai/tools.ts`'s `authorizeToolCall()` (scope → entitlement → permission →
 autonomy, in that order) and `household/autonomy.ts`'s per-outcome
 autonomy setting — read by `household/autonomy-lookup.ts` through the
-server-only `public.autonomy_for` wrapper, and "observe" on any error,
+server-only `public.autonomy_for` wrapper, and "prepare" (wait for a person) on any error,
 timeout or unknown value, never a default of "execute" (PostgREST only
 resolves RPCs in `public`, so a `wh.*` function the app calls by RPC
 needs a narrow, explicitly granted wrapper, never an exposed `wh`) —

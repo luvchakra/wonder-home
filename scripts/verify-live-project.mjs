@@ -609,8 +609,8 @@ async function main() {
   const nobody = "00000000-0000-4000-8000-000000000000";
   const serverAutonomy = await admin.rpc("autonomy_for", { p_household_id: nobody, p_outcome_key: "groceries.stocked" });
   check(
-    "the server reads autonomy through public.autonomy_for (observe when unconfigured)",
-    !serverAutonomy.error && serverAutonomy.data === "observe",
+    "the server reads autonomy through public.autonomy_for (prepare when unconfigured)",
+    !serverAutonomy.error && serverAutonomy.data === "prepare",
     serverAutonomy.error?.code ?? `value=${JSON.stringify(serverAutonomy.data)}`,
   );
   const anonAutonomy = await anon.rpc("autonomy_for", { p_household_id: nobody, p_outcome_key: "groceries.stocked" });

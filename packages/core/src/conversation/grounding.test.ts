@@ -158,7 +158,7 @@ describe("the whole turn: grounding sits between understanding and any proposal"
   it("what a person approves names the grounded person and day, not the raw words", async () => {
     const turn = await converse({
       ...base,
-      autonomyFor: () => "approve",
+      autonomyFor: () => "prepare",
       utterance: "sunita is away next friday",
       ground: (understood) => groundIntent(understood, env()),
       understand: () => intent({ target: { kind: "member", reference: "sunita" }, parameters: { when: "next friday" } }),

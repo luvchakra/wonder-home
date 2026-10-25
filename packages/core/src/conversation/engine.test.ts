@@ -11,7 +11,7 @@ const turn = (over: Partial<TurnInput> = {}): TurnInput => ({
   channel: "text",
   actor: { memberId: "priya", roles: ["adult"], memberType: "adult" },
   pending: null,
-  autonomyFor: () => "approve",
+  autonomyFor: () => "prepare",
   entitledFor: () => true,
   sessionId: "session-1",
   now: NOW,

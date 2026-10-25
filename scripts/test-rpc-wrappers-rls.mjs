@@ -11,7 +11,7 @@
  *     and nobody else — not a signed-in member, not an anonymous caller;
  *   - busy_windows answers a signed-in member of the household only, because
  *     its membership check reads the caller's own JWT;
- *   - autonomy still resolves to "observe" for anything nobody configured,
+ *   - autonomy still resolves to "prepare" (wait for a person) for anything nobody configured,
  *     each household reads only its own settings, and `wh` stays unexposed.
  */
 import assert from "node:assert/strict";
@@ -62,9 +62,7 @@ before(() => {
     `insert into public.responsibilities (household_id, outcome_key, ai_mode) values
        ('${household}', 'groceries.stocked', 'execute'),
        ('${household}', 'laundry.ready', 'prepare'),
-       ('${household}', 'meals.dinner_ready', 'approve'),
-       ('${household}', 'pets.cared_for', 'observe'),
-       ('${otherHousehold}', 'groceries.stocked', 'observe');`,
+       ('${otherHousehold}', 'groceries.stocked', 'prepare');`,
     options,
   );
   psql(
@@ -81,22 +79,20 @@ after(() => {
 
 // --- A. autonomy resolves, through the wrapper, to what was configured -------
 
-test("A1–A4: the trusted server reads each configured mode exactly", () => {
+test("A1–A2: the trusted server reads each configured mode exactly", () => {
   const read = (key) => asRole("service_role", `select public.autonomy_for('${household}', '${key}');`);
-  assert.equal(read("pets.cared_for"), "observe");
   assert.equal(read("laundry.ready"), "prepare");
-  assert.equal(read("meals.dinner_ready"), "approve");
   assert.equal(read("groceries.stocked"), "execute");
 });
 
-test("an outcome nobody configured still resolves to observe — the wrapper adds no default of its own", () => {
-  assert.equal(asRole("service_role", `select public.autonomy_for('${household}', 'nothing.configured');`), "observe");
-  assert.equal(asRole("service_role", `select public.autonomy_for(gen_random_uuid(), 'groceries.stocked');`), "observe");
+test("an outcome nobody configured still resolves to prepare — the wrapper adds no default of its own", () => {
+  assert.equal(asRole("service_role", `select public.autonomy_for('${household}', 'nothing.configured');`), "prepare");
+  assert.equal(asRole("service_role", `select public.autonomy_for(gen_random_uuid(), 'groceries.stocked');`), "prepare");
 });
 
-test("C1/C2: each household reads only its own setting — the same outcome can be execute in one and observe in another", () => {
+test("C1/C2: each household reads only its own setting — the same outcome can be execute in one and prepare in another", () => {
   assert.equal(asRole("service_role", `select public.autonomy_for('${household}', 'groceries.stocked');`), "execute");
-  assert.equal(asRole("service_role", `select public.autonomy_for('${otherHousehold}', 'groceries.stocked');`), "observe");
+  assert.equal(asRole("service_role", `select public.autonomy_for('${otherHousehold}', 'groceries.stocked');`), "prepare");
 });
 
 // --- C. who may call what ----------------------------------------------------

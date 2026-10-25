@@ -297,8 +297,8 @@ export type GroupAutonomyLabels = {
   needsOwner: string;
 };
 
-/** The choices that hand the outcome to somebody (to approve, or to answer for it), so every outcome needs an owner first. */
-const NEEDS_AN_OWNER: ReadonlySet<AutonomyMode> = new Set(["approve", "execute"]);
+/** The choice that hands the outcome over to WonderHome, so somebody has to own it first. */
+const NEEDS_AN_OWNER: ReadonlySet<AutonomyMode> = new Set(["execute"]);
 
 /**
  * A group label on Responsibilities: a thin card, one row. The label and

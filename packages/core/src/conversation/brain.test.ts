@@ -35,7 +35,7 @@ const snapshot: BrainSnapshot = {
     { id: "anaya", displayName: "Anaya", memberType: "child", status: "active", roles: [], isOwner: false, ...NO_PROFILE_DETAILS },
     { id: "sunita", displayName: "Sunita", memberType: "helper", status: "active", roles: [], isOwner: false, ...NO_PROFILE_DETAILS },
   ],
-  responsibilities: [{ outcomeKey: "school.run", primaryMemberId: "upasana", backupMemberId: "kunal", aiMode: "approve", priority: 1 }],
+  responsibilities: [{ outcomeKey: "school.run", primaryMemberId: "upasana", backupMemberId: "kunal", aiMode: "prepare", priority: 1 }],
   events: [
     {
       id: "e1",

@@ -1873,11 +1873,11 @@ async function decideProviderRouting(
  */
 const FACT_BUDGET = 80;
 
-/** Autonomy per outcome, from the responsibilities matrix; "approve" if unset. */
+/** Autonomy per outcome, from the responsibilities matrix; "prepare" (wait for a yes) if unset or unknown. */
 async function autonomyLookup(supabase: Supabase, householdId: string) {
   const { data } = await supabase.from("responsibilities").select("outcome_key, ai_mode").eq("household_id", householdId);
   const modes = new Map<string, AutonomyMode>(((data as { outcome_key: string; ai_mode: AutonomyMode }[] | null) ?? []).map((row) => [row.outcome_key, row.ai_mode]));
-  return (outcomeKey: string | null): AutonomyMode => (outcomeKey && modes.get(outcomeKey)) || "approve";
+  return (outcomeKey: string | null): AutonomyMode => (outcomeKey && modes.get(outcomeKey) === "execute" ? "execute" : "prepare");
 }
 
 /**

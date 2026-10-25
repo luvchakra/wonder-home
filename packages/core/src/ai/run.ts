@@ -125,7 +125,7 @@ export async function runHouseholdAgents(
     const outcomeKey = typeof step.arguments.outcomeKey === "string" ? step.arguments.outcomeKey : step.toolName;
     // The household's own setting, read by the trusted server for the
     // household this request was already authorised against. Anything but a
-    // clean read of a known mode is "observe" (fail closed); what the mode
+    // clean read of a known mode is "prepare" (fail closed); what the mode
     // then permits is still decided by authorizeToolCall below.
     const { mode } = await lookupAutonomy(admin, householdId, outcomeKey);
 

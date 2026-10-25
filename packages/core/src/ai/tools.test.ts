@@ -62,29 +62,22 @@ describe("every call is re-checked, independently", () => {
     expect(result.allowed === true && result.requiresApproval).toBe(true);
   });
 
-  it("allows a safe read in any autonomy mode, including observe", () => {
-    const result = authorizeToolCall("outcomes.read", ctx({ autonomy: "observe" }));
+  it("allows a safe read in either autonomy mode, without asking", () => {
+    const result = authorizeToolCall("outcomes.read", ctx({ autonomy: "prepare" }));
     expect(result.allowed === true && result.requiresApproval).toBe(false);
   });
 
-  it("refuses a household change when the outcome is set to observe", () => {
-    const result = authorizeToolCall("availability.record_absence", ctx({ autonomy: "observe" }));
-    expect(result.allowed === false && result.code).toBe("autonomy_forbids");
-  });
-
-  it("asks first when autonomy is set to approve", () => {
-    const result = authorizeToolCall("outcomes.replan", ctx({ autonomy: "approve" }));
-    expect(result.allowed === true && result.requiresApproval).toBe(true);
+  it("asks first for a household change when the outcome is set to prepare", () => {
+    for (const tool of ["availability.record_absence", "outcomes.replan"]) {
+      const result = authorizeToolCall(tool, ctx({ autonomy: "prepare" }));
+      expect(result.allowed === true && result.requiresApproval, tool).toBe(true);
+    }
   });
 
   it("adding to the groceries list is governed by the outcome's autonomy — it writes a real row, so it is not a draft", () => {
     expect(findTool("list.add_item")?.actionKind).toBe("change");
-    const observe = authorizeToolCall("list.add_item", ctx({ autonomy: "observe" }));
-    expect(observe.allowed === false && observe.code).toBe("autonomy_forbids");
-    for (const autonomy of ["prepare", "approve"] as const) {
-      const result = authorizeToolCall("list.add_item", ctx({ autonomy }));
-      expect(result.allowed === true && result.requiresApproval, autonomy).toBe(true);
-    }
+    const prepare = authorizeToolCall("list.add_item", ctx({ autonomy: "prepare" }));
+    expect(prepare.allowed === true && prepare.requiresApproval).toBe(true);
     const execute = authorizeToolCall("list.add_item", ctx({ autonomy: "execute" }));
     expect(execute.allowed === true && execute.requiresApproval).toBe(false);
   });

@@ -12,11 +12,12 @@ import { AUTONOMY_MODES, type AutonomyMode } from "./autonomy";
  * by `authorizeToolCall` — scope, entitlement, permission, then autonomy —
  * and, for "execute", by the domain executor's own result.
  *
- * It fails closed. The only way to get anything other than "observe" is a
- * successful read that returned one of the four known modes; a missing
- * wrapper (the 404 / PGRST202 this module was written to end), a database
- * error, a timeout, null, or any value that is not a known mode all resolve
- * to "observe". There is deliberately no path that defaults to "execute".
+ * It fails closed. The only way to get "execute" is a successful read that
+ * returned it; a missing wrapper (the 404 / PGRST202 this module was written
+ * to end), a database error, a timeout, null, or any value that is not a
+ * known mode (an old "observe" or "approve" included) all resolve to
+ * "prepare", which waits for a person. There is deliberately no path that
+ * defaults to "execute".
  *
  * `client` must be the server's admin client: `public.autonomy_for` is
  * granted to service_role only, because `wh.autonomy_for` trusts its caller
@@ -59,15 +60,15 @@ export async function lookupAutonomy(
       timeout,
     ]);
     if (response === TIMED_OUT) {
-      result = { mode: "observe", success: false, errorCategory: "timeout" };
+      result = { mode: "prepare", success: false, errorCategory: "timeout" };
     } else if (response.error) {
-      result = { mode: "observe", success: false, errorCategory: "rpc_error" };
+      result = { mode: "prepare", success: false, errorCategory: "rpc_error" };
     } else {
       const mode = parseAutonomyMode(response.data);
-      result = mode ? { mode, success: true, errorCategory: null } : { mode: "observe", success: false, errorCategory: "invalid_value" };
+      result = mode ? { mode, success: true, errorCategory: null } : { mode: "prepare", success: false, errorCategory: "invalid_value" };
     }
   } catch {
-    result = { mode: "observe", success: false, errorCategory: "thrown" };
+    result = { mode: "prepare", success: false, errorCategory: "thrown" };
   } finally {
     if (timer) clearTimeout(timer);
   }
@@ -81,6 +82,6 @@ export async function lookupAutonomy(
     allow: ["household_id", "outcome_key", "resolved_autonomy", "lookup_success", "lookup_error_category"],
   };
   if (result.success) log.info("autonomy lookup", fields);
-  else log.warn("autonomy lookup failed closed to observe", fields);
+  else log.warn("autonomy lookup failed closed to prepare", fields);
   return result;
 }
