@@ -282,6 +282,7 @@ describe("what it does not know", () => {
         "actually we have 10 eggs in the fridge",
         "used 2 eggs",
         "bought 2 kg potatoes and 1 litre milk",
+        "Asmi's karate grading is on Sunday 1 November at 9.30 am",
       ].map((utterance) => read(utterance).action),
     );
     for (const action of RULE_ACTIONS) expect(seen.has(action)).toBe(true);
@@ -461,5 +462,28 @@ describe("calendar questions over a month-sized span", () => {
   it("never reads a request to plan or a grocery question as one", () => {
     expect(read("plan a dinner in December").action).toBe("plan_event");
     expect(read("do we need milk").parameters).not.toMatchObject({ scope: "schedule" });
+  });
+});
+
+describe("being told about a new dated thing goes to HomeSend (the owner, 2026-10-25)", () => {
+  it("files a sentence that says what is happening and when", () => {
+    for (const utterance of [
+      "Asmi's karate grading is on Sunday 1 November at 9.30 am.",
+      "Asmi has a Maths test on Friday 30 October.",
+      "Riya's party is on Saturday at 4",
+    ]) {
+      expect(read(utterance).action, utterance).toBe("file_with_homesend");
+    }
+  });
+
+  it("never takes a question, a move, a change already made, a time with no day, or a preference", () => {
+    expect(read("What is on tomorrow?").action).toBe("ask_status");
+    expect(read("Is Asmi's test on Friday?").action).not.toBe("file_with_homesend");
+    expect(read("Move Asmi's test to Monday").action).toBe("adjust_schedule");
+    expect(read("Asmi's Maths test has moved to Monday 2 November.").action).not.toBe("file_with_homesend");
+    expect(read("Asmi's Maths test on Friday is cancelled").action).not.toBe("file_with_homesend");
+    expect(read("Dinner is at 8 pm").action).not.toBe("file_with_homesend");
+    expect(read("Asmi doesn't like mushrooms").action).toBe("set_preference");
+    expect(read("I have a dentist appointment next Tuesday at 4").action).toBe("record_health_appointment");
   });
 });

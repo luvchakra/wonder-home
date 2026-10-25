@@ -36,6 +36,14 @@ export const INTENT_ACTIONS = [
   /** "The washing machine is making that noise again" — a service request logged against the appliance. */
   "raise_service_request",
   "adjust_schedule",
+  /**
+   * "Asmi's karate grading is on Sunday 1 November at 9.30 am" — being told
+   * about a new dated thing (a test, a class's grading or show, an event, an
+   * invitation, a bill's due day). The sentence goes to HomeSend, read and
+   * checked like anything sent there, and waits there for a person (the
+   * owner, 2026-10-25: typed into HomeTalk, it had been read as a move).
+   */
+  "file_with_homesend",
   "set_preference",
   "make_payment",
   /** "Add the electricity bill, 2,400 due on the 5th every month" — a new bill on Bills (11-010); never a payment. */
@@ -151,7 +159,8 @@ export function disposeIntent(intent: HouseholdIntent): IntentDisposition {
     return { kind: "clarify", question: clarifyingQuestionFor(intent) };
   }
 
-  if (intent.target.kind === "unspecified" && intent.action !== "ask_status" && intent.action !== "check_agents" && intent.action !== "find_places" && intent.action !== "open_screen") {
+  // HomeSend reads the whole sentence itself, so being told about something new names no target here.
+  if (intent.target.kind === "unspecified" && intent.action !== "ask_status" && intent.action !== "check_agents" && intent.action !== "find_places" && intent.action !== "open_screen" && intent.action !== "file_with_homesend") {
     return { kind: "clarify", question: "Which one did you mean?" };
   }
 

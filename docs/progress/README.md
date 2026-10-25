@@ -11,6 +11,7 @@ decision that shapes later work each earns a note, written before moving on.
 
 | Date | Note |
 |---|---|
+| 2026-10-25 | [HomeSend: the owner's test round, and what it fixed](2026-10-25-homesend-owner-test-round.md) |
 | 2026-10-25 | [HomeSend: more than 95% sure before anything is added on its own](2026-10-25-homesend-95-percent.md) |
 | 2026-10-25 | [HomeSend: the day and time a flyer names are always found](2026-10-25-homesend-dates-everywhere.md) |
 | 2026-10-25 | [HomeSend: Add creates WonderHome's own record, aligned to the entity](2026-10-25-homesend-entity-aligned-add.md) |

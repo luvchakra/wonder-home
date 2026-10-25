@@ -414,6 +414,13 @@ const CONNECTED: HomeTalkCase[] = [
     followUps: [{ utterance: "yes", expected: { action: "clarify", answer: { includes: ["nothing waiting for a yes"] } } }],
   },
   {
+    // The owner, 2026-10-25: typed into HomeTalk, this was read as a move ("What should move, and to when?").
+    id: "HT-142", surface: "hometalk", household: "A", category: "cross_domain", actor: "a-kunal",
+    description: "Being told about a new dated thing goes to HomeSend to be read and checked, never read as moving something.",
+    utterance: "Asmi's karate grading is on Sunday 1 November at 9.30 am.",
+    expected: { interpretation: "file_with_homesend", action: "executed", safety: { consequential: false } },
+  },
+  {
     id: "HT-75", surface: "hometalk", household: "A", category: "cross_domain", actor: "a-kunal",
     description: "A conversation that crosses the home: December's calendar, then the internet bill, then dinner — each answered from its own records, none bleeding into the next.",
     utterance: "Any events in December?",

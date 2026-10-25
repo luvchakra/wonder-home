@@ -1,7 +1,7 @@
 "use client";
 
 import { GraduationCap, HeartPulse, Medal, Mic, PartyPopper, ReceiptText, ShieldCheck, ShoppingBasket, Sparkles, Wallet } from "lucide-react";
-import { useState } from "react";
+import { useState, type ReactNode } from "react";
 
 import { isConsequentialInstruction } from "@wonderhome/core/homesend/audio";
 import type { DocumentPlan } from "@wonderhome/core/homesend/plan";
@@ -284,7 +284,7 @@ export function HomeSendConfirmStep({
   /** The category the review opens on, marked Suggested; null when nothing suggested one, so the person picks. */
   defaultKind: string | null;
   prefill: HomeSendExtractionFields;
-  kids: { id: string; displayName: string }[];
+  kids: { id: string; displayName: string; classes?: string[] }[];
   householdId: string;
   routeAction: (formData: FormData) => void;
   routeError?: string;
@@ -472,12 +472,15 @@ function SchoolChildField({
   defaultValue,
   canAddChild,
   labels,
+  after,
 }: {
-  kids: { id: string; displayName: string }[];
+  kids: { id: string; displayName: string; classes?: string[] }[];
   subject: ReviewSubject | null;
   defaultValue: string;
   canAddChild: boolean;
   labels: HomeSendReviewLabels["child"];
+  /** What depends on the child chosen, given that child's id ("" for none yet, or a child being added). */
+  after?: (childId: string) => ReactNode;
 }) {
   // A notice that named somebody the household does not have starts on
   // "add them"; so does a household with no children at all.
@@ -511,6 +514,36 @@ function SchoolChildField({
           <p className="text-xs text-[var(--wh-foreground-subtle)]">{labels.joins}</p>
         </div>
       ) : null}
+      {after?.(adding ? "" : value)}
+    </div>
+  );
+}
+
+/** The picker's value for "add a class that is not on record yet". */
+const NEW_CLASS = "__new_class__";
+
+/**
+ * A class outside school, picked from the chosen child's own (the owner,
+ * 2026-10-25: rule 20, never typed when it is a known set). The class the
+ * content named is chosen when the child has it; otherwise "Add new…" opens
+ * with the name it read, and the class is added with the item.
+ */
+function ActivityClassField({ classes, prefill, words }: { classes: readonly string[]; prefill: string; words: HomeSendReviewLabels["field"] }) {
+  const read = prefill.trim();
+  const known = classes.find((name) => name.toLocaleLowerCase() === read.toLocaleLowerCase());
+  const [choice, setChoice] = useState(known ?? (read || classes.length === 0 ? NEW_CLASS : ""));
+  const adding = choice === NEW_CLASS;
+  return (
+    <div className="space-y-1.5">
+      <label htmlFor="activityClass" className="block text-sm font-medium">{words.activityName}</label>
+      <select id="activityClass" name={adding ? undefined : "activityName"} className={selectClass} value={choice} onChange={(event) => setChoice(event.target.value)} required>
+        {!choice ? <option value="">{words.chooseExisting}</option> : null}
+        {classes.map((name) => (
+          <option key={name} value={name}>{name}</option>
+        ))}
+        <option value={NEW_CLASS}>{words.addNew}</option>
+      </select>
+      {adding ? <Field label={words.addNew.replace(/…$/, "")} name="activityName" required defaultValue={read} autoComplete="off" maxLength={120} /> : null}
     </div>
   );
 }
@@ -533,7 +566,7 @@ export function HomeSendConfirmFields({
 }: {
   kind: string;
   prefill: HomeSendExtractionFields;
-  kids: { id: string; displayName: string }[];
+  kids: { id: string; displayName: string; classes?: string[] }[];
   subject?: ReviewSubject | null;
   /** Needed by a receipt, whose lines are matched against what the household tracks. */
   householdId?: string;
@@ -590,9 +623,15 @@ export function HomeSendConfirmFields({
         </>
       ) : kind === "activity_item" ? (
         <>
-          <SchoolChildField kids={kids} subject={subject} defaultValue={schoolDefault} canAddChild={canAddChild} labels={labels.child} />
-          {/* The class it is for, by name: one of the child's own, or a new one added with it. */}
-          <Field label={words.activityName} name="activityName" required defaultValue={prefill?.subject ?? ""} autoComplete="off" maxLength={120} />
+          <SchoolChildField
+            kids={kids}
+            subject={subject}
+            defaultValue={schoolDefault}
+            canAddChild={canAddChild}
+            labels={labels.child}
+            // The class it is for: one of the chosen child's own, picked (rule 20), or a new one added with it.
+            after={(childId) => <ActivityClassField key={childId || "none"} classes={kids.find((kid) => kid.id === childId)?.classes ?? []} prefill={prefill?.subject ?? ""} words={words} />}
+          />
           <div className="space-y-1.5">
             <label htmlFor="activityKind" className="block text-sm font-medium">{words.activityKind}</label>
             <select id="activityKind" name="activityKind" defaultValue={prefill?.activityKind ?? "event"} className={selectClass}>

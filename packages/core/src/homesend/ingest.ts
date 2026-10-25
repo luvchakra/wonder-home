@@ -150,7 +150,8 @@ const defaultTranscribe: NonNullable<IngestDeps["transcribe"]> = async (supabase
     try {
       const heard = await provider.listen({ clip, settings });
       return { status: "transcribed", text: heard.text, confidence: heard.confidence };
-    } catch {
+    } catch (error) {
+      logTranscriptionFailure("cloud_speech", clip, error);
       return { status: "failed" };
     }
   }
@@ -191,10 +192,23 @@ async function transcribeWithGemini(
       languageCode: listeningLanguage(settings),
       vocabulary: live.transcriptionVocabulary(members.map((member) => member.displayName)),
     });
+    if (!text) logTranscriptionFailure("gemini", clip, new Error("no words came back"));
     return { status: "transcribed", text: text ?? "", confidence: GEMINI_TRANSCRIPT_CONFIDENCE };
-  } catch {
+  } catch (error) {
+    logTranscriptionFailure("gemini", clip, error);
     return { status: "failed" };
   }
+}
+
+/**
+ * Why a voice note could not be written down (the owner, 2026-10-25: a
+ * WhatsApp voice note failed and nothing said why). The error and the
+ * audio's type and size only — never the audio or any words from it.
+ */
+function logTranscriptionFailure(service: "cloud_speech" | "gemini", clip: AudioClip, error: unknown): void {
+  // A key can ride in a request URL ("?key=…"); it never reaches a log.
+  const reason = error instanceof Error ? `${error.name}: ${error.message}`.replace(/([?&]key=)[^&\s"']+/gi, "$1[redacted]").replace(/AIza[0-9A-Za-z_-]{20,}/g, "[redacted]").slice(0, 300) : "unknown error";
+  console.warn("[homesend] voice note not transcribed", { service, mimeType: clip.mimeType, approxBytes: Math.round((clip.base64.length * 3) / 4), reason });
 }
 
 const defaultScan: NonNullable<IngestDeps["scan"]> = (bytes, contentType) => scanForMalware(bytes, contentType, platformMalwareScanConfig());

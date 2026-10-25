@@ -154,6 +154,23 @@ export async function listTeachers(supabase: SupabaseClient, householdId: string
 }
 
 /** Every current class, with its current competitions, awards and notes, soonest first. */
+/**
+ * The household's children, each with the names of their own classes, for a
+ * picker that offers a child's classes once that child is chosen (rule 20).
+ */
+export function childrenWithClasses(
+  members: readonly { id: string; displayName: string; memberType: string }[],
+  activities: readonly Pick<Activity, "childMemberId" | "name">[],
+): { id: string; displayName: string; classes: string[] }[] {
+  return members
+    .filter((member) => member.memberType === "child")
+    .map((kid) => ({
+      id: kid.id,
+      displayName: kid.displayName,
+      classes: [...new Set(activities.filter((activity) => activity.childMemberId === kid.id).map((activity) => activity.name))].sort((a, b) => a.localeCompare(b)),
+    }));
+}
+
 export async function listActivities(supabase: SupabaseClient, householdId: string): Promise<Activity[]> {
   const { data, error } = await supabase.from("child_activities").select(ACTIVITY_COLUMNS).eq("household_id", householdId).eq("active", true).order("name");
   if (error) throw new Error(`listActivities failed: ${error.code ?? "unknown"}`);

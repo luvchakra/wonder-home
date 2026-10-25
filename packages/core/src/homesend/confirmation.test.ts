@@ -40,6 +40,8 @@ describe("HomeSend confirmation strategy (Wave 3 §12)", () => {
     expect(decide({ understanding: unchecked })).toMatchObject({ mode: "prepare", reason: "WonderHome couldn't check the name against what was sent, so a person looks first." });
     const twoThings = { ...unchecked, check: { verified: false, unverified: ["the amount", "the date"] } };
     expect(decide({ understanding: twoThings }).reason).toBe("WonderHome couldn't check the amount and the date against what was sent, so a person looks first.");
+    const photo = { ...unchecked, check: { verified: false, unverified: ["the original, which can't be checked word by word"] } };
+    expect(decide({ understanding: photo }).reason).toBe("This was read from a photo or a file, which can't be checked word by word, so a person looks first.");
     // Exactly 95% is not more than 95%.
     expect(decide({ understanding: { ...unchecked, score: 0.95, check: { verified: true, unverified: [] } } })).toMatchObject({ mode: "prepare", reason: "WonderHome adds things on its own only when it is more than 95% sure, so a person looks first." });
     // An item read before the check existed has no score, and never applies on its own.

@@ -186,6 +186,13 @@ WonderHome's AI layer is one pipeline with three named, real surfaces —
   was sent; the review says which detail it could not check. A photo or a
   file has no text to check against, so it always waits for a person, and a
   voice note is never surer than its transcript.
+  Being *told* in HomeTalk about a new dated thing ("Asmi's karate grading
+  is on Sunday 1 November at 9.30 am") is the `file_with_homesend` action
+  (the owner, 2026-10-25: a model had read it as a move). The executor hands
+  the person's own words to `ingestText`, the same entry point the paperclip
+  uses, so it is read, checked and reviewed exactly like anything sent, and
+  nothing reaches a domain table from HomeTalk. It needs no target and no
+  grounding of its own: HomeSend resolves the names and decides the day.
   A file's type is decided from its bytes (`normalize.ts`), a link is only
   ever fetched through `link-fetch.ts` (public addresses only, DNS checked
   and pinned, every redirect re-checked), an uncertain voice transcript is

@@ -5,6 +5,7 @@ import { listHouseholdPlaces } from "@wonderhome/core/homeplaces/repository";
 import { englishNoticeKey } from "@wonderhome/core/conversation/reply-language";
 import { requestT } from "@wonderhome/core/i18n/request";
 import { listMembers, isHouseholdAdmin } from "@wonderhome/core/identity/households";
+import { childrenWithClasses, listActivities } from "@wonderhome/core/school/activities";
 import { AppShell } from "@wonderhome/core/shell/app-shell";
 import { loadVoiceSettings, speechKeySource } from "@wonderhome/core/voice/repository";
 import { EmptyState } from "@wonderhome/core/ui/states";
@@ -42,7 +43,7 @@ export default async function AiPage({ searchParams }: { searchParams: Promise<{
   // after it (below), never before.
   const householdId = membership.household.id;
   const welcoming = welcome === "1";
-  const [entitlement, voiceEntitlement, voiceSettings, members, speechKey, gate, openSessionId, knownPlaces] = await Promise.all([
+  const [entitlement, voiceEntitlement, voiceSettings, members, speechKey, gate, openSessionId, knownPlaces, activities] = await Promise.all([
     may(supabase, householdId, "conversation.text"),
     may(supabase, householdId, "conversation.voice"),
     loadVoiceSettings(supabase, householdId),
@@ -51,8 +52,10 @@ export default async function AiPage({ searchParams }: { searchParams: Promise<{
     geminiLiveGate(supabase, householdId),
     welcoming ? Promise.resolve(null) : currentSessionId(supabase, householdId, membership.memberId).catch(() => null),
     listHouseholdPlaces(supabase, householdId).catch(() => []),
+    // Each child's own classes, for HomeSend's review: a class is picked, not typed (rule 20).
+    listActivities(supabase, householdId).catch(() => []),
   ]);
-  const kids = members.filter((member) => member.memberType === "child").map((kid) => ({ id: kid.id, displayName: kid.displayName }));
+  const kids = childrenWithClasses(members, activities);
   // A sustained, hands-free exchange is still voice underneath — gated the
   // same way tap-to-speak already is, and by the deployment's own rollout
   // flag (config/flags.ts: "flags gate rollout, never authorization").

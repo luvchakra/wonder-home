@@ -210,6 +210,8 @@ export const REPLY_CLASSES: Readonly<Record<IntentAction, readonly ContentClass[
   complete_school_item: ["child"],
   raise_service_request: [],
   adjust_schedule: [],
+  // The reply names what was read; a child's or a bill's detail is HomeSend's to show, on its own screen.
+  file_with_homesend: ["child", "financial"],
   set_preference: [],
   make_payment: ["financial"],
   order_items: ["financial"],
