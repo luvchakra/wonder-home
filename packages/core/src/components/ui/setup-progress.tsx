@@ -17,7 +17,7 @@ import {
 } from "lucide-react";
 import Link from "next/link";
 
-import type { SetupAssessment, SetupStep, SetupStepKey } from "../../household/setup";
+import { groupSetupSteps, type SetupAssessment, type SetupGroupKey, type SetupStep, type SetupStepKey } from "../../household/setup";
 import { cn } from "../../lib/cn";
 import { Card } from "./card";
 import { IconTile } from "./icon-tile";
@@ -50,6 +50,17 @@ export type SetupProgressLabels = {
   progress: string;
   firstWeek: string | null;
   seeAll: string;
+  /** Each group's heading on the full checklist. */
+  groups: Record<SetupGroupKey, string>;
+  /** "{done} of {total} done", filled in per group. */
+  groupDone: string;
+};
+
+const GROUP_NAMES: Record<SetupGroupKey, string> = {
+  household: "Your household and people",
+  running: "How the home runs",
+  home_money: "Home and money",
+  everyday: "Everyday life",
 };
 
 const ICONS: Record<SetupStepKey, LucideIcon> = {
@@ -94,6 +105,8 @@ export function SetupProgressCard({
     progress: `${assessment.done} of ${assessment.total} done. Each step you fill in is something WonderHome can start looking after for you.`,
     firstWeek: daysLeft !== undefined && daysLeft > 0 ? `Your first week: ${daysLeft === 1 ? "1 day" : `${daysLeft} days`} of guided setup left.` : null,
     seeAll: `See all ${assessment.total} steps`,
+    groups: GROUP_NAMES,
+    groupDone: "{done} of {total} done",
   };
 
   if (variant === "compact") {
@@ -154,11 +167,32 @@ export function SetupProgressCard({
         </div>
       </div>
 
-      <ul className="mt-4 divide-y divide-[var(--wh-border)]">
-        {shown.map((step) => (
-          <StepRow key={step.key} step={step} />
-        ))}
-      </ul>
+      {variant === "full" ? (
+        // The whole checklist, grouped by what each step is about (the owner, 2026-10-25).
+        <div className="mt-4 space-y-4">
+          {groupSetupSteps(shown).map((group) => (
+            <section key={group.key} aria-labelledby={`setup-group-${group.key}`}>
+              <h3 id={`setup-group-${group.key}`} className="flex flex-wrap items-baseline justify-between gap-x-3 gap-y-0.5 border-b border-[var(--wh-border)] pb-1.5 text-sm font-semibold">
+                <span>{words.groups[group.key]}</span>
+                <span className="text-xs font-medium text-[var(--wh-foreground-subtle)]">
+                  {words.groupDone.replace("{done}", String(group.steps.filter((step) => step.done).length)).replace("{total}", String(group.steps.length))}
+                </span>
+              </h3>
+              <ul className="divide-y divide-[var(--wh-border)]">
+                {group.steps.map((step) => (
+                  <StepRow key={step.key} step={step} />
+                ))}
+              </ul>
+            </section>
+          ))}
+        </div>
+      ) : (
+        <ul className="mt-4 divide-y divide-[var(--wh-border)]">
+          {shown.map((step) => (
+            <StepRow key={step.key} step={step} />
+          ))}
+        </ul>
+      )}
 
       {variant === "prominent" && assessment.total > assessment.next.length + assessment.done ? (
         <div className="mt-3 flex justify-end">

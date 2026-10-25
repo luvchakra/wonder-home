@@ -201,6 +201,25 @@ const DEFINITIONS: readonly Definition[] = [
   },
 ];
 
+export type SetupGroupKey = "household" | "running" | "home_money" | "everyday";
+
+/**
+ * The full checklist, grouped by what each step is about (the owner,
+ * 2026-10-25: "similar category items" together on Manage Household). Every
+ * step is in exactly one group, in the order the checklist reads.
+ */
+export const SETUP_GROUPS: readonly { key: SetupGroupKey; steps: readonly SetupStepKey[] }[] = [
+  { key: "household", steps: ["basics", "people", "children", "guardians", "helper_hours"] },
+  { key: "running", steps: ["responsibilities", "playbook", "policies"] },
+  { key: "home_money", steps: ["home", "bills"] },
+  { key: "everyday", steps: ["meals", "school", "family_time"] },
+];
+
+/** The steps that apply, in their groups; a group with none of them is left out. */
+export function groupSetupSteps<S extends { key: SetupStepKey }>(steps: readonly S[]): { key: SetupGroupKey; steps: S[] }[] {
+  return SETUP_GROUPS.map((group) => ({ key: group.key, steps: group.steps.flatMap((key) => steps.filter((step) => step.key === key)) })).filter((group) => group.steps.length > 0);
+}
+
 export type SetupAssessment = {
   /** 0–100, weighted, over the steps that apply to this household. */
   percent: number;
