@@ -591,7 +591,7 @@ function MessageBubble({
   );
 
   return (
-    <li className={`group flex items-center gap-1 ${message.mine ? "flex-row-reverse" : ""} ${message.last ? "mb-2" : "mb-0.5"}`}>
+    <li className={`group flex items-center gap-1 ${message.mine ? "flex-row-reverse" : ""} ${message.last ? "mb-3" : "mb-1"}`}>
       <Popover
         open={menu}
         onOpenChange={setMenu}
