@@ -188,6 +188,36 @@ async function setPlaybookItemActiveImpl(
  * all`), and deleting frees the outcome key to be assigned again from
  * scratch rather than leaving a dead "Nobody yet" row nothing can replace.
  */
+/**
+ * How far WonderHome goes for every listed responsibility at once (the group
+ * card on Responsibilities). Each one is saved through `saveResponsibility`,
+ * so each change is validated and audited on its own. This is not one
+ * transaction: if a write fails part-way, the ones before it stay changed and
+ * the error is raised so the person can see it.
+ */
+async function setAutonomyForOutcomesImpl(
+  supabase: SupabaseClient,
+  input: { householdId: string; actorMemberId: string; members: readonly ConfigMember[]; outcomeKeys: readonly string[]; aiMode: AutonomyMode },
+): Promise<number> {
+  const wanted = new Set(input.outcomeKeys);
+  const rows = (await listResponsibilities(supabase, input.householdId)).filter((row) => wanted.has(row.outcomeKey));
+  for (const row of rows) {
+    await saveResponsibilityImpl(supabase, {
+      householdId: input.householdId,
+      actorMemberId: input.actorMemberId,
+      members: input.members,
+      responsibility: {
+        outcomeKey: row.outcomeKey,
+        primaryMemberId: row.primaryMemberId,
+        backupMemberId: row.backupMemberId,
+        aiMode: input.aiMode,
+        priority: row.priority,
+      },
+    });
+  }
+  return rows.length;
+}
+
 async function removeResponsibilityImpl(
   supabase: SupabaseClient,
   input: { householdId: string; actorMemberId: string; outcomeKey: string },
@@ -582,6 +612,7 @@ async function audit(
 export const saveResponsibility = invalidatesContext(saveResponsibilityImpl, (_supabase, input) => input.householdId);
 export const savePlaybookItem = invalidatesContext(savePlaybookItemImpl, (_supabase, input) => input.householdId);
 export const setPlaybookItemActive = invalidatesContext(setPlaybookItemActiveImpl, (_supabase, input) => input.householdId);
+export const setAutonomyForOutcomes = invalidatesContext(setAutonomyForOutcomesImpl, (_supabase, input) => input.householdId);
 export const removeResponsibility = invalidatesContext(removeResponsibilityImpl, (_supabase, input) => input.householdId);
 export const retirePolicy = invalidatesContext(retirePolicyImpl, (_supabase, input) => input.householdId);
 export const savePolicy = invalidatesContext(savePolicyImpl, (_supabase, input) => input.householdId);
