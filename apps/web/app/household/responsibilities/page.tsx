@@ -1,4 +1,4 @@
-import { ChevronDown, ListChecks, Scale } from "lucide-react";
+import { ListChecks, Scale } from "lucide-react";
 import Link from "next/link";
 
 import { listConfigurationConflicts, listPlaybookOutcomes } from "@wonderhome/core/household/configuration-repository";
@@ -14,7 +14,8 @@ import { SectionHeader } from "@wonderhome/core/ui/section-header";
 import { SegmentedControl } from "@wonderhome/core/ui/segmented-control";
 import { EmptyState } from "@wonderhome/core/ui/states";
 
-import { AcceptRebalanceButton, AddResponsibilityButton, ResponsibilityRow } from "../../_components/responsibility-controls";
+import { AUTONOMY_MODES, type AutonomyMode } from "@wonderhome/core/household/autonomy";
+import { AcceptRebalanceButton, AddResponsibilityButton, ResponsibilityGroup, ResponsibilityRow, type GroupAutonomyLabels } from "../../_components/responsibility-controls";
 import { cadenceLabel } from "../../_lib/cadence";
 import { perWeekWords, responsibilityLabels, starterOutcomes } from "../../_lib/manage-labels";
 import { requireSession, type Session } from "../../_lib/session";
@@ -219,6 +220,15 @@ function renderResponsibilities({
   const imbalances = findImbalances(memberLoads(workloadMembers, workloadOutcomes));
   const titleOf = (key: string) => workloadOutcomes.find((outcome) => outcome.outcomeKey === key)?.name ?? key;
   const labels = responsibilityLabels(t);
+  const groupAutonomy = {
+    title: t("manage.resp.howMuch"),
+    options: Object.fromEntries(AUTONOMY_MODES.map((mode) => [mode, { heading: t(`manage.aiMode.${mode}`), how: t(`manage.resp.how.${mode}`) }])) as GroupAutonomyLabels["options"],
+  };
+  // The one mode every responsibility in a group shares, so its dropdown can show it chosen.
+  const sharedMode = (groupRows: Row[]): AutonomyMode | null => {
+    const first = groupRows[0]?.ai_mode ?? null;
+    return first && groupRows.every((row) => row.ai_mode === first) ? first : null;
+  };
   // Links keep the other choice: switching the tab keeps the grouping, and vice versa.
   const listHref = (params: { tab?: string; group?: string }) => {
     const query = new URLSearchParams(Object.entries(params).filter((entry): entry is [string, string] => Boolean(entry[1])));
@@ -368,13 +378,16 @@ function renderResponsibilities({
         ) : (
           <div className="space-y-4">
             {(grouping === "outcome" ? groupByArea(shown, t) : groupByOwner(shown, members, nobodyYet)).map((group) => (
-              <details key={`${group.ownerId ?? "area"}:${group.ownerName}`} open className="group space-y-2">
-                <summary className="flex min-h-11 cursor-pointer list-none items-center justify-between gap-3 px-1 text-xs font-medium tracking-wide text-[var(--wh-foreground-subtle)] uppercase [&::-webkit-details-marker]:hidden">
-                  <span>
-                    {group.ownerName} · {group.rows.length}
-                  </span>
-                  <ChevronDown aria-hidden className="size-4 shrink-0 transition-transform group-open:rotate-180" />
-                </summary>
+              <ResponsibilityGroup
+                key={`${group.ownerId ?? "area"}:${group.ownerName}`}
+                title={group.ownerName}
+                count={group.rows.length}
+                outcomeKeys={group.rows.map((row) => row.outcome_key)}
+                currentMode={sharedMode(group.rows)}
+                editable={admin}
+                householdId={householdId}
+                labels={groupAutonomy}
+              >
                 <Card className="p-2">
                   <ul className="divide-y divide-[var(--wh-border)]">
                     {group.rows.map((row) => {
@@ -413,7 +426,7 @@ function renderResponsibilities({
                     })}
                   </ul>
                 </Card>
-              </details>
+              </ResponsibilityGroup>
             ))}
           </div>
         )}

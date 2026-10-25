@@ -1,14 +1,16 @@
 "use client";
 
-import { Plus, Trash2 } from "lucide-react";
-import { startTransition, useActionState, useEffect, useRef, useState } from "react";
+import { ChevronDown, Plus, Trash2 } from "lucide-react";
+import { startTransition, useActionState, useEffect, useRef, useState, type ReactNode } from "react";
 
+import { AUTONOMY_MODES, type AutonomyMode } from "@wonderhome/core/household/autonomy";
+import { cn } from "@wonderhome/core/lib/cn";
 import { ResponsibilityCard, type ResponsibilityCardProps } from "@wonderhome/core/ui/outcome-card";
 import { Pill } from "@wonderhome/core/ui/pill";
 import { ConfirmationSheet, Sheet } from "@wonderhome/core/ui/sheet";
 
 import type { ActionState } from "../(auth)/actions";
-import { acceptRebalanceAction, removeResponsibilityAction, saveResponsibilityAction } from "../(auth)/configuration-actions";
+import { acceptRebalanceAction, removeResponsibilityAction, saveResponsibilityAction, setGroupAutonomyAction } from "../(auth)/configuration-actions";
 import { iconForOutcome } from "../_lib/outcome-icons";
 import { ResponsibilityForm, type ConfigFormLabels, type MemberOption, type ResponsibilityInitial } from "./config-forms";
 
@@ -286,6 +288,110 @@ function ReadOnlyDetail({ card, labels }: { card: Omit<ResponsibilityCardProps, 
  * the household already half-made — the person taking it is its named
  * backup — and it can be swapped straight back from the row itself.
  */
+/** The words for the group card's dropdown, in the viewer's language: each mode's heading and what it lets WonderHome do. */
+export type GroupAutonomyLabels = {
+  title: string;
+  options: Record<AutonomyMode, { heading: string; how: string }>;
+};
+
+/**
+ * A group label on Responsibilities: a thin card that starts collapsed. Opened,
+ * it shows the dropdown of the four autonomy choices (admins only) above the
+ * responsibilities under that label. Choosing one sets every responsibility in
+ * the group to that choice.
+ */
+export function ResponsibilityGroup({
+  title,
+  count,
+  outcomeKeys,
+  currentMode,
+  editable,
+  householdId,
+  labels,
+  children,
+}: {
+  title: string;
+  count: number;
+  outcomeKeys: readonly string[];
+  /** The mode every responsibility in the group shares, or null when they differ. */
+  currentMode: AutonomyMode | null;
+  editable: boolean;
+  householdId: string;
+  labels: GroupAutonomyLabels;
+  children: ReactNode;
+}) {
+  const [open, setOpen] = useState(false);
+
+  return (
+    <div className="space-y-2">
+      <button
+        type="button"
+        aria-expanded={open}
+        onClick={() => setOpen((value) => !value)}
+        className="flex min-h-11 w-full items-center justify-between gap-3 rounded-[var(--wh-radius-sm)] border border-[var(--wh-border)] bg-[var(--wh-surface)] px-4 text-left text-xs font-medium tracking-wide text-[var(--wh-foreground-subtle)] uppercase transition-colors hover:bg-[var(--wh-surface-muted)]"
+      >
+        <span>
+          {title} · {count}
+        </span>
+        <ChevronDown aria-hidden className={cn("size-4 shrink-0 transition-transform", open && "rotate-180")} />
+      </button>
+
+      {open ? (
+        <div className="space-y-2">
+          {editable ? <GroupAutonomyChooser outcomeKeys={outcomeKeys} currentMode={currentMode} householdId={householdId} labels={labels} /> : null}
+          {children}
+        </div>
+      ) : null}
+    </div>
+  );
+}
+
+function GroupAutonomyChooser({
+  outcomeKeys,
+  currentMode,
+  householdId,
+  labels,
+}: {
+  outcomeKeys: readonly string[];
+  currentMode: AutonomyMode | null;
+  householdId: string;
+  labels: GroupAutonomyLabels;
+}) {
+  const [state, formAction, pending] = useActionState<ActionState, FormData>(setGroupAutonomyAction, {});
+
+  return (
+    <details className="group rounded-[var(--wh-radius-sm)] border border-[var(--wh-border)] bg-[var(--wh-surface)]">
+      <summary className="flex min-h-11 cursor-pointer list-none items-center justify-between gap-3 px-4 text-sm font-medium [&::-webkit-details-marker]:hidden">
+        <span>{labels.title}</span>
+        <ChevronDown aria-hidden className="size-4 shrink-0 text-[var(--wh-foreground-subtle)] transition-transform group-open:rotate-180" />
+      </summary>
+      <form action={formAction} className="divide-y divide-[var(--wh-border)] border-t border-[var(--wh-border)]">
+        <input type="hidden" name="householdId" value={householdId} />
+        <input type="hidden" name="outcomeKeys" value={outcomeKeys.join(",")} />
+        {AUTONOMY_MODES.map((mode) => (
+          <button
+            key={mode}
+            type="submit"
+            name="aiMode"
+            value={mode}
+            disabled={pending}
+            aria-pressed={currentMode === mode}
+            className={cn(
+              "block w-full px-4 py-3 text-left transition-colors hover:bg-[var(--wh-surface-muted)] disabled:opacity-60",
+              currentMode === mode && "bg-[var(--wh-primary-soft)]/40",
+            )}
+          >
+            <span className="block text-sm font-semibold">{labels.options[mode].heading}</span>
+            <span className="block text-xs text-[var(--wh-foreground-muted)]">{labels.options[mode].how}</span>
+          </button>
+        ))}
+      </form>
+      {state.error ? <p className="px-4 pb-3 text-xs text-[var(--wh-attention)]" role="alert">{state.error}</p> : null}
+      {state.notice && !state.error ? <p className="px-4 pb-3 text-xs text-[var(--wh-handled)]" role="status">{state.notice}</p> : null}
+    </details>
+  );
+}
+
 export function AcceptRebalanceButton({
   householdId,
   outcomeKey,

@@ -17,6 +17,7 @@ import {
   savePlaybookItem,
   savePolicy,
   saveResponsibility,
+  setAutonomyForOutcomes,
   setPlaybookItemActive,
 } from "@wonderhome/core/household/configuration-repository";
 import { acceptRebalance } from "@wonderhome/core/household/workload-repository";
@@ -98,6 +99,36 @@ export async function acceptRebalanceAction(_previous: ActionState, formData: Fo
     revalidatePath("/household/responsibilities");
     revalidatePath("/househelper");
     return { notice: changed ? "Swapped. The backup owns it now, and the owner backs it up." : "Already swapped." };
+  } catch (thrown) {
+    return { error: toErrorBody(thrown, "configuration").body.error.message };
+  }
+}
+
+const groupAutonomySchema = z.object({
+  householdId: z.uuid(),
+  // Comma-separated outcome keys, one group's worth (a key never holds a comma).
+  outcomeKeys: z
+    .string()
+    .transform((value) => value.split(",").filter(Boolean))
+    .pipe(z.array(z.string().regex(/^[a-z][a-z0-9_.]{1,60}$/, { error: "That is not a valid outcome key." })).min(1).max(100)),
+  aiMode: z.enum(AUTONOMY_MODES),
+});
+
+/** The group card on Responsibilities: one choice sets how far WonderHome goes for every responsibility under that label. */
+export async function setGroupAutonomyAction(_previous: ActionState, formData: FormData): Promise<ActionState> {
+  const parsed = groupAutonomySchema.safeParse(Object.fromEntries(formData));
+  if (!parsed.success) return { error: parsed.error.issues[0]?.message ?? "That choice could not be read. Please try again." };
+
+  try {
+    const supabase = await createClient();
+    const { householdId, outcomeKeys, aiMode } = parsed.data;
+    const membership = await requireHouseholdAdmin(supabase, householdId);
+    const members = await listMembers(supabase, householdId, membership.household.ownerMemberId);
+    const changed = await setAutonomyForOutcomes(supabase, { householdId, actorMemberId: membership.memberId, members, outcomeKeys, aiMode });
+    revalidatePath("/household/responsibilities");
+    revalidatePath("/household/setup");
+    revalidatePath("/househelper");
+    return { notice: `Updated ${changed} responsibilit${changed === 1 ? "y" : "ies"}.` };
   } catch (thrown) {
     return { error: toErrorBody(thrown, "configuration").body.error.message };
   }
