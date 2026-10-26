@@ -37,7 +37,7 @@ export type PreparedReview = {
   reconciliation: ReviewReconciliation | null;
   confirmation?: ReviewConfirmation | null;
   plan?: DocumentPlan | null;
-  /** Why it waits when it would otherwise be added on its own ("already on the shopping list"), worded on the server (I-24). */
+  /** Why it waits when it would otherwise be added on its own ("already on the shopping list"), worded on the server (I-27). */
   waitWords?: string | null;
 };
 
@@ -411,7 +411,7 @@ export function HomeSendInbox({
               {pendingOthers.map((item) => {
                 const heard = uncheckedTranscript(item);
                 const presentation = item.source === "audio_note" && heard ? { icon: Mic, tone: "neutral" as IconTone, label: words.voiceNote } : presentationFor(item.classifiedKind, words.kind);
-                // Something that would be added on its own says why it waits, in a few words (I-24).
+                // Something that would be added on its own says why it waits, in a few words (I-27).
                 const waiting = reviews[item.id]?.waitWords;
                 const reason = heard
                   ? words.checkHeard

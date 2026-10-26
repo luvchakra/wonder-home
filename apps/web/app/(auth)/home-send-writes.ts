@@ -191,14 +191,14 @@ export type Created = {
   also?: { domain: HomeSendChangeDomain; entityId: string }[];
   changeType?: "created" | "updated";
   previous?: Record<string, unknown>;
-  /** A grocery that was on the shopping list already: what this added, and what the list says now (I-24). */
+  /** A grocery that was on the shopping list already: what this added, and what the list says now (I-27). */
   more?: { added: Amount; now: Amount };
 };
 
 /**
  * The tracked item a HomeSend grocery goes onto: the one HomeTalk's add would
  * pick (its name or alias, then the one holding every word said), so two
- * entries that look alike never get a third (I-24); else the closest by spelling.
+ * entries that look alike never get a third (I-27); else the closest by spelling.
  */
 export function trackedGrocery(name: string, groceries: readonly GroceryItem[]): GroceryItem | null {
   return findGrocery(name, groceries) ?? groceries.find((item) => [item.name, ...item.aliases].some((known) => similarity(known, name) >= 0.8)) ?? null;

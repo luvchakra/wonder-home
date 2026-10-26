@@ -44,7 +44,7 @@ export type ConfirmationDecision = {
    * and said on WhatsApp, in a few words, never with an amount.
    */
   wait?: WaitingFor;
-  /** An `auto_apply` that adds to a grocery already on the shopping list, never a second entry (I-24). */
+  /** An `auto_apply` that adds to a grocery already on the shopping list, never a second entry (I-27). */
   topUp?: true;
 };
 
@@ -105,7 +105,7 @@ export type ConfirmationInput = {
   /**
    * The grocery it matched is on the shopping list now (`home-send-review.ts`
    * reads it). With an explicit amount that is a top-up, as HomeTalk's "+2 L,
-   * now 3 L" (design §6), not a duplicate to choose about (I-24).
+   * now 3 L" (design §6), not a duplicate to choose about (I-27).
    */
   onShoppingList?: boolean;
 };
@@ -153,7 +153,7 @@ export function decideConfirmation(input: ConfirmationInput): ConfirmationDecisi
   if (missing.length > 0) return { mode: "ask", reason: `It doesn't say the ${listDetails(missing)}.`, question: null, ...stillNeeded };
 
   // A grocery already on the shopping list, said with an amount, is more of
-  // it (I-24, the owner 2026-10-26): the same decision as anything new, then
+  // it (I-27, the owner 2026-10-26): the same decision as anything new, then
   // added to the entry that is there. Without an amount it waits for the
   // person to choose. Every other match keeps the duplicate rule (I-4).
   const listed = kind === "grocery_item" && input.onShoppingList === true && input.reconciliation?.proposal.type === "duplicate";

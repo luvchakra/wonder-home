@@ -142,7 +142,7 @@ Run them with `npx vitest run -t "AT-"`, or run the files above.
 
 Two product defects were found by these follow-up tests and fixed, as noted in the table. One E2E run failed once after a fresh build and did not reproduce in four further runs; its output was overwritten before it was captured.
 
-## Follow-up: I-24, a listed grocery, the reason and the row (25-039, 14-052)
+## Follow-up: I-27, a listed grocery, the reason and the row (25-039, 14-052)
 
 The owner, 2026-10-26: "2 litres mustard oil" on WhatsApp waited although groceries were Pre Approved; "Science project model · 70% sure · every detail is in what you sent"; Mustard oil waited at 97% with only "Review". Expected results were written into the tests before they ran.
 

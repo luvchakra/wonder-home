@@ -337,7 +337,7 @@ export async function answerIntakeQuestion(
 export function handedBackText(lead: string, outcome: { added: AddedOnItsOwn | WaitingInHomeSend | null; stillNeeded: readonly string[] }): string {
   const added = wasAdded(outcome.added) ? outcome.added : null;
   if (added?.more) {
-    // More of a grocery already on the list (I-24), as HomeTalk's own add says it: "+2 L, now 3 L".
+    // More of a grocery already on the list (I-27), as HomeTalk's own add says it: "+2 L, now 3 L".
     return `${lead} Added ${amountWords(added.more.added)} more **${added.title}** (now ${amountWords(added.more.now)})${sureClause(added)} — your household lets WonderHome add these on its own. You can undo it in HomeSend.`;
   }
   if (added) return `${lead} Added **${added.title}** to ${added.where}${sureClause(added)} — your household lets WonderHome add these on its own. You can undo it in HomeSend.`;

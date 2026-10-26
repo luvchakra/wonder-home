@@ -4,6 +4,10 @@ import type { whatsappEn } from "./en";
 export const whatsappZh: AreaCatalog<typeof whatsappEn> = {
   "whatsapp.ack.gotIt": "收到 👍",
   "whatsapp.ack.duplicate": "收到 👍 它已经在 HomeSend 里了。",
+  "whatsapp.ack.duplicateFor": "收到 👍 它已经在 HomeSend 里了——我已记下这是给 {name} 的。",
+  "whatsapp.ack.duplicateNoted": "收到 👍 它已经在 HomeSend 里了——我已把你的备注加上。",
+  "whatsapp.ack.duplicateHandled": "收到 👍 这一条已经处理过了 ✅ 你可以在 HomeSend 里修改它是给谁的。",
+  "whatsapp.noteAlone": "抱歉，我没明白这是关于什么的 🤔 能把它对应的那条消息发给我吗？",
   "whatsapp.ack.failed": "⚠️ 我先收好了。{why} 它在 HomeSend 的“已安全拦下”里。",
   "whatsapp.ack.unreadable": "WonderHome 读不出来。",
   "whatsapp.ack.checkTranscript": "收到 👍 我不确定那条语音听对了——请到 HomeSend 看看它说了什么。 🎙️",

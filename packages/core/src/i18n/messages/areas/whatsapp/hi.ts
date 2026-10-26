@@ -4,6 +4,10 @@ import type { whatsappEn } from "./en";
 export const whatsappHi: AreaCatalog<typeof whatsappEn> = {
   "whatsapp.ack.gotIt": "मिल गया 👍",
   "whatsapp.ack.duplicate": "मिल गया 👍 यह पहले से HomeSend में है।",
+  "whatsapp.ack.duplicateFor": "मिल गया 👍 यह पहले से HomeSend में है — मैंने लिख लिया है कि यह {name} के लिए है।",
+  "whatsapp.ack.duplicateNoted": "मिल गया 👍 यह पहले से HomeSend में है — मैंने आपका नोट इसमें जोड़ दिया है।",
+  "whatsapp.ack.duplicateHandled": "मिल गया 👍 यह पहले ही निपट चुका है ✅ यह किसके लिए है, यह आप HomeSend में बदल सकते हैं।",
+  "whatsapp.noteAlone": "माफ़ कीजिए, मैं समझ नहीं पाया कि यह किस बारे में है 🤔 क्या आप वह संदेश भेज सकते हैं जिससे यह जुड़ा है?",
   "whatsapp.ack.failed": "⚠️ मैंने इसे रख लिया। {why} यह HomeSend में \"सुरक्षित रूप से रुका\" में है।",
   "whatsapp.ack.unreadable": "WonderHome इसे पढ़ नहीं सका।",
   "whatsapp.ack.checkTranscript": "मिल गया 👍 मुझे पक्का नहीं कि मैंने वह वॉइस नोट सही सुना — कृपया HomeSend में देख लें कि उसमें क्या है। 🎙️",

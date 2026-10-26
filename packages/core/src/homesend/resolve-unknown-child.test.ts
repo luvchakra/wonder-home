@@ -54,3 +54,20 @@ describe("a notice naming a child who is not on record", () => {
     expect(subject.unknown).toBeUndefined();
   });
 });
+
+/** I-26: a model's placeholder is never a child to add. */
+describe("a reading that names a placeholder", () => {
+  it("never offers to add 'Child B', and asks who it is for", () => {
+    const subject = subjectFor([parent, member("asmi", "Asmi", "child"), member("manan", "Manan", "child")], ["Child B"]);
+    expect(subject.unknown).toBeUndefined();
+    expect(subject.said).toBeNull();
+    expect(subject.selected).toBeNull();
+    expect(subject.question).toBe("Who is this for — Asmi or Manan?");
+  });
+
+  it("with one child, asks rather than assuming the placeholder is them", () => {
+    const subject = subjectFor([parent, member("asmi", "Asmi", "child")], ["Child B"]);
+    expect(subject).toMatchObject({ said: null, selected: null, question: "Is this for Asmi?" });
+    expect(subject.unknown).toBeUndefined();
+  });
+});

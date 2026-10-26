@@ -163,7 +163,7 @@ export async function prepareReview(
   // Who it is for: what the content said, or else whose record it matched.
   const subject = resolution ? adoptMatchedSubject(kind, resolution.subject, reconciliation?.existing.subjectMemberId, people) : null;
   // The outcome's autonomy and the household's bar (`auto-add.ts`), read together.
-  // A grocery it matched may be on the shopping list now: with an amount, that is a top-up, not a duplicate (I-24).
+  // A grocery it matched may be on the shopping list now: with an amount, that is a top-up, not a duplicate (I-27).
   const listedCheck = kind === "grocery_item" && reconciliation?.proposal.type === "duplicate";
   const [autonomy, autoAddPercent, onShoppingList] = checked
     ? await Promise.all([

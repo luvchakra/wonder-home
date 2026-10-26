@@ -1,6 +1,6 @@
-# A Pre Approved grocery already on the list is topped up; HomeSend says why something waits (25-039, 14-052, I-24)
+# A Pre Approved grocery already on the list is topped up; HomeSend says why something waits (25-039, 14-052, I-27)
 
-**Date:** 2026-10-26 · **Stories:** HomeFood 25-039, AI Orchestration 14-052 · **Design:** `docs/hometalk-homesend-design.md` §4.7, §7, I-24
+**Date:** 2026-10-26 · **Stories:** HomeFood 25-039, AI Orchestration 14-052 · **Design:** `docs/hometalk-homesend-design.md` §4.7, §7, I-27
 
 ## Why
 

@@ -62,7 +62,7 @@ export type AddedOnItsOwn = {
   where: string;
   percent?: number | null;
   why?: SureWhy | null;
-  /** A top-up of a grocery already on the shopping list (I-24): what it added, and what the list says now. */
+  /** A top-up of a grocery already on the shopping list (I-27): what it added, and what the list says now. */
   more?: { added: Amount; now: Amount };
 };
 
@@ -92,7 +92,7 @@ export function wasAdded(result: AddedOnItsOwn | WaitingInHomeSend | null | unde
   return Boolean(result) && !("waiting" in result!);
 }
 
-/** Why it waits, in HomeTalk's words, never with an amount (I-24): null when nothing needs saying. */
+/** Why it waits, in HomeTalk's words, never with an amount (I-27): null when nothing needs saying. */
 export function waitingWords(waiting: WaitingFor | null | undefined, title: string): string | null {
   if (!waiting) return null;
   if (waiting.listed || waiting.reason === "on_list") return `**${title}** is already on your shopping list, so it's waiting in HomeSend for you to choose.`;

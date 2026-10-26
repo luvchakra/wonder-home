@@ -70,7 +70,7 @@ export async function autoApplyHomeSendItem(
  * complete: the same review the app runs, as this member, and only an "add on
  * its own" decision is acted on (Pre Approved and above the household's bar).
  * Anything else stays waiting in HomeSend: when it would otherwise have been
- * added on its own, with why (`confirmation.ts` `wait`, I-24), so the reply can
+ * added on its own, with why (`confirmation.ts` `wait`, I-27), so the reply can
  * say so. Null when nothing was added and there is nothing to say.
  */
 export async function addIfAllowed(

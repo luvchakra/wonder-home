@@ -44,7 +44,7 @@ The person never chooses. Each message goes through these rules in order, and th
 
 | # | Message | Goes to | Why |
 |---|---|---|---|
-| 1 | Part of a burst: a forward plus the note typed straight after, within 30 s | Read together as one thing | One intent, sent as several messages |
+| 1 | Part of a burst, within 30 s and before the first is answered: a forward, photo or file plus the note typed straight after; or a typed message plus a **short note** typed after it (up to 6 words naming a household member, a day or time, or an amount, asking nothing itself: "for Manan", "Asmi Sunday", "due Friday", "2 litres") | Read together as one thing: one HomeSend item, the note as what the sender added, one reply | One intent, sent as several messages. Two requests or questions, a note that is itself for HomeTalk, or a message after the first was answered (rule 2) are never joined. When the typed message is already on record (same content), the note goes onto that item if it still waits ("…I've noted it's for Manan"), or the reply says it was already handled; never a new item. A lone short note that is only a detail ("for Manan") and answers no open question is never a HomeSend item and never Failed safely: the reply asks for the message it goes with. A typed message for HomeSend waits up to 15 s for its note; the note's own run waits for it and stops once it is taken (`whatsapp/intake.ts` `typedBurstOf`, `claimLateNotes`, the owner 2026-10-26) |
 | 2 | A reply while **HomeTalk's question is open**: its last word in this member's WhatsApp conversation is a clarify question, from the last 15 min, and the member's previous message went to HomeTalk | **HomeTalk** | The reply is the answer ("coconut oil") |
 | 3 | A question ("what's for dinner?", "what are upcoming events") | **HomeTalk** | Something to answer, not to keep |
 | 4 | An everyday request ("add milk", "remind me…", "remember…", "remove…") | **HomeTalk** | HomeTalk does it, with an Undo |
@@ -102,9 +102,9 @@ received → understood → checked & scored → reconciled → completeness
    | Unreadable or unknown | **ask** what it is |
    | Low confidence, who it's for is unclear, or a required detail still missing | **ask**: HomeTalk asks it (HomeSend gives no question, only what is missing) |
    | Possible duplicate; medium confidence below the bar; content with instructions in it; several needs; not sent by a member; photo or file | **prepare**: waits in HomeSend |
-   | A grocery already on the shopping list, with no amount | **prepare**: waits for the person to choose how much more (I-24) |
+   | A grocery already on the shopping list, with no amount | **prepare**: waits for the person to choose how much more (I-27) |
    | Pre Approved, score above the household's bar, a grocery or school item, nothing required missing | **auto_apply**: added on its own, with an Undo |
-   | The same, for a grocery already on the shopping list said with an amount ("2 litres", or a number alone) | **auto_apply** as a top-up: added to the entry already there, the one HomeTalk's add would pick, never a second one (I-24) |
+   | The same, for a grocery already on the shopping list said with an amount ("2 litres", or a number alone) | **auto_apply** as a top-up: added to the entry already there, the one HomeTalk's add would pick, never a second one (I-27) |
 
    - Bills, school items, events and every other match keep the duplicate rule (I-4). Bills, health documents, receipts, photos and files always wait.
    - **Why it waits.** When something that would otherwise be added on its own waits for a reason the person can act on, the decision carries it (`wait`): already on the shopping list, the outcome set to Wait for Approval, or below the bar. The Needs review row says it in a few words; WhatsApp and HomeTalk say it in a sentence, never with an amount.
@@ -164,8 +164,8 @@ Live since #365 (issue I-12).
   - on WonderHome's pick ("Suggested · 97% sure");
   - in the "added on its own" message.
 - The reasons: "every detail is in what you sent", "read from a photo or file", "some details aren't in what you sent", "the AI wasn't sure".
-  - The reason explains the score, never contradicts it: "every detail is in what you sent" only in the 97% band. Every detail found but a 70% (medium) reading, or a voice note not clearly heard, is "the AI wasn't sure" (`auto-add.ts` `sureWhy`, I-24).
-- A waiting row that would otherwise have been added on its own also says why, in a few words, in place of where it came from: "already on the shopping list", "groceries set to Wait for Approval", "below your bar of 95%" (`auto-add.ts` `waitRowWords`, I-24).
+  - The reason explains the score, never contradicts it: "every detail is in what you sent" only in the 97% band. Every detail found but a 70% (medium) reading, or a voice note not clearly heard, is "the AI wasn't sure" (`auto-add.ts` `sureWhy`, I-27).
+- A waiting row that would otherwise have been added on its own also says why, in a few words, in place of where it came from: "already on the shopping list", "groceries set to Wait for Approval", "below your bar of 95%" (`auto-add.ts` `waitRowWords`, I-27).
 - **The bar.** Settings → AI Assistant → "How sure HomeSend must be to add on its own".
   - Choices: more than 60, 70, 80, 85, 90, 95 (recommended), 97 or 99%.
   - Admins only, kept as a versioned policy. If the setting can't be read, the highest bar applies.
@@ -195,7 +195,7 @@ No provider tells an app a balance in advance. The email comes at the first refu
 | HomeTalk understanding a sentence | ≤ 2 s | Fast tier (Haiku 5.5); rules first where they're sure |
 | HomeTalk composing an answer | ≤ 4 s | Balanced tier (Sonnet 5.5) |
 | HomeSend reading a message | ≤ 5 s text, ≤ 12 s file | Sonnet 5.5, not Opus (was 9–25 s on Opus) |
-| WhatsApp reply | ≤ 10 s after a burst settles | 8 s burst wait, then one pass; "typing…" shows from the start (a voice note to HomeTalk took 27 s on 2026-10-26) |
+| WhatsApp reply | ≤ 10 s after a burst settles | 8 s burst wait (15 s for a typed message headed for HomeSend, which a short note may follow), then one pass; "typing…" shows from the start (a voice note to HomeTalk took 27 s on 2026-10-26) |
 | Page reads | p95 ≤ 500 ms | One `Promise.all` wave; bounded lists |
 
 To measure: `updated_at - created_at` on `home_send_items`, and `hometalk_channel_events.latency_ms`.
@@ -251,7 +251,10 @@ To measure: `updated_at - created_at` on `home_send_items`, and `hometalk_channe
 | I-21 | No split of added on its own vs confirmed, nor why things failed safely | Not counted | Both in the platform-admin HomeSend metrics | Live (14-049) |
 | I-22 | Waiting items sat unfilled unless someone opened HomeSend | HomeTalk asked only about something just sent | HomeTalk offers, at most twice a day, to fill them in; "yes" asks item by item | Live (14-050) |
 | I-23 | WhatsApp refusals and connect replies were English only | Hard-coded strings | Closed refusal codes and `whatsapp.link.*` in eight languages | Live (14-051) |
-| I-24 | "2 litres mustard oil" on WhatsApp waited although groceries were Pre Approved and it read at 97%; a 70% item said "every detail is in what you sent"; a waiting row gave no reason | Any match on record meant "prepare" (I-4), even an item already on the shopping list said with an amount; `sureWhy` read only the check, not the score; the row showed only where it came from | A listed grocery with an amount is a top-up under the same decision (`onShoppingList`, `topUp`), with HomeTalk's "now 3 L" and Undo; no amount, Wait for Approval or below the bar waits and says why (`wait`); "verified" only in the 97% band; the row's reason in eight languages | Live (25-039, 14-052) |
+| I-24 | A typed notice, then "for Manan" 9 s later: asked "Who is it for?" and answered twice (2026-10-26, 21:04 IST) | The notice was read at its 8 s wait; the note reached WonderHome 11 s after it, so rule 2 took it as the answer. Typed messages sent together were also joined whatever they were | Rule 1 joins a typed message and a short note: the message waits up to 15 s for it, the note's run defers to it; two requests or questions stay apart | Live (this PR) |
+| I-25 | The notice resent (a duplicate), then "for Manan": the note became its own item, Failed safely (2026-10-26, 21:08 IST) | Read alone at 8 s; a lone detail was kept as content | The longer wait joins it; a note on a message already on record goes onto that item (or says it was handled); a lone bare detail is never an item (`itemOnRecord`, `noteOnItem`, `isBareDetail`) | Live (this PR) |
+| I-26 | "Asmi has a karate grading exam…" filed with HomeSend as "Child B has…"; the review offered "Add Child B as a child" (the owner, 2026-10-26) | `file_with_homesend` filed `intent.utterance`, which a model reading carried as the masked text the provider read | `reidentifyIntent` (`ai/privacy.ts`): the reading keeps the member's own words and real names; nothing is filed with a placeholder in it; a placeholder in a reading is never offered as a child to add, the household is asked who; the eval masks as the route does and fails any case that keeps a placeholder (HT-161) | Live (this PR) |
+| I-27 | "2 litres mustard oil" on WhatsApp waited although groceries were Pre Approved and it read at 97%; a 70% item said "every detail is in what you sent"; a waiting row gave no reason | Any match on record meant "prepare" (I-4), even an item already on the shopping list said with an amount; `sureWhy` read only the check, not the score; the row showed only where it came from | A listed grocery with an amount is a top-up under the same decision (`onShoppingList`, `topUp`), with HomeTalk's "now 3 L" and Undo; no amount, Wait for Approval or below the bar waits and says why (`wait`); "verified" only in the 97% band; the row's reason in eight languages | Live (25-039, 14-052) |
 
 ---
 

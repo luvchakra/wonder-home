@@ -340,13 +340,13 @@ describe("AT-F: \"N% sure — why\"", () => {
 });
 
 /**
- * AT-L: a grocery already on the shopping list (I-24, the owner 2026-10-26: "2 litres mustard oil"
+ * AT-L: a grocery already on the shopping list (I-27, the owner 2026-10-26: "2 litres mustard oil"
  * on WhatsApp waited although groceries were Pre Approved). Expected, from design §6 and §4.7:
  * with an explicit amount, Pre Approved and above the bar, it is added to the entry already there
  * ("+2 L, now 3 L", as HomeTalk does); with no amount, Wait for Approval or below the bar it waits
  * and says why, never with an amount. Every other duplicate keeps I-4's rule.
  */
-describe("AT-L: a grocery already on the shopping list (I-24)", () => {
+describe("AT-L: a grocery already on the shopping list (I-27)", () => {
   const LISTED: Partial<ConfirmationInput> = { reconciliation: { message: "This looks like the same one — keep the existing one, or add this as new?", proposal: { type: "duplicate" } }, onShoppingList: true };
   const noAmount = { ...GROCERY, extracted: { ...GROCERY.extracted, quantity: null, unit: null } } as unknown as typeof GROCERY;
   const bareNumber = { ...GROCERY, extracted: { ...GROCERY.extracted, quantity: 2, unit: null } } as unknown as typeof GROCERY;
@@ -472,7 +472,7 @@ describe("AT-L: a grocery already on the shopping list (I-24)", () => {
  * the owner 2026-10-26: Mustard oil waited at 97% with only "Review"). Expected: a few words,
  * one line, in every language.
  */
-describe("AT-M: the Needs review row's reason (I-24)", () => {
+describe("AT-M: the Needs review row's reason (I-27)", () => {
   it("AT-M01 English: on the list, the setting, the bar", async () => {
     const t = await translatorFor("en");
     expect(waitRowWords({ reason: "on_list", listed: true }, t)).toBe("already on the shopping list");
