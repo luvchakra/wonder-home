@@ -1,4 +1,4 @@
-# HomeSend: bills, receipts and health documents may be added directly (14-054)
+# HomeSend: bills, receipts and health documents may be added directly (14-055)
 
 **Asked:** the owner, 2026-10-26: "along with the % setting add setting feature to ask user if they want to add entries related to health, entries related to money directly in WonderHome if allowed in responsibilities". This deliberately changes the CLAUDE.md HomeSend invariant ("bills, health documents and receipts always wait"); the line now describes the opt-in.
 

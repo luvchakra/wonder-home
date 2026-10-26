@@ -11,11 +11,11 @@ in `docs/progress/`; for the running log of what changed when, `tracking/PROGRES
 
 ## The whole picture
 
-**398 of 430 stories done — 92.6%**
+**399 of 431 stories done — 92.6%**
 
 | Status | Stories |
 |---|---:|
-| Done | 398 |
+| Done | 399 |
 | In Progress | 10 |
 | Blocked | 1 |
 | Not Started | 17 |
@@ -39,7 +39,7 @@ in `docs/progress/`; for the running log of what changed when, `tracking/PROGRES
 | 11 Bills, Fees & Finance | `█████████░` | 14 | 15 | 1 not started |
 | 12 Family Time & Social Activities | `██████████` | 9 | 9 | — |
 | 13 Maintenance, Laundry & Pet Care | `█████████░` | 10 | 11 | 1 in progress |
-| 14 AI Orchestration & Learning | `████████░░` | 46 | 54 | 2 in progress, 3 not started, 3 deferred |
+| 14 AI Orchestration & Learning | `████████░░` | 47 | 55 | 2 in progress, 3 not started, 3 deferred |
 | 15 Privacy, Security & Governance | `██████████` | 9 | 9 | — |
 | 16 Platform Admin & Operations | `██████████` | 8 | 8 | — |
 | 17 External Integrations | `██████████` | 9 | 9 | — |
@@ -387,7 +387,7 @@ in `docs/progress/`; for the running log of what changed when, `tracking/PROGRES
 
 ### 14 — AI Orchestration & Learning
 
-46 of 54 done `████████░░`
+47 of 55 done `████████░░`
 
 | Story | Priority | Status | Notes |
 |---|---|---|---|
@@ -444,7 +444,8 @@ in `docs/progress/`; for the running log of what changed when, `tracking/PROGRES
 | `14-051` The rest of WhatsApp's words in the member's language | P1 | Done | PR #368. HomeSend's refusals carry a closed code (`IngestRejected.code`) and are said from `whatsapp.rejected.*`; the reply to a connect code is in the linked member's language (`whatsapp.link.*`). Only a code that names nobody, and the "not connected yet" reply, stay English: nobody is known yet. |
 | `14-052` HomeSend says why something waits, and its reason matches its score | P0 | Done | PR #378. The owner, 2026-10-26: "2 litres mustard oil" on WhatsApp waited although groceries were Pre Approved ("its pre approved, still issue"); "Science project model · 70% sure · every detail is in what you sent"; Mustard oil waited at 97% with only "Review". `confirmation.ts`: a grocery already on the shopping list said with an amount goes through the same decision and is a top-up (`onShoppingList`, `topUp`, the HomeFood half is 25-039); a decision that holds something otherwise added on its own carries why (`wait`: on the list, Wait for Approval, below the bar). The Needs review row says it in a few words (`auto-add.ts` `waitRowWords`, `homesend.inbox.wait.*`), WhatsApp in a sentence (`whatsapp.wait.*`), HomeTalk in English, never with an amount; all eight languages. `sureWhy` says "verified" only in the 97% band. Every other duplicate keeps I-4's rule. Tests AT-F08–F11, AT-L, AT-M, AT-H08–H11, AT-J05–J06; browser-checked at 360 px and desktop on the live project. Design §4.7, §7, I-27. |
 | `14-053` Answers to pick under HomeTalk's questions | P1 | Done | The owner, 2026-10-26 (principle 20). Every question with sensible answers carries localized choices (`hometalk/choices.ts`, `metadata.choices`): amounts by the one rule for amounts (25-037), names, days, times, record types, yes / not now, candidates, and checkboxes for which waiting items to fill in. App chips and checkboxes (`ui/answer-choices`); WhatsApp reply buttons or a list with a text fallback, read back by id. No preview card on a turn that only asked. Eval HT-162–HT-168 (HT-167 caught "not now" normalised to "not"); design I-28. |
-| `14-054` Admins may let bills, receipts and health documents be added directly | P1 | Done | PR pending. The owner, 2026-10-26: "along with the % setting add setting feature to ask user if they want to add entries related to health, entries related to money directly in WonderHome if allowed in responsibilities". Two Admin switches on Settings → AI Assistant, off by default; on, the entry takes the grocery path (Pre Approved + above the bar + every other rule). Photos and files still wait. Starter outcomes `finance.budget_reviewed` and `health.records_kept` added. |
+| `14-054` A finished turn's action preview behind an "i" beside its time | P1 | Done | The owner, 2026-10-26, 9:13 PM IST: "do not show separate card for action preview, rather show a small i icon left to time". `ui/preview-info`: a popover on a desktop, a bottom sheet on a phone; a preview waiting for a decision stays inline with its buttons. "Can be undone" only on a done turn that can be. Help ¶2 of HomeTalk in eight languages; signed-in E2E. |
+| `14-055` Admins may let bills, receipts and health documents be added directly | P1 | Done | PR pending. The owner, 2026-10-26: "along with the % setting add setting feature to ask user if they want to add entries related to health, entries related to money directly in WonderHome if allowed in responsibilities". Two Admin switches on Settings → AI Assistant, off by default; on, the entry takes the grocery path (Pre Approved + above the bar + every other rule). Photos and files still wait. Starter outcomes `finance.budget_reviewed` and `health.records_kept` added. |
 
 ### 15 — Privacy, Security & Governance
 

@@ -433,7 +433,7 @@ File: `packages/core/src/household/auto-add-repository.test.ts` · 5/5 passed
 | AT-K05 a stored bar WonderHome doesn't offer (99%) holds a 97% reading | ✅ pass |
 
 
-### AT-N: Adding money and health entries directly (14-054)
+### AT-N: Adding money and health entries directly (14-055)
 
 The owner, 2026-10-26: "along with the % setting add setting feature to ask user if they want to add entries related to health, entries related to money directly in WonderHome if allowed in responsibilities".
 

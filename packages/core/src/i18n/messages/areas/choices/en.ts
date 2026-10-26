@@ -42,6 +42,7 @@ export const choicesEn = {
   "hometalk.choice.countIn.ml": "Count it in millilitres instead",
   "hometalk.choice.countIn.kg": "Count it in kilos instead",
   "hometalk.choice.countIn.g": "Count it in grams instead",
+  "hometalk.preview.details": "Details of what WonderHome did",
   "hometalk.choice.pick": "Pick an answer",
   "hometalk.choice.groupLabel": "Answers to pick",
   "hometalk.choice.send": "Send",

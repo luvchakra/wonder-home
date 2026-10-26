@@ -262,6 +262,64 @@ test.describe("every signed-in screen loads", () => {
     // The text box always stays.
     await expect(page.locator("textarea")).toBeVisible();
   });
+  // The owner, 2026-10-26: a finished turn's action preview sits behind an "i" beside its time; a decision stays inline.
+  test("HomeTalk: a finished reply's preview opens from its i; one waiting for a decision stays inline", async ({ page }) => {
+    const member = await admin.from("household_members").select("id").eq("household_id", householdId).eq("profile_id", userId).single();
+    if (member.error) throw member.error;
+    const session = await admin.from("conversation_sessions").insert({ household_id: householdId, member_id: member.data.id, channel: "text", surface: "app", status: "open" }).select("id").single();
+    if (session.error) throw session.error;
+    const at = (secondsAgo: number) => new Date(Date.now() - secondsAgo * 1000).toISOString();
+    const messages = await admin.from("conversation_messages").insert([
+      { household_id: householdId, session_id: session.data.id, role: "assistant", content: "Added Milk (2 L) to the shopping list.", metadata: { proposal: "executed", mode: "answer" }, created_at: at(30) },
+      { household_id: householdId, session_id: session.data.id, role: "assistant", content: "Here is what I would do — pay the electricity bill. Shall I go ahead?", metadata: { proposal: "needs_approval", mode: "answer" }, created_at: at(20) },
+    ]).select("id, content");
+    if (messages.error) throw messages.error;
+    const done = messages.data.find((row) => row.content.startsWith("Added"))!;
+    const waiting = messages.data.find((row) => row.content.startsWith("Here"))!;
+    const actions = await admin.from("conversation_actions").insert([
+      { household_id: householdId, session_id: session.data.id, message_id: done.id, action_type: "add_to_list", approval_status: "executed", payload: { preview: { summary: "Add milk to the groceries", changes: ["Add 2 L milk to the shopping list"], because: "You asked for it.", reversible: true } } },
+      { household_id: householdId, session_id: session.data.id, message_id: waiting.id, action_type: "make_payment", approval_status: "proposed", payload: { preview: { summary: "Pay the electricity bill", changes: ["Pay the electricity bill"], because: "It is due on Friday.", reversible: false } } },
+    ]);
+    if (actions.error) throw actions.error;
+
+    await signIn(page);
+    await page.goto("/ai");
+    await streamed(page);
+    // The decision stays inline, with its buttons; the finished turn shows no card.
+    const inline = page.getByRole("region", { name: "Action preview" });
+    await expect(inline).toHaveCount(1);
+    await expect(inline.getByRole("button", { name: "Confirm" })).toBeVisible();
+    await expect(inline.getByText("Pay the electricity bill").first()).toBeVisible();
+    await expect(page.getByText("Add 2 L milk to the shopping list")).toHaveCount(0);
+    const info = page.getByRole("button", { name: "Details of what WonderHome did" });
+    await expect(info).toHaveCount(1);
+    const box = (await info.evaluate((element) => {
+      const before = getComputedStyle(element, "::before");
+      return { width: element.getBoundingClientRect().width - parseFloat(before.left) - parseFloat(before.right), height: element.getBoundingClientRect().height - parseFloat(before.top) - parseFloat(before.bottom) };
+    }));
+    // 44 px, give or take the sub-pixel layout a scaled screen rounds to.
+    expect(box.width).toBeGreaterThanOrEqual(43.5);
+    expect(box.height).toBeGreaterThanOrEqual(43.5);
+    // The "i" sits left of the time, on the same line.
+    const time = page.locator(`#message-${done.id} time`);
+    const [infoBox, timeBox] = [(await info.boundingBox())!, (await time.boundingBox())!];
+    expect(infoBox.x + infoBox.width).toBeLessThanOrEqual(timeBox.x);
+    expect(Math.abs(infoBox.y + infoBox.height / 2 - (timeBox.y + timeBox.height / 2))).toBeLessThan(8);
+    // Opened from the keyboard, it shows the preview; Escape closes it and focus returns to the "i".
+    await info.focus();
+    await page.keyboard.press("Enter");
+    await expect(page.getByText("Add 2 L milk to the shopping list")).toBeVisible();
+    await expect(page.getByText("Can be undone.")).toBeVisible();
+    await page.keyboard.press("Escape");
+    await expect(page.getByText("Add 2 L milk to the shopping list")).toHaveCount(0);
+    await expect(info).toBeFocused();
+    // A tap opens it too.
+    await info.click();
+    await expect(page.getByText("Add 2 L milk to the shopping list")).toBeVisible();
+    await page.keyboard.press("Escape");
+    expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(page.viewportSize()!.width);
+  });
+
   test("Manage Household: the playbook is grouped into folded cards that open with their chevron", async ({ page }) => {
     await signIn(page);
     await page.goto("/household");
