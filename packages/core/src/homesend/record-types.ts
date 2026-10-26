@@ -2,7 +2,8 @@ import type { EventCategory } from "../calendar/projection";
 import type { EventKind } from "../family/schedule";
 import { billType, billTypeFor, type BillRecurrence, type BillTypeKey } from "../finance/bill-catalog";
 import type { ObligationKind } from "../finance/payments";
-import { normalizeUnit } from "../commerce/units";
+import { readBareNumber, type BareItem } from "../commerce/bare-amount";
+import { compatible, normalizeUnit, stepInBase, toBase, type Amount } from "../commerce/units";
 
 /**
  * What a confirmed HomeSend item becomes in WonderHome's own structure (the
@@ -66,4 +67,23 @@ export function groceryShape(said: { title: string; quantity?: number | string |
     unit: (said.unit && normalizeUnit(said.unit)) || "pcs",
     toBuy: Number.isFinite(quantity) && quantity > 0 ? quantity : 1,
   };
+}
+
+/**
+ * How much a HomeSend grocery adds to an item (25-037): an amount said with
+ * its unit, in that unit; a number alone by the item's practical unit — 2
+ * milk is 2 L and 2 eggs 2 pcs, never 2 ml or 2 dozen. A number the rule
+ * would ask about takes the amount it would suggest, else one usual buy:
+ * the person has seen and confirmed it in the review.
+ */
+export function groceryAmount(said: { quantity?: number | string | null; unit?: string | null }, item: BareItem): Amount {
+  const quantity = Number(said.quantity);
+  const count = Number.isFinite(quantity) && quantity > 0 ? quantity : 1;
+  const unit = said.unit ? normalizeUnit(said.unit) : null;
+  if (unit) return compatible(unit, item.unit) ? toBase(count, unit) : stepInBase(item.unit, item.step);
+  const read = readBareNumber(count, item);
+  if (read.kind === "amount") return toBase(read.amount.quantity, read.amount.unit);
+  if (read.meant) return toBase(read.meant.quantity, read.meant.unit);
+  const pack = item.catalog?.pack;
+  return pack && compatible(pack.unit, item.unit) ? toBase(pack.quantity, pack.unit) : stepInBase(item.unit, item.step);
 }

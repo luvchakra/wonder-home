@@ -7,9 +7,8 @@ import { catalogItemFor } from "@wonderhome/core/commerce/catalog";
 import { baseOf } from "@wonderhome/core/commerce/buying-sizes";
 import { adjustListEntry, listGroceries } from "@wonderhome/core/commerce/inventory";
 import { createConsumable } from "@wonderhome/core/commerce/repository";
-import { compatible } from "@wonderhome/core/commerce/units";
 import { similarity } from "@wonderhome/core/context/normalize";
-import { billShape, eventShape, groceryShape } from "@wonderhome/core/homesend/record-types";
+import { billShape, eventShape, groceryAmount, groceryShape } from "@wonderhome/core/homesend/record-types";
 import type { createClient } from "@wonderhome/core/db/server";
 import { OBLIGATION_KINDS } from "@wonderhome/core/finance/payments";
 import { cancelObligation, createObligation, listObligations, updateObligation } from "@wonderhome/core/finance/repository";
@@ -210,15 +209,19 @@ export async function addGrocery(
   const listKey = `hs:${key}:list`;
   const tracked = (await listGroceries(supabase, householdId)).find((item) => [item.name, ...item.aliases].some((known) => similarity(known, shape.name) >= 0.8));
   if (tracked) {
-    const amount = compatible(shape.unit, tracked.unit) ? { quantity: shape.toBuy, unit: shape.unit } : { quantity: 1, unit: tracked.unit };
+    // A number alone is the item's practical amount (25-037): 2 milk is 2 L, never 2 ml.
+    const amount = groceryAmount(said, tracked);
     await adjustListEntry(supabase, { householdId, itemId: tracked.id, kind: "add", amount, source: "manual", idempotencyKey: listKey });
     return { routedTable: "consumables", routedId: tracked.id, changeType: "updated", previous: { listKey } };
   }
   const named = await catalogItemFor(supabase, shape.name).catch(() => null);
-  const catalogId = named?.catalogId && baseOf(named.unit).unit === baseOf(shape.unit).unit ? named.catalogId : null;
+  // No unit said: kept the way the catalog keeps it, and the number read by its practical unit (25-037).
+  const unit = !said.unit?.trim() && named ? named.unit : shape.unit;
+  const catalogId = named?.catalogId && baseOf(named.unit).unit === baseOf(unit).unit ? named.catalogId : null;
   const category = said.category && (CONSUMABLE_CATEGORIES as readonly string[]).includes(said.category) ? said.category : CONSUMABLE_CATEGORIES[0];
-  const { id } = await createConsumable(supabase, { householdId, name: shape.name, category, unit: shape.unit, typicalQuantity: 1, catalogId });
-  await adjustListEntry(supabase, { householdId, itemId: id, kind: "add", amount: { quantity: shape.toBuy, unit: shape.unit }, source: "manual", idempotencyKey: listKey });
+  const { id } = await createConsumable(supabase, { householdId, name: shape.name, category, unit, typicalQuantity: 1, catalogId });
+  const amount = groceryAmount(said, { name: shape.name, unit, catalog: named ? { category: named.category, pack: named.pack } : null });
+  await adjustListEntry(supabase, { householdId, itemId: id, kind: "add", amount, source: "manual", idempotencyKey: listKey });
   return { routedTable: "consumables", routedId: id, changeType: "created" };
 }
 

@@ -221,6 +221,9 @@ const awaitingWordLimit: Record<string, number> = { member: 4, day: 5, referent:
 /** "That's enough", "none", "no thanks": leave the list as it is. */
 const ENOUGH = /^(?:no|nope|none|nothing|nothing more|no more|no need|no thanks?|no,? thank you|enough|that'?s enough|it'?s enough|that'?s fine|that'?s all|fine as it is|leave it|leave it as it is|leave them|skip|skip it|don'?t add (?:it|them|any(?:thing)?)|cancel)(?:,?\s*(?:thanks|thank you))?$/i;
 
+/** "Yes" to "Did you mean 500 g of rice?". */
+const YES = /^(?:yes|yeah|yep|yup|ya|haan|ha|ok(?:ay)?|right|correct|exactly|sure|yes please|yes,? that'?s right)(?:,?\s*(?:thanks|thank you|please))?$/i;
+
 /** Lowercase, without a plural "s"/"es", for matching an answer's item to the one asked about. */
 function itemKey(value: string): string {
   return value.trim().toLowerCase().replace(/\s+/g, " ").replace(/(?:es|s)$/, "");
@@ -243,6 +246,13 @@ function answerQuantity(pending: PendingClarification, utterance: string, contex
   const base = { actorMemberId: context.actorMemberId, channel: context.channel, utterance, action: pending.action, target: pending.target, confidence: 0.9 };
   const rest = withoutGroundingState(pending.parameters);
   if (ENOUGH.test(raw)) return { ...base, parameters: { ...rest, keepAsIs: true } };
+  // "Did you mean 500 g of rice?" — "yes" is the amount it named (25-037).
+  const meant = typeof pending.parameters.quantityMeant === "string" ? pending.parameters.quantityMeant : null;
+  if (meant && asked.length === 1 && YES.test(raw)) {
+    const names = typeof pending.parameters.item === "string" ? [pending.parameters.item] : Array.isArray(pending.parameters.items) ? (pending.parameters.items as unknown[]).filter((name): name is string => typeof name === "string") : asked;
+    const items = names.map((name) => (name === asked[0] ? meant : name));
+    return { ...base, parameters: { ...withoutItems(rest), items, ...(items.length === 1 ? { item: items[0] } : {}) } };
+  }
 
   const filled = stripFiller(raw);
   const said = filled.replace(ORDER_VERBS, "").replace(DESTINATION, " ").replace(/\s{2,}/g, " ").replace(/\s+(?:of\s+)?each$/i, "").trim();
@@ -346,6 +356,7 @@ function withoutGroundingState(parameters: Record<string, unknown>): Record<stri
   delete rest.awaiting;
   delete rest.candidates;
   delete rest.quantityFor;
+  delete rest.quantityMeant;
   return rest;
 }
 
@@ -436,8 +447,8 @@ export function escalatedQuestion(pending: PendingClarification): string {
       return [
         `Sorry, I didn't catch how much${what}. Could you say it one of these ways?`,
         '- "2 litres" or "500 g"',
-        '- "1 bottle" or "2 packets"',
-        '- just a number, like "3"',
+        '- "a dozen" or "half a kilo"',
+        '- just a number, like "2": litres for milk and oil, kilos for rice and vegetables, pieces for eggs',
         `Or say "that's enough" to leave ${asked.length > 1 ? "them" : "it"}.`,
       ].join("\n");
     }

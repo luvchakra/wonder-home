@@ -169,7 +169,9 @@ export async function converse(raw: TurnInput): Promise<TurnResult> {
   // "Yes", "no" and "do it" only mean something against what was just proposed.
   // A yes or no to HomeTalk's own offer to fill in HomeSend details (14-050) answers that question, not a proposal.
   const answersOffer = input.clarifying?.action === "fill_homesend_details" && !input.pending;
-  const short = answersOffer ? ({ kind: "not_a_short_reply" } as const) : resolveShortReply(input.utterance, input.pending, now);
+  // So does a yes to "Did you mean 2 L of milk?" (25-037).
+  const answersMeant = input.clarifying?.parameters.awaiting === "quantity" && typeof input.clarifying.parameters.quantityMeant === "string" && !input.pending;
+  const short = answersOffer || answersMeant ? ({ kind: "not_a_short_reply" } as const) : resolveShortReply(input.utterance, input.pending, now);
   switch (short.kind) {
     case "approve":
       // Not "done": nothing has run yet. The route carries it out through the

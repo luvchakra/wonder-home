@@ -4,6 +4,7 @@ import { ApiError } from "../api/errors";
 import { catalogItemFor } from "../commerce/catalog";
 import { adjustListEntry, changeStock, listGroceries, markBought, type GroceryItem } from "../commerce/inventory";
 import { createConsumable, retireConsumable } from "../commerce/repository";
+import { bareExampleFor, bareExamples, bareRule, bareTwoReads, englishCount, readBareNumber, type BareItem } from "../commerce/bare-amount";
 import { compatible, formatAmount, stepInBase, toBase, unitInfo, type Amount } from "../commerce/units";
 import type { HouseholdIntent } from "./intent";
 import { readItemAmount, type SpokenAmount } from "./quantity";
@@ -80,15 +81,6 @@ export function groceryCandidates(name: string, items: readonly GroceryItem[]): 
   return items.filter((item) => words.every((word) => stem(item.name).split(" ").some((part) => part.startsWith(word))));
 }
 
-/** "pc"/"pcs", "bunch"/"bunches" — the English record's count words. */
-function englishCount(unit: string, quantity: number): string {
-  if (unit === "pcs") return quantity === 1 ? "pc" : "pcs";
-  if (unit === "dozen" || quantity === 1) return unit;
-  if (/(?:ch|sh|x|s)$/.test(unit)) return `${unit}es`;
-  if (unit === "loaf") return "loaves";
-  return `${unit}s`;
-}
-
 /** An amount the way a reply says it: "1.5 kg", "6 pcs", "1 bunch". */
 function say(amount: Amount, preferredUnit?: string): string {
   if (amount.quantity === 0 && preferredUnit) {
@@ -98,20 +90,36 @@ function say(amount: Amount, preferredUnit?: string): string {
   return formatAmount(amount, "en", englishCount);
 }
 
+/** What the bare-number rule knows about an item: its own catalog entry, or what the catalog said of its name when it was made. */
+export function bareItemOf(item: Pick<GroceryItem, "name" | "unit" | "step"> & { catalog?: Pick<NonNullable<GroceryItem["catalog"]>, "pack" | "category" | "subcategory" | "ladder"> | null }, named?: Named | null): BareItem {
+  const catalog = item.catalog ?? (named ? { category: named.category, subcategory: null, pack: named.pack, ladder: null } : null);
+  return { name: item.name, unit: item.unit, step: item.step, catalog };
+}
+
+type Named = { category: string | null; pack: Amount | null };
+
 /**
  * The amount a line asks for, in the item's base unit. When none was said:
  * the household's own step, else the usual buy (its catalog pack, or the
  * pack the everyday kinds share — "add pasta" is a 500 g pack, 25-012),
- * else the unit's natural step.
+ * else the unit's natural step. A number said with no unit is read by the
+ * one bare-number rule (`commerce/bare-amount.ts`, 25-037): 2 milk is 2 L,
+ * 2 eggs 2 pcs, 2 rice 2 kg — never the unit the list stores it in.
  */
-function amountFor(line: GroceryLine, item: Pick<GroceryItem, "name" | "unit" | "step"> & { catalog?: Pick<NonNullable<GroceryItem["catalog"]>, "pack"> | null }, usual?: Amount | null): Amount {
+function amountFor(line: GroceryLine, item: Pick<GroceryItem, "name" | "unit" | "step"> & { catalog?: Pick<NonNullable<GroceryItem["catalog"]>, "pack" | "category" | "subcategory" | "ladder"> | null }, named?: Named | null): Amount {
   if (!line.amount) {
     if (item.step && item.step > 0) return stepInBase(item.unit, item.step);
-    const pack = item.catalog?.pack ?? usual ?? null;
+    const pack = item.catalog?.pack ?? named?.pack ?? null;
     if (pack && compatible(pack.unit, item.unit)) return toBase(pack.quantity, pack.unit);
     return stepInBase(item.unit, item.step);
   }
-  const unit = line.amount.unit ?? item.unit;
+  if (line.amount.unit === null) {
+    const read = readBareNumber(line.amount.quantity, bareItemOf(item, named));
+    // Grounding asks this before anything is written; here it is the last guard.
+    if (read.kind === "ask") throw ApiError.badRequest(read.question);
+    return toBase(read.amount.quantity, read.amount.unit);
+  }
+  const unit = line.amount.unit;
   if (!compatible(unit, item.unit)) {
     throw ApiError.badRequest(`${item.name} is kept in ${unitInfo(item.unit).key}, so ${line.amount.quantity} ${unit} does not fit it.`);
   }
@@ -126,7 +134,7 @@ function titleCase(value: string): string {
   return value.charAt(0).toUpperCase() + value.slice(1);
 }
 
-async function itemFor(context: Context, line: GroceryLine, items: GroceryItem[], create: boolean): Promise<{ item: GroceryItem | null; created: boolean; usual?: Amount | null }> {
+async function itemFor(context: Context, line: GroceryLine, items: GroceryItem[], create: boolean): Promise<{ item: GroceryItem | null; created: boolean; named?: Named | null }> {
   const known = line.itemId ? items.find((item) => item.id === line.itemId) : findGrocery(line.item, items);
   if (known || !create) return { item: known ?? null, created: false };
   // The catalog's reading of the name (25-012): "add pasta" is counted in
@@ -157,17 +165,7 @@ async function itemFor(context: Context, line: GroceryLine, items: GroceryItem[]
     toBuy: null,
   };
   items.push(fresh);
-  return { item: fresh, created: true, usual: named?.pack ?? null };
-}
-
-/** "1 litre or 2 bottles" — examples in the units an item is kept in. */
-function quantityExamples(unit: string | null): string {
-  const key = unit ? unitInfo(unit).key : null;
-  if (key === "l" || key === "ml") return "1 litre or 2 bottles";
-  if (key === "kg" || key === "g") return "1 kg or 500 g";
-  if (key === "pcs") return "6 or a dozen";
-  if (key && key !== "dozen") return `1 ${englishCount(key, 1)} or 2 ${englishCount(key, 2)}`;
-  return "1 litre, 1 kg or 2 packets";
+  return { item: fresh, created: true, named: named ? { category: named.category, pack: named.pack } : null };
 }
 
 /**
@@ -180,19 +178,24 @@ function quantityExamples(unit: string | null): string {
 export function quantityQuestion(names: readonly string[], items: readonly GroceryItem[]): string {
   const known = names.map((name) => {
     const item = findGrocery(name, items);
-    return { name: item?.name ?? titleCase(name.trim()), item };
+    return { name: item?.name ?? titleCase(name.trim()), said: name.trim(), item };
   });
   if (known.length === 1) {
     const { name, item } = known[0]!;
     if (item?.toBuy) {
       return `${name} is already on your shopping list (${say({ quantity: item.toBuy.quantity, unit: item.toBuy.unit })}). How much more should I add? Or say "that's enough" to leave it.`;
     }
-    const counted = item && unitInfo(item.unit).key === "pcs";
-    return `How ${counted ? "many" : "much"} ${name.toLowerCase()} should I add? For example ${quantityExamples(item?.unit ?? null)}.`;
+    const counted = item && ["piece", "own"].includes(bareRule(bareItemOf(item)).kind);
+    return `How ${counted ? "many" : "much"} ${name.toLowerCase()} should I add? For example ${bareExamples(item ? bareItemOf(item) : null)}.`;
   }
   const listed = known.map(({ name, item }) => (item?.toBuy ? `${name} (already on the list, ${say({ quantity: item.toBuy.quantity, unit: item.toBuy.unit })})` : name));
   const leave = known.some(({ item }) => item?.toBuy) ? ` Or say "that's enough" to leave them.` : "";
-  return `How much of each should I add? ${listed.join(", ")}. For example "2 of each" or "1 litre ${known[0]!.name.toLowerCase()} and 6 ${known[1]!.name.toLowerCase()}".${leave}`;
+  // Every example reads back as it says (25-037): "1 litre milk and 6 eggs",
+  // and "2 of each" only when 2 is a fair amount of every one of them.
+  const bare = known.map(({ item }) => (item ? bareItemOf(item) : null));
+  const each = bare.every(bareTwoReads) ? `"2 of each" or ` : "";
+  const examples = known.slice(0, 2).map(({ said }, index) => bareExampleFor(said, bare[index]!));
+  return `How much of each should I add? ${listed.join(", ")}. For example ${each}"${examples.join(" and ")}".${leave}`;
 }
 
 export type ListChangeEntry = { name: string; consumableId: string; created: boolean; delta: Amount; after: Amount };
@@ -229,7 +232,7 @@ export async function addToShoppingList(intent: HouseholdIntent, context: Contex
       else leftOff.push(item?.name ?? titleCase(line.item.trim()));
       continue;
     }
-    const { item, created, usual } = await itemFor(context, line, items, true);
+    const { item, created, named } = await itemFor(context, line, items, true);
     if (!item) continue;
     // "Make sure we have everything for pasta": what is confirmed at home
     // already is not bought again. Without a confirmed amount it goes on.
@@ -241,7 +244,7 @@ export async function addToShoppingList(intent: HouseholdIntent, context: Contex
       there.push({ name: item.name, consumableId: item.id, toBuy: { quantity: item.toBuy.quantity, unit: item.toBuy.unit } });
       continue;
     }
-    const delta = amountFor(line, item, usual);
+    const delta = amountFor(line, item, named);
     const result = await adjustListEntry(context.supabase, { householdId: context.householdId, itemId: item.id, kind: "add", amount: delta, source: "hometalk", idempotencyKey: key("ht-add") });
     changed.push({ name: item.name, consumableId: item.id, created, delta, after: { quantity: result.after, unit: result.unit } });
   }
@@ -328,12 +331,12 @@ export async function changeStockFromTalk(intent: HouseholdIntent, context: Cont
   const said: string[] = [];
   const changes: { name: string; consumableId: string; created: boolean; kind: string; before: number | null; after: Amount }[] = [];
   for (const line of lines) {
-    const { item, created } = await itemFor(context, line, items, kind === "set");
+    const { item, created, named } = await itemFor(context, line, items, kind === "set");
     if (!item) {
       said.push(`**${titleCase(line.item)}** is not something I keep track of yet, so nothing changed for it.`);
       continue;
     }
-    const amount = amountFor(line, item);
+    const amount = amountFor(line, item, named);
     const result = await changeStock(context.supabase, { householdId: context.householdId, itemId: item.id, kind, amount, source: kind === "use" ? "consumption" : "stated", idempotencyKey: key(`ht-${kind}`) });
     const after = { quantity: result.after, unit: result.unit };
     changes.push({ name: item.name, consumableId: item.id, created, kind, before: result.before, after });
@@ -359,9 +362,9 @@ export async function markBoughtFromTalk(intent: HouseholdIntent, context: Conte
   const said: string[] = [];
   const bought: { name: string; consumableId: string; amount: Amount; remaining: number; unit: string }[] = [];
   for (const line of lines) {
-    const { item } = await itemFor(context, line, items, true);
+    const { item, named } = await itemFor(context, line, items, true);
     if (!item) continue;
-    const amount = line.amount ? amountFor(line, item) : item.toBuy ? { quantity: item.toBuy.quantity, unit: item.toBuy.unit } : stepInBase(item.unit, item.step);
+    const amount = line.amount ? amountFor(line, item, named) : item.toBuy ? { quantity: item.toBuy.quantity, unit: item.toBuy.unit } : stepInBase(item.unit, item.step);
     // Not on the list: it goes on and comes straight off as bought, so the
     // purchase is recorded the one way every purchase is.
     let entryId = item.toBuy?.entryId ?? null;
