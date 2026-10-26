@@ -67,22 +67,28 @@ describe("something told to HomeTalk and filed with HomeSend", () => {
 // household's approval settings. HomeSend's own decision stands in for the app's review.
 describe("AT-J: filed from HomeTalk, under the approval settings", () => {
   const understanding = { readable: true, confidence: "high" as const, score: 0.97, check: { verified: true, unverified: [] }, safety: { signals: [], instructionsIgnored: false } };
-  const decideWith = (autonomy: "execute" | "prepare", bar: number, kind: string, extracted: Record<string, unknown>) => async () => {
-    const decision = decideConfirmation({ kind: kind as never, extracted: extracted as never, understanding, reconciliation: null, subject: null, memberInitiated: true, autonomy, autoAddPercent: bar });
-    return decision.mode === "auto_apply" ? { title: String(extracted.title), where: "Groceries", percent: 97, why: "verified" as const } : null;
+  const decideWith = (autonomy: "execute" | "prepare", bar: number, kind: string, extracted: Record<string, unknown>, listed = false) => async () => {
+    const onList = listed ? { reconciliation: { message: "This looks like the same one.", proposal: { type: "duplicate" as const } }, onShoppingList: true } : { reconciliation: null };
+    const decision = decideConfirmation({ kind: kind as never, extracted: extracted as never, understanding, subject: null, memberInitiated: true, autonomy, autoAddPercent: bar, ...onList });
+    if (decision.mode !== "auto_apply") return decision.wait ? { waiting: decision.wait, title: String(extracted.title) } : null;
+    const more = decision.topUp ? { more: { added: { quantity: 2000, unit: "ml" }, now: { quantity: 3000, unit: "ml" } } } : {};
+    return { title: String(extracted.title), where: "Groceries", percent: 97, why: "verified" as const, ...more };
   };
   const oil = { title: "Mustard oil", quantity: 2, unit: "l", needs: [], confidence: "high" };
   const bill = { title: "Electricity", payee: "BESCOM", amount: 2140, dueDate: "2026-11-05", needs: [], confidence: "high" };
-  const cases: [id: string, kind: string, extracted: Record<string, unknown>, autonomy: "execute" | "prepare", bar: number, expected: RegExp][] = [
+  // A wait that would otherwise have been added says why, with what was read (I-24, 2026-10-26).
+  const cases: [id: string, kind: string, extracted: Record<string, unknown>, autonomy: "execute" | "prepare", bar: number, expected: RegExp, listed?: boolean][] = [
     ["AT-J01", "grocery_item", oil, "execute", 95, /^Added \*\*Mustard oil\*\* to Groceries \(97% sure — every detail is in what you sent\)/],
-    ["AT-J02", "grocery_item", oil, "execute", 99, /for you to check before anything is added/],
-    ["AT-J03", "grocery_item", oil, "prepare", 60, /for you to check before anything is added/],
+    ["AT-J02", "grocery_item", oil, "execute", 99, /^WonderHome adds things on its own only when it is more than 99% sure, so it's waiting in HomeSend for you to check\. I read it as something to buy: \*\*Mustard oil\*\*\.$/],
+    ["AT-J03", "grocery_item", oil, "prepare", 60, /^Your household has groceries set to Wait for Approval, so it's waiting in HomeSend for you to approve\. I read it as/],
     ["AT-J04", "bill", bill, "execute", 60, /for you to check before anything is added/],
+    ["AT-J05", "grocery_item", oil, "execute", 95, /^Added 2 L more \*\*Mustard oil\*\* \(now 3 L\) \(97% sure/, true],
+    ["AT-J06", "grocery_item", oil, "prepare", 95, /^\*\*Mustard oil\*\* is already on your shopping list, so it's waiting in HomeSend for you to choose\./, true],
   ];
-  for (const [id, kind, extracted, autonomy, bar, expected] of cases) {
-    it(`${id} ${kind}, ${autonomy === "execute" ? "Pre Approved" : "Wait for Approval"}, bar ${bar}%`, async () => {
+  for (const [id, kind, extracted, autonomy, bar, expected, listed] of cases) {
+    it(`${id} ${kind}, ${autonomy === "execute" ? "Pre Approved" : "Wait for Approval"}, bar ${bar}%${listed ? ", already on the list" : ""}`, async () => {
       outcome.current = read(kind, extracted);
-      const result = await executeIntent(intent, context(decideWith(autonomy, bar, kind, extracted)));
+      const result = await executeIntent(intent, context(decideWith(autonomy, bar, kind, extracted, listed)));
       expect(result.ok && result.text).toMatch(expected);
       if (kind === "bill") expect(result.ok && result.text).not.toMatch(/2,?140/);
     });

@@ -102,12 +102,19 @@ received → understood → checked & scored → reconciled → completeness
    | Unreadable or unknown | **ask** what it is |
    | Low confidence, who it's for is unclear, or a required detail still missing | **ask**: HomeTalk asks it (HomeSend gives no question, only what is missing) |
    | Possible duplicate; medium confidence below the bar; content with instructions in it; several needs; not sent by a member; photo or file | **prepare**: waits in HomeSend |
+   | A grocery already on the shopping list, with no amount | **prepare**: waits for the person to choose how much more (I-24) |
    | Pre Approved, score above the household's bar, a grocery or school item, nothing required missing | **auto_apply**: added on its own, with an Undo |
+   | The same, for a grocery already on the shopping list said with an amount ("2 litres", or a number alone) | **auto_apply** as a top-up: added to the entry already there, the one HomeTalk's add would pick, never a second one (I-24) |
+
+   - Bills, school items, events and every other match keep the duplicate rule (I-4). Bills, health documents, receipts, photos and files always wait.
+   - **Why it waits.** When something that would otherwise be added on its own waits for a reason the person can act on, the decision carries it (`wait`): already on the shopping list, the outcome set to Wait for Approval, or below the bar. The Needs review row says it in a few words; WhatsApp and HomeTalk say it in a sentence, never with an amount.
 
 8. **Added through the governed write.** The same domain service a person's confirm uses (`home-send-auto.ts`, `home-send-writes.ts`), recorded as a change that can be undone, and marked `auto_added`.
 9. **The reply.**
    - App: a notice with an Undo.
    - WhatsApp: "Added *Maths worksheet* for Asmi to Kids & School … You can undo it in HomeSend", or "It's waiting in HomeSend for you to check".
+   - A top-up: "Added 2 L more *Mustard oil* (now 3 L) (97% sure — every detail is in what you sent) — … You can undo it in HomeSend."
+   - Waiting on the list: "*Mustard oil* is already on your shopping list, so it's waiting in HomeSend for you to choose."
 
 ---
 
@@ -157,6 +164,8 @@ Live since #365 (issue I-12).
   - on WonderHome's pick ("Suggested · 97% sure");
   - in the "added on its own" message.
 - The reasons: "every detail is in what you sent", "read from a photo or file", "some details aren't in what you sent", "the AI wasn't sure".
+  - The reason explains the score, never contradicts it: "every detail is in what you sent" only in the 97% band. Every detail found but a 70% (medium) reading, or a voice note not clearly heard, is "the AI wasn't sure" (`auto-add.ts` `sureWhy`, I-24).
+- A waiting row that would otherwise have been added on its own also says why, in a few words, in place of where it came from: "already on the shopping list", "groceries set to Wait for Approval", "below your bar of 95%" (`auto-add.ts` `waitRowWords`, I-24).
 - **The bar.** Settings → AI Assistant → "How sure HomeSend must be to add on its own".
   - Choices: more than 60, 70, 80, 85, 90, 95 (recommended), 97 or 99%.
   - Admins only, kept as a versioned policy. If the setting can't be read, the highest bar applies.
@@ -242,6 +251,7 @@ To measure: `updated_at - created_at` on `home_send_items`, and `hometalk_channe
 | I-21 | No split of added on its own vs confirmed, nor why things failed safely | Not counted | Both in the platform-admin HomeSend metrics | Live (14-049) |
 | I-22 | Waiting items sat unfilled unless someone opened HomeSend | HomeTalk asked only about something just sent | HomeTalk offers, at most twice a day, to fill them in; "yes" asks item by item | Live (14-050) |
 | I-23 | WhatsApp refusals and connect replies were English only | Hard-coded strings | Closed refusal codes and `whatsapp.link.*` in eight languages | Live (14-051) |
+| I-24 | "2 litres mustard oil" on WhatsApp waited although groceries were Pre Approved and it read at 97%; a 70% item said "every detail is in what you sent"; a waiting row gave no reason | Any match on record meant "prepare" (I-4), even an item already on the shopping list said with an amount; `sureWhy` read only the check, not the score; the row showed only where it came from | A listed grocery with an amount is a top-up under the same decision (`onShoppingList`, `topUp`), with HomeTalk's "now 3 L" and Undo; no amount, Wait for Approval or below the bar waits and says why (`wait`); "verified" only in the 97% band; the row's reason in eight languages | Live (25-039, 14-052) |
 
 ---
 

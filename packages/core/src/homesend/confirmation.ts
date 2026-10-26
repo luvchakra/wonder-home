@@ -38,6 +38,26 @@ export type ConfirmationDecision = {
    * the question: HomeTalk asks, and the review shows "Still needed".
    */
   stillNeeded?: string[];
+  /**
+   * An item that would otherwise be added on its own, held for a reason the
+   * person can act on (the owner, 2026-10-26): shown on its Needs review row
+   * and said on WhatsApp, in a few words, never with an amount.
+   */
+  wait?: WaitingFor;
+  /** An `auto_apply` that adds to a grocery already on the shopping list, never a second entry (I-24). */
+  topUp?: true;
+};
+
+/** Why something that would be added on its own waits: already on the list, the setting, or the bar. */
+export type WaitReason = "on_list" | "wait_for_approval" | "below_bar";
+export type WaitingFor = {
+  reason: WaitReason;
+  /** The household's bar, for "below your bar of N%". */
+  percent?: number;
+  /** Whose setting holds it, for "groceries set to Wait for Approval". */
+  area?: "groceries" | "school";
+  /** It is a grocery already on the shopping list: WhatsApp says that, whatever else holds it. */
+  listed?: true;
 };
 
 /**
@@ -82,6 +102,12 @@ export type ConfirmationInput = {
   autonomy: AutonomyMode;
   /** How sure, in percent, a reading must be (strictly above) to be added on its own (`auto-add.ts`); 95 when unset. */
   autoAddPercent?: number;
+  /**
+   * The grocery it matched is on the shopping list now (`home-send-review.ts`
+   * reads it). With an explicit amount that is a top-up, as HomeTalk's "+2 L,
+   * now 3 L" (design §6), not a duplicate to choose about (I-24).
+   */
+  onShoppingList?: boolean;
 };
 
 /** Why a clear reading still waits: what WonderHome could not find in what was sent. */
@@ -126,7 +152,15 @@ export function decideConfirmation(input: ConfirmationInput): ConfirmationDecisi
   // HomeTalk is the one that asks.
   if (missing.length > 0) return { mode: "ask", reason: `It doesn't say the ${listDetails(missing)}.`, question: null, ...stillNeeded };
 
-  if (input.reconciliation) return { mode: "prepare", reason: input.reconciliation.message, question: null };
+  // A grocery already on the shopping list, said with an amount, is more of
+  // it (I-24, the owner 2026-10-26): the same decision as anything new, then
+  // added to the entry that is there. Without an amount it waits for the
+  // person to choose. Every other match keeps the duplicate rule (I-4).
+  const listed = kind === "grocery_item" && input.onShoppingList === true && input.reconciliation?.proposal.type === "duplicate";
+  if (input.reconciliation && !listed) return { mode: "prepare", reason: input.reconciliation.message, question: null };
+  if (listed && !hasAmount(input.extracted)) {
+    return { mode: "prepare", reason: `${title} is already on your shopping list, so it waits for you to choose how much more.`, question: null, wait: { reason: "on_list", listed: true } };
+  }
   if (confidence === "medium" && !aboveBar) return { mode: "prepare", reason: "WonderHome read it, but not surely enough to act on its own.", question: null };
   if (input.understanding?.safety.instructionsIgnored) {
     return { mode: "prepare", reason: "It contained instructions aimed at WonderHome, so a person looks first.", question: null };
@@ -145,11 +179,23 @@ export function decideConfirmation(input: ConfirmationInput): ConfirmationDecisi
   // or a person confirms (the owner, 2026-10-25 and 2026-10-26).
   // A photo or a file always waits, whatever the bar: there are no words of its own to check the reading against.
   const unverified = input.understanding?.check?.unverified ?? [];
-  if (!aboveBar || unverified.includes(FROM_A_FILE)) return { mode: "prepare", reason: notSureEnough(unverified, percent), question: null };
+  const onList = listed ? { listed: true as const } : {};
+  if (unverified.includes(FROM_A_FILE)) return { mode: "prepare", reason: notSureEnough(unverified, percent), question: null };
+  if (!aboveBar) return { mode: "prepare", reason: notSureEnough(unverified, percent), question: null, wait: { reason: "below_bar", percent, ...onList } };
 
   const decision = decideAutonomy(input.autonomy, { outcomeKey: outcome.outcomeKey, kind: "schedule", reversible: true });
   if (decision.outcome === "execute") {
+    if (listed) {
+      return { mode: "auto_apply", reason: `Your household lets WonderHome handle ${outcome.label} on its own, and this was clear, so it adds to what is already on the shopping list. Undo it any time.`, question: null, topUp: true };
+    }
     return { mode: "auto_apply", reason: `Your household lets WonderHome handle ${outcome.label} on its own, and this was clear. Undo it any time.`, question: null };
   }
-  return { mode: "prepare", reason: `Your household has ${outcome.label} set to “Wait for Approval”, so WonderHome asks first.`, question: null };
+  const area = kind === "grocery_item" ? "groceries" : "school";
+  return { mode: "prepare", reason: `Your household has ${outcome.label} set to “Wait for Approval”, so WonderHome asks first.`, question: null, wait: { reason: "wait_for_approval", area, ...onList } };
+}
+
+/** An amount was said ("2 litres", or a number alone, 25-037), not left for WonderHome to pick. */
+function hasAmount(extracted: ConfirmationInput["extracted"]): boolean {
+  const quantity = Number(extracted?.quantity);
+  return Number.isFinite(quantity) && quantity > 0;
 }

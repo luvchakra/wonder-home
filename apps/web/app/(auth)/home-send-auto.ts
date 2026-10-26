@@ -1,7 +1,7 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 
 import { CONSUMABLE_CATEGORIES } from "@wonderhome/core/commerce/consumables";
-import { type AddedOnItsOwn, scorePercent, sureWhy } from "@wonderhome/core/homesend/auto-add";
+import { type AddedOnItsOwn, scorePercent, sureWhy, type WaitingInHomeSend } from "@wonderhome/core/homesend/auto-add";
 import { recordHomeSendChange } from "@wonderhome/core/homesend/changes";
 import type { HomeSendExtraction, HomeSendKind } from "@wonderhome/core/homesend/items";
 import { getHomeSendItem, routeHomeSendItem } from "@wonderhome/core/homesend/repository";
@@ -22,7 +22,7 @@ export async function autoApplyHomeSendItem(
   supabase: SupabaseClient,
   membership: HouseholdMembership,
   item: { id: string; kind: HomeSendKind; extracted: HomeSendExtraction | null; subject: SubjectResolution | null },
-): Promise<{ changeId: string; title: string; where: string } | null> {
+): Promise<{ changeId: string; title: string; where: string; more?: AddedOnItsOwn["more"] } | null> {
   const extracted = item.extracted;
   const title = extracted?.title?.trim();
   if (!title || (item.kind !== "grocery_item" && item.kind !== "school_item")) return null;
@@ -61,7 +61,7 @@ export async function autoApplyHomeSendItem(
     createdByMemberId: membership.memberId,
     ...(created.changeType === "updated" ? { changeType: "updated" as const, previous: created.previous ?? {} } : {}),
   });
-  return { changeId: change.id, title, where: item.kind === "grocery_item" ? "Groceries" : "Kids & School" };
+  return { changeId: change.id, title, where: item.kind === "grocery_item" ? "Groceries" : "Kids & School", ...(created.more ? { more: created.more } : {}) };
 }
 
 /**
@@ -69,19 +69,27 @@ export async function autoApplyHomeSendItem(
  * HomeTalk has nothing left to ask about it, or a WhatsApp item arrives
  * complete: the same review the app runs, as this member, and only an "add on
  * its own" decision is acted on (Pre Approved and above the household's bar).
- * Anything else stays waiting in HomeSend. Null when nothing was added.
+ * Anything else stays waiting in HomeSend: when it would otherwise have been
+ * added on its own, with why (`confirmation.ts` `wait`, I-24), so the reply can
+ * say so. Null when nothing was added and there is nothing to say.
  */
 export async function addIfAllowed(
   supabase: SupabaseClient,
   membership: HouseholdMembership,
   itemId: string,
   options: { createdByMemberId?: string } = {},
-): Promise<AddedOnItsOwn | null> {
+): Promise<AddedOnItsOwn | WaitingInHomeSend | null> {
   const item = await getHomeSendItem(supabase, membership.household.id, itemId);
   if (!item || item.status !== "classified" || !item.classifiedKind) return null;
   const review = await prepareReview(supabase, membership, { ...item, createdByMemberId: options.createdByMemberId ?? item.createdByMemberId });
-  if (review.confirmation.mode !== "auto_apply" || review.plan) return null;
+  if (review.plan) return null;
+  if (review.confirmation.mode !== "auto_apply") {
+    const title = item.extracted?.title?.trim();
+    return review.confirmation.wait && title ? { waiting: review.confirmation.wait, title } : null;
+  }
   const applied = await autoApplyHomeSendItem(supabase, membership, { id: item.id, kind: item.classifiedKind, extracted: item.extracted, subject: review.subject });
   // How sure, and why, goes with every "added on its own" message (design §7).
-  return applied ? { title: applied.title, where: applied.where, percent: scorePercent(review.understanding?.score), why: sureWhy(review.understanding) } : null;
+  if (!applied) return null;
+  const more = review.confirmation.topUp && applied.more ? { more: applied.more } : {};
+  return { title: applied.title, where: applied.where, percent: scorePercent(review.understanding?.score), why: sureWhy(review.understanding), ...more };
 }
