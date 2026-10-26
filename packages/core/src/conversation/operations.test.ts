@@ -156,6 +156,29 @@ describe("several things at once (§10): each item on its own", () => {
     expect(done.ok && unchangedResult(done.result)).toBe(true);
   });
 
+  it("\"that's enough\" to how much more leaves the list as it is, and says so (the owner, 2026-10-26)", async () => {
+    inventory.listGroceries.mockResolvedValue([grocery("c-oil", "Coconut oil", { unit: "bottle", toBuy: { quantity: 1, unit: "bottle" } })]);
+    const done = await executeIntent(intent({ parameters: { item: "coconut oil", keepAsIs: true } }), context());
+    expect(inventory.adjustListEntry).not.toHaveBeenCalled();
+    expect(done.ok && done.text).toBe("Okay, I've left the [shopping list](/groceries?view=to-buy) as it is. **Coconut oil** is on it (1 bottle).");
+    expect(done.ok && unchangedResult(done.result)).toBe(true);
+  });
+
+  it("\"none\" for a new item makes nothing and adds nothing", async () => {
+    const done = await executeIntent(intent({ parameters: { item: "coconut oil", keepAsIs: true } }), context());
+    expect(commerce.createConsumable).not.toHaveBeenCalled();
+    expect(inventory.adjustListEntry).not.toHaveBeenCalled();
+    expect(done.ok && done.text).toBe("Okay, I've left the [shopping list](/groceries?view=to-buy) as it is. I've not added **Coconut oil**.");
+  });
+
+  it("the answer to how much more adds that much on top (the owner, 2026-10-26)", async () => {
+    inventory.listGroceries.mockResolvedValue([grocery("c-oil", "Coconut oil", { unit: "l", toBuy: { quantity: 1000, unit: "ml" } })]);
+    inventory.adjustListEntry.mockResolvedValueOnce({ before: 1000, after: 3000, unit: "ml", version: 2, clamped: false, replayed: false, conflict: false, entryId: "e-oil" });
+    const done = await executeIntent(intent({ parameters: { item: "2 litres coconut oil" } }), context());
+    expect(inventory.adjustListEntry).toHaveBeenCalledWith(expect.anything(), expect.objectContaining({ itemId: "c-oil", kind: "add", amount: { quantity: 2000, unit: "ml" } }));
+    expect(done.ok && done.text).toBe("Added **Coconut oil** (+2 L, now 3 L) to the [shopping list](/groceries?view=to-buy).");
+  });
+
   it("\"add 6 more\" adds six to what is listed, never replaces it (Groceries §5.2)", async () => {
     inventory.listGroceries.mockResolvedValue([grocery("c-eggs", "Eggs", { toBuy: { quantity: 6, unit: "pcs" } })]);
     inventory.adjustListEntry.mockResolvedValueOnce({ before: 6, after: 12, unit: "pcs", version: 2, clamped: false, replayed: false, conflict: false, entryId: "e-c-eggs" });

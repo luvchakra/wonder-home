@@ -7,6 +7,10 @@ import { handleWhatsAppWebhook } from "../notifications/whatsapp-webhook";
 import { readInboundMessages } from "./inbound";
 import { isForHomeTalk, isQuestionForWonderHome, whatsappReplyText } from "./hometalk";
 import { memberNamedInReply } from "../hometalk/intake-questions";
+import { converse, type TurnInput } from "../conversation/engine";
+import { canExecute } from "../conversation/executor";
+import { groundIntent } from "../conversation/grounding";
+import { NO_REFERENCES } from "../conversation/references";
 import { acknowledgementFor, leadOf, processWhatsAppMessage, QUESTION_REPLY, receiveWhatsAppMessages, WHATSAPP_PROCESS_KIND, withAdded } from "./intake";
 import { CONNECT_CODE_LENGTH, connectMessage, generateConnectCode, hashConnectCode, readConnectCode, whatsappBusinessNumber, whatsappChatLink } from "./linking";
 
@@ -401,6 +405,47 @@ describe("processing into HomeSend", () => {
     expect(heard).toEqual(["coconut oil"]);
     expect(h.tables.home_send_items).toEqual([]);
     expect(out.sent[0]!.text).toBe("Added *Coconut oil* (2 L) to the shopping list.");
+  });
+
+  // The owner, 2026-10-26: "coconut oil" met "already on the shopping list, so there was nothing to add" — "it should ask for quantity".
+  it("HomeTalk's how-much question is answered on WhatsApp: \"2 litres\" adds 2 litres of coconut oil", async () => {
+    const oil = {
+      id: "c-oil", name: "Coconut oil", category: "grocery", unit: "l", step: null, lowLevel: null, storage: null, note: null, aliases: [], imageUrl: null, imagePath: null, catalog: null, lastPurchasedOn: null, stock: null,
+      toBuy: { entryId: "e-oil", quantity: 1000, unit: "ml", version: 1, source: "manual", mealId: null },
+    };
+    const now = new Date();
+    const talk = (utterance: string, clarifying: TurnInput["clarifying"] = null) =>
+      converse({
+        utterance, channel: "text", actor: { memberId: MEMBER, roles: ["head"] }, pending: null, clarifying, autonomyFor: () => "execute", entitledFor: () => true, executable: canExecute, sessionId: "s-wa", now,
+        ground: (intent) => groundIntent(intent, { people: [], viewerMemberId: MEMBER, timezone: "Asia/Kolkata", now, references: async () => NO_REFERENCES, groceries: async () => [oil] }),
+      });
+    const first = await talk("Add coconut oil to the groceries");
+    expect(first.kind === "reply" && first.text).toBe('Coconut oil is already on your shopping list (1 L). How much more should I add? Or say "that\'s enough" to leave it.');
+    const clarifying = first.kind === "reply" ? (first.clarification ?? null) : null;
+
+    const { h, id } = await received("text");
+    h.tables.whatsapp_messages![0]!.text_content = "2 litres";
+    const asked = new Date(Date.now() - 60 * 1000).toISOString();
+    h.tables.whatsapp_messages!.push({ id: "m-ask", household_id: HOUSEHOLD, member_id: MEMBER, provider_message_id: "wamid.ask", message_type: "text", homesend_item_id: null, received_at: asked, processing_status: "ignored" });
+    h.tables.conversation_sessions = [{ id: "s-wa", household_id: HOUSEHOLD, member_id: MEMBER, surface: "whatsapp", status: "open", created_at: asked }];
+    h.tables.conversation_messages = [
+      { id: "c2", household_id: HOUSEHOLD, session_id: "s-wa", role: "assistant", metadata: { mode: "clarify", proposal: "clarify", clarify: clarifying }, created_at: new Date(Date.now() - 50 * 1000).toISOString() },
+    ];
+    h.tables.home_send_items = [];
+    const out = replies();
+    const turns: Awaited<ReturnType<typeof talk>>[] = [];
+    await processWhatsAppMessage(h.client, id, {
+      config: CONFIG, fetch: out.fetchImpl, ingest: { classify },
+      ask: async ({ text }) => {
+        const answered = await talk(text ?? "", clarifying);
+        turns.push(answered);
+        return "Added *Coconut oil* (+2 L, now 3 L) to the shopping list.";
+      },
+    });
+    expect(turns[0]!.kind === "reply" && turns[0]!.intent).toMatchObject({ action: "add_to_list", parameters: { item: "2 litres coconut oil" } });
+    expect(turns[0]!.kind === "reply" && turns[0]!.proposal.kind).toBe("executed");
+    expect(h.tables.home_send_items).toEqual([]);
+    expect(out.sent[0]!.text).toBe("Added *Coconut oil* (+2 L, now 3 L) to the shopping list.");
   });
 
   it("once HomeTalk has answered rather than asked, the next text is HomeSend's again", async () => {

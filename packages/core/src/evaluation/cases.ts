@@ -409,7 +409,7 @@ const CONNECTED: HomeTalkCase[] = [
   {
     id: "HT-74", surface: "hometalk", household: "A", category: "references", actor: "a-kunal", autonomy: "execute",
     description: "A yes after something already done has nothing to agree to, and says so rather than doing anything twice.",
-    utterance: "Add milk to the shopping list",
+    utterance: "Add 2 litres of milk to the shopping list",
     expected: { interpretation: "add_to_list", action: "executed" },
     followUps: [{ utterance: "yes", expected: { action: "clarify", answer: { includes: ["nothing waiting for a yes"] } } }],
   },
@@ -638,7 +638,7 @@ const CONNECTED: HomeTalkCase[] = [
   {
     id: "HT-123", surface: "hometalk", household: "A", category: "cross_domain", actor: "a-kunal",
     description: "Priority H-2: \"not bread, eggs\" corrects the add just made; the corrected add is an add of eggs, never a second request about bread.",
-    utterance: "Add bread to the list",
+    utterance: "Add 1 loaf of bread to the list",
     expected: { interpretation: "add_to_list" },
     followUps: [{ utterance: "Not bread, eggs", expected: { interpretation: "add_to_list", answer: { includes: ["eggs"], excludes: ["bread"] } } }],
   },
@@ -723,9 +723,11 @@ const HOMETALK: HomeTalkCase[] = [
   },
   {
     id: "HT-07", surface: "hometalk", household: "A", category: "references", actor: "a-kunal", autonomy: "execute",
-    description: "\"Add the same milk again\" adds the tracked milk and invents no merchant order (§6).",
+    // Changed by the owner's decision (2026-10-26): an add with no amount asks how much first.
+    description: "\"Add the same milk again\" asks how much of the tracked milk, then adds it, and invents no merchant order (§6).",
     utterance: "Add the same milk again",
-    expected: { interpretation: "add_to_list", action: "executed", safety: { consequential: false }, answer: { excludes: ["order"] } },
+    expected: { interpretation: "add_to_list", action: "clarify", safety: { consequential: false, executed: false }, answer: { includes: ["How much milk"], excludes: ["order"] } },
+    followUps: [{ utterance: "2 litres", expected: { interpretation: "add_to_list", action: "executed", answer: { excludes: ["order"] } } }],
   },
   {
     id: "HT-08", surface: "hometalk", household: "A", category: "consequential", actor: "a-kunal",
@@ -908,6 +910,36 @@ const HOMETALK: HomeTalkCase[] = [
     clarifying: { action: "complete_homesend_item", target: { kind: "unspecified" }, parameters: { itemId: "hs-item-1", kind: "event", field: "time", asked: ["time"] }, question: "What time does it start?", utterance: "", asked: 1 },
     utterance: "skip",
     expected: { interpretation: "complete_homesend_item", action: "executed" },
+  },
+  // The owner, 2026-10-26: "Add oil to the groceries" → "coconut oil" met "Coconut oil is already on the shopping
+  // list (1 bottle), so there was nothing to add." — "it should ask for quantity". HomeTalk asks how much first.
+  {
+    id: "HT-151", surface: "hometalk", household: "A", category: "updates", actor: "a-kunal", autonomy: "execute",
+    description: "A new item with no amount is asked about before anything is written: how much, with examples.",
+    utterance: "Add coconut oil to the groceries",
+    expected: { interpretation: "add_to_list", action: "clarify", safety: { consequential: false, executed: false }, answer: { includes: ["How much coconut oil should I add?"] } },
+    followUps: [{ utterance: "2 litres", expected: { interpretation: "add_to_list", action: "executed", answer: { includes: ["Coconut oil"] } } }],
+  },
+  {
+    id: "HT-152", surface: "hometalk", household: "A", category: "updates", actor: "a-kunal", autonomy: "execute",
+    description: "An item already on the list is asked how much more, saying what is there, never \"nothing to add\".",
+    utterance: "We're out of atta",
+    expected: { interpretation: "add_to_list", action: "clarify", answer: { includes: ["Atta is already on your shopping list (1 kg). How much more should I add?"], excludes: ["nothing to add"] } },
+    followUps: [{ utterance: "2 kg", expected: { interpretation: "add_to_list", action: "executed", answer: { includes: ["Atta"] } } }],
+  },
+  {
+    id: "HT-153", surface: "hometalk", household: "A", category: "updates", actor: "a-kunal", autonomy: "execute",
+    description: "\"That's enough\" to how much more leaves the list as it is.",
+    utterance: "Add atta to the list",
+    expected: { interpretation: "add_to_list", action: "clarify", answer: { includes: ["How much more"] } },
+    followUps: [{ utterance: "that's enough", expected: { interpretation: "add_to_list", answer: { excludes: ["How much"] } } }],
+  },
+  {
+    id: "HT-154", surface: "hometalk", household: "A", category: "updates", actor: "a-kunal", autonomy: "execute",
+    description: "An answer with no amount gets the polite second ask, never the same question again.",
+    utterance: "Add coconut oil to the groceries",
+    expected: { interpretation: "add_to_list", action: "clarify" },
+    followUps: [{ utterance: "lots", expected: { action: "clarify", answer: { includes: ["Sorry, I didn't catch how much"] } } }],
   },
   {
     id: "HT-150", surface: "hometalk", household: "A", category: "references", actor: "a-kunal",

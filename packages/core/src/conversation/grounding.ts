@@ -1,5 +1,5 @@
 import { matchBill } from "./bill-talk";
-import { groceryCandidates } from "./grocery-actions";
+import { groceryCandidates, quantityQuestion } from "./grocery-actions";
 import { readItemAmount } from "./quantity";
 import type { GroceryItem } from "../commerce/inventory";
 import { matchCatalogRecipe } from "../meals/recipe-catalog";
@@ -41,7 +41,7 @@ export type Grounding =
     };
 
 /** What a grounding question waits for — read by `answerClarification`. */
-export type Awaiting = "member" | "referent" | "day" | "item";
+export type Awaiting = "member" | "referent" | "day" | "item" | "quantity";
 
 export type GroundingEnv = {
   /** The household's people, as the resolver's member items. */
@@ -453,6 +453,19 @@ export async function groundIntent(intent: HouseholdIntent, env: GroundingEnv): 
     delete next.ingredientsOf;
     grounded = { ...grounded, parameters: next };
     focus.push({ entityType: "meal", entityId: subject.mealId, label: subject.label, source: "mention", at });
+  }
+
+  // --- How much (the owner, 2026-10-26): "add coconut oil" names no amount,
+  // so HomeTalk asks before it writes — how much, or how much more when it is
+  // already on the list — one question for every bare item. An amount said
+  // adds straight away; a meal's ingredients keep their own at-home check.
+  if (grounded.action === "add_to_list" && typeof grounded.parameters.forMeal !== "string" && grounded.parameters.keepAsIs !== true && !Array.isArray(grounded.parameters.lines)) {
+    const names = typeof grounded.parameters.item === "string" ? [grounded.parameters.item] : Array.isArray(grounded.parameters.items) ? (grounded.parameters.items as unknown[]).filter((name): name is string => typeof name === "string") : [];
+    const bare = names.filter((name) => name.trim() && !readItemAmount(name).amount);
+    if (bare.length > 0) {
+      const known = env.groceries ? await env.groceries().catch(() => []) : [];
+      return clarify({ ...grounded, parameters: { ...grounded.parameters, quantityFor: bare } }, "quantity", quantityQuestion(bare, known), []);
+    }
   }
 
   // --- A reminder (§10): when, and what "them" was --------------------------

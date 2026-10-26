@@ -1,6 +1,8 @@
 import type { Person } from "../ai/privacy";
 import { eventEntries, holidayEntries, mergeEntries, occasionEntries, type CalendarEntry, type CalendarEventRecord, type CalendarViewer, type HolidayRecord } from "../calendar/projection";
 import type { Consumable } from "../commerce/consumables";
+import type { GroceryItem } from "../commerce/inventory";
+import { unitInfo } from "../commerce/units";
 import { buildContextItems, type ContextRecords } from "../context/builders";
 import { applyFreshness } from "../context/freshness";
 import { filterForViewer } from "../context/privacy";
@@ -59,7 +61,20 @@ export type GoldenHousehold = {
    * alongside `records.events`; HomeBrain's facts never reach them.
    */
   calendar?: CalendarEventRecord[];
+  /** What is on the shopping list now, by consumable, in the item's own unit. */
+  shoppingList?: { consumableId: string; quantity: number }[];
 };
+
+/** A consumable as the Groceries list shows it to grounding, with what is on the shopping list. */
+function groceryOf(item: Consumable, listed: GoldenHousehold["shoppingList"]): GroceryItem {
+  const onList = listed?.find((entry) => entry.consumableId === item.id);
+  const unit = unitInfo(item.unit).key;
+  return {
+    id: item.id, name: item.name, category: item.category, unit, step: null, lowLevel: null, storage: null, note: null, aliases: [],
+    imageUrl: null, imagePath: null, catalog: null, lastPurchasedOn: item.lastPurchasedOn ?? null, stock: null,
+    toBuy: onList ? { entryId: `list-${item.id}`, quantity: onList.quantity, unit, version: 1, source: "manual", mealId: null } : null,
+  };
+}
 
 /** The public holidays every golden household's calendar shows (a slice of the DoP&T list). */
 export const GOLDEN_HOLIDAYS: HolidayRecord[] = [
@@ -180,6 +195,8 @@ const HOUSEHOLD_A: GoldenHousehold = {
   now: GOLDEN_NOW,
   members: A_MEMBERS,
   guardians: { "a-asmi": ["a-kunal", "a-upasana"], "a-manan": ["a-kunal", "a-upasana"] },
+  // Atta is already on the shopping list, for "how much more?" (the owner, 2026-10-26).
+  shoppingList: [{ consumableId: "a-c-atta", quantity: 1 }],
   recipes: [
     { id: "a-r-pasta", name: "Tomato pasta", ingredients: ["pasta", "tomatoes", "basil"] },
     { id: "a-r-dal", name: "Dal tadka", ingredients: ["toor dal", "ghee", "cumin"] },
@@ -477,6 +494,7 @@ export function groundingEnvFor(household: GoldenHousehold, memberId: string, re
         .map((item) => ({ id: item.id, title: item.title, childMemberId: item.childMemberId, dueAt: item.dueAt ? item.dueAt.toISOString() : null, status: item.status, dueTimeKnown: item.dueTimeKnown, endsAt: item.endsAt ? item.endsAt.toISOString() : null })),
     assets: async () => (household.records.assets ?? []).filter((a) => a.status === "active").map((a) => ({ id: a.id, name: a.name })),
     bills: async () => (household.records.obligations ?? []).filter((bill) => bill.status !== "paid" && bill.status !== "cancelled").map((bill) => ({ id: bill.id, name: bill.name, billType: bill.billType ?? null })),
+    groceries: async () => (household.records.consumables ?? []).map((item) => groceryOf(item, household.shoppingList)),
   };
 }
 
