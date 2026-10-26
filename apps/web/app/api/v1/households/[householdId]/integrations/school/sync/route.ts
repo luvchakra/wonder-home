@@ -7,6 +7,7 @@ import { requireHouseholdAdmin } from "@wonderhome/core/identity/households";
 import { getConnector } from "@wonderhome/core/integrations/registry";
 import { listIdentities, loadConnection } from "@wonderhome/core/integrations/repository";
 import type { SchoolConnector } from "@wonderhome/core/school/connector";
+import { registerSchoolProviders } from "@wonderhome/core/school/providers";
 import { syncSchool } from "@wonderhome/core/school/school-sync";
 import { schoolSyncPorts } from "@wonderhome/core/school/sync-ports";
 
@@ -37,6 +38,10 @@ export async function POST(request: Request, { params }: Params) {
     const connection = await loadConnection(supabase, householdId, "school", provider);
     if (!connection) throw ApiError.notFound("No school portal is connected to this household.");
 
+    // Populate the registry from the catalog. In a deployment with no portal
+    // environment set — every deployment today — this registers nothing, and the
+    // "not configured" answer below is reached honestly.
+    registerSchoolProviders();
     const connector = getConnector("school", connection.provider) as SchoolConnector | null;
     if (!connector) {
       throw ApiError.conflict(
