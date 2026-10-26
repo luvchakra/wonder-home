@@ -12,6 +12,7 @@ decision that shapes later work each earns a note, written before moving on.
 | Date | Note |
 |---|---|
 | 2026-10-26 | [HomeSend: bills, receipts and health documents may be added directly (14-054)](2026-10-26-homesend-direct-money-health.md) |
+| 2026-10-26 | [Connect-school screen + channel UI (08-029, 08-031 PR B)](2026-10-26-school-connect-ui.md) |
 | 2026-10-26 | [School channels, backend (08-031, PR A)](2026-10-26-school-channels-backend.md) |
 | 2026-10-26 | [Answers to pick under HomeTalk's questions (14-053)](2026-10-26-hometalk-answer-choices.md) |
 | 2026-10-26 | [HomeTalk's reply rule: structured, with emojis, cheerful](2026-10-26-hometalk-reply-rule.md) |
