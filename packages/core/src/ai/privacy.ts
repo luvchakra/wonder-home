@@ -1,6 +1,8 @@
 import type { MemberType } from "../identity/schemas";
 import { MODEL_PROVIDERS, type KeySource, type ModelProvider } from "./model-key";
 
+export { hasPlaceholderName, isPlaceholderName } from "./placeholders";
+
 /**
  * What may be told to a model provider, and how little of it (story 15-005).
  *
@@ -464,6 +466,42 @@ export function restoreParameterNames<T extends Record<string, unknown>>(paramet
   const restore = (value: unknown): unknown =>
     typeof value === "string" ? restoreNames(value, pseudonyms, people) : Array.isArray(value) ? value.map(restore) : value;
   return Object.fromEntries(Object.entries(parameters).map(([key, value]) => [key, restore(value)])) as T;
+}
+
+/**
+ * A model's reading made the household's again (I-26, the owner,
+ * 2026-10-26). The model read the pseudonymised sentence, so everything it
+ * returns — its parameters, its target, its references and the utterance it
+ * was handed — names people by placeholder. The reading keeps the model's
+ * structure, but the words are the member's own (`said`), and every
+ * placeholder the model wrote goes back to the person it stands for. A
+ * placeholder stored as-is ("Child B has a karate exam") is a name nobody in
+ * the household has, filed where the household reads it.
+ */
+export function reidentifyIntent<I extends { utterance: string; parameters: Record<string, unknown>; target: { kind: string; reference?: string }; understanding?: { references?: string[] } }>(
+  understood: I,
+  said: string,
+  pseudonyms: Record<string, string>,
+  people: readonly Person[],
+): I {
+  const understanding = understood.understanding?.references
+    ? { ...understood.understanding, references: understood.understanding.references.map((reference) => restoreNames(reference, pseudonyms, people)) }
+    : understood.understanding;
+  const intent: I = {
+    ...understood,
+    utterance: said,
+    parameters: restoreParameterNames(understood.parameters, pseudonyms, people),
+    ...(understanding ? { understanding } : {}),
+  };
+  if (intent.target.kind === "member" && intent.target.reference) {
+    const mapped = unpseudonymise(intent.target.reference, pseudonyms, people);
+    return {
+      ...intent,
+      target: { kind: "member", reference: mapped.reference },
+      parameters: mapped.memberId ? { ...intent.parameters, memberId: mapped.memberId } : intent.parameters,
+    };
+  }
+  return intent;
 }
 
 /** Replaces every household name in the text, longest first so "Ravi Nair" wins over "Ravi". */

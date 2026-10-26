@@ -1,3 +1,4 @@
+import { hasPlaceholderName } from "../ai/placeholders";
 import type { CaseCategory, ErrorType, Expectation, Observation, StageResult } from "./types";
 
 /**
@@ -99,6 +100,17 @@ export function compareStages(expected: Expectation, observed: Observation, cate
     stages.push({ stage: "answer", pass, expected: expected.answer, actual: { missing, leaked } });
     if (leaked.length > 0) errors.add(category === "privacy" ? "privacy_leak" : category === "updates" ? "stale_context_use" : "unsupported_answer");
     if (missing.length > 0) errors.add("incomplete_answer");
+  }
+
+  // I-26: a placeholder in what a turn keeps is a name nobody in the household has, filed where they read it.
+  if (expected.kept !== undefined || (observed.kept !== undefined && hasPlaceholderName(observed.kept))) {
+    const kept = normal(observed.kept ?? "");
+    const missing = (expected.kept?.includes ?? []).filter((fragment) => !kept.includes(normal(fragment)));
+    const leaked = [...(expected.kept?.excludes ?? []).filter((fragment) => kept.includes(normal(fragment))), ...(hasPlaceholderName(observed.kept ?? "") ? ["a placeholder name"] : [])];
+    const pass = missing.length === 0 && leaked.length === 0;
+    stages.push({ stage: "entity", pass, expected: expected.kept ?? { excludes: ["a placeholder name"] }, actual: { missing, leaked } });
+    if (leaked.length > 0) errors.add("privacy_leak");
+    if (missing.length > 0) errors.add("false_entity_match");
   }
 
   return { stages, errors: [...errors], pass: errors.size === 0 && stages.every((stage) => stage.pass) };

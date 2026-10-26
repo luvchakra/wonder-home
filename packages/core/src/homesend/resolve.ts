@@ -1,3 +1,4 @@
+import { isPlaceholderName } from "../ai/placeholders";
 import { resolvePerson } from "../context/resolution";
 import type { HouseholdContextItem, PersonRef } from "../context/types";
 import type { HomeSendKind } from "./items";
@@ -83,7 +84,15 @@ export function resolveIntakePeople(
   if (!PERSONAL_KINDS.has(understanding.kind)) return { references, subject: none };
 
   let unmatchedChild: string | null = null;
+  // A placeholder ("Child B") is a stand-in a model wrote, never somebody
+  // the household could add (I-26): it is neither matched nor offered as a
+  // new child, and the household is asked who the item is for.
+  let placeholder = false;
   for (const reference of understanding.references) {
+    if (isPlaceholderName(reference.text)) {
+      placeholder = true;
+      continue;
+    }
     const resolution = resolvePerson(reference.text, items, { viewerMemberId: options.viewerMemberId });
     const candidates = resolution.candidates.map((candidate) => toPerson(candidate.entity)).filter(eligible);
     if (candidates.length === 0) {
@@ -122,7 +131,8 @@ export function resolveIntakePeople(
         },
       };
     }
-    if (kids.length === 1) return { references, subject: { said: null, selected: kids[0]!, candidates: kids, question: null } };
+    if (kids.length === 1 && !placeholder) return { references, subject: { said: null, selected: kids[0]!, candidates: kids, question: null } };
+    if (kids.length === 1) return { references, subject: { said: null, selected: null, candidates: kids, question: `Is this for ${kids[0]!.displayName}?` } };
     if (kids.length > 1) return { references, subject: { said: null, selected: null, candidates: kids, question: `Who is this for — ${joinOr(kids.map((kid) => kid.displayName))}?` } };
   }
   return { references, subject: none };

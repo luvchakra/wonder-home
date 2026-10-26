@@ -174,6 +174,11 @@ const HOMESEND_KIND_WORDS: Record<string, string> = {
  * HomeSend's own governed write (`addFromHomeSend`).
  */
 async function fileWithHomeSend(intent: HouseholdIntent, context: ExecutionContext): Promise<ExecutionResult> {
+  // The member's own words are filed, never a model's masked copy of them
+  // (I-26). A placeholder here means the words are not the member's: nothing
+  // is filed under a name nobody in the household has.
+  const { hasPlaceholderName } = await import("../ai/privacy");
+  if (hasPlaceholderName(intent.utterance)) return { ok: false, reason: "I didn't file that, because I lost track of who it is for. Could you say it again with their name?" };
   const { ingestText } = await import("../homesend/ingest");
   const outcome = await ingestText(context.supabase, { householdId: context.householdId, memberId: context.actorMemberId }, { text: intent.utterance });
   const review = linkTo("/home-send", "HomeSend");

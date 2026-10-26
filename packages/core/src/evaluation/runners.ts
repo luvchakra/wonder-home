@@ -1,6 +1,6 @@
 import { groundIntakeDate, type IntakeExtraction } from "../ai/classify-intake";
 import { reviewIntakeKind } from "../ai/intake-kind-check";
-import { DEFAULT_DATA_USE } from "../ai/privacy";
+import { DEFAULT_DATA_USE, minimiseContext, pseudonymiseText, reidentifyIntent, type Person } from "../ai/privacy";
 import type { AnswerComposer } from "../ai/model-client";
 import { asksTheCalendar, asksWhatIsOn, calendarSpanReply, lookAheadReply, lookAheadSpan, memberNamedIn, readLookAhead, scheduleReply, scheduleSpanOf } from "../calendar/answer";
 import type { PendingClarification } from "../conversation/clarify";
@@ -175,6 +175,26 @@ export async function observeConversation(c: HomeTalkCase, models: Models = {}):
   return observed;
 }
 
+/**
+ * A provider's understanding, told what the conversation route tells it
+ * (`hometalk-turn.ts`): names as placeholders on the way out, the reading
+ * made the household's again on the way back (I-26). Without this a
+ * provider run never sees a placeholder, and a placeholder kept as a
+ * member's words could not show up here.
+ */
+function maskedAsTheRouteDoes(understand: Understanding, people: readonly Person[]): Understanding {
+  return async (said, context) => {
+    const minimised = minimiseContext([{ id: "utterance", contentClass: "general", need: "what was asked", text: said, relevant: true }], { policy: DEFAULT_DATA_USE, people });
+    const masked = (text: string) => pseudonymiseText(text, people);
+    const understood = await understand(minimised.included[0]?.text ?? masked(said), {
+      ...context,
+      history: context.history?.map((turn) => ({ ...turn, text: masked(turn.text) })),
+      runtime: context.runtime ? { ...context.runtime, pending: context.runtime.pending ? masked(context.runtime.pending) : context.runtime.pending, recent: context.runtime.recent?.map(masked) } : undefined,
+    });
+    return reidentifyIntent(understood, said, minimised.pseudonyms, people);
+  };
+}
+
 async function talkTurn(c: HomeTalkCase, utterance: string, carried: Carried, models: Models): Promise<{ observed: Observation; next: Carried }> {
   const household = GOLDEN_HOUSEHOLDS[c.household];
   const who = memberOf(household, c.actor);
@@ -220,7 +240,7 @@ async function talkTurn(c: HomeTalkCase, utterance: string, carried: Carried, mo
       pending: pendingWords(carried.pending ? { summary: carried.pending.summary } : references?.proposal?.[0] ? { summary: references.proposal[0].label } : null),
       recent: [...new Set([...carried.focus.map((focus) => focus.label), ...[...(references?.conversation ?? []), ...(references?.homesend ?? [])].map((spec) => spec.label)])].slice(0, 5),
     },
-    ...(corrected ? { understand: () => corrected } : c.simulate && first ? { understand: failingUnderstanding(c.simulate) } : models.understand ? { understand: models.understand } : {}),
+    ...(corrected ? { understand: () => corrected } : c.simulate && first ? { understand: failingUnderstanding(c.simulate) } : models.understand ? { understand: maskedAsTheRouteDoes(models.understand, peopleOf(household)) } : {}),
   });
 
   const history: ConversationTurn[] = [...carried.history, { role: "member", text: utterance }];
@@ -265,6 +285,7 @@ async function talkTurn(c: HomeTalkCase, utterance: string, carried: Carried, mo
     answer,
     confidence: intent.confidence,
     providerFailure: intent.understanding?.failure ?? null,
+    kept: [intent.utterance, intent.target.reference ?? "", JSON.stringify(intent.parameters)].join(" "),
   };
   const asked = intent.action === "ask_status" || intent.action === "unknown";
   return {

@@ -421,6 +421,17 @@ const CONNECTED: HomeTalkCase[] = [
     expected: { interpretation: "file_with_homesend", action: "executed", safety: { consequential: false } },
   },
   {
+    id: "HT-161", surface: "hometalk", household: "A", category: "privacy", actor: "a-kunal",
+    description: "I-26 (the owner, 2026-10-26): a child's dated class event is filed with HomeSend in the member's own words — the child by name and the place — never the placeholder the model read.",
+    utterance: "Asmi has a karate grading exam next Sunday at 10 am at the Koramangala dojo",
+    expected: {
+      interpretation: "file_with_homesend",
+      action: "executed",
+      safety: { consequential: false },
+      kept: { includes: ["Asmi has a karate grading exam", "Koramangala dojo"], excludes: ["Child A", "Child B"] },
+    },
+  },
+  {
     id: "HT-75", surface: "hometalk", household: "A", category: "cross_domain", actor: "a-kunal",
     description: "A conversation that crosses the home: December's calendar, then the internet bill, then dinner — each answered from its own records, none bleeding into the next.",
     utterance: "Any events in December?",

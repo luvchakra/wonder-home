@@ -103,6 +103,12 @@ export type Expectation = {
    * 2026-10-21). `excludes` stays literal.
    */
   answer?: { includes?: (string | readonly string[])[]; excludes?: string[] };
+  /**
+   * The words a HomeTalk turn keeps — what it files, remembers or writes —
+   * must and must never carry (I-26). A placeholder ("Child B") in them fails
+   * every case, whether it says this or not.
+   */
+  kept?: { includes?: string[]; excludes?: string[] };
 };
 
 type CaseBase = {
@@ -197,6 +203,8 @@ export type Observation = {
   confidence: number | null;
   /** Set when the model could not be reached or its output could not be read. */
   providerFailure: string | null;
+  /** A HomeTalk turn's words and reading as it would keep them; absent on other surfaces. */
+  kept?: string;
 };
 
 export type StageResult = { stage: Stage; pass: boolean; expected: unknown; actual: unknown };
