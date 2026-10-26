@@ -67,6 +67,14 @@ describe("every call is re-checked, independently", () => {
     expect(result.allowed === true && result.requiresApproval).toBe(false);
   });
 
+  it("never lets a retired or unknown autonomy value reach execute: it waits for a person", () => {
+    // An old "observe" or "approve", or junk, that skipped the lookup's cleaning (migration 20261026090000).
+    for (const stale of ["observe", "approve", "do_whatever"]) {
+      const result = authorizeToolCall("availability.record_absence", ctx({ autonomy: stale as never }));
+      expect(result.allowed === true && result.requiresApproval, stale).toBe(true);
+    }
+  });
+
   it("asks first for a household change when the outcome is set to prepare", () => {
     for (const tool of ["availability.record_absence", "outcomes.replan"]) {
       const result = authorizeToolCall(tool, ctx({ autonomy: "prepare" }));

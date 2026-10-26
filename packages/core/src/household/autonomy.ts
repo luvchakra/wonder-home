@@ -82,12 +82,10 @@ export function decideAutonomy(mode: AutonomyMode, action: ProposedAction): Auto
     };
   }
 
-  switch (mode) {
-    case "prepare":
-      return { outcome: "needs_approval", reason: "Ready to go once you approve." };
-    case "execute":
-      return { outcome: "execute", reason: "Handled automatically, as configured." };
-  }
+  // Only an explicit "execute" acts. Anything else — "prepare", or a stale or
+  // unknown value that reached here without the lookup's cleaning — waits.
+  if (mode === "execute") return { outcome: "execute", reason: "Handled automatically, as configured." };
+  return { outcome: "needs_approval", reason: "Ready to go once you approve." };
 }
 
 function labelFor(kind: ProposedAction["kind"]): string {
