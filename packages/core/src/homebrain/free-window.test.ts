@@ -5,7 +5,8 @@ import { buildContextItems } from "../context/builders";
 import type { HouseholdContextItem } from "../context/types";
 import { resolveRuleIntent } from "../conversation/rules";
 import { contextItemsFor, GOLDEN_HOUSEHOLDS, memberOf, peopleOf, viewerFor } from "../evaluation/households";
-import { householdInsights, tripQuestion } from "./insights";
+import { longWeekendLines } from "./answer";
+import { householdInsights, LONG_WEEKENDS_LEAD, tripQuestion } from "./insights";
 import { answerWithHomeBrain } from "./turn";
 
 /**
@@ -96,6 +97,14 @@ describe("when to go away", () => {
       privacyClass: "general",
     });
     expect(trip[1]!.statement).toMatch(/^For a 2-day getaway, nothing is on the family calendar on Sat 24 Oct/);
+  });
+
+  it("says each long weekend on its own line, the dates first (the owner, 2026-10-26)", () => {
+    const statement = `${LONG_WEEKENDS_LEAD} Sat 21 Nov to Tue 24 Nov if Mon 23 Nov is taken off (Guru Nanak's Birthday, Tue 24 Nov); Fri 25 Dec to Sun 27 Dec (Christmas Day, Fri 25 Dec).`;
+    expect(longWeekendLines(statement)).toEqual([
+      "- **Sat 21 Nov to Tue 24 Nov** — Guru Nanak's Birthday (Tue 24 Nov), if Mon 23 Nov is taken off",
+      "- **Fri 25 Dec to Sun 27 Dec** — Christmas Day (Fri 25 Dec)",
+    ]);
   });
 
   it("is not drawn for any other question", () => {
