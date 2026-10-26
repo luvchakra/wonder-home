@@ -7,7 +7,7 @@ import { handleWhatsAppWebhook } from "../notifications/whatsapp-webhook";
 import { readInboundMessages } from "./inbound";
 import { isForHomeTalk, isQuestionForWonderHome, whatsappReplyText } from "./hometalk";
 import { memberNamedInReply } from "../hometalk/intake-questions";
-import { acknowledgementFor, leadOf, processWhatsAppMessage, QUESTION_REPLY, receiveWhatsAppMessages, WHATSAPP_PROCESS_KIND, withAdded } from "./intake";
+import { acknowledgementFor, leadOf, processWhatsAppMessage, QUESTION_REPLY, receiveWhatsAppMessages, WHATSAPP_PROCESS_KIND, withAdded, type WhatsAppIntakeDeps } from "./intake";
 import { CONNECT_CODE_LENGTH, connectMessage, generateConnectCode, hashConnectCode, readConnectCode, whatsappBusinessNumber, whatsappChatLink } from "./linking";
 
 /** The WhatsApp HomeSend spec: WhatsApp as an intake channel, never an authorization channel. */
@@ -212,7 +212,7 @@ describe("processing into HomeSend", () => {
   });
   const classify: IngestDeps["classify"] = async () => extraction({});
 
-  async function received(type: "text" | "image" | "video", extra: Record<string, unknown> = {}) {
+  async function received(type: "text" | "image" | "video" | "audio", extra: Record<string, unknown> = {}) {
     const h = harness({ linked: true });
     await receiveWhatsAppMessages(
       h.client,
@@ -306,6 +306,69 @@ describe("processing into HomeSend", () => {
     await processWhatsAppMessage(h.client, id, { config: CONFIG, fetch: out.fetchImpl, ingest: { classify }, ask: async () => null });
     expect(out.sent[0]!.text).toBe(QUESTION_REPLY);
     expect(h.tables.home_send_items).toEqual([]);
+  });
+
+  // The owner, 2026-10-26: a spoken "What are upcoming events" ended in Failed safely.
+  describe("a voice note", () => {
+    const OGG = new TextEncoder().encode("OggS\0\x02\0\0voice");
+    const voice = (text: string, confidence = 0.95, extra: Partial<WhatsAppIntakeDeps> = {}) => {
+      const hearings: string[] = [];
+      const out = replies();
+      const deps: WhatsAppIntakeDeps = {
+        config: CONFIG,
+        fetch: out.fetchImpl,
+        download: async () => ({ ok: true as const, bytes: OGG, mimeType: "audio/ogg" }),
+        ingest: { classify, scan: async () => ({ scanned: false as const }), transcribe: async () => (hearings.push(text), { status: "transcribed" as const, text, confidence }) },
+        ...extra,
+      };
+      return { deps, out, hearings };
+    };
+    const receivedVoice = async () => {
+      const got = await received("audio");
+      Object.assign(got.h.tables.whatsapp_messages![0]!, { media_id: "media-9", media_mime_type: "audio/ogg", text_content: null });
+      return got;
+    };
+
+    it("asking a question is answered by HomeTalk, as speech, and leaves nothing in HomeSend", async () => {
+      const { h, id } = await receivedVoice();
+      const asked: unknown[] = [];
+      const { deps, out } = voice("What are upcoming events", 0.95, { ask: async (input) => (asked.push(input), "Sports Day is on Friday.") });
+      expect(await processWhatsAppMessage(h.client, id, deps)).toBe("read");
+      expect(asked).toEqual([{ householdId: HOUSEHOLD, memberId: MEMBER, text: "What are upcoming events", requestId: "wamid.audio", spoken: { confidence: 0.95 } }]);
+      expect(h.tables.home_send_items ?? []).toEqual([]);
+      expect(h.uploads).toEqual([]);
+      expect(h.tables.whatsapp_messages![0]).toMatchObject({ processing_status: "ignored" });
+      expect(out.sent.map((sent) => sent.text)).toEqual(["Sports Day is on Friday."]);
+    });
+
+    it("asking for something goes to HomeTalk too", async () => {
+      const { h, id } = await receivedVoice();
+      const heard: string[] = [];
+      const { deps } = voice("add milk", 0.95, { ask: async ({ text }) => (heard.push(text), "Added milk to the grocery list.") });
+      await processWhatsAppMessage(h.client, id, deps);
+      expect(heard).toEqual(["add milk"]);
+      expect(h.tables.home_send_items ?? []).toEqual([]);
+    });
+
+    it("reading out a school notice stays HomeSend content, heard once", async () => {
+      const { h, id } = await receivedVoice();
+      const { deps, hearings } = voice("Tomorrow is Sports Day. Bring a water bottle, cap and sports shoes.", 0.95, { ask: async () => "should not be asked" });
+      await processWhatsAppMessage(h.client, id, deps);
+      expect(hearings).toHaveLength(1);
+      expect(h.tables.home_send_items).toHaveLength(1);
+      expect(h.tables.home_send_items![0]).toMatchObject({ source: "whatsapp_media", classified_kind: "school_item" });
+    });
+
+    it("heard unsurely, it is checked in HomeSend, never sent to HomeTalk", async () => {
+      const { h, id } = await receivedVoice();
+      const asked: string[] = [];
+      const { deps, out } = voice("What are upcoming events", 0.4, { ask: async ({ text }) => (asked.push(text), "never") });
+      await processWhatsAppMessage(h.client, id, deps);
+      expect(asked).toEqual([]);
+      expect(h.tables.home_send_items).toHaveLength(1);
+      expect(h.tables.home_send_items![0]!.status).not.toBe("failed");
+      expect(out.sent[0]!.text).toMatch(/not sure I heard that voice note right/);
+    });
   });
 
   it("still keeps a forwarded notice in HomeSend when HomeTalk is there", async () => {

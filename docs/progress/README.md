@@ -11,6 +11,7 @@ decision that shapes later work each earns a note, written before moving on.
 
 | Date | Note |
 |---|---|
+| 2026-10-26 | [WhatsApp: a spoken question goes to HomeTalk, not Failed safely](2026-10-26-whatsapp-voice-to-hometalk.md) |
 | 2026-10-26 | [HomeSend reports what an entry lacks; HomeTalk asks (14-041)](2026-10-26-homesend-completeness.md) |
 | 2026-10-26 | [An email when an AI key stops working (out of credits, quota, invalid)](2026-10-26-ai-key-alerts.md) |
 | 2026-10-26 | [HomeSend: Admin-set bar, a score on every entry, faster reading; WhatsApp undo; playbook groups](2026-10-26-homesend-bar-speed-playbook.md) |
