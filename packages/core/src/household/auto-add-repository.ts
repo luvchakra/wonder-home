@@ -1,7 +1,7 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 
-import { savePolicy } from "../household/configuration-repository";
-import { asAutoAddPercent, AUTO_ADD_PERCENTS, DEFAULT_AUTO_ADD_PERCENT, type AutoAddPercent } from "./auto-add";
+import { savePolicy } from "./configuration-repository";
+import { asAutoAddPercent, AUTO_ADD_PERCENTS, DEFAULT_AUTO_ADD_PERCENT, type AutoAddPercent } from "../homesend/auto-add";
 
 /**
  * The household's bar for HomeSend adding on its own (`auto-add.ts`), kept

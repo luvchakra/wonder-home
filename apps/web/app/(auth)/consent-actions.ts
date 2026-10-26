@@ -6,7 +6,7 @@ import { z } from "zod";
 import { toErrorBody } from "@wonderhome/core/api/errors";
 import { saveConfirmRequested } from "@wonderhome/core/conversation/consent-repository";
 import { asAutoAddPercent, AUTO_ADD_PERCENTS } from "@wonderhome/core/homesend/auto-add";
-import { saveAutoAddPercent } from "@wonderhome/core/homesend/auto-add-repository";
+import { saveAutoAddPercent } from "@wonderhome/core/household/auto-add-repository";
 import { createClient } from "@wonderhome/core/db/server";
 import { requireHouseholdAdmin } from "@wonderhome/core/identity/households";
 

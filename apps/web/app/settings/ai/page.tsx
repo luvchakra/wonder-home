@@ -5,7 +5,7 @@ import { describeKeySource, platformKey, resolveModelKey } from "@wonderhome/cor
 import { loadDataUse } from "@wonderhome/core/ai/privacy-repository";
 import { loadConfirmRequested } from "@wonderhome/core/conversation/consent-repository";
 import { AUTO_ADD_PERCENTS } from "@wonderhome/core/homesend/auto-add";
-import { loadAutoAddPercent } from "@wonderhome/core/homesend/auto-add-repository";
+import { loadAutoAddPercent } from "@wonderhome/core/household/auto-add-repository";
 import { AppShell } from "@wonderhome/core/shell/app-shell";
 import { Card } from "@wonderhome/core/ui/card";
 import { IconTile } from "@wonderhome/core/ui/icon-tile";

@@ -9,7 +9,7 @@
  * paying, deleting — still waits whatever the bar says.
  *
  * Pure, so client screens can show a score; the stored choice is read and
- * saved in `auto-add-repository.ts`.
+ * saved in `household/auto-add-repository.ts` (HomeSend itself touches only its own tables, X-003).
  */
 
 /** The bars an Admin may pick (rule 20: picked, not typed), in percent. */
