@@ -159,7 +159,7 @@ describe("HomeTalk adds it, or asks once — never a raw refusal", () => {
     const done = await executeIntent(answered, context);
     expect(inventory.change).toHaveBeenCalledWith(expect.objectContaining({ unit: "l", item: expect.objectContaining({ id: "c-oil", unit: "bottle" }) }));
     expect(inventory.adjust).toHaveBeenCalledWith(expect.objectContaining({ amount: { quantity: 1000, unit: "ml" } }));
-    expect(done.ok && done.text).toBe("**Coconut oil** is counted in litres now. Added **Coconut oil** (1 L) to the [shopping list](/groceries?view=to-buy).");
+    expect(done.ok && done.text).toBe("**Coconut oil** is counted in litres now.\nAdded **Coconut oil** (1 L) to the [shopping list](/groceries?view=to-buy).");
   });
 
   it("a write that reaches the executor unasked is answered with the question, said as it is", async () => {

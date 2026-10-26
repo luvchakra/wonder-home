@@ -325,7 +325,7 @@ export async function addToShoppingList(intent: HouseholdIntent, context: Contex
     const rest = [onIt, home].filter(Boolean).join("; ");
     text = `${forMeal ? `For ${forMeal.toLowerCase()}, I checked what is at home and on the list.\n` : ""}${added}${rest ? `\n${rest[0]!.toUpperCase()}${rest.slice(1)}.` : ""}`;
   }
-  if (switched) text = `${switched} ${text}`;
+  if (switched) text = `${switched}\n${text}`;
   return {
     text,
     result: {
