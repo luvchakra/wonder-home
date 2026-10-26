@@ -507,6 +507,11 @@ describe("an everyday request goes to HomeTalk too", () => {
     expect(isForHomeTalk(text)).toBe(true);
   });
 
+  // 2026-10-26: "undo" after "Say undo to take it back" was kept by HomeSend and "failed safely".
+  it.each(["undo", "Undo", "undo that", "take it back", "scratch that", "yes", "No", "ok"])("sends a reply to HomeTalk back to HomeTalk: %s", (text) => {
+    expect(isForHomeTalk(text)).toBe(true);
+  });
+
   it("keeps a list or a notice for HomeSend", () => {
     expect(isForHomeTalk("Milk, eggs, bread")).toBe(false);
     expect(isForHomeTalk("Sports Day is on Friday. Children must bring a water bottle.")).toBe(false);

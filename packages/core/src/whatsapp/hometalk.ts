@@ -1,3 +1,4 @@
+import { isUndo } from "../conversation/consent";
 import type { HomeTalkResponse } from "../hometalk/contract";
 
 /**
@@ -24,6 +25,14 @@ const QUESTION_OPENING =
 const REQUEST_OPENING = /^(?:add|remove|put|take|remind me|set a reminder|remember)\b/i;
 
 /**
+ * A reply to what HomeTalk just said: "undo" after "Say undo to take it
+ * back", or a yes or no to its question. It means nothing to HomeSend — on
+ * 2026-10-26 an "undo" was kept as content and "failed safely" while the
+ * milk it meant stayed on the list.
+ */
+const REPLY_TO_HOMETALK = /^(?:yes|yeah|yep|yup|no|nope|ok|okay|sure|go ahead|do it|don't|do not|cancel)[.!]?$/i;
+
+/**
  * Whether a WhatsApp text is a question for WonderHome rather than something
  * to keep: one short line that asks ("what's the plan for the morning",
  * "is there milk?"). A forwarded notice, a list or anything with a link is
@@ -34,10 +43,10 @@ export function isQuestionForWonderHome(text: string): boolean {
   return line !== null && (line.endsWith("?") || QUESTION_OPENING.test(line));
 }
 
-/** A question, or a one-line everyday request ("add milk to the list", "remind me to call the plumber at 5"). */
+/** A question, a one-line everyday request ("add milk to the list", "remind me to call the plumber at 5"), or a reply to HomeTalk ("undo", "yes"). */
 export function isForHomeTalk(text: string): boolean {
   const line = shortLine(text);
-  return line !== null && (isQuestionForWonderHome(line) || REQUEST_OPENING.test(line));
+  return line !== null && (isQuestionForWonderHome(line) || REQUEST_OPENING.test(line) || isUndo(line) || REPLY_TO_HOMETALK.test(line));
 }
 
 function shortLine(text: string): string | null {
