@@ -306,7 +306,7 @@ export default async function SchoolPage({ searchParams }: { searchParams: Promi
             Add homework starts on the picked child; a school portal is connected for the household. */}
         <div className="flex flex-wrap gap-2">
           {children.length > 0 ? <AddHomeworkButton householdId={householdId} kids={childOptions} labels={formLabels} defaultChildId={selected} /> : null}
-          <PillLink href="/household/integrations" tone="quiet"><Plug aria-hidden className="size-3.5" /> {t("school.connect")}</PillLink>
+          <PillLink href="/household/integrations/school" tone="quiet"><Plug aria-hidden className="size-3.5" /> {t("school.connect")}</PillLink>
         </div>
 
         <SegmentedControl
@@ -385,7 +385,7 @@ export default async function SchoolPage({ searchParams }: { searchParams: Promi
                 tone="school"
                 title={agenda.checked === 0 ? t("school.empty.title") : t("school.underControl.title")}
                 description={agenda.checked === 0 ? t("school.empty.lede") : t("school.underControl.lede")}
-                action={agenda.checked === 0 ? <PillLink href="/household/integrations"><Plug aria-hidden className="size-3.5" /> {t("school.connect")}</PillLink> : null}
+                action={agenda.checked === 0 ? <PillLink href="/household/integrations/school"><Plug aria-hidden className="size-3.5" /> {t("school.connect")}</PillLink> : null}
               />
             ) : (
               <>
