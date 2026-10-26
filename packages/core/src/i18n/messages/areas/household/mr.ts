@@ -133,6 +133,7 @@ export const householdMr: AreaCatalog<typeof householdEn> = {
   "manage.resp.area.finance": "पैसे",
   "manage.resp.area.school": "शाळा",
   "manage.resp.area.home": "घर",
+  "manage.resp.area.household": "घरकामाची मदत",
   "manage.resp.area.pets": "पाळीव प्राणी",
   "manage.resp.area.kids": "मुले",
   "manage.resp.area.other": "इतर",

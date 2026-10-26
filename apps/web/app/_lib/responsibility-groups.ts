@@ -48,16 +48,20 @@ export function groupByOwner(
 }
 
 /** The outcome areas the starter outcomes name; any other prefix is shown as written. */
-const KNOWN_AREAS = new Set(["laundry", "meals", "groceries", "finance", "school", "home", "pets", "kids"]);
+const KNOWN_AREAS = new Set(["laundry", "meals", "groceries", "finance", "school", "home", "household", "pets", "kids"]);
 
 /** An outcome's area is the part of its key before the dot: "laundry.ready" is laundry. */
-function areaOf(outcomeKey: string): string {
+export function areaOf(outcomeKey: string): string {
   return outcomeKey.split(".")[0] ?? outcomeKey;
 }
 
-/** Groups rows by outcome area, in the order the first row of each area appears (priority order). */
-export function groupByArea(rows: Row[], t: Translate): { ownerId: null; ownerName: string; rows: Row[] }[] {
-  const byArea = new Map<string, Row[]>();
+/**
+ * Groups rows by outcome area, in the order the first row of each area
+ * appears (priority order). Anything keyed by an outcome groups the same
+ * way: the Responsibilities page and the Household playbook share it.
+ */
+export function groupByArea<T extends { outcome_key: string }>(rows: T[], t: Translate): { ownerId: null; ownerName: string; area: string; rows: T[] }[] {
+  const byArea = new Map<string, T[]>();
   for (const row of rows) {
     const area = areaOf(row.outcome_key);
     const existing = byArea.get(area);
@@ -66,6 +70,7 @@ export function groupByArea(rows: Row[], t: Translate): { ownerId: null; ownerNa
   }
   return [...byArea].map(([area, areaRows]) => ({
     ownerId: null,
+    area,
     ownerName: KNOWN_AREAS.has(area) ? t(`manage.resp.area.${area}` as Parameters<Translate>[0]) : area.replace(/_/g, " "),
     rows: areaRows,
   }));

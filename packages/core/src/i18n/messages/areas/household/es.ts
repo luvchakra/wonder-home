@@ -133,6 +133,7 @@ export const householdEs: AreaCatalog<typeof householdEn> = {
   "manage.resp.area.finance": "Dinero",
   "manage.resp.area.school": "Escuela",
   "manage.resp.area.home": "Casa",
+  "manage.resp.area.household": "Ayuda en casa",
   "manage.resp.area.pets": "Mascotas",
   "manage.resp.area.kids": "Niños",
   "manage.resp.area.other": "Otros",

@@ -133,6 +133,7 @@ export const householdZh: AreaCatalog<typeof householdEn> = {
   "manage.resp.area.finance": "财务",
   "manage.resp.area.school": "学校",
   "manage.resp.area.home": "家务",
+  "manage.resp.area.household": "家政帮手",
   "manage.resp.area.pets": "宠物",
   "manage.resp.area.kids": "孩子",
   "manage.resp.area.other": "其他",

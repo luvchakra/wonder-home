@@ -11,6 +11,7 @@ decision that shapes later work each earns a note, written before moving on.
 
 | Date | Note |
 |---|---|
+| 2026-10-26 | [HomeSend: Admin-set bar, a score on every entry, faster reading; WhatsApp undo; playbook groups](2026-10-26-homesend-bar-speed-playbook.md) |
 | 2026-10-26 | [Signed-in E2E against the live project: first real run](2026-10-26-signed-in-e2e-live.md) |
 | 2026-10-26 | [Guards against code that doesn't know live data; the nightly E2E made green](2026-10-26-live-data-guards-and-nightly.md) |
 | 2026-10-26 | [Autonomy: two modes instead of four](2026-10-26-two-autonomy-modes.md) |
