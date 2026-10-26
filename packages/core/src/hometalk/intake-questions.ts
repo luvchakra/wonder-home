@@ -2,7 +2,7 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 
 import type { PendingClarification } from "../conversation/clarify";
 import { openSession, recordMessage, type ConversationSurface } from "../conversation/repository";
-import { sureClause, type AddedOnItsOwn } from "../homesend/auto-add";
+import { amountWords, sureClause, waitingWords, wasAdded, type AddedOnItsOwn, type WaitingInHomeSend } from "../homesend/auto-add";
 import { listDetails, missingDetails, nextMissingDetail, personNamed, type CompletenessReading, type DetailField } from "../homesend/completeness";
 import type { HomeSendKind } from "../homesend/items";
 import type { Translate, TranslationKey } from "../i18n/translate";
@@ -334,10 +334,17 @@ export async function answerIntakeQuestion(
 }
 
 /** The closing words once HomeTalk has nothing left to ask. Never an amount, a health detail or a number. */
-export function handedBackText(lead: string, outcome: { added: AddedOnItsOwn | null; stillNeeded: readonly string[] }): string {
-  if (outcome.added) return `${lead} Added **${outcome.added.title}** to ${outcome.added.where}${sureClause(outcome.added)} — your household lets WonderHome add these on its own. You can undo it in HomeSend.`;
+export function handedBackText(lead: string, outcome: { added: AddedOnItsOwn | WaitingInHomeSend | null; stillNeeded: readonly string[] }): string {
+  const added = wasAdded(outcome.added) ? outcome.added : null;
+  if (added?.more) {
+    // More of a grocery already on the list (I-27), as HomeTalk's own add says it: "+2 L, now 3 L".
+    return `${lead} Added ${amountWords(added.more.added)} more **${added.title}** (now ${amountWords(added.more.now)})${sureClause(added)} — your household lets WonderHome add these on its own. You can undo it in HomeSend.`;
+  }
+  if (added) return `${lead} Added **${added.title}** to ${added.where}${sureClause(added)} — your household lets WonderHome add these on its own. You can undo it in HomeSend.`;
   if (outcome.stillNeeded.length > 0) return `${lead} It's waiting in HomeSend — the ${listDetails(outcome.stillNeeded.map((label) => ({ label })))} can be filled in there.`;
-  return `${lead} It's waiting in HomeSend for you to check.`;
+  const held = outcome.added && "waiting" in outcome.added ? outcome.added : null;
+  const waiting = held ? waitingWords(held.waiting, held.title) : null;
+  return `${lead} ${waiting ?? "It's waiting in HomeSend for you to check."}`;
 }
 
 // --- Filling in what waits in HomeSend (story 14-050) --------------------------------------

@@ -5,9 +5,11 @@ import { may } from "@wonderhome/core/billing/repository";
 import { CONSUMABLE_CATEGORIES } from "@wonderhome/core/commerce/consumables";
 import { catalogItemFor } from "@wonderhome/core/commerce/catalog";
 import { baseOf } from "@wonderhome/core/commerce/buying-sizes";
-import { adjustListEntry, listGroceries } from "@wonderhome/core/commerce/inventory";
+import { adjustListEntry, listGroceries, type GroceryItem } from "@wonderhome/core/commerce/inventory";
 import { createConsumable } from "@wonderhome/core/commerce/repository";
+import type { Amount } from "@wonderhome/core/commerce/units";
 import { similarity } from "@wonderhome/core/context/normalize";
+import { findGrocery } from "@wonderhome/core/conversation/grocery-actions";
 import { billShape, eventShape, groceryAmount, groceryShape } from "@wonderhome/core/homesend/record-types";
 import type { createClient } from "@wonderhome/core/db/server";
 import { OBLIGATION_KINDS } from "@wonderhome/core/finance/payments";
@@ -189,7 +191,18 @@ export type Created = {
   also?: { domain: HomeSendChangeDomain; entityId: string }[];
   changeType?: "created" | "updated";
   previous?: Record<string, unknown>;
+  /** A grocery that was on the shopping list already: what this added, and what the list says now (I-27). */
+  more?: { added: Amount; now: Amount };
 };
+
+/**
+ * The tracked item a HomeSend grocery goes onto: the one HomeTalk's add would
+ * pick (its name or alias, then the one holding every word said), so two
+ * entries that look alike never get a third (I-27); else the closest by spelling.
+ */
+export function trackedGrocery(name: string, groceries: readonly GroceryItem[]): GroceryItem | null {
+  return findGrocery(name, groceries) ?? groceries.find((item) => [item.name, ...item.aliases].some((known) => similarity(known, name) >= 0.8)) ?? null;
+}
 
 /**
  * A grocery as Groceries' own Add files it (the owner, 2026-10-25: aligned to
@@ -207,12 +220,13 @@ export async function addGrocery(
 ): Promise<Created> {
   const shape = groceryShape(said);
   const listKey = `hs:${key}:list`;
-  const tracked = (await listGroceries(supabase, householdId)).find((item) => [item.name, ...item.aliases].some((known) => similarity(known, shape.name) >= 0.8));
+  const tracked = trackedGrocery(shape.name, await listGroceries(supabase, householdId));
   if (tracked) {
     // A number alone is the item's practical amount (25-037): 2 milk is 2 L, never 2 ml.
     const amount = groceryAmount(said, tracked);
-    await adjustListEntry(supabase, { householdId, itemId: tracked.id, kind: "add", amount, source: "manual", idempotencyKey: listKey });
-    return { routedTable: "consumables", routedId: tracked.id, changeType: "updated", previous: { listKey } };
+    const result = await adjustListEntry(supabase, { householdId, itemId: tracked.id, kind: "add", amount, source: "manual", idempotencyKey: listKey });
+    const more = tracked.toBuy && tracked.toBuy.quantity > 0 ? { more: { added: amount, now: { quantity: result.after, unit: result.unit } } } : {};
+    return { routedTable: "consumables", routedId: tracked.id, changeType: "updated", previous: { listKey }, ...more };
   }
   const named = await catalogItemFor(supabase, shape.name).catch(() => null);
   // No unit said: kept the way the catalog keeps it, and the number read by its practical unit (25-037).

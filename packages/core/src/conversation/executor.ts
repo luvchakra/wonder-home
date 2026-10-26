@@ -8,7 +8,7 @@ import { createAppointment, type AppointmentType } from "../health/appointments"
 import { createFitnessGoal, FITNESS_ACTIVITY_LABEL, type FitnessActivityType, type FitnessFrequencyPeriod } from "../health/fitness";
 import { createIssue, listIssues, setIssueStatus } from "../health/issues";
 import { addFamilyEvent } from "../calendar/add-event";
-import type { AddedOnItsOwn } from "../homesend/auto-add";
+import { waitingWords, wasAdded, type AddedOnItsOwn, type WaitingInHomeSend } from "../homesend/auto-add";
 import { setEventCancelled } from "../family/event-detail";
 import { createServiceRequest } from "../home/repository";
 import { attachIngredients, createMeal, removeMeal } from "../meals/repository";
@@ -66,7 +66,7 @@ export type ExecutionContext = {
    * where the household allows it (Pre Approved and above the bar), else
    * null and it waits in HomeSend. Supplied by the route.
    */
-  addFromHomeSend?: (itemId: string) => Promise<AddedOnItsOwn | null>;
+  addFromHomeSend?: (itemId: string) => Promise<AddedOnItsOwn | WaitingInHomeSend | null>;
 };
 
 export type ExecutionResult =
@@ -199,11 +199,14 @@ async function fileWithHomeSend(intent: HouseholdIntent, context: ExecutionConte
   });
   // Nothing to ask: HomeSend's own decision, as for anything sent to it (design §13.2) — added where the
   // household pre-approved it and the reading clears the bar, else it waits.
-  const added = !next && context.addFromHomeSend ? await context.addFromHomeSend(outcome.itemId).catch(() => null) : null;
-  if (added) {
+  const decided = !next && context.addFromHomeSend ? await context.addFromHomeSend(outcome.itemId).catch(() => null) : null;
+  if (wasAdded(decided)) {
     const { handedBackText } = await import("../hometalk/intake-questions");
-    return { ok: true, text: handedBackText("", { added, stillNeeded: [] }).trim(), result: { homeSendItemId: outcome.itemId, added: added.where } };
+    return { ok: true, text: handedBackText("", { added: decided, stillNeeded: [] }).trim(), result: { homeSendItemId: outcome.itemId, added: decided.where } };
   }
+  // Held for a reason the person can act on (I-27): said, with what it read.
+  const held = decided ? waitingWords(decided.waiting, decided.title) : null;
+  if (held) return { ok: true, text: `${held}${read}`, result: { homeSendItemId: outcome.itemId } };
   return {
     ok: true,
     text: `It's in ${review} for you to check before anything is added.${read}${next ? ` ${next.question}` : ""}`,
@@ -229,8 +232,9 @@ async function completeHomeSendItem(intent: HouseholdIntent, context: ExecutionC
     now: context.now ?? new Date(),
   });
   if (!answered.handBack) return { ok: true, text: answered.text, result: { homeSendItemId: itemId, ...(answered.clarify ? { clarify: answered.clarify } : {}) } };
-  const added = context.addFromHomeSend ? await context.addFromHomeSend(itemId).catch(() => null) : null;
-  const closing = handedBackText(answered.text, { added, stillNeeded: answered.stillNeeded });
+  const decided = context.addFromHomeSend ? await context.addFromHomeSend(itemId).catch(() => null) : null;
+  const added = wasAdded(decided) ? decided : null;
+  const closing = handedBackText(answered.text, { added: decided, stillNeeded: answered.stillNeeded });
   // Filling in several waiting items (14-050): on to the next one that still needs something.
   const queue = Array.isArray(intent.parameters.queue) ? intent.parameters.queue.filter((id): id is string => typeof id === "string") : [];
   const { nextQueuedQuestion } = await import("../hometalk/intake-questions");
