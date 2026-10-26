@@ -11,6 +11,7 @@ decision that shapes later work each earns a note, written before moving on.
 
 | Date | Note |
 |---|---|
+| 2026-10-26 | [Connect-school screen + channel UI (08-029, 08-031 PR B)](2026-10-26-school-connect-ui.md) |
 | 2026-10-26 | [School channels, backend (08-031, PR A)](2026-10-26-school-channels-backend.md) |
 | 2026-10-26 | [WhatsApp "typing…" while WonderHome works; a spoken question about buying reaches HomeTalk](2026-10-26-whatsapp-typing.md) |
 | 2026-10-26 | [A generic school-portal connector catalog (08-028)](2026-10-26-school-provider-catalog.md) |
