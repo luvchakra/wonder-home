@@ -29,7 +29,7 @@ import {
   type SendHomeItemState,
 } from "../(auth)/home-send-actions";
 import { fillIn, type HomeSendPageLabels, type HomeSendSourceLabels } from "../_lib/homesend-labels";
-import { describeSource, HomeSendConfirmStep, TranscriptCheck, type ReviewConfirmation, type ReviewReconciliation, type ReviewSubject } from "./home-send-intake";
+import { describeSource, HomeSendConfirmStep, percentSure, TranscriptCheck, type ReviewConfirmation, type ReviewReconciliation, type ReviewSubject } from "./home-send-intake";
 
 /** What the server prepared for an item already waiting (`home-send-review.ts`): who it is for, and whether it is already on record. */
 export type PreparedReview = { subject: ReviewSubject | null; reconciliation: ReviewReconciliation | null; confirmation?: ReviewConfirmation | null; plan?: DocumentPlan | null };
@@ -413,7 +413,10 @@ export function HomeSendInbox({
                     <IconTile icon={presentation.icon} tone={presentation.tone} size="sm" />
                     <span className="min-w-0 flex-1">
                       <span className="block text-sm font-medium break-words">{title}</span>
-                      <span className="block text-xs text-[var(--wh-foreground-subtle)]">{presentation.label} · {reason}</span>
+                      <span className="block text-xs text-[var(--wh-foreground-subtle)]">
+                        {presentation.label} · {reason}
+                        {heard || !percentSure(item.understanding, review.found) ? "" : ` · ${percentSure(item.understanding, review.found)}`}
+                      </span>
                     </span>
                     <Pill type="button" tone="soft" onClick={() => openReview(item)} aria-label={fillIn(words.reviewAria, { title })}>
                       {words.review}
@@ -509,6 +512,7 @@ export function HomeSendInbox({
                           {presentation.label}
                           {primaryChange && primaryChange.changeType !== "created" && !primaryChange.undoneAt ? ` · ${onRecord}` : ""}
                           {item.reviewDecision === "auto_added" && !primaryChange?.undoneAt ? ` · ${words.addedOnItsOwn}` : ""}
+                          {percentSure(item.understanding, review.found) ? ` · ${percentSure(item.understanding, review.found)}` : ""}
                         </span>
                       </span>
                       {canUndoPrimary ? (

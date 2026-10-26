@@ -3,14 +3,16 @@ import type { HomeSendExtraction, HomeSendKind } from "./items";
 import type { HomeSendReconciliation } from "./reconcile";
 import type { SubjectResolution } from "./resolve";
 import type { IntakeUnderstanding } from "./understanding";
-import { AUTO_APPLY_FLOOR, FROM_A_FILE } from "./verify";
+import { DEFAULT_AUTO_ADD_PERCENT } from "./auto-add";
+import { FROM_A_FILE } from "./verify";
 
 /**
  * How HomeSend confirms what it read (Wave 3 §12):
  *
  *   - high confidence, safe and reversible → may apply on its own, but only
  *     where the domain allows it AND the household's own autonomy setting
- *     for that outcome says "execute";
+ *     for that outcome says "execute" AND the score is above the bar an
+ *     Admin picked (`auto-add.ts`, 95% unless changed);
  *   - medium confidence → prepare it and ask;
  *   - low confidence → ask one targeted question;
  *   - consequential → the existing governance, whatever the confidence.
@@ -70,11 +72,13 @@ export type ConfirmationInput = {
   memberInitiated: boolean;
   /** The household's own setting for this kind's outcome; "prepare" when nothing is configured. */
   autonomy: AutonomyMode;
+  /** How sure, in percent, a reading must be (strictly above) to be added on its own (`auto-add.ts`); 95 when unset. */
+  autoAddPercent?: number;
 };
 
 /** Why a clear reading still waits: what WonderHome could not find in what was sent. */
-function notSureEnough(unverified: readonly string[]): string {
-  if (unverified.length === 0) return "WonderHome adds things on its own only when it is more than 95% sure, so a person looks first.";
+function notSureEnough(unverified: readonly string[], percent: number): string {
+  if (unverified.length === 0) return `WonderHome adds things on its own only when it is more than ${percent}% sure, so a person looks first.`;
   if (unverified.includes(FROM_A_FILE)) return "This was read from a photo or a file, which can't be checked word by word, so a person looks first.";
   const listed = unverified.length === 1 ? unverified[0] : `${unverified.slice(0, -1).join(", ")} and ${unverified.at(-1)}`;
   return `WonderHome couldn't check ${listed} against what was sent, so a person looks first.`;
@@ -92,6 +96,10 @@ export function decideConfirmation(input: ConfirmationInput): ConfirmationDecisi
   if (consequential) return { mode: "govern", reason: consequential, question: null };
 
   const confidence = input.understanding?.confidence ?? input.extracted?.confidence ?? "low";
+  const percent = input.autoAddPercent ?? DEFAULT_AUTO_ADD_PERCENT;
+  const score = input.understanding?.score ?? null;
+  // Above the household's bar, a "medium" reading is still a candidate: the Admin chose that bar.
+  const aboveBar = score !== null && score > percent / 100;
   if (confidence === "low" || !title) {
     const question = input.subject?.question ?? (title ? `Is this ${KIND_LABEL[kind]}: “${title}”?` : "What is it?");
     return { mode: "ask", reason: "WonderHome isn't sure it read this right.", question };
@@ -100,7 +108,7 @@ export function decideConfirmation(input: ConfirmationInput): ConfirmationDecisi
   if ((kind === "school_item" || kind === "activity_item") && !input.subject?.selected) return { mode: "ask", reason: "It doesn't say who it's for.", question: "Who is this for?" };
 
   if (input.reconciliation) return { mode: "prepare", reason: input.reconciliation.message, question: null };
-  if (confidence === "medium") return { mode: "prepare", reason: "WonderHome read it, but not surely enough to act on its own.", question: null };
+  if (confidence === "medium" && !aboveBar) return { mode: "prepare", reason: "WonderHome read it, but not surely enough to act on its own.", question: null };
   if (input.understanding?.safety.instructionsIgnored) {
     return { mode: "prepare", reason: "It contained instructions aimed at WonderHome, so a person looks first.", question: null };
   }
@@ -114,10 +122,11 @@ export function decideConfirmation(input: ConfirmationInput): ConfirmationDecisi
   const outcome = AUTO_APPLY_OUTCOMES[kind];
   if (!outcome) return { mode: "prepare", reason: "Ready for you to check.", question: null };
 
-  // More than 95% sure, or a person confirms (the owner, 2026-10-25): the
-  // right kind and every detail found in what was sent (`verify.ts`).
-  const score = input.understanding?.score ?? null;
-  if (score === null || score <= AUTO_APPLY_FLOOR) return { mode: "prepare", reason: notSureEnough(input.understanding?.check?.unverified ?? []), question: null };
+  // More sure than the household's bar (95% unless an Admin picked another),
+  // or a person confirms (the owner, 2026-10-25 and 2026-10-26).
+  // A photo or a file always waits, whatever the bar: there are no words of its own to check the reading against.
+  const unverified = input.understanding?.check?.unverified ?? [];
+  if (!aboveBar || unverified.includes(FROM_A_FILE)) return { mode: "prepare", reason: notSureEnough(unverified, percent), question: null };
 
   const decision = decideAutonomy(input.autonomy, { outcomeKey: outcome.outcomeKey, kind: "schedule", reversible: true });
   if (decision.outcome === "execute") {

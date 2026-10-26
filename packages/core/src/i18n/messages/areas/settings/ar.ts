@@ -20,6 +20,10 @@ export const settingsAr: AreaCatalog<typeof settingsEn> = {
   "settingsPage.ai.confirmRequested.title": "اسأل قبل التصرف بناءً على ما أقول",
   "settingsPage.ai.confirmRequested.on": "مفعّل: يسألك HomeTalk أولًا، في المحادثة، قبل أن يخطط أو يضيف أو يغيّر أي شيء طلبته.",
   "settingsPage.ai.confirmRequested.off": "غير مفعّل: عندما تطلب من HomeTalk أن يخطط لشيء أو يضيفه أو يغيّره، يفعل ذلك فورًا ويخبرك كيف تتراجع عنه. الدفع والطلبات وتغييرات الوصول تنتظر موافقتك دائمًا.",
+  "settingsPage.ai.autoAdd.title": "مدى تأكد HomeSend قبل أن يضيف بنفسه",
+  "settingsPage.ai.autoAdd.detail": "للنتائج المضبوطة على Pre Approved، ما ترسله عبر WhatsApp أو تقوله لـ HomeTalk أو تشاركه بطريقة أخرى لا يُضاف دون سؤالك إلا عندما يكون WonderHome متأكدًا أكثر من هذا. الفواتير والمستندات الصحية والإيصالات والصور والملفات تنتظرك دائمًا.",
+  "settingsPage.ai.autoAdd.option": "أكثر من {percent}%",
+  "settingsPage.ai.autoAdd.optionDefault": "أكثر من {percent}% (موصى به)",
   "settingsPage.ai.keySet": "عُيّن في {date}",
   "settingsPage.ai.badge.rulesOnly": "القواعد فقط",
   "settingsPage.ai.ownKeyIntro":

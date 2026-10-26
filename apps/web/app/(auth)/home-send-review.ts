@@ -3,6 +3,7 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 import { loadHouseholdContext } from "@wonderhome/core/context/repository";
 import { listResponsibilities } from "@wonderhome/core/household/configuration-repository";
 import type { AutonomyMode } from "@wonderhome/core/household/autonomy";
+import { loadAutoAddPercent } from "@wonderhome/core/homesend/auto-add-repository";
 import { AUTO_APPLY_OUTCOMES, decideConfirmation, type ConfirmationDecision } from "@wonderhome/core/homesend/confirmation";
 import type { HouseholdContextItem } from "@wonderhome/core/context/types";
 import type { HomeSendExtraction, HomeSendKind } from "@wonderhome/core/homesend/items";
@@ -112,8 +113,8 @@ export async function prepareReview(
   },
 ): Promise<ReviewPreparation> {
   const kind = item.classifiedKind;
-  const confirm = (subject: SubjectResolution | null, reconciliation: HomeSendReconciliation | null, understanding: IntakeUnderstanding | null, autonomy: AutonomyMode) =>
-    decideConfirmation({ kind, extracted: item.extracted, understanding, reconciliation, subject, memberInitiated: item.createdByMemberId !== null, autonomy });
+  const confirm = (subject: SubjectResolution | null, reconciliation: HomeSendReconciliation | null, understanding: IntakeUnderstanding | null, autonomy: AutonomyMode, autoAddPercent?: number) =>
+    decideConfirmation({ kind, extracted: item.extracted, understanding, reconciliation, subject, memberInitiated: item.createdByMemberId !== null, autonomy, autoAddPercent });
   // A receipt is matched line by line on its own confirm form (09-009): it is
   // for nobody in particular and never a second copy of a record.
   if (!kind || kind === "unknown" || kind === "receipt" || !item.extracted?.title) {
@@ -151,12 +152,15 @@ export async function prepareReview(
 
   // Who it is for: what the content said, or else whose record it matched.
   const subject = resolution ? adoptMatchedSubject(kind, resolution.subject, reconciliation?.existing.subjectMemberId, people) : null;
-  const autonomy = checked ? await autonomyFor(supabase, membership.household.id, kind) : "prepare";
+  // The outcome's autonomy and the household's bar (`auto-add.ts`), read together.
+  const [autonomy, autoAddPercent] = checked
+    ? await Promise.all([autonomyFor(supabase, membership.household.id, kind), AUTO_APPLY_OUTCOMES[kind] ? loadAutoAddPercent(supabase, membership.household.id) : undefined])
+    : (["prepare", undefined] as const);
   // A document with several records is reviewed as a plan (DDU 2.0), and
   // never applied on its own: every record in it waits for a person.
   const plan = wantsPlan(understanding) ? await planFor(supabase, membership, { understanding, createdAt: item.createdAt }, { people }).catch(() => null) : null;
   const confirmation = plan
     ? { mode: "prepare" as const, reason: "A document with several things in it waits for you to check each one.", question: null }
-    : confirm(subject, reconciliation, understanding, autonomy);
+    : confirm(subject, reconciliation, understanding, autonomy, autoAddPercent);
   return { subject, reconciliation, understanding, confirmation, plan };
 }

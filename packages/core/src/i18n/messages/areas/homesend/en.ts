@@ -124,6 +124,7 @@ export const homesendEn = {
   "homesend.found.alsoAsks": "It also asks for {list}.",
   "homesend.found.source": "Source",
   "homesend.found.confidence": "Confidence",
+  "homesend.found.percentSure": "{percent}% sure",
   "homesend.found.high": "High",
   "homesend.found.medium": "Medium",
   "homesend.found.low": "Low",

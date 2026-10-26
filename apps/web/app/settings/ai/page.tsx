@@ -4,6 +4,8 @@ import { credentialStatus, geminiVoiceKeyStatus } from "@wonderhome/core/ai/cred
 import { describeKeySource, platformKey, resolveModelKey } from "@wonderhome/core/ai/model-key";
 import { loadDataUse } from "@wonderhome/core/ai/privacy-repository";
 import { loadConfirmRequested } from "@wonderhome/core/conversation/consent-repository";
+import { AUTO_ADD_PERCENTS } from "@wonderhome/core/homesend/auto-add";
+import { loadAutoAddPercent } from "@wonderhome/core/homesend/auto-add-repository";
 import { AppShell } from "@wonderhome/core/shell/app-shell";
 import { Card } from "@wonderhome/core/ui/card";
 import { IconTile } from "@wonderhome/core/ui/icon-tile";
@@ -16,6 +18,7 @@ import { saveDataUseAction } from "../../(auth)/privacy-actions";
 import { AiKeyForm } from "../../_components/ai-key-form";
 import { ReturnLink, returnLabelKey } from "../../_components/return-link";
 import { safeReturnTo } from "../../_lib/return-to";
+import { AutoAddPercentPicker } from "../../_components/auto-add-percent-picker";
 import { ConfirmRequestedSwitch } from "../../_components/confirm-requested-switch";
 import { DataUseForm } from "../../_components/data-use-form";
 import { formatDate, requireSession } from "../../_lib/session";
@@ -36,11 +39,12 @@ export default async function AiAssistantSettingsPage({ searchParams }: { search
   const returnTo = safeReturnTo(query.returnTo);
   const { supabase, membership, view, viewer, secondary } = session;
   const householdId = membership.household.id;
-  const [credential, voiceCredential, dataUse, confirmRequested] = await Promise.all([
+  const [credential, voiceCredential, dataUse, confirmRequested, autoAddPercent] = await Promise.all([
     credentialStatus(supabase, householdId).catch(() => ({ configured: false, provider: null, updatedAt: null })),
     geminiVoiceKeyStatus(supabase, householdId).catch(() => ({ configured: false, provider: null, updatedAt: null })),
     loadDataUse(supabase, householdId),
     loadConfirmRequested(supabase, householdId),
+    loadAutoAddPercent(supabase, householdId),
   ]);
 
   // Which key actually answers, decided in one place so the screen can never
@@ -80,6 +84,21 @@ export default async function AiAssistantSettingsPage({ searchParams }: { search
                 title: t("settingsPage.ai.confirmRequested.title"),
                 on: t("settingsPage.ai.confirmRequested.on"),
                 off: t("settingsPage.ai.confirmRequested.off"),
+                adminDecides: t("settingsPage.adminDecides"),
+              }}
+            />
+          </Card>
+          {/* HomeSend's bar for adding on its own (the owner, 2026-10-26): beside the other "acting" choice. */}
+          <Card className="mt-3 p-4">
+            <AutoAddPercentPicker
+              householdId={householdId}
+              percent={autoAddPercent}
+              options={AUTO_ADD_PERCENTS}
+              manages={manages}
+              labels={{
+                title: t("settingsPage.ai.autoAdd.title"),
+                detail: t("settingsPage.ai.autoAdd.detail"),
+                option: Object.fromEntries(AUTO_ADD_PERCENTS.map((percent) => [percent, t(percent === 95 ? "settingsPage.ai.autoAdd.optionDefault" : "settingsPage.ai.autoAdd.option", { percent })])),
                 adminDecides: t("settingsPage.adminDecides"),
               }}
             />

@@ -20,6 +20,10 @@ export const settingsMr: AreaCatalog<typeof settingsEn> = {
   "settingsPage.ai.confirmRequested.title": "मी सांगितल्यावर काम करण्यापूर्वी विचारा",
   "settingsPage.ai.confirmRequested.on": "चालू: तुम्ही सांगितलेले काहीही ठरवण्यापूर्वी, जोडण्यापूर्वी किंवा बदलण्यापूर्वी HomeTalk संभाषणातच आधी तुम्हाला विचारतो.",
   "settingsPage.ai.confirmRequested.off": "बंद: तुम्ही HomeTalk ला काही ठरवायला, जोडायला किंवा बदलायला सांगता तेव्हा तो लगेच करतो आणि ते कसे परत घ्यायचे ते सांगतो. पेमेंट, ऑर्डर आणि प्रवेशातील बदल नेहमी तुमच्या परवानगीची वाट पाहतात.",
+  "settingsPage.ai.autoAdd.title": "स्वतः जोडण्यासाठी HomeSend ला किती खात्री हवी",
+  "settingsPage.ai.autoAdd.detail": "Pre Approved असलेल्या परिणामांसाठी, तुम्ही WhatsApp वर पाठवलेले, HomeTalk ला सांगितलेले किंवा इतर मार्गाने शेअर केलेले, WonderHome ला यापेक्षा जास्त खात्री असेल तेव्हाच न विचारता जोडले जाते. बिले, आरोग्य कागदपत्रे, पावत्या, फोटो आणि फाइल्स नेहमी तुमची वाट पाहतात.",
+  "settingsPage.ai.autoAdd.option": "{percent}% पेक्षा जास्त",
+  "settingsPage.ai.autoAdd.optionDefault": "{percent}% पेक्षा जास्त (शिफारस केलेले)",
   "settingsPage.ai.keySet": "{date} रोजी सेट केली",
   "settingsPage.ai.badge.rulesOnly": "फक्त नियम",
   "settingsPage.ai.ownKeyIntro":

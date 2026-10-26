@@ -120,6 +120,7 @@ export const homesendMr: AreaCatalog<typeof homesendEn> = {
   "homesend.found.alsoAsks": "यात {list} ची देखील मागणी आहे.",
   "homesend.found.source": "स्रोत",
   "homesend.found.confidence": "खात्री",
+  "homesend.found.percentSure": "{percent}% खात्री",
   "homesend.found.high": "जास्त",
   "homesend.found.medium": "मध्यम",
   "homesend.found.low": "कमी",

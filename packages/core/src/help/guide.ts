@@ -105,7 +105,7 @@ const SECTIONS: readonly SectionShape[] = [
   {
     id: "home-send",
     group: "Everyday use",
-    updated: "2026-10-25",
+    updated: "2026-10-26",
     keywords: ["homesend", "upload", "photo", "pdf", "screenshot", "forward", "email", "share", "paperclip", "school notice", "receipt", "whatsapp", "voice note", "link", "undo"],
   },
   {
