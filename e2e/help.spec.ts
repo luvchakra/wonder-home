@@ -4,6 +4,8 @@ import { expect, test, type Page } from "@playwright/test";
 import { FAQ, GUIDE } from "../packages/core/src/help/guide";
 import { answerQuestion } from "../packages/core/src/help/search";
 
+import { streamed } from "./streaming";
+
 /**
  * The help centre is for signed-in members.
  *
@@ -174,6 +176,7 @@ test.describe("signed in", () => {
   async function signIn(page: Page) {
     await page.goto("/help");
     await expect(page).toHaveURL(/\/sign-in\?next=%2Fhelp$/);
+    await streamed(page);
     await page.locator('input[name="email"]').fill(email);
     await page.locator('input[name="password"]').fill(password);
     await page.getByRole("button", { name: "Sign in", exact: true }).click();

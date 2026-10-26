@@ -11,8 +11,8 @@ import type { Page } from "@playwright/test";
  * page's `load` event does not wait for the reveal, so a test that locates
  * something straight after `goto` races it.
  */
-export async function streamed(page: Page): Promise<void> {
-  await page.waitForFunction(() => document.querySelector('div[hidden][id^="S:"]') === null);
+export async function streamed(page: Page, options: { timeout?: number } = {}): Promise<void> {
+  await page.waitForFunction(() => document.querySelector('div[hidden][id^="S:"]') === null, null, options);
 }
 
 /** `page.goto`, then wait for the streamed content to be in place. */

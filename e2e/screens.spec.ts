@@ -1,6 +1,8 @@
 import { createClient, type SupabaseClient } from "@supabase/supabase-js";
 import { expect, test, type Page } from "@playwright/test";
 
+import { streamed } from "./streaming";
+
 /**
  * Every signed-in screen loads against real data (the 2026-10-26 outage).
  *
@@ -101,6 +103,7 @@ test.describe("every signed-in screen loads", () => {
   async function signIn(page: Page) {
     await page.goto("/household/responsibilities");
     await expect(page).toHaveURL(/\/sign-in\?next=/);
+    await streamed(page);
     await page.locator('input[name="email"]').fill(email);
     await page.locator('input[name="password"]').fill(password);
     await page.getByRole("button", { name: "Sign in", exact: true }).click();
@@ -108,13 +111,20 @@ test.describe("every signed-in screen loads", () => {
   }
 
   test("no main screen shows the error screen or a server error", async ({ page }) => {
+    // One visit per screen, each a full server render against the project.
+    test.setTimeout(SCREENS.length * 10_000);
     await signIn(page);
     const broken: string[] = [];
     for (const path of SCREENS) {
       const response = await page.goto(path);
+      // An error boundary can stream in after the load event, and a render
+      // that failed leaves its hidden buffer unrevealed (/notifications did).
+      const settled = await streamed(page, { timeout: 8_000 }).then(() => true, () => false);
       const status = response?.status() ?? 0;
       const errorShown = await page.getByText(ERROR_SCREEN).count();
-      if (status >= 500 || errorShown > 0) broken.push(`${path} (status ${status}${errorShown ? ", error screen" : ""})`);
+      if (status >= 500 || errorShown > 0 || !settled) {
+        broken.push(`${path} (status ${status}${errorShown ? ", error screen" : ""}${settled ? "" : ", never finished loading"})`);
+      }
     }
     expect(broken, `screens that broke: ${broken.join("; ")}`).toEqual([]);
   });
@@ -122,6 +132,7 @@ test.describe("every signed-in screen loads", () => {
   test("Responsibilities: a group's dropdown offers the two choices and saves one for the whole group", async ({ page }) => {
     await signIn(page);
     await page.goto("/household/responsibilities?group=outcome");
+    await streamed(page);
     await expect(page.getByText(ERROR_SCREEN)).toHaveCount(0);
 
     // The laundry group: both owned, both "Wait for Approval".
@@ -145,6 +156,7 @@ test.describe("every signed-in screen loads", () => {
   test("Responsibilities: a group with an outcome nobody owns cannot be set to Pre Approved", async ({ page }) => {
     await signIn(page);
     await page.goto("/household/responsibilities?group=outcome");
+    await streamed(page);
     const pets = page.locator("form").filter({ hasText: /pets/i }).first();
     await pets.getByRole("button", { name: /How much WonderHome does on its own:/ }).click();
     await expect(pets.locator('button[name="aiMode"][value="execute"]')).toBeDisabled();
