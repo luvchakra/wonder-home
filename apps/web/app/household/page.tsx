@@ -82,19 +82,29 @@ export default async function ManageHouseholdPage() {
   const modeCounts = (["prepare", "execute"] as const).map((mode) => ({ mode, count: modes.filter((m) => m === mode).length }));
   const attention = integrations.filter((integration) => integration.needsAttention).length;
 
-  const sections: { href: string; icon: typeof Users; tone: IconTone; title: string; meta: string; badge?: { label: string; tone: "attention" | "handled" | "neutral" } }[] = [
-    { href: "/household/setup", icon: Wand2, tone: "primary", title: t("manage.section.setup"), meta: t("manage.section.setupMeta") },
-    { href: "/household/address", icon: MapPin, tone: "home", title: t("manage.section.address"), meta: address?.formattedAddress ?? t("manage.section.addressMeta") },
-    { href: "/household/members", icon: Users, tone: "people", title: t("manage.section.members"), meta: t("manage.section.membersMeta", { count: memberCount ?? 0 }) },
-    { href: "/household/responsibilities", icon: ListChecks, tone: "primary", title: t("nav.item.responsibilities"), meta: t("manage.section.responsibilitiesMeta", { count: modes.length }) },
-    { href: "#playbook", icon: BookOpen, tone: "home", title: t("manage.section.playbook"), meta: t("manage.section.playbookMeta", { count: items.filter((i) => i.active).length }) },
-    { href: "/household/activity", icon: FileClock, tone: "neutral", title: t("manage.section.activity"), meta: t("manage.section.activityMeta") },
-    { href: "/household/notifications", icon: Bell, tone: "attention", title: t("manage.section.notifications"), meta: t("manage.section.notificationsMeta") },
-    { href: "/household/delivery", icon: BellRing, tone: "attention", title: t("manage.section.delivery"), meta: t("manage.section.deliveryMeta") },
-    { href: "#policies", icon: ShieldCheck, tone: "money", title: t("manage.section.policies"), meta: t("manage.section.policiesMeta", { count: rules.length }) },
-    { href: "#autonomy", icon: Bot, tone: "ai", title: t("manage.section.autonomy"), meta: (["prepare", "execute"] as const).map((mode) => t(`manage.mode.${mode}`)).join(" · ") },
-    { href: "/household/integrations", icon: Plug, tone: "care", title: t("manage.section.integrations"), meta: t("manage.section.integrationsMeta", { count: integrations.length }), badge: attention > 0 ? { label: t("manage.section.needYou", { count: attention }), tone: "attention" } : undefined },
-    { href: "/settings", icon: Cog, tone: "neutral", title: t("manage.section.houseSettings"), meta: `${membership.household.name} · ${membership.household.timezone}` },
+  type SectionLink = { href: string; icon: typeof Users; tone: IconTone; title: string; meta: string; badge?: { label: string; tone: "attention" | "handled" | "neutral" } };
+  const link = {
+    setup: { href: "/household/setup", icon: Wand2, tone: "primary", title: t("manage.section.setup"), meta: t("manage.section.setupMeta") },
+    address: { href: "/household/address", icon: MapPin, tone: "home", title: t("manage.section.address"), meta: address?.formattedAddress ?? t("manage.section.addressMeta") },
+    members: { href: "/household/members", icon: Users, tone: "people", title: t("manage.section.members"), meta: t("manage.section.membersMeta", { count: memberCount ?? 0 }) },
+    settings: { href: "/settings", icon: Cog, tone: "neutral", title: t("manage.section.houseSettings"), meta: `${membership.household.name} · ${membership.household.timezone}` },
+    responsibilities: { href: "/household/responsibilities", icon: ListChecks, tone: "primary", title: t("nav.item.responsibilities"), meta: t("manage.section.responsibilitiesMeta", { count: modes.length }) },
+    playbook: { href: "#playbook", icon: BookOpen, tone: "home", title: t("manage.section.playbook"), meta: t("manage.section.playbookMeta", { count: items.filter((i) => i.active).length }) },
+    policies: { href: "#policies", icon: ShieldCheck, tone: "money", title: t("manage.section.policies"), meta: t("manage.section.policiesMeta", { count: rules.length }) },
+    autonomy: { href: "#autonomy", icon: Bot, tone: "ai", title: t("manage.section.autonomy"), meta: (["prepare", "execute"] as const).map((mode) => t(`manage.mode.${mode}`)).join(" · ") },
+    notifications: { href: "/household/notifications", icon: Bell, tone: "attention", title: t("manage.section.notifications"), meta: t("manage.section.notificationsMeta") },
+    delivery: { href: "/household/delivery", icon: BellRing, tone: "attention", title: t("manage.section.delivery"), meta: t("manage.section.deliveryMeta") },
+    integrations: { href: "/household/integrations", icon: Plug, tone: "care", title: t("manage.section.integrations"), meta: t("manage.section.integrationsMeta", { count: integrations.length }), badge: attention > 0 ? { label: t("manage.section.needYou", { count: attention }), tone: "attention" } : undefined },
+    activity: { href: "/household/activity", icon: FileClock, tone: "neutral", title: t("manage.section.activity"), meta: t("manage.section.activityMeta") },
+  } satisfies Record<string, SectionLink>;
+  // Grouped by what the reader is deciding (principle 17, the owner 2026-10-26). "How the home runs" lists
+  // the sections below in the order they appear. The setup card above already opens the walk-through, so its
+  // row shows only when that card can't (principle 14).
+  const groups: { id: string; title: string; links: SectionLink[] }[] = [
+    { id: "household", title: t("manage.group.household"), links: [...(setup ? [] : [link.setup]), link.members, link.address, link.settings] },
+    { id: "running", title: t("manage.group.running"), links: [link.responsibilities, link.playbook, link.policies, link.autonomy] },
+    { id: "notifications", title: t("manage.group.notifications"), links: [link.notifications, link.delivery] },
+    { id: "records", title: t("manage.group.records"), links: [link.integrations, link.activity] },
   ];
 
   return (
@@ -107,23 +117,28 @@ export default async function ManageHouseholdPage() {
 
         {setup ? <SetupProgressCard assessment={setup} variant="full" labels={setupProgressLabels(setup, t)} /> : null}
 
-        <Card className="p-2">
-          <ul className="divide-y divide-[var(--wh-border)]">
-            {sections.map((section) => (
-              <li key={section.href}>
-                <Link href={section.href} className="flex min-h-14 items-center gap-3 rounded-[var(--wh-radius-sm)] px-2 py-2.5 transition-colors hover:bg-[var(--wh-surface-muted)]">
-                  <IconTile icon={section.icon} tone={section.tone} />
-                  <span className="min-w-0 flex-1">
-                    <span className="block text-sm font-medium">{section.title}</span>
-                    <span className="block text-xs text-[var(--wh-foreground-subtle)]">{section.meta}</span>
-                  </span>
-                  {section.badge ? <Badge tone={section.badge.tone}>{section.badge.label}</Badge> : null}
-                  <ChevronRight aria-hidden className="size-4 text-[var(--wh-foreground-subtle)]" />
-                </Link>
-              </li>
-            ))}
-          </ul>
-        </Card>
+        {groups.map((group) => (
+          <section key={group.id} id={`manage-${group.id}`}>
+            <SectionHeader title={group.title} />
+            <Card className="p-2">
+              <ul className="divide-y divide-[var(--wh-border)]">
+                {group.links.map((section) => (
+                  <li key={section.href}>
+                    <Link href={section.href} className="flex min-h-14 items-center gap-3 rounded-[var(--wh-radius-sm)] px-2 py-2.5 transition-colors hover:bg-[var(--wh-surface-muted)]">
+                      <IconTile icon={section.icon} tone={section.tone} />
+                      <span className="min-w-0 flex-1">
+                        <span className="block text-sm font-medium">{section.title}</span>
+                        <span className="block text-xs text-[var(--wh-foreground-subtle)]">{section.meta}</span>
+                      </span>
+                      {section.badge ? <Badge tone={section.badge.tone}>{section.badge.label}</Badge> : null}
+                      <ChevronRight aria-hidden className="size-4 text-[var(--wh-foreground-subtle)]" />
+                    </Link>
+                  </li>
+                ))}
+              </ul>
+            </Card>
+          </section>
+        ))}
 
         <section id="playbook">
           <SectionHeader title={t("manage.section.playbook")} count={items.length} />

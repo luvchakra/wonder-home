@@ -201,4 +201,14 @@ test.describe("every signed-in screen loads", () => {
     await expect(groups.nth(2).getByText("Pet care")).toBeHidden();
     expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(page.viewportSize()!.width);
   });
+  test("Manage Household: the links are grouped under four headings, with no second door to setup", async ({ page }) => {
+    await signIn(page);
+    await page.goto("/household");
+    const headings = page.locator("section[id^='manage-'] h2, section[id^='manage-'] h3");
+    await expect(headings).toHaveText(["Your household", "How the home runs", "Notifications", "Connections and records"]);
+    await expect(page.locator("#manage-running a")).toHaveText([/Responsibilities/, /Household playbook/, /Policies/, /AI autonomy/]);
+    // The setup card opens the walk-through; the list doesn't repeat it.
+    await expect(page.locator("section[id^='manage-'] a[href='/household/setup']")).toHaveCount(0);
+    expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(page.viewportSize()!.width);
+  });
 });
