@@ -151,7 +151,7 @@ describe("the webhook as an intake", () => {
     h.tables.household_members = [{ id: MEMBER, household_id: HOUSEHOLD, language: "es" }];
     const out = replies();
     await post(delivery([{ ...TEXT, id: "wamid.C2", text: { body: "CONNECT ABCDEFGH23" } }]), { config: WA_ENV, admin: () => h.client, fetch: out.fetchImpl });
-    expect(out.sent[0]!.text).toMatch(/^WhatsApp conectado ✓/);
+    expect(out.sent[0]!.text).toMatch(/^WhatsApp conectado 🔗/);
   });
 
   it("answers a code that names nobody in English", async () => {
@@ -271,7 +271,7 @@ describe("processing into HomeSend", () => {
     expect(h.tables.home_send_items![0]).toMatchObject({ source: "whatsapp", household_id: HOUSEHOLD, created_by_member_id: MEMBER, external_id: "whatsapp:wamid.T1" });
     expect(h.tables.whatsapp_messages![0]).toMatchObject({ processing_status: "processed", homesend_item_id: h.tables.home_send_items![0]!.id });
     expect(out.sent).toHaveLength(1);
-    expect(out.sent[0]!.text).toMatch(/Got it 👍 I found a school item: \*Sports Day\*\. It's waiting in HomeSend/);
+    expect(out.sent[0]!.text).toMatch(/Got it 👍 I found a school item: \*Sports Day\*\. 🎒 It's waiting in HomeSend/);
   });
 
   it("keeps a photo in the private bucket as a WhatsApp item, with its caption", async () => {
@@ -437,7 +437,7 @@ describe("processing into HomeSend", () => {
     h.tables.household_members = FAMILY();
     const out = replies();
     await processWhatsAppMessage(h.client, id, { config: CONFIG, fetch: out.fetchImpl, ingest: { classify }, ask: async () => "not asked" });
-    expect(out.sent[0]!.text).toBe("Got it 👍 I found a school item: *Sports Day*. Who is it for — Asmi or Manan?");
+    expect(out.sent[0]!.text).toBe("Got it 👍 I found a school item: *Sports Day*. 🎒 Who is it for — Asmi or Manan?");
     // Recorded as HomeTalk's own open question, about this item, for the next turn to answer.
     const asked = h.tables.conversation_messages!.at(-1)!;
     expect(asked).toMatchObject({ role: "assistant", content: "Who is it for — Asmi or Manan?", metadata: { mode: "clarify", intent: "complete_homesend_item" } });
@@ -451,7 +451,7 @@ describe("processing into HomeSend", () => {
     const noDay: IngestDeps["classify"] = async () => extraction({ kind: "event", title: "Diwali dinner", dueDate: null, dateText: null, people: [] });
     let added = false;
     await processWhatsAppMessage(h.client, id, { config: CONFIG, fetch: out.fetchImpl, ingest: { classify: noDay }, ask: async () => "x", addOnItsOwn: async () => ((added = true), null) });
-    expect(out.sent[0]!.text).toBe("Got it 👍 I found an event: *Diwali dinner*. Which day is it?");
+    expect(out.sent[0]!.text).toBe("Got it 👍 I found an event: *Diwali dinner*. 📅 Which day is it?");
     expect(added).toBe(false);
   });
 
@@ -460,7 +460,7 @@ describe("processing into HomeSend", () => {
     h.tables.household_members = FAMILY();
     const out = replies();
     await processWhatsAppMessage(h.client, id, { config: CONFIG, fetch: out.fetchImpl, ingest: { classify } });
-    expect(out.sent[0]!.text).toBe("Got it 👍 I found a school item: *Sports Day*. It's waiting in HomeSend for you to check.");
+    expect(out.sent[0]!.text).toBe("Got it 👍 I found a school item: *Sports Day*. 🎒 It's waiting in HomeSend for you to check.");
     expect(h.tables.conversation_messages ?? []).toEqual([]);
   });
 
@@ -547,9 +547,9 @@ describe("processing into HomeSend", () => {
         await processWhatsAppMessage(h.client, id, { config: CONFIG, fetch: out.fetchImpl, ingest: { classify: oil }, ask: async () => "x", addOnItsOwn });
         const reply = out.sent[0]!.text;
         if (expected === "added") {
-          expect(reply).toMatch(/^Added \*Mustard oil\* to Groceries \(9\d% sure — every detail is in what you sent\) — your household lets WonderHome add these on its own\. You can undo it in HomeSend\.$/);
+          expect(reply).toMatch(/^✅ Added \*Mustard oil\* to Groceries \(9\d% sure — every detail is in what you sent\) — your household lets WonderHome add these on its own\. You can undo it in HomeSend\.$/);
         } else {
-          expect(reply).toBe("Got it 👍 I found groceries: Mustard oil. It's waiting in HomeSend for you to check.");
+          expect(reply).toBe("Got it 👍 I found groceries: Mustard oil. 🛒 It's waiting in HomeSend for you to check.");
         }
       });
     }
@@ -568,7 +568,7 @@ describe("processing into HomeSend", () => {
       h.tables.household_members = [{ id: MEMBER, household_id: HOUSEHOLD, language: "hi" }];
       const out = replies();
       await processWhatsAppMessage(h.client, id, { config: CONFIG, fetch: out.fetchImpl, ingest: { classify: oil } });
-      expect(out.sent[0]!.text).toBe("वह संदेश खाली था।");
+      expect(out.sent[0]!.text).toBe("⚠️ वह संदेश खाली था।");
     });
 
     it("AT-H07 the member's language is used for WonderHome's own words", async () => {
@@ -577,7 +577,7 @@ describe("processing into HomeSend", () => {
       h.tables.household_members = [{ id: MEMBER, household_id: HOUSEHOLD, language: "hi" }];
       const out = replies();
       await processWhatsAppMessage(h.client, id, { config: CONFIG, fetch: out.fetchImpl, ingest: { classify: oil } });
-      expect(out.sent[0]!.text).toBe("मिल गया 👍 मुझे किराने का सामान मिला: Mustard oil। यह HomeSend में आपकी जाँच का इंतज़ार कर रहा है।");
+      expect(out.sent[0]!.text).toBe("मिल गया 👍 मुझे किराने का सामान मिला: Mustard oil। 🛒 यह HomeSend में आपकी जाँच का इंतज़ार कर रहा है।");
     });
   });
 
@@ -910,9 +910,9 @@ describe("saying what it found", () => {
     ({ itemId: "i", duplicate: false, state: "needs_review", notice: "", item: { id: "i", classifiedKind, extracted: { title, needs: [] }, understanding: { references: [] } } }) as unknown as Parameters<typeof acknowledgementFor>[0];
   it("names a class outside school and an event for what they are, never school work", () => {
     expect(acknowledgementFor(outcome("activity_item", "Karate exam"), { question: "Who is it for — Asmi or Manan?" }).text).toBe(
-      "Got it 👍 I found something for a class outside school: *Karate exam*. Who is it for — Asmi or Manan?",
+      "Got it 👍 I found something for a class outside school: *Karate exam*. 🏅 Who is it for — Asmi or Manan?",
     );
-    expect(acknowledgementFor(outcome("event", "Riya's birthday party")).text).toBe("Got it 👍 I found an event: *Riya's birthday party*. It's waiting in HomeSend for you to check.");
+    expect(acknowledgementFor(outcome("event", "Riya's birthday party")).text).toBe("Got it 👍 I found an event: *Riya's birthday party*. 📅 It's waiting in HomeSend for you to check.");
   });
 });
 
@@ -997,22 +997,22 @@ describe("what WonderHome says back", () => {
 
   it("never echoes an amount or a health detail", () => {
     const bill = acknowledgementFor(base("bill", { title: "Electricity", amount: 2430, currency: "INR" })).text;
-    expect(bill).toBe("Got it 👍 I found a bill. It's waiting in HomeSend for you to check.");
+    expect(bill).toBe("Got it 👍 I found a bill. 🧾 It's waiting in HomeSend for you to check.");
     expect(bill).not.toMatch(/2,?430|₹|INR/);
     expect(acknowledgementFor(base("health_document", { title: "HbA1c 7.9%" })).text).not.toMatch(/HbA1c|7\.9/);
   });
 
   it("follows what it found with HomeTalk's question, worded by HomeTalk", () => {
-    expect(acknowledgementFor(base("bill", { title: "Electricity" }), { question: "When is it due?" })).toEqual({ text: "Got it 👍 I found a bill. When is it due?", asks: true });
+    expect(acknowledgementFor(base("bill", { title: "Electricity" }), { question: "When is it due?" })).toEqual({ text: "Got it 👍 I found a bill. 🧾 When is it due?", asks: true });
     // A name it can't place is HomeTalk's to ask too, never a HomeSend line of its own.
     const outcome = base("school_item", { title: "Sports Day" });
     outcome.item.understanding = { references: [{ text: "your child", candidates: ["Aarav", "Anya"], confidence: 0.5 }] } as never;
-    expect(acknowledgementFor(outcome).text).toBe("Got it 👍 I found a school item: *Sports Day*. It's waiting in HomeSend for you to check.");
+    expect(acknowledgementFor(outcome).text).toBe("Got it 👍 I found a school item: *Sports Day*. 🎒 It's waiting in HomeSend for you to check.");
   });
 
   it("says a repeat is already there, and a failure is kept, not lost", () => {
-    expect(acknowledgementFor(base("unknown", null, { duplicate: true })).text).toBe("Got it — that's already in HomeSend.");
-    expect(acknowledgementFor(base("unknown", null, { state: "failed", failureReason: "unsupported_type" })).text).toMatch(/^I kept that\. WonderHome can't read this kind of file yet\. It's in HomeSend under Failed safely\.$/);
+    expect(acknowledgementFor(base("unknown", null, { duplicate: true })).text).toBe("Got it 👍 That's already in HomeSend.");
+    expect(acknowledgementFor(base("unknown", null, { state: "failed", failureReason: "unsupported_type" })).text).toMatch(/^⚠️ I kept that\. WonderHome can't read this kind of file yet\. It's in HomeSend under Failed safely\.$/);
   });
 });
 
@@ -1038,17 +1038,17 @@ describe("WonderHome's own WhatsApp words in the member's language (14-047)", ()
   it("acknowledges, says what was added and how sure, in Hindi", async () => {
     const t = await translatorFor("hi");
     const outcome = { duplicate: false, state: "needs_review", itemId: "i-1", notice: "", item: { classifiedKind: "bill", extracted: { title: "Water" } } } as never;
-    expect(acknowledgementFor(outcome, { t }).text).toBe("मिल गया 👍 मुझे एक बिल मिला। यह HomeSend में आपकी जाँच का इंतज़ार कर रहा है।");
+    expect(acknowledgementFor(outcome, { t }).text).toBe("मिल गया 👍 मुझे एक बिल मिला। 🧾 यह HomeSend में आपकी जाँच का इंतज़ार कर रहा है।");
     const sure = `${t("homesend.found.percentSure", { percent: 97 })} — ${t("homesend.found.why.verified")}`;
     expect(addedReply({ title: "Milk", where: "Groceries", percent: 97, why: "verified" }, undefined, t)).toBe(
-      `*Milk* को Groceries में जोड़ दिया (${sure}) — आपका परिवार WonderHome को ये अपने आप जोड़ने देता है। आप इसे HomeSend में वापस ले सकते हैं।`,
+      `✅ *Milk* को Groceries में जोड़ दिया (${sure}) — आपका परिवार WonderHome को ये अपने आप जोड़ने देता है। आप इसे HomeSend में वापस ले सकते हैं।`,
     );
   });
 
   it("says a failure's reason in the member's language", async () => {
     const t = await translatorFor("de");
     const outcome = { duplicate: false, state: "failed", failureReason: "too_large", itemId: "i-1", notice: "", item: { classifiedKind: "unknown", extracted: null } } as never;
-    expect(acknowledgementFor(outcome, { t }).text).toBe(`Ich habe es aufbewahrt. ${t("homesend.failure.tooLarge")} Es liegt in HomeSend unter Sicher angehalten.`);
+    expect(acknowledgementFor(outcome, { t }).text).toBe(`⚠️ Ich habe es aufbewahrt. ${t("homesend.failure.tooLarge")} Es liegt in HomeSend unter Sicher angehalten.`);
   });
 
   it("asks HomeTalk's first question about something just sent in the member's language", async () => {

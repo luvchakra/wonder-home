@@ -107,7 +107,7 @@ export const LINK_REPLIES: Record<LinkOutcome, string> = {
 
 /** What an unlinked number is told — the same whoever it is, so nothing about any household leaks. */
 export const UNKNOWN_SENDER_REPLY =
-  "This number isn't connected to WonderHome yet. In WonderHome, open Settings, choose Connect WhatsApp, and send the code it shows from this phone.";
+  "👋 This number isn't connected to WonderHome yet. In WonderHome, open Settings, choose Connect WhatsApp, and send the code it shows from this phone.";
 
 export type WhatsAppIdentity = { id: string; householdId: string; memberId: string; phone: string };
 
