@@ -233,7 +233,7 @@ describe("every choice reads back as the same answer (answerClarification)", () 
 });
 
 describe("what a pick sends reaches the engine as it is", () => {
-  // The engine reads a turn after `normaliseUtterance` (HT-166: "not now" lost its "now" and was not read as an answer).
+  // The engine reads a turn after `normaliseUtterance` (HT-167: "not now" lost its "now" and was not read as an answer).
   it("normalising never changes a choice's words", () => {
     const sets = [
       choicesFor(quantity, context),

@@ -32,7 +32,7 @@ describe("normaliseUtterance", () => {
     expect(canon("What is on today, thanks?")).toBe("What is on today?");
   });
 
-  it("keeps the \"now\" of \"not now\", which is an answer, not a tail (HT-166)", () => {
+  it("keeps the \"now\" of \"not now\", which is an answer, not a tail (HT-167)", () => {
     expect(canon("not now")).toBe("not now");
     expect(canon("Not now, thanks")).toBe("Not now");
     expect(canon("Add milk now")).toBe("Add milk");

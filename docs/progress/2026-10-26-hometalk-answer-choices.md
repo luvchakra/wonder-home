@@ -12,12 +12,12 @@
 - **WhatsApp** (`notifications/whatsapp.ts` `interactiveMessage`/`sendWhatsAppChoices`, `whatsapp/intake.ts` `openChoices`, `whatsapp/inbound.ts`). Reply buttons for 3 or fewer, a list for up to 10 (pick button in the member's language); each id is `say:<words>` and a pick comes back as those words. Falls back to plain text when the send fails, a label would be cut, or the body is too long. A health record's choices are never sent. No question about money has choices.
 - **Voice** unchanged: the question is spoken, never the list.
 - **No preview card on a question** (`onlyAsked`): `fill_homesend_details`, and `complete_homesend_item` that only asked the next question, show no Done card and no ✅ (the warmth from #374 now treats them as questions). Kept on reload via `metadata.questionOnly`.
-- **Defect the eval caught** (HT-166): `normaliseUtterance` dropped the "now" of "not now" as a polite tail, so "not now" was never read as an answer. The tail rule now keeps it (`normalise.ts`).
+- **Defect the eval caught** (HT-167): `normaliseUtterance` dropped the "now" of "not now" as a polite tail, so "not now" was never read as an answer. The tail rule now keeps it (`normalise.ts`).
 
 ## Verified
 
 - Unit: `hometalk/choices.test.ts` (choice sets per question, every `say` round-tripped through `answerClarification` and `readDetailAnswer`, normalising never changes a `say`, multi-select combined answer, amounts, stored-choice reading, `onlyAsked`), `notifications/whatsapp-choices.test.ts` (buttons, list, limits, text fallback, inbound picks), `whatsapp-intake.test.ts` (buttons on HomeTalk's question; a health record's as text), `ui/answer-choices.test.tsx`, `normalise.test.ts`. Related suites: 1,742 pass. The unit question from 25-038 (#376, "1 bottle", "2 bottles", "Count it in litres instead") is offered as chips too.
-- Eval: HT-161–HT-167 pass; full deterministic eval 204/204, Unsafe Action Rate 0.
+- Eval: HT-162–HT-168 pass; full deterministic eval 204/204, Unsafe Action Rate 0.
 - Signed-in E2E (`e2e/screens.spec.ts`, mobile and desktop, live project): latest question's chips enabled at ≥ 44 px, an answered one's greyed, no "Can be undone" card on a question-only turn, no overflow at 360 px. Whole spec 20/20.
 - Browser, production build with a service role on the live project, throwaway account: "Add coconut oil to the groceries" → 1 bottle / 2 bottles / 3 bottles / That's enough → tapped "2 bottles" → added (+2 bottles); "Remind me to call the plumber" → Today / Tomorrow / Saturday / Another day… → "Tomorrow" → reminder for Tue 27 Oct 9 am; the offer with two waiting items → unticked one, Send → "First, Coconut oil: How much should I get?" with amount chips and no preview card. 360 px and 1280 px, no horizontal overflow, arrows move focus without sending.
 - Typecheck, ESLint on changed files, import boundaries, help links, bundle check, production build.
