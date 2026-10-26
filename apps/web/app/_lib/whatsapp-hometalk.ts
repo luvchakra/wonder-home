@@ -8,6 +8,11 @@ import { withMemberSession } from "@wonderhome/core/voicelink/member-session";
 import { whatsappReplyText } from "@wonderhome/core/whatsapp/hometalk";
 import type { WhatsAppIntakeDeps } from "@wonderhome/core/whatsapp/intake";
 
+import { getHomeSendItem } from "@wonderhome/core/homesend/repository";
+import { requireMembership } from "@wonderhome/core/identity/households";
+
+import { autoApplyHomeSendItem } from "@/app/(auth)/home-send-auto";
+import { prepareReview } from "@/app/(auth)/home-send-review";
 import { handleHomeTalkRequest } from "@/app/_lib/hometalk-gateway";
 
 /**
@@ -41,3 +46,35 @@ export function whatsappAsk(admin: SupabaseClient): NonNullable<WhatsAppIntakeDe
     }
   };
 }
+
+/**
+ * Carrying a WhatsApp item on where the household allows it (the owner,
+ * 2026-10-26): once it is known who an item is for, or straight away when
+ * nothing is missing, the same review the app runs decides, under the
+ * member's own session. Only an "add on its own" decision is acted on —
+ * the outcome set to "Pre Approved", the reading above the household's bar,
+ * a grocery or school item — through the same governed write and Undo as
+ * the app. Anything else waits in HomeSend; WhatsApp never confirms.
+ */
+export function whatsappAutoAdd(admin: SupabaseClient): NonNullable<WhatsAppIntakeDeps["addOnItsOwn"]> {
+  return async ({ householdId, memberId, itemId }) => {
+    const { data } = await admin.from("household_members").select("profile_id").eq("household_id", householdId).eq("id", memberId).maybeSingle();
+    const profileId = (data as { profile_id: string | null } | null)?.profile_id ?? null;
+    if (!profileId) return null;
+    try {
+      return await withMemberSession(admin, profileId, async (supabase) => {
+        const membership = await requireMembership(supabase, householdId);
+        const item = await getHomeSendItem(supabase, householdId, itemId);
+        if (!item || item.status !== "classified" || !item.classifiedKind) return null;
+        const review = await prepareReview(supabase, membership, { ...item, createdByMemberId: memberId });
+        if (review.confirmation.mode !== "auto_apply" || review.plan) return null;
+        const applied = await autoApplyHomeSendItem(supabase, membership, { id: item.id, kind: item.classifiedKind, extracted: item.extracted, subject: review.subject });
+        return applied ? { title: applied.title, where: applied.where } : null;
+      });
+    } catch (thrown) {
+      log.warn("whatsapp: add on its own failed", { reason: thrown instanceof Error ? thrown.name : "unknown", allow: ["reason"] });
+      return null;
+    }
+  };
+}
+

@@ -23,7 +23,7 @@ import { localMoment } from "./timing";
  * name, a title and a count crosses to another channel.
  */
 
-export const NOTICE_SOURCE_TYPES = ["homesend_item", "event_replies", "helper_absence", "grocery_order", "event_change", "weather_plan", "goal_checkin", "chat_thread"] as const;
+export const NOTICE_SOURCE_TYPES = ["homesend_item", "event_replies", "helper_absence", "grocery_order", "event_change", "weather_plan", "goal_checkin", "chat_thread", "ai_key"] as const;
 export type NoticeSourceType = (typeof NOTICE_SOURCE_TYPES)[number];
 
 export type Notice = {
@@ -497,6 +497,52 @@ export function chatNotices(
         expiresAt: new Date(new Date(latest.created_at).getTime() + 7 * DAY_MS),
       });
     }
+  }
+  return notices;
+}
+
+// --- An AI key a provider stopped taking (the owner, 2026-10-26) -------------
+
+export type AiKeyAlertRow = {
+  id: string;
+  purpose: "assistant" | "gemini_voice";
+  provider: "anthropic" | "google" | "openai";
+  kind: "out_of_credits" | "quota_exhausted" | "key_rejected";
+  first_seen_at: string;
+  last_seen_at: string;
+};
+
+const PROVIDER_NAME: Record<AiKeyAlertRow["provider"], string> = { anthropic: "Anthropic", google: "Google", openai: "OpenAI" };
+
+/** A quota refusal is told only once it has lasted this long: a per-minute limit passes well within it. */
+export const QUOTA_ALERT_AFTER_MS = 10 * 60_000;
+
+/**
+ * One notice per household key a provider has stopped taking (`ai/key-alerts.ts`),
+ * to the household's Admin, high enough to be emailed: on 2026-10-26 Gemini ran
+ * out of credits and voice simply stopped. Out of credits and a rejected key are
+ * told at once; a quota refusal only once it has lasted, so a passing rate limit
+ * tells nobody. It resolves by itself when a call with the key works again.
+ */
+export function aiKeyNotices(rows: readonly AiKeyAlertRow[], directory: Directory, now: Date): Notice[] {
+  const admin = adminOf(directory);
+  if (!admin) return [];
+  const notices: Notice[] = [];
+  for (const row of rows) {
+    const lasted = new Date(row.last_seen_at).getTime() - new Date(row.first_seen_at).getTime();
+    if (row.kind === "quota_exhausted" && lasted < QUOTA_ALERT_AFTER_MS) continue;
+    notices.push({
+      sourceType: "ai_key",
+      sourceId: row.id,
+      threadKey: `ai_key:${row.purpose}`,
+      recipientMemberId: admin,
+      category: "system",
+      priority: "high",
+      title: msg(row.purpose === "gemini_voice" ? "reminder.aiKey.title.gemini_voice" : "reminder.aiKey.title.assistant"),
+      body: msg(`reminder.aiKey.body.${row.kind}` as "reminder.aiKey.body.out_of_credits", { provider: PROVIDER_NAME[row.provider] }),
+      action: { action: "open", target: "/settings/ai" },
+      expiresAt: new Date(now.getTime() + 30 * DAY_MS),
+    });
   }
   return notices;
 }

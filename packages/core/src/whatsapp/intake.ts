@@ -52,6 +52,15 @@ export type WhatsAppIntakeDeps = {
   ask?: (input: { householdId: string; memberId: string; text: string; requestId: string }) => Promise<string | null>;
   /** Waiting for what the person sends straight after; replaceable in tests. */
   sleep?: (ms: number) => Promise<void>;
+  /**
+   * Adds an item on its own where the household allows it (the outcome is
+   * "Pre Approved" and the reading is above its bar), under the member's own
+   * session, through the same governed write the app uses
+   * (`apps/web/app/_lib/whatsapp-hometalk.ts`). Null when it must wait for a
+   * person. WhatsApp itself never confirms anything: the household decided
+   * this in advance (the owner, 2026-10-26).
+   */
+  addOnItsOwn?: (input: { householdId: string; memberId: string; itemId: string }) => Promise<{ title: string; where: string } | null>;
 };
 
 export type ReceiveOutcome = { linked: number; queued: string[]; duplicates: number; unknown: number };
@@ -238,6 +247,23 @@ export async function processWhatsAppMessage(admin: SupabaseClient, messageId: s
     return "read";
   }
 
+  // An answer to the question HomeTalk just asked on WhatsApp ("Should I use
+  // coconut oil, mustard oil or sunflower oil?" — "coconut oil", the owner,
+  // 2026-10-26) goes back to HomeTalk, which finishes what was asked. Before
+  // this it became a new HomeSend item, without the 2 litres and waiting.
+  if (!together && row.message_type === "text" && row.text_content && deps.ask && !row.reply_to_provider_message_id && row.text_content.trim().length <= 160) {
+    if (await homeTalkAwaitsAnswer(admin, row, now).catch(() => false)) {
+      const answer = await deps.ask({ householdId: row.household_id, memberId: row.member_id, text: row.text_content, requestId: row.provider_message_id }).catch(() => null);
+      if (answer) {
+        events.push({ kind: "question_answered", householdId: row.household_id });
+        await settle({ processing_status: "ignored" });
+        await say(answer);
+        await recordWhatsAppEvents(admin, events);
+        return "read";
+      }
+    }
+  }
+
   // A reply to one of the person's own items that names someone in the
   // household answers that item's "who is this for?" (the owner's "asmi",
   // 2026-10-24): the item waits for them with that person picked, and the
@@ -247,7 +273,9 @@ export async function processWhatsAppMessage(admin: SupabaseClient, messageId: s
     if (answered) {
       events.push({ kind: "clarification_answered", householdId: row.household_id });
       await settle({ processing_status: "ignored" });
-      await say(`Got it — that's for ${answered}. It's waiting in HomeSend for you to check.`);
+      // With who it is for known, the item carries on: added now where the household allows it, else it waits.
+      const added = deps.addOnItsOwn ? await deps.addOnItsOwn({ householdId: row.household_id, memberId: row.member_id, itemId: answered.itemId }).catch(() => null) : null;
+      await say(added ? addedReply(added, answered.name) : `Got it — that's for ${answered.name}. It's waiting in HomeSend for you to check.`);
       await recordWhatsAppEvents(admin, events);
       return "read";
     }
@@ -332,7 +360,12 @@ export async function processWhatsAppMessage(admin: SupabaseClient, messageId: s
   if (!outcome.duplicate) events.push({ kind: "homesend_created", householdId: row.household_id });
   const ack = acknowledgementFor(outcome, { whoFor: await whoForChoices(admin, row.household_id, outcome).catch(() => []) });
   if (ack.asks) events.push({ kind: "clarification_requested", householdId: row.household_id });
-  await say(ack.text);
+  // Nothing left to ask: added now where the household allows it, else the acknowledgement says where it waits.
+  const added =
+    !ack.asks && !outcome.duplicate && outcome.state !== "failed" && deps.addOnItsOwn
+      ? await deps.addOnItsOwn({ householdId: row.household_id, memberId: row.member_id, itemId: outcome.itemId }).catch(() => null)
+      : null;
+  await say(added ? addedReply(added) : ack.text);
   await recordWhatsAppEvents(admin, events);
   return "read";
 }
@@ -366,7 +399,7 @@ export function memberNamedInReply(text: string, members: readonly { id: string;
  * choice is written as the name the item is read as being for, so the
  * review opens with that person picked and nothing is applied.
  */
-async function answerWhoFor(admin: SupabaseClient, row: MessageRow, text: string, now: Date): Promise<string | null> {
+async function answerWhoFor(admin: SupabaseClient, row: MessageRow, text: string, now: Date): Promise<{ name: string; itemId: string } | null> {
   // The item it answers: the one the person swiped to reply to, or else the
   // last thing they sent in the past half hour that is still waiting to
   // know who it is for (a plain "asmi" straight after the photo).
@@ -405,7 +438,64 @@ async function answerWhoFor(admin: SupabaseClient, row: MessageRow, text: string
     .update({ extracted, ...(understanding ? { understanding } : {}) })
     .eq("household_id", row.household_id)
     .eq("id", waiting.id);
-  return error ? null : member.displayName;
+  return error ? null : { name: member.displayName, itemId: waiting.id };
+}
+
+/**
+ * Said when an item was added on its own: what, where, and that it can be
+ * taken back in HomeSend. Never an amount or a health detail, which are never
+ * added on their own anyway.
+ */
+export function addedReply(added: { title: string; where: string }, forName?: string): string {
+  const title = shortTitle(added.title) ?? "it";
+  return `Added *${title}*${forName ? ` for ${forName}` : ""} to ${added.where} — your household lets WonderHome add these on its own. You can undo it in HomeSend.`;
+}
+
+/** How long a question HomeTalk asked on WhatsApp still takes the person's next message as its answer. */
+const HOMETALK_ANSWER_WINDOW_MS = 15 * 60 * 1000;
+
+/**
+ * Whether the last thing said in this person's WhatsApp conversation with
+ * HomeTalk is a question still waiting for them — HomeTalk asked which one
+ * or whether, and nothing else has happened since — and their last WhatsApp
+ * message before this one went to HomeTalk, not to HomeSend.
+ */
+export async function homeTalkAwaitsAnswer(admin: SupabaseClient, row: Pick<MessageRow, "id" | "household_id" | "member_id">, now: Date): Promise<boolean> {
+  const since = new Date(now.getTime() - HOMETALK_ANSWER_WINDOW_MS).toISOString();
+  const [{ data: previous }, { data: session }] = await Promise.all([
+    admin
+      .from("whatsapp_messages")
+      .select("homesend_item_id, processing_status, message_type")
+      .eq("household_id", row.household_id)
+      .eq("member_id", row.member_id)
+      .neq("id", row.id)
+      .gte("received_at", since)
+      .order("received_at", { ascending: false })
+      .limit(1),
+    admin
+      .from("conversation_sessions")
+      .select("id")
+      .eq("household_id", row.household_id)
+      .eq("member_id", row.member_id)
+      .eq("surface", "whatsapp")
+      .eq("status", "open")
+      .order("created_at", { ascending: false })
+      .limit(1),
+  ]);
+  const last = ((previous ?? []) as { homesend_item_id: string | null; processing_status: string; message_type: string }[])[0];
+  if (!last || last.homesend_item_id || last.message_type !== "text") return false;
+  const sessionId = ((session ?? []) as { id: string }[])[0]?.id;
+  if (!sessionId) return false;
+  const { data: said } = await admin
+    .from("conversation_messages")
+    .select("role, metadata, created_at")
+    .eq("household_id", row.household_id)
+    .eq("session_id", sessionId)
+    .gte("created_at", since)
+    .order("created_at", { ascending: false })
+    .limit(1);
+  const latest = ((said ?? []) as { role: string; metadata: { mode?: unknown; proposal?: unknown } | null }[])[0];
+  return latest?.role === "assistant" && (latest.metadata?.mode === "clarify" || latest.metadata?.proposal === "clarify");
 }
 
 /** How long after sending something a plain name still answers who it is for. */

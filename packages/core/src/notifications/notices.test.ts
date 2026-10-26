@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 type Row = Record<string, unknown>;
 
 import { CHANNEL_ADAPTERS } from "./channels";
-import { adminOf, chatNotices, eventChangeNotices, goalCheckInNotices, mentions, eventReplyNotices, helperAbsenceNotices, homesendNotices, orderNotices, weatherNotices, type EventRow } from "./notices";
+import { adminOf, aiKeyNotices, chatNotices, eventChangeNotices, goalCheckInNotices, mentions, eventReplyNotices, helperAbsenceNotices, homesendNotices, orderNotices, weatherNotices, type EventRow } from "./notices";
 import type { LaundryNeed } from "../home/laundry";
 import type { WeatherWindow } from "../home/weather";
 import { sweepNotices } from "./notices-sweep";
@@ -355,5 +355,40 @@ describe("something new to read in a chat (the owner, 2026-10-21)", () => {
     const notices = chatNotices([group], people, [message({ thread_id: "t-group" })], chatDirectory, chatNames, NOW);
     expect(notices.map((notice) => notice.recipientMemberId)).toEqual(["asmi"]);
     expect(notices[0]?.title).toEqual({ key: "reminder.chat.inChat", params: { chat: "Diwali plans" } });
+  });
+});
+
+describe("an AI key a provider stopped taking (the owner, 2026-10-26)", () => {
+  const row = (over: Partial<Parameters<typeof aiKeyNotices>[0][number]> = {}) => ({
+    id: "alert-1",
+    purpose: "gemini_voice" as const,
+    provider: "google" as const,
+    kind: "out_of_credits" as const,
+    first_seen_at: "2026-10-20T05:58:00Z",
+    last_seen_at: "2026-10-20T05:58:00Z",
+    ...over,
+  });
+
+  it("tells the household's Admin at once, high enough to be emailed, and opens AI settings", () => {
+    const [notice, ...rest] = aiKeyNotices([row()], directory, NOW);
+    expect(rest).toEqual([]);
+    expect(notice).toMatchObject({
+      sourceType: "ai_key",
+      threadKey: "ai_key:gemini_voice",
+      recipientMemberId: adminOf(directory),
+      priority: "high",
+      title: { key: "reminder.aiKey.title.gemini_voice" },
+      body: { key: "reminder.aiKey.body.out_of_credits", params: { provider: "Google" } },
+      action: { action: "open", target: "/settings/ai" },
+    });
+  });
+
+  it("tells a quota refusal only once it has lasted ten minutes, so a passing rate limit tells nobody", () => {
+    expect(aiKeyNotices([row({ kind: "quota_exhausted", last_seen_at: "2026-10-20T06:03:00Z" })], directory, NOW)).toEqual([]);
+    expect(aiKeyNotices([row({ kind: "quota_exhausted", last_seen_at: "2026-10-20T06:09:00Z" })], directory, NOW)).toHaveLength(1);
+  });
+
+  it("names the assistant's key apart from the voice key", () => {
+    expect(aiKeyNotices([row({ purpose: "assistant", provider: "anthropic", kind: "key_rejected" })], directory, NOW)[0]?.title).toEqual({ key: "reminder.aiKey.title.assistant" });
   });
 });

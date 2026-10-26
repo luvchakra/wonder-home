@@ -18,7 +18,9 @@ import { saveDataUseAction } from "../../(auth)/privacy-actions";
 import { AiKeyForm } from "../../_components/ai-key-form";
 import { ReturnLink, returnLabelKey } from "../../_components/return-link";
 import { safeReturnTo } from "../../_lib/return-to";
+import { openKeyAlerts } from "@wonderhome/core/ai/key-alert-status";
 import { AutoAddPercentPicker } from "../../_components/auto-add-percent-picker";
+import { KeyAlertBanner } from "../../_components/key-alert-banner";
 import { ConfirmRequestedSwitch } from "../../_components/confirm-requested-switch";
 import { DataUseForm } from "../../_components/data-use-form";
 import { formatDate, requireSession } from "../../_lib/session";
@@ -39,12 +41,13 @@ export default async function AiAssistantSettingsPage({ searchParams }: { search
   const returnTo = safeReturnTo(query.returnTo);
   const { supabase, membership, view, viewer, secondary } = session;
   const householdId = membership.household.id;
-  const [credential, voiceCredential, dataUse, confirmRequested, autoAddPercent] = await Promise.all([
+  const [credential, voiceCredential, dataUse, confirmRequested, autoAddPercent, keyAlerts] = await Promise.all([
     credentialStatus(supabase, householdId).catch(() => ({ configured: false, provider: null, updatedAt: null })),
     geminiVoiceKeyStatus(supabase, householdId).catch(() => ({ configured: false, provider: null, updatedAt: null })),
     loadDataUse(supabase, householdId),
     loadConfirmRequested(supabase, householdId),
     loadAutoAddPercent(supabase, householdId),
+    openKeyAlerts(supabase, householdId),
   ]);
 
   // Which key actually answers, decided in one place so the screen can never
@@ -71,6 +74,8 @@ export default async function AiAssistantSettingsPage({ searchParams }: { search
           <p className="mt-0.5 text-sm text-[var(--wh-foreground-muted)]">{t("settingsPage.ai.lede", { household: membership.household.name })}</p>
         </header>
         {returnTo ? <ReturnLink href={returnTo} label={t(returnLabelKey(returnTo))} /> : null}
+        {/* This is the page the banner sends an Admin to, so it says what is wrong without a link back to itself. */}
+        <KeyAlertBanner alerts={keyAlerts} manages={manages} link={false} t={t} />
 
         {/* What HomeTalk does with a request (HomeBrain 4.0 §3.9): first, because it is what a person meets every day. */}
         <section id="acting">

@@ -110,6 +110,18 @@ reminders about real records, never lines of text fired and forgotten.
   reminder pass and, for any household whose records changed, from the
   delivery clock. A notice needs a `source_id` and a `reminder.*` message in
   every language. A new notice is a builder with a test, never a new writer.
+- **An AI key that stopped working** (the owner, 2026-10-26, `ai/key-alerts.ts`,
+  `notices.ts` `aiKeyNotices`). Every model call goes through
+  `ai/provider-clients.ts`, which shows the answer to `key-alerts.ts`: a
+  refusal about the key itself (out of credits, out of quota, not valid) is
+  recorded by the key's SHA-256 fingerprint in `ai_key_alerts`; a call that
+  works resolves it. A live voice session's close reason comes back from the
+  page (`/voice/gemini/closed`). The notice pass matches fingerprints to the
+  household's own keys (`household_ai_key_alerts`) and tells the Admin, high
+  priority so it is emailed. Out of credits and a rejected key are told at
+  once; a quota refusal only after ten minutes, since a per-minute limit says
+  the same words. No provider reports a balance in advance, so this tells at
+  the first refusal, not before.
 - **A second way, a summary, a fit** (stories 27-007, 27-008, 27-015). A bill,
   school or pet reminder unanswered past the policy's wait (`channelEscalation`,
   always shorter than the backup's) is also sent once by email or WhatsApp,

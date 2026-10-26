@@ -14,6 +14,8 @@ import { Sparkles } from "lucide-react";
 import { geminiFix, geminiLiveGate } from "../_lib/gemini-live";
 import { homesendReviewLabels } from "../_lib/homesend-labels";
 import { requireSession } from "../_lib/session";
+import { openKeyAlerts } from "@wonderhome/core/ai/key-alert-status";
+import { KeyAlertBanner } from "../_components/key-alert-banner";
 import { Assistant, type AssistantMessage } from "./assistant";
 import type { PlaceMark } from "./place-cards";
 import { ConversationSearch } from "./conversation-search";
@@ -43,7 +45,7 @@ export default async function AiPage({ searchParams }: { searchParams: Promise<{
   // after it (below), never before.
   const householdId = membership.household.id;
   const welcoming = welcome === "1";
-  const [entitlement, voiceEntitlement, voiceSettings, members, speechKey, gate, openSessionId, knownPlaces, activities] = await Promise.all([
+  const [entitlement, voiceEntitlement, voiceSettings, members, speechKey, gate, openSessionId, knownPlaces, activities, keyAlerts] = await Promise.all([
     may(supabase, householdId, "conversation.text"),
     may(supabase, householdId, "conversation.voice"),
     loadVoiceSettings(supabase, householdId),
@@ -54,6 +56,8 @@ export default async function AiPage({ searchParams }: { searchParams: Promise<{
     listHouseholdPlaces(supabase, householdId).catch(() => []),
     // Each child's own classes, for HomeSend's review: a class is picked, not typed (rule 20).
     listActivities(supabase, householdId).catch(() => []),
+    // An AI key a provider stopped taking (2026-10-26): said here, and the live button explains instead of failing.
+    openKeyAlerts(supabase, householdId),
   ]);
   const kids = childrenWithClasses(members, activities);
   // A sustained, hands-free exchange is still voice underneath — gated the
@@ -72,7 +76,12 @@ export default async function AiPage({ searchParams }: { searchParams: Promise<{
   const geminiAvailability = gate.availability;
   // Where it is off for a reason this person can change, the picker links straight to it and comes back here.
   const fix = geminiFix(geminiAvailability, { canManage: session.view.permissions.includes("household.manage"), returnTo: "/ai", t: locale.t });
-  const geminiLive = geminiAvailability.available ? { available: true } : { available: false, reason: geminiAvailability.reason, ...(fix ? { fix } : {}) };
+  const voiceKeyAlert = keyAlerts.find((alert) => alert.purpose === "gemini_voice" || (alert.purpose === "assistant" && alert.provider === "google"));
+  const geminiLive = !geminiAvailability.available
+    ? { available: false, reason: geminiAvailability.reason, ...(fix ? { fix } : {}) }
+    : voiceKeyAlert
+      ? { available: false, reason: locale.t(`reminder.aiKey.body.${voiceKeyAlert.kind}` as "reminder.aiKey.body.out_of_credits", { provider: "Google" }) }
+      : { available: true };
   const liveEngine = voiceSettings.liveEngine === "gemini_live" && geminiLive.available ? "gemini_live" : "wonderhome";
 
   let initialMessages: AssistantMessage[] = [];
@@ -115,6 +124,7 @@ export default async function AiPage({ searchParams }: { searchParams: Promise<{
             labels={conversationSearchLabels(locale.t, timeStyle)}
           /> : undefined}
     >
+      <KeyAlertBanner alerts={keyAlerts} manages={session.view.permissions.includes("household.manage")} t={locale.t} className="mx-4 mt-2 sm:mx-0" />
       {welcomeWords ? (
         <WelcomeVoice householdId={membership.household.id} texts={welcomeWords} serverVoice={serverVoice} language={voiceSettings.language} label={locale.t("welcome.listen")} />
       ) : null}
