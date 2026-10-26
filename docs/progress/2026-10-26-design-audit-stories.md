@@ -51,6 +51,10 @@ Help: Connections ¶3 (WhatsApp) in all eight languages, covering the bare list,
 - `npm run eval -- --utterance "Add milk, eggs, bread to the shopping list"` → "How much of each should I add? …".
 - On the live database, the catalog search was checked: it matches "milk", "bread" and "eggs" as items, and "asmi" only inside "Jasmine".
 
+## Acceptance tests
+
+Afterwards the owner asked for extensive tests with expected results written first, including combinations of the approval settings. There are 174 acceptance cases (AT-A to AT-K), and all pass. Three failures came up while writing them; all three were mistakes in the tests, and none was a product defect. Report: `docs/testing/2026-10-26-hometalk-homesend-acceptance.md`.
+
 ## Open
 
 - **14-050:** HomeTalk offering, unprompted, to fill in waiting items needs the owner's yes, because it starts a conversation.

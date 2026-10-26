@@ -206,6 +206,7 @@ To measure: `updated_at - created_at` on `home_send_items`, and `hometalk_channe
 ## 11. Testing and watching
 
 - **Unit tests:** routing (`whatsapp-intake.test.ts`), clarify, completeness, confirmation, key alerts.
+- **Acceptance tests** (AT-A to AT-K, 174 cases, each with its expected result written in advance, across combinations of the approval settings): `docs/testing/2026-10-26-hometalk-homesend-acceptance.md`.
 - **`npm run eval`:** release gates block CI; Unsafe Action Rate stays 0. Every new question type has an eval case.
 - **Signed-in E2E** against the live project (`e2e/screens.spec.ts`): the % and its reason, the key-alert banner, the Settings bar, the review's "Still needed".
 - **Metrics:** HomeSend correction rate by kind, auto-added vs confirmed, failed-safely reasons, WhatsApp events (question answered, clarification asked or answered).
