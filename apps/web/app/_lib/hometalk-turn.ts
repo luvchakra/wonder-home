@@ -11,7 +11,7 @@ import { consume, may } from "@wonderhome/core/billing/repository";
 import { forgetHouseholdContext, householdContext, householdMemory, type HouseholdContext } from "@wonderhome/core/conversation/brain";
 import { personItems, type PersonLike } from "@wonderhome/core/context/builders";
 import { converse, pendingFrom, previewOf, PROPOSAL_TTL_MINUTES, resolveDeterministicIntent, type ConversationTurn, type RuntimeContext, type Understanding } from "@wonderhome/core/conversation/engine";
-import { canExecute, executeIntent, notYetDoable, undoExecuted, zonedTimeToUtcIso, type ExecutionContext } from "@wonderhome/core/conversation/executor";
+import { canExecute, executeIntent, failedReply, notYetDoable, undoExecuted, zonedTimeToUtcIso, type ExecutionContext } from "@wonderhome/core/conversation/executor";
 import { isUndo } from "@wonderhome/core/conversation/consent";
 import { UNDO_LINE, warmReply, warmUndo } from "@wonderhome/core/conversation/warmth";
 import { loadConfirmRequested } from "@wonderhome/core/conversation/consent-repository";
@@ -712,7 +712,7 @@ async function turnInEnglish(input: HomeTalkInput, speaking: Speaking) {
       if (turn.memory) await remember(admin, householdId, attributeMemory(turn.memory, people), { memberId: membership.memberId, displayName: membership.displayName });
       if (turn.proposal.kind === "executed") {
         const done = await executeIntent(turn.intent, execution);
-        text = done.ok ? done.text : `I tried, and it did not go through: ${done.reason}`;
+        text = done.ok ? done.text : failedReply(done);
         outcome = done.ok ? { status: "executed", result: done.result } : { status: "failed", result: { reason: done.reason } };
         partOutcome = done.ok ? "done" : "failed";
         if (done.ok) {
@@ -1125,7 +1125,7 @@ async function turnInEnglish(input: HomeTalkInput, speaking: Speaking) {
   } else if (result.kind === "reply" && result.proposal.kind === "executed") {
     if (result.memory) await remember(admin, householdId, attributeMemory(result.memory, people), { memberId: membership.memberId, displayName: membership.displayName });
     const done = await executeIntent(result.intent, execution);
-    text = done.ok ? done.text : `I tried, and it did not go through: ${done.reason}`;
+    text = done.ok ? done.text : failedReply(done);
     // What the executor asked next — HomeTalk's question about a HomeSend item — stays open for the next turn.
     if (done.ok && isIntakeQuestion(done.result.clarify)) followUp = done.result.clarify;
     outcome = done.ok ? { status: "executed", result: done.result } : { status: "failed", result: { reason: done.reason } };
@@ -1381,7 +1381,7 @@ async function carryOutApproved(input: {
   if (done.ok) forgetHouseholdContext(input.householdId);
 
   return {
-    text: done.ok ? warmReply(done.text, { action: intent.action, proposal: "executed", ok: true }) : `I have your go-ahead, and it did not go through: ${done.reason}`,
+    text: done.ok ? warmReply(done.text, { action: intent.action, proposal: "executed", ok: true }) : failedReply(done, "I have your go-ahead, and it did not go through"),
     action: { ...input.action, status, ...(done.ok && unchangedResult(done.result) ? { unchanged: true } : {}) },
     focus: done.ok ? focusFromResult(intent.action, done.result, new Date().toISOString()) : [],
   };
