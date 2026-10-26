@@ -37,7 +37,8 @@ export default async function ResponsibilitiesPage({ searchParams }: { searchPar
   // A responsibility opened from elsewhere (Family status) always lands on
   // "all", whatever tab param it might otherwise carry — the outcome could
   // belong to any member, not just this viewer.
-  const active = outcome ? "all" : tab === "mine" || tab === "family" ? tab : "all";
+  // Two tabs (the owner, 2026-10-26: "All" already covers what "Family" showed); an old ?tab=family link lands on All.
+  const active = outcome ? "all" : tab === "mine" ? "mine" : "all";
   const shell = { active: "more" as const, viewer, secondary, pathname: "/household/responsibilities", back: { href: "/more", label: t("common.back") }, title: t("nav.item.responsibilities") };
 
   if (view.tone === "child") {
@@ -110,7 +111,7 @@ function renderResponsibilities({
   t: Translate;
   shell: { active: "more"; viewer: Session["viewer"]; secondary: Session["secondary"]; pathname: string; back: { href: string; label: string }; title: string };
   membership: Session["membership"];
-  active: "all" | "mine" | "family";
+  active: "all" | "mine";
   /** Who the list is grouped under: the person who owns each outcome, or its area. */
   grouping: "person" | "outcome";
   responsibilityRows: { data: unknown; failed: boolean };
@@ -125,7 +126,7 @@ function renderResponsibilities({
   const rows = ((responsibilityRows.data as Row[] | null) ?? []).map((row) => ({ ...row, ai_mode: asAutonomyMode(row.ai_mode) }));
   const nameOf = (id: string | null) => members.find((member) => member.id === id)?.displayName ?? null;
   const isMine = (row: Row) => row.primary_member_id === membership.memberId || row.backup_member_id === membership.memberId;
-  const shown = rows.filter((row) => (active === "mine" ? isMine(row) : active === "family" ? row.primary_member_id !== membership.memberId : true));
+  const shown = active === "mine" ? rows.filter(isMine) : rows;
   const gaps = rows.filter((row) => !row.primary_member_id);
 
   // Outcomes the household has already described, plus starters it has not —
@@ -200,7 +201,6 @@ function renderResponsibilities({
           segments={[
             { key: "all", label: t("manage.resp.tab.all"), href: listHref({ group: groupParam }), count: rows.length },
             { key: "mine", label: t("manage.resp.tab.mine"), href: listHref({ tab: "mine", group: groupParam }), count: rows.filter(isMine).length },
-            { key: "family", label: t("manage.resp.tab.family"), href: listHref({ tab: "family", group: groupParam }) },
           ]}
         />
 

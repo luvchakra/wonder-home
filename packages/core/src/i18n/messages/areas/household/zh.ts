@@ -124,7 +124,6 @@ export const householdZh: AreaCatalog<typeof householdEn> = {
   "manage.resp.whose": "谁的职责",
   "manage.resp.tab.all": "全部",
   "manage.resp.tab.mine": "我的",
-  "manage.resp.tab.family": "家人",
   "manage.resp.groupBy": "分组方式",
   "manage.resp.group.person": "按人",
   "manage.resp.group.outcome": "按结果",

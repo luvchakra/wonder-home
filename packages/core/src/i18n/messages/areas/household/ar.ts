@@ -132,7 +132,6 @@ export const householdAr: AreaCatalog<typeof householdEn> = {
   "manage.resp.whose": "مسؤوليات من",
   "manage.resp.tab.all": "الكل",
   "manage.resp.tab.mine": "مسؤولياتي",
-  "manage.resp.tab.family": "العائلة",
   "manage.resp.groupBy": "تجميع حسب",
   "manage.resp.group.person": "الشخص",
   "manage.resp.group.outcome": "النتيجة",

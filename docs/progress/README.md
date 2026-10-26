@@ -11,6 +11,7 @@ decision that shapes later work each earns a note, written before moving on.
 
 | Date | Note |
 |---|---|
+| 2026-10-26 | [Guards against code that doesn't know live data; the nightly E2E made green](2026-10-26-live-data-guards-and-nightly.md) |
 | 2026-10-26 | [Autonomy: two modes instead of four](2026-10-26-two-autonomy-modes.md) |
 | 2026-10-26 | [Responsibilities: group by, group cards, and one autonomy choice per group](2026-10-26-responsibilities-groups-and-autonomy.md) |
 | 2026-10-26 | [Branch sync: why squash merges kept conflicting, and the fix](2026-10-26-branch-sync.md) |
