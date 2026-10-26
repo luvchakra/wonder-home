@@ -34,6 +34,7 @@ create index ai_key_alerts_last_seen_idx on public.ai_key_alerts (last_seen_at d
 
 alter table public.ai_key_alerts enable row level security;
 revoke all on public.ai_key_alerts from anon, authenticated;
+create policy ai_key_alerts_no_client_access on public.ai_key_alerts for all to anon, authenticated using (false) with check (false);
 
 -- Record a refusal: a new open alert, or one more on the open one.
 create or replace function public.record_ai_key_alert(p_fingerprint text, p_provider text, p_kind text)
@@ -77,7 +78,7 @@ as $$
     select 'gemini_voice'::text, v.api_key from public.household_gemini_voice_credentials v where v.household_id = p_household_id
   ) k
   join public.ai_key_alerts a
-    on a.key_fingerprint = encode(extensions.digest(k.api_key, 'sha256'), 'hex')
+    on a.key_fingerprint = encode(pg_catalog.sha256(convert_to(k.api_key, 'UTF8')), 'hex')
    and a.resolved_at is null;
 $$;
 
@@ -93,10 +94,10 @@ as $$
     select key_fingerprint from public.ai_key_alerts where last_seen_at >= p_since limit 200
   )
   select c.household_id from public.household_ai_credentials c
-    join changed on changed.key_fingerprint = encode(extensions.digest(c.api_key, 'sha256'), 'hex')
+    join changed on changed.key_fingerprint = encode(pg_catalog.sha256(convert_to(c.api_key, 'UTF8')), 'hex')
   union
   select v.household_id from public.household_gemini_voice_credentials v
-    join changed on changed.key_fingerprint = encode(extensions.digest(v.api_key, 'sha256'), 'hex');
+    join changed on changed.key_fingerprint = encode(pg_catalog.sha256(convert_to(v.api_key, 'UTF8')), 'hex');
 $$;
 
 revoke all on function public.record_ai_key_alert(text, text, text) from public, anon, authenticated;
