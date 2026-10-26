@@ -28,7 +28,15 @@ export const WHATSAPP_EVENT_KINDS = [
   "question_redirected",
   "question_answered",
   "clarification_answered",
+  "typing_shown",
+  "typing_failed",
 ] as const;
+/**
+ * Kinds whose migration may land after the code that writes them
+ * (`20261026200000_whatsapp_typing_events.sql`): until it does, a batch that
+ * the database refuses is written again without them.
+ */
+const NEWEST_KINDS: readonly WhatsAppEventKind[] = ["typing_shown", "typing_failed"];
 export type WhatsAppEventKind = (typeof WHATSAPP_EVENT_KINDS)[number];
 
 export type WhatsAppEvent = { kind: WhatsAppEventKind; householdId?: string | null; latencyMs?: number | null };
@@ -36,12 +44,19 @@ export type WhatsAppEvent = { kind: WhatsAppEventKind; householdId?: string | nu
 /** Best effort: telemetry never costs a person their message. */
 export async function recordWhatsAppEvents(admin: SupabaseClient, events: readonly WhatsAppEvent[]): Promise<void> {
   if (events.length === 0) return;
-  const { error } = await admin.from("whatsapp_events").insert(
-    events.map((event) => ({
-      kind: event.kind,
-      household_id: event.householdId ?? null,
-      latency_ms: event.latencyMs == null ? null : Math.max(0, Math.min(3_600_000, Math.round(event.latencyMs))),
-    })),
-  );
+  const insert = (batch: readonly WhatsAppEvent[]) =>
+    admin.from("whatsapp_events").insert(
+      batch.map((event) => ({
+        kind: event.kind,
+        household_id: event.householdId ?? null,
+        latency_ms: event.latencyMs == null ? null : Math.max(0, Math.min(3_600_000, Math.round(event.latencyMs))),
+      })),
+    );
+  let { error } = await insert(events);
+  // 23514: the kind check predates the newest kinds; the rest are still worth keeping.
+  if (error?.code === "23514") {
+    const older = events.filter((event) => !NEWEST_KINDS.includes(event.kind));
+    error = older.length > 0 ? (await insert(older)).error : null;
+  }
   if (error) log.warn("whatsapp events not recorded", { reason: error.code ?? "unknown", allow: ["reason"] });
 }

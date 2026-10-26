@@ -129,6 +129,38 @@ export async function sendWhatsAppText(config: WhatsAppConfig, to: string, text:
   }
 }
 
+/** Marks a person's message read and shows "typing…" on it (Meta's typing indicator). */
+export function typingMessage(messageId: string) {
+  return { messaging_product: "whatsapp", status: "read", message_id: messageId, typing_indicator: { type: "text" } };
+}
+
+/** How long a "typing…" request may take: it is a courtesy, never worth waiting for. */
+export const WHATSAPP_TYPING_TIMEOUT_MS = 4_000;
+
+export type TypingResult = { ok: true } | { ok: false; reason: "refused" | "unavailable" };
+
+/**
+ * Shows "typing…" in the person's chat while WonderHome works on their
+ * message, and marks it read. WhatsApp clears it when the reply arrives, or
+ * after about 25 seconds. Never throws: a failure is a closed word, and the
+ * message is answered all the same.
+ */
+export async function showWhatsAppTyping(config: WhatsAppConfig, messageId: string, fetchImpl: Fetch = config.fetch ?? fetch): Promise<TypingResult> {
+  try {
+    const response = await fetchImpl(`${GRAPH}/${encodeURIComponent(config.phoneNumberId)}/messages`, {
+      method: "POST",
+      headers: { authorization: `Bearer ${config.accessToken}`, "content-type": "application/json" },
+      body: JSON.stringify(typingMessage(messageId)),
+      signal: AbortSignal.timeout(WHATSAPP_TYPING_TIMEOUT_MS),
+    });
+    const body = (await response.json().catch(() => null)) as { success?: unknown } | null;
+    if (response.ok && body?.success === true) return { ok: true };
+    return { ok: false, reason: response.status === 429 || response.status >= 500 ? "unavailable" : "refused" };
+  } catch {
+    return { ok: false, reason: "unavailable" };
+  }
+}
+
 export type WhatsAppEnv = {
   adapter: WhatsAppConfig;
   appSecret: string | null;

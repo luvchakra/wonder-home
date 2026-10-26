@@ -184,7 +184,17 @@ authorization channel:
   texts are "The sender added: …", with one reply.
 - **What it never does.** WhatsApp is not a second brain: it decides nothing
   itself, and never touches a domain record except through HomeTalk's gates.
-- **Telemetry.** `whatsapp_events` holds closed words and counts only.
+- **"typing…" while it works.** When a linked member's message is picked up,
+  `showWhatsAppTyping` (`notifications/whatsapp.ts`) sends Meta's typing
+  indicator (`status: "read"`, `typing_indicator: {type: "text"}` on the
+  incoming wamid): blue ticks, and "typing…" until the reply or about 25 s.
+  The burst's first message's run shows it before the burst wait, once per
+  burst, never for an unknown sender, a connect code or an answered row; it
+  is shown once more after `TYPING_REFRESH_MS` only while the run still
+  works, and never after the reply or a failure. Never awaited: a slow or
+  refused request never delays the reply (`typing_shown` / `typing_failed`).
+- **Telemetry.** `whatsapp_events` holds closed words and counts only; a
+  reply's `latency_ms` runs from WhatsApp's time on the message to the reply.
 - **Screens.** `/settings/whatsapp` is the one place a number is
   connected or disconnected. "I've sent the message" only looks again,
   and the confirmation is shown from the server's own link, never from

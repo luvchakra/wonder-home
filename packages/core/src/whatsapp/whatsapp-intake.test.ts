@@ -33,14 +33,22 @@ async function sign(body: string, secret = SECRET) {
   return `sha256=${[...new Uint8Array(signature)].map((b) => b.toString(16).padStart(2, "0")).join("")}`;
 }
 
-function replies() {
+function replies(options: { typing?: "ok" | "refused" | "throws" } = {}) {
   const sent: { to: string; text: string }[] = [];
+  /** Every "typing…" request, in order, kept apart from the replies. */
+  const typing: Record<string, unknown>[] = [];
   const fetchImpl = (async (_url: string, init: RequestInit) => {
-    const body = JSON.parse(init.body as string) as { to: string; text: { body: string } };
+    const body = JSON.parse(init.body as string) as { to: string; text: { body: string }; typing_indicator?: unknown };
+    if (body.typing_indicator) {
+      typing.push(body);
+      if (options.typing === "throws") throw new TypeError("fetch failed");
+      if (options.typing === "refused") return new Response(JSON.stringify({ error: { code: 100 } }), { status: 400 });
+      return new Response(JSON.stringify({ success: true }), { status: 200 });
+    }
     sent.push({ to: body.to, text: body.text.body });
     return new Response(JSON.stringify({ messages: [{ id: `wamid.reply${sent.length}` }] }), { status: 200 });
   }) as unknown as typeof fetch;
-  return { sent, fetchImpl };
+  return { sent, typing, fetchImpl };
 }
 
 /** fakeSupabase, plus the two RPCs intake calls: the rate limiter and the atomic link. */
@@ -382,6 +390,28 @@ describe("processing into HomeSend", () => {
       expect(h.tables.home_send_items![0]).toMatchObject({ source: "whatsapp_media", classified_kind: "school_item" });
     });
 
+    // The owner, 2026-10-26 20:20 IST: "Show me the to buy shopping cart for groceries" became a HomeSend item, "Not sure yet".
+    it("a spoken question that mentions buying is answered by HomeTalk at the everyday bar, never filed in HomeSend", async () => {
+      // Expected: Gemini's 0.8 clears the everyday bar for a question; HomeTalk is asked as speech; no HomeSend item.
+      const { h, id } = await receivedVoice();
+      const asked: string[] = [];
+      const { deps, out } = voice("Show me the to buy shopping cart for groceries", 0.8, { ask: async ({ text }) => (asked.push(text), "Here is your shopping list.") });
+      expect(await processWhatsAppMessage(h.client, id, deps)).toBe("read");
+      expect(asked).toEqual(["Show me the to buy shopping cart for groceries"]);
+      expect(h.tables.home_send_items ?? []).toEqual([]);
+      expect(out.sent.map((sent) => sent.text)).toEqual(["Here is your shopping list."]);
+    });
+
+    it("an instruction to buy, heard at 0.8, still waits in HomeSend to be checked", async () => {
+      // Expected: not a question → the buying bar (0.9) holds; HomeTalk is never asked.
+      const { h, id } = await receivedVoice();
+      const asked: string[] = [];
+      const { deps } = voice("buy two litres of milk", 0.8, { ask: async ({ text }) => (asked.push(text), "should not be asked") });
+      await processWhatsAppMessage(h.client, id, deps);
+      expect(asked).toEqual([]);
+      expect(h.tables.home_send_items).toHaveLength(1);
+    });
+
     it("heard unsurely, it is checked in HomeSend, never sent to HomeTalk", async () => {
       const { h, id } = await receivedVoice();
       const asked: string[] = [];
@@ -717,6 +747,145 @@ describe("processing into HomeSend", () => {
     expect((item.understanding as { safety: { instructionsIgnored: boolean } }).safety.instructionsIgnored).toBe(true);
     const written = Object.entries(h.tables).filter(([, rows]) => rows.length > 0).map(([table]) => table).sort();
     expect(written).toEqual(["home_send_items", "jobs", "whatsapp_events", "whatsapp_identities", "whatsapp_messages"]);
+  });
+});
+
+describe("\"typing…\" while WonderHome works", () => {
+  const classify: IngestDeps["classify"] = async () => ({
+    readable: true, kind: "school_item", title: "Sports Day", notes: null, billKind: null, payee: null, amount: null, currency: null, dueDate: "2026-09-25",
+    schoolKind: "event", subject: null, quantity: null, unit: null, category: null, healthRecordType: null, documentDate: null, dateText: "tomorrow",
+    merchant: null, lines: [], subjectMemberName: null, summary: "Sports Day is tomorrow.", people: [], facts: [], needs: [], change: "new", confidence: "high", secondary: null,
+  });
+  const tick = (ms = 0) => new Promise<void>((resolve) => setTimeout(resolve, ms));
+
+  async function linkedText(text = TEXT.text.body) {
+    const h = harness({ linked: true });
+    await receiveWhatsAppMessages(h.client, readInboundMessages(JSON.parse(delivery([{ ...TEXT, text: { body: text } }]))), { config: CONFIG, fetch: replies().fetchImpl });
+    const row = h.tables.whatsapp_messages![0]!;
+    Object.assign(row, { identity: { phone_number: `+${PRIYA}`, status: "active" }, attempts: 0, processing_status: "received", acknowledged_at: null, homesend_item_id: null });
+    return { h, id: row.id as string };
+  }
+
+  it("marks the message read and shows typing with Meta's exact body, before the wait for the rest", async () => {
+    // Expected: one POST to /1098765/messages, {messaging_product, status: "read", message_id: the incoming wamid, typing_indicator: {type: "text"}}, sent before the burst wait.
+    const { h, id } = await linkedText();
+    const out = replies();
+    const order: string[] = [];
+    const urls: string[] = [];
+    const fetchImpl = (async (url: string, init: RequestInit) => {
+      urls.push(url);
+      if ((JSON.parse(init.body as string) as { typing_indicator?: unknown }).typing_indicator) order.push("typing");
+      return out.fetchImpl(url, init);
+    }) as unknown as typeof fetch;
+    const sleep = async () => void order.push("wait");
+    expect(await processWhatsAppMessage(h.client, id, { config: CONFIG, fetch: fetchImpl, ingest: { classify }, sleep, now: () => new Date(1790000002 * 1000) })).toBe("read");
+    expect(out.typing).toEqual([{ messaging_product: "whatsapp", status: "read", message_id: "wamid.T1", typing_indicator: { type: "text" } }]);
+    expect(urls[0]).toBe("https://graph.facebook.com/v21.0/1098765/messages");
+    expect(order.slice(0, 2)).toEqual(["typing", "wait"]);
+    expect(out.sent).toHaveLength(1);
+    expect(h.tables.whatsapp_events!.map((event) => event.kind)).toContain("typing_shown");
+  });
+
+  it("is shown once for a burst, by the first message's run, whichever run reads it", async () => {
+    // Expected: two messages sent together, two runs at once → exactly one typing request, on the first message, and one reply.
+    const { h, id } = await linkedText("Dear parents, the exam is at 9.30");
+    Object.assign(h.tables.whatsapp_messages![0]!, { forwarded: true, received_at: "2026-10-24T02:32:55.000Z", created_at: "2026-10-24T02:32:57.000Z" });
+    h.tables.whatsapp_messages!.push({
+      id: "m-note", household_id: HOUSEHOLD, member_id: MEMBER, provider_message_id: "wamid.note", message_type: "text", text_content: "asmi Karate Sunday", forwarded: false,
+      received_at: "2026-10-24T02:32:55.000Z", created_at: "2026-10-24T02:32:58.000Z", processing_status: "received", attempts: 0, homesend_item_id: null, acknowledged_at: null, identity: { phone_number: `+${PRIYA}`, status: "active" },
+    });
+    const out = replies();
+    const deps = { config: CONFIG, fetch: out.fetchImpl, ingest: { classify }, now: () => new Date("2026-10-24T02:33:30.000Z") };
+    const results = await Promise.all([processWhatsAppMessage(h.client, "m-note", deps), processWhatsAppMessage(h.client, id, deps)]);
+    expect([...results].sort()).toEqual(["read", "skipped"]);
+    expect(out.typing.map((body) => body.message_id)).toEqual(["wamid.T1"]);
+    expect(out.sent).toHaveLength(1);
+  });
+
+  it("is never shown for an unknown sender or a connect code", async () => {
+    // Expected: zero typing requests; each still gets its one plain reply.
+    for (const [linked, body] of [[false, "Hello"], [false, "CONNECT ABCDEFGH23"], [true, "CONNECT ABCDEFGH23"]] as const) {
+      const h = harness({ linked });
+      const out = replies();
+      await receiveWhatsAppMessages(h.client, readInboundMessages(JSON.parse(delivery([{ ...TEXT, text: { body } }]))), { config: CONFIG, fetch: out.fetchImpl });
+      expect(out.typing).toEqual([]);
+      expect(out.sent).toHaveLength(1);
+      expect(h.tables.whatsapp_messages).toEqual([]);
+    }
+  });
+
+  it("is never shown for a message already answered", async () => {
+    // Expected: a retried run of an acknowledged row sends no typing and no second reply.
+    const { h, id } = await linkedText();
+    Object.assign(h.tables.whatsapp_messages![0]!, { attempts: 1, processing_status: "failed", acknowledged_at: "2026-10-24T02:33:00.000Z" });
+    const out = replies();
+    await processWhatsAppMessage(h.client, id, { config: CONFIG, fetch: out.fetchImpl, ingest: { classify } });
+    expect(out.typing).toEqual([]);
+    expect(out.sent).toEqual([]);
+  });
+
+  it.each([["refused", "refused"], ["unreachable", "throws"]] as const)("a typing request WhatsApp %s still gets the reply out, and says only that it failed", async (_label, typing) => {
+    // Expected: "read", one reply, a typing_failed event, and nothing thrown.
+    const { h, id } = await linkedText();
+    const out = replies({ typing });
+    expect(await processWhatsAppMessage(h.client, id, { config: CONFIG, fetch: out.fetchImpl, ingest: { classify } })).toBe("read");
+    expect(out.typing).toHaveLength(1);
+    expect(out.sent).toHaveLength(1);
+    expect(out.sent[0]!.text).toMatch(/Got it/);
+    expect(h.tables.whatsapp_events!.map((event) => event.kind)).toContain("typing_failed");
+  });
+
+  it("a typing request that never answers never holds the reply", async () => {
+    // Expected: the reply is sent while the typing request is still pending.
+    const { h, id } = await linkedText();
+    const out = replies();
+    const fetchImpl = (async (url: string, init: RequestInit) =>
+      (JSON.parse(init.body as string) as { typing_indicator?: unknown }).typing_indicator ? new Promise<Response>(() => undefined) : out.fetchImpl(url, init)) as unknown as typeof fetch;
+    expect(await processWhatsAppMessage(h.client, id, { config: CONFIG, fetch: fetchImpl, ingest: { classify } })).toBe("read");
+    expect(out.sent).toHaveLength(1);
+  });
+
+  it("is shown once more only while HomeTalk is still working", async () => {
+    // Expected: a slow answer (past the refresh) → two typing requests then the reply; a quick one → one, and none after it.
+    const slow = await linkedText("add milk to the list");
+    const slowOut = replies();
+    const slowAsk = async () => {
+      await tick(40);
+      return "Added milk.";
+    };
+    await processWhatsAppMessage(slow.h.client, slow.id, { config: CONFIG, fetch: slowOut.fetchImpl, ask: slowAsk, typingRefreshMs: 10 });
+    expect(slowOut.typing.map((body) => body.message_id)).toEqual(["wamid.T1", "wamid.T1"]);
+    expect(slowOut.sent).toHaveLength(1);
+
+    const quick = await linkedText("add milk to the list");
+    const quickOut = replies();
+    await processWhatsAppMessage(quick.h.client, quick.id, { config: CONFIG, fetch: quickOut.fetchImpl, ask: async () => "Added milk.", typingRefreshMs: 10 });
+    await tick(40);
+    expect(quickOut.typing).toHaveLength(1);
+    expect(quickOut.sent).toHaveLength(1);
+  });
+
+  it("is never shown again after the run has failed", async () => {
+    // Expected: processing throws → "failed", one typing request, none after.
+    const { h, id } = await linkedText();
+    const out = replies();
+    const result = await processWhatsAppMessage(h.client, id, { config: CONFIG, fetch: out.fetchImpl, ingest: { classify: async () => { throw new Error("provider down"); } }, typingRefreshMs: 10 });
+    await tick(40);
+    expect(["failed", "read"]).toContain(result);
+    expect(out.typing).toHaveLength(1);
+  });
+
+  it("records a reply's latency at the moment it is sent, not when the run began", async () => {
+    // Expected: received 20:19:13, run starts at :17, HomeTalk answers at :40 → latency 27 s, not 4 s.
+    const { h, id } = await linkedText("what's on tomorrow?");
+    h.tables.whatsapp_messages![0]!.received_at = "2026-10-26T14:49:13.000Z";
+    let at = new Date("2026-10-26T14:49:17.000Z");
+    const ask = async () => {
+      at = new Date("2026-10-26T14:49:40.000Z");
+      return "Nothing planned.";
+    };
+    await processWhatsAppMessage(h.client, id, { config: CONFIG, fetch: replies().fetchImpl, ask, now: () => at, sleep: async () => undefined });
+    expect(h.tables.whatsapp_events!.find((event) => event.kind === "question_answered")!.latency_ms).toBe(27_000);
   });
 });
 
