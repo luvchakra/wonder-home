@@ -18,6 +18,7 @@ import { chatHi } from "./areas/chat/hi";
 import { amafHi } from "./areas/amaf/hi";
 import { groceryHi } from "./areas/grocery/hi";
 import { welcomeHi } from "./areas/welcome/hi";
+import { whatsappHi } from "./areas/whatsapp/hi";
 
 export const hi: Catalog = {
   "common.next": "आगे",
@@ -1004,4 +1005,5 @@ export const hi: Catalog = {
   ...memberInviteHi,
   ...groceryHi,
   ...welcomeHi,
+  ...whatsappHi,
 };

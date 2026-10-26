@@ -18,6 +18,7 @@ import { chatMr } from "./areas/chat/mr";
 import { amafMr } from "./areas/amaf/mr";
 import { groceryMr } from "./areas/grocery/mr";
 import { welcomeMr } from "./areas/welcome/mr";
+import { whatsappMr } from "./areas/whatsapp/mr";
 
 export const mr: Catalog = {
   "common.next": "पुढे",
@@ -1004,4 +1005,5 @@ export const mr: Catalog = {
   ...memberInviteMr,
   ...groceryMr,
   ...welcomeMr,
+  ...whatsappMr,
 };

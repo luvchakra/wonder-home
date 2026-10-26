@@ -49,6 +49,32 @@ export function isForHomeTalk(text: string): boolean {
   return line !== null && (isQuestionForWonderHome(line) || REQUEST_OPENING.test(line) || isUndo(line) || REPLY_TO_HOMETALK.test(line));
 }
 
+/**
+ * The names in a bare shopping list sent on its own ("milk, eggs and bread"):
+ * two to eight short names split by commas, "and" or "&", nothing else on the
+ * line. Null for anything else. Whether each is really a grocery is checked
+ * against the catalog (`intake.ts`), so "Asmi, Manan and Kunal" stays content.
+ */
+export function groceryListNames(text: string): string[] | null {
+  const line = shortLine(text);
+  if (!line || line.length > 100 || isForHomeTalk(line)) return null;
+  const names = line
+    .replace(/[.!]+$/, "")
+    .split(/\s*(?:,|&|\band\b|\+)\s*/i)
+    .map((name) => name.trim())
+    .filter(Boolean);
+  if (names.length < 2 || names.length > 8) return null;
+  return names.every((name) => /^[\p{L}][\p{L}' -]*$/u.test(name) && name.split(/\s+/).length <= 3) ? names : null;
+}
+
+/** Whether a catalog entry's name holds every word of what was typed, as whole words ("eggs" in "Eggs, Brown"; never "asmi" in "Jasmine"). */
+export function namesTheSameThing(typed: string, catalogName: string): boolean {
+  const words = (value: string) => value.toLowerCase().split(/[^\p{L}]+/u).filter(Boolean).map((word) => word.replace(/(?:es|s)$/, ""));
+  const have = new Set(words(catalogName));
+  const want = words(typed);
+  return want.length > 0 && want.every((word) => have.has(word));
+}
+
 function shortLine(text: string): string | null {
   const line = text.trim();
   if (!line || line.length > 160 || /\n/.test(line) || /https?:\/\/|www\./i.test(line)) return null;

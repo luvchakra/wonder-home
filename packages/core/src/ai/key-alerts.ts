@@ -12,7 +12,8 @@ import type { ModelProvider } from "./model-key";
  * of credits, out of quota, not valid) is recorded by the key's fingerprint in
  * `ai_key_alerts`; a call that works resolves it. The notice pass
  * (`notices.ts` `aiKeyNotices`) matches fingerprints to the household's own
- * keys and tells an Admin, by email too.
+ * keys and tells an Admin, by email too; an alert on the platform's own key goes
+ * to the platform admins (`platform-key-alert.ts`).
  *
  * No provider tells an app a key's balance before it runs out, so this tells
  * the household at the first refusal, not before. It never throws and never

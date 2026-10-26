@@ -1,16 +1,21 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 
 import { auditChange } from "../api/audit";
+import { searchWords } from "../commerce/catalog-curated";
+import { parseHouseholdSettings, parseMemberChoices, resolvePreferences } from "../i18n/preferences";
+import { en } from "../i18n/messages/en";
+import { translator, translatorFor, type Translate, type TranslationKey } from "../i18n/translate";
 import { openIntakeQuestion } from "../hometalk/intake-questions";
 import { enqueueClassifyRetry, type ClaimedJob, type JobHandler } from "../homesend/retry-queue";
 import { gateTranscript } from "../homesend/audio";
+import { sureClause, type AddedOnItsOwn } from "../homesend/auto-add";
 import { hearWhatsAppVoiceNote, ingestWhatsAppMedia, ingestWhatsAppText, IngestRejected, type IngestDeps, type IngestOutcome, type TranscribeResult } from "../homesend/ingest";
 import { FAILURE_REASON_COPY } from "../homesend/items";
 import { sendWhatsAppText, type WhatsAppConfig } from "../notifications/whatsapp";
 import { log } from "../observability/logger";
 import { hitRateLimit } from "../security/rate-limit";
 import { recordWhatsAppEvents, type WhatsAppEvent } from "./events";
-import { isForHomeTalk, isQuestionForWonderHome } from "./hometalk";
+import { groceryListNames, isForHomeTalk, isQuestionForWonderHome, namesTheSameThing } from "./hometalk";
 import type { WhatsAppInboundMessage, WhatsAppMessageType } from "./inbound";
 import { completeLink, findActiveIdentity, LINK_REPLIES, readConnectCode, UNKNOWN_SENDER_REPLY } from "./linking";
 import { downloadWhatsAppMedia, type MediaDownload } from "./media";
@@ -62,7 +67,7 @@ export type WhatsAppIntakeDeps = {
    * person. WhatsApp itself never confirms anything: the household decided
    * this in advance (the owner, 2026-10-26).
    */
-  addOnItsOwn?: (input: { householdId: string; memberId: string; itemId: string }) => Promise<{ title: string; where: string } | null>;
+  addOnItsOwn?: (input: { householdId: string; memberId: string; itemId: string }) => Promise<AddedOnItsOwn | null>;
 };
 
 export type ReceiveOutcome = { linked: number; queued: string[]; duplicates: number; unknown: number };
@@ -201,6 +206,9 @@ export async function processWhatsAppMessage(admin: SupabaseClient, messageId: s
     events.push({ kind: sent.ok ? "ack_sent" : "ack_failed", householdId: row.household_id });
     if (sent.ok) await admin.from("whatsapp_messages").update({ acknowledged_at: now.toISOString() }).eq("id", row.id);
   };
+  // WonderHome's own words on WhatsApp, in the member's language (14-047); HomeTalk's answers come translated already.
+  let wordsRead: Promise<Translate> | null = null;
+  const words = () => (wordsRead ??= memberWords(admin, row.household_id, row.member_id));
   const settle = async (patch: Record<string, unknown>) => {
     await admin.from("whatsapp_messages").update(patch).eq("id", row.id);
   };
@@ -244,7 +252,7 @@ export async function processWhatsAppMessage(admin: SupabaseClient, messageId: s
     events.push({ kind: "unsupported_type", householdId: row.household_id });
     await settle({ processing_status: "ignored" });
     await settleBurst({ processing_status: "received" });
-    await say(UNSUPPORTED_REPLY);
+    await say((await words())("whatsapp.unsupported"));
     await recordWhatsAppEvents(admin, events);
     return "read";
   }
@@ -260,7 +268,7 @@ export async function processWhatsAppMessage(admin: SupabaseClient, messageId: s
     if (await homeTalkAwaitsAnswer(admin, row, now).catch(() => false)) {
       const answer = await deps.ask({ householdId: row.household_id, memberId: row.member_id, text: row.text_content, requestId: row.provider_message_id }).catch(() => null);
       if (answer) {
-        events.push({ kind: "question_answered", householdId: row.household_id });
+        events.push({ kind: "clarification_answered", householdId: row.household_id, latencyMs: now.getTime() - new Date(row.received_at).getTime() });
         await settle({ processing_status: "ignored" });
         await say(answer);
         await recordWhatsAppEvents(admin, events);
@@ -278,11 +286,26 @@ export async function processWhatsAppMessage(admin: SupabaseClient, messageId: s
     const answer = deps.ask
       ? await deps.ask({ householdId: row.household_id, memberId: row.member_id, text, requestId: row.provider_message_id }).catch(() => null)
       : null;
-    events.push({ kind: answer ? "question_answered" : "question_redirected", householdId: row.household_id });
+    events.push({ kind: answer ? "question_answered" : "question_redirected", householdId: row.household_id, latencyMs: now.getTime() - new Date(row.received_at).getTime() });
     await settle({ processing_status: "ignored" });
-    await say(answer ?? QUESTION_REPLY);
+    await say(answer ?? (await words())("whatsapp.questionReply"));
     await recordWhatsAppEvents(admin, events);
     return "read";
+  }
+
+  // A bare shopping list sent on its own ("milk, eggs and bread", design §13.4) is a request to add
+  // them: HomeTalk adds them and asks the amounts in one question, never one HomeSend item per need.
+  const ask = deps.ask;
+  const listed = !together && ask && !row.forwarded && text ? groceryListNames(text) : null;
+  if (ask && listed && (await allGroceries(admin, listed))) {
+    const answer = await ask({ householdId: row.household_id, memberId: row.member_id, text: `Add ${listed.join(", ")} to the shopping list`, requestId: row.provider_message_id }).catch(() => null);
+    if (answer) {
+      events.push({ kind: "question_answered", householdId: row.household_id, latencyMs: now.getTime() - new Date(row.received_at).getTime() });
+      await settle({ processing_status: "ignored" });
+      await say(answer);
+      await recordWhatsAppEvents(admin, events);
+      return "read";
+    }
   }
 
   // A voice note is written down first, then read exactly like a typed
@@ -315,9 +338,9 @@ export async function processWhatsAppMessage(admin: SupabaseClient, messageId: s
             ? await deps.ask({ householdId: row.household_id, memberId: row.member_id, text: spoken, requestId: row.provider_message_id, spoken: { confidence: gate.confidence } }).catch(() => null)
             : null;
           if (answer || forHomeTalk) {
-            events.push({ kind: answer ? "question_answered" : "question_redirected", householdId: row.household_id });
+            events.push({ kind: !answer ? "question_redirected" : forHomeTalk ? "question_answered" : "clarification_answered", householdId: row.household_id, latencyMs: now.getTime() - new Date(row.received_at).getTime() });
             await settle({ processing_status: "ignored" });
-            await say(answer ?? QUESTION_REPLY);
+            await say(answer ?? (await words())("whatsapp.questionReply"));
             await recordWhatsAppEvents(admin, events);
             return "read";
           }
@@ -341,7 +364,7 @@ export async function processWhatsAppMessage(admin: SupabaseClient, messageId: s
         if (file.reason === "too_large") {
           await settle({ processing_status: "failed", failure_reason: "too_large" });
           events.push({ kind: "message_failed", householdId: row.household_id });
-          await say("That file is too large for WonderHome — please send one under 10MB.");
+          await say((await words())("whatsapp.tooLarge"));
           await recordWhatsAppEvents(admin, events);
           return "read";
         }
@@ -392,16 +415,17 @@ export async function processWhatsAppMessage(admin: SupabaseClient, messageId: s
   // the owner 2026-10-26). HomeSend only says what it found.
   const question =
     deps.ask && !outcome.duplicate && outcome.state === "needs_review"
-      ? await openIntakeQuestion(admin, { householdId: row.household_id, memberId: row.member_id, itemId: outcome.itemId, surface: "whatsapp" }).catch(() => null)
+      ? await openIntakeQuestion(admin, { householdId: row.household_id, memberId: row.member_id, itemId: outcome.itemId, surface: "whatsapp", t: await words() }).catch(() => null)
       : null;
-  const ack = acknowledgementFor(outcome, { question });
+  const t = await words();
+  const ack = acknowledgementFor(outcome, { question, t });
   if (ack.asks) events.push({ kind: "clarification_requested", householdId: row.household_id });
   // Nothing left to ask: added now where the household allows it, else the acknowledgement says where it waits.
   const added =
     !ack.asks && !outcome.duplicate && outcome.state !== "failed" && deps.addOnItsOwn
       ? await deps.addOnItsOwn({ householdId: row.household_id, memberId: row.member_id, itemId: outcome.itemId }).catch(() => null)
       : null;
-  await say(added ? addedReply(added) : ack.text);
+  await say(added ? addedReply(added, undefined, t) : ack.text);
   await recordWhatsAppEvents(admin, events);
   return "read";
 }
@@ -420,9 +444,50 @@ export function whatsappJobHandler(deps: WhatsAppIntakeDeps): JobHandler {
  * taken back in HomeSend. Never an amount or a health detail, which are never
  * added on their own anyway.
  */
-export function addedReply(added: { title: string; where: string }, forName?: string): string {
+export function addedReply(added: AddedOnItsOwn, forName?: string, t: Translate = ENGLISH): string {
   const title = shortTitle(added.title) ?? "it";
-  return `Added *${title}*${forName ? ` for ${forName}` : ""} to ${added.where} — your household lets WonderHome add these on its own. You can undo it in HomeSend.`;
+  const sure = t === ENGLISH ? sureClause(added) : sureIn(t, added);
+  return forName ? t("whatsapp.addedFor", { title, name: forName, where: added.where, sure }) : t("whatsapp.added", { title, where: added.where, sure });
+}
+
+const ENGLISH: Translate = translator("en", en);
+
+/** " (97% sure — every detail is in what you sent)", in the member's language. */
+function sureIn(t: Translate, added: AddedOnItsOwn): string {
+  if (typeof added.percent !== "number") return "";
+  const why = added.why ? ` — ${t(`homesend.found.why.${added.why}`)}` : "";
+  return ` (${t("homesend.found.percentSure", { percent: added.percent })}${why})`;
+}
+
+/** The member's language for WonderHome's own words (their choice, else the household's); English when it can't be read. */
+async function memberWords(admin: SupabaseClient, householdId: string, memberId: string): Promise<Translate> {
+  try {
+    const [{ data: household }, { data: member }] = await Promise.all([
+      admin.from("households").select("region, currency, timezone, measurement_system, default_language").eq("id", householdId).maybeSingle(),
+      admin.from("household_members").select("language, date_format, time_format, measurement_system").eq("id", memberId).maybeSingle(),
+    ]);
+    const home = (household ?? {}) as Record<string, unknown>;
+    const preferences = resolvePreferences(parseMemberChoices((member ?? {}) as Record<string, unknown>), parseHouseholdSettings({ ...home, language: home.default_language }));
+    return await translatorFor(preferences.language);
+  } catch {
+    return ENGLISH;
+  }
+}
+
+/** Whether every name is an everyday item in the grocery catalog, by whole words. Unsure (or a failed read) is no. */
+async function allGroceries(admin: SupabaseClient, names: readonly string[]): Promise<boolean> {
+  try {
+    const found = await Promise.all(
+      names.map(async (name) => {
+        const { data, error } = await admin.rpc("search_grocery_catalog_kind", { p_query: searchWords(name), p_limit: 5, p_kind: "item" });
+        if (error) return false;
+        return ((data ?? []) as { name?: string }[]).some((entry) => typeof entry.name === "string" && namesTheSameThing(name, entry.name));
+      }),
+    );
+    return found.every(Boolean);
+  } catch {
+    return false;
+  }
 }
 
 /** How long a question HomeTalk asked on WhatsApp still takes the person's next message as its answer. */
@@ -475,7 +540,8 @@ export async function homeTalkAwaitsAnswer(admin: SupabaseClient, row: Pick<Mess
   // to HomeSend (a fresh forward is never an answer to an older question).
   const about = latest.metadata?.clarify?.action === "complete_homesend_item" ? latest.metadata.clarify.parameters?.itemId : null;
   if (about) return last.homesend_item_id === about;
-  return !last.homesend_item_id && last.message_type === "text";
+  // A voice note HomeTalk answered went to HomeTalk too ("ignored": nothing kept in HomeSend).
+  return !last.homesend_item_id && (last.message_type === "text" || (last.message_type === "audio" && last.processing_status === "ignored"));
 }
 
 /** How close together messages must be to be read as one: a forward and the note typed straight after it. */
@@ -550,10 +616,9 @@ export function withAdded(text: string, added: readonly string[]): string {
   return [text.trim(), ...added.map((note) => `The sender added: ${note}`)].filter(Boolean).join("\n\n");
 }
 
-export const QUESTION_REPLY =
-  "I can't answer questions on WhatsApp yet. Ask HomeTalk in the app: https://home.wonderapps.biz/ai — and send me things to keep here, like a school notice, a bill, a photo or a grocery list.";
+export const QUESTION_REPLY = en["whatsapp.questionReply"];
 
-export const UNSUPPORTED_REPLY = "WonderHome can take text, photos, PDFs, text files and voice notes on WhatsApp for now — that one it can't read yet.";
+export const UNSUPPORTED_REPLY = en["whatsapp.unsupported"];
 
 /**
  * What WonderHome says back once a message is in HomeSend. Short, and never
@@ -562,58 +627,55 @@ export const UNSUPPORTED_REPLY = "WonderHome can take text, photos, PDFs, text f
  * because saying back what was understood is the point.
  * HomeTalk's question about what it still lacks follows, when there is one.
  */
-export function acknowledgementFor(outcome: IngestOutcome, options: { question?: string | null } = {}): { text: string; asks: boolean } {
-  if (outcome.duplicate) return { text: "Got it — that's already in HomeSend.", asks: false };
+export function acknowledgementFor(outcome: IngestOutcome, options: { question?: string | null; t?: Translate } = {}): { text: string; asks: boolean } {
+  const t = options.t ?? ENGLISH;
+  if (outcome.duplicate) return { text: t("whatsapp.ack.duplicate"), asks: false };
   if (outcome.state === "failed") {
-    const why = outcome.failureReason ? FAILURE_REASON_COPY[outcome.failureReason] : "WonderHome couldn't read it.";
-    return { text: `I kept that. ${why} It's in HomeSend under Failed safely.`, asks: false };
+    const reason = outcome.failureReason;
+    const why = reason ? t(`homesend.failure.${reason.replace(/_(\w)/g, (_, letter: string) => letter.toUpperCase())}` as TranslationKey) || FAILURE_REASON_COPY[reason] : t("whatsapp.ack.unreadable");
+    return { text: t("whatsapp.ack.failed", { why }), asks: false };
   }
-  if (outcome.state === "check_transcript") {
-    return { text: "Got it 👍 I'm not sure I heard that voice note right — please check what it says in HomeSend.", asks: false };
-  }
+  if (outcome.state === "check_transcript") return { text: t("whatsapp.ack.checkTranscript"), asks: false };
 
   const extracted = outcome.item.extracted;
-  const closing = "It's waiting in HomeSend for you to check.";
+  const titled = (plain: TranslationKey, withTitle: TranslationKey) => {
+    const title = shortTitle(extracted?.title);
+    return title ? t(withTitle, { title }) : t(plain);
+  };
   let found: string;
   switch (outcome.item.classifiedKind) {
-    case "school_item": {
-      const title = shortTitle(extracted?.title);
-      found = title ? `I found a school item: *${title}*.` : "I found a school item.";
+    case "school_item":
+      found = titled("whatsapp.found.school", "whatsapp.found.schoolTitled");
       break;
-    }
-    case "activity_item": {
-      const title = shortTitle(extracted?.title);
-      found = title ? `I found something for a class outside school: *${title}*.` : "I found something for a class outside school.";
+    case "activity_item":
+      found = titled("whatsapp.found.activity", "whatsapp.found.activityTitled");
       break;
-    }
-    case "event": {
-      const title = shortTitle(extracted?.title);
-      found = title ? `I found an event: *${title}*.` : "I found an event.";
+    case "event":
+      found = titled("whatsapp.found.event", "whatsapp.found.eventTitled");
       break;
-    }
     case "grocery_item": {
       const names = [extracted?.title ?? null, ...(extracted?.needs ?? []).map((need) => need.title)]
         .map((name) => shortTitle(name))
         .filter((name): name is string => Boolean(name));
       const unique = [...new Set(names)].slice(0, 5);
-      found = unique.length > 0 ? `I found groceries: ${unique.join(", ")}.` : "I found something for the grocery list.";
+      found = unique.length > 0 ? t("whatsapp.found.groceries", { names: unique.join(", ") }) : t("whatsapp.found.grocery");
       break;
     }
     case "bill":
-      found = "I found a bill.";
+      found = t("whatsapp.found.bill");
       break;
     case "receipt":
-      found = "I found a receipt.";
+      found = t("whatsapp.found.receipt");
       break;
     case "health_document":
-      found = "I found a health document.";
+      found = t("whatsapp.found.health");
       break;
     default:
-      found = "I kept it, but I couldn't tell what it's about.";
+      found = t("whatsapp.found.unknown");
   }
   // HomeTalk's question about it, worded by HomeTalk (`hometalk/intake-questions.ts`), follows what was found.
-  if (options.question) return { text: `Got it 👍 ${found} ${options.question}`, asks: true };
-  return { text: `Got it 👍 ${found} ${closing}`, asks: false };
+  if (options.question) return { text: `${t("whatsapp.ack.gotIt")} ${found} ${options.question}`, asks: true };
+  return { text: `${t("whatsapp.ack.gotIt")} ${found} ${t("whatsapp.ack.waiting")}`, asks: false };
 }
 
 function shortTitle(value: string | null | undefined): string | null {

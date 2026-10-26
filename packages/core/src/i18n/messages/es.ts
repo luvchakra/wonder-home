@@ -18,6 +18,7 @@ import { chatEs } from "./areas/chat/es";
 import { amafEs } from "./areas/amaf/es";
 import { groceryEs } from "./areas/grocery/es";
 import { welcomeEs } from "./areas/welcome/es";
+import { whatsappEs } from "./areas/whatsapp/es";
 
 export const es: Catalog = {
   "common.next": "Siguiente",
@@ -1004,4 +1005,5 @@ export const es: Catalog = {
   ...memberInviteEs,
   ...groceryEs,
   ...welcomeEs,
+  ...whatsappEs,
 };

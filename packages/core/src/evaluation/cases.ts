@@ -911,6 +911,13 @@ const HOMETALK: HomeTalkCase[] = [
     utterance: "skip",
     expected: { interpretation: "complete_homesend_item", action: "executed" },
   },
+  {
+    id: "HT-155", surface: "hometalk", household: "A", category: "references", actor: "a-kunal",
+    description: "An answer HomeTalk can't read (\"lots\" to \"How much should I get?\") is still an attempt at it: it goes to the item, which asks once more with ways to say it, never read as a new request (design §5).",
+    clarifying: { action: "complete_homesend_item", target: { kind: "unspecified" }, parameters: { itemId: "hs-item-1", kind: "grocery_item", field: "quantity", asked: ["quantity"] }, question: "How much should I get? For example 2 litres or 1 kg.", utterance: "", asked: 1 },
+    utterance: "lots",
+    expected: { interpretation: "complete_homesend_item", action: "executed" },
+  },
   // The owner, 2026-10-26: "Add oil to the groceries" → "coconut oil" met "Coconut oil is already on the shopping
   // list (1 bottle), so there was nothing to add." — "it should ask for quantity". HomeTalk asks how much first.
   {

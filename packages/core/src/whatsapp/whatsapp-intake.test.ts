@@ -5,13 +5,14 @@ import type { IngestDeps, IngestOutcome } from "../homesend/ingest";
 import { fakeSupabase } from "../homesend/testing";
 import { handleWhatsAppWebhook } from "../notifications/whatsapp-webhook";
 import { readInboundMessages } from "./inbound";
-import { isForHomeTalk, isQuestionForWonderHome, whatsappReplyText } from "./hometalk";
-import { memberNamedInReply } from "../hometalk/intake-questions";
+import { groceryListNames, isForHomeTalk, isQuestionForWonderHome, namesTheSameThing, whatsappReplyText } from "./hometalk";
+import { intakeQuestion, memberNamedInReply, questionIn } from "../hometalk/intake-questions";
+import { translatorFor } from "../i18n/translate";
 import { converse, type TurnInput } from "../conversation/engine";
 import { canExecute } from "../conversation/executor";
 import { groundIntent } from "../conversation/grounding";
 import { NO_REFERENCES } from "../conversation/references";
-import { acknowledgementFor, leadOf, processWhatsAppMessage, QUESTION_REPLY, receiveWhatsAppMessages, WHATSAPP_PROCESS_KIND, withAdded, type WhatsAppIntakeDeps } from "./intake";
+import { acknowledgementFor, addedReply, leadOf, processWhatsAppMessage, QUESTION_REPLY, receiveWhatsAppMessages, WHATSAPP_PROCESS_KIND, withAdded, type WhatsAppIntakeDeps } from "./intake";
 import { CONNECT_CODE_LENGTH, connectMessage, generateConnectCode, hashConnectCode, readConnectCode, whatsappBusinessNumber, whatsappChatLink } from "./linking";
 
 /** The WhatsApp HomeSend spec: WhatsApp as an intake channel, never an authorization channel. */
@@ -468,6 +469,58 @@ describe("processing into HomeSend", () => {
     expect(heard).toEqual(["coconut oil"]);
     expect(h.tables.home_send_items).toEqual([]);
     expect(out.sent[0]!.text).toBe("Added *Coconut oil* (2 L) to the shopping list.");
+    expect(h.tables.whatsapp_events!.map((event) => event.kind)).toContain("clarification_answered");
+    expect(h.tables.whatsapp_events!.find((event) => event.kind === "clarification_answered")!.latency_ms).toEqual(expect.any(Number));
+  });
+
+  /** The grocery catalog's everyday items, as `search_grocery_catalog_kind` finds them (by substring, like the real one). */
+  function withCatalog(h: Awaited<ReturnType<typeof received>>["h"], names: readonly string[]) {
+    const rpc = (h.client as unknown as { rpc: (name: string, args: Record<string, unknown>) => Promise<unknown> }).rpc;
+    Object.assign(h.client, {
+      rpc: async (name: string, args: Record<string, unknown>) =>
+        name === "search_grocery_catalog_kind" ? { data: names.filter((entry) => entry.toLowerCase().includes(String(args.p_query))).map((entry) => ({ name: entry })), error: null } : rpc(name, args),
+    });
+  }
+  const CATALOG = ["Milk", "Eggs, Brown", "Eggs, White", "Bread, Brown", "Rice, Jasmine"];
+
+  // Design §13.4: "milk, eggs and bread" is a shopping list, and HomeTalk asks the amounts once.
+  it("a bare shopping list goes to HomeTalk as a request to add the items, never into HomeSend", async () => {
+    const { h, id } = await received("text");
+    h.tables.whatsapp_messages![0]!.text_content = "milk, eggs and bread";
+    withCatalog(h, CATALOG);
+    h.tables.home_send_items = [];
+    const out = replies();
+    const heard: string[] = [];
+    await processWhatsAppMessage(h.client, id, { config: CONFIG, fetch: out.fetchImpl, ingest: { classify }, ask: async ({ text }) => (heard.push(text ?? ""), "How much of each should I add? Milk, Eggs, Bread.") });
+    expect(heard).toEqual(["Add milk, eggs, bread to the shopping list"]);
+    expect(h.tables.home_send_items).toEqual([]);
+    expect(out.sent[0]!.text).toBe("How much of each should I add? Milk, Eggs, Bread.");
+  });
+
+  it("a list of names that aren't groceries stays HomeSend's", async () => {
+    const { h, id } = await received("text");
+    h.tables.whatsapp_messages![0]!.text_content = "Asmi, Manan and Kunal";
+    withCatalog(h, CATALOG);
+    let asks = 0;
+    await processWhatsAppMessage(h.client, id, { config: CONFIG, fetch: replies().fetchImpl, ingest: { classify }, ask: async () => ((asks += 1), "x") });
+    expect(asks).toBe(0);
+  });
+
+  // Design audit 2026-10-26: a voice note HomeTalk answered is HomeTalk's turn too, so the typed answer after it reaches HomeTalk.
+  it("an answer typed after a voice note HomeTalk asked about goes back to HomeTalk", async () => {
+    const { h, id } = await received("text");
+    h.tables.whatsapp_messages![0]!.text_content = "coconut oil";
+    const asked = new Date(Date.now() - 60 * 1000).toISOString();
+    h.tables.whatsapp_messages!.push({ id: "m-ask", household_id: HOUSEHOLD, member_id: MEMBER, provider_message_id: "wamid.ask", message_type: "audio", homesend_item_id: null, received_at: asked, processing_status: "ignored" });
+    h.tables.conversation_sessions = [{ id: "s-wa", household_id: HOUSEHOLD, member_id: MEMBER, surface: "whatsapp", status: "open", created_at: asked }];
+    h.tables.conversation_messages = [
+      { id: "c2", household_id: HOUSEHOLD, session_id: "s-wa", role: "assistant", metadata: { mode: "clarify", proposal: "clarify" }, created_at: new Date(Date.now() - 50 * 1000).toISOString() },
+    ];
+    h.tables.home_send_items = [];
+    const heard: string[] = [];
+    await processWhatsAppMessage(h.client, id, { config: CONFIG, fetch: replies().fetchImpl, ingest: { classify }, ask: async ({ text }) => (heard.push(text ?? ""), "Added *Coconut oil* (2 L) to the shopping list.") });
+    expect(heard).toEqual(["coconut oil"]);
+    expect(h.tables.home_send_items).toEqual([]);
   });
 
   // The owner, 2026-10-26: "coconut oil" met "already on the shopping list, so there was nothing to add" — "it should ask for quantity".
@@ -713,5 +766,51 @@ describe("what WonderHome says back", () => {
   it("says a repeat is already there, and a failure is kept, not lost", () => {
     expect(acknowledgementFor(base("unknown", null, { duplicate: true })).text).toBe("Got it — that's already in HomeSend.");
     expect(acknowledgementFor(base("unknown", null, { state: "failed", failureReason: "unsupported_type" })).text).toMatch(/^I kept that\. WonderHome can't read this kind of file yet\. It's in HomeSend under Failed safely\.$/);
+  });
+});
+
+describe("a bare shopping list on WhatsApp (design §13.4)", () => {
+  it("reads two to eight short names on one line", () => {
+    expect(groceryListNames("milk, eggs and bread")).toEqual(["milk", "eggs", "bread"]);
+    expect(groceryListNames("Milk & curd.")).toEqual(["Milk", "curd"]);
+    expect(groceryListNames("milk")).toBeNull();
+    expect(groceryListNames("add milk, eggs and bread")).toBeNull();
+    expect(groceryListNames("Sports day on Saturday, bring white shoes and a cap")).toBeNull();
+    expect(groceryListNames("milk, eggs\nbread")).toBeNull();
+  });
+
+  it("matches a catalog name by whole words only", () => {
+    expect(namesTheSameThing("eggs", "Eggs, Brown")).toBe(true);
+    expect(namesTheSameThing("egg", "Eggs, Brown")).toBe(true);
+    expect(namesTheSameThing("brown bread", "Bread, Brown")).toBe(true);
+    expect(namesTheSameThing("asmi", "Rice, Jasmine")).toBe(false);
+  });
+});
+
+describe("WonderHome's own WhatsApp words in the member's language (14-047)", () => {
+  it("acknowledges, says what was added and how sure, in Hindi", async () => {
+    const t = await translatorFor("hi");
+    const outcome = { duplicate: false, state: "needs_review", itemId: "i-1", notice: "", item: { classifiedKind: "bill", extracted: { title: "Water" } } } as never;
+    expect(acknowledgementFor(outcome, { t }).text).toBe("मिल गया 👍 मुझे एक बिल मिला। यह HomeSend में आपकी जाँच का इंतज़ार कर रहा है।");
+    const sure = `${t("homesend.found.percentSure", { percent: 97 })} — ${t("homesend.found.why.verified")}`;
+    expect(addedReply({ title: "Milk", where: "Groceries", percent: 97, why: "verified" }, undefined, t)).toBe(
+      `*Milk* को Groceries में जोड़ दिया (${sure}) — आपका परिवार WonderHome को ये अपने आप जोड़ने देता है। आप इसे HomeSend में वापस ले सकते हैं।`,
+    );
+  });
+
+  it("says a failure's reason in the member's language", async () => {
+    const t = await translatorFor("de");
+    const outcome = { duplicate: false, state: "failed", failureReason: "too_large", itemId: "i-1", notice: "", item: { classifiedKind: "unknown", extracted: null } } as never;
+    expect(acknowledgementFor(outcome, { t }).text).toBe(`Ich habe es aufbewahrt. ${t("homesend.failure.tooLarge")} Es liegt in HomeSend unter Sicher angehalten.`);
+  });
+
+  it("asks HomeTalk's first question about something just sent in the member's language", async () => {
+    const t = await translatorFor("es");
+    const next = intakeQuestion({ itemId: "i1", kind: "school_item", extracted: { title: "Hoja", people: [] }, asked: [], people: [
+      { id: "a", displayName: "Asmi Chakraborty", memberType: "child" },
+      { id: "m", displayName: "Manan", memberType: "child" },
+    ] })!;
+    expect(questionIn(t, "school_item", next)).toBe("¿Para quién es: Asmi o Manan?");
+    expect(questionIn(t, "receipt", { ...next, field: "date" })).toBe("¿Qué día se compró?");
   });
 });

@@ -98,8 +98,8 @@ received → understood → checked & scored → reconciled → completeness
    |---|---|
    | A bill, health document or receipt | **govern**: always waits |
    | Unreadable or unknown | **ask** what it is |
-   | Low confidence, or who it's for is unclear | **ask** that question |
-   | Possible duplicate; medium confidence below the bar; content with instructions in it; several needs; not sent by a member; photo or file; a required detail still missing | **prepare**: waits in HomeSend |
+   | Low confidence, who it's for is unclear, or a required detail still missing | **ask**: HomeTalk asks it (HomeSend gives no question, only what is missing) |
+   | Possible duplicate; medium confidence below the bar; content with instructions in it; several needs; not sent by a member; photo or file | **prepare**: waits in HomeSend |
    | Pre Approved, score above the household's bar, a grocery or school item, nothing required missing | **auto_apply**: added on its own, with an Undo |
 
 8. **Added through the governed write.** The same domain service a person's confirm uses (`home-send-auto.ts`, `home-send-writes.ts`), recorded as a change that can be undone, and marked `auto_added`.
@@ -143,7 +143,7 @@ From `completeness.ts`. A required detail blocks adding; a useful detail is aske
 - If the item is already on the list, it asks "How much more?" and offers "that's enough".
 - An explicit amount adds straight away.
 
-This is issue I-12, being built. Today a bare name adds the usual pack, or nothing if the item is already listed.
+Live since #365 (issue I-12).
 
 ---
 
@@ -227,15 +227,23 @@ To measure: `updated_at - created_at` on `home_send_items`, and `hometalk_channe
 | I-9 | "Reading…" took 9–25 s | Intake used Opus | Sonnet 5.5 for intake, settable | Live (#357) |
 | I-10 | Gemini out of credits: voice silently stopped | Provider refusals weren't recorded | Key alerts by fingerprint; email, notice, banner, button reason | Live (#359, #360) |
 | I-11 | A WhatsApp voice note ("What are upcoming events") heard fine but put in Failed safely | Voice notes always went to HomeSend | Routing rule 6: a transcript is treated like typed text | Live (#364) |
-| I-12 | "Add oil" → "already on the list, nothing to add"; no quantity asked | Bare names never asked an amount | HomeTalk asks "how much?" (section 6) | In progress (session 011bFwDCeS2xGBdcHaNX8h5f) |
+| I-12 | "Add oil" → "already on the list, nothing to add"; no quantity asked | Bare names never asked an amount | HomeTalk asks "how much?" (section 6) | Live (#365) |
 | I-13 | Old questions sitting in Failed safely ("undo", "whats plan for the morning") | Mis-routed before I-1 and I-2 | Owner can dismiss them; tidy only with the owner's yes | Open |
+| I-14 | Design audit (2026-10-26): an unreadable stored bar read as 95%; WhatsApp answers counted as plain questions; a typed answer after a voice note missed HomeTalk; no WhatsApp latency when HomeTalk answered | Small gaps between this design and the code | Highest bar (99%) for a bar WonderHome doesn't offer; `clarification_answered`; voice notes HomeTalk answered count for rule 2; latency on every HomeTalk answer | Live (14-042) |
+| I-15 | "Added on its own" said no % on WhatsApp or after HomeTalk's questions; the app gave the decision's reason | Only the review rows showed the score | Every "added on its own" message carries "N% sure — why" (§7) | Live (14-043) |
+| I-16 | An answer HomeTalk couldn't read was dropped at once; after three questions only required details were named | No second ask for item questions | One polite, listed second ask; the closing line names every detail still missing | Live (14-044) |
+| I-17 | Something told to HomeTalk and complete always waited, even Pre Approved | `file_with_homesend` never asked HomeSend's decision | The same decision as anything sent to HomeSend | Live (14-045) |
+| I-18 | "milk, eggs and bread" on WhatsApp became a HomeSend item with no amounts | Only "add …" reached HomeTalk | A bare list of catalog groceries goes to HomeTalk, which asks the amounts once | Live (14-046) |
+| I-19 | WhatsApp acknowledgements and the first item question were English only | Hard-coded strings | Catalog words (`whatsapp.*`) in all eight languages, in the member's language | Live (14-047) |
+| I-20 | An alert on the platform's own key told no one | Matched only to household keys | Emailed once to the platform's owners and operators; shown in the AI operations read | Live (14-048) |
+| I-21 | No split of added on its own vs confirmed, nor why things failed safely | Not counted | Both in the platform-admin HomeSend metrics | Live (14-049) |
 
 ---
 
 ## 13. Still to decide or build
 
-1. **Platform key alerts.** An alert on the deployment's own key (`WONDERHOME_AI_KEY`) is recorded but tells no one. It should go to the platform admin.
-2. **A HomeTalk answer that creates HomeSend content.** "Here's the school circular" typed into HomeTalk with a pasted body should file to HomeSend in one step and say so. This is partly done via `file_with_homesend`.
-3. **Questions in the app for waiting items.** HomeTalk could offer, unprompted, "2 things in HomeSend need a detail: shall we fill them in?". This needs the owner's yes, since it starts a conversation.
-4. **Multi-item WhatsApp messages** ("milk, eggs and bread"). Ask amounts for all in one question, not three.
-5. **Live provider evaluation of the intake model change** (`npm run eval -- --provider configured`). Run once with a key.
+Items 1, 2 and 4 of the earlier list are built (14-048, 14-045, 14-046); item 5 needs a key.
+
+1. **Questions in the app for waiting items** (story 14-050). HomeTalk could offer, unprompted, "2 things in HomeSend need a detail: shall we fill them in?". This needs the owner's yes, since it starts a conversation.
+2. **Live provider evaluation of the intake model change** (`npm run eval -- --provider configured`). Run once with a key.
+3. **The rest of WhatsApp's English.** A rejection message from HomeSend's intake (`IngestRejected`) and the connect-code replies (sent before anyone is known) are still English.

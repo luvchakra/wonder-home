@@ -4,9 +4,8 @@ import { GraduationCap, HeartPulse, Medal, Mic, PartyPopper, ReceiptText, Shield
 import { useCallback, useEffect, useRef, useState, type ReactNode } from "react";
 
 import { isConsequentialInstruction } from "@wonderhome/core/homesend/audio";
-import { scorePercent } from "@wonderhome/core/homesend/auto-add";
+import { scorePercent, sureWhy } from "@wonderhome/core/homesend/auto-add";
 import { COMPLETENESS, type DetailSpec } from "@wonderhome/core/homesend/completeness";
-import { FROM_A_FILE } from "@wonderhome/core/homesend/verify";
 import type { DocumentPlan } from "@wonderhome/core/homesend/plan";
 import type { IntakeUnderstanding } from "@wonderhome/core/homesend/understanding";
 import { Alert } from "@wonderhome/core/ui/alert";
@@ -158,16 +157,8 @@ export function percentSure(understanding: Pick<IntakeUnderstanding, "readable" 
   const percent = understanding?.readable ? scorePercent(understanding.score) : null;
   if (percent === null) return null;
   // Why that number, in a few words (the owner, 2026-10-26): what the reading was checked against (`homesend/verify.ts`).
-  const unverified = understanding?.check?.unverified ?? [];
-  const why = understanding?.check?.verified
-    ? words.why.verified
-    : unverified.includes(FROM_A_FILE)
-      ? words.why.file
-      : unverified.length > 0
-        ? words.why.missing
-        : understanding?.confidence !== "high"
-          ? words.why.unsure
-          : null;
+  const reason = sureWhy(understanding);
+  const why = reason ? words.why[reason] : null;
   return [fillIn(words.percentSure, { percent }), why].filter(Boolean).join(" · ");
 }
 

@@ -9,6 +9,8 @@ import { drainJobs } from "@wonderhome/core/homesend/retry-queue";
 import { notificationJobHandlers } from "@wonderhome/core/notifications/retry-handler";
 import { sendDueDigests } from "@wonderhome/core/notifications/digest";
 import { householdsWithNoticeChanges, sweepNotices } from "@wonderhome/core/notifications/notices-sweep";
+import { tellPlatformAdmins } from "@wonderhome/core/ai/platform-key-alert";
+import { platformMailer } from "@wonderhome/core/email/mailer";
 import { advanceDueStages, deliverDueNotifications } from "@wonderhome/core/notifications/reconcile";
 import { whatsappConfigFromEnv } from "@wonderhome/core/notifications/whatsapp";
 import { WHATSAPP_PROCESS_KIND, whatsappJobHandler } from "@wonderhome/core/whatsapp/intake";
@@ -98,6 +100,8 @@ async function dispatch(request: Request): Promise<Response> {
   } catch (thrown) {
     log.warn("notice sweep tick failed", { reason: thrown instanceof Error ? thrown.name : "unknown" });
   }
+  // An alert on WonderHome's own AI key goes to the platform admins, once (14-048).
+  await tellPlatformAdmins(admin, platformMailer(), now);
   // Morning digests (story 27-008): each one whose time has come on its household's clock.
   let digests = 0;
   try {

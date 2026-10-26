@@ -42,6 +42,15 @@ export type HomeSendMetrics = {
   downstreamWriteSuccess: Ratio;
   /** Kept and shown under "Failed safely" instead of acted on, out of everything that arrived. */
   safeRejection: Ratio;
+  /** The same, by why it failed safely (the closed failure reason; "other" when none was recorded). Design §11. */
+  safeRejectionByReason: Record<string, number>;
+  /**
+   * Added on its own (Pre Approved and above the bar) out of everything acted
+   * on, and by kind how many were added on their own and how many a person
+   * confirmed. Design §11.
+   */
+  addedOnItsOwn: Ratio;
+  addedByKind: Record<string, { onItsOwn: number; confirmed: number }>;
   /** Waiting on a person right now (not windowed). */
   queueDepth: number;
   /** Minutes from arriving to being routed into a domain, for items routed in the window. */
@@ -68,6 +77,7 @@ export type MetricsItemRow = {
   review_proposal: HomeSendReviewProposal | null;
   review_subject: HomeSendReviewSubject | null;
   review_corrected: boolean | null;
+  failure_reason?: string | null;
   created_at: string;
   routed_at: string | null;
   /** From a document plan's receipt: its counts, numbers only (DDU 2.0). */
@@ -125,6 +135,16 @@ export function summarizeHomeSend(
     if (row.review_corrected === true) entry.count += 1;
   }
 
+  const acted = reviewed.filter((row) => ACTED.has(row.review_decision!));
+  const addedByKind: Record<string, { onItsOwn: number; confirmed: number }> = {};
+  for (const row of acted) {
+    const entry = (addedByKind[row.classified_kind ?? "unknown"] ??= { onItsOwn: 0, confirmed: 0 });
+    if (row.review_decision === "auto_added") entry.onItsOwn += 1;
+    else entry.confirmed += 1;
+  }
+  const safeRejectionByReason: Record<string, number> = {};
+  for (const row of rows) if (row.status === "failed") safeRejectionByReason[row.failure_reason ?? "other"] = (safeRejectionByReason[row.failure_reason ?? "other"] ?? 0) + 1;
+
   const minutes = rows
     .filter((row) => row.status === "routed" && row.routed_at)
     .map((row) => (Date.parse(row.routed_at!) - Date.parse(row.created_at)) / 60_000)
@@ -138,11 +158,14 @@ export function summarizeHomeSend(
     entityResolution: { count: personal.filter((row) => row.review_subject === "resolved").length, of: personal.length },
     ambiguity: { count: personal.filter((row) => row.review_subject === "asked").length, of: personal.length },
     duplicateDetection: { count: reviewed.filter((row) => row.review_proposal !== null).length, of: reviewed.length },
-    proposalAcceptance: { count: reviewed.filter((row) => ACTED.has(row.review_decision!)).length, of: reviewed.length },
+    proposalAcceptance: { count: acted.length, of: reviewed.length },
     correction: { count: confirmed.filter((row) => row.review_corrected === true).length, of: confirmed.length },
     correctionByKind,
     downstreamWriteSuccess: { count: changes.filter((change) => change.undone_at === null).length, of: changes.length },
     safeRejection: { count: rows.filter((row) => row.status === "failed").length, of: rows.length },
+    safeRejectionByReason,
+    addedOnItsOwn: { count: acted.filter((row) => row.review_decision === "auto_added").length, of: acted.length },
+    addedByKind,
     queueDepth: options.queueDepth,
     documents: documentMetrics(rows, changes),
     timeToOutcomeMinutes: {
@@ -164,7 +187,7 @@ export async function loadHomeSendMetrics(supabase: SupabaseClient, options: { w
   const [items, changes, queue] = await Promise.all([
     supabase
       .from("home_send_items")
-      .select("source, status, classified_kind, review_decision, review_proposal, review_subject, review_corrected, created_at, routed_at, receipt_counts:receipt->counts")
+      .select("source, status, classified_kind, review_decision, review_proposal, review_subject, review_corrected, failure_reason, created_at, routed_at, receipt_counts:receipt->counts")
       .gte("created_at", since)
       .limit(50_000),
     supabase.from("homesend_changes").select("undone_at, plan_key").gte("created_at", since).limit(50_000),

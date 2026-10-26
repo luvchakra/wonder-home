@@ -1,6 +1,7 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 
 import { CONSUMABLE_CATEGORIES } from "@wonderhome/core/commerce/consumables";
+import { type AddedOnItsOwn, scorePercent, sureWhy } from "@wonderhome/core/homesend/auto-add";
 import { recordHomeSendChange } from "@wonderhome/core/homesend/changes";
 import type { HomeSendExtraction, HomeSendKind } from "@wonderhome/core/homesend/items";
 import { getHomeSendItem, routeHomeSendItem } from "@wonderhome/core/homesend/repository";
@@ -75,11 +76,12 @@ export async function addIfAllowed(
   membership: HouseholdMembership,
   itemId: string,
   options: { createdByMemberId?: string } = {},
-): Promise<{ title: string; where: string } | null> {
+): Promise<AddedOnItsOwn | null> {
   const item = await getHomeSendItem(supabase, membership.household.id, itemId);
   if (!item || item.status !== "classified" || !item.classifiedKind) return null;
   const review = await prepareReview(supabase, membership, { ...item, createdByMemberId: options.createdByMemberId ?? item.createdByMemberId });
   if (review.confirmation.mode !== "auto_apply" || review.plan) return null;
   const applied = await autoApplyHomeSendItem(supabase, membership, { id: item.id, kind: item.classifiedKind, extracted: item.extracted, subject: review.subject });
-  return applied ? { title: applied.title, where: applied.where } : null;
+  // How sure, and why, goes with every "added on its own" message (design §7).
+  return applied ? { title: applied.title, where: applied.where, percent: scorePercent(review.understanding?.score), why: sureWhy(review.understanding) } : null;
 }

@@ -18,6 +18,7 @@ import { chatDe } from "./areas/chat/de";
 import { amafDe } from "./areas/amaf/de";
 import { groceryDe } from "./areas/grocery/de";
 import { welcomeDe } from "./areas/welcome/de";
+import { whatsappDe } from "./areas/whatsapp/de";
 
 export const de: Catalog = {
   "common.next": "Weiter",
@@ -1004,4 +1005,5 @@ export const de: Catalog = {
   ...memberInviteDe,
   ...groceryDe,
   ...welcomeDe,
+  ...whatsappDe,
 };
