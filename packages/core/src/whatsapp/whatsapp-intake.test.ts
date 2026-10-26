@@ -6,6 +6,8 @@ import { fakeSupabase } from "../homesend/testing";
 import { handleWhatsAppWebhook } from "../notifications/whatsapp-webhook";
 import { readInboundMessages } from "./inbound";
 import { groceryListNames, isForHomeTalk, isQuestionForWonderHome, namesTheSameThing, whatsappReplyText } from "./hometalk";
+import { quantityQuestion } from "../conversation/grocery-actions";
+import { warmReply } from "../conversation/warmth";
 import { intakeQuestion, memberNamedInReply, questionIn } from "../hometalk/intake-questions";
 import { translatorFor } from "../i18n/translate";
 import { scorePercent, sureWhy } from "../homesend/auto-add";
@@ -646,7 +648,7 @@ describe("processing into HomeSend", () => {
         ground: (intent) => groundIntent(intent, { people: [], viewerMemberId: MEMBER, timezone: "Asia/Kolkata", now, references: async () => NO_REFERENCES, groceries: async () => [oil] }),
       });
     const first = await talk("Add coconut oil to the groceries");
-    expect(first.kind === "reply" && first.text).toBe('Coconut oil is already on your shopping list (1 L). How much more should I add? Or say "that\'s enough" to leave it.');
+    expect(first.kind === "reply" && first.text).toBe('**Coconut oil** is already on your shopping list (1 L).\nHow much more should I add?\nOr say "that\'s enough" to leave it.');
     const clarifying = first.kind === "reply" ? (first.clarification ?? null) : null;
 
     const { h, id } = await received("text");
@@ -1032,6 +1034,12 @@ describe("HomeTalk's answer as a WhatsApp message", () => {
   it("uses WhatsApp's bold, writes links in full and adds the screen it opens", () => {
     const text = whatsappReplyText({ displayText: "**Tomorrow**\n- Piano at 5 pm\n- [Groceries](/groceries) has 3 things", navigate: "/calendar" });
     expect(text).toBe("*Tomorrow*\n• Piano at 5 pm\n• Groceries (https://home.wonderapps.biz/groceries) has 3 things\n\nhttps://home.wonderapps.biz/calendar");
+  });
+
+  it("shows HomeTalk's how-much question as a list, one item a line, with the hint below (the owner, 2026-10-26)", () => {
+    const asked = quantityQuestion(["milk", "eggs"], []);
+    const shown = whatsappReplyText({ displayText: warmReply(asked, { action: "add_to_list", proposal: "clarify", ok: true }) });
+    expect(shown).toMatch(/^🛒 How much of each should I add\?\n• \*Milk\*\n• \*Eggs\*\n💡 For example [^\n]+\.$/);
   });
 
   it("ends a long answer at a sentence and says the rest is in the app", () => {

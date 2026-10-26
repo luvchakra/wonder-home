@@ -725,7 +725,7 @@ async function turnInEnglish(input: HomeTalkInput, speaking: Speaking) {
 
       const partHedge = turn.proposal.kind !== "clarify" ? confidenceLead(turn.intent) : null;
       if (partHedge) text = `${partHedge} ${text}`;
-      text = warmReply(text, { action: turn.intent.action, proposal: turn.proposal.kind, ok: outcome?.status !== "failed" });
+      text = warmReply(text, { action: turn.intent.action, proposal: turn.proposal.kind, ok: outcome?.status !== "failed" && !turn.intent.understanding?.failure });
 
       // A question in the middle of a request is answered before anything
       // after it is done — and the question stays the last thing said, so
@@ -1134,7 +1134,7 @@ async function turnInEnglish(input: HomeTalkInput, speaking: Speaking) {
     if (done.ok) turnFocus.push(...focusFromResult(result.intent.action, done.result, new Date().toISOString()));
     if (done.ok) forgetHouseholdContext(householdId);
     // Done because it was asked: said with how to take it back (HomeBrain 4.0 §3.9).
-    if (done.ok && UNDOABLE.has(result.intent.action) && !unchangedResult(done.result)) text = `${text} ${UNDO_LINE}`;
+    if (done.ok && UNDOABLE.has(result.intent.action) && !unchangedResult(done.result)) text = `${text}\n${UNDO_LINE}`;
     // Then to the screen that shows it, refreshed (the owner, 2026-10-20): "add tomato" lands on the list with tomato on it.
     if (done.ok && source !== "alexa") navigate = screenShowing(text);
   } else if (result.kind === "reply" && result.memory) {
@@ -1151,7 +1151,7 @@ async function turnInEnglish(input: HomeTalkInput, speaking: Speaking) {
   // A warm emoji, after everything above was validated (`conversation/warmth.ts`).
   if (result.kind === "reply") {
     const proposal = brainAnswer ? (brainAnswer.mode === "clarify" ? "clarify" : "answer") : result.proposal.kind;
-    text = warmReply(text, { action: result.intent.action, proposal, ok: outcome?.status !== "failed", explained, classes: speaking.carried });
+    text = warmReply(text, { action: result.intent.action, proposal, ok: outcome?.status !== "failed" && !(result.intent.understanding?.failure && !brainAnswer), explained, classes: speaking.carried });
   }
 
   // What HomeBrain's answer rested on, so "move it to Friday" after "when is

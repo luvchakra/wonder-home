@@ -375,7 +375,7 @@ describe("groceries in conversation (Groceries §5.3, cases A–H)", () => {
 
   it("B′: an item already on the list asks how much more, with what is there", async () => {
     const result = await ask("Add milk to the list", milkOnList);
-    expect(result.kind === "reply" && result.text).toBe('Milk is already on your shopping list (1 L). How much more should I add? Or say "that\'s enough" to leave it.');
+    expect(result.kind === "reply" && result.text).toBe('**Milk** is already on your shopping list (1 L).\nHow much more should I add?\nOr say "that\'s enough" to leave it.');
   });
 
   it("B″: the answer adds that much, through the same add", async () => {
@@ -404,7 +404,7 @@ describe("groceries in conversation (Groceries §5.3, cases A–H)", () => {
 
   it("B⁵: several bare items are one question; an amount said is never asked about", async () => {
     const both = await ask("add milk and eggs to the list");
-    expect(both.kind === "reply" && both.text).toMatch(/^How much of each should I add\? Milk, Eggs\./);
+    expect(both.kind === "reply" && both.text).toMatch(/^How much of each should I add\?\n- \*\*Milk\*\*\n- \*\*Eggs\*\*\nFor example/);
     const said = await ask("add 2 litres of milk to the list");
     expect(said.kind === "reply" && said.proposal.kind).toBe("executed");
   });
@@ -419,7 +419,7 @@ describe("groceries in conversation (Groceries §5.3, cases A–H)", () => {
   it("B⁶: the how-much question's examples read as they say, and \"2 of each\" is one of each item's own", async () => {
     const first = await ask("add milk, eggs and bread", owners);
     expect(first.kind === "reply" && first.text).toBe(
-      'How much of each should I add? Milk (already on the list, 2.5 L), Eggs, Brown (already on the list, 8 pcs), Bread, White (already on the list, 1 loaf). For example "2 of each" or "1 litre milk and 6 eggs". Or say "that\'s enough" to leave them.',
+      'How much of each should I add?\n- **Milk** — 2.5 L already on the list\n- **Eggs, Brown** — 8 pcs already on the list\n- **Bread, White** — 1 loaf already on the list\nFor example "2 of each" or "1 litre milk and 6 eggs".\nOr say "that\'s enough" to leave them.',
     );
     const clarifying = first.kind === "reply" ? (first.clarification ?? null) : null;
     const each = await ask("2 of each", owners, { clarifying });
