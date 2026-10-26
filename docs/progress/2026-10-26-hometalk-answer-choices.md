@@ -1,4 +1,4 @@
-# Answers to pick under HomeTalk's questions (14-052)
+# Answers to pick under HomeTalk's questions (14-053)
 
 **Why.** The owner, 2026-10-26, about "First, Coconut oil: How much should I get? For example 2 litres or 1 kg. (Say "skip" to leave one for later.)": "instead of receiving answers in text, why don't you give easy contextual answers to pick from". Design principle 20. The same screenshot showed an "ACTION PREVIEW · Done … Can be undone" card under that question.
 

@@ -102,12 +102,19 @@ received → understood → checked & scored → reconciled → completeness
    | Unreadable or unknown | **ask** what it is |
    | Low confidence, who it's for is unclear, or a required detail still missing | **ask**: HomeTalk asks it (HomeSend gives no question, only what is missing) |
    | Possible duplicate; medium confidence below the bar; content with instructions in it; several needs; not sent by a member; photo or file | **prepare**: waits in HomeSend |
+   | A grocery already on the shopping list, with no amount | **prepare**: waits for the person to choose how much more (I-27) |
    | Pre Approved, score above the household's bar, a grocery or school item, nothing required missing | **auto_apply**: added on its own, with an Undo |
+   | The same, for a grocery already on the shopping list said with an amount ("2 litres", or a number alone) | **auto_apply** as a top-up: added to the entry already there, the one HomeTalk's add would pick, never a second one (I-27) |
+
+   - Bills, school items, events and every other match keep the duplicate rule (I-4). Bills, health documents, receipts, photos and files always wait.
+   - **Why it waits.** When something that would otherwise be added on its own waits for a reason the person can act on, the decision carries it (`wait`): already on the shopping list, the outcome set to Wait for Approval, or below the bar. The Needs review row says it in a few words; WhatsApp and HomeTalk say it in a sentence, never with an amount.
 
 8. **Added through the governed write.** The same domain service a person's confirm uses (`home-send-auto.ts`, `home-send-writes.ts`), recorded as a change that can be undone, and marked `auto_added`.
 9. **The reply.**
    - App: a notice with an Undo.
    - WhatsApp: "Added *Maths worksheet* for Asmi to Kids & School … You can undo it in HomeSend", or "It's waiting in HomeSend for you to check".
+   - A top-up: "Added 2 L more *Mustard oil* (now 3 L) (97% sure — every detail is in what you sent) — … You can undo it in HomeSend."
+   - Waiting on the list: "*Mustard oil* is already on your shopping list, so it's waiting in HomeSend for you to choose."
 
 ---
 
@@ -123,7 +130,7 @@ received → understood → checked & scored → reconciled → completeness
   - never the same question twice.
 - **Time limit.** An open question takes answers for 15 minutes on WhatsApp; after that, a new message is a new turn.
 - **One question at a time**, and never more than 3 for one item.
-- **Answers to pick** (principle 20, the owner 2026-10-26, I-27). A question with sensible answers carries them on its reply as `metadata.choices` (`hometalk/choices.ts`): `{ mode: "single" | "multi", choices: [{ label, say }], also?, health? }`.
+- **Answers to pick** (principle 20, the owner 2026-10-26, I-28). A question with sensible answers carries them on its reply as `metadata.choices` (`hometalk/choices.ts`): `{ mode: "single" | "multi", choices: [{ label, say }], also?, health? }`.
   - `label` is in the member's language; `say` is the exact English the clarify step already reads as that answer, so a pick is an ordinary turn and grounding and every gate run on it unchanged. `say: null` ("Another day…") focuses the text box.
   - The sets: an amount (2–3 practical amounts for that item by the one rule for amounts, `commerce/bare-amount.ts`, from the catalog's unit, pack and ladder; then Skip, or That's enough when it is already on the list; "1 of each"/"2 of each" for several); who (the candidates, else the household's names); a day (Today, Tomorrow, the next weekend day, Another day…; Today, Yesterday for a receipt or health document); a time (9 am, 12 pm, 4 pm, 6 pm, Another time…); a record type; yes / not now; which item (the candidates); and which waiting items to fill in (checkboxes, all ticked, one Send — "Maths worksheet and Diwali dinner" fills in just those).
   - The text box always stays. In the app the latest question's choices are chips (a radio group) or checkboxes (`ui/answer-choices`), greyed once answered. On WhatsApp they are reply buttons (3 or fewer) or a list (up to 10), each id `say:<words>`; a pick comes back as those words, and a failed interactive send goes as plain text. A health record's choices never go to WhatsApp. Voice reads the question only.
@@ -162,6 +169,8 @@ Live since #365 (issue I-12).
   - on WonderHome's pick ("Suggested · 97% sure");
   - in the "added on its own" message.
 - The reasons: "every detail is in what you sent", "read from a photo or file", "some details aren't in what you sent", "the AI wasn't sure".
+  - The reason explains the score, never contradicts it: "every detail is in what you sent" only in the 97% band. Every detail found but a 70% (medium) reading, or a voice note not clearly heard, is "the AI wasn't sure" (`auto-add.ts` `sureWhy`, I-27).
+- A waiting row that would otherwise have been added on its own also says why, in a few words, in place of where it came from: "already on the shopping list", "groceries set to Wait for Approval", "below your bar of 95%" (`auto-add.ts` `waitRowWords`, I-27).
 - **The bar.** Settings → AI Assistant → "How sure HomeSend must be to add on its own".
   - Choices: more than 60, 70, 80, 85, 90, 95 (recommended), 97 or 99%.
   - Admins only, kept as a versioned policy. If the setting can't be read, the highest bar applies.
@@ -251,7 +260,8 @@ To measure: `updated_at - created_at` on `home_send_items`, and `hometalk_channe
 | I-24 | A typed notice, then "for Manan" 9 s later: asked "Who is it for?" and answered twice (2026-10-26, 21:04 IST) | The notice was read at its 8 s wait; the note reached WonderHome 11 s after it, so rule 2 took it as the answer. Typed messages sent together were also joined whatever they were | Rule 1 joins a typed message and a short note: the message waits up to 15 s for it, the note's run defers to it; two requests or questions stay apart | Live (this PR) |
 | I-25 | The notice resent (a duplicate), then "for Manan": the note became its own item, Failed safely (2026-10-26, 21:08 IST) | Read alone at 8 s; a lone detail was kept as content | The longer wait joins it; a note on a message already on record goes onto that item (or says it was handled); a lone bare detail is never an item (`itemOnRecord`, `noteOnItem`, `isBareDetail`) | Live (this PR) |
 | I-26 | "Asmi has a karate grading exam…" filed with HomeSend as "Child B has…"; the review offered "Add Child B as a child" (the owner, 2026-10-26) | `file_with_homesend` filed `intent.utterance`, which a model reading carried as the masked text the provider read | `reidentifyIntent` (`ai/privacy.ts`): the reading keeps the member's own words and real names; nothing is filed with a placeholder in it; a placeholder in a reading is never offered as a child to add, the household is asked who; the eval masks as the route does and fails any case that keeps a placeholder (HT-161) | Live (this PR) |
-| I-27 | "First, Coconut oil: How much should I get? …" had to be typed; the answer to a question showed "ACTION PREVIEW · Done … Can be undone" | Questions carried no answers to pick; a question-only turn kept its executed preview | Choices on every question with sensible answers (§5), in the app and as WhatsApp buttons; no preview card on a turn that only asked; "not now" kept whole by the normaliser | Live (14-052) |
+| I-27 | "2 litres mustard oil" on WhatsApp waited although groceries were Pre Approved and it read at 97%; a 70% item said "every detail is in what you sent"; a waiting row gave no reason | Any match on record meant "prepare" (I-4), even an item already on the shopping list said with an amount; `sureWhy` read only the check, not the score; the row showed only where it came from | A listed grocery with an amount is a top-up under the same decision (`onShoppingList`, `topUp`), with HomeTalk's "now 3 L" and Undo; no amount, Wait for Approval or below the bar waits and says why (`wait`); "verified" only in the 97% band; the row's reason in eight languages | Live (25-039, 14-052) |
+| I-28 | "First, Coconut oil: How much should I get? …" had to be typed; the answer to a question showed "ACTION PREVIEW · Done … Can be undone" | Questions carried no answers to pick; a question-only turn kept its executed preview | Choices on every question with sensible answers (§5), in the app and as WhatsApp buttons; no preview card on a turn that only asked; "not now" kept whole by the normaliser | Live (14-053) |
 
 ---
 

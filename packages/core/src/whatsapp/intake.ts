@@ -8,7 +8,7 @@ import { translator, translatorFor, type Translate, type TranslationKey } from "
 import { openIntakeQuestion } from "../hometalk/intake-questions";
 import { enqueueClassifyRetry, type ClaimedJob, type JobHandler } from "../homesend/retry-queue";
 import { gateTranscript, TRANSCRIPT_CONFIDENCE_FLOOR, type TranscriptGate } from "../homesend/audio";
-import { sureClause, type AddedOnItsOwn } from "../homesend/auto-add";
+import { amountWords, sureClause, type AddedOnItsOwn, type WaitingInHomeSend } from "../homesend/auto-add";
 import { hearWhatsAppVoiceNote, ingestWhatsAppMedia, ingestWhatsAppText, IngestRejected, type IngestDeps, type IngestOutcome, type TranscribeResult } from "../homesend/ingest";
 import { COMPLETENESS } from "../homesend/completeness";
 import { FAILURE_REASON_COPY, type HomeSendKind } from "../homesend/items";
@@ -67,11 +67,12 @@ export type WhatsAppIntakeDeps = {
    * Adds an item on its own where the household allows it (the outcome is
    * "Pre Approved" and the reading is above its bar), under the member's own
    * session, through the same governed write the app uses
-   * (`apps/web/app/_lib/whatsapp-hometalk.ts`). Null when it must wait for a
-   * person. WhatsApp itself never confirms anything: the household decided
-   * this in advance (the owner, 2026-10-26).
+   * (`apps/web/app/_lib/whatsapp-hometalk.ts`). When it must wait for a
+   * person, why — if it would otherwise have been added (I-27) — else null.
+   * WhatsApp itself never confirms anything: the household decided this in
+   * advance (the owner, 2026-10-26).
    */
-  addOnItsOwn?: (input: { householdId: string; memberId: string; itemId: string }) => Promise<AddedOnItsOwn | null>;
+  addOnItsOwn?: (input: { householdId: string; memberId: string; itemId: string }) => Promise<AddedOnItsOwn | WaitingInHomeSend | null>;
   /** When "typing…" is shown once more while the work is still running; replaceable in tests. */
   typingRefreshMs?: number;
 };
@@ -520,11 +521,13 @@ async function readMessage(admin: SupabaseClient, messageId: string, deps: Whats
   const ack = acknowledgementFor(outcome, { question, t });
   if (ack.asks) events.push({ kind: "clarification_requested", householdId: row.household_id });
   // Nothing left to ask: added now where the household allows it, else the acknowledgement says where it waits.
-  const added =
+  const decided =
     !ack.asks && !outcome.duplicate && outcome.state !== "failed" && deps.addOnItsOwn
       ? await deps.addOnItsOwn({ householdId: row.household_id, memberId: row.member_id, itemId: outcome.itemId }).catch(() => null)
       : null;
-  await (added ? say(addedReply(added, undefined, t)) : ack.asks ? sayHomeTalk(ack.text) : say(ack.text));
+  // Held for a reason the person can act on: the acknowledgement says which (I-27).
+  if (decided && "waiting" in decided) await say(acknowledgementFor(outcome, { t, wait: decided }).text);
+  else await (decided ? say(addedReply(decided, undefined, t)) : ack.asks ? sayHomeTalk(ack.text) : say(ack.text));
   await recordWhatsAppEvents(admin, events);
   return "read";
 }
@@ -641,6 +644,8 @@ export function whatsappJobHandler(deps: WhatsAppIntakeDeps): JobHandler {
 export function addedReply(added: AddedOnItsOwn, forName?: string, t: Translate = ENGLISH): string {
   const title = shortTitle(added.title) ?? "it";
   const sure = t === ENGLISH ? sureClause(added) : sureIn(t, added);
+  // More of a grocery already on the list (I-27): "Added 2 L more *Mustard oil* (now 3 L)".
+  if (added.more) return t("whatsapp.addedMore", { amount: amountWords(added.more.added), title, now: amountWords(added.more.now), sure });
   return forName ? t("whatsapp.addedFor", { title, name: forName, where: added.where, sure }) : t("whatsapp.added", { title, where: added.where, sure });
 }
 
@@ -1066,7 +1071,10 @@ export const UNSUPPORTED_REPLY = en["whatsapp.unsupported"];
  * because saying back what was understood is the point.
  * HomeTalk's question about what it still lacks follows, when there is one.
  */
-export function acknowledgementFor(outcome: IngestOutcome, options: { question?: string | null; t?: Translate } = {}): { text: string; asks: boolean } {
+export function acknowledgementFor(
+  outcome: IngestOutcome,
+  options: { question?: string | null; t?: Translate; wait?: WaitingInHomeSend | null } = {},
+): { text: string; asks: boolean } {
   const t = options.t ?? ENGLISH;
   if (outcome.duplicate) return { text: t("whatsapp.ack.duplicate"), asks: false };
   if (outcome.state === "failed") {
@@ -1114,6 +1122,13 @@ export function acknowledgementFor(outcome: IngestOutcome, options: { question?:
   }
   // HomeTalk's question about it, worded by HomeTalk (`hometalk/intake-questions.ts`), follows what was found.
   if (options.question) return { text: `${t("whatsapp.ack.gotIt")} ${found} ${options.question}`, asks: true };
+  // Something that would have been added on its own says why it waits, never with an amount (I-27).
+  const wait = options.wait?.waiting;
+  if (wait && (wait.listed || wait.reason === "on_list")) {
+    return { text: `${t("whatsapp.ack.gotIt")} ${t("whatsapp.wait.onList", { title: shortTitle(options.wait!.title) ?? "" })}`, asks: false };
+  }
+  if (wait?.reason === "wait_for_approval") return { text: `${t("whatsapp.ack.gotIt")} ${found} ${t(wait.area === "school" ? "whatsapp.wait.approvalSchool" : "whatsapp.wait.approvalGroceries")}`, asks: false };
+  if (wait?.reason === "below_bar") return { text: `${t("whatsapp.ack.gotIt")} ${found} ${t("whatsapp.wait.belowBar", { percent: wait.percent ?? 95 })}`, asks: false };
   return { text: `${t("whatsapp.ack.gotIt")} ${found} ${t("whatsapp.ack.waiting")}`, asks: false };
 }
 

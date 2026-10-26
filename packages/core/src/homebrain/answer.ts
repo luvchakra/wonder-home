@@ -1,5 +1,6 @@
 import { inWindow, type BrainReading } from "./question";
 import type { GroundedFact } from "./grounding";
+import { LONG_WEEKENDS_LEAD } from "./insights";
 import { sayFact } from "./say";
 import { describeViolations, validateAnswer, type ValidationContext, type Violation } from "./validate";
 
@@ -119,7 +120,35 @@ export function composeFromFacts(facts: readonly GroundedFact[], reading: BrainR
   const lead = reading.goal === "check" && /\b(?:is there anything|are there any|is anything|anything (?:on|due|planned|happening))\b/i.test(reading.retrievalText) ? `Yes. ${plainLead}` : reading.goal === "decide" ? `Here is what WonderHome has on record that bears on it${reading.time ? ` ${reading.time.label}` : ""}:` : plainLead;
   // Each fact as a person reads it, with where to see it (say.ts): never a
   // raw ISO day or an action code, which were written for a model.
-  return `${lead}\n${pool.slice(0, limit).map((fact) => `- ${sayFact(fact)}`).join("\n")}`;
+  const shown = pool.slice(0, limit);
+  // The long weekends are one fact, said one per line (the owner, 2026-10-26:
+  // five of them in one sentence joined by semicolons was unreadable).
+  const long = shown.find((fact) => fact.statement.startsWith(LONG_WEEKENDS_LEAD));
+  const rest = shown.filter((fact) => fact !== long);
+  const longBlock = long ? `${LONG_WEEKENDS_LEAD}\n${longWeekendLines(long.statement).join("\n")}` : "";
+  const restBlock = rest.length > 0 ? `${lead}\n${rest.map((fact) => `- ${sayFact(fact)}`).join("\n")}` : "";
+  return [longBlock, restBlock].filter(Boolean).join("\n\n");
+}
+
+/**
+ * "Sat 21 Nov to Tue 24 Nov if Mon 23 Nov is taken off (Guru Nanak's
+ * Birthday, Tue 24 Nov)" as "- **Sat 21 Nov to Tue 24 Nov** — Guru Nanak's
+ * Birthday (Tue 24 Nov), if Mon 23 Nov is taken off". One line each; a
+ * weekend the shape doesn't match is said as it was.
+ */
+export function longWeekendLines(statement: string): string[] {
+  return statement
+    .slice(LONG_WEEKENDS_LEAD.length)
+    .trim()
+    .replace(/\.$/, "")
+    .split(/;\s*/)
+    .filter(Boolean)
+    .map((entry) => {
+      const shape = entry.match(/^(.+? to \S+ \d{1,2} \S+)(?: if (.+?) is taken off)? \((.+), (\S+ \d{1,2} \S+)\)$/);
+      if (!shape) return `- ${entry}`;
+      const [, range, off, holiday, day] = shape;
+      return `- **${range}** — ${holiday} (${day})${off ? `, if ${off} is taken off` : ""}`;
+    });
 }
 
 /**
