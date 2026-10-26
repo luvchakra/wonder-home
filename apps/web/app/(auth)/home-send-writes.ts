@@ -5,9 +5,12 @@ import { may } from "@wonderhome/core/billing/repository";
 import { CONSUMABLE_CATEGORIES } from "@wonderhome/core/commerce/consumables";
 import { catalogItemFor } from "@wonderhome/core/commerce/catalog";
 import { baseOf } from "@wonderhome/core/commerce/buying-sizes";
-import { adjustListEntry, listGroceries, type GroceryItem } from "@wonderhome/core/commerce/inventory";
-import { createConsumable } from "@wonderhome/core/commerce/repository";
+import { adjustListEntry, changeStock, listGroceries, type GroceryItem } from "@wonderhome/core/commerce/inventory";
+import { createConsumable, listConsumables, recordPurchase } from "@wonderhome/core/commerce/repository";
 import type { Amount } from "@wonderhome/core/commerce/units";
+import { receiptStockLine } from "@wonderhome/core/commerce/receipt-stock";
+import { currencyCode, unitCostMinor } from "@wonderhome/core/commerce/receipts";
+import { recordHomeSendChange } from "@wonderhome/core/homesend/changes";
 import { similarity } from "@wonderhome/core/context/normalize";
 import { findGrocery } from "@wonderhome/core/conversation/grocery-actions";
 import { billShape, eventShape, groceryAmount, groceryShape } from "@wonderhome/core/homesend/record-types";
@@ -397,3 +400,102 @@ export async function createNew(supabase: Supabase, membership: Membership, inpu
   return addGrocery(supabase, householdId, { title: input.title, quantity: input.quantity, unit: input.unit, category: input.category }, input.itemId);
 }
 
+/** One receipt line as a person's confirm keeps it (09-009, 25-003b). */
+export type ReceiptLine = {
+  name: string;
+  quantity: number | "";
+  unit: string;
+  lineTotal: number | "";
+  /** A tracked consumable's id, or "new" to start tracking it. */
+  match: string;
+  stock: boolean;
+  clear: boolean;
+};
+
+/**
+ * A receipt's lines recorded as purchases (09-009): each against the tracked
+ * item it is, or a new tracked item, every write its own `homesend_changes`
+ * row so each undoes on its own; what was bought added at home and taken off
+ * the list only for the lines that say so (25-003b). Shared by a person's
+ * confirm and by adding on its own, which keeps neither of those two.
+ * Nothing is paid and nothing is ordered.
+ */
+export async function recordReceipt(
+  supabase: Supabase,
+  membership: Membership,
+  input: { householdId: string; itemId: string; merchant?: string | null; purchasedOn: string; currency?: string | null },
+  kept: readonly ReceiptLine[],
+): Promise<{ firstPurchase: string; started: number; stocked: number; cleared: number } | { error: string }> {
+  const tracked = await listConsumables(supabase, input.householdId);
+  const groceries = new Map<string, GroceryItem>((await listGroceries(supabase, input.householdId)).map((item) => [item.id, item]));
+  const byId = new Map(tracked.map((consumable) => [consumable.id, consumable]));
+  const byName = new Map<string, { id: string }>(tracked.map((consumable) => [consumable.name.trim().toLowerCase(), { id: consumable.id }]));
+  const currency = currencyCode(input.currency);
+  const change = (domain: "grocery_item" | "purchase", entityId: string) =>
+    recordHomeSendChange(supabase, { householdId: input.householdId, intakeId: input.itemId, domain, entityId, createdByMemberId: membership.memberId });
+
+  let firstPurchase: string | null = null;
+  let started = 0;
+  let stocked = 0;
+  let cleared = 0;
+  for (const line of kept) {
+    const quantity = line.quantity === "" ? 1 : line.quantity;
+    let consumableId: string;
+    if (line.match === "new") {
+      // "New" never makes a second copy of something already tracked under
+      // the same name — it records against that one instead.
+      const same = byName.get(line.name.toLowerCase());
+      if (same) {
+        consumableId = same.id;
+      } else {
+        const created = await createConsumable(supabase, {
+          householdId: input.householdId,
+          name: line.name,
+          category: CONSUMABLE_CATEGORIES[0],
+          unit: line.unit || "unit",
+          typicalQuantity: quantity,
+        });
+        consumableId = created.id;
+        byName.set(line.name.toLowerCase(), { id: created.id });
+        await change("grocery_item", created.id);
+        started += 1;
+      }
+    } else {
+      if (!byId.has(line.match)) return { error: `"${line.name}" was matched to something this household no longer tracks. Choose again.` };
+      consumableId = line.match;
+    }
+    const purchase = await recordPurchase(supabase, {
+      householdId: input.householdId,
+      consumableId,
+      purchasedOn: input.purchasedOn,
+      quantity,
+      unitCostMinor: unitCostMinor(line.lineTotal === "" ? null : line.lineTotal, quantity, currency),
+      currency,
+      merchant: input.merchant ?? null,
+      unit: line.unit || null,
+    });
+    firstPurchase ??= purchase.id;
+    await change("purchase", purchase.id);
+
+    // At home and on the list, from what is on record now — a new item starts at what was bought.
+    const plan = receiptStockLine({ quantity, unit: line.unit || null }, groceries.get(consumableId) ?? null, input.purchasedOn);
+    if (line.stock && plan.bought && plan.addable) {
+      await changeStock(supabase, {
+        householdId: input.householdId,
+        itemId: consumableId,
+        kind: "add",
+        amount: plan.bought,
+        source: "receipt",
+        idempotencyKey: `hsr:${purchase.id}`,
+        sourceRef: { purchaseId: purchase.id, homeSendItemId: input.itemId },
+      });
+      stocked += 1;
+    }
+    if (line.clear && plan.bought && plan.clearable) {
+      await adjustListEntry(supabase, { householdId: input.householdId, itemId: consumableId, kind: "subtract", amount: plan.bought, source: "receipt", idempotencyKey: `hsl:${purchase.id}` });
+      cleared += 1;
+    }
+  }
+  if (!firstPurchase) return { error: "Choose at least one line to record, or dismiss the receipt." };
+  return { firstPurchase, started, stocked, cleared };
+}

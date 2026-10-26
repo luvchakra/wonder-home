@@ -183,7 +183,7 @@ export function HomeSendInbox({
   const [failedNotice, setFailedNotice] = useState<string | null>(null);
   // Applied on its own under the household's own autonomy setting (§12):
   // said so, with its Undo right here as well as in "Recently handled".
-  const [autoApplied, setAutoApplied] = useState<{ notice: string; changeId: string; title: string } | null>(null);
+  const [autoApplied, setAutoApplied] = useState<{ notice: string; changeId: string; title: string; itemId?: string; whole?: boolean } | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const uploadFormRef = useRef<HTMLFormElement>(null);
   const busy = uploading || pasting;
@@ -197,7 +197,11 @@ export function HomeSendInbox({
   const fresh = [uploadState, pasteState, transcriptState].find((state, index) => state !== seen[index]);
   if (fresh) {
     setSeen([uploadState, pasteState, transcriptState]);
-    setAutoApplied(fresh.autoApplied ? { notice: fresh.notice ?? "", changeId: fresh.autoApplied.changeId, title: fresh.autoApplied.title } : null);
+    setAutoApplied(
+      fresh.autoApplied
+        ? { notice: fresh.notice ?? "", changeId: fresh.autoApplied.changeId, title: fresh.autoApplied.title, itemId: fresh.autoApplied.itemId, whole: fresh.autoApplied.whole }
+        : null,
+    );
     if (fresh.state === "failed") {
       setFailedNotice(fresh.notice ?? null);
       setOpenItem(null);
@@ -311,7 +315,12 @@ export function HomeSendInbox({
                   <span className="min-w-0 flex-1 break-words">{autoApplied.notice}</span>
                   <form action={undoAction}>
                     <input type="hidden" name="householdId" value={householdId} />
-                    <input type="hidden" name="changeId" value={autoApplied.changeId} />
+                    {/* A receipt's lines are undone together, by the item. */}
+                    {autoApplied.whole && autoApplied.itemId ? (
+                      <input type="hidden" name="itemId" value={autoApplied.itemId} />
+                    ) : (
+                      <input type="hidden" name="changeId" value={autoApplied.changeId} />
+                    )}
                     <Pill type="submit" tone="quiet" disabled={undoing} aria-label={fillIn(words.undoAdding, { title: autoApplied.title })}>
                       {undoing ? review.undoing : words.undo}
                     </Pill>

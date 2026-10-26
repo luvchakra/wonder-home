@@ -431,3 +431,80 @@ File: `packages/core/src/household/auto-add-repository.test.ts` · 5/5 passed
 | AT-K03 nothing stored (95%) adds a 97% reading | ✅ pass |
 | AT-K04 a setting that can't be read (99%) holds even a 97% reading | ✅ pass |
 | AT-K05 a stored bar WonderHome doesn't offer (99%) holds a 97% reading | ✅ pass |
+
+
+### AT-N: Adding money and health entries directly (14-053)
+
+The owner, 2026-10-26: "along with the % setting add setting feature to ask user if they want to add entries related to health, entries related to money directly in WonderHome if allowed in responsibilities".
+
+Expected results were written first, from design §1.5, §4.7 and §7: setting off → `govern` as before (AT-B01 to AT-B04 kept); setting on → the grocery path. Combinations: setting on/off × Pre Approved / Wait for Approval × bar × typed text vs photo/file × a required detail missing × a duplicate, for bills, receipts and health documents.
+
+File: `packages/core/src/evaluation/hometalk-homesend-acceptance.test.ts` · 63/63 passed. Also `household/direct-add-repository.test.ts` 4/4, the Settings e2e (phone and desktop) 2/2, and eval cases HS-36 to HS-38.
+
+| Case (expected result in the name) | Result |
+|---|---|
+| AT-N101 a bill: setting off, Pre Approved, 60%, 97% → govern (as today) | ✅ pass |
+| AT-N102 a bill: setting off, Wait for Approval → govern | ✅ pass |
+| AT-N103 a bill: setting on, Pre Approved, 95%, 97% → added on its own | ✅ pass |
+| AT-N104 a bill: setting on, Wait for Approval, 95%, 97% → waits | ✅ pass |
+| AT-N105 a bill: setting on, Pre Approved, 95%, 90% → waits (below the bar) | ✅ pass |
+| AT-N106 a bill: setting on, Pre Approved, 85%, 90% → added on its own | ✅ pass |
+| AT-N107 a bill: setting on, Pre Approved, 99%, 97% → waits (the bar is higher) | ✅ pass |
+| AT-N108 a bill: setting on, Pre Approved, 97%, 97% → waits (equal is not above) | ✅ pass |
+| AT-N109 a bill: setting on, Pre Approved, 60%, 70% → added on its own (the Admin chose 60%) | ✅ pass |
+| AT-N110 a bill: setting on, a photo or file → waits | ✅ pass |
+| AT-N111 a bill: setting on, instructions aimed at WonderHome → waits | ✅ pass |
+| AT-N112 a bill: setting on, not sent by a member (an email) → waits | ✅ pass |
+| AT-N113 a bill: setting on, a low reading → asked | ✅ pass |
+| AT-N114 a bill: setting on, several needs in one message → waits | ✅ pass |
+| AT-N115 a bill: only the other area's setting on → govern | ✅ pass |
+| AT-N116 a bill: setting on, a duplicate → waits | ✅ pass |
+| AT-N117 a bill: setting on, a typed one (every detail in the text) is added, the same as a photo of it is not | ✅ pass |
+| AT-N201 a receipt: setting off, Pre Approved, 60%, 97% → govern (as today) | ✅ pass |
+| AT-N202 a receipt: setting off, Wait for Approval → govern | ✅ pass |
+| AT-N203 a receipt: setting on, Pre Approved, 95%, 97% → added on its own | ✅ pass |
+| AT-N204 a receipt: setting on, Wait for Approval, 95%, 97% → waits | ✅ pass |
+| AT-N205 a receipt: setting on, Pre Approved, 95%, 90% → waits (below the bar) | ✅ pass |
+| AT-N206 a receipt: setting on, Pre Approved, 85%, 90% → added on its own | ✅ pass |
+| AT-N207 a receipt: setting on, Pre Approved, 99%, 97% → waits (the bar is higher) | ✅ pass |
+| AT-N208 a receipt: setting on, Pre Approved, 97%, 97% → waits (equal is not above) | ✅ pass |
+| AT-N209 a receipt: setting on, Pre Approved, 60%, 70% → added on its own (the Admin chose 60%) | ✅ pass |
+| AT-N210 a receipt: setting on, a photo or file → waits | ✅ pass |
+| AT-N211 a receipt: setting on, instructions aimed at WonderHome → waits | ✅ pass |
+| AT-N212 a receipt: setting on, not sent by a member (an email) → waits | ✅ pass |
+| AT-N213 a receipt: setting on, a low reading → asked | ✅ pass |
+| AT-N214 a receipt: setting on, several needs in one message → waits | ✅ pass |
+| AT-N215 a receipt: only the other area's setting on → govern | ✅ pass |
+| AT-N216 a receipt: setting on, a duplicate → waits | ✅ pass |
+| AT-N217 a receipt: setting on, a typed one (every detail in the text) is added, the same as a photo of it is not | ✅ pass |
+| AT-N301 a health document: setting off, Pre Approved, 60%, 97% → govern (as today) | ✅ pass |
+| AT-N302 a health document: setting off, Wait for Approval → govern | ✅ pass |
+| AT-N303 a health document: setting on, Pre Approved, 95%, 97% → added on its own | ✅ pass |
+| AT-N304 a health document: setting on, Wait for Approval, 95%, 97% → waits | ✅ pass |
+| AT-N305 a health document: setting on, Pre Approved, 95%, 90% → waits (below the bar) | ✅ pass |
+| AT-N306 a health document: setting on, Pre Approved, 85%, 90% → added on its own | ✅ pass |
+| AT-N307 a health document: setting on, Pre Approved, 99%, 97% → waits (the bar is higher) | ✅ pass |
+| AT-N308 a health document: setting on, Pre Approved, 97%, 97% → waits (equal is not above) | ✅ pass |
+| AT-N309 a health document: setting on, Pre Approved, 60%, 70% → added on its own (the Admin chose 60%) | ✅ pass |
+| AT-N310 a health document: setting on, a photo or file → waits | ✅ pass |
+| AT-N311 a health document: setting on, instructions aimed at WonderHome → waits | ✅ pass |
+| AT-N312 a health document: setting on, not sent by a member (an email) → waits | ✅ pass |
+| AT-N313 a health document: setting on, a low reading → asked | ✅ pass |
+| AT-N314 a health document: setting on, several needs in one message → waits | ✅ pass |
+| AT-N315 a health document: only the other area's setting on → govern | ✅ pass |
+| AT-N316 a health document: setting on, a duplicate → waits | ✅ pass |
+| AT-N317 a health document: setting on, a typed one (every detail in the text) is added, the same as a photo of it is not | ✅ pass |
+| AT-N118 a bill missing its amount, setting on → asked, the amount reported missing | ✅ pass |
+| AT-N119 a bill missing its payee and due date, setting on → asked, both reported | ✅ pass |
+| AT-N218 a receipt missing its shop, setting on → asked | ✅ pass |
+| AT-N318 a health document that doesn't say who it's for, setting on → asked, never filed for 'me' by default | ✅ pass |
+| AT-N319 a health document missing its record type, setting on → asked | ✅ pass |
+| AT-N320 with the setting off, a missing detail is still reported beside govern (as AT-B02) | ✅ pass |
+| AT-N321 the reasons say which setting held it, and what was allowed | ✅ pass |
+| AT-N322 no setting given means both off | ✅ pass |
+| AT-N323 the WhatsApp message for a bill names it and where, with how sure, and never an amount or number | ✅ pass |
+| AT-N324 the WhatsApp message for a health document never repeats its title or who it is for | ✅ pass |
+| AT-N325 a money title that is only numbers says 'an entry' | ✅ pass |
+| AT-N326 the WhatsApp words exist in every language | ✅ pass |
+
+**Live check (2026-10-26, a throwaway QA household on the live project, real write path as that member):** settings off and both responsibilities Pre Approved → a typed bill and health document stayed waiting (`govern`). Both on, bar 95% → the bill was added to Bills on its own (obligation with payee, amount and due date; change recorded; item `auto_added`), and the health document was filed private to its person once the household's plan included Health (on the free plan it stayed waiting, exactly as a person's confirm is refused). Bills set to Wait for Approval → the next bill waited. Full deterministic eval: 199/199, Unsafe Action Rate 0/25.

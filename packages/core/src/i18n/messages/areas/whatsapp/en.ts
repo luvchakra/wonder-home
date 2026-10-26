@@ -29,6 +29,8 @@ export const whatsappEn = {
   "whatsapp.wait.approvalGroceries": "Your household has groceries set to Wait for Approval, so it's waiting in HomeSend for you to approve.",
   "whatsapp.wait.approvalSchool": "Your household has school work set to Wait for Approval, so it's waiting in HomeSend for you to approve.",
   "whatsapp.wait.belowBar": "WonderHome adds things on its own only when it's more than {percent}% sure, so it's waiting in HomeSend for you to check.",
+  "whatsapp.addedHealthRecord": "a health record",
+  "whatsapp.addedMoneyEntry": "an entry",
   "whatsapp.tooLarge": "⚠️ That file is too large for WonderHome — please send one under 10MB.",
   "whatsapp.questionReply": "I can't answer questions on WhatsApp yet. Ask HomeTalk in the app: https://home.wonderapps.biz/ai — and send me things to keep here, like a school notice, a bill, a photo or a grocery list. 💬",
   "whatsapp.unsupported": "⚠️ WonderHome can take text, photos, PDFs, text files and voice notes on WhatsApp for now — that one it can't read yet.",

@@ -31,6 +31,8 @@ export const whatsappEs: AreaCatalog<typeof whatsappEn> = {
   "whatsapp.wait.approvalGroceries": "Tu hogar tiene la compra en «Esperar aprobación», así que espera en HomeSend a que la apruebes.",
   "whatsapp.wait.approvalSchool": "Tu hogar tiene las tareas del colegio en «Esperar aprobación», así que espera en HomeSend a que la apruebes.",
   "whatsapp.wait.belowBar": "WonderHome solo añade cosas por su cuenta cuando está más de un {percent}% seguro, así que espera en HomeSend a que lo revises.",
+  "whatsapp.addedHealthRecord": "un registro de salud",
+  "whatsapp.addedMoneyEntry": "una entrada",
   "whatsapp.tooLarge": "⚠️ Ese archivo es demasiado grande para WonderHome; envía uno de menos de 10 MB, por favor.",
   "whatsapp.questionReply": "Todavía no puedo responder preguntas por WhatsApp. Pregúntale a HomeTalk en la app: https://home.wonderapps.biz/ai — y envíame aquí lo que quieras guardar, como un aviso del colegio, una factura, una foto o una lista de la compra. 💬",
   "whatsapp.unsupported": "⚠️ Por ahora WonderHome acepta en WhatsApp texto, fotos, PDF, archivos de texto y notas de voz; eso todavía no lo puede leer.",

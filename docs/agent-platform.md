@@ -22,7 +22,7 @@ Detail: `docs/agent-platform.md`. Read it before changing conversation, HomeBrai
   - The household context is one server-only row (`household_context`, `homebrain/context-store.ts`). Never read it from a session, and never answer from a row older than the last write.
 - **How HomeTalk and HomeSend work together** (routing, the life of an item, questions, confidence, failures, and the issues behind each rule): `docs/hometalk-homesend-design.md`.
 - **HomeSend** (`packages/core/src/homesend/`, `ai/classify-intake.ts`, `/home-send`) is the intake. Every input enters through `homesend/ingest.ts` and ends in `IntakeUnderstanding`. A new input type is a new `ingest*` entry point, never a second pipeline.
-  - Nothing reaches a domain table until a person confirms. Bills, health documents and receipts always wait for a person.
+  - Nothing reaches a domain table until a person confirms, or the household's own settings allow it. Bills, receipts and health documents wait for a person unless an Admin turned on "Add money entries directly" or "Add health entries directly" (Settings → AI Assistant, off by default, `household/direct-add-repository.ts`; the owner, 2026-10-26: "along with the % setting add setting feature to ask user if they want to add entries related to health, entries related to money directly in WonderHome if allowed in responsibilities"). On, they follow the same autonomy, bar and rules as a grocery; a bill is recorded, never paid.
   - Nothing is added on its own unless HomeSend is more sure than the household's bar: more than 95% (every detail found in the text sent, `homesend/verify.ts`) unless an Admin picks another on Settings → AI Assistant (`homesend/auto-add.ts`, 60–99%). Photos and files always wait, whatever the bar. Every entry shows its score as "N% sure". The `understanding` eval gate keeps HomeSend above 95% in category and end to end.
   - Told in HomeTalk about a new dated thing (`file_with_homesend`), the sentence goes through `ingestText` like a paste, never straight to a table.
   - What makes an entry complete is `homesend/completeness.ts`: per kind, required details (nothing is added on its own while one is missing) and useful ones. What the content says is taken first (`fillFromEvidence`), never guessed. **HomeSend only reports what is missing; it never words or sends a question** (the owner, 2026-10-26). **HomeTalk asks**, one question at a time, at most three per item, in the app and on WhatsApp (`hometalk/intake-questions.ts`), as its own open question (`metadata.clarify`, action `complete_homesend_item`, read by `conversation/clarify.ts`); who an item is for is asked the same way, with the household's names. The answer goes back onto the item, then HomeSend adds it (Pre Approved and above the bar, `addIfAllowed`) or it waits. Never an amount or health detail said back. The review form says "Still needed" and keeps Add off; `createNew` refuses a post without a required detail.
@@ -278,8 +278,10 @@ WonderHome's AI layer is one pipeline with three named, real surfaces —
   and an undone change is said to be undone. How an item is confirmed is `homesend/confirmation.ts`
   (§12): a clear, new grocery or school item a member sent may apply on its
   own only where the household set that outcome's autonomy to "execute";
-  bills, health documents and receipts always wait for a person, whatever
-  the confidence. A class outside school is its own kind, never school work
+  bills, health documents and receipts wait for a person, whatever the
+  confidence, unless an Admin turned on that area's "add directly" setting
+  (the owner, 2026-10-26), when they take the same path under
+  `finance.bills_paid`, `finance.budget_reviewed` or `health.records_kept`. A class outside school is its own kind, never school work
   (`activity_item`, story 08-027): a karate exam or a dance show is filed under
   the child's class of that name in Kids & School (the class is added in the
   same step when the child has none, and undone with it), and an event or

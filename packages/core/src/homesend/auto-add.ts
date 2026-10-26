@@ -4,9 +4,10 @@
  *
  * An Admin picks the bar on Settings → AI Assistant; a reading is added on
  * its own only when its score is strictly above it, and only where the
- * outcome's autonomy is "Pre Approved" (`confirmation.ts`). Everything else
- * that always waits — bills, health documents, receipts, photos and files,
- * paying, deleting — still waits whatever the bar says.
+ * outcome's autonomy is "Pre Approved" (`confirmation.ts`). Bills, receipts
+ * and health documents wait too, unless an Admin turned on "Add money
+ * entries directly" or "Add health entries directly" (`DirectAdd` below).
+ * Photos and files, paying and deleting still wait whatever any setting says.
  *
  * Pure, so client screens can show a score; the stored choice is read and
  * saved in `household/auto-add-repository.ts` (HomeSend itself touches only its own tables, X-003).
@@ -16,6 +17,7 @@ import { formatAmount, type Amount } from "../commerce/units";
 import type { Translate } from "../i18n/translate";
 import type { WaitingFor } from "./confirmation";
 import { FROM_A_FILE, VERIFIED_CONFIDENCE } from "./verify";
+import type { HomeSendKind } from "./items";
 
 /** The bars an Admin may pick (rule 20: picked, not typed), in percent. */
 export const AUTO_ADD_PERCENTS = [60, 70, 80, 85, 90, 95, 97, 99] as const;
@@ -60,6 +62,8 @@ export function sureWhy(
 export type AddedOnItsOwn = {
   title: string;
   where: string;
+  /** What kind it was: a health document's own title is never repeated outside the app, nor a bill's numbers. */
+  kind?: HomeSendKind | null;
   percent?: number | null;
   why?: SureWhy | null;
   /** A top-up of a grocery already on the shopping list (I-27): what it added, and what the list says now. */
@@ -105,4 +109,27 @@ export function waitRowWords(waiting: WaitingFor, t: Translate): string {
   if (waiting.reason === "on_list") return t("homesend.inbox.wait.onList");
   if (waiting.reason === "wait_for_approval") return t(waiting.area === "school" ? "homesend.inbox.wait.approvalSchool" : "homesend.inbox.wait.approvalGroceries");
   return t("homesend.inbox.wait.belowBar", { percent: waiting.percent ?? DEFAULT_AUTO_ADD_PERCENT });
+}
+
+/**
+ * Whether bills and receipts ("money") and health documents ("health") may
+ * be added on their own at all (the owner, 2026-10-26: "along with the %
+ * setting add setting feature to ask user if they want to add entries related
+ * to health, entries related to money directly in WonderHome if allowed in
+ * responsibilities"). Each is an Admin's choice, off until one turns it on,
+ * and off whenever it can't be read (`household/direct-add-repository.ts`).
+ * On, the entry still needs its responsibility Pre Approved and a reading
+ * above the bar, like any other (`confirmation.ts`).
+ */
+export type DirectAddArea = "money" | "health";
+export type DirectAdd = Record<DirectAddArea, boolean>;
+
+/** Both off: the default, and the answer whenever the settings can't be read. */
+export const NO_DIRECT_ADD: DirectAdd = { money: false, health: false };
+
+/** Which of the two settings decides a kind; null for a kind neither decides. */
+export function directAddAreaOf(kind: HomeSendKind | null | undefined): DirectAddArea | null {
+  if (kind === "bill" || kind === "receipt") return "money";
+  if (kind === "health_document") return "health";
+  return null;
 }

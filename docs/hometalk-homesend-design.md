@@ -13,13 +13,14 @@ This is the target design. Most of it is live. Section 12 says, issue by issue, 
    - HomeSend turns something to keep (a notice, photo, PDF, voice note, forwarded message or list) into an entry, and says what that entry still lacks.
    - It never words or sends a question.
 3. **Nothing is guessed.** A detail the content didn't give is asked for, never invented. While WonderHome is still unsure, it asks one focused question.
-4. **The household decides how much happens on its own.** Two settings decide, and nothing else:
+4. **The household decides how much happens on its own.** These settings decide, and nothing else:
    - each responsibility's autonomy ("Wait for Approval" or "Pre Approved");
-   - the Admin's confidence bar (more than 95% unless changed).
-5. **Some things always wait for a person, whatever the settings:**
-   - bills, health documents and receipts;
-   - photos and files;
-   - paying, ordering, changing who can do what, and deleting.
+   - the Admin's confidence bar (more than 95% unless changed);
+   - for bills and receipts, "Add money entries directly", and for health documents, "Add health entries directly" (Admin-only, off by default; the owner, 2026-10-26: "along with the % setting add setting feature to ask user if they want to add entries related to health, entries related to money directly in WonderHome if allowed in responsibilities").
+5. **Some things wait for a person:**
+   - bills, receipts and health documents, unless an Admin turned on that area's "add directly" setting (then they follow principle 4 like a grocery);
+   - always, whatever the settings: photos and files (most bills and reports arrive this way, so most still wait);
+   - always: paying, ordering, changing who can do what, and deleting. A bill added on its own is a record, and a reminder may follow; nothing is paid.
 6. **Every refusal and failure says why.** It says so in the app, on WhatsApp and by email where it matters. Nothing fails silently.
 7. **Polite and structured.** Short sentences, a "please" or "sorry" where it fits, and choices or needed parts set out as a list. Every message is in all eight languages.
 
@@ -98,23 +99,25 @@ received → understood → checked & scored → reconciled → completeness
 
    | Situation | Outcome |
    |---|---|
-   | A bill, health document or receipt | **govern**: always waits |
+   | A bill, receipt or health document, with its "add directly" setting off | **govern**: waits for a person |
+   | The same, with the setting on | the rows below, like a grocery. Its responsibility: `finance.bills_paid` (bill), `finance.budget_reviewed` (receipt), `health.records_kept` (health). A health document must name its person |
    | Unreadable or unknown | **ask** what it is |
    | Low confidence, who it's for is unclear, or a required detail still missing | **ask**: HomeTalk asks it (HomeSend gives no question, only what is missing) |
    | Possible duplicate; medium confidence below the bar; content with instructions in it; several needs; not sent by a member; photo or file | **prepare**: waits in HomeSend |
    | A grocery already on the shopping list, with no amount | **prepare**: waits for the person to choose how much more (I-27) |
-   | Pre Approved, score above the household's bar, a grocery or school item, nothing required missing | **auto_apply**: added on its own, with an Undo |
+   | Pre Approved, score above the household's bar, a grocery or school item (or a bill, receipt or health document with its setting on), nothing required missing | **auto_apply**: added on its own, with an Undo |
    | The same, for a grocery already on the shopping list said with an amount ("2 litres", or a number alone) | **auto_apply** as a top-up: added to the entry already there, the one HomeTalk's add would pick, never a second one (I-27) |
 
-   - Bills, school items, events and every other match keep the duplicate rule (I-4). Bills, health documents, receipts, photos and files always wait.
+   - Bills, school items, events and every other match keep the duplicate rule (I-4). Photos and files always wait; bills, receipts and health documents wait unless their "add directly" setting is on (I-28).
    - **Why it waits.** When something that would otherwise be added on its own waits for a reason the person can act on, the decision carries it (`wait`): already on the shopping list, the outcome set to Wait for Approval, or below the bar. The Needs review row says it in a few words; WhatsApp and HomeTalk say it in a sentence, never with an amount.
 
-8. **Added through the governed write.** The same domain service a person's confirm uses (`home-send-auto.ts`, `home-send-writes.ts`), recorded as a change that can be undone, and marked `auto_added`.
+8. **Added through the governed write.** The same domain service a person's confirm uses (`home-send-auto.ts`, `home-send-writes.ts`), recorded as a change that can be undone, and marked `auto_added`. A bill becomes an obligation, never a payment; a receipt records its lines as purchases (not what is at home or on the list), and Undo takes back every line; a health record is filed private to its person, through the same self-or-guardian rule and plan check as a person's confirm.
 9. **The reply.**
    - App: a notice with an Undo.
    - WhatsApp: "Added *Maths worksheet* for Asmi to Kids & School … You can undo it in HomeSend", or "It's waiting in HomeSend for you to check".
    - A top-up: "Added 2 L more *Mustard oil* (now 3 L) (97% sure — every detail is in what you sent) — … You can undo it in HomeSend."
    - Waiting on the list: "*Mustard oil* is already on your shopping list, so it's waiting in HomeSend for you to choose."
+   - A bill or receipt on WhatsApp loses every number from its title ("Added *Electricity bill* to Bills (97% sure — …)"); a health document is "a health record", for nobody named. Never an amount, a health detail or a number.
 
 ---
 
@@ -169,6 +172,9 @@ Live since #365 (issue I-12).
 - **The bar.** Settings → AI Assistant → "How sure HomeSend must be to add on its own".
   - Choices: more than 60, 70, 80, 85, 90, 95 (recommended), 97 or 99%.
   - Admins only, kept as a versioned policy. If the setting can't be read, the highest bar applies.
+- **Money and health.** Settings → AI Assistant → "Add money entries directly" (bills, receipts) and "Add health entries directly" (health documents), right beside the bar (14-053, I-28).
+  - Admins only, off by default, versioned policies; if a setting can't be read, it is off.
+  - On, the entry still needs its responsibility Pre Approved and a score above the bar. The help line says photos and files still wait.
 - **Autonomy** (Manage Household → Responsibilities):
   - **Wait for Approval:** HomeSend prepares the entry and adds it only after a person approves.
   - **Pre Approved:** it is added on its own when it clears the bar, and the person is told afterwards.
@@ -255,6 +261,7 @@ To measure: `updated_at - created_at` on `home_send_items`, and `hometalk_channe
 | I-25 | The notice resent (a duplicate), then "for Manan": the note became its own item, Failed safely (2026-10-26, 21:08 IST) | Read alone at 8 s; a lone detail was kept as content | The longer wait joins it; a note on a message already on record goes onto that item (or says it was handled); a lone bare detail is never an item (`itemOnRecord`, `noteOnItem`, `isBareDetail`) | Live (this PR) |
 | I-26 | "Asmi has a karate grading exam…" filed with HomeSend as "Child B has…"; the review offered "Add Child B as a child" (the owner, 2026-10-26) | `file_with_homesend` filed `intent.utterance`, which a model reading carried as the masked text the provider read | `reidentifyIntent` (`ai/privacy.ts`): the reading keeps the member's own words and real names; nothing is filed with a placeholder in it; a placeholder in a reading is never offered as a child to add, the household is asked who; the eval masks as the route does and fails any case that keeps a placeholder (HT-161) | Live (this PR) |
 | I-27 | "2 litres mustard oil" on WhatsApp waited although groceries were Pre Approved and it read at 97%; a 70% item said "every detail is in what you sent"; a waiting row gave no reason | Any match on record meant "prepare" (I-4), even an item already on the shopping list said with an amount; `sureWhy` read only the check, not the score; the row showed only where it came from | A listed grocery with an amount is a top-up under the same decision (`onShoppingList`, `topUp`), with HomeTalk's "now 3 L" and Undo; no amount, Wait for Approval or below the bar waits and says why (`wait`); "verified" only in the 97% band; the row's reason in eight languages | Live (25-039, 14-052) |
+| I-28 | Bills, receipts and health documents always waited, even Pre Approved and clear (the owner, 2026-10-26: "along with the % setting add setting feature to ask user if they want to add entries related to health, entries related to money directly in WonderHome if allowed in responsibilities") | They were hard-coded `govern` | Two Admin switches beside the bar; on, the grocery path (autonomy, bar, every other rule); photos and files still wait | Live (14-053) |
 
 ---
 

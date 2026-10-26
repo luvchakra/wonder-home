@@ -5,11 +5,9 @@ import { z } from "zod";
 
 import { toErrorBody } from "@wonderhome/core/api/errors";
 import { cancelObligation, restoreObligation, updateObligation } from "@wonderhome/core/finance/repository";
-import { CONSUMABLE_CATEGORIES } from "@wonderhome/core/commerce/consumables";
-import { createConsumable, listConsumables, recordPurchase, removePurchase, retireConsumable } from "@wonderhome/core/commerce/repository";
+import { removePurchase, retireConsumable } from "@wonderhome/core/commerce/repository";
 import { adjustListEntry, changeStock, listGroceries, recordedChange, type GroceryItem } from "@wonderhome/core/commerce/inventory";
-import { duplicateReceipt, receiptStockLine } from "@wonderhome/core/commerce/receipt-stock";
-import { currencyCode, unitCostMinor } from "@wonderhome/core/commerce/receipts";
+import { duplicateReceipt } from "@wonderhome/core/commerce/receipt-stock";
 import { createAdminClient } from "@wonderhome/core/db/admin";
 import { createClient } from "@wonderhome/core/db/server";
 import { homesendCorrectionEvidence, recordCorrectionEvidence } from "@wonderhome/core/evaluation/evidence";
@@ -33,7 +31,7 @@ import { setEventCancelled } from "@wonderhome/core/family/event-detail";
 
 import { prepareReview } from "./home-send-review";
 import { autoApplyHomeSendItem } from "./home-send-auto";
-import { addChildFromNotice, addGrocery, createNew, reviseExisting, routeSchema, type RouteInput } from "./home-send-writes";
+import { addChildFromNotice, addGrocery, createNew, recordReceipt, reviseExisting, routeSchema, type RouteInput } from "./home-send-writes";
 
 /**
  * HomeSend's entry points (Wave 3): upload a photo, PDF, text file or voice
@@ -55,7 +53,8 @@ export type SendHomeItemState = {
    * Set when the household's own autonomy setting let WonderHome apply this
    * without asking (§12) — shown as done, with its Undo, not as a review.
    */
-  autoApplied?: { changeId: string; title: string; where: string };
+  /** `whole`: Undo takes back every change it made (a receipt's lines), by the item. */
+  autoApplied?: { changeId: string; title: string; where: string; itemId?: string; whole?: boolean };
   item?: {
     id: string;
     classifiedKind: HomeSendKind;
@@ -85,6 +84,7 @@ async function withReview(
   const item = state.item;
   if (!item) return state;
   const review = await prepareReview(supabase, membership, {
+    id: item.id,
     classifiedKind: item.classifiedKind,
     extracted: item.extracted,
     understanding: item.understanding ?? null,
@@ -98,11 +98,14 @@ async function withReview(
     // How sure it was, with the entry (the owner, 2026-10-26).
     // The score's own reason, not the decision's (design §7).
     const sure = sureClause({ percent: scorePercent(review.understanding?.score), why: sureWhy(review.understanding) });
-    if (applied) return { notice: `${applied.title} — added to ${applied.where} on its own${sure}.`, autoApplied: applied };
+    if (applied) return { notice: `${applied.title} — added to ${applied.where} on its own${sure}.`, autoApplied: { ...applied, itemId: item.id } };
   }
+  // Allowed but not written (the plan, or the domain refused it): it waits, and never says it was added.
+  const confirmation: ConfirmationDecision =
+    review.confirmation.mode === "auto_apply" ? { mode: "prepare", reason: "WonderHome couldn't add this on its own, so it is waiting for you to check.", question: null } : review.confirmation;
   return {
     ...state,
-    item: { ...item, understanding: review.understanding, reconciliation: review.reconciliation, subject: review.subject, confirmation: review.confirmation, plan: review.plan ?? null },
+    item: { ...item, understanding: review.understanding, reconciliation: review.reconciliation, subject: review.subject, confirmation, plan: review.plan ?? null },
   };
 }
 
@@ -326,76 +329,9 @@ async function routeReceipt(formData: FormData): Promise<RouteHomeItemState> {
       return { error: `This looks like a receipt already recorded on ${duplicate.recordedAt.slice(0, 10)}, with the same shop, day and total. If it really is a second one, tick "Record it again".` };
     }
 
-    const tracked = await listConsumables(supabase, input.householdId);
-    const groceries = new Map<string, GroceryItem>((await listGroceries(supabase, input.householdId)).map((item) => [item.id, item]));
-    const byId = new Map(tracked.map((consumable) => [consumable.id, consumable]));
-    const byName = new Map<string, { id: string }>(tracked.map((consumable) => [consumable.name.trim().toLowerCase(), { id: consumable.id }]));
-    const currency = currencyCode(input.currency);
-    const change = (domain: "grocery_item" | "purchase", entityId: string) =>
-      recordHomeSendChange(supabase, { householdId: input.householdId, intakeId: input.itemId, domain, entityId, createdByMemberId: membership.memberId });
-
-    let firstPurchase: string | null = null;
-    let started = 0;
-    let stocked = 0;
-    let cleared = 0;
-    for (const line of kept) {
-      const quantity = line.quantity === "" ? 1 : line.quantity;
-      let consumableId: string;
-      if (line.match === "new") {
-        // "New" never makes a second copy of something already tracked under
-        // the same name — it records against that one instead.
-        const same = byName.get(line.name.toLowerCase());
-        if (same) {
-          consumableId = same.id;
-        } else {
-          const created = await createConsumable(supabase, {
-            householdId: input.householdId,
-            name: line.name,
-            category: CONSUMABLE_CATEGORIES[0],
-            unit: line.unit || "unit",
-            typicalQuantity: quantity,
-          });
-          consumableId = created.id;
-          byName.set(line.name.toLowerCase(), { id: created.id });
-          await change("grocery_item", created.id);
-          started += 1;
-        }
-      } else {
-        if (!byId.has(line.match)) return { error: `"${line.name}" was matched to something this household no longer tracks. Choose again.` };
-        consumableId = line.match;
-      }
-      const purchase = await recordPurchase(supabase, {
-        householdId: input.householdId,
-        consumableId,
-        purchasedOn: input.purchasedOn,
-        quantity,
-        unitCostMinor: unitCostMinor(line.lineTotal === "" ? null : line.lineTotal, quantity, currency),
-        currency,
-        merchant: input.merchant ?? null,
-        unit: line.unit || null,
-      });
-      firstPurchase ??= purchase.id;
-      await change("purchase", purchase.id);
-
-      // At home and on the list, from what is on record now — a new item starts at what was bought.
-      const plan = receiptStockLine({ quantity, unit: line.unit || null }, groceries.get(consumableId) ?? null, input.purchasedOn);
-      if (line.stock && plan.bought && plan.addable) {
-        await changeStock(supabase, {
-          householdId: input.householdId,
-          itemId: consumableId,
-          kind: "add",
-          amount: plan.bought,
-          source: "receipt",
-          idempotencyKey: `hsr:${purchase.id}`,
-          sourceRef: { purchaseId: purchase.id, homeSendItemId: input.itemId },
-        });
-        stocked += 1;
-      }
-      if (line.clear && plan.bought && plan.clearable) {
-        await adjustListEntry(supabase, { householdId: input.householdId, itemId: consumableId, kind: "subtract", amount: plan.bought, source: "receipt", idempotencyKey: `hsl:${purchase.id}` });
-        cleared += 1;
-      }
-    }
+    const recorded = await recordReceipt(supabase, membership, input, kept);
+    if ("error" in recorded) return { error: recorded.error };
+    const { firstPurchase, started, stocked, cleared } = recorded;
 
     const readLines = read?.lines ?? [];
     const corrected = intake?.extracted
@@ -704,6 +640,7 @@ async function reverseReceiptLine(supabase: Awaited<ReturnType<typeof createClie
 }
 
 const undoSchema = z.object({ householdId: z.uuid(), changeId: z.uuid() });
+const undoWholeSchema = z.object({ householdId: z.uuid(), itemId: z.uuid() });
 
 /**
  * Undoing what sending something in did (CLAUDE.md rule 12, Wave 3 §10):
@@ -712,6 +649,10 @@ const undoSchema = z.object({ householdId: z.uuid(), changeId: z.uuid() });
  * edit or remove would use.
  */
 export async function undoHomeSendChangeAction(_previous: RouteHomeItemState, formData: FormData): Promise<RouteHomeItemState> {
+  // Something added on its own as several changes (a receipt's lines) is undone whole, by its item.
+  if (!formData.get("changeId") && undoWholeSchema.safeParse({ householdId: formData.get("householdId"), itemId: formData.get("itemId") }).success) {
+    return undoHomeSendDocumentAction(_previous, formData);
+  }
   const parsed = undoSchema.safeParse({ householdId: formData.get("householdId"), changeId: formData.get("changeId") });
   if (!parsed.success) return { error: "Please try again." };
 

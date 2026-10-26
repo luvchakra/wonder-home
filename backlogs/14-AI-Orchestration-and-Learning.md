@@ -56,6 +56,7 @@
 | 50 | P2 | 14-050 | HomeTalk offers to fill in details for waiting items | Done | PR #368. The owner said yes on 2026-10-26 ("go ahead with 14-050"). On opening HomeTalk, an adult with HomeSend items from the last two weeks that miss something HomeTalk can ask hears "2 things in HomeSend need a detail — … Shall we fill them in now?", at most once every twelve hours and never over an open question (`hometalk/details-offer.ts`). "Yes" runs `fill_homesend_details`: the first item's first question, the rest queued, each item after the last; "no" leaves them. Browser-checked at 360 px and desktop on the live project (offer on first load, once; "yes" → "First, Diwali dinner: Which day is it?"; the answer saved). Eval HT-156, HT-157; tests OF-01–OF-21. |
 | 51 | P1 | 14-051 | The rest of WhatsApp's words in the member's language | Done | PR #368. HomeSend's refusals carry a closed code (`IngestRejected.code`) and are said from `whatsapp.rejected.*`; the reply to a connect code is in the linked member's language (`whatsapp.link.*`). Only a code that names nobody, and the "not connected yet" reply, stay English: nobody is known yet. |
 | 52 | P0 | 14-052 | HomeSend says why something waits, and its reason matches its score | Done | PR #378. The owner, 2026-10-26: "2 litres mustard oil" on WhatsApp waited although groceries were Pre Approved ("its pre approved, still issue"); "Science project model · 70% sure · every detail is in what you sent"; Mustard oil waited at 97% with only "Review". `confirmation.ts`: a grocery already on the shopping list said with an amount goes through the same decision and is a top-up (`onShoppingList`, `topUp`, the HomeFood half is 25-039); a decision that holds something otherwise added on its own carries why (`wait`: on the list, Wait for Approval, below the bar). The Needs review row says it in a few words (`auto-add.ts` `waitRowWords`, `homesend.inbox.wait.*`), WhatsApp in a sentence (`whatsapp.wait.*`), HomeTalk in English, never with an amount; all eight languages. `sureWhy` says "verified" only in the 97% band. Every other duplicate keeps I-4's rule. Tests AT-F08–F11, AT-L, AT-M, AT-H08–H11, AT-J05–J06; browser-checked at 360 px and desktop on the live project. Design §4.7, §7, I-27. |
+| 53 | P1 | 14-053 | Admins may let bills, receipts and health documents be added directly | Done | PR pending. The owner, 2026-10-26: "along with the % setting add setting feature to ask user if they want to add entries related to health, entries related to money directly in WonderHome if allowed in responsibilities". Two Admin switches on Settings → AI Assistant, off by default; on, the entry takes the grocery path (Pre Approved + above the bar + every other rule). Photos and files still wait. Starter outcomes `finance.budget_reviewed` and `health.records_kept` added. |
 
 **Status flow:** `Not Started` → `In Progress` → `Blocked` → `Done`
 
@@ -643,6 +644,17 @@ Implement AI Orchestration & Learning as a first-class WonderHome domain. The mo
 - The decision names why it waits (on the list, Wait for Approval, below the bar); the Needs review row, WhatsApp and HomeTalk say it, in all eight languages, never with an amount.
 - Bills, school items and events keep the duplicate rule; bills, health documents, receipts, photos and files always wait.
 - "Every detail is in what you sent" only in the 97% band; otherwise unsure, missing details, or from a photo or file.
+### Story 14-053 — Admins may let bills, receipts and health documents be added directly
+**Epic:** AI Orchestration & Learning
+**Priority:** P1
+**Goal:** The owner, 2026-10-26: "along with the % setting add setting feature to ask user if they want to add entries related to health, entries related to money directly in WonderHome if allowed in responsibilities".
+
+**Acceptance criteria**
+- Settings → AI Assistant has "Add money entries directly" (bills, receipts) and "Add health entries directly" (health documents), Admin-only, off by default, off when unreadable, versioned `policies` rows (`household/direct-add-repository.ts`).
+- With a setting on, `decideConfirmation` treats that kind like a grocery: its responsibility's autonomy (`finance.bills_paid`, `finance.budget_reviewed`, `health.records_kept`), the bar and every other rule. Photos and files, duplicates, injected instructions, several needs, non-member senders and a missing required detail still wait or ask.
+- Added through the same domain services as a person's confirm, marked `auto_added`, undoable; a bill is a record, never a payment; a health record is private to its person.
+- WhatsApp never echoes an amount, a health detail or a number.
+- Off, nothing changes (AT-B01 to AT-B04); AT-N covers the combinations; HS-36 to HS-38 keep the Unsafe Action Rate at zero.
 
 ## Module Completion Rule
 Complete dependency-ready P0 stories before P1/P2, but do not block unrelated work on unavailable external providers.

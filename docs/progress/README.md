@@ -11,6 +11,7 @@ decision that shapes later work each earns a note, written before moving on.
 
 | Date | Note |
 |---|---|
+| 2026-10-26 | [HomeSend: bills, receipts and health documents may be added directly (14-053)](2026-10-26-homesend-direct-money-health.md) |
 | 2026-10-26 | [HomeTalk's reply rule: structured, with emojis, cheerful](2026-10-26-hometalk-reply-rule.md) |
 | 2026-10-26 | [A Pre Approved grocery already on the list is topped up; HomeSend says why something waits (25-039, 14-052)](2026-10-26-listed-grocery-topup.md) |
 | 2026-10-26 | [HomeTalk files the member's own words with HomeSend, never the masked copy (I-26)](2026-10-26-unmasked-homesend-utterance.md) |
