@@ -6,6 +6,8 @@ import { fakeSupabase } from "../homesend/testing";
 import { handleWhatsAppWebhook } from "../notifications/whatsapp-webhook";
 import { readInboundMessages } from "./inbound";
 import { groceryListNames, isForHomeTalk, isQuestionForWonderHome, namesTheSameThing, whatsappReplyText } from "./hometalk";
+import { quantityQuestion } from "../conversation/grocery-actions";
+import { warmReply } from "../conversation/warmth";
 import { intakeQuestion, memberNamedInReply, questionIn } from "../hometalk/intake-questions";
 import { translatorFor } from "../i18n/translate";
 import { scorePercent, sureWhy } from "../homesend/auto-add";
@@ -685,7 +687,7 @@ describe("processing into HomeSend", () => {
         ground: (intent) => groundIntent(intent, { people: [], viewerMemberId: MEMBER, timezone: "Asia/Kolkata", now, references: async () => NO_REFERENCES, groceries: async () => [oil] }),
       });
     const first = await talk("Add coconut oil to the groceries");
-    expect(first.kind === "reply" && first.text).toBe('Coconut oil is already on your shopping list (1 L). How much more should I add? Or say "that\'s enough" to leave it.');
+    expect(first.kind === "reply" && first.text).toBe('**Coconut oil** is already on your shopping list (1 L).\nHow much more should I add?\nOr say "that\'s enough" to leave it.');
     const clarifying = first.kind === "reply" ? (first.clarification ?? null) : null;
 
     const { h, id } = await received("text");
@@ -711,6 +713,49 @@ describe("processing into HomeSend", () => {
     expect(turns[0]!.kind === "reply" && turns[0]!.proposal.kind).toBe("executed");
     expect(h.tables.home_send_items).toEqual([]);
     expect(out.sent[0]!.text).toBe("Added *Coconut oil* (+2 L, now 3 L) to the shopping list.");
+  });
+
+  // The owner, 2026-10-26, 9:03 PM: "add 1 litre coconut oil to the list" for
+  // coconut oil kept in bottles met "I tried, and it did not go through:
+  // Coconut oil is kept in bottle, so 1 l does not fit it" (25-038). Now the
+  // one question goes out on WhatsApp, and "count it in litres instead" is
+  // the unit change the Groceries screen makes, then 1 litre added.
+  it("1 litre of coconut oil kept in bottles is asked about on WhatsApp, and \"count it in litres instead\" answers it", async () => {
+    const oil = {
+      id: "c-oil", name: "Coconut oil", category: "grocery", unit: "bottle", step: null, lowLevel: null, storage: null, note: null, aliases: [], imageUrl: null, imagePath: null, catalog: null, lastPurchasedOn: null, stock: null,
+      toBuy: { entryId: "e-oil", quantity: 1, unit: "bottle", version: 1, source: "manual", mealId: null },
+    };
+    const now = new Date();
+    const talk = (utterance: string, clarifying: TurnInput["clarifying"] = null) =>
+      converse({
+        utterance, channel: "text", actor: { memberId: MEMBER, roles: ["head"] }, pending: null, clarifying, autonomyFor: () => "execute", entitledFor: () => true, executable: canExecute, sessionId: "s-wa", now,
+        ground: (intent) => groundIntent(intent, { people: [], viewerMemberId: MEMBER, timezone: "Asia/Kolkata", now, references: async () => NO_REFERENCES, groceries: async () => [oil] }),
+      });
+
+    const first = await received("text");
+    first.h.tables.whatsapp_messages![0]!.text_content = "add 1 litre coconut oil to the list";
+    first.h.tables.home_send_items = [];
+    const asked = replies();
+    const questions: Awaited<ReturnType<typeof talk>>[] = [];
+    await processWhatsAppMessage(first.h.client, first.id, {
+      config: CONFIG, fetch: asked.fetchImpl, ingest: { classify },
+      ask: async ({ text }) => {
+        const question = await talk(text ?? "");
+        questions.push(question);
+        return question.kind === "reply" ? question.text : "";
+      },
+    });
+    const sent = asked.sent[0]!.text;
+    expect(sent).toContain("Coconut oil is kept in bottles. How many bottles should I add for 1 litre?");
+    expect(sent).toContain('"count it in litres instead"');
+    expect(sent).not.toMatch(/does not fit|I tried|\b1 l\b/);
+    const question = questions[0]!;
+    const clarifying = question.kind === "reply" ? (question.clarification ?? null) : null;
+    expect(clarifying?.parameters).toMatchObject({ choices: ["1 bottle", "2 bottles", "Count it in litres instead"] });
+
+    const answer = await talk("count it in litres instead", clarifying);
+    expect(answer.kind === "reply" && answer.intent).toMatchObject({ action: "add_to_list", parameters: { item: "1 litre coconut oil", switchUnit: { itemId: "c-oil", unit: "l" } } });
+    expect(answer.kind === "reply" && answer.proposal.kind).toBe("executed");
   });
 
   // The owner, 2026-10-26: "milk, eggs and bread", then "2 of each", added
@@ -1071,6 +1116,12 @@ describe("HomeTalk's answer as a WhatsApp message", () => {
   it("uses WhatsApp's bold, writes links in full and adds the screen it opens", () => {
     const text = whatsappReplyText({ displayText: "**Tomorrow**\n- Piano at 5 pm\n- [Groceries](/groceries) has 3 things", navigate: "/calendar" });
     expect(text).toBe("*Tomorrow*\n• Piano at 5 pm\n• Groceries (https://home.wonderapps.biz/groceries) has 3 things\n\nhttps://home.wonderapps.biz/calendar");
+  });
+
+  it("shows HomeTalk's how-much question as a list, one item a line, with the hint below (the owner, 2026-10-26)", () => {
+    const asked = quantityQuestion(["milk", "eggs"], []);
+    const shown = whatsappReplyText({ displayText: warmReply(asked, { action: "add_to_list", proposal: "clarify", ok: true }) });
+    expect(shown).toMatch(/^🛒 How much of each should I add\?\n• \*Milk\*\n• \*Eggs\*\n💡 For example [^\n]+\.$/);
   });
 
   it("ends a long answer at a sentence and says the rest is in the app", () => {

@@ -350,7 +350,8 @@ const HOUSEHOLD_D: GoldenHousehold = {
       appointment("d-h-kabir", D_ID, "d-kabir", "2026-09-25T10:30:00Z", { appointmentType: "mental_wellness", provider: "Dr. Sen" }),
     ],
     obligations: [bill("d-b-school-fees", "School fees", "2026-09-30", 85000, "d-neha", { kind: "school_fee" })],
-    consumables: [consumable("d-c-milk", "Milk", { unit: "litre", daysPerUnit: 1 })],
+    // Coconut oil counted in bottles, as the owner's own household keeps it (HT-160, 25-038).
+    consumables: [consumable("d-c-milk", "Milk", { unit: "litre", daysPerUnit: 1 }), consumable("d-c-coconut-oil", "Coconut oil", { unit: "bottle", daysPerUnit: 30 })],
   },
 };
 

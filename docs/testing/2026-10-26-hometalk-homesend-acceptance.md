@@ -142,7 +142,7 @@ Run them with `npx vitest run -t "AT-"`, or run the files above.
 
 Two product defects were found by these follow-up tests and fixed, as noted in the table. One E2E run failed once after a fresh build and did not reproduce in four further runs; its output was overwritten before it was captured.
 
-## Follow-up: I-24, a listed grocery, the reason and the row (25-038, 14-052)
+## Follow-up: I-24, a listed grocery, the reason and the row (25-039, 14-052)
 
 The owner, 2026-10-26: "2 litres mustard oil" on WhatsApp waited although groceries were Pre Approved; "Science project model · 70% sure · every detail is in what you sent"; Mustard oil waited at 97% with only "Review". Expected results were written into the tests before they ran.
 
@@ -177,7 +177,7 @@ The owner, 2026-10-26: "2 litres mustard oil" on WhatsApp waited although grocer
 | AT-J05, AT-J06 | Told in HomeTalk, listed: Pre Approved → "Added 2 L more **Mustard oil** (now 3 L)"; Wait for Approval → "already on your shopping list" | ✅ pass |
 | Browser, live project, 360 px and desktop | Needs your review rows: "already on the shopping list", "below your bar of 95%", "groceries set to Wait for Approval"; the 70% school item reads "the AI wasn't sure"; no sideways scroll at 360 px. "Add anyway" on a listed 2 L item topped the one entry up from 1 L to 3 L, with no second item | ✅ pass |
 
-Touched suites: 2,001 / 2,001 pass (the acceptance file: 195). Evaluation: 196 / 196, Unsafe Action Rate 0 / 23. One test expectation was wrong (AT-H11, above); no product defect was found by these tests beyond the three reported.
+Touched suites: 2,018 / 2,018 pass (the acceptance file: 195). Evaluation: 197 / 197, Unsafe Action Rate 0 / 23. One test expectation was wrong (AT-H11, above); no product defect was found by these tests beyond the three reported.
 
 ## Every case and its result
 

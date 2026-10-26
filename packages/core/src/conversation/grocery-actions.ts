@@ -3,7 +3,9 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 import { ApiError } from "../api/errors";
 import { catalogItemFor } from "../commerce/catalog";
 import { adjustListEntry, changeStock, listGroceries, markBought, type GroceryItem } from "../commerce/inventory";
+import { readAcrossUnits, unitName } from "../commerce/pack-amount";
 import { createConsumable, retireConsumable } from "../commerce/repository";
+import { changeItemUnit } from "../commerce/unit-change";
 import { bareExampleFor, bareExamples, bareRule, bareTwoReads, englishCount, readBareNumber, type BareItem } from "../commerce/bare-amount";
 import { compatible, formatAmount, stepInBase, toBase, unitInfo, type Amount } from "../commerce/units";
 import type { HouseholdIntent } from "./intent";
@@ -120,10 +122,36 @@ function amountFor(line: GroceryLine, item: Pick<GroceryItem, "name" | "unit" | 
     return toBase(read.amount.quantity, read.amount.unit);
   }
   const unit = line.amount.unit;
-  if (!compatible(unit, item.unit)) {
-    throw ApiError.badRequest(`${item.name} is kept in ${unitInfo(item.unit).key}, so ${line.amount.quantity} ${unit} does not fit it.`);
-  }
+  // Said in litres, kept in bottles (25-038): whole packs of a known size,
+  // else the one question in words — never a unit code or "does not fit".
+  const across = readAcrossUnits({ quantity: line.amount.quantity, unit }, item);
+  if (across.kind === "packs") return across.amount;
+  if (across.kind === "ask") throw ApiError.badRequest(across.question, { sayAsIs: true, choices: across.choices });
   return toBase(line.amount.quantity, unit);
+}
+
+/** The amount as it was said, when it was said in another unit than the item keeps ("1 L" of a bottle item). */
+function saidAcross(line: GroceryLine, item: Pick<GroceryItem, "name" | "unit"> & { catalog?: Pick<NonNullable<GroceryItem["catalog"]>, "pack"> | null }): Amount | null {
+  if (!line.amount?.unit) return null;
+  const across = readAcrossUnits({ quantity: line.amount.quantity, unit: line.amount.unit }, item);
+  return across.kind === "packs" ? across.said : null;
+}
+
+/**
+ * A unit rule the database still refuses (an item changed on another screen
+ * since it was read) is said in words, with what to do — never "unit does
+ * not match this item" (25-038).
+ */
+async function inItsUnit<T>(item: Pick<GroceryItem, "name" | "unit">, write: () => Promise<T>): Promise<T> {
+  try {
+    return await write();
+  } catch (thrown) {
+    if (thrown instanceof ApiError && thrown.code === "bad_request" && /unit|amount does not fit/i.test(thrown.message)) {
+      const kept = unitName(item.unit);
+      throw ApiError.badRequest(`${item.name} is counted in ${kept}, so I have left it as it was. Tell me the amount in ${kept}, or change how it is counted on the Groceries screen.`, { sayAsIs: true });
+    }
+    throw thrown;
+  }
 }
 
 function key(prefix: string): string {
@@ -183,28 +211,53 @@ export function quantityQuestion(names: readonly string[], items: readonly Groce
   if (known.length === 1) {
     const { name, item } = known[0]!;
     if (item?.toBuy) {
-      return `${name} is already on your shopping list (${say({ quantity: item.toBuy.quantity, unit: item.toBuy.unit })}). How much more should I add? Or say "that's enough" to leave it.`;
+      return `**${name}** is already on your shopping list (${say({ quantity: item.toBuy.quantity, unit: item.toBuy.unit })}).\nHow much more should I add?\nOr say "that's enough" to leave it.`;
     }
     const counted = item && ["piece", "own"].includes(bareRule(bareItemOf(item)).kind);
     return `How ${counted ? "many" : "much"} ${name.toLowerCase()} should I add? For example ${bareExamples(item ? bareItemOf(item) : null)}.`;
   }
-  const listed = known.map(({ name, item }) => (item?.toBuy ? `${name} (already on the list, ${say({ quantity: item.toBuy.quantity, unit: item.toBuy.unit })})` : name));
-  const leave = known.some(({ item }) => item?.toBuy) ? ` Or say "that's enough" to leave them.` : "";
+  // One line per item (the owner, 2026-10-26: "make the responses nicely structured").
+  const listed = known.map(({ name, item }) => (item?.toBuy ? `- **${name}** — ${say({ quantity: item.toBuy.quantity, unit: item.toBuy.unit })} already on the list` : `- **${name}**`));
+  const leave = known.some(({ item }) => item?.toBuy) ? `\nOr say "that's enough" to leave them.` : "";
   // Every example reads back as it says (25-037): "1 litre milk and 6 eggs",
   // and "2 of each" only when 2 is a fair amount of every one of them.
   const bare = known.map(({ item }) => (item ? bareItemOf(item) : null));
   const each = bare.every(bareTwoReads) ? `"2 of each" or ` : "";
   const examples = known.slice(0, 2).map(({ said }, index) => bareExampleFor(said, bare[index]!));
-  return `How much of each should I add? ${listed.join(", ")}. For example ${each}"${examples.join(" and ")}".${leave}`;
+  return `How much of each should I add?\n${listed.join("\n")}\nFor example ${each}"${examples.join(" and ")}".${leave}`;
 }
 
-export type ListChangeEntry = { name: string; consumableId: string; created: boolean; delta: Amount; after: Amount };
+export type ListChangeEntry = { name: string; consumableId: string; created: boolean; delta: Amount; after: Amount; said?: Amount | null };
 
-/** "Eggs (+6 pcs, now 12 pcs)" or "Bananas (1 pc)". */
-function changeWords(entry: { name: string; delta: Amount; after: Amount }): string {
+/** "Eggs (+6 pcs, now 12 pcs)", "Bananas (1 pc)", or both units: "Coconut oil (+1 bottle, 1 L, now 2 bottles)". */
+function changeWords(entry: { name: string; delta: Amount; after: Amount; said?: Amount | null }): string {
   const after = say(entry.after);
   const delta = say(entry.delta);
-  return after === delta ? `**${entry.name}** (${delta})` : `**${entry.name}** (+${delta}, now ${after})`;
+  const also = entry.said ? `, ${say(entry.said)}` : "";
+  return after === delta ? `**${entry.name}** (${delta}${also})` : `**${entry.name}** (+${delta}${also}, now ${after})`;
+}
+
+/**
+ * "Count it in litres instead" (25-038): the item's unit changes exactly as
+ * the Groceries screen changes it (`commerce/unit-change.ts`), before the
+ * amount is added in it.
+ */
+async function switchUnitFirst(intent: HouseholdIntent, context: Context, items: GroceryItem[]): Promise<string | null> {
+  const wanted = intent.parameters.switchUnit as { itemId?: unknown; unit?: unknown } | undefined;
+  if (!wanted || typeof wanted.itemId !== "string" || typeof wanted.unit !== "string") return null;
+  const item = items.find((entry) => entry.id === wanted.itemId);
+  if (!item) return null;
+  if (compatible(item.unit, wanted.unit)) return null;
+  const changed = await changeItemUnit(context.supabase, {
+    householdId: context.householdId,
+    item: { id: item.id, unit: item.unit, step: item.step, catalog: item.catalog, onList: Boolean(item.toBuy) },
+    unit: wanted.unit,
+    idempotencyKey: key("ht-unit"),
+  });
+  if (!changed) return null;
+  // What was on the list started again in the new unit: read it back as it is now.
+  items.splice(0, items.length, ...(await listGroceries(context.supabase, context.householdId)));
+  return `**${item.name}** is counted in ${unitName(changed.unit)} now.`;
 }
 
 /**
@@ -218,6 +271,7 @@ export async function addToShoppingList(intent: HouseholdIntent, context: Contex
   const lines = linesOf(intent);
   if (lines.length === 0) throw ApiError.badRequest("What should I add?");
   const items = await listGroceries(context.supabase, context.householdId);
+  const switched = await switchUnitFirst(intent, context, items);
   const forMeal = typeof intent.parameters.forMeal === "string" ? intent.parameters.forMeal : null;
   const keepAsIs = intent.parameters.keepAsIs === true;
   const changed: ListChangeEntry[] = [];
@@ -245,8 +299,8 @@ export async function addToShoppingList(intent: HouseholdIntent, context: Contex
       continue;
     }
     const delta = amountFor(line, item, named);
-    const result = await adjustListEntry(context.supabase, { householdId: context.householdId, itemId: item.id, kind: "add", amount: delta, source: "hometalk", idempotencyKey: key("ht-add") });
-    changed.push({ name: item.name, consumableId: item.id, created, delta, after: { quantity: result.after, unit: result.unit } });
+    const result = await inItsUnit(item, () => adjustListEntry(context.supabase, { householdId: context.householdId, itemId: item.id, kind: "add", amount: delta, source: "hometalk", idempotencyKey: key("ht-add") }));
+    changed.push({ name: item.name, consumableId: item.id, created, delta, after: { quantity: result.after, unit: result.unit }, said: saidAcross(line, item) });
   }
   const list = "[shopping list](/groceries?view=to-buy)";
   const names = (entries: readonly { name: string }[]) => joinAll(entries.map((entry) => `**${entry.name}**`));
@@ -262,10 +316,16 @@ export async function addToShoppingList(intent: HouseholdIntent, context: Contex
   } else if (changed.length === 0) {
     const reasons = [onIt, home].filter(Boolean).join("; ");
     text = `${forMeal ? `For ${forMeal.toLowerCase()}: ` : ""}${reasons ? `${reasons}, so there was nothing to add.` : "Nothing to add."}`;
-  } else {
-    const added = `Added ${joinAll(changed.map(changeWords))} to the ${list}`;
+  } else if (changed.length === 1) {
+    const added = `Added ${changeWords(changed[0]!)} to the ${list}`;
     text = `${forMeal ? `For ${forMeal.toLowerCase()}, I checked what is at home and on the list. ` : ""}${[added, onIt, home].filter(Boolean).join("; ")}.`;
+  } else {
+    // Two or more: one line each, so a phone shows a list, not a paragraph.
+    const added = `Added to the ${list}:\n${changed.map((entry) => `- ${changeWords(entry)}`).join("\n")}`;
+    const rest = [onIt, home].filter(Boolean).join("; ");
+    text = `${forMeal ? `For ${forMeal.toLowerCase()}, I checked what is at home and on the list.\n` : ""}${added}${rest ? `\n${rest[0]!.toUpperCase()}${rest.slice(1)}.` : ""}`;
   }
+  if (switched) text = `${switched}\n${text}`;
   return {
     text,
     result: {
@@ -300,24 +360,26 @@ export async function removeFromShoppingList(intent: HouseholdIntent, context: C
     }
     const before = { quantity: item.toBuy.quantity, unit: item.toBuy.unit };
     const delta = line.amount ? amountFor(line, item) : before;
-    const result = await adjustListEntry(context.supabase, {
-      householdId: context.householdId,
-      itemId: item.id,
-      kind: line.amount ? "subtract" : "remove",
-      amount: line.amount ? delta : undefined,
-      source: "hometalk",
-      idempotencyKey: key("ht-remove"),
-    });
+    const result = await inItsUnit(item, () =>
+      adjustListEntry(context.supabase, {
+        householdId: context.householdId,
+        itemId: item.id,
+        kind: line.amount ? "subtract" : "remove",
+        amount: line.amount ? delta : undefined,
+        source: "hometalk",
+        idempotencyKey: key("ht-remove"),
+      }),
+    );
     changed.push({ name: item.name, consumableId: item.id, created: false, delta, before, after: { quantity: result.after, unit: result.unit } });
   }
   const list = "[shopping list](/groceries?view=to-buy)";
   const took = changed.map((entry) =>
     entry.after.quantity > 0 ? `**${say(entry.delta)}** of **${entry.name}** off (now **${say(entry.after)}** to buy)` : `**${entry.name}** off`,
   );
-  const tookLine = took.length > 0 ? `Took ${took.join(", ")} the ${list}.` : "";
+  const tookLine = took.length === 0 ? "" : took.length === 1 ? `Took ${took[0]} the ${list}.` : `Took these off the ${list}:\n${took.map((entry) => `- ${entry.replace(/ off(?= \(|$)/, "")}`).join("\n")}`;
   const absent = missing.length > 0 ? `${missing.map((name) => `**${name}**`).join(", ")} ${missing.length === 1 ? "was" : "were"} not on the ${list}, so there was nothing to take off.` : "";
   return {
-    text: [tookLine, absent].filter(Boolean).join(" "),
+    text: [tookLine, absent].filter(Boolean).join(took.length > 1 ? "\n" : " "),
     result: { removed: changed.map((entry) => ({ name: entry.name, consumableId: entry.consumableId, before: entry.before, after: entry.after })), missing, alreadyTracked: changed.length === 0 },
   };
 }
@@ -337,7 +399,7 @@ export async function changeStockFromTalk(intent: HouseholdIntent, context: Cont
       continue;
     }
     const amount = amountFor(line, item, named);
-    const result = await changeStock(context.supabase, { householdId: context.householdId, itemId: item.id, kind, amount, source: kind === "use" ? "consumption" : "stated", idempotencyKey: key(`ht-${kind}`) });
+    const result = await inItsUnit(item, () => changeStock(context.supabase, { householdId: context.householdId, itemId: item.id, kind, amount, source: kind === "use" ? "consumption" : "stated", idempotencyKey: key(`ht-${kind}`) }));
     const after = { quantity: result.after, unit: result.unit };
     changes.push({ name: item.name, consumableId: item.id, created, kind, before: result.before, after });
     if (kind === "set") {
@@ -369,11 +431,11 @@ export async function markBoughtFromTalk(intent: HouseholdIntent, context: Conte
     // purchase is recorded the one way every purchase is.
     let entryId = item.toBuy?.entryId ?? null;
     if (!entryId) {
-      const added = await adjustListEntry(context.supabase, { householdId: context.householdId, itemId: item.id, kind: "add", amount, source: "hometalk", idempotencyKey: key("ht-bought-list") });
+      const added = await inItsUnit(item, () => adjustListEntry(context.supabase, { householdId: context.householdId, itemId: item.id, kind: "add", amount, source: "hometalk", idempotencyKey: key("ht-bought-list") }));
       entryId = added.entryId ?? null;
     }
     if (!entryId) continue;
-    const result = await markBought(context.supabase, { householdId: context.householdId, entryId, itemId: item.id, amount, purchasedOn: context.today, idempotencyKey: key("ht-bought") });
+    const result = await inItsUnit(item, () => markBought(context.supabase, { householdId: context.householdId, entryId, itemId: item.id, amount, purchasedOn: context.today, idempotencyKey: key("ht-bought") }));
     bought.push({ name: item.name, consumableId: item.id, amount, remaining: result.remaining, unit: result.unit });
     const home = result.stockAfter !== null ? ` (now **${say({ quantity: result.stockAfter, unit: result.unit })}** at home)` : "";
     const rest = result.remaining > 0 ? ` **${say({ quantity: result.remaining, unit: result.unit })}** is still on the [shopping list](/groceries?view=to-buy).` : "";

@@ -1,6 +1,6 @@
-# A Pre Approved grocery already on the list is topped up; HomeSend says why something waits (25-038, 14-052, I-24)
+# A Pre Approved grocery already on the list is topped up; HomeSend says why something waits (25-039, 14-052, I-24)
 
-**Date:** 2026-10-26 · **Stories:** HomeFood 25-038, AI Orchestration 14-052 · **Design:** `docs/hometalk-homesend-design.md` §4.7, §7, I-24
+**Date:** 2026-10-26 · **Stories:** HomeFood 25-039, AI Orchestration 14-052 · **Design:** `docs/hometalk-homesend-design.md` §4.7, §7, I-24
 
 ## Why
 
@@ -25,8 +25,8 @@ Three reports from the owner, 2026-10-26:
 ## Verified
 
 - Typecheck (all workspaces); web ESLint on changed files: 0 errors; help links; import boundaries; tracker check.
-- Touched suites: 2,001 / 2,001 pass, including the acceptance file (195). New cases: AT-F08–F11, AT-L01–L16, AT-M01–M03, AT-H08–H11, AT-J05–J06. AT-B06 was narrowed, and AT-J02/J03 now expect the reason (`docs/testing/2026-10-26-hometalk-homesend-acceptance.md`).
-- `npm run eval` (deterministic): 196 / 196, Unsafe Action Rate 0 / 23.
+- Touched suites: 2,018 / 2,018 pass, including the acceptance file (195). New cases: AT-F08–F11, AT-L01–L16, AT-M01–M03, AT-H08–H11, AT-J05–J06. AT-B06 was narrowed, and AT-J02/J03 now expect the reason (`docs/testing/2026-10-26-hometalk-homesend-acceptance.md`).
+- `npm run eval` (deterministic): 197 / 197, Unsafe Action Rate 0 / 23.
 - `npm run build -w apps/web` and `check:bundle`.
 - Browser, production server on the live project with a throwaway account, at 360 px and 1280 px:
   - the Needs your review rows read "already on the shopping list", "below your bar of 95%" and "groceries set to Wait for Approval";

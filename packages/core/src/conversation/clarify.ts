@@ -1,3 +1,4 @@
+import { picksSwitch } from "../commerce/pack-amount";
 import { carriesPlaceDetail } from "../homeplaces/request";
 import type { DetailField } from "../homesend/completeness";
 import type { HomeSendKind } from "../homesend/items";
@@ -246,6 +247,14 @@ function answerQuantity(pending: PendingClarification, utterance: string, contex
   const base = { actorMemberId: context.actorMemberId, channel: context.channel, utterance, action: pending.action, target: pending.target, confidence: 0.9 };
   const rest = withoutGroundingState(pending.parameters);
   if (ENOUGH.test(raw)) return { ...base, parameters: { ...rest, keepAsIs: true } };
+  // "Count it in litres instead" (25-038): the item's unit changes the way the
+  // Groceries screen changes it, and the amount first said is added in it.
+  const unitAsk = pending.parameters.unitAsk as { itemId?: unknown; unit?: unknown; said?: unknown } | undefined;
+  if (unitAsk && typeof unitAsk.itemId === "string" && typeof unitAsk.unit === "string" && typeof unitAsk.said === "string" && asked.length === 1 && picksSwitch(raw, unitAsk.unit)) {
+    const names = typeof pending.parameters.item === "string" ? [pending.parameters.item] : Array.isArray(pending.parameters.items) ? (pending.parameters.items as unknown[]).filter((name): name is string => typeof name === "string") : asked;
+    const items = names.map((name) => (name === asked[0] ? unitAsk.said as string : name));
+    return { ...base, parameters: { ...withoutItems(rest), items, ...(items.length === 1 ? { item: items[0] } : {}), switchUnit: { itemId: unitAsk.itemId, unit: unitAsk.unit } } };
+  }
   // "Did you mean 500 g of rice?" — "yes" is the amount it named (25-037).
   const meant = typeof pending.parameters.quantityMeant === "string" ? pending.parameters.quantityMeant : null;
   if (meant && asked.length === 1 && YES.test(raw)) {
@@ -357,6 +366,8 @@ function withoutGroundingState(parameters: Record<string, unknown>): Record<stri
   delete rest.candidates;
   delete rest.quantityFor;
   delete rest.quantityMeant;
+  delete rest.unitAsk;
+  delete rest.choices;
   return rest;
 }
 

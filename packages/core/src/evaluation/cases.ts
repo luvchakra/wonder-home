@@ -948,6 +948,15 @@ const HOMETALK: HomeTalkCase[] = [
     expected: { interpretation: "add_to_list", action: "clarify", safety: { consequential: false, executed: false }, answer: { includes: ["Did you mean 2 L of milk?"] } },
     followUps: [{ utterance: "yes", expected: { interpretation: "add_to_list", action: "executed", answer: { includes: ["2 L milk"] } } }],
   },
+  // The owner on WhatsApp, 2026-10-26, 9:03 PM: "add 1 litre coconut oil to the list" for coconut oil counted in
+  // bottles met "I tried, and it did not go through: Coconut oil is kept in bottle, so 1 l does not fit it" (25-038).
+  {
+    id: "HT-160", surface: "hometalk", household: "D", category: "updates", actor: "d-neha", autonomy: "execute",
+    description: "1 litre of an item counted in bottles of unknown size is one question with choices, never a raw refusal; \"count it in litres instead\" changes the unit and adds it.",
+    utterance: "add 1 litre coconut oil to the list",
+    expected: { interpretation: "add_to_list", action: "clarify", safety: { consequential: false, executed: false }, answer: { includes: ["How many bottles should I add for 1 litre?", "count it in litres instead"], excludes: ["does not fit", "I tried"] } },
+    followUps: [{ utterance: "count it in litres instead", expected: { interpretation: "add_to_list", action: "executed", answer: { includes: ["Coconut oil"], excludes: ["does not fit"] } } }],
+  },
   // The owner, 2026-10-26: "Add oil to the groceries" → "coconut oil" met "Coconut oil is already on the shopping
   // list (1 bottle), so there was nothing to add." — "it should ask for quantity". HomeTalk asks how much first.
   {
@@ -961,7 +970,7 @@ const HOMETALK: HomeTalkCase[] = [
     id: "HT-152", surface: "hometalk", household: "A", category: "updates", actor: "a-kunal", autonomy: "execute",
     description: "An item already on the list is asked how much more, saying what is there, never \"nothing to add\".",
     utterance: "We're out of atta",
-    expected: { interpretation: "add_to_list", action: "clarify", answer: { includes: ["Atta is already on your shopping list (1 kg). How much more should I add?"], excludes: ["nothing to add"] } },
+    expected: { interpretation: "add_to_list", action: "clarify", answer: { includes: ["**Atta** is already on your shopping list (1 kg).\nHow much more should I add?"], excludes: ["nothing to add"] } },
     followUps: [{ utterance: "2 kg", expected: { interpretation: "add_to_list", action: "executed", answer: { includes: ["Atta"] } } }],
   },
   {
