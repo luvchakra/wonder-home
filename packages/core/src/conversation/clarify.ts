@@ -305,7 +305,8 @@ function answerIntakeDetail(pending: PendingClarification, utterance: string, co
   if (!said || !field || !kind || said.split(/\s+/).length > 8) return null;
   const skip = readDetailAnswer(kind, "title", said, { timezone: "UTC", now: new Date() }) === "skip";
   if (!skip && NEW_REQUEST.test(stripFiller(said))) return null;
-  if (!skip && field !== "child" && field !== "person" && readDetailAnswer(kind, field, said, { timezone: "UTC", now: new Date() }) === null) return null;
+  // A short reply that isn't a new request is an attempt at the answer even when it can't be read
+  // ("lots"): the executor reads it again and asks once more, politely (design §5).
   if ((field === "child" || field === "person") && said.split(/\s+/).length > 4) return null;
   return {
     action: "complete_homesend_item",

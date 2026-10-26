@@ -2,8 +2,10 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 
 import type { PendingClarification } from "../conversation/clarify";
 import { openSession, recordMessage, type ConversationSurface } from "../conversation/repository";
-import { listDetails, missingRequired, nextMissingDetail, personNamed, type CompletenessReading, type DetailField } from "../homesend/completeness";
+import { sureClause, type AddedOnItsOwn } from "../homesend/auto-add";
+import { listDetails, missingDetails, nextMissingDetail, personNamed, type CompletenessReading, type DetailField } from "../homesend/completeness";
 import type { HomeSendKind } from "../homesend/items";
+import type { Translate, TranslationKey } from "../i18n/translate";
 import { readDetailAnswer } from "./detail-answers";
 
 /**
@@ -46,6 +48,40 @@ const DATED_QUESTION: Partial<Record<HomeSendKind, string>> = {
   receipt: "What day was it bought?",
   health_document: "What date is on it?",
 };
+
+/**
+ * The second ask, when an answer can't be read (design §5): "Sorry, …", then
+ * ways of saying it that work, as a list. Never the same question twice, and
+ * only once: a second answer that can't be read is left for HomeSend.
+ */
+const SECOND_ASK_WAYS: Partial<Record<DetailField, string[]>> = {
+  quantity: ['- "2 litres" or "500 g"', '- "1 bottle" or "2 packets"', '- just a number, like "3"'],
+  dueDate: ['- "tomorrow" or "next Friday"', '- a date, like "7 Nov"'],
+  date: ['- "tomorrow" or "last Monday"', '- a date, like "7 Nov"'],
+  time: ['- "8 pm" or "9:30 am"', '- "18:30"'],
+  amount: ['- a number, like "1500"', '- with the currency, like "₹1,500"'],
+  recordType: ["- a prescription", "- a lab report", "- a scan", "- a vaccination"],
+};
+
+export function secondAsk(field: DetailField, choices: readonly Pick<IntakePerson, "displayName">[]): string {
+  const skip = 'Or say "skip" and I\'ll leave it for you in HomeSend.';
+  if (field === "child" || field === "person") {
+    const names = choices.map((person) => `- ${person.displayName.split(/\s+/)[0]}`);
+    return names.length > 0
+      ? ["Sorry, I couldn't tell who from that. Could you pick one?", ...names, skip].join("\n")
+      : ["Sorry, I couldn't tell who from that. Could you say their name as your household has it?", skip].join("\n");
+  }
+  const ways = SECOND_ASK_WAYS[field];
+  return ways
+    ? ["Sorry, I couldn't make that out. Could you say it one of these ways?", ...ways, skip].join("\n")
+    : [`Sorry, I couldn't make that out. ${DETAIL_QUESTIONS[field]} A few words is enough.`, skip].join("\n");
+}
+
+function withoutAnswer(parameters: Record<string, unknown>): Record<string, unknown> {
+  const rest = { ...parameters };
+  delete rest.answer;
+  return rest;
+}
 
 export type IntakePerson = { id: string; displayName: string; nickname?: string | null; memberType?: string | null };
 
@@ -151,7 +187,7 @@ function ambiguousNames(understanding: Record<string, unknown> | null): string[]
  */
 export async function openIntakeQuestion(
   admin: SupabaseClient,
-  input: { householdId: string; memberId: string; itemId: string; surface: ConversationSurface },
+  input: { householdId: string; memberId: string; itemId: string; surface: ConversationSurface; t?: Translate },
 ): Promise<string | null> {
   const [item, { data: members }] = await Promise.all([
     loadItem(admin, input.householdId, input.itemId),
@@ -161,15 +197,45 @@ export async function openIntakeQuestion(
   const people = ((members ?? []) as { id: string; display_name: string; nickname: string | null; member_type: string }[]).map((row) => ({ id: row.id, displayName: row.display_name, nickname: row.nickname, memberType: row.member_type }));
   const next = intakeQuestion({ itemId: item.id, kind: item.classified_kind, extracted: (item.extracted ?? null) as CompletenessReading, asked: [], people, ambiguous: ambiguousNames(item.understanding) });
   if (!next) return null;
+  // Said outside a HomeTalk turn, so in the member's language here (14-047); the clarify keeps HomeTalk's own words.
+  const said = input.t ? questionIn(input.t, item.classified_kind, next) : next.question;
   const sessionId = await openSession(admin, { householdId: input.householdId, memberId: input.memberId, channel: "text", surface: input.surface });
   await recordMessage(admin, {
     householdId: input.householdId,
     sessionId,
     role: "assistant",
-    content: next.question,
+    content: said,
     metadata: { proposal: "clarify", intent: "complete_homesend_item", mode: "clarify", clarify: next.clarify },
   });
-  return next.question;
+  return said;
+}
+
+const QUESTION_KEYS: Record<Exclude<DetailField, "child" | "person">, TranslationKey> = {
+  name: "whatsapp.ask.name",
+  quantity: "whatsapp.ask.quantity",
+  title: "whatsapp.ask.title",
+  dueDate: "whatsapp.ask.dueDate",
+  className: "whatsapp.ask.className",
+  date: "whatsapp.ask.date",
+  time: "whatsapp.ask.time",
+  where: "whatsapp.ask.where",
+  payee: "whatsapp.ask.payee",
+  amount: "whatsapp.ask.amount",
+  recordType: "whatsapp.ask.recordType",
+  merchant: "whatsapp.ask.merchant",
+};
+
+/** HomeTalk's question in the member's language, from the catalog (`whatsapp.ask.*`). */
+export function questionIn(t: Translate, kind: HomeSendKind | null, next: IntakeQuestion): string {
+  if (next.field === "child" || next.field === "person") {
+    const choices = (Array.isArray(next.clarify.parameters.choices) ? next.clarify.parameters.choices : []) as Pick<IntakePerson, "displayName">[];
+    const named = choices.map((person) => person.displayName.split(/\s+/)[0]!);
+    const names = named.length <= 1 ? (named[0] ?? "") : `${named.slice(0, -1).join(", ")}${t("whatsapp.list.or")}${named.at(-1)}`;
+    return t(kind === "health_document" ? "whatsapp.ask.whose" : "whatsapp.ask.who", { names });
+  }
+  if (next.field === "date" && kind === "receipt") return t("whatsapp.ask.receiptDate");
+  if (next.field === "date" && kind === "health_document") return t("whatsapp.ask.healthDate");
+  return t(QUESTION_KEYS[next.field]);
 }
 
 export type IntakeAnswer = {
@@ -204,6 +270,7 @@ export async function answerIntakeQuestion(
   const extracted = item.extracted ?? {};
   let lead: string;
   let patch: Record<string, unknown> | null = null;
+  let unread = false;
   let understanding = item.understanding;
 
   if (field === "child" || field === "person") {
@@ -215,6 +282,7 @@ export async function answerIntakeQuestion(
       understanding = item.understanding ? { ...item.understanding, references: [{ text: member.displayName, candidates: [], confidence: 0 }] } : null;
       lead = `Got it — that's for ${member.displayName}.`;
     } else {
+      unread = true;
       lead = "Sorry, I couldn't tell who from that, so I've left it for you to pick in HomeSend.";
     }
   } else {
@@ -223,7 +291,24 @@ export async function answerIntakeQuestion(
     else if (read) {
       patch = read as Record<string, unknown>;
       lead = "Got it, thanks.";
-    } else lead = "Sorry, I couldn't make that out, so I've left it for you to fill in in HomeSend.";
+    } else {
+      unread = true;
+      lead = "Sorry, I couldn't make that out, so I've left it for you to fill in in HomeSend.";
+    }
+  }
+
+  // An answer that can't be read gets one polite second ask, never the same question (design §5).
+  if (unread && input.parameters.retried !== true) {
+    const choices = (Array.isArray(input.parameters.choices) ? input.parameters.choices : []) as IntakePerson[];
+    const question = secondAsk(field, choices);
+    const title = typeof extracted.title === "string" ? extracted.title : null;
+    return {
+      text: question,
+      clarify: { action: "complete_homesend_item", target: { kind: "unspecified" }, parameters: { ...withoutAnswer(input.parameters), retried: true }, question, utterance: "", asked: 2 },
+      handBack: false,
+      stillNeeded: [],
+      title,
+    };
   }
 
   const filled = patch ? { ...extracted, ...patch } : extracted;
@@ -239,13 +324,16 @@ export async function answerIntakeQuestion(
   const title = typeof filled.title === "string" ? filled.title : null;
   const next = intakeQuestion({ itemId: item.id, kind, extracted: filled as CompletenessReading, asked, people: input.people, ambiguous: patch && (field === "child" || field === "person") ? [] : ambiguousNames(understanding) });
   if (next) return { text: `${lead} ${next.question}`, clarify: next.clarify, handBack: false, stillNeeded: [], title };
-  const stillNeeded = missingRequired(kind, filled as CompletenessReading, { person: true }).map((spec) => spec.label);
+  // Every detail still missing: the required ones, and useful ones never asked (one already asked isn't insisted on).
+  const stillNeeded = missingDetails(kind, filled as CompletenessReading, { person: true })
+    .filter((spec) => spec.need === "required" || (!asked.includes(spec.field) && spec.field !== field))
+    .map((spec) => spec.label);
   return { text: lead, clarify: null, handBack: true, stillNeeded, title };
 }
 
 /** The closing words once HomeTalk has nothing left to ask. Never an amount, a health detail or a number. */
-export function handedBackText(lead: string, outcome: { added: { title: string; where: string } | null; stillNeeded: readonly string[] }): string {
-  if (outcome.added) return `${lead} Added **${outcome.added.title}** to ${outcome.added.where} — your household lets WonderHome add these on its own. You can undo it in HomeSend.`;
+export function handedBackText(lead: string, outcome: { added: AddedOnItsOwn | null; stillNeeded: readonly string[] }): string {
+  if (outcome.added) return `${lead} Added **${outcome.added.title}** to ${outcome.added.where}${sureClause(outcome.added)} — your household lets WonderHome add these on its own. You can undo it in HomeSend.`;
   if (outcome.stillNeeded.length > 0) return `${lead} It's waiting in HomeSend — the ${listDetails(outcome.stillNeeded.map((label) => ({ label })))} can be filled in there.`;
   return `${lead} It's waiting in HomeSend for you to check.`;
 }

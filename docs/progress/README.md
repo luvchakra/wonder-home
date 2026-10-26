@@ -11,6 +11,7 @@ decision that shapes later work each earns a note, written before moving on.
 
 | Date | Note |
 |---|---|
+| 2026-10-26 | [HomeTalk/HomeSend design audit: what remained, built (14-042 to 14-049)](2026-10-26-design-audit-stories.md) |
 | 2026-10-26 | [HomeTalk asks how much before it adds a grocery (25-036)](2026-10-26-grocery-ask-quantity.md) |
 | 2026-10-26 | [WhatsApp: a spoken question goes to HomeTalk, not Failed safely](2026-10-26-whatsapp-voice-to-hometalk.md) |
 | 2026-10-26 | [HomeSend reports what an entry lacks; HomeTalk asks (14-041)](2026-10-26-homesend-completeness.md) |

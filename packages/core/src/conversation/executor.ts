@@ -8,6 +8,7 @@ import { createAppointment, type AppointmentType } from "../health/appointments"
 import { createFitnessGoal, FITNESS_ACTIVITY_LABEL, type FitnessActivityType, type FitnessFrequencyPeriod } from "../health/fitness";
 import { createIssue, listIssues, setIssueStatus } from "../health/issues";
 import { addFamilyEvent } from "../calendar/add-event";
+import type { AddedOnItsOwn } from "../homesend/auto-add";
 import { setEventCancelled } from "../family/event-detail";
 import { createServiceRequest } from "../home/repository";
 import { attachIngredients, createMeal, removeMeal } from "../meals/repository";
@@ -65,7 +66,7 @@ export type ExecutionContext = {
    * where the household allows it (Pre Approved and above the bar), else
    * null and it waits in HomeSend. Supplied by the route.
    */
-  addFromHomeSend?: (itemId: string) => Promise<{ title: string; where: string } | null>;
+  addFromHomeSend?: (itemId: string) => Promise<AddedOnItsOwn | null>;
 };
 
 export type ExecutionResult =
@@ -155,8 +156,10 @@ const HOMESEND_KIND_WORDS: Record<string, string> = {
 /**
  * Being told about a new dated thing (the owner, 2026-10-25): the sentence
  * goes through HomeSend's own text entry point — the same reading, the same
- * check against what was said, the same review — and waits there for a
- * person. Nothing reaches a domain table from here.
+ * check against what was said, the same review and the same decision: it
+ * waits there for a person unless the household pre-approved it and it needs
+ * no question. Nothing reaches a domain table from here except through
+ * HomeSend's own governed write (`addFromHomeSend`).
  */
 async function fileWithHomeSend(intent: HouseholdIntent, context: ExecutionContext): Promise<ExecutionResult> {
   const { ingestText } = await import("../homesend/ingest");
@@ -177,6 +180,13 @@ async function fileWithHomeSend(intent: HouseholdIntent, context: ExecutionConte
     people: context.members,
     ambiguous: outcome.item.understanding?.references.find((reference) => reference.candidates.length > 1)?.candidates ?? [],
   });
+  // Nothing to ask: HomeSend's own decision, as for anything sent to it (design §13.2) — added where the
+  // household pre-approved it and the reading clears the bar, else it waits.
+  const added = !next && context.addFromHomeSend ? await context.addFromHomeSend(outcome.itemId).catch(() => null) : null;
+  if (added) {
+    const { handedBackText } = await import("../hometalk/intake-questions");
+    return { ok: true, text: handedBackText("", { added, stillNeeded: [] }).trim(), result: { homeSendItemId: outcome.itemId, added: added.where } };
+  }
   return {
     ok: true,
     text: `It's in ${review} for you to check before anything is added.${read}${next ? ` ${next.question}` : ""}`,

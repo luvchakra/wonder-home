@@ -24,7 +24,9 @@ export async function loadAutoAddPercent(supabase: SupabaseClient, householdId: 
     .maybeSingle();
   if (error) return AUTO_ADD_PERCENTS.at(-1)!;
   if (!data) return DEFAULT_AUTO_ADD_PERCENT;
-  return asAutoAddPercent((data as { rule: { percent?: unknown } | null }).rule?.percent);
+  // A stored bar WonderHome doesn't offer is read like one that can't be read: the highest.
+  const stored = (data as { rule: { percent?: unknown } | null }).rule?.percent;
+  return AUTO_ADD_PERCENTS.some((percent) => percent === stored) ? asAutoAddPercent(stored) : AUTO_ADD_PERCENTS.at(-1)!;
 }
 
 export async function saveAutoAddPercent(

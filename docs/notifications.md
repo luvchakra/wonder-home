@@ -122,6 +122,10 @@ reminders about real records, never lines of text fired and forgotten.
   once; a quota refusal only after ten minutes, since a per-minute limit says
   the same words. No provider reports a balance in advance, so this tells at
   the first refusal, not before.
+  WonderHome's own key (`WONDERHOME_AI_KEY`) belongs to no household: the
+  delivery clock emails the platform's owners and operators once per alert
+  (`ai/platform-key-alert.ts`, stamped `platform_notified_at`), and the
+  platform-admin AI operations read shows it while it is open (14-048).
 - **A second way, a summary, a fit** (stories 27-007, 27-008, 27-015). A bill,
   school or pet reminder unanswered past the policy's wait (`channelEscalation`,
   always shorter than the backup's) is also sent once by email or WhatsApp,

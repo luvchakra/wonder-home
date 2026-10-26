@@ -35,7 +35,7 @@ const ROWS: MetricsItemRow[] = [
   // Read, but not recognised.
   row({ source: "link", status: "classified", classified_kind: "unknown" }),
   // Failed safely: a link to a private address, never read.
-  row({ source: "link", status: "failed", classified_kind: null }),
+  row({ source: "link", status: "failed", classified_kind: null, failure_reason: "link_blocked" }),
   // Just arrived, not read yet.
   row({ source: "audio_note", status: "received", classified_kind: null }),
 ];
@@ -78,6 +78,17 @@ describe("HomeSend metrics (Wave 3 §19)", () => {
     expect(metrics.downstreamWriteSuccess).toEqual({ count: 3, of: 4 });
     expect(metrics.safeRejection).toEqual({ count: 1, of: 10 });
     expect(metrics.queueDepth).toBe(2);
+  });
+
+  // Design §11: how much is added on its own, and why things failed safely.
+  it("splits what was added on its own from what a person confirmed, by kind", () => {
+    expect(metrics.addedOnItsOwn).toEqual({ count: 1, of: 4 });
+    expect(metrics.addedByKind).toEqual({ school_item: { onItsOwn: 0, confirmed: 3 }, grocery_item: { onItsOwn: 1, confirmed: 0 } });
+  });
+
+  it("counts what failed safely by why", () => {
+    expect(metrics.safeRejectionByReason).toEqual({ link_blocked: 1 });
+    expect(summarizeHomeSend([row({ status: "failed" })], [], { windowDays: 7, queueDepth: 0 }).safeRejectionByReason).toEqual({ other: 1 });
   });
 
   it("times arrival to a useful outcome", () => {

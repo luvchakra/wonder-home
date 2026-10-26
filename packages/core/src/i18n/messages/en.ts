@@ -27,6 +27,7 @@ import { chatEn } from "./areas/chat/en";
 import { amafEn } from "./areas/amaf/en";
 import { groceryEn } from "./areas/grocery/en";
 import { welcomeEn } from "./areas/welcome/en";
+import { whatsappEn } from "./areas/whatsapp/en";
 
 // Each area's words are spread in at the end (story 22-004).
 export const en = {
@@ -1014,6 +1015,7 @@ export const en = {
   ...memberInviteEn,
   ...groceryEn,
   ...welcomeEn,
+  ...whatsappEn,
 } as const;
 
 export type MessageKey = keyof typeof en;

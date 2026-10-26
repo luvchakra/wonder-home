@@ -86,10 +86,14 @@ describe("HomeTalk's clarify machinery reads the answer", () => {
     expect(answerClarification(pending("time"), "skip", ctx)?.action).toBe("complete_homesend_item");
   });
 
+  // Design §5: an attempt that can't be read is still an attempt, so it gets one polite second ask.
+  it("takes a short reply it can't read as an attempt at the answer", () => {
+    expect(answerClarification(pending("quantity", "grocery_item"), "lots", ctx)).toMatchObject({ action: "complete_homesend_item", parameters: { answer: "lots" } });
+  });
+
   it("reads a new request as that request, never as the answer", () => {
     expect(answerClarification(pending("date"), "add milk to the list", ctx)).toBeNull();
     expect(answerClarification(pending("where"), "what's on tomorrow?", ctx)).toBeNull();
-    expect(answerClarification(pending("quantity", "grocery_item"), "lots", ctx)).toBeNull();
     expect(answerClarification(pending("child", "school_item"), "remind me to call the school at 5", ctx)).toBeNull();
   });
 });
@@ -138,11 +142,38 @@ describe("the answer goes back onto the HomeSend item", () => {
     expect(said).not.toMatch(/2,?140|₹/);
   });
 
-  it("leaves an answer it can't read for HomeSend, and moves on", async () => {
+  it("asks once more, politely and with ways to say it, when it can't read an answer", async () => {
     const h = seeded({ classified_kind: "school_item", extracted: { title: "Worksheet", people: ["Asmi"] } });
     const result = await answer(h.client, { kind: "school_item", field: "dueDate", asked: ["dueDate"] }, "whenever");
     expect(h.tables.home_send_items![0]!.extracted).not.toHaveProperty("dueDate");
-    expect(result.text).toMatch(/^Sorry, I couldn't make that out/);
+    expect(result.text).toBe(['Sorry, I couldn\'t make that out. Could you say it one of these ways?', '- "tomorrow" or "next Friday"', '- a date, like "7 Nov"', 'Or say "skip" and I\'ll leave it for you in HomeSend.'].join("\n"));
+    expect(result.clarify).toMatchObject({ action: "complete_homesend_item", parameters: { field: "dueDate", asked: ["dueDate"], retried: true } });
+    expect(result.clarify!.parameters).not.toHaveProperty("answer");
+    expect(result.handBack).toBe(false);
+  });
+
+  it("leaves a second answer it can't read for HomeSend, and moves on", async () => {
+    const h = seeded({ classified_kind: "school_item", extracted: { title: "Worksheet", people: ["Asmi"] } });
+    const result = await answer(h.client, { kind: "school_item", field: "dueDate", asked: ["dueDate"], retried: true }, "whenever");
+    expect(result.text).toMatch(/^Sorry, I couldn't make that out, so I've left it for you to fill in in HomeSend/);
+    expect(result.handBack).toBe(true);
+    expect(result.stillNeeded).toEqual(["due date"]);
+  });
+
+  it("asks who again with the names as a list", async () => {
+    const h = seeded({ classified_kind: "school_item", extracted: { title: "Worksheet", people: [] } });
+    const result = await answer(h.client, { kind: "school_item", field: "child", asked: ["child"], choices: PEOPLE.slice(0, 2) }, "the older one");
+    expect(result.text.split("\n")[0]).toBe("Sorry, I couldn't tell who from that. Could you pick one?");
+    expect(result.text).toContain("- Asmi");
+    expect(result.clarify?.parameters).toMatchObject({ field: "child", retried: true });
+  });
+
+  it("names the useful details it never got to ask, as well as the required ones", async () => {
+    const h = seeded({ classified_kind: "event", extracted: { title: "Diwali dinner", dueDate: null } });
+    const result = await answer(h.client, { kind: "event", field: "date", asked: ["title", "where", "date"] }, "Saturday 7 November");
+    expect(result).toMatchObject({ handBack: true });
+    expect(result.stillNeeded).toEqual(["start time"]);
+    expect(handedBackText(result.text, { added: null, stillNeeded: result.stillNeeded })).toBe("Got it, thanks. It's waiting in HomeSend — the start time can be filled in there.");
   });
 
   it("says plainly when the item no longer waits in HomeSend", async () => {

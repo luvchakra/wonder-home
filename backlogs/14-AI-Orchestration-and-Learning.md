@@ -45,6 +45,15 @@
 | 39 | P1 | 14-039 | Record index Phase 4: structure-first retrieval and coverage misses | Not Started | Questions read into time/people/kind filters by rules; list questions get every match, not the top 12; a "nothing on record" answer that the index can find by words is logged as a coverage miss (table name only). Spec §6 |
 | 40 | P1 | 14-040 | WhatsApp asks HomeTalk | Done | A linked adult's one-line question or everyday request on WhatsApp is answered by HomeTalk through the same gateway as Alexa (channel `whatsapp`, own conversation surface, `WHATSAPP_SCOPES`); school, health and money kept off; never a HomeSend item. Voice notes written down by the household's Gemini key when there is no Cloud Speech key. PRs #319, #320 |
 | 41 | P0 | 14-041 | HomeSend reports what an entry lacks; HomeTalk asks | Done | PR #363 (the owner, 2026-10-26, then "isn't that HomeTalk's job" — strictly that design). `homesend/completeness.ts`: per-kind required and useful details, the content's own words first (`fillFromEvidence`); HomeSend only reports what is missing (`confirmation.ts` `stillNeeded`), never a question, and adds nothing on its own while a required one is missing. HomeTalk asks every question (`hometalk/intake-questions.ts`, action `complete_homesend_item` through the clarify machinery), in the app and on WhatsApp, one at a time, at most three; the HomeSend-side "Who is it for?" is folded into it. Answers go back onto the item, then HomeSend adds it or it waits. The review form says "Still needed" and keeps Add off. Eval HS-29–HS-35, HT-143–HT-150. |
+| 42 | P0 | 14-042 | HomeSend and WhatsApp: small correctness fixes from the design audit | Done — PR #366 | Design audit 2026-10-26 (`docs/hometalk-homesend-design.md`). An unreadable stored bar means the highest bar (99%), not 95%; an answer to HomeTalk's question on WhatsApp is counted as `clarification_answered`; a voice note HomeTalk answered counts as "went to HomeTalk" for routing rule 2; WhatsApp latency is recorded when HomeTalk answers too. |
+| 43 | P1 | 14-043 | Every "added on its own" message says how sure and why | Done — PR #366 | WhatsApp `addedReply`, HomeTalk's hand-back after its questions and the app notice carry the % and the score's reason (not the decision's), in the household's language. Design §7. |
+| 44 | P1 | 14-044 | HomeTalk's questions about an item end well | Done — PR #366 | An answer that can't be read gets one polite, listed second ask before HomeTalk moves on; after three questions it names every detail still missing, useful ones too; E2E covers the review's "Still needed". Design §4.6, §5, §11. |
+| 45 | P1 | 14-045 | A complete, Pre Approved item filed from HomeTalk adds on its own | Done — PR #366 | Told in HomeTalk about a new thing that needs no question (`file_with_homesend`), it is added on its own where the household pre-approved it and it clears the bar, with an Undo; otherwise it waits as today. Design §13.2. |
+| 46 | P1 | 14-046 | A bare list on WhatsApp asks the amounts in one question | Done — PR #366 | "milk, eggs and bread" sent on WhatsApp is read as a shopping list; HomeTalk asks "How much of each?" once, not one question per item. Design §13.4. |
+| 47 | P1 | 14-047 | WhatsApp replies and HomeTalk's item questions in the household's language | Done — PR #366 | WhatsApp acknowledgements, `addedReply` and the intake questions come from the catalog in all eight languages, not hard-coded English. Design §10. |
+| 48 | P1 | 14-048 | An alert on the platform's own AI key reaches the platform admin | Done — PR #366 | A refusal of `WONDERHOME_AI_KEY` (out of credits, quota, rejected) is told to the platform admin by email and on the platform admin screen, and clears on the next call that works. Design §8, §13.1. |
+| 49 | P2 | 14-049 | HomeSend metrics: added on its own vs confirmed, and why things failed safely | Done — PR #366 | The platform-admin HomeSend metrics split auto-added from confirmed and break failed-safely down by reason. Design §11. |
+| 50 | P2 | 14-050 | HomeTalk offers to fill in details for waiting items | Not Started | Needs the owner's yes: it starts a conversation unprompted. "2 things in HomeSend need a detail: shall we fill them in?" Design §13.3. |
 
 **Status flow:** `Not Started` → `In Progress` → `Blocked` → `Done`
 
@@ -528,6 +537,88 @@ Implement AI Orchestration & Learning as a first-class WonderHome domain. The mo
 - Nothing is added on its own while a required detail is missing; HomeSend reports it.
 - HomeTalk asks, in the app and on WhatsApp, one short question at a time, at most three per item, through its clarify machinery; who it is for is one of those questions. Each reply is read as the detail asked (quantity and unit, a date phrase, a time, an amount, a choice, a few words) or not at all, and goes back onto the HomeSend item, which is then added (where the household allows) or waits. Amounts and health details are never said back.
 - The review says "Still needed", marks those fields and keeps Add off until the required ones are filled.
+
+### Story 14-042 — HomeSend and WhatsApp: small correctness fixes from the design audit
+**Epic:** AI Orchestration & Learning
+**Priority:** P0
+**Goal:** The code does what `docs/hometalk-homesend-design.md` says, where the audit of 2026-10-26 found it didn't.
+
+**Acceptance criteria**
+- A stored auto-add bar WonderHome doesn't offer is read as the highest bar (99%), like a bar that can't be read at all.
+- A WhatsApp reply that answers HomeTalk's open question is recorded as `clarification_answered`.
+- A voice note HomeTalk answered counts as "went to HomeTalk" for routing rule 2, so a typed answer after it reaches HomeTalk.
+- WhatsApp latency is recorded when HomeTalk answers, not only when HomeSend keeps something.
+
+### Story 14-043 — Every "added on its own" message says how sure and why
+**Epic:** AI Orchestration & Learning
+**Priority:** P1
+**Goal:** Wherever WonderHome says it added something on its own, it says how sure it was and why, in the reading's own words.
+
+**Acceptance criteria**
+- The WhatsApp reply, HomeTalk's hand-back after its questions and the app notice each carry "N% sure" and the score's reason ("every detail is in what you sent", …).
+- Never an amount, a health detail or a number from the content.
+
+### Story 14-044 — HomeTalk's questions about an item end well
+**Epic:** AI Orchestration & Learning
+**Priority:** P1
+**Goal:** HomeTalk's questions about a HomeSend item never dead-end: an unreadable answer gets one polite second ask, and when it stops it names everything still missing.
+
+**Acceptance criteria**
+- An answer that can't be read as the detail asked gets one second ask: "Sorry, …", with the choices or an example, never the same question; a second failure moves on.
+- After its questions it names every detail still missing, required and useful, and says they can be filled in HomeSend.
+- A signed-in E2E checks the review's "Still needed" (already in `e2e/screens.spec.ts`, the bill test).
+
+### Story 14-045 — A complete, Pre Approved item filed from HomeTalk adds on its own
+**Epic:** AI Orchestration & Learning
+**Priority:** P1
+**Goal:** Something told to HomeTalk and filed with HomeSend gets the same decision as anything sent to HomeSend.
+
+**Acceptance criteria**
+- When nothing needs asking, it is added on its own where the outcome is Pre Approved and the reading clears the household's bar, with an Undo, and HomeTalk says so with the %; otherwise it waits in HomeSend as today.
+- Bills, health documents, receipts, photos and files still always wait.
+
+### Story 14-046 — A bare list on WhatsApp asks the amounts in one question
+**Epic:** AI Orchestration & Learning
+**Priority:** P1
+**Goal:** "milk, eggs and bread" sent on WhatsApp goes to the shopping list through HomeTalk, which asks the amounts once.
+
+**Acceptance criteria**
+- A short message that is only grocery names is read as a request to add them, not as content to keep.
+- HomeTalk asks "How much of each should I add?" once; an answer with amounts for some adds those, and the rest get the usual pack.
+
+### Story 14-047 — WhatsApp replies and HomeTalk's item questions in the household's language
+**Epic:** AI Orchestration & Learning
+**Priority:** P1
+**Goal:** No WhatsApp reply or item question is English-only.
+
+**Acceptance criteria**
+- Acknowledgements, "added on its own" replies and the intake questions come from the catalog in all eight languages, in the member's language.
+
+### Story 14-048 — An alert on the platform's own AI key reaches the platform admin
+**Epic:** AI Orchestration & Learning
+**Priority:** P1
+**Goal:** When the deployment's own key stops working, someone is told.
+
+**Acceptance criteria**
+- A refusal of `WONDERHOME_AI_KEY` is shown on the platform admin screen and emailed to the platform admins, once per alert, and clears on the next call that works.
+- No household sees it.
+
+### Story 14-049 — HomeSend metrics: added on its own vs confirmed, and why things failed safely
+**Epic:** AI Orchestration & Learning
+**Priority:** P2
+**Goal:** The platform admin can see how much HomeSend adds on its own and why things fail safely.
+
+**Acceptance criteria**
+- The metrics split items added on their own from those a person confirmed, by kind.
+- Failed-safely items are counted by reason.
+
+### Story 14-050 — HomeTalk offers to fill in details for waiting items
+**Epic:** AI Orchestration & Learning
+**Priority:** P2
+**Goal:** "2 things in HomeSend need a detail: shall we fill them in?"
+
+**Acceptance criteria**
+- Waits on the owner's yes, since it starts a conversation unprompted.
 
 ## Module Completion Rule
 Complete dependency-ready P0 stories before P1/P2, but do not block unrelated work on unavailable external providers.

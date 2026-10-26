@@ -1,3 +1,4 @@
+import { openPlatformKeyAlert } from "@wonderhome/core/ai/platform-key-alert";
 import { defineRoute } from "@wonderhome/core/api/route";
 import { createAdminClient } from "@wonderhome/core/db/admin";
 import { createClient } from "@wonderhome/core/db/server";
@@ -14,12 +15,14 @@ export const GET = defineRoute(
   { authenticate: async () => requirePlatformAdmin(await createClient()) },
   async ({ actor }) => {
     const adminClient = createAdminClient();
-    const [summary, failedRuns] = await Promise.all([
+    const [summary, failedRuns, platformKeyAlert] = await Promise.all([
       aiOperationsSummary(adminClient, actor),
       listFailedAgentRuns(adminClient, actor),
+      // WonderHome's own key refused by its provider (14-048); null while it works.
+      openPlatformKeyAlert(adminClient).catch(() => null),
     ]);
 
-    return { summary, failedRuns };
+    return { summary, failedRuns, platformKeyAlert };
   },
 );
 

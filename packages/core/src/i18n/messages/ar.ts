@@ -18,6 +18,7 @@ import { chatAr } from "./areas/chat/ar";
 import { amafAr } from "./areas/amaf/ar";
 import { groceryAr } from "./areas/grocery/ar";
 import { welcomeAr } from "./areas/welcome/ar";
+import { whatsappAr } from "./areas/whatsapp/ar";
 
 export const ar: Catalog = {
   "common.next": "التالي",
@@ -1026,4 +1027,5 @@ export const ar: Catalog = {
   ...memberInviteAr,
   ...groceryAr,
   ...welcomeAr,
+  ...whatsappAr,
 };

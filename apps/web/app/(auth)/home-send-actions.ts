@@ -14,7 +14,7 @@ import { createAdminClient } from "@wonderhome/core/db/admin";
 import { createClient } from "@wonderhome/core/db/server";
 import { homesendCorrectionEvidence, recordCorrectionEvidence } from "@wonderhome/core/evaluation/evidence";
 import { archiveRecord } from "@wonderhome/core/health/records";
-import { scorePercent } from "@wonderhome/core/homesend/auto-add";
+import { scorePercent, sureClause, sureWhy } from "@wonderhome/core/homesend/auto-add";
 import { getHomeSendChange, hasActiveHomeSendChanges, listHomeSendChanges, recordHomeSendChange, undoHomeSendChange } from "@wonderhome/core/homesend/changes";
 import type { ConfirmationDecision } from "@wonderhome/core/homesend/confirmation";
 import type { DocumentPlan } from "@wonderhome/core/homesend/plan";
@@ -96,9 +96,9 @@ async function withReview(
   if (review.confirmation.mode === "auto_apply" && !state.duplicate && !review.plan) {
     const applied = await autoApplyHomeSendItem(supabase, membership, { id: item.id, kind: item.classifiedKind, extracted: item.extracted, subject: review.subject }).catch(() => null);
     // How sure it was, with the entry (the owner, 2026-10-26).
-    const percent = scorePercent(review.understanding?.score);
-    const sure = percent === null ? "" : ` (${percent}% sure)`;
-    if (applied) return { notice: `${applied.title} — added to ${applied.where} on its own${sure}. ${review.confirmation.reason}`, autoApplied: applied };
+    // The score's own reason, not the decision's (design §7).
+    const sure = sureClause({ percent: scorePercent(review.understanding?.score), why: sureWhy(review.understanding) });
+    if (applied) return { notice: `${applied.title} — added to ${applied.where} on its own${sure}.`, autoApplied: applied };
   }
   return {
     ...state,
