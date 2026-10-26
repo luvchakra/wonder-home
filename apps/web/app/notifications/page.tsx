@@ -82,9 +82,12 @@ export default async function NotificationsPage({ searchParams }: { searchParams
     supabase.from("notification_preferences").select("daily_digest").eq("member_id", membership.memberId).eq("channel", "in_app").maybeSingle(),
     // A child's or helper's requests waiting on this adult's OK (conversation/referral.ts).
     membership.memberType === "adult"
-      ? import("@wonderhome/core/conversation/referral").then(({ pendingApprovalsFor }) =>
-          pendingApprovalsFor(createAdminClient(), { householdId: membership.household.id, memberId: membership.memberId, now }).catch(() => []),
-        )
+      ? import("@wonderhome/core/conversation/referral")
+          .then(({ pendingApprovalsFor }) =>
+            pendingApprovalsFor(createAdminClient(), { householdId: membership.household.id, memberId: membership.memberId, now }),
+          )
+          // Also covers createAdminClient throwing (no service role): the screen loads without the requests.
+          .catch(() => [])
       : Promise.resolve([]),
     // This member's push devices, so the nudge below knows whether this one is already on.
     supabase.from("push_subscriptions").select("endpoint").eq("member_id", membership.memberId),

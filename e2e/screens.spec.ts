@@ -117,11 +117,14 @@ test.describe("every signed-in screen loads", () => {
     const broken: string[] = [];
     for (const path of SCREENS) {
       const response = await page.goto(path);
-      // An error boundary can stream in after the load event.
-      await streamed(page);
+      // An error boundary can stream in after the load event, and a render
+      // that failed leaves its hidden buffer unrevealed (/notifications did).
+      const settled = await streamed(page, { timeout: 8_000 }).then(() => true, () => false);
       const status = response?.status() ?? 0;
       const errorShown = await page.getByText(ERROR_SCREEN).count();
-      if (status >= 500 || errorShown > 0) broken.push(`${path} (status ${status}${errorShown ? ", error screen" : ""})`);
+      if (status >= 500 || errorShown > 0 || !settled) {
+        broken.push(`${path} (status ${status}${errorShown ? ", error screen" : ""}${settled ? "" : ", never finished loading"})`);
+      }
     }
     expect(broken, `screens that broke: ${broken.join("; ")}`).toEqual([]);
   });
