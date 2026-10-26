@@ -83,7 +83,7 @@ export function parseReply(text: string): Block[] {
 
   for (const raw of text.replace(/\r\n?/g, "\n").split("\n")) {
     const line = raw.trim();
-    const bullet = line.match(/^(?:[-*•]|\d+[.)])\s+(.*)$/);
+    const bullet = line.match(/^(?:[-*•◦]|\d+[.)])\s+(.*)$/);
     if (bullet) {
       flushParagraph();
       list ??= [];

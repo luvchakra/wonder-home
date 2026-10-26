@@ -12,9 +12,12 @@
  *    a greeting, a place or a screen with 👋 📍 👉; closes a one-line
  *    answer with 😊 and leads a longer one with 📋;
  *  - puts each hint ("For example …", "Or say …", "You can also …") on its
- *    own line, the first led by 💡, and the Undo line on its own line.
- * Never an emoji on a refusal, a failure, the "Why?" evidence, or a reply
- * about money, health or a child (those are still laid out, plainly).
+ *    own line, the first led by 💡, and the Undo line on its own line;
+ *  - unfolds a run of three or more things joined by semicolons into a line
+ *    each (`unfold`), whoever wrote it, a model included.
+ * Never an emoji on a refusal, a failure or the "Why?" evidence (still laid
+ * out, plainly). A reply about money, health or a child is led by a neutral
+ * mark for its topic (🧾, 🩺, 🎒, 📋), never closed with a smile.
  * Spoken output drops every emoji and reads each line as a sentence
  * (`speech.ts`).
  */
@@ -24,7 +27,12 @@ import type { IntentAction } from "./intent";
 import type { Proposal } from "./proposal";
 import { replyClassesFor } from "./reply-language";
 
-const EMOJI = /\p{Extended_Pictographic}/u;
+/**
+ * A real emoji: one drawn as a picture, or a symbol asked to be one (U+FE0F).
+ * "★4.8" in a place's rating is a symbol, not warmth (2026-10-26: it kept a
+ * place answer from its 📍).
+ */
+const EMOJI = /\p{Emoji_Presentation}|\p{Extended_Pictographic}\u{FE0F}/u;
 const SENSITIVE: ReadonlySet<ContentClass> = new Set(["health", "child", "financial"]);
 
 /** The Undo line, said after something HomeTalk did because it was asked. */
@@ -48,7 +56,51 @@ const DONE: Partial<Record<IntentAction, string>> = {
   file_with_homesend: "📥",
   complete_homesend_item: "📥",
   fill_homesend_details: "📥",
+  add_bill: "🧾",
+  record_bill_payment: "🧾",
+  set_bill_amount: "🧾",
+  make_payment: "🧾",
+  order_items: "🛒",
+  complete_school_item: "🎒",
+  record_health_appointment: "🩺",
+  log_health_issue: "🩺",
+  resolve_health_issue: "🩺",
+  log_vital: "🩺",
+  set_fitness_goal: "🏃",
+  find_places: "📍",
 };
+
+/** What an answer is about, from the first screen it links to. */
+const SCREEN: readonly [RegExp, string][] = [
+  [/^\/(?:calendar|today)\b/, "📅"],
+  [/^\/groceries\b/, "🛒"],
+  [/^\/meals\b/, "🍽️"],
+  [/^\/bills\b/, "🧾"],
+  [/^\/school\b/, "🎒"],
+  [/^\/health\b/, "🩺"],
+  [/^\/places\b/, "📍"],
+  [/^\/home-send\b/, "📥"],
+  [/^\/(?:househelper|household)\b/, "🏠"],
+];
+
+/** …or, with no link, from the words of its opening line. */
+const WORDS: readonly [RegExp, string][] = [
+  [/\b(?:calendar|weekends?|holidays?|events?|plans?|free)\b/i, "📅"],
+  [/\b(?:grocer(?:y|ies)|shopping list)\b/i, "🛒"],
+  [/\b(?:meals?|dinner|lunch|breakfast)\b/i, "🍽️"],
+  [/\bbills?\b/i, "🧾"],
+  [/\b(?:school|homework)\b/i, "🎒"],
+  [/\bplaces?\b/i, "📍"],
+];
+
+function topicOf(text: string): string | null {
+  for (const match of text.matchAll(/\]\(([^)\s]+)\)/g)) {
+    const found = SCREEN.find(([pattern]) => pattern.test(match[1]!));
+    if (found) return found[1];
+  }
+  const first = text.split("\n")[0] ?? "";
+  return WORDS.find(([pattern]) => pattern.test(first))?.[1] ?? null;
+}
 
 /** What leads an answer, by what was asked; anything else closes with 😊. */
 const ANSWER: Partial<Record<IntentAction, string>> = {
@@ -58,7 +110,7 @@ const ANSWER: Partial<Record<IntentAction, string>> = {
 };
 
 /** A sentence that suggests what to say or do next. */
-const HINT = /^(?:For example|Or say|Or just say|You can also|You could also|Or you can|Try saying)\b/;
+const HINT = /^(?:For example|Or say|Or just say|You can also|You could also|Or you can|Try saying|Save the ones you like)\b/;
 
 export type WarmthInput = {
   action: IntentAction | null;
@@ -78,9 +130,9 @@ export type WarmthInput = {
 export function shapeReply(text: string, options: { emoji: boolean } = { emoji: true }): string {
   const lines: string[] = [];
   let hinted = false;
-  for (const raw of text.replace(/\r\n?/g, "\n").split("\n")) {
+  for (const raw of text.replace(/\r\n?/g, "\n").split("\n").flatMap((line) => unfold(line.trim()))) {
     const line = raw.trim();
-    if (/^(?:[-*•]|\d+[.)])\s/.test(line) || !line) {
+    if (/^(?:[-*•◦]|\d+[.)])\s/.test(line) || !line) {
       lines.push(line);
       continue;
     }
@@ -102,6 +154,19 @@ export function shapeReply(text: string, options: { emoji: boolean } = { emoji: 
   return lines.join("\n").replace(/\n{3,}/g, "\n\n").trim();
 }
 
+/**
+ * A run of three or more things joined by semicolons, one per line under its
+ * label: "Guests: Riya said yes; Dev said yes; Meera said maybe" becomes
+ * "Guests:" and a "◦" line each (HomeTalk's reply rule, 2026-10-26). A line
+ * with no label before the run is left as it is.
+ */
+export function unfold(line: string): string[] {
+  const parts = line.split(/;\s+/);
+  const label = parts[0]!.lastIndexOf(": ");
+  if (parts.length < 3 || label < 0) return [line];
+  return [parts[0]!.slice(0, label + 1), ...[parts[0]!.slice(label + 2), ...parts.slice(1)].map((part) => `◦ ${part.trim()}`)];
+}
+
 /** The reply, warm and laid out, or exactly as it was where neither belongs. */
 export function warmReply(text: string, input: WarmthInput): string {
   const trimmed = text.trim();
@@ -110,23 +175,23 @@ export function warmReply(text: string, input: WarmthInput): string {
   const sensitive = !input.action || [...replyClassesFor(input.action), ...(input.classes ?? [])].some((kind) => SENSITIVE.has(kind));
   // Already warm (a catalog word, a model's own): its layout still helps.
   const warm = EMOJI.test(trimmed.replace(UNDO_LINE, ""));
-  const shaped = shapeReply(trimmed, { emoji: !plain && !sensitive });
+  const shaped = shapeReply(trimmed, { emoji: !plain });
   if (plain || warm) return shaped;
   const action = input.action!;
   switch (input.proposal) {
     case "executed":
       return `${DONE[action] ?? "✅"} ${shaped}`;
     case "clarify":
-      return sensitive ? shaped : `${DONE[action] ?? "🤔"} ${shaped}`;
+      return `${DONE[action] ?? topicOf(shaped) ?? "🤔"} ${shaped}`;
     case "answer": {
-      if (sensitive || action === "check_agents") return shaped;
-      const lead = ANSWER[action];
+      const lead = ANSWER[action] ?? topicOf(shaped);
       if (lead) return `${lead} ${shaped}`;
-      return shaped.includes("\n") ? `📋 ${shaped}` : `${shaped} 😊`;
+      // A one-line answer about ordinary things closes with a smile; anything longer, or about money, health or a child, is led.
+      return shaped.includes("\n") || sensitive || action === "check_agents" ? `📋 ${shaped}` : `${shaped} 😊`;
     }
     case "prepared":
     case "needs_approval":
-      return sensitive ? shaped : `📝 ${shaped}`;
+      return `📝 ${shaped}`;
     default:
       return shaped;
   }
