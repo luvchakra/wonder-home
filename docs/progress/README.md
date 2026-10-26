@@ -11,6 +11,7 @@ decision that shapes later work each earns a note, written before moving on.
 
 | Date | Note |
 |---|---|
+| 2026-10-26 | [A finished turn's action preview behind an "i" (14-054)](2026-10-26-hometalk-preview-info.md) |
 | 2026-10-26 | [School channels, backend (08-031, PR A)](2026-10-26-school-channels-backend.md) |
 | 2026-10-26 | [Answers to pick under HomeTalk's questions (14-053)](2026-10-26-hometalk-answer-choices.md) |
 | 2026-10-26 | [HomeTalk's reply rule: structured, with emojis, cheerful](2026-10-26-hometalk-reply-rule.md) |

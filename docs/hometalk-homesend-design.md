@@ -134,7 +134,8 @@ received → understood → checked & scored → reconciled → completeness
   - `label` is in the member's language; `say` is the exact English the clarify step already reads as that answer, so a pick is an ordinary turn and grounding and every gate run on it unchanged. `say: null` ("Another day…") focuses the text box.
   - The sets: an amount (2–3 practical amounts for that item by the one rule for amounts, `commerce/bare-amount.ts`, from the catalog's unit, pack and ladder; then Skip, or That's enough when it is already on the list; "1 of each"/"2 of each" for several); who (the candidates, else the household's names); a day (Today, Tomorrow, the next weekend day, Another day…; Today, Yesterday for a receipt or health document); a time (9 am, 12 pm, 4 pm, 6 pm, Another time…); a record type; yes / not now; which item (the candidates); and which waiting items to fill in (checkboxes, all ticked, one Send — "Maths worksheet and Diwali dinner" fills in just those).
   - The text box always stays. In the app the latest question's choices are chips (a radio group) or checkboxes (`ui/answer-choices`), greyed once answered. On WhatsApp they are reply buttons (3 or fewer) or a list (up to 10), each id `say:<words>`; a pick comes back as those words, and a failed interactive send goes as plain text. A health record's choices never go to WhatsApp. Voice reads the question only.
-  - A turn that only asked (`fill_homesend_details`, or `complete_homesend_item` that asked the next question) shows no preview card (`onlyAsked`): asking is not done, and there is nothing to undo.
+  - A turn that only asked (`fill_homesend_details`, or `complete_homesend_item` that asked the next question) is not "done" (`onlyAsked`): no ✅, and its preview never says "Can be undone".
+  - Any settled turn's preview sits behind a small "i" left of the reply's time (14-054, `ui/preview-info`); only a preview waiting for a decision stays an inline card with its buttons.
 
 ---
 

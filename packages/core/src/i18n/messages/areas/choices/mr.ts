@@ -40,6 +40,7 @@ export const choicesMr: AreaCatalog<typeof choicesEn> = {
   "hometalk.choice.countIn.ml": "हे मि.ली.मध्ये मोजा",
   "hometalk.choice.countIn.kg": "हे किलोमध्ये मोजा",
   "hometalk.choice.countIn.g": "हे ग्रॅममध्ये मोजा",
+  "hometalk.preview.details": "WonderHome ने काय केले त्याचा तपशील",
   "hometalk.choice.pick": "उत्तर निवडा",
   "hometalk.choice.groupLabel": "निवडण्यासाठी उत्तरे",
   "hometalk.choice.send": "पाठवा",

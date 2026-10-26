@@ -40,6 +40,7 @@ export const choicesAr: AreaCatalog<typeof choicesEn> = {
   "hometalk.choice.countIn.ml": "احسبه بالمليلتر بدلًا من ذلك",
   "hometalk.choice.countIn.kg": "احسبه بالكيلو بدلًا من ذلك",
   "hometalk.choice.countIn.g": "احسبه بالغرام بدلًا من ذلك",
+  "hometalk.preview.details": "تفاصيل ما فعله WonderHome",
   "hometalk.choice.pick": "اختر إجابة",
   "hometalk.choice.groupLabel": "إجابات للاختيار",
   "hometalk.choice.send": "إرسال",

@@ -62,6 +62,7 @@ export function ChatMessage({
   sentAt,
   pending = false,
   timeTail = false,
+  timeLead,
   id,
   className,
 }: {
@@ -95,6 +96,12 @@ export function ChatMessage({
    * room automatically.
    */
   timeTail?: boolean;
+  /**
+   * Something small just before the time, on the same line (the action
+   * preview's "i", the owner 2026-10-26). Give the matching `ChatTimeRoom`
+   * `lead` so the last line keeps room for it.
+   */
+  timeLead?: ReactNode;
   pending?: boolean;
   /** An anchor, so something else on the screen (a search result) can bring this message into view. */
   id?: string;
@@ -133,16 +140,20 @@ export function ChatMessage({
             // is full, as a messaging app does.
             <div className="relative">
               {children}
-              {plainText ? <ChatTimeRoom label={sentAt.label} /> : null}
-              <time dateTime={sentAt.dateTime} className={cn("absolute end-0 bottom-[0.3125rem]", timeClass)}>
-                {sentAt.label}
-              </time>
+              {plainText ? <ChatTimeRoom label={sentAt.label} lead={Boolean(timeLead)} /> : null}
+              <span className="absolute end-0 bottom-[0.3125rem] flex items-center gap-1.5">
+                {timeLead}
+                <time dateTime={sentAt.dateTime} className={timeClass}>
+                  {sentAt.label}
+                </time>
+              </span>
             </div>
           ) : sentAt ? (
             // The time sits beside a short message's last words and drops to
             // its own line, still in the corner, when the text needs the width.
             <div className="flex flex-wrap items-end justify-end gap-x-2.5">
               <div className="min-w-0 flex-auto">{children}</div>
+              {timeLead ? <span className="flex shrink-0 translate-y-0.5 items-center">{timeLead}</span> : null}
               <time
                 dateTime={sentAt.dateTime}
                 className={cn("shrink-0 translate-y-0.5", timeClass)}
@@ -165,9 +176,10 @@ export function ChatMessage({
  * copy of the time itself, so it is exactly as wide in every language. Put
  * it at the end of the words (`ReplyText`'s `tail`) and set `timeTail`.
  */
-export function ChatTimeRoom({ label }: { label: string }) {
+export function ChatTimeRoom({ label, lead = false }: { label: string; lead?: boolean }) {
   return (
-    <span aria-hidden className="invisible inline-block ps-2.5 text-[0.6875rem] leading-none whitespace-nowrap tabular-nums">
+    // `lead`: room for the small button before the time too (1rem and its gap).
+    <span aria-hidden className={cn("invisible inline-block text-[0.6875rem] leading-none whitespace-nowrap tabular-nums", lead ? "ps-[2.0625rem]" : "ps-2.5")}>
       {label}
     </span>
   );

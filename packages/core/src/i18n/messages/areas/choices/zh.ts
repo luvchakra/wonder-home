@@ -40,6 +40,7 @@ export const choicesZh: AreaCatalog<typeof choicesEn> = {
   "hometalk.choice.countIn.ml": "改用毫升计",
   "hometalk.choice.countIn.kg": "改用千克计",
   "hometalk.choice.countIn.g": "改用克计",
+  "hometalk.preview.details": "WonderHome 所做之事的详情",
   "hometalk.choice.pick": "选择答案",
   "hometalk.choice.groupLabel": "可选的答案",
   "hometalk.choice.send": "发送",

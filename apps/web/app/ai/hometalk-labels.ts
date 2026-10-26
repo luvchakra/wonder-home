@@ -30,6 +30,8 @@ export type AssistantLabels = {
   alreadyOnRecord: string;
   /** The answers to pick under a question (rule 20): the group's name for a screen reader, and the multi set's Send. */
   choices: { legend: string; send: string };
+  /** The "i" beside a finished reply's time that opens its action preview. */
+  previewDetails: string;
   stop: string;
   restOnScreen: string;
   /** "{count} more", the browser fills the count. */
@@ -108,6 +110,7 @@ export function assistantLabels(t: Translate, time: Pick<MessageTimeStyle, "loca
     cancel: t("hometalk.ui.cancel"),
     alreadyOnRecord: t("hometalk.ui.alreadyOnRecord"),
     choices: { legend: t("hometalk.choice.groupLabel"), send: t("hometalk.choice.send") },
+    previewDetails: t("hometalk.preview.details"),
     stop: t("hometalk.ui.stop"),
     restOnScreen: t("hometalk.ui.restOnScreen"),
     andMore: t("hometalk.ui.andMore", { count: "{count}" }),
