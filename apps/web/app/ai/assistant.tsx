@@ -21,6 +21,7 @@ import type { PlaceSuggestion } from "@wonderhome/core/homeplaces/service";
 import { spokenSummary } from "@wonderhome/core/conversation/speech";
 import { ActionPreview } from "@wonderhome/core/ui/action-preview";
 import { AnswerChoices } from "@wonderhome/core/ui/answer-choices";
+import { PreviewInfo } from "@wonderhome/core/ui/preview-info";
 import { combinedSay, type HomeTalkChoices } from "@wonderhome/core/hometalk/choices";
 import { messageDay, messageDayLabel, messageTime } from "@wonderhome/core/conversation/message-time";
 import { AiOrb, ChatDayDivider, ChatMessage, ChatTimeRoom, SuggestionChips } from "@wonderhome/core/ui/ai-message";
@@ -534,6 +535,23 @@ export function Assistant({
           {messages.map((message, index) => {
             const sentAt = message.at ? { label: messageTime(new Date(message.at), timeZone, labels.time), dateTime: message.at } : undefined;
             const withPlaces = Boolean(message.places && message.places.length > 0);
+            // A settled turn's preview sits behind an "i" beside its time; one still waiting for a decision stays inline (the owner, 2026-10-26).
+            const preview = message.role === "assistant" ? (message.action?.preview ?? message.preview ?? null) : null;
+            const deciding = message.action?.status === "proposed";
+            const info = preview && !deciding ? (
+              <PreviewInfo
+                label={labels.previewDetails}
+                preview={{
+                  labels: labels.preview,
+                  state: stateOf(message),
+                  understood: preview.summary,
+                  plan: message.action?.unchanged ? [labels.alreadyOnRecord] : preview.changes,
+                  impact: preview.because,
+                  // "Can be undone" only when something was done and it is true; never under a question.
+                  reversible: !message.questionOnly && stateOf(message) === "executed" ? preview.reversible : undefined,
+                }}
+              />
+            ) : null;
             return (
             <Fragment key={message.id}>
             {/* A date between the days, as a messaging app shows it. */}
@@ -547,8 +565,9 @@ export function Assistant({
               pending={message.pending}
               sentAt={sentAt}
               timeTail={message.role === "assistant" && !withPlaces}
+              timeLead={info}
               aside={
-                !message.questionOnly && (message.action?.preview || message.preview) ? (
+                preview && deciding ? (
                   <ActionPreview
                     labels={labels.preview}
                     state={stateOf(message)}
@@ -600,7 +619,7 @@ export function Assistant({
                     <PlaceCards householdId={householdId} messageId={message.id} places={message.places!} marks={placeMarks} labels={labels.places} />
                   </div>
                 ) : (
-                  <ReplyText text={message.text} className="space-y-1.5" tail={sentAt ? <ChatTimeRoom label={sentAt.label} /> : null} />
+                  <ReplyText text={message.text} className="space-y-1.5" tail={sentAt ? <ChatTimeRoom label={sentAt.label} lead={Boolean(info)} /> : null} />
                 )
               ) : (
                 message.text
