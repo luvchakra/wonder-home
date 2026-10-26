@@ -148,6 +148,11 @@ export default async function IntegrationsPage() {
                         {integration.provider} · {integration.lastSuccessAt ? t("manage.integrations.lastSynced", { date: formatDate(timezone, integration.lastSuccessAt, "long") }) : t("manage.integrations.neverSynced")}
                       </p>
                     ))}
+                    {kind.kind === "school" ? (
+                      <div className="mt-2">
+                        <PillLink href="/household/integrations/school" tone="primary">{t("school.connect")}</PillLink>
+                      </div>
+                    ) : null}
                   </div>
                 </Card>
               );
