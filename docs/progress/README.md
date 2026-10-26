@@ -11,6 +11,7 @@ decision that shapes later work each earns a note, written before moving on.
 
 | Date | Note |
 |---|---|
+| 2026-10-26 | [An amount in another unit is converted or asked about, never refused raw (25-038)](2026-10-26-grocery-unit-refusals.md) |
 | 2026-10-26 | [HomeTalk replies laid out for a phone, with emojis throughout](2026-10-26-structured-replies.md) |
 | 2026-10-26 | [A number said without a unit is the item's practical amount (25-037)](2026-10-26-practical-default-units.md) |
 | 2026-10-26 | [Warm emojis on WhatsApp and HomeTalk replies](2026-10-26-warm-emoji-replies.md) |
