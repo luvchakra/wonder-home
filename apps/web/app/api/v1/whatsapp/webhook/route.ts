@@ -4,7 +4,7 @@ import { createAdminClient } from "@wonderhome/core/db/admin";
 import { whatsappConfigFromEnv } from "@wonderhome/core/notifications/whatsapp";
 import { handleWhatsAppWebhook } from "@wonderhome/core/notifications/whatsapp-webhook";
 
-import { whatsappAsk } from "@/app/_lib/whatsapp-hometalk";
+import { whatsappAsk, whatsappAutoAdd } from "@/app/_lib/whatsapp-hometalk";
 
 /**
  * WhatsApp's webhook (story 17-006; inbound HomeSend intake, 14-015/14-016). Everything it does is
@@ -21,7 +21,8 @@ async function handle(request: Request): Promise<Response> {
   // The admin client is made only when a verified message is asked about: built eagerly, it threw on every
   // request where the service role is unset, and the unconfigured route answered 500 instead of its 401.
   const ask = (input: Parameters<ReturnType<typeof whatsappAsk>>[0]) => whatsappAsk(createAdminClient())(input);
-  return handleWhatsAppWebhook(request, { config: whatsappConfigFromEnv(), admin: createAdminClient, defer: (work) => after(work), ask });
+  const addOnItsOwn = (input: Parameters<ReturnType<typeof whatsappAutoAdd>>[0]) => whatsappAutoAdd(createAdminClient())(input);
+  return handleWhatsAppWebhook(request, { config: whatsappConfigFromEnv(), admin: createAdminClient, defer: (work) => after(work), ask, addOnItsOwn });
 }
 
 export const GET = handle;

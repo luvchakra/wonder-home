@@ -232,6 +232,8 @@ export const es: Catalog = {
   "reminder.aiKey.body.out_of_credits": "{provider} dice que esta clave se ha quedado sin créditos, así que lo que la usa ha dejado de funcionar. Recarga la cuenta; el aviso se quita solo cuando vuelva a funcionar.",
   "reminder.aiKey.body.quota_exhausted": "{provider} sigue rechazando esta clave por cuota, así que lo que la usa ha dejado de funcionar. Revisa la cuota y la facturación; el aviso se quita solo cuando vuelva a funcionar.",
   "reminder.aiKey.body.key_rejected": "{provider} dice que esta clave no es válida. Cámbiala en Ajustes → Asistente de IA; el aviso se quita solo cuando vuelva a funcionar.",
+  "keyAlert.fix": "Abrir ajustes de IA",
+  "keyAlert.adminTold": "Se ha avisado a un administrador.",
   "reminder.goalCheck.title": "{name} dice que hizo «{goal}»",
   "reminder.goalCheck.body": "Compruébalo y di sí o todavía no. Las estrellas cuentan cuando dices que sí.",
   "reminder.chat.family": "Toda la familia",

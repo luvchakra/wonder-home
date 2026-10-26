@@ -1,3 +1,5 @@
+import { createHash } from "node:crypto";
+
 import { createClient, type SupabaseClient } from "@supabase/supabase-js";
 import { expect, test, type Page } from "@playwright/test";
 
@@ -102,7 +104,12 @@ test.describe("every signed-in screen loads", () => {
     if (playbook.error) throw playbook.error;
   });
 
+  /** A made-up Gemini voice key for the key-alert test, and its fingerprint (the alert row outlives the household). */
+  const fakeVoiceKey = `AIza-e2e-${Math.random().toString(36).slice(2, 14)}-not-a-real-key`;
+  const fakeFingerprint = createHash("sha256").update(fakeVoiceKey, "utf8").digest("hex");
+
   test.afterAll(async () => {
+    if (admin) await admin.from("ai_key_alerts").delete().eq("key_fingerprint", fakeFingerprint);
     if (householdId) await admin.from("households").delete().eq("id", householdId);
     if (userId) await admin.auth.admin.deleteUser(userId);
   });
@@ -210,5 +217,29 @@ test.describe("every signed-in screen loads", () => {
     // The setup card opens the walk-through; the list doesn't repeat it.
     await expect(page.locator("section[id^='manage-'] a[href='/household/setup']")).toHaveCount(0);
     expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(page.viewportSize()!.width);
+  });
+  test("an AI key out of credits is said on HomeTalk and on Settings → AI Assistant", async ({ page }) => {
+    const member = await admin.from("household_members").select("id").eq("household_id", householdId).eq("profile_id", userId).single();
+    if (member.error) throw member.error;
+    const key = await admin.from("household_gemini_voice_credentials").upsert({ household_id: householdId, provider: "google", api_key: fakeVoiceKey, set_by_member_id: member.data.id });
+    if (key.error) throw key.error;
+    const alert = await admin.rpc("record_ai_key_alert", { p_fingerprint: fakeFingerprint, p_provider: "google", p_kind: "out_of_credits" });
+    if (alert.error) throw alert.error;
+
+    await signIn(page);
+    await page.goto("/ai");
+    const banner = page.getByRole("alert").filter({ hasText: "The Gemini voice key needs attention" });
+    await expect(banner).toBeVisible();
+    await expect(banner).toContainText("Google says this key is out of credits");
+    await expect(banner.getByRole("link", { name: "Open AI settings" })).toHaveAttribute("href", "/settings/ai");
+    expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(page.viewportSize()!.width);
+
+    await page.goto("/settings/ai");
+    await expect(page.getByRole("alert").filter({ hasText: "The Gemini voice key needs attention" })).toBeVisible();
+
+    // A call with the key working again clears it everywhere.
+    await admin.rpc("resolve_ai_key_alert", { p_fingerprint: fakeFingerprint });
+    await page.goto("/ai");
+    await expect(page.getByText("The Gemini voice key needs attention")).toHaveCount(0);
   });
 });

@@ -242,6 +242,8 @@ export const en = {
   "reminder.aiKey.body.out_of_credits": "{provider} says this key is out of credits, so what uses it has stopped. Top up the account; this clears by itself once it works again.",
   "reminder.aiKey.body.quota_exhausted": "{provider} keeps refusing this key for quota, so what uses it has stopped. Check the account’s quota and billing; this clears by itself once it works again.",
   "reminder.aiKey.body.key_rejected": "{provider} says this key is not valid. Replace it in Settings → AI Assistant; this clears by itself once it works again.",
+  "keyAlert.fix": "Open AI settings",
+  "keyAlert.adminTold": "An Admin has been told.",
   "reminder.goalCheck.title": "{name} says they did “{goal}”",
   "reminder.goalCheck.body": "Check it and say yes, or not yet. Stars count once you say yes.",
   "reminder.chat.family": "Whole family",

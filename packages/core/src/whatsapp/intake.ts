@@ -52,6 +52,15 @@ export type WhatsAppIntakeDeps = {
   ask?: (input: { householdId: string; memberId: string; text: string; requestId: string }) => Promise<string | null>;
   /** Waiting for what the person sends straight after; replaceable in tests. */
   sleep?: (ms: number) => Promise<void>;
+  /**
+   * Adds an item on its own where the household allows it (the outcome is
+   * "Pre Approved" and the reading is above its bar), under the member's own
+   * session, through the same governed write the app uses
+   * (`apps/web/app/_lib/whatsapp-hometalk.ts`). Null when it must wait for a
+   * person. WhatsApp itself never confirms anything: the household decided
+   * this in advance (the owner, 2026-10-26).
+   */
+  addOnItsOwn?: (input: { householdId: string; memberId: string; itemId: string }) => Promise<{ title: string; where: string } | null>;
 };
 
 export type ReceiveOutcome = { linked: number; queued: string[]; duplicates: number; unknown: number };
@@ -247,7 +256,9 @@ export async function processWhatsAppMessage(admin: SupabaseClient, messageId: s
     if (answered) {
       events.push({ kind: "clarification_answered", householdId: row.household_id });
       await settle({ processing_status: "ignored" });
-      await say(`Got it — that's for ${answered}. It's waiting in HomeSend for you to check.`);
+      // With who it is for known, the item carries on: added now where the household allows it, else it waits.
+      const added = deps.addOnItsOwn ? await deps.addOnItsOwn({ householdId: row.household_id, memberId: row.member_id, itemId: answered.itemId }).catch(() => null) : null;
+      await say(added ? addedReply(added, answered.name) : `Got it — that's for ${answered.name}. It's waiting in HomeSend for you to check.`);
       await recordWhatsAppEvents(admin, events);
       return "read";
     }
@@ -332,7 +343,12 @@ export async function processWhatsAppMessage(admin: SupabaseClient, messageId: s
   if (!outcome.duplicate) events.push({ kind: "homesend_created", householdId: row.household_id });
   const ack = acknowledgementFor(outcome, { whoFor: await whoForChoices(admin, row.household_id, outcome).catch(() => []) });
   if (ack.asks) events.push({ kind: "clarification_requested", householdId: row.household_id });
-  await say(ack.text);
+  // Nothing left to ask: added now where the household allows it, else the acknowledgement says where it waits.
+  const added =
+    !ack.asks && !outcome.duplicate && outcome.state !== "failed" && deps.addOnItsOwn
+      ? await deps.addOnItsOwn({ householdId: row.household_id, memberId: row.member_id, itemId: outcome.itemId }).catch(() => null)
+      : null;
+  await say(added ? addedReply(added) : ack.text);
   await recordWhatsAppEvents(admin, events);
   return "read";
 }
@@ -366,7 +382,7 @@ export function memberNamedInReply(text: string, members: readonly { id: string;
  * choice is written as the name the item is read as being for, so the
  * review opens with that person picked and nothing is applied.
  */
-async function answerWhoFor(admin: SupabaseClient, row: MessageRow, text: string, now: Date): Promise<string | null> {
+async function answerWhoFor(admin: SupabaseClient, row: MessageRow, text: string, now: Date): Promise<{ name: string; itemId: string } | null> {
   // The item it answers: the one the person swiped to reply to, or else the
   // last thing they sent in the past half hour that is still waiting to
   // know who it is for (a plain "asmi" straight after the photo).
@@ -405,7 +421,17 @@ async function answerWhoFor(admin: SupabaseClient, row: MessageRow, text: string
     .update({ extracted, ...(understanding ? { understanding } : {}) })
     .eq("household_id", row.household_id)
     .eq("id", waiting.id);
-  return error ? null : member.displayName;
+  return error ? null : { name: member.displayName, itemId: waiting.id };
+}
+
+/**
+ * Said when an item was added on its own: what, where, and that it can be
+ * taken back in HomeSend. Never an amount or a health detail, which are never
+ * added on their own anyway.
+ */
+export function addedReply(added: { title: string; where: string }, forName?: string): string {
+  const title = shortTitle(added.title) ?? "it";
+  return `Added *${title}*${forName ? ` for ${forName}` : ""} to ${added.where} — your household lets WonderHome add these on its own. You can undo it in HomeSend.`;
 }
 
 /** How long after sending something a plain name still answers who it is for. */

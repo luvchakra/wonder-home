@@ -27,12 +27,12 @@ import type { IntakeUnderstanding } from "@wonderhome/core/homesend/understandin
 import { requireMembership } from "@wonderhome/core/identity/households";
 import { log } from "@wonderhome/core/observability/logger";
 import { hitRateLimit, rateLimitMessage } from "@wonderhome/core/security/rate-limit";
-import { SCHOOL_ITEM_KINDS } from "@wonderhome/core/school/items";
 import { cancelSchoolItem, restoreSchoolItem, updateSchoolItem } from "@wonderhome/core/school/repository";
 import { standDownActivity, standDownActivityNote } from "@wonderhome/core/school/activities";
 import { setEventCancelled } from "@wonderhome/core/family/event-detail";
 
 import { prepareReview } from "./home-send-review";
+import { autoApplyHomeSendItem } from "./home-send-auto";
 import { addChildFromNotice, addGrocery, createNew, reviseExisting, routeSchema, type RouteInput } from "./home-send-writes";
 
 /**
@@ -94,7 +94,7 @@ async function withReview(
   if (!review) return state;
   // Something already waiting is shown again, never applied a second time.
   if (review.confirmation.mode === "auto_apply" && !state.duplicate && !review.plan) {
-    const applied = await autoApply(supabase, membership, { id: item.id, kind: item.classifiedKind, extracted: item.extracted, subject: review.subject }).catch(() => null);
+    const applied = await autoApplyHomeSendItem(supabase, membership, { id: item.id, kind: item.classifiedKind, extracted: item.extracted, subject: review.subject }).catch(() => null);
     // How sure it was, with the entry (the owner, 2026-10-26).
     const percent = scorePercent(review.understanding?.score);
     const sure = percent === null ? "" : ` (${percent}% sure)`;
@@ -104,58 +104,6 @@ async function withReview(
     ...state,
     item: { ...item, understanding: review.understanding, reconciliation: review.reconciliation, subject: review.subject, confirmation: review.confirmation, plan: review.plan ?? null },
   };
-}
-
-/**
- * Applying an item the household's own autonomy setting allows (§12): the
- * same governed create a person's confirm uses, recorded as a change with
- * the same Undo, and marked `auto_added` so it is never mistaken for a
- * person's decision (§19).
- */
-async function autoApply(
-  supabase: Awaited<ReturnType<typeof createClient>>,
-  membership: Awaited<ReturnType<typeof requireMembership>>,
-  item: { id: string; kind: HomeSendKind; extracted: HomeSendExtraction | null; subject: SubjectResolution | null },
-): Promise<{ changeId: string; title: string; where: string } | null> {
-  const extracted = item.extracted;
-  const title = extracted?.title?.trim();
-  if (!title || (item.kind !== "grocery_item" && item.kind !== "school_item")) return null;
-  const householdId = membership.household.id;
-  const input: RouteInput = {
-    householdId,
-    itemId: item.id,
-    decision: "add",
-    kind: item.kind,
-    title: title.slice(0, 160),
-    notes: extracted?.notes ?? undefined,
-    location: extracted?.location ?? undefined,
-    dueDate: extracted?.dueDate ?? undefined,
-    dueTime: extracted?.dueTime ?? undefined,
-    endTime: extracted?.endTime ?? undefined,
-    childMemberId: item.subject?.selected?.memberId,
-    schoolKind: SCHOOL_ITEM_KINDS.find((schoolKind) => schoolKind === extracted?.schoolKind),
-    subject: extracted?.subject ?? undefined,
-    quantity: extracted?.quantity ?? undefined,
-    unit: extracted?.unit ?? undefined,
-    category: CONSUMABLE_CATEGORIES.find((category) => category === extracted?.category),
-    needs: [],
-  };
-  const created = await createNew(supabase, membership, input);
-  if ("error" in created) return null;
-  await routeHomeSendItem(supabase, householdId, item.id, {
-    routedTable: created.routedTable,
-    routedId: created.routedId,
-    review: { decision: "auto_added", subject: item.subject?.selected ? "resolved" : "not_needed", corrected: false },
-  });
-  const change = await recordHomeSendChange(supabase, {
-    householdId,
-    intakeId: item.id,
-    domain: item.kind,
-    entityId: created.routedId,
-    createdByMemberId: membership.memberId,
-    ...(created.changeType === "updated" ? { changeType: "updated" as const, previous: created.previous ?? {} } : {}),
-  });
-  return { changeId: change.id, title, where: item.kind === "grocery_item" ? "Groceries" : "Kids & School" };
 }
 
 function toState(outcome: IngestOutcome): SendHomeItemState {

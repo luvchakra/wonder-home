@@ -232,6 +232,8 @@ export const de: Catalog = {
   "reminder.aiKey.body.out_of_credits": "{provider} meldet, dass dieser Schlüssel kein Guthaben mehr hat, deshalb funktioniert, was ihn nutzt, nicht mehr. Lade das Konto auf; der Hinweis verschwindet von selbst, sobald es wieder geht.",
   "reminder.aiKey.body.quota_exhausted": "{provider} lehnt diesen Schlüssel wiederholt wegen des Kontingents ab, deshalb funktioniert, was ihn nutzt, nicht mehr. Prüfe Kontingent und Abrechnung; der Hinweis verschwindet von selbst, sobald es wieder geht.",
   "reminder.aiKey.body.key_rejected": "{provider} meldet, dass dieser Schlüssel ungültig ist. Ersetze ihn unter Einstellungen → KI-Assistent; der Hinweis verschwindet von selbst, sobald es wieder geht.",
+  "keyAlert.fix": "KI-Einstellungen öffnen",
+  "keyAlert.adminTold": "Ein Admin wurde informiert.",
   "reminder.goalCheck.title": "{name} sagt: „{goal}“ erledigt",
   "reminder.goalCheck.body": "Prüfe es und sag Ja oder Noch nicht. Sterne zählen erst nach deinem Ja.",
   "reminder.chat.family": "Ganze Familie",

@@ -236,6 +236,8 @@ export const ar: Catalog = {
   "reminder.aiKey.body.out_of_credits": "يقول {provider} إن رصيد هذا المفتاح نفد، لذا توقف ما يستخدمه. اشحن الحساب؛ يختفي هذا التنبيه وحده عندما يعمل من جديد.",
   "reminder.aiKey.body.quota_exhausted": "يرفض {provider} هذا المفتاح مرارًا بسبب الحصة، لذا توقف ما يستخدمه. راجع الحصة والفوترة؛ يختفي هذا التنبيه وحده عندما يعمل من جديد.",
   "reminder.aiKey.body.key_rejected": "يقول {provider} إن هذا المفتاح غير صالح. استبدله من الإعدادات → مساعد الذكاء الاصطناعي؛ يختفي هذا التنبيه وحده عندما يعمل من جديد.",
+  "keyAlert.fix": "افتح إعدادات الذكاء الاصطناعي",
+  "keyAlert.adminTold": "تم إبلاغ أحد المشرفين.",
   "reminder.goalCheck.title": "يقول {name} إنه أنجز «{goal}»",
   "reminder.goalCheck.body": "تحقّق وقل نعم أو ليس بعد. تُحتسب النجوم بعد موافقتك.",
   "reminder.chat.family": "العائلة كلها",

@@ -363,6 +363,46 @@ describe("processing into HomeSend", () => {
     expect(out.sent[0]!.text).toBe("Got it 👍 I found a school item: *Sports Day*. Who is it for — Asmi or Manan? Reply with their name.");
   });
 
+  // The owner, 2026-10-26: once WhatsApp has asked and been answered, the item carries on.
+  it("after the name, adds the item on its own where the household allows it, and says so", async () => {
+    const { h, id } = await received("text");
+    h.tables.whatsapp_messages![0]!.text_content = "Asmi";
+    h.tables.whatsapp_messages!.push({ id: "m-photo", household_id: HOUSEHOLD, member_id: MEMBER, provider_message_id: "wamid.photo", homesend_item_id: "item-exam", received_at: new Date().toISOString(), processing_status: "processed" });
+    h.tables.home_send_items = [{ id: "item-exam", household_id: HOUSEHOLD, status: "classified", classified_kind: "school_item", extracted: { title: "Maths worksheet", people: [] }, understanding: { references: [] } }];
+    h.tables.household_members = FAMILY();
+    const out = replies();
+    const asked: unknown[] = [];
+    await processWhatsAppMessage(h.client, id, {
+      config: CONFIG,
+      fetch: out.fetchImpl,
+      ingest: { classify },
+      addOnItsOwn: async (input) => (asked.push(input), { title: "Maths worksheet", where: "Kids & School" }),
+    });
+    expect(asked).toEqual([{ householdId: HOUSEHOLD, memberId: MEMBER, itemId: "item-exam" }]);
+    expect(out.sent[0]!.text).toBe("Added *Maths worksheet* for Asmi Chakraborty to Kids & School — your household lets WonderHome add these on its own. You can undo it in HomeSend.");
+  });
+
+  it("after the name, says it waits in HomeSend when the household wants to approve it", async () => {
+    const { h, id } = await received("text");
+    h.tables.whatsapp_messages![0]!.text_content = "Asmi";
+    h.tables.whatsapp_messages!.push({ id: "m-photo", household_id: HOUSEHOLD, member_id: MEMBER, provider_message_id: "wamid.photo", homesend_item_id: "item-exam", received_at: new Date().toISOString(), processing_status: "processed" });
+    h.tables.home_send_items = [{ id: "item-exam", household_id: HOUSEHOLD, status: "classified", classified_kind: "school_item", extracted: { title: "Exam", people: [] }, understanding: { references: [] } }];
+    h.tables.household_members = FAMILY();
+    const out = replies();
+    await processWhatsAppMessage(h.client, id, { config: CONFIG, fetch: out.fetchImpl, ingest: { classify }, addOnItsOwn: async () => null });
+    expect(out.sent[0]!.text).toBe("Got it — that's for Asmi Chakraborty. It's waiting in HomeSend for you to check.");
+  });
+
+  it("never adds anything while it is still asking who an item is for", async () => {
+    const { h, id } = await received("text");
+    h.tables.household_members = FAMILY();
+    const out = replies();
+    let called = false;
+    await processWhatsAppMessage(h.client, id, { config: CONFIG, fetch: out.fetchImpl, ingest: { classify }, addOnItsOwn: async () => ((called = true), { title: "x", where: "y" }) });
+    expect(called).toBe(false);
+    expect(out.sent[0]!.text).toMatch(/Who is it for — Asmi or Manan\? Reply with their name\./);
+  });
+
   /** The owner's test (2026-10-24): a forward and a note, stamped the same second, delivered note first. */
   async function forwardAndNote() {
     const { h, id } = await received("text");

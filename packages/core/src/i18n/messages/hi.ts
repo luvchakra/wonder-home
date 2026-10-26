@@ -232,6 +232,8 @@ export const hi: Catalog = {
   "reminder.aiKey.body.out_of_credits": "{provider} के अनुसार इस कुंजी के क्रेडिट ख़त्म हो गए हैं, इसलिए जो इसका इस्तेमाल करता है वह बंद है। खाते में रिचार्ज करें; फिर से चलने पर यह अपने आप हट जाएगा।",
   "reminder.aiKey.body.quota_exhausted": "{provider} कोटा के कारण इस कुंजी को बार-बार मना कर रहा है, इसलिए जो इसका इस्तेमाल करता है वह बंद है। कोटा और बिलिंग देखें; फिर से चलने पर यह अपने आप हट जाएगा।",
   "reminder.aiKey.body.key_rejected": "{provider} के अनुसार यह कुंजी मान्य नहीं है। इसे सेटिंग्स → AI सहायक में बदलें; फिर से चलने पर यह अपने आप हट जाएगा।",
+  "keyAlert.fix": "AI सेटिंग्स खोलें",
+  "keyAlert.adminTold": "एक Admin को बता दिया गया है।",
   "reminder.goalCheck.title": "{name} कहते हैं कि “{goal}” हो गया",
   "reminder.goalCheck.body": "देखिए और हाँ या अभी नहीं कहिए। हाँ कहने पर ही सितारे गिने जाते हैं।",
   "reminder.chat.family": "पूरा परिवार",
