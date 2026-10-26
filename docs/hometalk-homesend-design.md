@@ -53,7 +53,7 @@ The person never chooses. Each message goes through these rules in order, and th
 | 7 | A voice note WonderHome isn't sure it heard right | "Check what I heard" (HomeSend's transcript check) | Never act on a doubtful transcript |
 | 8 | Anything else: a forward, photo, PDF, list, longer note, voice note reading out a notice | **HomeSend** | Something to keep |
 
-Rule 6 is still being built (issue I-11). The rest is live.
+All eight rules are live; rule 6 since #364 (issue I-11).
 
 ### 3.2 The app
 
@@ -226,7 +226,7 @@ To measure: `updated_at - created_at` on `home_send_items`, and `hometalk_channe
 | I-8 | Confidence not shown, or shown without a reason | Not surfaced | % with a reason on every entry | Live (#357, #361) |
 | I-9 | "Reading…" took 9–25 s | Intake used Opus | Sonnet 5.5 for intake, settable | Live (#357) |
 | I-10 | Gemini out of credits: voice silently stopped | Provider refusals weren't recorded | Key alerts by fingerprint; email, notice, banner, button reason | Live (#359, #360) |
-| I-11 | A WhatsApp voice note ("What are upcoming events") heard fine but put in Failed safely | Voice notes always went to HomeSend | Routing rule 6: a transcript is treated like typed text | In progress (session 01SztgaxajAfJzhTzWd2TV3x) |
+| I-11 | A WhatsApp voice note ("What are upcoming events") heard fine but put in Failed safely | Voice notes always went to HomeSend | Routing rule 6: a transcript is treated like typed text | Live (#364) |
 | I-12 | "Add oil" → "already on the list, nothing to add"; no quantity asked | Bare names never asked an amount | HomeTalk asks "how much?" (section 6) | In progress (session 011bFwDCeS2xGBdcHaNX8h5f) |
 | I-13 | Old questions sitting in Failed safely ("undo", "whats plan for the morning") | Mis-routed before I-1 and I-2 | Owner can dismiss them; tidy only with the owner's yes | Open |
 
