@@ -13,6 +13,8 @@ import { decideConfirmation } from "../homesend/confirmation";
 import { converse, type TurnInput } from "../conversation/engine";
 import { canExecute } from "../conversation/executor";
 import { groundIntent } from "../conversation/grounding";
+import { readItemAmount } from "../conversation/quantity";
+import { readBareNumber } from "../commerce/bare-amount";
 import { NO_REFERENCES } from "../conversation/references";
 import { acknowledgementFor, addedReply, leadOf, processWhatsAppMessage, QUESTION_REPLY, receiveWhatsAppMessages, WHATSAPP_PROCESS_KIND, withAdded, type WhatsAppIntakeDeps } from "./intake";
 import { CONNECT_CODE_LENGTH, LINK_REPLIES, connectMessage, generateConnectCode, hashConnectCode, readConnectCode, whatsappBusinessNumber, whatsappChatLink } from "./linking";
@@ -670,6 +672,54 @@ describe("processing into HomeSend", () => {
     expect(turns[0]!.kind === "reply" && turns[0]!.proposal.kind).toBe("executed");
     expect(h.tables.home_send_items).toEqual([]);
     expect(out.sent[0]!.text).toBe("Added *Coconut oil* (+2 L, now 3 L) to the shopping list.");
+  });
+
+  // The owner, 2026-10-26: "milk, eggs and bread", then "2 of each", added
+  // "Milk (+2 ml, now 2.502 L), Eggs, Brown (+24 pcs, now 32 pcs)" (25-037).
+  it("\"2 of each\" on WhatsApp is 2 L of milk, 2 eggs and 2 loaves — never 2 ml or 2 dozen", async () => {
+    const kept = (id: string, name: string, unit: string, toBuy: { quantity: number; unit: string }) => ({
+      id, name, category: "grocery", unit, step: null, lowLevel: null, storage: null, note: null, aliases: [], imageUrl: null, imagePath: null, catalog: null, lastPurchasedOn: null, stock: null,
+      toBuy: { entryId: `e-${id}`, ...toBuy, version: 1, source: "manual", mealId: null },
+    });
+    const kitchen = [kept("c-milk", "Milk", "ml", { quantity: 2500, unit: "ml" }), kept("c-eggs", "Eggs, Brown", "dozen", { quantity: 8, unit: "pcs" }), kept("c-bread", "Bread, White", "loaf", { quantity: 1, unit: "loaf" })];
+    const now = new Date();
+    const talk = (utterance: string, clarifying: TurnInput["clarifying"] = null) =>
+      converse({
+        utterance, channel: "text", actor: { memberId: MEMBER, roles: ["head"] }, pending: null, clarifying, autonomyFor: () => "execute", entitledFor: () => true, executable: canExecute, sessionId: "s-wa", now,
+        ground: (intent) => groundIntent(intent, { people: [], viewerMemberId: MEMBER, timezone: "Asia/Kolkata", now, references: async () => NO_REFERENCES, groceries: async () => kitchen }),
+      });
+    const first = await talk("Add milk, eggs and bread to the groceries");
+    expect(first.kind === "reply" && first.text).toContain('For example "2 of each" or "1 litre milk and 6 eggs".');
+    const clarifying = first.kind === "reply" ? (first.clarification ?? null) : null;
+
+    const { h, id } = await received("text");
+    h.tables.whatsapp_messages![0]!.text_content = "2 of each";
+    const asked = new Date(Date.now() - 60 * 1000).toISOString();
+    h.tables.whatsapp_messages!.push({ id: "m-ask", household_id: HOUSEHOLD, member_id: MEMBER, provider_message_id: "wamid.ask", message_type: "text", homesend_item_id: null, received_at: asked, processing_status: "ignored" });
+    h.tables.conversation_sessions = [{ id: "s-wa", household_id: HOUSEHOLD, member_id: MEMBER, surface: "whatsapp", status: "open", created_at: asked }];
+    h.tables.conversation_messages = [
+      { id: "c2", household_id: HOUSEHOLD, session_id: "s-wa", role: "assistant", metadata: { mode: "clarify", proposal: "clarify", clarify: clarifying }, created_at: new Date(Date.now() - 50 * 1000).toISOString() },
+    ];
+    h.tables.home_send_items = [];
+    const turns: Awaited<ReturnType<typeof talk>>[] = [];
+    await processWhatsAppMessage(h.client, id, {
+      config: CONFIG, fetch: replies().fetchImpl, ingest: { classify },
+      ask: async ({ text }) => {
+        turns.push(await talk(text ?? "", clarifying));
+        return "ok";
+      },
+    });
+    const items = turns[0]!.kind === "reply" ? (turns[0]!.intent.parameters.items as string[]) : [];
+    expect(items).toEqual(["2 milk", "2 eggs", "2 bread"]);
+    expect(turns[0]!.kind === "reply" && turns[0]!.proposal.kind).toBe("executed");
+    // What the add then writes for each (the executor's own rule, `commerce/bare-amount.ts`).
+    const writes = items.map((said, index) => readBareNumber(readItemAmount(said).amount!.quantity, kitchen[index]!));
+    expect(writes).toEqual([
+      { kind: "amount", amount: { quantity: 2, unit: "l" } },
+      { kind: "amount", amount: { quantity: 2, unit: "pcs" } },
+      { kind: "amount", amount: { quantity: 2, unit: "loaf" } },
+    ]);
+    expect(h.tables.home_send_items).toEqual([]);
   });
 
   it("once HomeTalk has answered rather than asked, the next text is HomeSend's again", async () => {
