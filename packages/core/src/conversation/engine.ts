@@ -2,7 +2,7 @@ import { normaliseUtterance } from "./normalise";
 import { readWhyQuestion } from "../homebrain/why";
 import type { AutonomyMode } from "../household/autonomy";
 import type { PermissionContext } from "../identity/permissions";
-import { answerClarification, clarificationFrom, escalatedQuestion, type PendingClarification } from "./clarify";
+import { answerClarification, clarificationFrom, escalatedQuestion, isFreshRequest, type PendingClarification } from "./clarify";
 import { resolveFixtureIntent } from "./fixtures";
 import { needsGrounding, type Grounding } from "./grounding";
 import {
@@ -315,7 +315,9 @@ export async function converse(raw: TurnInput): Promise<TurnResult> {
         input.clarifying !== null &&
         input.clarifying !== undefined &&
         input.clarifying.action === grounding.intent.action &&
-        input.clarifying.parameters.awaiting === grounding.awaiting;
+        input.clarifying.parameters.awaiting === grounding.awaiting &&
+        // A whole new request is asked the real question again, choices and all.
+        !isFreshRequest(input.utterance, grounding.awaiting);
       const question = repeated ? escalatedQuestion({ ...input.clarifying!, parameters: grounding.intent.parameters }) : grounding.question;
       return {
         kind: "reply",
@@ -349,7 +351,7 @@ export async function converse(raw: TurnInput): Promise<TurnResult> {
   // last one asked, it says instead what was understood, what is missing,
   // and the shape of an answer that works.
   let settled = proposal;
-  if (proposal.kind === "clarify" && input.clarifying && sameQuestion(proposal.question, input.clarifying)) {
+  if (proposal.kind === "clarify" && input.clarifying && sameQuestion(proposal.question, input.clarifying) && !isFreshRequest(input.utterance, input.clarifying.parameters.awaiting)) {
     settled = { kind: "clarify", question: escalatedQuestion(input.clarifying) };
   }
 
