@@ -39,7 +39,7 @@ disagree again.)
 | 11 | Bills, Fees & Finance | 11 | 6 | 3 | 2 | 10 | In Progress (11-011 left) |
 | 12 | Family Time & Social Activities | 8 | 3 | 4 | 1 | 8 | Done (calendar stories moved to 26 HomeEvents) |
 | 13 | Maintenance, Laundry & Pet Care | 8 | 4 | 3 | 1 | 8 | Done |
-| 14 | AI Orchestration & Learning | 32 | 23 | 8 | 1 | 27 | In Progress |
+| 14 | AI Orchestration & Learning | 33 | 23 | 9 | 1 | 28 | In Progress |
 | 15 | Privacy, Security & Governance | 8 | 8 | 0 | 0 | 8 | Done |
 | 16 | Platform Admin & Operations | 8 | 6 | 2 | 0 | 6 | In Progress |
 | 17 | External Integrations | 8 | 5 | 2 | 1 | 8 | Done |
@@ -387,3 +387,4 @@ disagree again.)
 | 2026-10-21 | 12 | 12-016 | Done | Reactions on FamilyChat messages are on: the migration reached the live project, and the Chat help describes them again in every language. |
 | 2026-10-23 | 25 | 25-032 | Done | Order the To buy list on Swiggy Instamart (Builders Club MCP server): connect your own Swiggy account, products matched per line, Swiggy's cart and bill, placed once only on a tap, followed by order notices, put into stock. Off until `WONDERHOME_INSTAMART=on`; production waits on Swiggy allowlisting the redirect URI (25-034). UPI is 25-033. |
 | 2026-10-26 | 14 | 14-041 | Done | HomeSend reports what an entry lacks (`homesend/completeness.ts`, required vs useful, the content's own words first) and never asks; HomeTalk asks every question, in the app and on WhatsApp, one at a time through its clarify machinery (`hometalk/intake-questions.ts`, action `complete_homesend_item`), and hands the answers back; the review form says "Still needed" with Add off until filled. PR #363. |
+| 2026-10-26 | 14 | 14-053 | Done | Answers to pick under HomeTalk's questions (principle 20): localized choices on each question with sensible answers (`hometalk/choices.ts`), chips or checkboxes in the app (`ui/answer-choices`), WhatsApp reply buttons or a list with a text fallback; no preview card on a turn that only asked. |

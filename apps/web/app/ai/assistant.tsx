@@ -20,6 +20,8 @@ import type { ActionPreview as ActionPreviewShape } from "@wonderhome/core/conve
 import type { PlaceSuggestion } from "@wonderhome/core/homeplaces/service";
 import { spokenSummary } from "@wonderhome/core/conversation/speech";
 import { ActionPreview } from "@wonderhome/core/ui/action-preview";
+import { AnswerChoices } from "@wonderhome/core/ui/answer-choices";
+import { combinedSay, type HomeTalkChoices } from "@wonderhome/core/hometalk/choices";
 import { messageDay, messageDayLabel, messageTime } from "@wonderhome/core/conversation/message-time";
 import { AiOrb, ChatDayDivider, ChatMessage, ChatTimeRoom, SuggestionChips } from "@wonderhome/core/ui/ai-message";
 import { Button } from "@wonderhome/core/ui/button";
@@ -61,6 +63,10 @@ export type AssistantMessage = {
   places?: PlaceSuggestion[] | null;
   /** An Ask me about family question still waiting: the part of the app it fills. */
   amaf?: { section: string; href: string; left: number } | null;
+  /** The answers its question offers to pick (rule 20); open only while it is the latest message. */
+  choices?: HomeTalkChoices | null;
+  /** Only asked something: no preview card under a question. */
+  questionOnly?: boolean;
 };
 
 /** Far enough back to be deliberate rather than a stray touch. */
@@ -153,6 +159,9 @@ export function Assistant({
   const [homeSendOpen, setHomeSendOpen] = useState(false);
   const sentInitial = useRef(false);
   const scrollerRef = useRef<HTMLDivElement>(null);
+  const composerRef = useRef<HTMLDivElement>(null);
+  /** "Another day…": the answer is typed, so the cursor goes to the text box. */
+  const focusComposer = useCallback(() => composerRef.current?.querySelector("textarea")?.focus(), []);
   /**
    * Whether the reader has scrolled back through the conversation.
    *
@@ -260,6 +269,8 @@ export function Assistant({
           places?: PlaceSuggestion[];
           navigate?: string;
           amaf?: AssistantMessage["amaf"];
+          choices?: HomeTalkChoices | null;
+          questionOnly?: boolean;
         }[] = Array.isArray(payload.replies) && payload.replies.length > 0 ? payload.replies : [payload.reply];
         setMessages((current) =>
           current
@@ -275,6 +286,8 @@ export function Assistant({
                 proposal: reply.proposal,
                 places: reply.places ?? null,
                 amaf: reply.amaf ?? null,
+                choices: reply.choices ?? null,
+                questionOnly: reply.questionOnly === true,
                 speaker: speaker?.assistant,
                 at: new Date().toISOString(),
               })),
@@ -535,7 +548,7 @@ export function Assistant({
               sentAt={sentAt}
               timeTail={message.role === "assistant" && !withPlaces}
               aside={
-                message.action?.preview || message.preview ? (
+                !message.questionOnly && (message.action?.preview || message.preview) ? (
                   <ActionPreview
                     labels={labels.preview}
                     state={stateOf(message)}
@@ -593,6 +606,22 @@ export function Assistant({
                 message.text
               )}
             </ChatMessage>
+              {message.role === "assistant" && message.choices ? (
+                <div className="ps-12">
+                  <AnswerChoices
+                    legend={labels.choices.legend}
+                    sendLabel={labels.choices.send}
+                    name={`choices-${message.id}`}
+                    mode={message.choices.mode}
+                    choices={message.choices.choices}
+                    also={message.choices.also}
+                    // Open only on the latest message: once anything follows it, it was answered.
+                    disabled={busy || index !== messages.length - 1}
+                    onPick={(say) => (say ? void send(say, "text") : focusComposer())}
+                    onSend={(says) => void send(combinedSay(says), "text")}
+                  />
+                </div>
+              ) : null}
               {message.pending ? (
               <div className="ps-12">
                 <Pill
@@ -634,7 +663,7 @@ export function Assistant({
       ) : null}
 
       {/* A plain flex child below the scroller — nothing is stacked over anything, so nothing can show through it. */}
-      <div className="relative shrink-0 pt-1">
+      <div ref={composerRef} className="relative shrink-0 pt-1">
         {/* Only while the reader is actually back up the conversation —
             otherwise it is a button that does nothing, over the one thing
             on this screen somebody came to use. */}

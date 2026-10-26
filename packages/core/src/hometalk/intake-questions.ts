@@ -5,7 +5,10 @@ import { openSession, recordMessage, type ConversationSurface } from "../convers
 import { amountWords, sureClause, waitingWords, wasAdded, type AddedOnItsOwn, type WaitingInHomeSend } from "../homesend/auto-add";
 import { listDetails, missingDetails, nextMissingDetail, personNamed, type CompletenessReading, type DetailField } from "../homesend/completeness";
 import type { HomeSendKind } from "../homesend/items";
-import type { Translate, TranslationKey } from "../i18n/translate";
+import { en } from "../i18n/messages/en";
+import { translator, type Translate, type TranslationKey } from "../i18n/translate";
+import { amountsFor } from "./choice-amounts";
+import { choicesFor } from "./choices";
 import { readDetailAnswer } from "./detail-answers";
 
 /**
@@ -139,6 +142,8 @@ export function intakeQuestion(input: {
         kind: input.kind,
         field: next.field,
         asked: [...input.asked, next.field],
+        // What the amount is of, for the amounts offered to pick (`choices.ts`).
+        ...(next.field === "quantity" && typeof input.extracted?.title === "string" ? { title: input.extracted.title } : {}),
         ...(next.field === "child" || next.field === "person" ? { choices: choices.map((person) => ({ id: person.id, displayName: person.displayName, nickname: person.nickname ?? null })) } : {}),
       },
       question,
@@ -189,9 +194,10 @@ export async function openIntakeQuestion(
   admin: SupabaseClient,
   input: { householdId: string; memberId: string; itemId: string; surface: ConversationSurface; t?: Translate },
 ): Promise<string | null> {
-  const [item, { data: members }] = await Promise.all([
+  const [item, { data: members }, { data: household }] = await Promise.all([
     loadItem(admin, input.householdId, input.itemId),
     admin.from("household_members").select("id, display_name, nickname, member_type").eq("household_id", input.householdId).eq("status", "active").limit(50),
+    admin.from("households").select("timezone").eq("id", input.householdId).maybeSingle(),
   ]);
   if (!item || item.status !== "classified" || !item.classified_kind) return null;
   const people = ((members ?? []) as { id: string; display_name: string; nickname: string | null; member_type: string }[]).map((row) => ({ id: row.id, displayName: row.display_name, nickname: row.nickname, memberType: row.member_type }));
@@ -199,13 +205,19 @@ export async function openIntakeQuestion(
   if (!next) return null;
   // Said outside a HomeTalk turn, so in the member's language here (14-047); the clarify keeps HomeTalk's own words.
   const said = input.t ? questionIn(input.t, item.classified_kind, next) : next.question;
-  const sessionId = await openSession(admin, { householdId: input.householdId, memberId: input.memberId, channel: "text", surface: input.surface });
+  // The answers to pick (principle 20), in the same language as the question.
+  const timezone = (household as { timezone?: string | null } | null)?.timezone ?? "UTC";
+  const [sessionId, amounts] = await Promise.all([
+    openSession(admin, { householdId: input.householdId, memberId: input.memberId, channel: "text", surface: input.surface }),
+    amountsFor(admin, next.clarify),
+  ]);
+  const choices = choicesFor(next.clarify, { t: input.t ?? translator("en", en), now: new Date(), timezone, amounts });
   await recordMessage(admin, {
     householdId: input.householdId,
     sessionId,
     role: "assistant",
     content: said,
-    metadata: { proposal: "clarify", intent: "complete_homesend_item", mode: "clarify", clarify: next.clarify },
+    metadata: { proposal: "clarify", intent: "complete_homesend_item", mode: "clarify", clarify: next.clarify, ...(choices ? { choices } : {}) },
   });
   return said;
 }

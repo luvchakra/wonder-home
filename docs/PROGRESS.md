@@ -11,11 +11,11 @@ in `docs/progress/`; for the running log of what changed when, `tracking/PROGRES
 
 ## The whole picture
 
-**396 of 428 stories done — 92.5%**
+**397 of 429 stories done — 92.5%**
 
 | Status | Stories |
 |---|---:|
-| Done | 396 |
+| Done | 397 |
 | In Progress | 8 |
 | Blocked | 1 |
 | Not Started | 19 |
@@ -39,7 +39,7 @@ in `docs/progress/`; for the running log of what changed when, `tracking/PROGRES
 | 11 Bills, Fees & Finance | `█████████░` | 14 | 15 | 1 not started |
 | 12 Family Time & Social Activities | `██████████` | 9 | 9 | — |
 | 13 Maintenance, Laundry & Pet Care | `█████████░` | 10 | 11 | 1 in progress |
-| 14 AI Orchestration & Learning | `████████░░` | 44 | 52 | 2 in progress, 3 not started, 3 deferred |
+| 14 AI Orchestration & Learning | `████████░░` | 45 | 53 | 2 in progress, 3 not started, 3 deferred |
 | 15 Privacy, Security & Governance | `██████████` | 9 | 9 | — |
 | 16 Platform Admin & Operations | `██████████` | 8 | 8 | — |
 | 17 External Integrations | `██████████` | 9 | 9 | — |
@@ -387,7 +387,7 @@ in `docs/progress/`; for the running log of what changed when, `tracking/PROGRES
 
 ### 14 — AI Orchestration & Learning
 
-44 of 52 done `████████░░`
+45 of 53 done `████████░░`
 
 | Story | Priority | Status | Notes |
 |---|---|---|---|
@@ -443,6 +443,7 @@ in `docs/progress/`; for the running log of what changed when, `tracking/PROGRES
 | `14-050` HomeTalk offers to fill in details for waiting items | P2 | Done | PR #368. The owner said yes on 2026-10-26 ("go ahead with 14-050"). On opening HomeTalk, an adult with HomeSend items from the last two weeks that miss something HomeTalk can ask hears "2 things in HomeSend need a detail — … Shall we fill them in now?", at most once every twelve hours and never over an open question (`hometalk/details-offer.ts`). "Yes" runs `fill_homesend_details`: the first item's first question, the rest queued, each item after the last; "no" leaves them. Browser-checked at 360 px and desktop on the live project (offer on first load, once; "yes" → "First, Diwali dinner: Which day is it?"; the answer saved). Eval HT-156, HT-157; tests OF-01–OF-21. |
 | `14-051` The rest of WhatsApp's words in the member's language | P1 | Done | PR #368. HomeSend's refusals carry a closed code (`IngestRejected.code`) and are said from `whatsapp.rejected.*`; the reply to a connect code is in the linked member's language (`whatsapp.link.*`). Only a code that names nobody, and the "not connected yet" reply, stay English: nobody is known yet. |
 | `14-052` HomeSend says why something waits, and its reason matches its score | P0 | Done | PR #378. The owner, 2026-10-26: "2 litres mustard oil" on WhatsApp waited although groceries were Pre Approved ("its pre approved, still issue"); "Science project model · 70% sure · every detail is in what you sent"; Mustard oil waited at 97% with only "Review". `confirmation.ts`: a grocery already on the shopping list said with an amount goes through the same decision and is a top-up (`onShoppingList`, `topUp`, the HomeFood half is 25-039); a decision that holds something otherwise added on its own carries why (`wait`: on the list, Wait for Approval, below the bar). The Needs review row says it in a few words (`auto-add.ts` `waitRowWords`, `homesend.inbox.wait.*`), WhatsApp in a sentence (`whatsapp.wait.*`), HomeTalk in English, never with an amount; all eight languages. `sureWhy` says "verified" only in the 97% band. Every other duplicate keeps I-4's rule. Tests AT-F08–F11, AT-L, AT-M, AT-H08–H11, AT-J05–J06; browser-checked at 360 px and desktop on the live project. Design §4.7, §7, I-27. |
+| `14-053` Answers to pick under HomeTalk's questions | P1 | Done | The owner, 2026-10-26 (principle 20). Every question with sensible answers carries localized choices (`hometalk/choices.ts`, `metadata.choices`): amounts by the one rule for amounts (25-037), names, days, times, record types, yes / not now, candidates, and checkboxes for which waiting items to fill in. App chips and checkboxes (`ui/answer-choices`); WhatsApp reply buttons or a list with a text fallback, read back by id. No preview card on a turn that only asked. Eval HT-162–HT-168 (HT-167 caught "not now" normalised to "not"); design I-28. |
 
 ### 15 — Privacy, Security & Governance
 
