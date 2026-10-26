@@ -38,6 +38,22 @@ const LIVE_CONNECT_TIMEOUT_MS = 15_000;
 
 const FAILED_TOOL = { success: false, status: "failed", userMessage: "I couldn't do that right now. Nothing was changed." };
 
+/**
+ * Google's own reason when it closes the socket ("1008 · API key not valid"),
+ * added to the message: on 2026-10-26 every session closed right after its
+ * token was minted, and the page said only that it "could not connect", so
+ * nobody could tell why. A normal close (1000) with no reason adds nothing.
+ */
+export function withReason(message: string, event: unknown): string {
+  const close = event as { code?: unknown; reason?: unknown; message?: unknown } | null;
+  const code = typeof close?.code === "number" && close.code !== 1000 ? String(close.code) : "";
+  const said = typeof close?.reason === "string" ? close.reason : typeof close?.message === "string" ? close.message : "";
+  const reason = said.replace(/\s+/g, " ").trim().slice(0, 160);
+  const detail = [code, reason].filter(Boolean).join(" · ");
+  if (detail) console.warn("gemini live closed", { code, reason });
+  return detail ? `${message} (Gemini: ${detail})` : message;
+}
+
 export function useGeminiLive(input: {
   householdId: string;
   /** What was said on each side, once per utterance, for the on-screen record. */
@@ -323,8 +339,9 @@ export function useGeminiLive(input: {
             if (reading.toolCalls.length > 0) void answerTools(reading.toolCalls, sessionId);
             if (reading.goingAway) callbacks.current.onError?.("Gemini is ending this voice session. Start it again to keep talking.");
           },
-          onerror: () => fail("The voice session had a problem. Nothing was changed by it."),
-          onclose: () => fail(sessionRef.current ? "The voice session ended. Start it again to keep talking." : "Gemini voice could not connect just now. Nothing was changed."),
+          onerror: (event: unknown) => fail(withReason("The voice session had a problem. Nothing was changed by it.", event)),
+          onclose: (event: unknown) =>
+            fail(withReason(sessionRef.current ? "The voice session ended. Start it again to keep talking." : "Gemini voice could not connect just now. Nothing was changed.", event)),
         },
       });
       const session = (await Promise.race([
