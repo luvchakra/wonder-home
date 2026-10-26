@@ -5,7 +5,11 @@ import { z } from "zod";
 
 import { toErrorBody } from "@wonderhome/core/api/errors";
 import { createClient } from "@wonderhome/core/db/server";
-import { requireMembership } from "@wonderhome/core/identity/households";
+import { requireHouseholdAdmin, requireMembership } from "@wonderhome/core/identity/households";
+import { connectIntegration, disconnectIntegration } from "@wonderhome/core/integrations/repository";
+import { addSchoolChannel, setSchoolChannelActive } from "@wonderhome/core/school/channel-repository";
+import { parseSchoolChannel } from "@wonderhome/core/school/channels";
+import { getSchoolProvider } from "@wonderhome/core/school/providers";
 import { addSchoolItem } from "@wonderhome/core/calendar/add-event";
 import { cancelSchoolItem, updateSchoolItem } from "@wonderhome/core/school/repository";
 import { SCHOOL_ITEM_KINDS } from "@wonderhome/core/school/items";
@@ -580,4 +584,115 @@ export async function removeSchoolRecordAction(input: { householdId: string; id:
   if (!parsed.success) return { error: "Please try again." };
   const { standDownSchoolRecord } = await import("@wonderhome/core/school/exams");
   return inHousehold(parsed.data.householdId, (supabase) => standDownSchoolRecord(supabase, parsed.data));
+}
+
+// ---------------------------------------------------------------------------
+// Connecting a school and tracking its channels (stories 08-029, 08-031).
+// ---------------------------------------------------------------------------
+// Every one of these is an administrator's action — connecting a school sets up
+// a shared credential and a feed into the household's HomeSend. The forward
+// path (`manual`) is not here: it needs no connection, so there is nothing to
+// save; the screen simply points a household at it.
+
+/** An Admin's action that touches a school connection, with the integrations screen revalidated. */
+async function asSchoolAdmin<T>(
+  householdId: string,
+  work: (supabase: Awaited<ReturnType<typeof createClient>>, actor: Awaited<ReturnType<typeof requireHouseholdAdmin>>) => Promise<T>,
+): Promise<ActionState> {
+  try {
+    const supabase = await createClient();
+    const actor = await requireHouseholdAdmin(supabase, householdId);
+    await work(supabase, actor);
+    revalidatePath("/household/integrations/school");
+    revalidatePath("/household/integrations");
+    return { notice: "Saved." };
+  } catch (error) {
+    return { error: toErrorBody(error, "school").body.error.message };
+  }
+}
+
+const connectSchema = z.object({ householdId: z.uuid(), provider: z.string().trim().min(1).max(64) });
+
+/** Register a school portal for the household. It stays "connecting" until an adapter and consent make it live. */
+export async function connectSchoolPortalAction(_previous: ActionState, formData: FormData): Promise<ActionState> {
+  const parsed = connectSchema.safeParse({ householdId: field(formData, "householdId"), provider: field(formData, "provider") });
+  if (!parsed.success) return { error: "Please try again." };
+  const descriptor = getSchoolProvider(parsed.data.provider);
+  if (!descriptor || descriptor.auth === "manual") return { error: "That is not a school portal you can connect." };
+  return asSchoolAdmin(parsed.data.householdId, (supabase, actor) =>
+    connectIntegration(supabase, {
+      householdId: parsed.data.householdId,
+      kind: "school",
+      provider: descriptor.id,
+      scopes: descriptor.scopes,
+      actorMemberId: actor.memberId,
+    }),
+  );
+}
+
+/** Disconnect a school portal (its tracked channels go with it, by the connection's cascade). */
+export async function disconnectSchoolPortalAction(_previous: ActionState, formData: FormData): Promise<ActionState> {
+  const parsed = connectSchema.safeParse({ householdId: field(formData, "householdId"), provider: field(formData, "provider") });
+  if (!parsed.success) return { error: "Please try again." };
+  return asSchoolAdmin(parsed.data.householdId, (supabase, actor) =>
+    disconnectIntegration(supabase, { householdId: parsed.data.householdId, kind: "school", provider: parsed.data.provider, actorMemberId: actor.memberId }),
+  );
+}
+
+const trackChannelSchema = z.object({
+  householdId: z.uuid(),
+  integrationId: z.uuid(),
+  provider: z.string().trim().min(1).max(64),
+  url: z.string().trim().min(1).max(2048),
+  childMemberId: z.union([z.uuid(), z.literal("")]).optional(),
+});
+
+/** Track a message channel from a pasted portal link. The link is recognised and normalised before it is stored. */
+export async function trackSchoolChannelAction(_previous: ActionState, formData: FormData): Promise<ActionState> {
+  const parsed = trackChannelSchema.safeParse({
+    householdId: field(formData, "householdId"),
+    integrationId: field(formData, "integrationId"),
+    provider: field(formData, "provider"),
+    url: field(formData, "url"),
+    childMemberId: field(formData, "childMemberId"),
+  });
+  if (!parsed.success) return { error: "Please try again." };
+
+  const recognised = parseSchoolChannel(parsed.data.url);
+  if (!recognised.ok) {
+    return {
+      error:
+        recognised.reason === "invalid_url"
+          ? "That is not a web address."
+          : recognised.reason === "unknown_provider"
+            ? "That link is not from a school we recognise."
+            : "That link is not a channel.",
+    };
+  }
+  if (recognised.channel.provider !== parsed.data.provider) {
+    return { error: "That link is for a different school than this connection." };
+  }
+
+  return asSchoolAdmin(parsed.data.householdId, (supabase, actor) =>
+    addSchoolChannel(supabase, {
+      householdId: parsed.data.householdId,
+      integrationId: parsed.data.integrationId,
+      provider: recognised.channel.provider,
+      channelId: recognised.channel.channelId,
+      url: recognised.channel.url,
+      childMemberId: parsed.data.childMemberId || null,
+      createdBy: actor.memberId,
+    }),
+  );
+}
+
+const stopChannelSchema = z.object({ householdId: z.uuid(), id: z.uuid(), active: z.enum(["true", "false"]) });
+
+/** Stop or resume tracking a channel. Stopping keeps the row and its cursor. */
+export async function setSchoolChannelActiveAction(_previous: ActionState, formData: FormData): Promise<ActionState> {
+  const parsed = stopChannelSchema.safeParse({ householdId: field(formData, "householdId"), id: field(formData, "id"), active: field(formData, "active") });
+  if (!parsed.success) return { error: "Please try again." };
+  return asSchoolAdmin(parsed.data.householdId, (supabase) =>
+    setSchoolChannelActive(supabase, { householdId: parsed.data.householdId, id: parsed.data.id, active: parsed.data.active === "true" }),
+  );
 }
