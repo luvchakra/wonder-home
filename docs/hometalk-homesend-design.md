@@ -123,6 +123,11 @@ received → understood → checked & scored → reconciled → completeness
   - never the same question twice.
 - **Time limit.** An open question takes answers for 15 minutes on WhatsApp; after that, a new message is a new turn.
 - **One question at a time**, and never more than 3 for one item.
+- **Answers to pick** (principle 20, the owner 2026-10-26, I-27). A question with sensible answers carries them on its reply as `metadata.choices` (`hometalk/choices.ts`): `{ mode: "single" | "multi", choices: [{ label, say }], also?, health? }`.
+  - `label` is in the member's language; `say` is the exact English the clarify step already reads as that answer, so a pick is an ordinary turn and grounding and every gate run on it unchanged. `say: null` ("Another day…") focuses the text box.
+  - The sets: an amount (2–3 practical amounts for that item by the one rule for amounts, `commerce/bare-amount.ts`, from the catalog's unit, pack and ladder; then Skip, or That's enough when it is already on the list; "1 of each"/"2 of each" for several); who (the candidates, else the household's names); a day (Today, Tomorrow, the next weekend day, Another day…; Today, Yesterday for a receipt or health document); a time (9 am, 12 pm, 4 pm, 6 pm, Another time…); a record type; yes / not now; which item (the candidates); and which waiting items to fill in (checkboxes, all ticked, one Send — "Maths worksheet and Diwali dinner" fills in just those).
+  - The text box always stays. In the app the latest question's choices are chips (a radio group) or checkboxes (`ui/answer-choices`), greyed once answered. On WhatsApp they are reply buttons (3 or fewer) or a list (up to 10), each id `say:<words>`; a pick comes back as those words, and a failed interactive send goes as plain text. A health record's choices never go to WhatsApp. Voice reads the question only.
+  - A turn that only asked (`fill_homesend_details`, or `complete_homesend_item` that asked the next question) shows no preview card (`onlyAsked`): asking is not done, and there is nothing to undo.
 
 ---
 
@@ -201,6 +206,7 @@ To measure: `updated_at - created_at` on `home_send_items`, and `hometalk_channe
   - say where to finish ("You can undo it in HomeSend");
   - use WhatsApp bold, and write links in full.
 - **Questions:** one at a time, with choices when there are any ("Should I use coconut oil, mustard oil or sunflower oil?"), and an example of an answer that works.
+- **Choices to pick** (§5): labels from `hometalk.choice.*` in all eight languages; what a pick sends is HomeTalk's English. On WhatsApp a button title is at most 20 characters and a list row 24; a label that would have to be cut sends the question as plain text instead (rule 11). No button ever carries an amount of money or a health detail.
 - **A second ask:** "Sorry, …", then a list. Never blame, never repeat.
 
 ---
@@ -245,6 +251,7 @@ To measure: `updated_at - created_at` on `home_send_items`, and `hometalk_channe
 | I-24 | A typed notice, then "for Manan" 9 s later: asked "Who is it for?" and answered twice (2026-10-26, 21:04 IST) | The notice was read at its 8 s wait; the note reached WonderHome 11 s after it, so rule 2 took it as the answer. Typed messages sent together were also joined whatever they were | Rule 1 joins a typed message and a short note: the message waits up to 15 s for it, the note's run defers to it; two requests or questions stay apart | Live (this PR) |
 | I-25 | The notice resent (a duplicate), then "for Manan": the note became its own item, Failed safely (2026-10-26, 21:08 IST) | Read alone at 8 s; a lone detail was kept as content | The longer wait joins it; a note on a message already on record goes onto that item (or says it was handled); a lone bare detail is never an item (`itemOnRecord`, `noteOnItem`, `isBareDetail`) | Live (this PR) |
 | I-26 | "Asmi has a karate grading exam…" filed with HomeSend as "Child B has…"; the review offered "Add Child B as a child" (the owner, 2026-10-26) | `file_with_homesend` filed `intent.utterance`, which a model reading carried as the masked text the provider read | `reidentifyIntent` (`ai/privacy.ts`): the reading keeps the member's own words and real names; nothing is filed with a placeholder in it; a placeholder in a reading is never offered as a child to add, the household is asked who; the eval masks as the route does and fails any case that keeps a placeholder (HT-161) | Live (this PR) |
+| I-27 | "First, Coconut oil: How much should I get? …" had to be typed; the answer to a question showed "ACTION PREVIEW · Done … Can be undone" | Questions carried no answers to pick; a question-only turn kept its executed preview | Choices on every question with sensible answers (§5), in the app and as WhatsApp buttons; no preview card on a turn that only asked; "not now" kept whole by the normaliser | Live (14-052) |
 
 ---
 

@@ -15,7 +15,7 @@ import { FAILURE_REASON_COPY, type HomeSendKind } from "../homesend/items";
 import { contentHash, normalizeText } from "../homesend/normalize";
 import { PENDING_STATUSES } from "../homesend/repository";
 import { readDetailAnswer } from "../hometalk/detail-answers";
-import { sendWhatsAppText, showWhatsAppTyping, type WhatsAppConfig } from "../notifications/whatsapp";
+import { sendWhatsAppChoices, sendWhatsAppText, showWhatsAppTyping, type WhatsAppChoice, type WhatsAppConfig } from "../notifications/whatsapp";
 import { log } from "../observability/logger";
 import { hitRateLimit } from "../security/rate-limit";
 import { recordWhatsAppEvents, type WhatsAppEvent } from "./events";
@@ -229,6 +229,17 @@ async function readMessage(admin: SupabaseClient, messageId: string, deps: Whats
     events.push({ kind: sent.ok ? "ack_sent" : "ack_failed", householdId: row.household_id });
     if (sent.ok) await admin.from("whatsapp_messages").update({ acknowledged_at: clock().toISOString() }).eq("id", row.id);
   };
+  // HomeTalk's words, with the answers its question offers to pick as buttons or a list (principle 20).
+  const sayHomeTalk = async (text: string) => {
+    typing.stop();
+    if (!to || row.acknowledged_at) return;
+    const offered = await openChoices(admin, row, clock()).catch(() => null);
+    const sent = offered
+      ? await sendWhatsAppChoices(deps.config, to, text, offered, (await words())("hometalk.choice.pick"), deps.fetch).catch(() => ({ ok: false as const }))
+      : await sendWhatsAppText(deps.config, to, text, deps.fetch).catch(() => ({ ok: false as const }));
+    events.push({ kind: sent.ok ? "ack_sent" : "ack_failed", householdId: row.household_id });
+    if (sent.ok) await admin.from("whatsapp_messages").update({ acknowledged_at: clock().toISOString() }).eq("id", row.id);
+  };
   // "typing…" while WonderHome works, once per burst, for a message that is still to be answered.
   const showTyping = (providerMessageId: string) => {
     if (to && !row.acknowledged_at) typing.show(providerMessageId, { events, householdId: row.household_id });
@@ -311,7 +322,7 @@ async function readMessage(admin: SupabaseClient, messageId: string, deps: Whats
       if (answer) {
         events.push({ kind: "clarification_answered", householdId: row.household_id, latencyMs: elapsed() });
         await settle({ processing_status: "ignored" });
-        await say(answer);
+        await sayHomeTalk(answer);
         await recordWhatsAppEvents(admin, events);
         return "read";
       }
@@ -329,7 +340,7 @@ async function readMessage(admin: SupabaseClient, messageId: string, deps: Whats
       : null;
     events.push({ kind: answer ? "question_answered" : "question_redirected", householdId: row.household_id, latencyMs: elapsed() });
     await settle({ processing_status: "ignored" });
-    await say(answer ?? (await words())("whatsapp.questionReply"));
+    await (answer ? sayHomeTalk(answer) : say((await words())("whatsapp.questionReply")));
     await recordWhatsAppEvents(admin, events);
     return "read";
   }
@@ -343,7 +354,7 @@ async function readMessage(admin: SupabaseClient, messageId: string, deps: Whats
     if (answer) {
       events.push({ kind: "question_answered", householdId: row.household_id, latencyMs: elapsed() });
       await settle({ processing_status: "ignored" });
-      await say(answer);
+      await sayHomeTalk(answer);
       await recordWhatsAppEvents(admin, events);
       return "read";
     }
@@ -382,7 +393,7 @@ async function readMessage(admin: SupabaseClient, messageId: string, deps: Whats
           if (answer || forHomeTalk) {
             events.push({ kind: !answer ? "question_redirected" : forHomeTalk ? "question_answered" : "clarification_answered", householdId: row.household_id, latencyMs: elapsed() });
             await settle({ processing_status: "ignored" });
-            await say(answer ?? (await words())("whatsapp.questionReply"));
+            await (answer ? sayHomeTalk(answer) : say((await words())("whatsapp.questionReply")));
             await recordWhatsAppEvents(admin, events);
             return "read";
           }
@@ -513,7 +524,7 @@ async function readMessage(admin: SupabaseClient, messageId: string, deps: Whats
     !ack.asks && !outcome.duplicate && outcome.state !== "failed" && deps.addOnItsOwn
       ? await deps.addOnItsOwn({ householdId: row.household_id, memberId: row.member_id, itemId: outcome.itemId }).catch(() => null)
       : null;
-  await say(added ? addedReply(added, undefined, t) : ack.text);
+  await (added ? say(addedReply(added, undefined, t)) : ack.asks ? sayHomeTalk(ack.text) : say(ack.text));
   await recordWhatsAppEvents(admin, events);
   return "read";
 }
@@ -675,6 +686,44 @@ async function allGroceries(admin: SupabaseClient, names: readonly string[]): Pr
 
 /** How long a question HomeTalk asked on WhatsApp still takes the person's next message as its answer. */
 const HOMETALK_ANSWER_WINDOW_MS = 15 * 60 * 1000;
+
+/**
+ * The answers HomeTalk's last reply on WhatsApp offers to pick, when it asked
+ * one just now (`metadata.choices`, `hometalk/choices.ts`). Never a health
+ * record's: those stay words, so nothing about one sits in a button.
+ */
+async function openChoices(admin: SupabaseClient, row: Pick<MessageRow, "household_id" | "member_id">, now: Date): Promise<WhatsAppChoice[] | null> {
+  const { data: session } = await admin
+    .from("conversation_sessions")
+    .select("id")
+    .eq("household_id", row.household_id)
+    .eq("member_id", row.member_id)
+    .eq("surface", "whatsapp")
+    .eq("status", "open")
+    .order("created_at", { ascending: false })
+    .limit(1);
+  const sessionId = ((session ?? []) as { id: string }[])[0]?.id;
+  if (!sessionId) return null;
+  const { data } = await admin
+    .from("conversation_messages")
+    .select("role, metadata")
+    .eq("household_id", row.household_id)
+    .eq("session_id", sessionId)
+    .gte("created_at", new Date(now.getTime() - 2 * 60_000).toISOString())
+    .order("created_at", { ascending: false })
+    .limit(1);
+  const latest = ((data ?? []) as { role: string; metadata: Record<string, unknown> | null }[])[0];
+  const offered = latest?.role === "assistant" ? (latest.metadata?.choices as { mode?: unknown; choices?: unknown; also?: unknown; health?: unknown } | undefined) : undefined;
+  if (!offered || offered.health === true) return null;
+  const read = (value: unknown): WhatsAppChoice[] =>
+    (Array.isArray(value) ? value : []).flatMap((entry) => {
+      const choice = entry as { label?: unknown; say?: unknown } | null;
+      return choice && typeof choice.label === "string" && (typeof choice.say === "string" || choice.say === null) ? [{ label: choice.label, say: choice.say }] : [];
+    });
+  // WhatsApp has no checkboxes: each of a multi set is its own pick there, and "Not now" beside them.
+  const choices = [...read(offered.choices), ...read(offered.also)];
+  return choices.length > 0 ? choices : null;
+}
 
 /**
  * Whether the last thing said in this person's WhatsApp conversation with

@@ -129,6 +129,79 @@ export async function sendWhatsAppText(config: WhatsAppConfig, to: string, text:
   }
 }
 
+/** What an interactive reply's id carries: the words HomeTalk reads as that answer (`hometalk/choices.ts`). */
+export const CHOICE_ID_PREFIX = "say:";
+
+/** WhatsApp's own limits on an interactive message. */
+const BUTTON_TITLE_MAX = 20;
+const ROW_TITLE_MAX = 24;
+const BODY_MAX = 1024;
+
+export type WhatsAppChoice = { label: string; say: string | null };
+
+/**
+ * HomeTalk's question with its answers to pick (principle 20): reply
+ * buttons for three or fewer, a list message for up to ten. Each choice's
+ * id carries its `say`, so the reply reads back as those exact words. Null
+ * when the choices can't go as WhatsApp allows — a label too long to show
+ * whole (rule 11: never cut), more than ten, or a body over WhatsApp's
+ * limit — and the question goes as plain text instead. "Another day…"
+ * (no `say`) is left out: typing is that answer on WhatsApp.
+ */
+export function interactiveMessage(to: string, text: string, choices: readonly WhatsAppChoice[], pickLabel: string) {
+  const sendable = choices.filter((choice): choice is { label: string; say: string } => typeof choice.say === "string" && choice.say.trim() !== "" && choice.label.trim() !== "");
+  if (sendable.length === 0 || sendable.length > 10 || !text.trim() || text.length > BODY_MAX) return null;
+  const id = (say: string) => `${CHOICE_ID_PREFIX}${say}`.slice(0, 200);
+  const recipient = to.replace(/^\+/, "");
+  if (sendable.length <= 3 && sendable.every((choice) => choice.label.length <= BUTTON_TITLE_MAX)) {
+    return {
+      messaging_product: "whatsapp",
+      to: recipient,
+      type: "interactive",
+      interactive: { type: "button", body: { text }, action: { buttons: sendable.map((choice) => ({ type: "reply", reply: { id: id(choice.say), title: choice.label } })) } },
+    };
+  }
+  if (!sendable.every((choice) => choice.label.length <= ROW_TITLE_MAX) || !pickLabel.trim() || pickLabel.length > BUTTON_TITLE_MAX) return null;
+  return {
+    messaging_product: "whatsapp",
+    to: recipient,
+    type: "interactive",
+    interactive: { type: "list", body: { text }, action: { button: pickLabel, sections: [{ rows: sendable.map((choice) => ({ id: id(choice.say), title: choice.label })) }] } },
+  };
+}
+
+/**
+ * A reply with its choices, inside the 24-hour window the person opened by
+ * writing — which every HomeTalk answer is. Falls back to plain text when
+ * the choices can't be sent as buttons or a list, or WhatsApp refuses them.
+ */
+export async function sendWhatsAppChoices(
+  config: WhatsAppConfig,
+  to: string,
+  text: string,
+  choices: readonly WhatsAppChoice[],
+  pickLabel: string,
+  fetchImpl: Fetch = config.fetch ?? fetch,
+): Promise<ChannelSendResult & { interactive?: boolean }> {
+  const message = interactiveMessage(to, text, choices, pickLabel);
+  if (message) {
+    try {
+      const response = await fetchImpl(`${GRAPH}/${encodeURIComponent(config.phoneNumberId)}/messages`, {
+        method: "POST",
+        headers: { authorization: `Bearer ${config.accessToken}`, "content-type": "application/json" },
+        body: JSON.stringify(message),
+        signal: AbortSignal.timeout(WHATSAPP_TIMEOUT_MS),
+      });
+      const body = (await response.json().catch(() => null)) as { messages?: { id?: unknown }[] } | null;
+      const id = body?.messages?.[0]?.id;
+      if (response.ok && typeof id === "string") return { ok: true, providerMessageId: id, interactive: true };
+    } catch {
+      // Unreachable or refused: the same words as plain text below.
+    }
+  }
+  return sendWhatsAppText(config, to, text, fetchImpl);
+}
+
 /** Marks a person's message read and shows "typing…" on it (Meta's typing indicator). */
 export function typingMessage(messageId: string) {
   return { messaging_product: "whatsapp", status: "read", message_id: messageId, typing_indicator: { type: "text" } };

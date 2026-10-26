@@ -1,3 +1,5 @@
+import { CHOICE_ID_PREFIX } from "../notifications/whatsapp";
+
 /**
  * What a person sent WonderHome's WhatsApp number (the WhatsApp HomeSend
  * spec), read from a verified webhook delivery into one closed shape.
@@ -81,8 +83,13 @@ function readBody(kind: string, message: Record<string, unknown>): Pick<WhatsApp
       return body ? { type: "text", text: body, media: null } : null;
     }
     case "interactive": {
-      const interactive = message.interactive as { button_reply?: { title?: unknown }; list_reply?: { title?: unknown } } | undefined;
-      const body = clipped(stringOf(interactive?.button_reply?.title) ?? stringOf(interactive?.list_reply?.title));
+      // A choice HomeTalk offered reads as the words its id carries (`say:…`, `hometalk/choices.ts`);
+      // any other button or row as what it showed.
+      const interactive = message.interactive as { button_reply?: { id?: unknown; title?: unknown }; list_reply?: { id?: unknown; title?: unknown } } | undefined;
+      const picked = interactive?.button_reply ?? interactive?.list_reply;
+      const id = stringOf(picked?.id);
+      const said = id?.startsWith(CHOICE_ID_PREFIX) ? id.slice(CHOICE_ID_PREFIX.length) : null;
+      const body = clipped(said || stringOf(picked?.title));
       return body ? { type: "text", text: body, media: null } : null;
     }
     case "image":

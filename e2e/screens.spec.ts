@@ -194,6 +194,42 @@ test.describe("every signed-in screen loads", () => {
     // Nothing overflows the phone width.
     expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(360);
   });
+  // Principle 20, the owner 2026-10-26: HomeTalk's question offers its answers to pick (story 14-052).
+  test("HomeTalk: the latest question's answers are chips to pick, an answered one's are greyed", async ({ page }) => {
+    const member = await admin.from("household_members").select("id").eq("household_id", householdId).eq("profile_id", userId).single();
+    if (member.error) throw member.error;
+    const session = await admin.from("conversation_sessions").insert({ household_id: householdId, member_id: member.data.id, channel: "text", surface: "app", status: "open" }).select("id").single();
+    if (session.error) throw session.error;
+    const at = (secondsAgo: number) => new Date(Date.now() - secondsAgo * 1000).toISOString();
+    const day = { mode: "single", choices: [{ label: "Today", say: "today" }, { label: "Tomorrow", say: "tomorrow" }, { label: "Saturday", say: "saturday" }, { label: "Another day…", say: null }] };
+    const seeded = await admin.from("conversation_messages").insert([
+      { household_id: householdId, session_id: session.data.id, role: "assistant", content: "When should I remind you — later today, tomorrow, or another day?", metadata: { proposal: "clarify", mode: "clarify", choices: day }, created_at: at(60) },
+      { household_id: householdId, session_id: session.data.id, role: "member", content: "tomorrow", metadata: {}, created_at: at(50) },
+      { household_id: householdId, session_id: session.data.id, role: "assistant", content: "First, Coconut oil: How much should I get?", metadata: { proposal: "executed", mode: "clarify", questionOnly: true, choices: { mode: "single", choices: [{ label: "500 ml", say: "500 ml" }, { label: "1 litre", say: "1 litre" }, { label: "2 litres", say: "2 litres" }, { label: "Skip", say: "skip" }] } }, created_at: at(40) },
+    ]);
+    if (seeded.error) throw seeded.error;
+
+    await signIn(page);
+    await page.setViewportSize({ width: 360, height: 800 });
+    await page.goto("/ai");
+    await streamed(page);
+    const groups = page.getByRole("radiogroup", { name: "Answers to pick" });
+    await expect(groups).toHaveCount(2);
+    // The answered question's choices stay, greyed; the open one's can be picked.
+    await expect(groups.first().getByRole("radio")).toHaveText(["Today", "Tomorrow", "Saturday", "Another day…"]);
+    for (const radio of await groups.first().getByRole("radio").all()) await expect(radio).toBeDisabled();
+    const open = groups.last().getByRole("radio");
+    await expect(open).toHaveText(["500 ml", "1 litre", "2 litres", "Skip"]);
+    for (const radio of await open.all()) {
+      await expect(radio).toBeEnabled();
+      expect((await radio.boundingBox())!.height).toBeGreaterThanOrEqual(44);
+    }
+    // A turn that only asked shows no "Done … Can be undone" card.
+    await expect(page.getByText("Can be undone")).toHaveCount(0);
+    expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(360);
+    // The text box always stays.
+    await expect(page.locator("textarea")).toBeVisible();
+  });
   test("Manage Household: the playbook is grouped into folded cards that open with their chevron", async ({ page }) => {
     await signIn(page);
     await page.goto("/household");

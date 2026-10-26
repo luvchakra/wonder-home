@@ -11,11 +11,11 @@ in `docs/progress/`; for the running log of what changed when, `tracking/PROGRES
 
 ## The whole picture
 
-**394 of 426 stories done — 92.5%**
+**395 of 427 stories done — 92.5%**
 
 | Status | Stories |
 |---|---:|
-| Done | 394 |
+| Done | 395 |
 | In Progress | 8 |
 | Blocked | 1 |
 | Not Started | 19 |
@@ -39,7 +39,7 @@ in `docs/progress/`; for the running log of what changed when, `tracking/PROGRES
 | 11 Bills, Fees & Finance | `█████████░` | 14 | 15 | 1 not started |
 | 12 Family Time & Social Activities | `██████████` | 9 | 9 | — |
 | 13 Maintenance, Laundry & Pet Care | `█████████░` | 10 | 11 | 1 in progress |
-| 14 AI Orchestration & Learning | `████████░░` | 43 | 51 | 2 in progress, 3 not started, 3 deferred |
+| 14 AI Orchestration & Learning | `████████░░` | 44 | 52 | 2 in progress, 3 not started, 3 deferred |
 | 15 Privacy, Security & Governance | `██████████` | 9 | 9 | — |
 | 16 Platform Admin & Operations | `██████████` | 8 | 8 | — |
 | 17 External Integrations | `██████████` | 9 | 9 | — |
@@ -387,7 +387,7 @@ in `docs/progress/`; for the running log of what changed when, `tracking/PROGRES
 
 ### 14 — AI Orchestration & Learning
 
-43 of 51 done `████████░░`
+44 of 52 done `████████░░`
 
 | Story | Priority | Status | Notes |
 |---|---|---|---|
@@ -442,6 +442,7 @@ in `docs/progress/`; for the running log of what changed when, `tracking/PROGRES
 | `14-049` HomeSend metrics: added on its own vs confirmed, and why things failed safely | P2 | Done | PR #366. The platform-admin HomeSend metrics split auto-added from confirmed and break failed-safely down by reason. Design §11. |
 | `14-050` HomeTalk offers to fill in details for waiting items | P2 | Done | PR #368. The owner said yes on 2026-10-26 ("go ahead with 14-050"). On opening HomeTalk, an adult with HomeSend items from the last two weeks that miss something HomeTalk can ask hears "2 things in HomeSend need a detail — … Shall we fill them in now?", at most once every twelve hours and never over an open question (`hometalk/details-offer.ts`). "Yes" runs `fill_homesend_details`: the first item's first question, the rest queued, each item after the last; "no" leaves them. Browser-checked at 360 px and desktop on the live project (offer on first load, once; "yes" → "First, Diwali dinner: Which day is it?"; the answer saved). Eval HT-156, HT-157; tests OF-01–OF-21. |
 | `14-051` The rest of WhatsApp's words in the member's language | P1 | Done | PR #368. HomeSend's refusals carry a closed code (`IngestRejected.code`) and are said from `whatsapp.rejected.*`; the reply to a connect code is in the linked member's language (`whatsapp.link.*`). Only a code that names nobody, and the "not connected yet" reply, stay English: nobody is known yet. |
+| `14-052` Answers to pick under HomeTalk's questions | P1 | Done | The owner, 2026-10-26 (principle 20). Every question with sensible answers carries localized choices (`hometalk/choices.ts`, `metadata.choices`): amounts by the one rule for amounts (25-037), names, days, times, record types, yes / not now, candidates, and checkboxes for which waiting items to fill in. App chips and checkboxes (`ui/answer-choices`); WhatsApp reply buttons or a list with a text fallback, read back by id. No preview card on a turn that only asked. Eval HT-161–HT-167 (HT-166 caught "not now" normalised to "not"); design I-27. |
 
 ### 15 — Privacy, Security & Governance
 

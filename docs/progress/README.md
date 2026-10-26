@@ -11,6 +11,7 @@ decision that shapes later work each earns a note, written before moving on.
 
 | Date | Note |
 |---|---|
+| 2026-10-26 | [Answers to pick under HomeTalk's questions (14-052)](2026-10-26-hometalk-answer-choices.md) |
 | 2026-10-26 | [HomeTalk files the member's own words with HomeSend, never the masked copy (I-26)](2026-10-26-unmasked-homesend-utterance.md) |
 | 2026-10-26 | [WhatsApp: a short note typed after a message is read with it](2026-10-26-whatsapp-typed-note-burst.md) |
 | 2026-10-26 | [An amount in another unit is converted or asked about, never refused raw (25-038)](2026-10-26-grocery-unit-refusals.md) |

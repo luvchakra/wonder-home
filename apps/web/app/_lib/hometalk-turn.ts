@@ -47,6 +47,8 @@ import {
 } from "@wonderhome/core/conversation/repository";
 import { focusFromProposal, focusFromResult, homeSendFocus, NO_REFERENCES, readFocus, SAME_MOMENT_MS, type FocusEntity, type ReferenceState } from "@wonderhome/core/conversation/references";
 import type { PendingClarification } from "@wonderhome/core/conversation/clarify";
+import { amountsFor } from "@wonderhome/core/hometalk/choice-amounts";
+import { choicesFor, onlyAsked, type HomeTalkChoices } from "@wonderhome/core/hometalk/choices";
 import { englishNoticeKey, EVERY_SENSITIVE_CLASS, localizeReply, mayTranslate, replyClassesFor, type ReplyTranslator, type TranslationFallback } from "@wonderhome/core/conversation/reply-language";
 import { composeStatusAnswer } from "@wonderhome/core/conversation/status";
 import { composeRoster } from "@wonderhome/core/conversation/roster";
@@ -109,6 +111,7 @@ import type { AutonomyMode } from "@wonderhome/core/household/autonomy";
 import { ageBandFor, parseDateOfBirth } from "@wonderhome/core/identity/age";
 import { isHouseholdAdmin, requireMembership } from "@wonderhome/core/identity/households";
 import type { HouseholdMembership } from "@wonderhome/core/identity/schemas";
+import type { SupabaseClient } from "@supabase/supabase-js";
 import { buildPersonalView, type PersonalView } from "@wonderhome/core/identity/views";
 
 import { agendaAllows, channelAllowsAction, channelRefusal, narrowToChannel, VOICE_NOT_ALLOWED, voiceAllowsAction, type ChannelLimits } from "@wonderhome/core/voicelink/scopes";
@@ -736,6 +739,7 @@ async function turnInEnglish(input: HomeTalkInput, speaking: Speaking) {
       }
 
       const mode = modeFor(turn.proposal.kind, outcome ? outcome.status === "executed" : null);
+      const partChoices = turn.clarification ? await choicesOf(supabase, membership, people, turn.clarification) : null;
       const id = await recordMessage(admin, {
         householdId,
         sessionId,
@@ -747,6 +751,7 @@ async function turnInEnglish(input: HomeTalkInput, speaking: Speaking) {
           intent: turn.intent.action,
           understanding: turn.intent.understanding?.source ?? null,
           ...(turn.clarification ? { clarify: turn.clarification } : {}),
+          ...(partChoices ? { choices: partChoices } : {}),
           mode,
           ...(focus.length > 0 ? { focus: focus.slice(0, 8) } : {}),
           provider: routing.code,
@@ -763,7 +768,7 @@ async function turnInEnglish(input: HomeTalkInput, speaking: Speaking) {
       }
       // A part that opened a screen goes there; a part that changed something goes to the screen showing it.
       const goTo = opened?.navigate ?? (outcome?.status === "executed" && source !== "alexa" ? screenShowing(text) : null);
-      replies.push({ id, text, action, preview: previewOf(turn.proposal), proposal: turn.proposal.kind, mode, ...(goTo ? { navigate: goTo } : {}) });
+      replies.push({ id, text, action, preview: previewOf(turn.proposal), proposal: turn.proposal.kind, mode, ...(goTo ? { navigate: goTo } : {}), ...(partChoices ? { choices: partChoices } : {}) });
       earlier.push({ part, outcome: partOutcome });
       if (partOutcome === "asked") break;
     }
@@ -1150,7 +1155,9 @@ async function turnInEnglish(input: HomeTalkInput, speaking: Speaking) {
   if (hedge) text = `${hedge} ${text}`;
   // A warm emoji, after everything above was validated (`conversation/warmth.ts`).
   if (result.kind === "reply") {
-    const proposal = brainAnswer ? (brainAnswer.mode === "clarify" ? "clarify" : "answer") : result.proposal.kind;
+    // A turn that only asked (filling in HomeSend details) is a question: no ✅ on it.
+    const asked = onlyAsked({ action: result.intent.action, proposal: result.proposal.kind, askedNext: followUp !== null });
+    const proposal = brainAnswer ? (brainAnswer.mode === "clarify" ? "clarify" : "answer") : asked ? "clarify" : result.proposal.kind;
     text = warmReply(text, { action: result.intent.action, proposal, ok: outcome?.status !== "failed" && !(result.intent.understanding?.failure && !brainAnswer), explained, classes: speaking.carried });
   }
 
@@ -1178,6 +1185,10 @@ async function turnInEnglish(input: HomeTalkInput, speaking: Speaking) {
   // "Near whose school?" is a question; a place answer that only invites narrowing is still an answer.
   if (placeQuestion && "children" in placeQuestion.parameters && openQuestion === placeQuestion) mode = "clarify";
   if (followUp && openQuestion === followUp) mode = "clarify";
+  // The answers to pick under the question (principle 20), in the person's language.
+  const choices = openQuestion ? await choicesOf(supabase, membership, people, openQuestion) : null;
+  // A turn whose only effect was asking (filling in HomeSend details): no "Done … Can be undone" card under a question.
+  const questionOnly = result.kind === "reply" && onlyAsked({ action: result.intent.action, proposal: result.proposal.kind, askedNext: followUp !== null && openQuestion === followUp });
 
   let action: ConversationAction | null = null;
   const replyId = await recordMessage(admin, {
@@ -1196,6 +1207,8 @@ async function turnInEnglish(input: HomeTalkInput, speaking: Speaking) {
             // whenever the turn did not ask anything, which is what
             // closes the question rather than leaving it open forever.
             ...(openQuestion ? { clarify: openQuestion } : {}),
+            ...(choices ? { choices } : {}),
+            ...(questionOnly ? { questionOnly: true } : {}),
             mode,
           }
         : { kind: result.kind }),
@@ -1275,9 +1288,11 @@ async function turnInEnglish(input: HomeTalkInput, speaking: Speaking) {
       id: replyId,
       text,
       action,
-      preview: result.kind === "reply" ? previewOf(result.proposal) : null,
+      preview: result.kind === "reply" && !questionOnly ? previewOf(result.proposal) : null,
       proposal: result.kind === "reply" ? result.proposal.kind : result.kind,
       mode,
+      ...(choices ? { choices } : {}),
+      ...(questionOnly ? { questionOnly: true } : {}),
       ...(places && places.length > 0 ? { places } : {}),
       ...(navigate ? { navigate } : {}),
     },
@@ -2124,6 +2139,23 @@ export async function answerReferral(input: {
     metadata: { referralAnswered: input.approvalId },
   });
   return ran ? { ok: true, text: done.text } : { ok: false, reason: done.text };
+}
+
+/**
+ * The answers to pick under a question HomeTalk leaves open (principle 20,
+ * `hometalk/choices.ts`): labels in the person's language, each sending the
+ * English HomeTalk reads. A grocery's amounts come from the catalog. Never
+ * throws: a question without choices is still a question.
+ */
+async function choicesOf(supabase: SupabaseClient, membership: HouseholdMembership, people: readonly Person[], question: PendingClarification): Promise<HomeTalkChoices | null> {
+  try {
+    const timezone = membership.household.timezone;
+    const [t, amounts] = await Promise.all([translatorFor(preferencesOf(membership.locale, timezone).language), amountsFor(supabase, question)]);
+    const names = people.map((person) => person.displayName.split(/\s+/)[0] ?? person.displayName).filter(Boolean);
+    return choicesFor(question, { t, now: new Date(), timezone, people: names, amounts });
+  } catch {
+    return null;
+  }
 }
 
 /** A question an executor left open: HomeTalk's next question about a HomeSend item. */

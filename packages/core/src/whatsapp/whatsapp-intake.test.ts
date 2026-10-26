@@ -39,18 +39,18 @@ async function sign(body: string, secret = SECRET) {
 }
 
 function replies(options: { typing?: "ok" | "refused" | "throws" } = {}) {
-  const sent: { to: string; text: string }[] = [];
+  const sent: { to: string; text: string; interactive?: Record<string, unknown> }[] = [];
   /** Every "typing…" request, in order, kept apart from the replies. */
   const typing: Record<string, unknown>[] = [];
   const fetchImpl = (async (_url: string, init: RequestInit) => {
-    const body = JSON.parse(init.body as string) as { to: string; text: { body: string }; typing_indicator?: unknown };
+    const body = JSON.parse(init.body as string) as { to: string; type?: string; text: { body: string }; interactive?: { body: { text: string } } & Record<string, unknown>; typing_indicator?: unknown };
     if (body.typing_indicator) {
       typing.push(body);
       if (options.typing === "throws") throw new TypeError("fetch failed");
       if (options.typing === "refused") return new Response(JSON.stringify({ error: { code: 100 } }), { status: 400 });
       return new Response(JSON.stringify({ success: true }), { status: 200 });
     }
-    sent.push({ to: body.to, text: body.text.body });
+    sent.push(body.type === "interactive" ? { to: body.to, text: body.interactive!.body.text, interactive: body.interactive } : { to: body.to, text: body.text.body });
     return new Response(JSON.stringify({ messages: [{ id: `wamid.reply${sent.length}` }] }), { status: 200 });
   }) as unknown as typeof fetch;
   return { sent, typing, fetchImpl };
@@ -443,6 +443,11 @@ describe("processing into HomeSend", () => {
     const out = replies();
     await processWhatsAppMessage(h.client, id, { config: CONFIG, fetch: out.fetchImpl, ingest: { classify }, ask: async () => "not asked" });
     expect(out.sent[0]!.text).toBe("Got it 👍 I found a school item: *Sports Day*. 🎒 Who is it for — Asmi or Manan?");
+    // The names to pick, as reply buttons that answer in HomeTalk's own words (principle 20).
+    expect(out.sent[0]!.interactive).toMatchObject({
+      type: "button",
+      action: { buttons: [{ type: "reply", reply: { id: "say:Asmi", title: "Asmi" } }, { type: "reply", reply: { id: "say:Manan", title: "Manan" } }, { type: "reply", reply: { id: "say:skip", title: "Skip" } }] },
+    });
     // Recorded as HomeTalk's own open question, about this item, for the next turn to answer.
     const asked = h.tables.conversation_messages!.at(-1)!;
     expect(asked).toMatchObject({ role: "assistant", content: "Who is it for — Asmi or Manan?", metadata: { mode: "clarify", intent: "complete_homesend_item" } });
@@ -486,6 +491,34 @@ describe("processing into HomeSend", () => {
     expect(h.tables.home_send_items).toHaveLength(1);
     expect(h.tables.home_send_items![0]!.extracted).toEqual({ title: "Exam", people: [] });
     expect(out.sent[0]!.text).toBe("Got it — that's for Asmi Chakraborty. When is it due?");
+  });
+
+  // Principle 20 on WhatsApp: the answers HomeTalk's next question offers go as buttons; a health record's never do.
+  it("sends HomeTalk's next question with its answers to pick, and a health record's as plain words", async () => {
+    for (const [health, expected] of [[false, "button"], [true, undefined]] as const) {
+      const { h, id } = await received("text");
+      h.tables.whatsapp_messages![0]!.text_content = "asmi";
+      const sent = new Date(Date.now() - 60 * 1000).toISOString();
+      h.tables.whatsapp_messages!.push({ id: "m-item", household_id: HOUSEHOLD, member_id: MEMBER, provider_message_id: "wamid.item", message_type: "text", homesend_item_id: "item-1", received_at: sent, processing_status: "processed" });
+      h.tables.conversation_sessions = [{ id: "s-wa", household_id: HOUSEHOLD, member_id: MEMBER, surface: "whatsapp", status: "open", created_at: sent }];
+      h.tables.conversation_messages = [
+        { id: "c1", household_id: HOUSEHOLD, session_id: "s-wa", role: "assistant", metadata: { mode: "clarify", clarify: { action: "complete_homesend_item", parameters: { itemId: "item-1", field: "child" } } }, created_at: new Date(Date.now() - 50 * 1000).toISOString() },
+      ];
+      const out = replies();
+      // The turn records its reply with the choices, as `hometalk-turn.ts` does.
+      const ask = async () => {
+        h.tables.conversation_messages!.push({
+          id: "c2", household_id: HOUSEHOLD, session_id: "s-wa", role: "assistant", created_at: new Date().toISOString(),
+          metadata: { mode: "clarify", choices: { mode: "single", choices: [{ label: "Today", say: "today" }, { label: "Tomorrow", say: "tomorrow" }, { label: "Another day…", say: null }], ...(health ? { health: true } : {}) } },
+        });
+        return "Got it — that's for Asmi. When is it due?";
+      };
+      await processWhatsAppMessage(h.client, id, { config: CONFIG, fetch: out.fetchImpl, ingest: { classify }, ask });
+      expect(out.sent).toHaveLength(1);
+      expect(out.sent[0]!.text).toBe("Got it — that's for Asmi. When is it due?");
+      expect((out.sent[0]!.interactive as { type?: string } | undefined)?.type).toBe(expected);
+      if (!health) expect(out.sent[0]!.interactive).toMatchObject({ action: { buttons: [{ reply: { id: "say:today", title: "Today" } }, { reply: { id: "say:tomorrow", title: "Tomorrow" } }] } });
+    }
   });
 
   it("a question HomeTalk asked about another item never takes a reply sent after a new one", async () => {
