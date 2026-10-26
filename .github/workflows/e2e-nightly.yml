@@ -65,7 +65,7 @@ jobs:
         env:
           E2E_SUPABASE_URL: ${{ secrets.E2E_SUPABASE_URL }}
           E2E_SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.E2E_SUPABASE_SERVICE_ROLE_KEY }}
-          E2E_ALLOW_LIVE_PROJECT: ${{ vars.E2E_ALLOW_LIVE_PROJECT }}
+          E2E_ALLOW_LIVE_PROJECT: ${{ vars.E2E_ALLOW_LIVE_PROJECT || secrets.E2E_ALLOW_LIVE_PROJECT }}
         run: node scripts/e2e-cleanup.mjs
 
       - id: plan
@@ -82,14 +82,15 @@ jobs:
     # that need a signed-in member use it (help.spec.ts creates and deletes
     # its own account); without one, everything runs against the placeholder
     # and those specs say they were skipped. E2E_ALLOW_LIVE_PROJECT is a
-    # repository variable, set only while WonderHome is pre-launch (CLAUDE.md).
+    # repository variable (a secret of that name is read too), set only while
+    # WonderHome is pre-launch (CLAUDE.md).
     env:
       NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.E2E_SUPABASE_URL || 'https://ci.placeholder.supabase.co' }}
       NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY: ${{ secrets.E2E_SUPABASE_PUBLISHABLE_KEY || 'sb_publishable_ci_placeholder_key' }}
       E2E_SUPABASE_URL: ${{ secrets.E2E_SUPABASE_URL }}
       E2E_SUPABASE_PUBLISHABLE_KEY: ${{ secrets.E2E_SUPABASE_PUBLISHABLE_KEY }}
       E2E_SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.E2E_SUPABASE_SERVICE_ROLE_KEY }}
-      E2E_ALLOW_LIVE_PROJECT: ${{ vars.E2E_ALLOW_LIVE_PROJECT }}
+      E2E_ALLOW_LIVE_PROJECT: ${{ vars.E2E_ALLOW_LIVE_PROJECT || secrets.E2E_ALLOW_LIVE_PROJECT }}
     # The part's own budget (at most 60 minutes) ends the tests cleanly with a
     # summary; this is only the backstop for a hang outside Playwright.
     timeout-minutes: 90
@@ -193,7 +194,8 @@ jobs:
 
       - name: Measured timings
         run: |
-          reports=$(find parts -name results.json)
+          # No parts when an earlier job failed: say nothing, fail nothing.
+          reports=$(find parts -name results.json 2>/dev/null || true)
           if [ -n "$reports" ]; then
             node scripts/e2e-report.mjs timings $reports > timings.json
             echo '### Measured seconds per spec (for e2e/timings.json)' >> "$GITHUB_STEP_SUMMARY"
