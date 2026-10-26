@@ -32,6 +32,9 @@
 | 26 | P2 | 08-026 | Touch the cat and it darts away | Done | The owner, 2026-10-21 ("if you try to touch the cat, it should quickly move away!"). A touch on the companion cat (or a mouse coming near it) sends it to the far side of its card from the finger in 140 ms, with a sideways skip, never past the card's edge (worked out from where it rests, so a second tap moves on from there rather than off the card); it strolls back after 1.5 s (`companion-card.tsx`, `flee`). A touch that arrives as two pointer events counts once. Still under reduced motion. Browser QA at 360px: the cat moved about 370px inside a card of 466px and came back. |
 | 27 | P0 | 08-027 | A class's exam or event, from HomeSend, on the Calendar | Done | The owner, 2026-10-24 ("this particular activity is actual Extra Curricular not school work. add more types so categorisation can be done properly"), on a WhatsApp forward about Asmi's karate exam that HomeSend filed as school work. A class's entries gain an exam (grading, belt test) and an event (a show, a match), each with a start and end time (migration `20261024130000_activity_note_exams_events`, applied live); every dated one is on the Calendar once on its day (`activityEntries`) and a HomeBrain fact with its time. HomeSend reads two new kinds — a class or activity outside school (`activity_item`, filed under the child's class of that name, the class added in the same step if the child has none) and an event or invitation (`event`, on the family calendar through `addFamilyEvent`); both are reviewed, reconciled and undoable (migration `20261024140000_homesend_activity_event_kinds`, applied live). Eval HS-20 (now an activity) and HS-21 (an invitation) |
 | 34 | P1 | 08-028 | A generic school-portal connector catalog | Done | The owner, 2026-10-26 ("create a generic connector… it could be any other portal for other schools"). The connector framework (08-002/08-003/08-008) was provider-neutral but registered no providers, so `getConnector("school", …)` was always null and the pipeline unreachable. New catalog `packages/core/src/school/providers.ts`: a `SchoolProviderDescriptor` (id, label, auth, scopes, `requiredEnv`, `adapterReady`, `portalUrl`) and `SCHOOL_PROVIDERS` — the forward path (`manual`, works for any school with no setup, items arrive via HomeSend), a `demo-school` fixture for development, and `loop-learning` named but `adapterReady:false` (off until `LOOPLEARNING_*` set, and still unconnectable until a real adapter ships — CLAUDE.md's bar). `schoolProviderAvailability`/`schoolProviderCatalog` gate on env; `connectable` is true only for the forward path and shipped+configured adapters, so a merely-named portal never masquerades as live. `registerSchoolProviders()` (idempotent) populates the shared registry and is called by the school sync route before `getConnector`; with no portal env — every deployment today — it registers nothing and the route still answers "not configured" honestly. Every registered connector is `live:false`. Tests `school/providers.test.ts` 10/10 (catalog order, env gating, connectable logic, no live adapter, idempotent registration, a full sync through a catalog provider); school suite 122/122, core typecheck + web typecheck clean. No migration, no secrets. Follow-up: the user-facing Connect-school screen (provider picker, per-portal auth + guardian consent, child-identity mapping) — 08-029. |
+| 35 | P2 | 08-029 | The Connect-school screen | Not Started | Turn the catalog (08-028) into a user-facing connect flow: provider picker, per-portal sign-in or grant, a guardian's consent, and external-child-id → member mapping, read-only. Eight languages; 360px/desktop QA. |
+| 36 | P1 | 08-030 | Track a school message channel from its link | Done | The owner, 2026-10-26 ("after login… user can give a direct link within the portal where messages come in continuously… tracked and entered in WonderHome as entries", e.g. `https://www.looplearning.com/channel/2044541`). The provider-neutral, network-free core: a `channel` shape on `SchoolProviderDescriptor` (hosts + path pattern + example; Loop Learning's `/channel/:id`), and `packages/core/src/school/channels.ts` — `parseSchoolChannel(url)` recognises a pasted link by its host, extracts the channel id and normalises the URL (a host no provider claims, or a non-channel path, is refused with a reason, never guessed), and `toChannelIntake(channel, message)` codifies how one message becomes a HomeSend review entry: untrusted text with a context line and an idempotency key `school_channel:provider:channel:messageId`, so a continuous feed never files one twice. The rule it keeps (CLAUDE.md agent platform): every channel message is untrusted and goes through HomeSend — understood, injection-scanned, nothing written until a person confirms; a channel is never an authorisation channel. Tests `school/channels.test.ts` 8/8 (the owner's exact link, trailing slash/query/bare-host normalisation, wrong host, non-channel path, non-URL, idempotent keying, sender prefix); school suite 130/130; core + web typecheck clean. No migration, no secrets, no live polling. |
+| 37 | P1 | 08-031 | Store, poll and file a school channel | Not Started | Follow-up of 08-030, needs a live adapter (CLAUDE.md): persist a connection's channels (table + RLS), a dedicated `school_channel` HomeSend source (migration altering the `home_send_items` source check) and a DB-backed `ingestSchoolChannelMessage` that dedupes on the channel key, a schedule that polls each channel when its provider is live, and the UI to paste and manage a channel link (eight languages, 360px/desktop). Nothing is written back to the portal; every message still waits for a person to confirm. |
 
 **Status flow:** `Not Started` → `In Progress` → `Blocked` → `Done`
 
@@ -286,6 +289,40 @@ Implement Kids & School Intelligence as a first-class WonderHome domain. The mod
 - Kids & School's "Connect school" opens a screen listing the catalog with honest states: the forward path available now (linking to Add homework / forwarding), portals as "setup needed" or "coming soon".
 - A connectable portal collects its credential as a secret (never in code or a log), records a guardian's consent, and maps external child ids to members before any sync.
 - Words in all eight languages; browser-checked at 360px and desktop.
+
+**Definition of Done**
+- Domain behavior implemented and integrated with existing architecture.
+- UI behavior implemented where applicable, including loading/empty/error/unauthorized states.
+- API/OpenAPI and Supabase migrations/RLS are updated where applicable.
+- Relevant unit/integration/E2E tests pass.
+- Security/privacy/audit requirements are verified.
+- Story is marked `Done` in this file and `tracking/PROGRESS.md` only after evidence exists.
+
+### Story 08-030 — Track a school message channel from its link
+**Epic:** Documents, Communication & Deep Integrations
+**Priority:** P1
+**Goal:** After an account is connected, let a household paste a link to a message channel inside the portal (a class group, a notice board) so its messages are tracked and entered into WonderHome — the network-free core of it: recognising the link and codifying how a message becomes an entry.
+
+**Acceptance criteria**
+- A provider declares the shape of its channel links; a pasted link is recognised by its host, the channel id extracted, the URL normalised. A host no provider claims, or a path that is not a channel, is refused with a reason — never guessed, because a misrecognised channel would file a stranger's messages against a child.
+- A channel message is modelled as untrusted content that becomes a HomeSend review entry (understood, injection-scanned, nothing written until a person confirms), with an idempotency key so a continuous feed never files one twice.
+- No live polling; no secrets; no migration.
+
+**Definition of Done**
+- Domain behavior implemented and integrated with existing architecture.
+- Relevant unit tests pass; core and web typecheck clean.
+- Story is marked `Done` in this file and `tracking/PROGRESS.md` only after evidence exists.
+
+### Story 08-031 — Store, poll and file a school channel
+**Epic:** Documents, Communication & Deep Integrations
+**Priority:** P1
+**Goal:** Make channel tracking real end to end once a provider's adapter is live: store the channels a household registers, poll each for new messages, and file each through HomeSend — nothing written back to the portal.
+
+**Acceptance criteria**
+- A connection's channels are stored with RLS (guardians and Admins manage; scoped to the household), each recognised by 08-030's parser before it is saved.
+- A dedicated `school_channel` HomeSend source (migration to the `home_send_items` source check) and a DB-backed `ingestSchoolChannelMessage` that dedupes on the channel key; each message waits for a person to confirm.
+- A schedule polls each channel when its provider is live; a provider that is not live stores the channel but polls nothing, honestly.
+- UI to paste and manage a channel link; eight languages; 360px/desktop QA.
 
 **Definition of Done**
 - Domain behavior implemented and integrated with existing architecture.

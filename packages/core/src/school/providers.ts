@@ -62,6 +62,21 @@ export type SchoolProviderDescriptor = {
   adapterReady: boolean;
   /** The portal's own address, when it has one. */
   portalUrl?: string;
+  /**
+   * How this provider's message-channel links look, when it has channels a
+   * household can track (story 08-030). A channel is a continuous feed of
+   * messages inside the portal — a class group, a notice board — that a parent
+   * reaches at a stable URL. Declaring its shape here lets WonderHome recognise
+   * a pasted link and, once the adapter ships, know what to poll.
+   */
+  channel?: {
+    /** Hosts a channel link may use, lower-case, no scheme. */
+    hosts: readonly string[];
+    /** Matches the channel path and captures the channel id in group 1. */
+    pathPattern: RegExp;
+    /** A sample link, for the connect screen. */
+    example: string;
+  };
 };
 
 /** The one provider that needs no portal: forwarding to WonderHome. */
@@ -103,6 +118,11 @@ export const SCHOOL_PROVIDERS: readonly SchoolProviderDescriptor[] = [
     requiredEnv: ["LOOPLEARNING_USERNAME", "LOOPLEARNING_PASSWORD"],
     adapterReady: false,
     portalUrl: "https://www.looplearning.com",
+    channel: {
+      hosts: ["looplearning.com", "www.looplearning.com"],
+      pathPattern: /^\/channel\/([A-Za-z0-9_-]+)\/?$/,
+      example: "https://www.looplearning.com/channel/2044541",
+    },
   },
 ];
 

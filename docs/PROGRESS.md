@@ -11,14 +11,14 @@ in `docs/progress/`; for the running log of what changed when, `tracking/PROGRES
 
 ## The whole picture
 
-**391 of 421 stories done — 92.9%**
+**392 of 424 stories done — 92.5%**
 
 | Status | Stories |
 |---|---:|
-| Done | 391 |
+| Done | 392 |
 | In Progress | 8 |
 | Blocked | 1 |
-| Not Started | 17 |
+| Not Started | 19 |
 | Deferred | 4 |
 
 ## By module
@@ -33,7 +33,7 @@ in `docs/progress/`; for the running log of what changed when, `tracking/PROGRES
 | 05 Household Certification & Understanding | `██████████` | 12 | 12 | — |
 | 06 Actionable Notification Engine | `██████████` | 8 | 8 | — |
 | 07 Househelper & Home Operations | `██████████` | 10 | 10 | — |
-| 08 Kids & School Intelligence | `████████░░` | 23 | 27 | 3 in progress, 1 not started |
+| 08 Kids & School Intelligence | `████████░░` | 24 | 30 | 3 in progress, 3 not started |
 | 09 Commerce, Groceries & Pet Supplies | `██████████` | 9 | 9 | — |
 | 10 Meals & Cooking | `██████████` | 16 | 16 | — |
 | 11 Bills, Fees & Finance | `█████████░` | 14 | 15 | 1 not started |
@@ -64,6 +64,8 @@ in `docs/progress/`; for the running log of what changed when, `tracking/PROGRES
 | `08-020` A child's Done on a goal waits for a grown-up | 08 Kids & School Intelligence | P0 | In Progress |
 | `08-021` The cat's sayings from a long list, by age and gender, never repeated for a child | 08 Kids & School Intelligence | P1 | In Progress |
 | `08-023` The cat walks, goes back and forth, and goes round its whole list | 08 Kids & School Intelligence | P1 | In Progress |
+| `08-029` The Connect-school screen | 08 Kids & School Intelligence | P2 | Not Started |
+| `08-031` Store, poll and file a school channel | 08 Kids & School Intelligence | P1 | Not Started |
 | `11-011` Payees beyond the catalogue's cities, and outside India | 11 Bills, Fees & Finance | P2 | Not Started |
 | `13-009` A pet's likes, dislikes, favourites, fears and allergies | 13 Maintenance, Laundry & Pet Care | P1 | In Progress |
 | `14-021` HomeBrain 3.0 phase B — retrieval and one pass | 14 AI Orchestration & Learning | P0 | Deferred |
@@ -253,7 +255,7 @@ in `docs/progress/`; for the running log of what changed when, `tracking/PROGRES
 
 ### 08 — Kids & School Intelligence
 
-23 of 27 done `████████░░`
+24 of 30 done `████████░░`
 
 | Story | Priority | Status | Notes |
 |---|---|---|---|
@@ -284,6 +286,9 @@ in `docs/progress/`; for the running log of what changed when, `tracking/PROGRES
 | `08-026` Touch the cat and it darts away | P2 | Done | The owner, 2026-10-21 ("if you try to touch the cat, it should quickly move away!"). A touch on the companion cat (or a mouse coming near it) sends it to the far side of its card from the finger in 140 ms, with a sideways skip, never past the card's edge (worked out from where it rests, so a second tap moves on from there rather than off the card); it strolls back after 1.5 s (`companion-card.tsx`, `flee`). A touch that arrives as two pointer events counts once. Still under reduced motion. Browser QA at 360px: the cat moved about 370px inside a card of 466px and came back. |
 | `08-027` A class's exam or event, from HomeSend, on the Calendar | P0 | Done | The owner, 2026-10-24 ("this particular activity is actual Extra Curricular not school work. add more types so categorisation can be done properly"), on a WhatsApp forward about Asmi's karate exam that HomeSend filed as school work. A class's entries gain an exam (grading, belt test) and an event (a show, a match), each with a start and end time (migration `20261024130000_activity_note_exams_events`, applied live); every dated one is on the Calendar once on its day (`activityEntries`) and a HomeBrain fact with its time. HomeSend reads two new kinds — a class or activity outside school (`activity_item`, filed under the child's class of that name, the class added in the same step if the child has none) and an event or invitation (`event`, on the family calendar through `addFamilyEvent`); both are reviewed, reconciled and undoable (migration `20261024140000_homesend_activity_event_kinds`, applied live). Eval HS-20 (now an activity) and HS-21 (an invitation) |
 | `08-028` A generic school-portal connector catalog | P1 | Done | The owner, 2026-10-26 ("create a generic connector… it could be any other portal for other schools"). The connector framework (08-002/08-003/08-008) was provider-neutral but registered no providers, so `getConnector("school", …)` was always null and the pipeline unreachable. New catalog `packages/core/src/school/providers.ts`: a `SchoolProviderDescriptor` (id, label, auth, scopes, `requiredEnv`, `adapterReady`, `portalUrl`) and `SCHOOL_PROVIDERS` — the forward path (`manual`, works for any school with no setup, items arrive via HomeSend), a `demo-school` fixture for development, and `loop-learning` named but `adapterReady:false` (off until `LOOPLEARNING_*` set, and still unconnectable until a real adapter ships — CLAUDE.md's bar). `schoolProviderAvailability`/`schoolProviderCatalog` gate on env; `connectable` is true only for the forward path and shipped+configured adapters, so a merely-named portal never masquerades as live. `registerSchoolProviders()` (idempotent) populates the shared registry and is called by the school sync route before `getConnector`; with no portal env — every deployment today — it registers nothing and the route still answers "not configured" honestly. Every registered connector is `live:false`. Tests `school/providers.test.ts` 10/10 (catalog order, env gating, connectable logic, no live adapter, idempotent registration, a full sync through a catalog provider); school suite 122/122, core typecheck + web typecheck clean. No migration, no secrets. Follow-up: the user-facing Connect-school screen (provider picker, per-portal auth + guardian consent, child-identity mapping) — 08-029. |
+| `08-029` The Connect-school screen | P2 | Not Started | Turn the catalog (08-028) into a user-facing connect flow: provider picker, per-portal sign-in or grant, a guardian's consent, and external-child-id → member mapping, read-only. Eight languages; 360px/desktop QA. |
+| `08-030` Track a school message channel from its link | P1 | Done | The owner, 2026-10-26 ("after login… user can give a direct link within the portal where messages come in continuously… tracked and entered in WonderHome as entries", e.g. `https://www.looplearning.com/channel/2044541`). The provider-neutral, network-free core: a `channel` shape on `SchoolProviderDescriptor` (hosts + path pattern + example; Loop Learning's `/channel/:id`), and `packages/core/src/school/channels.ts` — `parseSchoolChannel(url)` recognises a pasted link by its host, extracts the channel id and normalises the URL (a host no provider claims, or a non-channel path, is refused with a reason, never guessed), and `toChannelIntake(channel, message)` codifies how one message becomes a HomeSend review entry: untrusted text with a context line and an idempotency key `school_channel:provider:channel:messageId`, so a continuous feed never files one twice. The rule it keeps (CLAUDE.md agent platform): every channel message is untrusted and goes through HomeSend — understood, injection-scanned, nothing written until a person confirms; a channel is never an authorisation channel. Tests `school/channels.test.ts` 8/8 (the owner's exact link, trailing slash/query/bare-host normalisation, wrong host, non-channel path, non-URL, idempotent keying, sender prefix); school suite 130/130; core + web typecheck clean. No migration, no secrets, no live polling. |
+| `08-031` Store, poll and file a school channel | P1 | Not Started | Follow-up of 08-030, needs a live adapter (CLAUDE.md): persist a connection's channels (table + RLS), a dedicated `school_channel` HomeSend source (migration altering the `home_send_items` source check) and a DB-backed `ingestSchoolChannelMessage` that dedupes on the channel key, a schedule that polls each channel when its provider is live, and the UI to paste and manage a channel link (eight languages, 360px/desktop). Nothing is written back to the portal; every message still waits for a person to confirm. |
 
 ### 09 — Commerce, Groceries & Pet Supplies
 
