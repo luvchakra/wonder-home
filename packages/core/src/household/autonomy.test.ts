@@ -16,24 +16,23 @@ const action = (over: Partial<ProposedAction> = {}): ProposedAction => ({
 });
 
 describe("autonomy decisions", () => {
-  it("lets reading and drafting happen in any mode, including observe", () => {
+  it("has two modes: prepare, which waits for a person, and execute (the owner, 2026-10-26)", () => {
+    expect(AUTONOMY_MODES).toEqual(["prepare", "execute"]);
+  });
+
+  it("lets reading and drafting happen in either mode", () => {
     for (const mode of AUTONOMY_MODES) {
       expect(decideAutonomy(mode, action({ kind: "read" })).outcome).toBe("execute");
       expect(decideAutonomy(mode, action({ kind: "draft" })).outcome).toBe("execute");
     }
   });
 
-  it("changes nothing in observe mode", () => {
-    expect(decideAutonomy("observe", action()).outcome).toBe("observe_only");
-    expect(decideAutonomy("observe", action({ kind: "schedule" })).outcome).toBe("observe_only");
-  });
-
-  it("gets things ready but stops short in prepare mode", () => {
-    expect(decideAutonomy("prepare", action()).outcome).toBe("prepare_only");
-  });
-
-  it("waits for a yes in approve mode", () => {
-    expect(decideAutonomy("approve", action()).outcome).toBe("needs_approval");
+  it("gets things ready and waits for a yes in prepare mode, never acting on its own", () => {
+    for (const kind of ["order", "schedule", "change", "notify"] as const) {
+      const decision = decideAutonomy("prepare", action({ kind }));
+      expect(decision.outcome, kind).toBe("needs_approval");
+      expect(mayExecuteNow(decision)).toBe(false);
+    }
   });
 
   it("acts in execute mode", () => {
@@ -43,7 +42,7 @@ describe("autonomy decisions", () => {
   });
 
   it("never lets a payment run unattended, even on execute", () => {
-    for (const mode of ["prepare", "approve", "execute"] as const) {
+    for (const mode of AUTONOMY_MODES) {
       const decision = decideAutonomy(mode, action({ kind: "payment", amountMinor: 284_000 }));
       expect(decision.outcome, `payment ran unattended in ${mode}`).toBe("needs_approval");
       expect(mayExecuteNow(decision)).toBe(false);
@@ -56,15 +55,8 @@ describe("autonomy decisions", () => {
     }
   });
 
-  it("does not turn observe into an approval prompt the household never invited", () => {
-    // A household that asked for nothing to happen gets a proposal, not a
-    // steady stream of "approve this?" interruptions.
-    expect(decideAutonomy("observe", action({ kind: "payment" })).outcome).toBe("observe_only");
-  });
-
   it("asks a person before anything that cannot be undone", () => {
     expect(decideAutonomy("prepare", action({ reversible: false })).outcome).toBe("needs_approval");
-    expect(decideAutonomy("approve", action({ reversible: false })).outcome).toBe("needs_approval");
   });
 
   it("respects an explicit execute setting for an irreversible action", () => {

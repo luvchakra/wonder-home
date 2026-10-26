@@ -140,7 +140,7 @@ export type ResponsibilityInitial = {
   outcomeLabel: string;
   primaryMemberId: string | null;
   backupMemberId: string | null;
-  aiMode: "observe" | "prepare" | "approve" | "execute";
+  aiMode: "prepare" | "execute";
   priority: number;
 };
 
@@ -194,7 +194,7 @@ export function ResponsibilityForm({
         label={labels.aiMode}
         name="aiMode"
         defaultValue={initial?.aiMode ?? "prepare"}
-        options={(["observe", "prepare", "approve", "execute"] as const).map((mode) => ({ value: mode, label: labels.aiModes[mode] }))}
+        options={(["prepare", "execute"] as const).map((mode) => ({ value: mode, label: labels.aiModes[mode] }))}
         hint={labels.aiModeHint}
       />
       <Select

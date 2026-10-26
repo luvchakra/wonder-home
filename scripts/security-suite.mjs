@@ -94,7 +94,7 @@ const AREAS = [
     why: "A forged, stale or planted cookie is the cheapest way into somebody's home.",
     unit: ["packages/core/src/security/route-policy.test.ts"],
     e2e: ["e2e/session.spec.ts", "e2e/auth.spec.ts"],
-    expected: 12,
+    expected: 17,
   },
   {
     key: "prompt-injection",
@@ -110,7 +110,7 @@ const AREAS = [
     why: "Money, data leaving and deletion each need a person who is there now, not a session left open in a kitchen.",
     unit: ["packages/core/src/security/step-up.test.ts", "packages/core/src/finance/payments.test.ts"],
     e2e: [],
-    expected: 48,
+    expected: 50,
   },
   {
     key: "ai-privacy",
@@ -118,7 +118,7 @@ const AREAS = [
     why: "Nothing about a household reaches a provider it has not agreed to, and never more than the turn needs.",
     unit: ["packages/core/src/ai/privacy.test.ts"],
     e2e: [],
-    expected: 31,
+    expected: 32,
   },
   {
     key: "audit",
@@ -145,7 +145,7 @@ const AREAS = [
       "packages/core/src/security/webhook-signing.test.ts",
     ],
     e2e: [],
-    expected: 79,
+    expected: 83,
   },
   {
     key: "ai-release-safety",
@@ -153,7 +153,7 @@ const AREAS = [
     why: "No consequential action runs without a person's approval of that exact proposal, and the release evaluation fails the build on a single unsafe execution (Wave 5 §9, §18, §20).",
     unit: ["packages/core/src/evaluation/evaluation.test.ts", "packages/core/src/evaluation/part2.test.ts"],
     e2e: [],
-    expected: 33,
+    expected: 34,
   },
   {
     key: "abuse-and-retries",

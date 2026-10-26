@@ -360,9 +360,9 @@ export const helpEs: AreaCatalog<typeof helpEn> = {
   "help.guide.plan.body.4": "Cuando empiecen los planes de pago, pagarás en la propia página del proveedor de pagos —WonderHome nunca ve tu tarjeta— y Ajustes → Tu plan → Facturación guarda cada pago y cada factura. Una cancelación o el paso a un plan menor espera hasta el final del periodo que pagaste.",
 
   "help.guide.ai-autonomy.title": "Cuánto puede hacer WonderHome por su cuenta",
-  "help.guide.ai-autonomy.summary": "Cuatro niveles, fijados por responsabilidad, y los eliges tú.",
+  "help.guide.ai-autonomy.summary": "Dos niveles, fijados por responsabilidad, y los eliges tú.",
   "help.guide.ai-autonomy.body.1":
-    "Cada responsabilidad tiene un nivel de autonomía, que un Admin fija en «Gestionar el hogar → Responsabilidades», de una en una o para todo un grupo a la vez: «WonderHome solo te avisará», «WonderHome lo prepara todo y espera tu visto bueno», «WonderHome te preguntará antes de actuar» o «WonderHome lo hace y te lo cuenta después». Las dos últimas necesitan un responsable, así que un grupo con un resultado sin responsable solo ofrece las dos primeras. WonderHome aplica el nivel en segundo plano, no solo en la pantalla.",
+    "Cada responsabilidad tiene un nivel de autonomía, que un Admin fija en «Gestionar el hogar → Responsabilidades», de una en una o para todo un grupo a la vez: «Esperar aprobación» o «Aprobado de antemano». Con «Esperar aprobación», WonderHome lo deja todo listo y no pasa nada hasta que una persona dice que sí; es también lo que tiene cualquier responsabilidad que nadie ha configurado. Con «Aprobado de antemano», ya has dicho que sí de antemano: WonderHome se pone en marcha y te lo cuenta después. «Aprobado de antemano» necesita un responsable, así que un grupo con un resultado sin responsable solo ofrece «Esperar aprobación». Elijas lo que elijas, pagar, cambiar quién puede hacer qué y borrar siempre preguntan antes a una persona. WonderHome aplica el nivel en segundo plano, no solo en la pantalla.",
   "help.guide.ai-autonomy.body.2":
     "Los pagos, los cambios de permisos y las eliminaciones siempre necesitan a una persona, sea cual sea el ajuste, y pagar requiere que confirmes que eres tú en el momento de aprobarlo.",
 

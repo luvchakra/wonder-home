@@ -39,7 +39,7 @@ describe("who is in the household", () => {
       channel: "voice",
       actor: { memberId: "k", roles: ["head"], memberType: "adult" },
       pending: null,
-      autonomyFor: () => "observe",
+      autonomyFor: () => "prepare",
       entitledFor: () => true,
       sessionId: "s",
     });

@@ -51,8 +51,8 @@ export const TOOLS: readonly ToolDefinition[] = [
     description: "Add something to a household list",
     requires: null,
     // Not a draft: the executor really writes a grocery item, so it answers
-    // to the household's autonomy setting like any other change — observe
-    // means it does not happen, approve means a person says yes first.
+    // to the household's autonomy setting like any other change — prepare
+    // means a person says yes first, execute means it happens.
     actionKind: "change",
     risk: "safe",
     reversible: true,
@@ -192,9 +192,6 @@ export function authorizeToolCall(toolName: string, context: ToolCallContext): T
   });
 
   switch (decision.outcome) {
-    case "observe_only":
-      return { allowed: false, code: "autonomy_forbids", reason: decision.reason };
-    case "prepare_only":
     case "needs_approval":
       return { allowed: true, requiresApproval: true, reason: decision.reason };
     case "execute":

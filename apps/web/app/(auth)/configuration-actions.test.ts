@@ -29,7 +29,7 @@ const HOUSEHOLD = "33333333-3333-4333-8333-333333333333";
 
 function choice(fields: Record<string, string>): FormData {
   const form = new FormData();
-  for (const [name, value] of Object.entries({ householdId: HOUSEHOLD, outcomeKeys: "laundry.ready,home.cleaning", aiMode: "approve", ...fields })) form.set(name, value);
+  for (const [name, value] of Object.entries({ householdId: HOUSEHOLD, outcomeKeys: "laundry.ready,home.cleaning", aiMode: "prepare", ...fields })) form.set(name, value);
   return form;
 }
 
@@ -46,13 +46,13 @@ describe("setGroupAutonomyAction", () => {
     expect(state.setAutonomyForOutcomes.mock.calls[0]![1]).toMatchObject({
       householdId: HOUSEHOLD,
       outcomeKeys: ["laundry.ready", "home.cleaning"],
-      aiMode: "approve",
+      aiMode: "prepare",
     });
     expect(result).toEqual({ notice: "Updated 2 responsibilities." });
   });
 
-  it("refuses a mode that is not one of the four choices, and changes nothing", async () => {
-    const result = await setGroupAutonomyAction({}, choice({ aiMode: "always" }));
+  it.each(["always", "observe", "approve"])("refuses %s, which is not one of the two choices, and changes nothing", async (aiMode) => {
+    const result = await setGroupAutonomyAction({}, choice({ aiMode }));
 
     expect(state.setAutonomyForOutcomes).not.toHaveBeenCalled();
     expect(result.error).toBeTruthy();

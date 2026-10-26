@@ -13,16 +13,14 @@ const { ResponsibilityGroup } = await import("./responsibility-controls");
 const LABELS = {
   title: "How much WonderHome does on its own",
   options: {
-    observe: { heading: "WonderHome will notify only", short: "WonderHome watches", how: "it notices a problem and tells you." },
-    prepare: { heading: "WonderHome does the groundwork, and waits for you", short: "WonderHome prepares", how: "it gets everything ready." },
-    approve: { heading: "WonderHome will ask before acting", short: "WonderHome asks first", how: "it asks first." },
-    execute: { heading: "WonderHome does it, and tells you afterwards", short: "WonderHome handles it", how: "it acts and reports back." },
+    prepare: { heading: "Wait for Approval", short: "Wait for Approval", how: "it gets everything ready." },
+    execute: { heading: "Pre Approved", short: "Pre Approved", how: "it acts and reports back." },
   },
   mixed: "Mixed — choose one",
   needsOwner: "Give every responsibility here an owner first.",
 };
 
-type Mode = "observe" | "prepare" | "approve" | "execute";
+type Mode = "prepare" | "execute";
 
 function render({ editable = true, currentMode = null as Mode | null } = {}) {
   return renderToStaticMarkup(
@@ -49,9 +47,9 @@ describe("ResponsibilityGroup", () => {
   });
 
   it("keeps the label, the dropdown and the list toggle in one row, in that order", () => {
-    const html = render({ currentMode: "observe" });
+    const html = render({ currentMode: "prepare" });
     const label = html.indexOf('HOME <span class="whitespace-nowrap">· 3</span>');
-    const dropdown = html.indexOf('aria-label="How much WonderHome does on its own: WonderHome will notify only"');
+    const dropdown = html.indexOf('aria-label="How much WonderHome does on its own: Wait for Approval"');
     const toggle = html.indexOf('aria-label="HOME · 3"');
     expect(label).toBeGreaterThan(-1);
     expect(dropdown).toBeGreaterThan(label);
@@ -64,12 +62,12 @@ describe("ResponsibilityGroup", () => {
 
   it("carries the dropdown on the card while collapsed, showing the group's choice in full and nothing under it", () => {
     const html = render({ currentMode: "prepare" });
-    expect(html).toContain('aria-label="How much WonderHome does on its own: WonderHome does the groundwork, and waits for you"');
+    expect(html).toContain('aria-label="How much WonderHome does on its own: Wait for Approval"');
     // Shown short, like each row's badge, so it fits beside the label on a phone.
-    expect(html).toContain("<span>WonderHome prepares</span>");
+    expect(html).toContain("<span>Wait for Approval</span>");
     // The "what it does" line lives only in the opened choices, not under the closed dropdown.
     expect(html).not.toContain("It gets everything ready.");
-    // The four choices open from the button; closed, they are not in the page.
+    // The two choices open from the button; closed, they are not in the page.
     expect(html).not.toContain('name="aiMode"');
   });
 
@@ -80,14 +78,14 @@ describe("ResponsibilityGroup", () => {
   });
 
   it("sends the whole group and the household with the choice", () => {
-    const html = render({ currentMode: "observe" });
+    const html = render({ currentMode: "execute" });
     expect(html).toContain('name="outcomeKeys" value="home.cleaning,home.maintenance"');
     expect(html).toContain('name="householdId" value="33333333-3333-4333-8333-333333333333"');
   });
 
   it("shows someone who cannot change it the group's mode, with no dropdown", () => {
-    const html = render({ editable: false, currentMode: "approve" });
+    const html = render({ editable: false, currentMode: "prepare" });
     expect(html).not.toContain("<form");
-    expect(html).toContain("WonderHome asks first");
+    expect(html).toContain("Wait for Approval");
   });
 });

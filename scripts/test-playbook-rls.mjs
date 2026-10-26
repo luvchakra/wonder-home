@@ -189,7 +189,7 @@ test("a backup who is also the primary is refused", () => {
 test("an outcome with no owner is representable, because the matrix must show gaps", () => {
   psql(
     `insert into public.responsibilities (household_id, outcome_key, ai_mode)
-     values ('${household}', 'pets.fed', 'observe');`,
+     values ('${household}', 'pets.fed', 'prepare');`,
     options,
   );
 
@@ -203,10 +203,10 @@ test("an outcome with no owner is representable, because the matrix must show ga
   );
 });
 
-test("an unconfigured outcome resolves to observe, never to acting", () => {
+test("an unconfigured outcome resolves to prepare, which waits for a person — never to acting", () => {
   assert.equal(
     psql(`select wh.autonomy_for('${household}', 'nothing.configured');`, options),
-    "observe",
+    "prepare",
   );
   assert.equal(psql(`select wh.autonomy_for('${household}', 'laundry.ready');`, options), "prepare");
 });
@@ -223,6 +223,20 @@ test("autonomy is a known mode, not arbitrary text", () => {
     rejected = true;
   }
   assert.ok(rejected, "an unknown autonomy mode was accepted");
+  // The two modes are prepare and execute (migration 20261026090000); the old ones are gone.
+  for (const old of ["observe", "approve"]) {
+    let refused = false;
+    try {
+      psql(
+        `update public.responsibilities set ai_mode = '${old}'
+         where household_id = '${household}' and outcome_key = 'laundry.ready';`,
+        options,
+      );
+    } catch {
+      refused = true;
+    }
+    assert.ok(refused, `the retired autonomy mode ${old} was accepted`);
+  }
 });
 
 test("a dependency cannot cross a household boundary or point at itself", () => {

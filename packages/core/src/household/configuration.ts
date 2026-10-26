@@ -81,14 +81,8 @@ export function validateResponsibility(
 
   // Autonomy is consulted at execution time. Letting WonderHome act alone on
   // an outcome nobody owns means there is nobody to answer for what it did.
-  if (!input.primaryMemberId && (input.aiMode === "execute" || input.aiMode === "approve")) {
-    problems.push({
-      field: "aiMode",
-      message:
-        input.aiMode === "execute"
-          ? "Somebody has to own an outcome before WonderHome may act on it alone."
-          : "Approval has to go to somebody. Give this outcome an owner first.",
-    });
+  if (!input.primaryMemberId && input.aiMode === "execute") {
+    problems.push({ field: "aiMode", message: "Somebody has to own an outcome before WonderHome may act on it alone." });
   }
 
   const primary = input.primaryMemberId ? byId.get(input.primaryMemberId) : undefined;
@@ -518,12 +512,8 @@ export function downstreamOf(change: ConfigChange): string[] {
 
 function autonomyEffects(mode: AutonomyMode): string[] {
   switch (mode) {
-    case "observe":
-      return ["WonderHome watches this and does nothing else. It will not even suggest."];
     case "prepare":
-      return ["WonderHome gets things ready and leaves them for you. Nothing is sent or spent."];
-    case "approve":
-      return ["WonderHome asks before it acts. You see exactly what it plans to do first."];
+      return ["WonderHome gets it ready and asks before it acts. You see exactly what it plans to do first, and nothing is sent or spent until you say yes."];
     case "execute":
       return [
         "WonderHome acts on this without asking first, and tells you afterwards.",

@@ -199,13 +199,6 @@ export function proposeFromIntent(intent: HouseholdIntent, context: ProposalCont
   const preview = buildPreview(intent, decision.reason, action.reversible);
 
   switch (decision.outcome) {
-    case "observe_only":
-      return {
-        kind: "refused",
-        reason: "This is set to observe only, so I have not changed anything.",
-      };
-    case "prepare_only":
-      return { kind: "prepared", preview };
     case "needs_approval":
       return { kind: "needs_approval", preview };
     case "execute":

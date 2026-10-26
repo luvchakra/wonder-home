@@ -65,7 +65,7 @@ export default async function ManageHouseholdPage() {
   const playbookOptions = items.map((item) => ({ key: item.outcome_key, label: item.name }));
   const rules = (policies.data as PolicyRow[] | null) ?? [];
   const modes = ((responsibilities.data as ResponsibilityRow[] | null) ?? []).map((row) => row.ai_mode);
-  const modeCounts = (["observe", "prepare", "approve", "execute"] as const).map((mode) => ({ mode, count: modes.filter((m) => m === mode).length }));
+  const modeCounts = (["prepare", "execute"] as const).map((mode) => ({ mode, count: modes.filter((m) => m === mode).length }));
   const attention = integrations.filter((integration) => integration.needsAttention).length;
 
   const sections: { href: string; icon: typeof Users; tone: IconTone; title: string; meta: string; badge?: { label: string; tone: "attention" | "handled" | "neutral" } }[] = [
@@ -78,7 +78,7 @@ export default async function ManageHouseholdPage() {
     { href: "/household/notifications", icon: Bell, tone: "attention", title: t("manage.section.notifications"), meta: t("manage.section.notificationsMeta") },
     { href: "/household/delivery", icon: BellRing, tone: "attention", title: t("manage.section.delivery"), meta: t("manage.section.deliveryMeta") },
     { href: "#policies", icon: ShieldCheck, tone: "money", title: t("manage.section.policies"), meta: t("manage.section.policiesMeta", { count: rules.length }) },
-    { href: "#autonomy", icon: Bot, tone: "ai", title: t("manage.section.autonomy"), meta: (["observe", "prepare", "approve", "execute"] as const).map((mode) => t(`manage.mode.${mode}`)).join(" · ") },
+    { href: "#autonomy", icon: Bot, tone: "ai", title: t("manage.section.autonomy"), meta: (["prepare", "execute"] as const).map((mode) => t(`manage.mode.${mode}`)).join(" · ") },
     { href: "/household/integrations", icon: Plug, tone: "care", title: t("manage.section.integrations"), meta: t("manage.section.integrationsMeta", { count: integrations.length }), badge: attention > 0 ? { label: t("manage.section.needYou", { count: attention }), tone: "attention" } : undefined },
     { href: "/settings", icon: Cog, tone: "neutral", title: t("manage.section.houseSettings"), meta: `${membership.household.name} · ${membership.household.timezone}` },
   ];
@@ -198,7 +198,7 @@ export default async function ManageHouseholdPage() {
           <div className="grid gap-2 sm:grid-cols-2">
             {modeCounts.map(({ mode, count }) => (
               <Card key={mode} className="flex items-start gap-3 p-3.5">
-                <IconTile icon={Bot} tone={mode === "execute" ? "ai" : mode === "approve" ? "primary" : mode === "prepare" ? "home" : "neutral"} size="sm" />
+                <IconTile icon={Bot} tone={mode === "execute" ? "ai" : "primary"} size="sm" />
                 <div className="min-w-0 flex-1">
                   <p className="text-sm font-semibold">{t(`manage.mode.${mode}`)}</p>
                   <p className="text-xs text-[var(--wh-foreground-muted)]">{t(`manage.modeDescription.${mode}`)}</p>

@@ -393,9 +393,9 @@ export const helpEn = {
 
   // How much WonderHome may do on its own
   "help.guide.ai-autonomy.title": "How much WonderHome may do on its own",
-  "help.guide.ai-autonomy.summary": "Four levels, set per responsibility, and you choose them.",
+  "help.guide.ai-autonomy.summary": "Two levels, set per responsibility, and you choose them.",
   "help.guide.ai-autonomy.body.1":
-    "Each responsibility carries an autonomy level, which an Admin sets on Manage Household → Responsibilities, one responsibility at a time or for a whole group at once: \"WonderHome will notify only\", \"WonderHome does the groundwork, and waits for you\", \"WonderHome will ask before acting\" or \"WonderHome does it, and tells you afterwards\". The last two need an owner, so a group with an outcome nobody owns offers only the first two. WonderHome enforces the level behind the scenes — not just on the screen.",
+    "Each responsibility carries an autonomy level, which an Admin sets on Manage Household → Responsibilities, one responsibility at a time or for a whole group at once: \"Wait for Approval\" or \"Pre Approved\". With \"Wait for Approval\", WonderHome gets things ready and nothing happens until a person says yes; it is also what any responsibility nobody has set up gets. With \"Pre Approved\", you have said yes in advance: WonderHome goes ahead and tells you afterwards. \"Pre Approved\" needs an owner, so a group with an outcome nobody owns offers only \"Wait for Approval\". Whatever you choose, paying, changing who can do what, and deleting always ask a person first. WonderHome enforces the level behind the scenes — not just on the screen.",
   "help.guide.ai-autonomy.body.2":
     "Payments, permission changes and deletions always need a person, whatever the setting, and paying money needs you to confirm it is you at the moment you approve.",
 

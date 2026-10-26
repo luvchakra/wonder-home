@@ -21,10 +21,10 @@ describe("HomeSend confirmation strategy (Wave 3 §12)", () => {
   it("applies a clear, safe, reversible item on its own only when the household set that outcome to execute", () => {
     expect(decide({}).mode).toBe("auto_apply");
     expect(decide({}).reason).toMatch(/lets WonderHome handle groceries on its own/);
-    for (const autonomy of ["observe", "prepare", "approve"] as const) {
+    for (const autonomy of ["prepare"] as const) {
       const decision = decide({ autonomy });
       expect(decision.mode).toBe("prepare");
-      expect(decision.reason).toContain(`“${autonomy}”`);
+      expect(decision.reason).toContain("“Wait for Approval”");
     }
   });
 

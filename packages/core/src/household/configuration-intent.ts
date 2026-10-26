@@ -367,7 +367,7 @@ function proposeAutonomy(
 
   return {
     kind: "change",
-    summary: `${describeMode(intent.mode)} for ${intent.outcomeLabel}.`,
+    summary: `“${describeMode(intent.mode)}” for ${intent.outcomeLabel}.`,
     downstream: downstreamOf({
       kind: "responsibility",
       outcomeKey: intent.outcomeKey,
@@ -386,8 +386,9 @@ function proposeAutonomy(
  * restriction would be the worst possible mistake to make here.
  */
 function readAutonomy(text: string): AutonomyMode | null {
-  if (/\b(?:just watch|only watch|watch only|don'?t act|do nothing)\b/.test(text)) return "observe";
-  if (/\b(?:ask me|check with me|ask first|without asking|never .* without)\b/.test(text)) return "approve";
+  // "Just watch" and "ask me first" both mean WonderHome waits for a person: the one mode that does.
+  if (/\b(?:just watch|only watch|watch only|don'?t act|do nothing)\b/.test(text)) return "prepare";
+  if (/\b(?:ask me|check with me|ask first|without asking|never .* without)\b/.test(text)) return "prepare";
   if (/\b(?:handle|take care of|sort out|deal with)\b.*\b(?:yourself|on your own|automatically)\b/.test(text)) {
     return "execute";
   }
@@ -397,14 +398,10 @@ function readAutonomy(text: string): AutonomyMode | null {
 
 function describeMode(mode: AutonomyMode): string {
   switch (mode) {
-    case "observe":
-      return "Watch only";
     case "prepare":
-      return "Get things ready and leave them to you";
-    case "approve":
-      return "Ask you before acting";
+      return "Wait for Approval";
     case "execute":
-      return "Act, then tell you";
+      return "Pre Approved";
   }
 }
 
@@ -502,7 +499,7 @@ export const CONFIG_UTTERANCE_FIXTURES: readonly {
   },
   {
     utterance: "Ask me before ordering groceries.",
-    expect: { kind: "autonomy", outcomeKey: "groceries.stocked", outcomeLabel: "groceries", mode: "approve" },
+    expect: { kind: "autonomy", outcomeKey: "groceries.stocked", outcomeLabel: "groceries", mode: "prepare" },
     note: "Setting autonomy is configuration, not a one-off instruction.",
   },
   {
@@ -512,7 +509,7 @@ export const CONFIG_UTTERANCE_FIXTURES: readonly {
   },
   {
     utterance: "Just watch the bills for now.",
-    expect: { kind: "autonomy", outcomeKey: "finance.bills_paid", outcomeLabel: "the bills", mode: "observe" },
+    expect: { kind: "autonomy", outcomeKey: "finance.bills_paid", outcomeLabel: "the bills", mode: "prepare" },
     note: "Stepping autonomy down must be as easy to say as stepping it up.",
   },
   {

@@ -185,8 +185,8 @@ const RECORDS: ContextRecords = {
   pets: [],
   responsibilities: [
     { outcomeKey: "groceries.stocked", primaryMemberId: "kunal", backupMemberId: "upasana", aiMode: "prepare", priority: 1 },
-    { outcomeKey: "bills.paid", primaryMemberId: "kunal", backupMemberId: null, aiMode: "approve", priority: 2 },
-    { outcomeKey: "school.run", primaryMemberId: "upasana", backupMemberId: null, aiMode: "observe", priority: 3 },
+    { outcomeKey: "bills.paid", primaryMemberId: "kunal", backupMemberId: null, aiMode: "prepare", priority: 2 },
+    { outcomeKey: "school.run", primaryMemberId: "upasana", backupMemberId: null, aiMode: "prepare", priority: 3 },
   ],
   events: [
     event("e-sports", "Sports Day", ["asmi"], "2026-09-26T03:30:00Z"),

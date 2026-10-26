@@ -182,7 +182,7 @@ async function setPlaybookItemActiveImpl(
  * Unlike a playbook entry or a policy, a responsibility has no in-force
  * history worth preserving under its own row — the outcome's real history
  * (what happened, when) lives in `outcomes`/`outcome_exceptions`, not here,
- * and `wh.autonomy_for()` already falls back to `'observe'` the moment no
+ * and `wh.autonomy_for()` already falls back to `'prepare'` the moment no
  * row exists for an outcome key. So this is a real delete, not a status
  * flip: RLS already permits it (`responsibilities_write_admin` is `for
  * all`), and deleting frees the outcome key to be assigned again from

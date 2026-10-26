@@ -79,7 +79,7 @@ describe("checking on the agents", () => {
 
   it("always proposes execute — what each step may actually do is gated per step", () => {
     const intent = read("check on things");
-    const proposal = proposeFromIntent(intent, { actor: { roles: ["adult"] }, autonomy: "observe", entitled: true });
+    const proposal = proposeFromIntent(intent, { actor: { roles: ["adult"] }, autonomy: "prepare", entitled: true });
     expect(proposal.kind).toBe("executed");
   });
 });
@@ -187,7 +187,7 @@ describe("greetings", () => {
   it("answers hello warmly rather than as a misunderstanding", () => {
     const intent = read("hi");
     expect(intent.action).toBe("greet");
-    const proposal = proposeFromIntent(intent, { actor: { roles: ["adult"] }, autonomy: "approve", entitled: true });
+    const proposal = proposeFromIntent(intent, { actor: { roles: ["adult"] }, autonomy: "prepare", entitled: true });
     expect(proposal.kind).toBe("answer");
     if (proposal.kind === "answer") expect(proposal.summary).toMatch(/hello/i);
   });
@@ -201,7 +201,7 @@ describe("greetings", () => {
   });
 
   it("says what it can do when asked", () => {
-    const proposal = proposeFromIntent(read("what can you do?"), { actor: { roles: ["adult"] }, autonomy: "approve", entitled: true });
+    const proposal = proposeFromIntent(read("what can you do?"), { actor: { roles: ["adult"] }, autonomy: "prepare", entitled: true });
     if (proposal.kind === "answer") expect(proposal.summary).toMatch(/groceries/);
   });
 });
@@ -295,7 +295,7 @@ describe("changing a meal", () => {
     expect(intent.action).toBe("unknown");
     expect(intent.target).toEqual({ kind: "outcome", reference: "meals.dinner" });
     expect(intent.parameters.clarify).toBe("What would you like for dinner on Sun 20 Sep? Tell me the dish and I will note the change.");
-    expect(proposeFromIntent(intent, { actor: { roles: ["adult"] }, autonomy: "approve", entitled: true })).toEqual({
+    expect(proposeFromIntent(intent, { actor: { roles: ["adult"] }, autonomy: "prepare", entitled: true })).toEqual({
       kind: "clarify",
       question: "What would you like for dinner on Sun 20 Sep? Tell me the dish and I will note the change.",
     });

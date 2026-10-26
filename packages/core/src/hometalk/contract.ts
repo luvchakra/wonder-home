@@ -61,7 +61,7 @@ export type TurnReply = {
  *   - `completed` only when the executor recorded the action as executed.
  *     An execution that failed, or was proposed as executed but has no
  *     executed record, is `failed` — never "done".
- *   - A refusal (permission, plan, observe-only) is `not_authorized`.
+ *   - A refusal (permission, plan) is `not_authorized`.
  *   - Everything else is `answered`.
  */
 export function toHomeTalkResponse(requestId: string, reply: TurnReply): HomeTalkResponse {

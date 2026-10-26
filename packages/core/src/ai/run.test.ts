@@ -97,15 +97,8 @@ describe("the agent pipeline, gate by gate", () => {
     expect(state.toolCalls).toEqual([expect.objectContaining({ tool_name: "list.add_item", outcome: "executed" })]);
   });
 
-  it("observe — nothing is written: the step is refused before any executor runs", async () => {
-    state.autonomy = { data: "observe", error: null };
-    const summary = await runHouseholdAgents({} as never, HOUSEHOLD, ADMIN);
-    expect(executor.run).not.toHaveBeenCalled();
-    expect(summary).toMatchObject({ executed: 0, refused: 1 });
-    expect(state.toolCalls).toEqual([expect.objectContaining({ outcome: "refused", refusal_code: "autonomy_forbids" })]);
-  });
-
-  it.each(["prepare", "approve"] as const)("%s — the step waits for a person; no executor runs before approval", async (mode) => {
+  // "observe" and "approve" are old values (migration 20261026090000); one left behind fails closed to prepare.
+  it.each(["prepare", "observe", "approve"] as const)("%s — the step waits for a person; no executor runs before approval", async (mode) => {
     state.autonomy = { data: mode, error: null };
     const summary = await runHouseholdAgents({} as never, HOUSEHOLD, ADMIN);
     expect(executor.run).not.toHaveBeenCalled();

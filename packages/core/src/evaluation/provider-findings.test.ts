@@ -124,14 +124,14 @@ describe("HomeTalk: what a model leaves out or misfiles", () => {
 
   it("a child asking to pay is refused before being asked which bill", () => {
     const payment = intent({ action: "make_payment", actorMemberId: "a-asmi", target: { kind: "unspecified" }, confidence: 0.5, utterance: "Pay the electricity bill" });
-    const proposal = proposeFromIntent(payment, { actor: { roles: ["child"] }, autonomy: "approve", entitled: true });
+    const proposal = proposeFromIntent(payment, { actor: { roles: ["child"] }, autonomy: "prepare", entitled: true });
     expect(proposal.kind).toBe("refused");
   });
 
   it("an adult with the same unclear request is still asked, and a plan that lacks the feature still says so after asking", () => {
     const payment = intent({ action: "make_payment", actorMemberId: "a-kunal", target: { kind: "unspecified" }, confidence: 0.5, utterance: "Pay it" });
-    expect(proposeFromIntent(payment, { actor: { roles: ["head"] }, autonomy: "approve", entitled: true }).kind).toBe("clarify");
-    expect(proposeFromIntent(payment, { actor: { roles: ["child"] }, autonomy: "approve", entitled: false }).kind).toBe("clarify");
+    expect(proposeFromIntent(payment, { actor: { roles: ["head"] }, autonomy: "prepare", entitled: true }).kind).toBe("clarify");
+    expect(proposeFromIntent(payment, { actor: { roles: ["child"] }, autonomy: "prepare", entitled: false }).kind).toBe("clarify");
   });
 
   it("the model is told the moment the same way in production and in evaluation", () => {

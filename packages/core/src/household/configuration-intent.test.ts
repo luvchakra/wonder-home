@@ -103,7 +103,7 @@ describe("proposing a change", () => {
           outcomeKey: "school.run",
           primaryMemberId: MEMBERS[1]!.id,
           backupMemberId: null,
-          aiMode: "approve",
+          aiMode: "prepare",
           priority: 2,
         },
       ],
@@ -115,7 +115,7 @@ describe("proposing a change", () => {
     expect(proposal.change.responsibility.primaryMemberId).toBe(MEMBERS[0]!.id);
     expect(proposal.change.responsibility.backupMemberId).toBe(MEMBERS[1]!.id);
     // A handover does not quietly reset how much WonderHome may do.
-    expect(proposal.change.responsibility.aiMode).toBe("approve");
+    expect(proposal.change.responsibility.aiMode).toBe("prepare");
     expect(proposal.downstream.join(" ")).toContain("Ravi Nair stays on as backup");
   });
 
@@ -177,25 +177,21 @@ describe("proposing a change", () => {
     expect(proposal.downstream.join(" ")).toContain("autonomy never overrides a policy");
   });
 
-  it("every autonomy level is reachable by sentence", () => {
-    const existing = [
-      {
-        outcomeKey: "finance.bills_paid",
-        primaryMemberId: MEMBERS[1]!.id,
-        backupMemberId: null,
-        aiMode: "prepare" as AutonomyMode,
-        priority: 3,
-      },
+  it("every autonomy level is reachable by sentence, and stepping down is as easy to say as stepping up", () => {
+    // Each sentence starts from the other mode, so it is always a change.
+    const existingAt = (aiMode: AutonomyMode) => [
+      { outcomeKey: "finance.bills_paid", primaryMemberId: MEMBERS[1]!.id, backupMemberId: null, aiMode, priority: 3 },
     ];
-    const said: Record<AutonomyMode, string> = {
-      observe: "Just watch the bills for now.",
-      prepare: "Get the bills ready and leave it to me.",
-      approve: "Ask me before paying the bills.",
-      execute: "Handle the bills yourself.",
-    };
+    // "Just watch" and "ask me first" mean the same now: WonderHome waits for a person (the owner, 2026-10-26).
+    const said: [string, AutonomyMode][] = [
+      ["Just watch the bills for now.", "prepare"],
+      ["Get the bills ready and leave it to me.", "prepare"],
+      ["Ask me before paying the bills.", "prepare"],
+      ["Handle the bills yourself.", "execute"],
+    ];
 
-    for (const [mode, utterance] of Object.entries(said)) {
-      const proposal = proposeConfiguration(utterance, context({ existing }));
+    for (const [utterance, mode] of said) {
+      const proposal = proposeConfiguration(utterance, context({ existing: existingAt(mode === "prepare" ? "execute" : "prepare") }));
       expect(proposal.kind, utterance).toBe("change");
       if (proposal.kind !== "change" || proposal.change.kind !== "responsibility") continue;
       expect(proposal.change.responsibility.aiMode, utterance).toBe(mode);

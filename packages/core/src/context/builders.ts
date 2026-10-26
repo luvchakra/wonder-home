@@ -1453,12 +1453,8 @@ function autonomyWord(mode: string): string {
   switch (mode) {
     case "execute":
       return "act on its own";
-    case "approve":
-      return "act once approved";
-    case "prepare":
-      return "prepare but not act";
     default:
-      return "only observe";
+      return "act once approved";
   }
 }
 

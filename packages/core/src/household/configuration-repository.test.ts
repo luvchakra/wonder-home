@@ -67,17 +67,17 @@ describe("setAutonomyForOutcomes", () => {
     expect(upserts).toEqual([]);
   });
 
-  it("lets an unowned outcome be watched or prepared, since it does not act on its own", async () => {
+  it("lets an unowned outcome wait for a person, since it does not act on its own", async () => {
     const { client, upserts } = fakeSupabase();
-    const changed = await setAutonomyForOutcomes(client, { householdId: HOUSEHOLD, actorMemberId: ACTOR, members: MEMBERS, outcomeKeys: ["meals.dinner_ready"], aiMode: "observe" });
+    const changed = await setAutonomyForOutcomes(client, { householdId: HOUSEHOLD, actorMemberId: ACTOR, members: MEMBERS, outcomeKeys: ["meals.dinner_ready"], aiMode: "prepare" });
 
     expect(changed).toBe(1);
-    expect(upserts.map((values) => values.ai_mode)).toEqual(["observe"]);
+    expect(upserts.map((values) => values.ai_mode)).toEqual(["prepare"]);
   });
 
   it("keeps each responsibility's owner, backup and priority as they were", async () => {
     const { client, upserts } = fakeSupabase();
-    await setAutonomyForOutcomes(client, { householdId: HOUSEHOLD, actorMemberId: ACTOR, members: MEMBERS, outcomeKeys: ["laundry.ready"], aiMode: "approve" });
+    await setAutonomyForOutcomes(client, { householdId: HOUSEHOLD, actorMemberId: ACTOR, members: MEMBERS, outcomeKeys: ["laundry.ready"], aiMode: "prepare" });
 
     expect(upserts).toEqual([
       {
@@ -85,7 +85,7 @@ describe("setAutonomyForOutcomes", () => {
         outcome_key: "laundry.ready",
         primary_member_id: MEMBERS[0]!.id,
         backup_member_id: MEMBERS[1]!.id,
-        ai_mode: "approve",
+        ai_mode: "prepare",
         priority: 1,
       },
     ]);
@@ -93,7 +93,7 @@ describe("setAutonomyForOutcomes", () => {
 
   it("writes nothing and reports zero when none of the keys is a responsibility", async () => {
     const { client, upserts } = fakeSupabase();
-    const changed = await setAutonomyForOutcomes(client, { householdId: HOUSEHOLD, actorMemberId: ACTOR, members: MEMBERS, outcomeKeys: ["pets.walk"], aiMode: "observe" });
+    const changed = await setAutonomyForOutcomes(client, { householdId: HOUSEHOLD, actorMemberId: ACTOR, members: MEMBERS, outcomeKeys: ["pets.walk"], aiMode: "prepare" });
 
     expect(changed).toBe(0);
     expect(upserts).toEqual([]);

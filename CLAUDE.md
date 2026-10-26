@@ -15,7 +15,7 @@ Read on every turn, so keep it short. Mechanics live in `docs/` (pointers below)
 ## Token economy
 Cost ≈ context size × turns. Every turn re-reads this file, the whole conversation and every tool result, so the costliest thing is a turn that didn't need to happen. Measured baseline: `docs/progress/2026-10-24-token-economy.md`; this section's habits: `docs/progress/2026-10-25-token-habits.md`.
 - **One request, one session.** After a PR merges, end with "Start a new session for the next request." Never take a new, unrelated request into a session that has already merged one; `/compact` if a request must continue. State lives in `docs/` and PRs, not in chat.
-- **Don't wake for PR noise.** With auto-merge on, open the PR, enable auto-merge and end the turn; don't subscribe to PR activity. Subscribe only when the owner asks to watch a PR or CI has already failed on it. A Vercel bot comment, "subscription created" or "check suite completed" with nothing failing needs no reply beyond one line. A red PR left open is caught at the next session's startup.
+- **Don't wake for PR noise.** With auto-merge on, open the PR, enable auto-merge, schedule the one merge check ("Opening and merging pull requests") and end the turn; don't subscribe to PR activity. Subscribe only when the owner asks to watch a PR or CI has already failed on it. A Vercel bot comment, "subscription created" or "check suite completed" with nothing failing needs no reply beyond one line.
 - **Batch.** Group small related requests into one branch and one PR. Add to the open PR while CI runs.
 - **CI waits.** On a CI-completed event, read the check results once and act (merge or fix) in that same turn. No polling, `sleep` loops or repeated status checks.
 - **Whole ask, first message.** Story id, file or screen, and what "done" means, so no clarifying rounds. No "status?" check-ins; the PR shows state.
@@ -130,6 +130,12 @@ All SQL against the Supabase project, including `mcp__Supabase__execute_sql`, `a
 - Every change reaches `main` through a PR, never a direct push. Open a PR for finished work pushed to a story or feature branch; never leave pushed commits with no PR against them.
 - **Before every push, run `scripts/branch-sync.sh`.** Auto-merge can land a PR between two of your pushes. When the script says a PR from the branch merged, the next push needs a new PR; never add commits to a branch whose PR merged and leave them without one.
 - Turn on auto-merge (squash) for every PR, as soon as it opens, whether or not this session opened it. Never ask first.
+- **A PR is done only when it has merged and deployed** (#351 sat red overnight). After enabling auto-merge, schedule one check (`ScheduleWakeup` or `send_later`) for when CI should be done, about 10 minutes. On it:
+  - merged → confirm the production deployment for the merge commit is READY, then apply any pending live migration;
+  - red CI → read the failing job's log, fix the cause and push (never lower a gate, a coverage count or a test to get green);
+  - conflict → `scripts/branch-sync.sh`, push;
+  - green and clean but not merged → merge it yourself (squash).
+  Reschedule until merged, and tell the owner a change is live only after that. At every session's startup, check this session's and earlier open PRs the same way.
 - The repo must allow auto-merge (Settings → General → Pull Requests). If the enable call is refused, say so once in the PR thread or to the owner, then merge yourself once CI is green with no conflict.
 - Only four things hold a merge: an open unaddressed review thread; a draft or WIP PR; red CI (fix it, don't wait); a red nightly E2E on `main` (`e2e-nightly.yml`), which is fixed before other work merges. "Flaky" is not a root cause.
 - Squash-merge. Docs, trackers, progress notes and test updates go in the PR for the code they describe.

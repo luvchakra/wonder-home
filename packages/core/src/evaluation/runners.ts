@@ -192,7 +192,7 @@ async function talkTurn(c: HomeTalkCase, utterance: string, carried: Carried, mo
     pending: corrected ? null : carried.pending,
     clarifying: corrected ? null : carried.clarifying,
     history: carried.history,
-    autonomyFor: () => c.autonomy ?? "approve",
+    autonomyFor: () => c.autonomy ?? "prepare",
     confirmRequestedChanges: c.confirmRequestedChanges === true,
     entitledFor: () => true,
     executable: canExecute,
@@ -487,7 +487,7 @@ export async function observeHomeSend(c: HomeSendCase, models: Models = {}): Pro
     reconciliation,
     subject,
     memberInitiated: c.memberInitiated ?? c.source.channel !== "email",
-    autonomy: c.autonomy ?? "observe",
+    autonomy: c.autonomy ?? "prepare",
   });
 
   const proposal = reconciliation?.proposal.type ?? "new";

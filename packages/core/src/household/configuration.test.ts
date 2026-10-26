@@ -47,7 +47,7 @@ describe("assignments that hold together", () => {
     // The row would say the outcome is unowned and simultaneously that
     // somebody covers it.
     const result = validateResponsibility(
-      responsibility({ primaryMemberId: null, backupMemberId: "priya", aiMode: "observe" }),
+      responsibility({ primaryMemberId: null, backupMemberId: "priya", aiMode: "prepare" }),
       members,
     );
 
@@ -65,18 +65,9 @@ describe("assignments that hold together", () => {
     expect(result.problems[0]?.message).toContain("own an outcome before");
   });
 
-  it("refuses sending approvals to nobody", () => {
+  it("allows an unowned outcome as long as WonderHome waits for a person (what it raises goes to the household's owner)", () => {
     const result = validateResponsibility(
-      responsibility({ primaryMemberId: null, backupMemberId: null, aiMode: "approve" }),
-      members,
-    );
-
-    expect(result.ok).toBe(false);
-  });
-
-  it("allows an unowned outcome as long as WonderHome only watches it", () => {
-    const result = validateResponsibility(
-      responsibility({ primaryMemberId: null, backupMemberId: null, aiMode: "observe" }),
+      responsibility({ primaryMemberId: null, backupMemberId: null, aiMode: "prepare" }),
       members,
     );
 
@@ -243,22 +234,22 @@ describe("what a change will actually do", () => {
     expect(lines.join(" ")).toContain("never overrides a policy");
   });
 
-  it("says observe does nothing at all, so nobody expects suggestions", () => {
+  it("says prepare waits for a yes, so nobody expects WonderHome to act on its own", () => {
     const lines = downstreamOf({
       kind: "responsibility",
       outcomeKey: "laundry.ready",
-      aiMode: "observe",
+      aiMode: "prepare",
       owned: true,
     });
 
-    expect(lines[0]).toContain("does nothing else");
+    expect(lines[0]).toContain("asks before it acts");
   });
 
   it("says where things go when nobody owns the outcome", () => {
     const lines = downstreamOf({
       kind: "responsibility",
       outcomeKey: "laundry.ready",
-      aiMode: "observe",
+      aiMode: "prepare",
       owned: false,
     });
 

@@ -29,7 +29,7 @@ import type { HouseholdIntent } from "./intent";
  * - permission, entitlement and RLS run first (`proposeFromIntent`); a
  *   request nobody may make is refused before consent is considered;
  * - what WonderHome does on its own — agents, HomeSend auto-apply — is still
- *   the household's autonomy setting, `observe` unless set. Consent is only
+ *   the household's autonomy setting, `prepare` unless set. Consent is only
  *   ever for what the person themselves just asked;
  * - a child's or a helper's request follows the autonomy setting, as before:
  *   a child asking for a sleepover does not put one on the calendar;
