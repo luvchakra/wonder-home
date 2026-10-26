@@ -129,6 +129,8 @@ export function canExecute(intent: HouseholdIntent): boolean {
       return intent.utterance.trim().length > 0;
     case "complete_homesend_item":
       return typeof intent.parameters.itemId === "string" && typeof intent.parameters.field === "string" && typeof intent.parameters.answer === "string";
+    case "fill_homesend_details":
+      return true;
     case "set_fitness_goal":
       return (
         typeof intent.parameters.activity === "string" &&
@@ -213,7 +215,28 @@ async function completeHomeSendItem(intent: HouseholdIntent, context: ExecutionC
   });
   if (!answered.handBack) return { ok: true, text: answered.text, result: { homeSendItemId: itemId, ...(answered.clarify ? { clarify: answered.clarify } : {}) } };
   const added = context.addFromHomeSend ? await context.addFromHomeSend(itemId).catch(() => null) : null;
-  return { ok: true, text: handedBackText(answered.text, { added, stillNeeded: answered.stillNeeded }), result: { homeSendItemId: itemId, ...(added ? { added: added.where } : {}) } };
+  const closing = handedBackText(answered.text, { added, stillNeeded: answered.stillNeeded });
+  // Filling in several waiting items (14-050): on to the next one that still needs something.
+  const queue = Array.isArray(intent.parameters.queue) ? intent.parameters.queue.filter((id): id is string => typeof id === "string") : [];
+  const { nextQueuedQuestion } = await import("../hometalk/intake-questions");
+  const next = queue.length > 0 ? await nextQueuedQuestion(context.supabase, { householdId: context.householdId, queue, people: context.members }).catch(() => null) : null;
+  if (next) return { ok: true, text: `${closing} Next${next.title ? `, **${next.title}**` : ""}: ${next.question}`, result: { homeSendItemId: itemId, ...(added ? { added: added.where } : {}), clarify: next.clarify } };
+  return { ok: true, text: closing, result: { homeSendItemId: itemId, ...(added ? { added: added.where } : {}) } };
+}
+
+/**
+ * "Yes" to HomeTalk's offer to fill in what waits in HomeSend (14-050): the
+ * first item's first question, with the rest queued behind it; "no" leaves
+ * them all waiting. Only questions — nothing is written here.
+ */
+async function fillHomeSendDetails(intent: HouseholdIntent, context: ExecutionContext): Promise<ExecutionResult> {
+  if (intent.parameters.decline === true) return { ok: true, text: "No problem — they'll wait in HomeSend for you.", result: {} };
+  const { nextQueuedQuestion, waitingForDetails } = await import("../hometalk/intake-questions");
+  const offered = Array.isArray(intent.parameters.itemIds) ? intent.parameters.itemIds.filter((id): id is string => typeof id === "string") : [];
+  const queue = offered.length > 0 ? offered : (await waitingForDetails(context.supabase, { householdId: context.householdId, people: context.members, now: context.now ?? new Date() })).map((item) => item.itemId);
+  const next = queue.length > 0 ? await nextQueuedQuestion(context.supabase, { householdId: context.householdId, queue, people: context.members }) : null;
+  if (!next) return { ok: true, text: "Everything waiting in HomeSend already has what it needs — nothing to fill in.", result: {} };
+  return { ok: true, text: `${next.title ? `First, **${next.title}**: ` : ""}${next.question} (Say "skip" to leave one for later.)`, result: { clarify: next.clarify } };
 }
 
 /** Why an approved intent still cannot be done by WonderHome itself — said plainly, never as "on its way". */
@@ -287,6 +310,8 @@ async function runIntent(intent: HouseholdIntent, context: ExecutionContext): Pr
         return await fileWithHomeSend(intent, context);
       case "complete_homesend_item":
         return await completeHomeSendItem(intent, context);
+      case "fill_homesend_details":
+        return await fillHomeSendDetails(intent, context);
       case "plan_event":
         return await putOnCalendar(intent, context);
       case "record_absence":

@@ -51,6 +51,13 @@ export const INTENT_ACTIONS = [
    * answer to an open question; never read from a fresh sentence.
    */
   "complete_homesend_item",
+  /**
+   * "Yes" to HomeTalk's offer to fill in what is waiting in HomeSend ("2 things
+   * in HomeSend need a detail: shall we fill them in?", story 14-050): asks the
+   * first item's first question, then the next item's after it. Only fills in
+   * the member's own waiting items; nothing reaches a domain table.
+   */
+  "fill_homesend_details",
   "set_preference",
   "make_payment",
   /** "Add the electricity bill, 2,400 due on the 5th every month" — a new bill on Bills (11-010); never a payment. */
@@ -167,7 +174,7 @@ export function disposeIntent(intent: HouseholdIntent): IntentDisposition {
   }
 
   // HomeSend reads the whole sentence itself, so being told about something new names no target here.
-  if (intent.target.kind === "unspecified" && intent.action !== "ask_status" && intent.action !== "check_agents" && intent.action !== "find_places" && intent.action !== "open_screen" && intent.action !== "file_with_homesend" && intent.action !== "complete_homesend_item") {
+  if (intent.target.kind === "unspecified" && intent.action !== "ask_status" && intent.action !== "check_agents" && intent.action !== "find_places" && intent.action !== "open_screen" && intent.action !== "file_with_homesend" && intent.action !== "complete_homesend_item" && intent.action !== "fill_homesend_details") {
     return { kind: "clarify", question: "Which one did you mean?" };
   }
 

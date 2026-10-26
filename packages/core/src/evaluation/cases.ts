@@ -918,6 +918,20 @@ const HOMETALK: HomeTalkCase[] = [
     utterance: "lots",
     expected: { interpretation: "complete_homesend_item", action: "executed" },
   },
+  {
+    id: "HT-156", surface: "hometalk", household: "A", category: "references", actor: "a-kunal",
+    description: "HomeTalk offered, on its own, to fill in what waits in HomeSend (14-050); \"yes\" starts asking, and nothing is added by it.",
+    clarifying: { action: "fill_homesend_details", target: { kind: "unspecified" }, parameters: { itemIds: ["hs-item-1"] }, question: "1 thing in HomeSend needs a detail — Diwali dinner. Shall we fill it in now? Say yes, or no to leave it.", utterance: "", asked: 1 },
+    utterance: "yes",
+    expected: { interpretation: "fill_homesend_details", action: "executed" },
+  },
+  {
+    id: "HT-157", surface: "hometalk", household: "A", category: "references", actor: "a-kunal",
+    description: "A new request while the offer to fill in HomeSend details is open is read as that request, never as a yes.",
+    clarifying: { action: "fill_homesend_details", target: { kind: "unspecified" }, parameters: { itemIds: ["hs-item-1"] }, question: "1 thing in HomeSend needs a detail — Diwali dinner. Shall we fill it in now? Say yes, or no to leave it.", utterance: "", asked: 1 },
+    utterance: "Add milk to the list",
+    expected: { interpretation: "add_to_list" },
+  },
   // The owner, 2026-10-26: "Add oil to the groceries" → "coconut oil" met "Coconut oil is already on the shopping
   // list (1 bottle), so there was nothing to add." — "it should ask for quantity". HomeTalk asks how much first.
   {

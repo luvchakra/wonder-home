@@ -407,4 +407,10 @@ export const homesendEn = {
   "homesend.install.desktop1": "Look for the install icon at the right-hand end of the address bar.",
   "homesend.install.desktop2": "Or open the browser’s menu and choose “Install WonderHome…”.",
   "homesend.install.other": "Open your browser’s menu and look for “Install app” or “Add to Home screen”.",
+  // HomeTalk's offer to fill in what waits in HomeSend (14-050).
+  "homesend.offer.ask#one": "{count} thing in HomeSend needs a detail — {titles}. Shall we fill it in now? Say yes, or no to leave it.",
+  "homesend.offer.ask#other": "{count} things in HomeSend need a detail — {titles}. Shall we fill them in now? Say yes, or no to leave them.",
+  "homesend.offer.askUntitled#one": "{count} thing in HomeSend needs a detail. Shall we fill it in now? Say yes, or no to leave it.",
+  "homesend.offer.askUntitled#other": "{count} things in HomeSend need a detail. Shall we fill them in now? Say yes, or no to leave them.",
+  "homesend.offer.and": " and ",
 } as const;

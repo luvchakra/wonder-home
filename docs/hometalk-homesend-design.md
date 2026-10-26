@@ -238,6 +238,8 @@ To measure: `updated_at - created_at` on `home_send_items`, and `hometalk_channe
 | I-19 | WhatsApp acknowledgements and the first item question were English only | Hard-coded strings | Catalog words (`whatsapp.*`) in all eight languages, in the member's language | Live (14-047) |
 | I-20 | An alert on the platform's own key told no one | Matched only to household keys | Emailed once to the platform's owners and operators; shown in the AI operations read | Live (14-048) |
 | I-21 | No split of added on its own vs confirmed, nor why things failed safely | Not counted | Both in the platform-admin HomeSend metrics | Live (14-049) |
+| I-22 | Waiting items sat unfilled unless someone opened HomeSend | HomeTalk asked only about something just sent | HomeTalk offers, at most twice a day, to fill them in; "yes" asks item by item | Live (14-050) |
+| I-23 | WhatsApp refusals and connect replies were English only | Hard-coded strings | Closed refusal codes and `whatsapp.link.*` in eight languages | Live (14-051) |
 
 ---
 
@@ -245,6 +247,7 @@ To measure: `updated_at - created_at` on `home_send_items`, and `hometalk_channe
 
 Items 1, 2 and 4 of the earlier list are built (14-048, 14-045, 14-046); item 5 needs a key.
 
-1. **Questions in the app for waiting items** (story 14-050). HomeTalk could offer, unprompted, "2 things in HomeSend need a detail: shall we fill them in?". This needs the owner's yes, since it starts a conversation.
-2. **Live provider evaluation of the intake model change** (`npm run eval -- --provider configured`). Run once with a key.
-3. **The rest of WhatsApp's English.** A rejection message from HomeSend's intake (`IngestRejected`) and the connect-code replies (sent before anyone is known) are still English.
+1. **Live provider evaluation of the intake model change** (`npm run eval -- --provider configured`). Run once with a key.
+2. **The last English on WhatsApp:** the "not connected yet" reply and the answer to a code that names nobody. Nobody is known yet, so there is no language to use.
+
+Built since: HomeTalk's offer to fill in waiting items (14-050, the owner's yes, 2026-10-26) and the rest of WhatsApp's words in the member's language (14-051).

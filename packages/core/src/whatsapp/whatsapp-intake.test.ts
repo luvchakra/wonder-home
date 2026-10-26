@@ -15,7 +15,7 @@ import { canExecute } from "../conversation/executor";
 import { groundIntent } from "../conversation/grounding";
 import { NO_REFERENCES } from "../conversation/references";
 import { acknowledgementFor, addedReply, leadOf, processWhatsAppMessage, QUESTION_REPLY, receiveWhatsAppMessages, WHATSAPP_PROCESS_KIND, withAdded, type WhatsAppIntakeDeps } from "./intake";
-import { CONNECT_CODE_LENGTH, connectMessage, generateConnectCode, hashConnectCode, readConnectCode, whatsappBusinessNumber, whatsappChatLink } from "./linking";
+import { CONNECT_CODE_LENGTH, LINK_REPLIES, connectMessage, generateConnectCode, hashConnectCode, readConnectCode, whatsappBusinessNumber, whatsappChatLink } from "./linking";
 
 /** The WhatsApp HomeSend spec: WhatsApp as an intake channel, never an authorization channel. */
 
@@ -137,6 +137,22 @@ describe("connect codes", () => {
 });
 
 describe("the webhook as an intake", () => {
+  // 14-051: the reply to a connect code is in the member's own language once the code says who they are.
+  it("says a number is connected in the member's language", async () => {
+    const h = harness({ linkOutcome: "linked" });
+    h.tables.household_members = [{ id: MEMBER, household_id: HOUSEHOLD, language: "es" }];
+    const out = replies();
+    await post(delivery([{ ...TEXT, id: "wamid.C2", text: { body: "CONNECT ABCDEFGH23" } }]), { config: WA_ENV, admin: () => h.client, fetch: out.fetchImpl });
+    expect(out.sent[0]!.text).toMatch(/^WhatsApp conectado ✓/);
+  });
+
+  it("answers a code that names nobody in English", async () => {
+    const h = harness({ linkOutcome: "invalid" });
+    const out = replies();
+    await post(delivery([{ ...TEXT, id: "wamid.C3", text: { body: "CONNECT ABCDEFGH23" } }]), { config: WA_ENV, admin: () => h.client, fetch: out.fetchImpl });
+    expect(out.sent[0]!.text).toBe(LINK_REPLIES.invalid);
+  });
+
   it("links a number only through its code, says so, and keeps nothing else from the message", async () => {
     const h = harness({ linkOutcome: "linked" });
     const out = replies();
@@ -513,6 +529,16 @@ describe("processing into HomeSend", () => {
       h.tables.whatsapp_messages![0]!.text_content = "2 litres mustard oil";
       await processWhatsAppMessage(h.client, id, { config: CONFIG, fetch: replies().fetchImpl, ingest: { classify: oil } });
       expect((h.tables.home_send_items![0]!.understanding as { score: number }).score).toBeGreaterThan(0.95);
+    });
+
+    // 14-051: a refusal is said in the member's language too.
+    it("says why it couldn't take something in the member's language", async () => {
+      const { h, id } = await received("text");
+      h.tables.whatsapp_messages![0]!.text_content = "   ";
+      h.tables.household_members = [{ id: MEMBER, household_id: HOUSEHOLD, language: "hi" }];
+      const out = replies();
+      await processWhatsAppMessage(h.client, id, { config: CONFIG, fetch: out.fetchImpl, ingest: { classify: oil } });
+      expect(out.sent[0]!.text).toBe("वह संदेश खाली था।");
     });
 
     it("AT-H07 the member's language is used for WonderHome's own words", async () => {

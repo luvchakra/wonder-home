@@ -126,6 +126,8 @@ export function answerClarification(
 ): HouseholdIntent | null {
   // HomeTalk's question about a HomeSend item (`hometalk/intake-questions.ts`).
   if (pending.action === "complete_homesend_item") return answerIntakeDetail(pending, utterance, context);
+  // HomeTalk's offer to fill in what waits in HomeSend (14-050): a yes or a no, nothing else.
+  if (pending.action === "fill_homesend_details") return answerDetailsOffer(pending, utterance, context);
 
   // "How much coconut oil should I add?"
   if (pending.parameters.awaiting === "quantity") return answerQuantity(pending, utterance, context);
@@ -315,6 +317,25 @@ function answerIntakeDetail(pending: PendingClarification, utterance: string, co
     utterance,
     target: { kind: "unspecified" },
     parameters: { ...pending.parameters, answer: said },
+    confidence: 0.95,
+  };
+}
+
+const OFFER_YES = /^(?:yes|yeah|yep|yup|sure|ok|okay|go ahead|let'?s (?:do it|go|do that)|please|fine|alright|all right|haan|ha|ji|si|oui|ja|是|好)(?:[ ,]+(?:please|sure|let'?s do it|go ahead))?[.!]*$/i;
+const OFFER_NO = /^(?:no|nope|not now|later|maybe later|skip|leave (?:it|them)|no thanks|nahi|nahin|non|nein|不)(?:[ ,]+(?:thanks|thank you))?[.!]*$/i;
+
+/** "Yes" fills in the waiting items one question at a time; "no" leaves them; anything else is a new request. */
+function answerDetailsOffer(pending: PendingClarification, utterance: string, context: { actorMemberId: string; channel: "text" | "voice" }): HouseholdIntent | null {
+  const said = utterance.trim();
+  const yes = OFFER_YES.test(said);
+  if (!yes && !OFFER_NO.test(said)) return null;
+  return {
+    action: "fill_homesend_details",
+    actorMemberId: context.actorMemberId,
+    channel: context.channel,
+    utterance,
+    target: { kind: "unspecified" },
+    parameters: { itemIds: pending.parameters.itemIds ?? [], ...(yes ? {} : { decline: true }) },
     confidence: 0.95,
   };
 }

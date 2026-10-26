@@ -395,4 +395,10 @@ export const homesendFr: AreaCatalog<typeof homesendEn> = {
   "homesend.install.desktop1": "Cherchez l’icône d’installation à l’extrémité droite de la barre d’adresse.",
   "homesend.install.desktop2": "Ou ouvrez le menu du navigateur et choisissez « Installer WonderHome… ».",
   "homesend.install.other": "Ouvrez le menu de votre navigateur et cherchez « Installer l’application » ou « Ajouter à l’écran d’accueil ».",
+  // HomeTalk's offer to fill in what waits in HomeSend (14-050).
+  "homesend.offer.ask#one": "{count} élément dans HomeSend attend un détail — {titles}. On le complète maintenant ? Dites oui, ou non pour le laisser.",
+  "homesend.offer.ask#other": "{count} éléments dans HomeSend attendent un détail — {titles}. On les complète maintenant ? Dites oui, ou non pour les laisser.",
+  "homesend.offer.askUntitled#one": "{count} élément dans HomeSend attend un détail. On le complète maintenant ? Dites oui, ou non pour le laisser.",
+  "homesend.offer.askUntitled#other": "{count} éléments dans HomeSend attendent un détail. On les complète maintenant ? Dites oui, ou non pour les laisser.",
+  "homesend.offer.and": " et ",
 };

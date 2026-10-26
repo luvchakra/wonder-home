@@ -94,7 +94,9 @@ export async function receiveWhatsAppMessages(admin: SupabaseClient, messages: r
         outcome.linked += 1;
         await auditChange({ householdId: result.householdId, actorMemberId: result.memberId, eventType: "whatsapp.linked", targetTable: "whatsapp_identities", targetId: result.identityId });
       }
-      await reply(message.phone, LINK_REPLIES[result.outcome]);
+      // In the member's own language once the code says who they are (14-051); English for a code that names nobody.
+      const t = result.householdId && result.memberId ? await memberWords(admin, result.householdId, result.memberId) : ENGLISH;
+      await reply(message.phone, t(`whatsapp.link.${result.outcome}`));
       continue;
     }
 
@@ -393,7 +395,8 @@ export async function processWhatsAppMessage(admin: SupabaseClient, messageId: s
     if (thrown instanceof IngestRejected) {
       await settle({ processing_status: "failed", failure_reason: "rejected" });
       events.push({ kind: "message_failed", householdId: row.household_id });
-      await say(thrown.message);
+      // In the member's language where the refusal has a closed word (14-051); its English otherwise.
+      await say(thrown.code ? (await words())(`whatsapp.rejected.${thrown.code}`) : thrown.message);
       await recordWhatsAppEvents(admin, events);
       return "read";
     }
