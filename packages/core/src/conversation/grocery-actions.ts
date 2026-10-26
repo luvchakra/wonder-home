@@ -185,14 +185,15 @@ export function quantityQuestion(names: readonly string[], items: readonly Groce
   if (known.length === 1) {
     const { name, item } = known[0]!;
     if (item?.toBuy) {
-      return `${name} is already on your shopping list (${say({ quantity: item.toBuy.quantity, unit: item.toBuy.unit })}). How much more should I add? Or say "that's enough" to leave it.`;
+      return `**${name}** is already on your shopping list (${say({ quantity: item.toBuy.quantity, unit: item.toBuy.unit })}).\nHow much more should I add?\nOr say "that's enough" to leave it.`;
     }
     const counted = item && unitInfo(item.unit).key === "pcs";
     return `How ${counted ? "many" : "much"} ${name.toLowerCase()} should I add? For example ${quantityExamples(item?.unit ?? null)}.`;
   }
-  const listed = known.map(({ name, item }) => (item?.toBuy ? `${name} (already on the list, ${say({ quantity: item.toBuy.quantity, unit: item.toBuy.unit })})` : name));
-  const leave = known.some(({ item }) => item?.toBuy) ? ` Or say "that's enough" to leave them.` : "";
-  return `How much of each should I add? ${listed.join(", ")}. For example "2 of each" or "1 litre ${known[0]!.name.toLowerCase()} and 6 ${known[1]!.name.toLowerCase()}".${leave}`;
+  // One line per item (the owner, 2026-10-26: "make the responses nicely structured").
+  const listed = known.map(({ name, item }) => (item?.toBuy ? `- **${name}** — ${say({ quantity: item.toBuy.quantity, unit: item.toBuy.unit })} already on the list` : `- **${name}**`));
+  const leave = known.some(({ item }) => item?.toBuy) ? `\nOr say "that's enough" to leave them.` : "";
+  return `How much of each should I add?\n${listed.join("\n")}\nFor example "2 of each" or "1 litre ${known[0]!.name.toLowerCase()} and 6 ${known[1]!.name.toLowerCase()}".${leave}`;
 }
 
 export type ListChangeEntry = { name: string; consumableId: string; created: boolean; delta: Amount; after: Amount };
@@ -259,9 +260,14 @@ export async function addToShoppingList(intent: HouseholdIntent, context: Contex
   } else if (changed.length === 0) {
     const reasons = [onIt, home].filter(Boolean).join("; ");
     text = `${forMeal ? `For ${forMeal.toLowerCase()}: ` : ""}${reasons ? `${reasons}, so there was nothing to add.` : "Nothing to add."}`;
-  } else {
-    const added = `Added ${joinAll(changed.map(changeWords))} to the ${list}`;
+  } else if (changed.length === 1) {
+    const added = `Added ${changeWords(changed[0]!)} to the ${list}`;
     text = `${forMeal ? `For ${forMeal.toLowerCase()}, I checked what is at home and on the list. ` : ""}${[added, onIt, home].filter(Boolean).join("; ")}.`;
+  } else {
+    // Two or more: one line each, so a phone shows a list, not a paragraph.
+    const added = `Added to the ${list}:\n${changed.map((entry) => `- ${changeWords(entry)}`).join("\n")}`;
+    const rest = [onIt, home].filter(Boolean).join("; ");
+    text = `${forMeal ? `For ${forMeal.toLowerCase()}, I checked what is at home and on the list.\n` : ""}${added}${rest ? `\n${rest[0]!.toUpperCase()}${rest.slice(1)}.` : ""}`;
   }
   return {
     text,
@@ -311,10 +317,10 @@ export async function removeFromShoppingList(intent: HouseholdIntent, context: C
   const took = changed.map((entry) =>
     entry.after.quantity > 0 ? `**${say(entry.delta)}** of **${entry.name}** off (now **${say(entry.after)}** to buy)` : `**${entry.name}** off`,
   );
-  const tookLine = took.length > 0 ? `Took ${took.join(", ")} the ${list}.` : "";
+  const tookLine = took.length === 0 ? "" : took.length === 1 ? `Took ${took[0]} the ${list}.` : `Took these off the ${list}:\n${took.map((entry) => `- ${entry.replace(/ off(?= \(|$)/, "")}`).join("\n")}`;
   const absent = missing.length > 0 ? `${missing.map((name) => `**${name}**`).join(", ")} ${missing.length === 1 ? "was" : "were"} not on the ${list}, so there was nothing to take off.` : "";
   return {
-    text: [tookLine, absent].filter(Boolean).join(" "),
+    text: [tookLine, absent].filter(Boolean).join(took.length > 1 ? "\n" : " "),
     result: { removed: changed.map((entry) => ({ name: entry.name, consumableId: entry.consumableId, before: entry.before, after: entry.after })), missing, alreadyTracked: changed.length === 0 },
   };
 }

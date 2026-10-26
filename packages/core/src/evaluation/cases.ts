@@ -945,7 +945,7 @@ const HOMETALK: HomeTalkCase[] = [
     id: "HT-152", surface: "hometalk", household: "A", category: "updates", actor: "a-kunal", autonomy: "execute",
     description: "An item already on the list is asked how much more, saying what is there, never \"nothing to add\".",
     utterance: "We're out of atta",
-    expected: { interpretation: "add_to_list", action: "clarify", answer: { includes: ["Atta is already on your shopping list (1 kg). How much more should I add?"], excludes: ["nothing to add"] } },
+    expected: { interpretation: "add_to_list", action: "clarify", answer: { includes: ["**Atta** is already on your shopping list (1 kg).\nHow much more should I add?"], excludes: ["nothing to add"] } },
     followUps: [{ utterance: "2 kg", expected: { interpretation: "add_to_list", action: "executed", answer: { includes: ["Atta"] } } }],
   },
   {
