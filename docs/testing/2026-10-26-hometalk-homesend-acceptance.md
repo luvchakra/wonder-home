@@ -142,6 +142,43 @@ Run them with `npx vitest run -t "AT-"`, or run the files above.
 
 Two product defects were found by these follow-up tests and fixed, as noted in the table. One E2E run failed once after a fresh build and did not reproduce in four further runs; its output was overwritten before it was captured.
 
+## Follow-up: I-27, a listed grocery, the reason and the row (25-039, 14-052)
+
+The owner, 2026-10-26: "2 litres mustard oil" on WhatsApp waited although groceries were Pre Approved; "Science project model · 70% sure · every detail is in what you sent"; Mustard oil waited at 97% with only "Review". Expected results were written into the tests before they ran.
+
+| Case | Expected | Result |
+|---|---|---|
+| AT-B06 (narrowed) | A likely duplicate of something on record that is not a grocery on the shopping list → waits | ✅ pass |
+| AT-F08 | Every detail found, scored 70% (medium) → "the AI wasn't sure" | ✅ pass |
+| AT-F09 | Every detail found, scored 97% → "every detail is in what you sent" | ✅ pass |
+| AT-F10 | Every detail found, a voice note heard at 92% → unsure | ✅ pass |
+| AT-F11 | A photo at 90% → "read from a photo or file"; missing details → "missing" | ✅ pass |
+| AT-L01 | Pre Approved + on the list + an amount → added on its own as a top-up | ✅ pass |
+| AT-L02 | Wait for Approval → waits; reason "groceries set to Wait for Approval" | ✅ pass |
+| AT-L03 | No amount → waits for the person to choose how much more | ✅ pass |
+| AT-L04 | Below the bar (99%) → waits; reason names the bar | ✅ pass |
+| AT-L05 | Two look-alike entries → one top-up, of the item HomeTalk would pick | ✅ pass |
+| AT-L06 | A number alone ("2 mustard oil") is an amount → top-up | ✅ pass |
+| AT-L07 | Matched but not on the shopping list → the duplicate rule, unchanged | ✅ pass |
+| AT-L08 | A photo of the list → always waits | ✅ pass |
+| AT-L09 to AT-L11 | A duplicate bill → govern; school work and an event → wait, never a top-up | ✅ pass |
+| AT-L12 | WhatsApp: "✅ Added 2 L more *Mustard oil* (now 3 L) (97% sure — …) — … You can undo it in HomeSend." | ✅ pass |
+| AT-L13 | WhatsApp, waiting on the list: "*Mustard oil* is already on your shopping list, so it's waiting in HomeSend for you to choose." No amount | ✅ pass |
+| AT-L14 | Something new held by the setting or the bar says which | ✅ pass |
+| AT-L15 | HomeTalk's hand-back says the same | ✅ pass |
+| AT-L16 × 8 languages | No braces; a wait echoes no amount; the top-up says "now 3 L" | ✅ pass |
+| AT-M01 | Row reasons: "already on the shopping list", "groceries set to Wait for Approval", "school work set to Wait for Approval", "below your bar of 97%" | ✅ pass |
+| AT-M02 | The decision gives the row its reason; added on its own or always waiting → none | ✅ pass |
+| AT-M03 × 8 languages | Every reason translated, filled in, at most 48 characters | ✅ pass |
+| AT-H08 | WhatsApp end to end, listed, Pre Approved, 95% → the top-up reply | ✅ pass |
+| AT-H09, AT-H10 | Listed, Wait for Approval / bar 99% → "already on your shopping list … to choose" | ✅ pass |
+| AT-H11 | Listed, no amount → HomeTalk asks how much first; nothing added | ✅ pass, after correcting the test: it first expected the waiting reply, but design §4.6 asks the amount before HomeSend decides |
+| AT-J02, AT-J03 (changed) | Told in HomeTalk and held by the bar / Wait for Approval → says which, with what it read | ✅ pass |
+| AT-J05, AT-J06 | Told in HomeTalk, listed: Pre Approved → "Added 2 L more **Mustard oil** (now 3 L)"; Wait for Approval → "already on your shopping list" | ✅ pass |
+| Browser, live project, 360 px and desktop | Needs your review rows: "already on the shopping list", "below your bar of 95%", "groceries set to Wait for Approval"; the 70% school item reads "the AI wasn't sure"; no sideways scroll at 360 px. "Add anyway" on a listed 2 L item topped the one entry up from 1 L to 3 L, with no second item | ✅ pass |
+
+Touched suites: 2,018 / 2,018 pass (the acceptance file: 195). Evaluation: 197 / 197, Unsafe Action Rate 0 / 23. One test expectation was wrong (AT-H11, above); no product defect was found by these tests beyond the three reported.
+
 ## Every case and its result
 
 ### AT-A: Approval matrix: autonomy × bar × how sure (grocery and school work)

@@ -5,6 +5,7 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 import { consumableNames, purchaseLabels } from "@wonderhome/core/commerce/repository";
 import { createAdminClient } from "@wonderhome/core/db/admin";
 import { getHomeSendAddress, platformHomeSendEmailDomain } from "@wonderhome/core/homesend/addresses";
+import { waitRowWords } from "@wonderhome/core/homesend/auto-add";
 import { listHomeSendChanges } from "@wonderhome/core/homesend/changes";
 import { inboxSegments, inChannel, readInboxChannel } from "@wonderhome/core/homesend/channels";
 import { ingestFile, ingestText } from "@wonderhome/core/homesend/ingest";
@@ -162,7 +163,10 @@ export default async function HomeSendPage({
   await Promise.all(
     pending.slice(0, 10).map(async (item) => {
       const review = await prepareReview(supabase, membership, item).catch(() => null);
-      if (review) reviews[item.id] = { subject: review.subject, reconciliation: review.reconciliation, confirmation: review.confirmation, plan: review.plan ?? null };
+      if (review) {
+        const waiting = review.confirmation.wait;
+        reviews[item.id] = { subject: review.subject, reconciliation: review.reconciliation, confirmation: review.confirmation, plan: review.plan ?? null, waitWords: waiting ? waitRowWords(waiting, t) : null };
+      }
     }),
   );
   const history = items.filter((item) => item.status === "routed" || item.status === "dismissed" || item.status === "undone").slice(0, 15);

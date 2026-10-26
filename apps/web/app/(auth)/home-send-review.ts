@@ -1,5 +1,6 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 
+import { listGroceries } from "@wonderhome/core/commerce/inventory";
 import { loadHouseholdContext } from "@wonderhome/core/context/repository";
 import { listResponsibilities } from "@wonderhome/core/household/configuration-repository";
 import type { AutonomyMode } from "@wonderhome/core/household/autonomy";
@@ -14,6 +15,8 @@ import type { DocumentReading } from "@wonderhome/core/homesend/document";
 import type { IntakeUnderstanding } from "@wonderhome/core/homesend/understanding";
 import type { HouseholdMembership } from "@wonderhome/core/identity/schemas";
 import { buildPersonalView } from "@wonderhome/core/identity/views";
+
+import { trackedGrocery } from "./home-send-writes";
 
 /**
  * What the review step needs beyond the reading itself (Wave 3 §9, §10):
@@ -83,6 +86,13 @@ async function autonomyFor(supabase: SupabaseClient, householdId: string, kind: 
   return rows.find((row) => row.outcomeKey === outcome.outcomeKey)?.aiMode === "execute" ? "execute" : "prepare";
 }
 
+/** Whether the item a HomeSend grocery would go onto (`trackedGrocery`) is on the shopping list now. Unreadable is no: it waits. */
+async function onTheList(supabase: SupabaseClient, householdId: string, title: string): Promise<boolean> {
+  const groceries = await listGroceries(supabase, householdId).catch(() => null);
+  const tracked = groceries ? trackedGrocery(title.trim(), groceries) : null;
+  return Boolean(tracked?.toBuy && tracked.toBuy.quantity > 0);
+}
+
 async function householdPeople(supabase: SupabaseClient, membership: HouseholdMembership): Promise<HouseholdContextItem[]> {
   const view = buildPersonalView(membership);
   const snapshot = await loadHouseholdContext(
@@ -113,8 +123,8 @@ export async function prepareReview(
   },
 ): Promise<ReviewPreparation> {
   const kind = item.classifiedKind;
-  const confirm = (subject: SubjectResolution | null, reconciliation: HomeSendReconciliation | null, understanding: IntakeUnderstanding | null, autonomy: AutonomyMode, autoAddPercent?: number) =>
-    decideConfirmation({ kind, extracted: item.extracted, understanding, reconciliation, subject, memberInitiated: item.createdByMemberId !== null, autonomy, autoAddPercent });
+  const confirm = (subject: SubjectResolution | null, reconciliation: HomeSendReconciliation | null, understanding: IntakeUnderstanding | null, autonomy: AutonomyMode, autoAddPercent?: number, onShoppingList?: boolean) =>
+    decideConfirmation({ kind, extracted: item.extracted, understanding, reconciliation, subject, memberInitiated: item.createdByMemberId !== null, autonomy, autoAddPercent, onShoppingList });
   // A receipt is matched line by line on its own confirm form (09-009): it is
   // for nobody in particular and never a second copy of a record.
   if (!kind || kind === "unknown" || kind === "receipt" || !item.extracted?.title) {
@@ -153,14 +163,20 @@ export async function prepareReview(
   // Who it is for: what the content said, or else whose record it matched.
   const subject = resolution ? adoptMatchedSubject(kind, resolution.subject, reconciliation?.existing.subjectMemberId, people) : null;
   // The outcome's autonomy and the household's bar (`auto-add.ts`), read together.
-  const [autonomy, autoAddPercent] = checked
-    ? await Promise.all([autonomyFor(supabase, membership.household.id, kind), AUTO_APPLY_OUTCOMES[kind] ? loadAutoAddPercent(supabase, membership.household.id) : undefined])
-    : (["prepare", undefined] as const);
+  // A grocery it matched may be on the shopping list now: with an amount, that is a top-up, not a duplicate (I-27).
+  const listedCheck = kind === "grocery_item" && reconciliation?.proposal.type === "duplicate";
+  const [autonomy, autoAddPercent, onShoppingList] = checked
+    ? await Promise.all([
+        autonomyFor(supabase, membership.household.id, kind),
+        AUTO_APPLY_OUTCOMES[kind] ? loadAutoAddPercent(supabase, membership.household.id) : undefined,
+        listedCheck ? onTheList(supabase, membership.household.id, item.extracted.title) : false,
+      ])
+    : (["prepare", undefined, false] as const);
   // A document with several records is reviewed as a plan (DDU 2.0), and
   // never applied on its own: every record in it waits for a person.
   const plan = wantsPlan(understanding) ? await planFor(supabase, membership, { understanding, createdAt: item.createdAt }, { people }).catch(() => null) : null;
   const confirmation = plan
     ? { mode: "prepare" as const, reason: "A document with several things in it waits for you to check each one.", question: null }
-    : confirm(subject, reconciliation, understanding, autonomy, autoAddPercent);
+    : confirm(subject, reconciliation, understanding, autonomy, autoAddPercent, onShoppingList);
   return { subject, reconciliation, understanding, confirmation, plan };
 }
