@@ -124,7 +124,6 @@ export const householdDe: AreaCatalog<typeof householdEn> = {
   "manage.resp.whose": "Wessen Zuständigkeiten",
   "manage.resp.tab.all": "Alle",
   "manage.resp.tab.mine": "Meine",
-  "manage.resp.tab.family": "Familie",
   "manage.resp.groupBy": "Gruppieren nach",
   "manage.resp.group.person": "Person",
   "manage.resp.group.outcome": "Ergebnis",

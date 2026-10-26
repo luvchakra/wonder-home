@@ -104,6 +104,7 @@ Targets are in `TECH-STACK-AND-NFR.md`. P0 security and authorisation tests are 
 ## Applying a migration to the live project
 - A file in `supabase/migrations/` is not shipped. Apply each migration to the live Supabase project in the same session with the Supabase MCP `apply_migration` tool (`mcp__Supabase__list_projects` for the id; `list_migrations` to check).
 - Then run `npm run verify:live`. A green `test:db` run (fresh local database) does not prove the live project has it.
+- **A migration that changes stored values must be safe in either order** (the 2026-10-26 Responsibilities outage). Before the code ships, every reader of those values, screens included, accepts the old and the new ones; apply the migration right after the deploy is READY, then load the screens that show them.
 - Live project: `wonderhome` (`kqxndableyysxqhxiorz`, ap-south-1).
 
 ## Row-level security checks membership as a set

@@ -124,7 +124,6 @@ export const householdHi: AreaCatalog<typeof householdEn> = {
   "manage.resp.whose": "किसकी ज़िम्मेदारियाँ",
   "manage.resp.tab.all": "सभी",
   "manage.resp.tab.mine": "मेरी",
-  "manage.resp.tab.family": "परिवार",
   "manage.resp.groupBy": "इसके अनुसार समूह",
   "manage.resp.group.person": "व्यक्ति",
   "manage.resp.group.outcome": "परिणाम",

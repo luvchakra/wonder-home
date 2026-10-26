@@ -122,7 +122,6 @@ export const householdEn = {
   "manage.resp.whose": "Whose responsibilities",
   "manage.resp.tab.all": "All",
   "manage.resp.tab.mine": "Mine",
-  "manage.resp.tab.family": "Family",
   "manage.resp.groupBy": "Group by",
   "manage.resp.group.person": "Person",
   "manage.resp.group.outcome": "Outcome",

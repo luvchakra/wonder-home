@@ -18,7 +18,10 @@ import { whatsappAsk } from "@/app/_lib/whatsapp-hometalk";
 async function handle(request: Request): Promise<Response> {
   // Processing (fetching a file, understanding it) runs after the response,
   // so WhatsApp gets its 200 quickly; the daily cron drains anything left.
-  return handleWhatsAppWebhook(request, { config: whatsappConfigFromEnv(), admin: createAdminClient, defer: (work) => after(work), ask: whatsappAsk(createAdminClient()) });
+  // The admin client is made only when a verified message is asked about: built eagerly, it threw on every
+  // request where the service role is unset, and the unconfigured route answered 500 instead of its 401.
+  const ask = (input: Parameters<ReturnType<typeof whatsappAsk>>[0]) => whatsappAsk(createAdminClient())(input);
+  return handleWhatsAppWebhook(request, { config: whatsappConfigFromEnv(), admin: createAdminClient, defer: (work) => after(work), ask });
 }
 
 export const GET = handle;

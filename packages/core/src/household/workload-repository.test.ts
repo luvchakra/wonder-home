@@ -21,7 +21,7 @@ const supabase = {} as SupabaseClient;
 describe("accepting a suggested swap (story 03-008)", () => {
   beforeEach(() => {
     saved.length = 0;
-    rows = [{ outcomeKey: "school.run", primaryMemberId: "priya", backupMemberId: "kunal", aiMode: "approve", priority: 2 }];
+    rows = [{ outcomeKey: "school.run", primaryMemberId: "priya", backupMemberId: "kunal", aiMode: "prepare", priority: 2 }];
   });
 
   it("makes the backup the owner and the owner the backup, keeping everything else", async () => {
@@ -29,7 +29,7 @@ describe("accepting a suggested swap (story 03-008)", () => {
     expect(saved).toEqual([
       expect.objectContaining({
         actorMemberId: "admin",
-        responsibility: { outcomeKey: "school.run", primaryMemberId: "kunal", backupMemberId: "priya", aiMode: "approve", priority: 2 },
+        responsibility: { outcomeKey: "school.run", primaryMemberId: "kunal", backupMemberId: "priya", aiMode: "prepare", priority: 2 },
       }),
     ]);
   });

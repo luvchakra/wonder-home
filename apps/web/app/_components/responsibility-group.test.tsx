@@ -83,6 +83,11 @@ describe("ResponsibilityGroup", () => {
     expect(html).toContain('name="householdId" value="33333333-3333-4333-8333-333333333333"');
   });
 
+  it("never crashes on a mode it has no words for: it reads as mixed (the 2026-10-26 outage)", () => {
+    const html = render({ currentMode: "observe" as never });
+    expect(html).toContain("<span>Mixed — choose one</span>");
+  });
+
   it("shows someone who cannot change it the group's mode, with no dropdown", () => {
     const html = render({ editable: false, currentMode: "prepare" });
     expect(html).not.toContain("<form");
