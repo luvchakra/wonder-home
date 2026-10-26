@@ -4,6 +4,7 @@ import type { HomeSendReconciliation } from "./reconcile";
 import type { SubjectResolution } from "./resolve";
 import type { IntakeUnderstanding } from "./understanding";
 import { DEFAULT_AUTO_ADD_PERCENT } from "./auto-add";
+import { listDetails, missingRequired, type CompletenessReading } from "./completeness";
 import { FROM_A_FILE } from "./verify";
 
 /**
@@ -31,6 +32,12 @@ export type ConfirmationDecision = {
   reason: string;
   /** The one question to ask, when `mode` is `ask`. */
   question: string | null;
+  /**
+   * What the entry can't be added without, by name ("due date"), in the order
+   * HomeTalk would ask (`completeness.ts`). HomeSend reports it and never words
+   * the question: HomeTalk asks, and the review shows "Still needed".
+   */
+  stillNeeded?: string[];
 };
 
 /**
@@ -64,7 +71,8 @@ const KIND_LABEL: Record<HomeSendKind, string> = {
 
 export type ConfirmationInput = {
   kind: HomeSendKind | null;
-  extracted: Pick<HomeSendExtraction, "title" | "needs" | "confidence"> | null;
+  /** The reading; the rest of its fields decide whether it is complete (`completeness.ts`). */
+  extracted: (Pick<HomeSendExtraction, "title" | "needs" | "confidence"> & NonNullable<CompletenessReading>) | null;
   understanding: Pick<IntakeUnderstanding, "readable" | "confidence" | "safety" | "score" | "check"> | null;
   reconciliation: Pick<HomeSendReconciliation, "message" | "proposal"> | null;
   subject: Pick<SubjectResolution, "question" | "selected"> | null;
@@ -92,8 +100,14 @@ export function decideConfirmation(input: ConfirmationInput): ConfirmationDecisi
     return { mode: "ask", reason: "WonderHome couldn't tell what this is.", question: "What is this — a bill, school work, something to buy, a receipt or a health document?" };
   }
 
+  // What it can't be added without (`completeness.ts`, the owner 2026-10-26).
+  // Who it is for is settled below, through the household's own people.
+  const missing = missingRequired(kind, input.extracted, { person: true });
+
   const consequential = CONSEQUENTIAL[kind];
-  if (consequential) return { mode: "govern", reason: consequential, question: null };
+  const stillNeeded = missing.length > 0 ? { stillNeeded: missing.map((spec) => spec.label) } : {};
+  // Held for a person whatever happens; what it still needs is reported beside it.
+  if (consequential) return { mode: "govern", reason: consequential, question: null, ...stillNeeded };
 
   const confidence = input.understanding?.confidence ?? input.extracted?.confidence ?? "low";
   const percent = input.autoAddPercent ?? DEFAULT_AUTO_ADD_PERCENT;
@@ -106,6 +120,11 @@ export function decideConfirmation(input: ConfirmationInput): ConfirmationDecisi
   }
   if (input.subject?.question) return { mode: "ask", reason: "It doesn't say who it's for.", question: input.subject.question };
   if ((kind === "school_item" || kind === "activity_item") && !input.subject?.selected) return { mode: "ask", reason: "It doesn't say who it's for.", question: "Who is this for?" };
+
+  // Nothing is added while something it can't be added without is missing
+  // (`completeness.ts`, the owner 2026-10-26). HomeSend says what is missing;
+  // HomeTalk is the one that asks.
+  if (missing.length > 0) return { mode: "ask", reason: `It doesn't say the ${listDetails(missing)}.`, question: null, ...stillNeeded };
 
   if (input.reconciliation) return { mode: "prepare", reason: input.reconciliation.message, question: null };
   if (confidence === "medium" && !aboveBar) return { mode: "prepare", reason: "WonderHome read it, but not surely enough to act on its own.", question: null };

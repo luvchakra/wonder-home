@@ -1,10 +1,11 @@
 "use client";
 
 import { GraduationCap, HeartPulse, Medal, Mic, PartyPopper, ReceiptText, ShieldCheck, ShoppingBasket, Sparkles, Wallet } from "lucide-react";
-import { useState, type ReactNode } from "react";
+import { useCallback, useEffect, useRef, useState, type ReactNode } from "react";
 
 import { isConsequentialInstruction } from "@wonderhome/core/homesend/audio";
 import { scorePercent } from "@wonderhome/core/homesend/auto-add";
+import { COMPLETENESS, type DetailSpec } from "@wonderhome/core/homesend/completeness";
 import { FROM_A_FILE } from "@wonderhome/core/homesend/verify";
 import type { DocumentPlan } from "@wonderhome/core/homesend/plan";
 import type { IntakeUnderstanding } from "@wonderhome/core/homesend/understanding";
@@ -342,6 +343,22 @@ export function HomeSendConfirmStep({
   const words = labels.confirm;
   const primaryLabel = prefill?.title ?? labels.options.kind[kind] ?? words.this;
 
+  // What the entry still lacks (`homesend/completeness.ts`, the owner
+  // 2026-10-26), read from the form as it stands: said above the fields,
+  // each one marked, and Add stays off while a required one is empty.
+  const formRef = useRef<HTMLFormElement>(null);
+  const [missing, setMissing] = useState<Pick<DetailSpec, "input" | "need">[]>([]);
+  const recheck = useCallback(() => {
+    const form = formRef.current;
+    if (form) setMissing((before) => sameDetails(before, emptyDetails(form, kind)) ? before : emptyDetails(form, kind));
+  }, [kind]);
+  useEffect(() => {
+    // The fields for a newly picked kind exist only once they have rendered.
+    const frame = requestAnimationFrame(recheck);
+    return () => cancelAnimationFrame(frame);
+  }, [recheck]);
+  const blocked = missing.some((detail) => detail.need === "required");
+
   if (plan && !byHand) {
     return (
       <div className="space-y-3">
@@ -367,7 +384,12 @@ export function HomeSendConfirmStep({
   }
 
   return (
-    <form action={routeAction} className="space-y-3">
+    <form
+      ref={formRef}
+      action={routeAction}
+      onChange={recheck}
+      className="space-y-3 [&_[data-missing]]:border-[var(--wh-attention)] [&_[data-missing]]:ring-1 [&_[data-missing]]:ring-[var(--wh-attention)]"
+    >
       <input type="hidden" name="householdId" value={householdId} />
       <input type="hidden" name="itemId" value={item.id} />
       {reconciliation?.existingId ? <input type="hidden" name="existingId" value={reconciliation.existingId} /> : null}
@@ -428,6 +450,12 @@ export function HomeSendConfirmStep({
         words={understanding?.readable && scorePercent(understanding.score) !== null ? { ...labels.picker, suggested: `${labels.picker.suggested} · ${fillIn(labels.found.percentSure, { percent: scorePercent(understanding.score)! })}` } : labels.picker}
       />
 
+      {kind && missing.length > 0 ? (
+        <p role="status" className="text-sm font-medium text-[var(--wh-attention)]">
+          {fillIn(words.stillNeeded, { list: missing.map((detail) => detailLabel(detail.input, kind, labels)).join(", ") })}
+        </p>
+      ) : null}
+
       {/* Nothing is asked until the person says what it is. */}
       {kind ? <HomeSendConfirmFields kind={kind} prefill={prefill} kids={kids} subject={subject ?? null} householdId={householdId} canAddChild={canAddChild} labels={labels} /> : null}
 
@@ -456,7 +484,7 @@ export function HomeSendConfirmStep({
             <Button type="submit" name="decision" value="keep" variant="secondary" disabled={busy}>
               {words.keepExisting}
             </Button>
-            <Button type="submit" name="confirmDuplicate" value="on" variant="secondary" disabled={busy}>
+            <Button type="submit" name="confirmDuplicate" value="on" variant="secondary" disabled={busy || blocked}>
               {words.addAsNew}
             </Button>
           </div>
@@ -466,17 +494,65 @@ export function HomeSendConfirmStep({
           <Button type="submit" name="decision" value="keep" variant="secondary" disabled={busy}>
             {words.keepExisting}
           </Button>
-          <Button type="submit" name="confirmDuplicate" value="on" disabled={busy}>
+          <Button type="submit" name="confirmDuplicate" value="on" disabled={busy || blocked}>
             {words.addAnyway}
           </Button>
         </div>
       ) : (
-        <Button type="submit" disabled={busy || !kind} className="w-full">
+        <Button type="submit" disabled={busy || !kind || blocked} className="w-full">
           {kind === "receipt" ? words.recordPurchases : words.add}
         </Button>
       )}
     </form>
   );
+}
+
+/**
+ * The details of `kind` whose fields are empty in the form right now, in the
+ * order they are asked, each field marked (`data-missing`) so the screen can
+ * point at it. A health record with nobody picked is the person's own ("Me"),
+ * so it is never missing a person.
+ */
+function emptyDetails(form: HTMLFormElement, kind: string): Pick<DetailSpec, "input" | "need">[] {
+  const specs: readonly DetailSpec[] = kind in COMPLETENESS ? COMPLETENESS[kind as keyof typeof COMPLETENESS] : [];
+  const empty: Pick<DetailSpec, "input" | "need">[] = [];
+  for (const spec of specs) {
+    if (spec.input === "subjectMemberId") continue;
+    const control = form.elements.namedItem(spec.input);
+    if (!control || !("value" in control)) continue;
+    const isEmpty = String(control.value ?? "").trim() === "";
+    if (control instanceof HTMLElement) {
+      control.toggleAttribute("data-missing", isEmpty);
+      if (spec.need === "required") control.setAttribute("aria-invalid", String(isEmpty));
+    }
+    if (isEmpty) empty.push({ input: spec.input, need: spec.need });
+  }
+  return empty;
+}
+
+function sameDetails(a: readonly Pick<DetailSpec, "input" | "need">[], b: readonly Pick<DetailSpec, "input" | "need">[]): boolean {
+  return a.length === b.length && a.every((detail, index) => detail.input === b[index]!.input);
+}
+
+/** A detail's name in "Still needed": the form's own label for it, without "(optional)" or a question mark. */
+function detailLabel(input: string, kind: string, labels: HomeSendReviewLabels): string {
+  const words = labels.field;
+  const label: Record<string, string> = {
+    title: words.whatIsIt,
+    quantity: words.quantity,
+    childMemberId: labels.confirm.whoFor,
+    dueDate: kind === "school_item" || kind === "bill" ? words.due : words.on,
+    activityName: words.activityName,
+    dueTime: words.starts,
+    location: words.where,
+    payee: words.payee,
+    amount: words.amount,
+    healthRecordType: words.recordType,
+    documentDate: words.documentDate,
+    merchant: labels.receipt.shop,
+    purchasedOn: labels.receipt.boughtOn,
+  };
+  return (label[input] ?? input).replace(/\s*[(（][^)）]*[)）]\s*$/, "").replace(/[?？؟]\s*$/, "").trim();
 }
 
 /**

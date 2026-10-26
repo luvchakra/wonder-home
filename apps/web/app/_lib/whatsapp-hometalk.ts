@@ -8,11 +8,9 @@ import { withMemberSession } from "@wonderhome/core/voicelink/member-session";
 import { whatsappReplyText } from "@wonderhome/core/whatsapp/hometalk";
 import type { WhatsAppIntakeDeps } from "@wonderhome/core/whatsapp/intake";
 
-import { getHomeSendItem } from "@wonderhome/core/homesend/repository";
 import { requireMembership } from "@wonderhome/core/identity/households";
 
-import { autoApplyHomeSendItem } from "@/app/(auth)/home-send-auto";
-import { prepareReview } from "@/app/(auth)/home-send-review";
+import { addIfAllowed } from "@/app/(auth)/home-send-auto";
 import { handleHomeTalkRequest } from "@/app/_lib/hometalk-gateway";
 
 /**
@@ -62,15 +60,7 @@ export function whatsappAutoAdd(admin: SupabaseClient): NonNullable<WhatsAppInta
     const profileId = (data as { profile_id: string | null } | null)?.profile_id ?? null;
     if (!profileId) return null;
     try {
-      return await withMemberSession(admin, profileId, async (supabase) => {
-        const membership = await requireMembership(supabase, householdId);
-        const item = await getHomeSendItem(supabase, householdId, itemId);
-        if (!item || item.status !== "classified" || !item.classifiedKind) return null;
-        const review = await prepareReview(supabase, membership, { ...item, createdByMemberId: memberId });
-        if (review.confirmation.mode !== "auto_apply" || review.plan) return null;
-        const applied = await autoApplyHomeSendItem(supabase, membership, { id: item.id, kind: item.classifiedKind, extracted: item.extracted, subject: review.subject });
-        return applied ? { title: applied.title, where: applied.where } : null;
-      });
+      return await withMemberSession(admin, profileId, async (supabase) => addIfAllowed(supabase, await requireMembership(supabase, householdId), itemId, { createdByMemberId: memberId }));
     } catch (thrown) {
       log.warn("whatsapp: add on its own failed", { reason: thrown instanceof Error ? thrown.name : "unknown", allow: ["reason"] });
       return null;

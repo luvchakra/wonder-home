@@ -11,11 +11,11 @@ in `docs/progress/`; for the running log of what changed when, `tracking/PROGRES
 
 ## The whole picture
 
-**378 of 408 stories done — 92.6%**
+**379 of 409 stories done — 92.7%**
 
 | Status | Stories |
 |---|---:|
-| Done | 378 |
+| Done | 379 |
 | In Progress | 8 |
 | Blocked | 1 |
 | Not Started | 17 |
@@ -39,7 +39,7 @@ in `docs/progress/`; for the running log of what changed when, `tracking/PROGRES
 | 11 Bills, Fees & Finance | `█████████░` | 14 | 15 | 1 not started |
 | 12 Family Time & Social Activities | `██████████` | 9 | 9 | — |
 | 13 Maintenance, Laundry & Pet Care | `█████████░` | 10 | 11 | 1 in progress |
-| 14 AI Orchestration & Learning | `████████░░` | 32 | 40 | 2 in progress, 3 not started, 3 deferred |
+| 14 AI Orchestration & Learning | `████████░░` | 33 | 41 | 2 in progress, 3 not started, 3 deferred |
 | 15 Privacy, Security & Governance | `██████████` | 9 | 9 | — |
 | 16 Platform Admin & Operations | `██████████` | 8 | 8 | — |
 | 17 External Integrations | `██████████` | 9 | 9 | — |
@@ -381,7 +381,7 @@ in `docs/progress/`; for the running log of what changed when, `tracking/PROGRES
 
 ### 14 — AI Orchestration & Learning
 
-32 of 40 done `████████░░`
+33 of 41 done `████████░░`
 
 | Story | Priority | Status | Notes |
 |---|---|---|---|
@@ -425,6 +425,7 @@ in `docs/progress/`; for the running log of what changed when, `tracking/PROGRES
 | `14-038` Record index Phase 3: the Calendar and HomeTalk read one projection | P1 | Not Started | Time questions become one query over facts by time and people; the Calendar screen reads the same facts; `calendar/modules.ts` adapters become registry describers and `CALENDAR_SOURCE_RECORDS` goes away. Spec §5 |
 | `14-039` Record index Phase 4: structure-first retrieval and coverage misses | P1 | Not Started | Questions read into time/people/kind filters by rules; list questions get every match, not the top 12; a "nothing on record" answer that the index can find by words is logged as a coverage miss (table name only). Spec §6 |
 | `14-040` WhatsApp asks HomeTalk | P1 | Done | A linked adult's one-line question or everyday request on WhatsApp is answered by HomeTalk through the same gateway as Alexa (channel `whatsapp`, own conversation surface, `WHATSAPP_SCOPES`); school, health and money kept off; never a HomeSend item. Voice notes written down by the household's Gemini key when there is no Cloud Speech key. PRs #319, #320 |
+| `14-041` HomeSend reports what an entry lacks; HomeTalk asks | P0 | Done | PR #363 (the owner, 2026-10-26, then "isn't that HomeTalk's job" — strictly that design). `homesend/completeness.ts`: per-kind required and useful details, the content's own words first (`fillFromEvidence`); HomeSend only reports what is missing (`confirmation.ts` `stillNeeded`), never a question, and adds nothing on its own while a required one is missing. HomeTalk asks every question (`hometalk/intake-questions.ts`, action `complete_homesend_item` through the clarify machinery), in the app and on WhatsApp, one at a time, at most three; the HomeSend-side "Who is it for?" is folded into it. Answers go back onto the item, then HomeSend adds it or it waits. The review form says "Still needed" and keeps Add off. Eval HS-29–HS-35, HT-143–HT-150. |
 
 ### 15 — Privacy, Security & Governance
 
@@ -695,4 +696,4 @@ in `docs/progress/`; for the running log of what changed when, `tracking/PROGRES
 | `27-024` The notification center | P0 | Done | The owner, 2026-10-22: "add notification center where adult can update their notification choices". Settings → Notifications opens with one row per kind (`_components/notification-center-card.tsx`, `ExpandableRow`): the collapsed row says in words whether it comes, when and where; opened, "Get these", "When" and "Where" change it, each saving at once and only that kind (`saveReminderKindAction`), so an untouched kind keeps following the household's starting timing. It replaces the separate timing and "What goes where" cards (both removed). A kind or channel an Admin turned off for the household says so and is not offered. Words in eight languages; help ¶8 and the reminder-timing FAQ |
 | `27-025` Household notifications for Admins | P0 | Done | The owner, 2026-10-22: "notification related admin settings that can control the notification experience of all users". Manage Household → Household notifications (`/household/notifications`, Admins only): each kind on or off for everyone and its starting timing; which channels beyond the app may reach anyone; whether an unanswered reminder takes the second-channel step and the backup step; the household's quiet hours. Kept as two versioned, audited `policies` rows (`notifications/household-settings.ts`; Quiet hours keeps HomeTalk's row), written only when something changed and only real choices. Enforced on the server: `reconcile.ts` (kinds off, starting timing, both steps, quiet hours) and `deliverNotification` (a channel off holds everything but a critical alert). A person narrows these and never widens them. Help ¶15 in eight languages |
 
-_Generated 2026-10-24 from 28 backlog files._
+_Generated 2026-10-26 from 28 backlog files._

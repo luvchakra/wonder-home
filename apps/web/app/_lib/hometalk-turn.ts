@@ -112,6 +112,7 @@ import { buildPersonalView, type PersonalView } from "@wonderhome/core/identity/
 
 import { agendaAllows, channelAllowsAction, channelRefusal, narrowToChannel, VOICE_NOT_ALLOWED, voiceAllowsAction, type ChannelLimits } from "@wonderhome/core/voicelink/scopes";
 
+import { addIfAllowed } from "@/app/(auth)/home-send-auto";
 import { householdAgenda, narrowAgenda, type HouseholdAgenda } from "@/app/_lib/agenda";
 import { continueAmaf, pendingAmaf, startAmaf } from "@/app/_lib/hometalk-amaf";
 import { continueWelcome, pendingWelcome } from "@/app/_lib/hometalk-welcome";
@@ -577,6 +578,8 @@ async function turnInEnglish(input: HomeTalkInput, speaking: Speaking) {
     timezone: membership.household.timezone,
     actor: { memberId: membership.memberId, roles: membership.roles, memberType: membership.memberType },
     admin,
+    // Once HomeTalk has nothing left to ask about a HomeSend item, HomeSend decides (`hometalk/intake-questions.ts`).
+    addFromHomeSend: (itemId) => addIfAllowed(supabase, membership, itemId),
   };
 
   // "Undo" (HomeBrain 4.0 §3.9): what HomeTalk did because it was asked is
@@ -864,6 +867,7 @@ async function turnInEnglish(input: HomeTalkInput, speaking: Speaking) {
   let placeRequest: PlaceRequest | null = null;
   let placeQuestion: PendingClarification | null = null;
   let navigate: string | null = null;
+  let followUp: PendingClarification | null = null;
   if (result.kind === "reply" && result.intent.action === "open_screen") {
     // "Take me to the grocery list": the screen's name and its path, by
     // rules. The browser goes there and the conversation carries on.
@@ -1121,6 +1125,8 @@ async function turnInEnglish(input: HomeTalkInput, speaking: Speaking) {
     if (result.memory) await remember(admin, householdId, attributeMemory(result.memory, people), { memberId: membership.memberId, displayName: membership.displayName });
     const done = await executeIntent(result.intent, execution);
     text = done.ok ? done.text : `I tried, and it did not go through: ${done.reason}`;
+    // What the executor asked next — HomeTalk's question about a HomeSend item — stays open for the next turn.
+    if (done.ok && isIntakeQuestion(done.result.clarify)) followUp = done.result.clarify;
     outcome = done.ok ? { status: "executed", result: done.result } : { status: "failed", result: { reason: done.reason } };
     // What was actually written — the row, not what was asked for — is
     // what the next turn's "it" means.
@@ -1154,7 +1160,7 @@ async function turnInEnglish(input: HomeTalkInput, speaking: Speaking) {
   // HomeBrain answered instead; and one asked earlier stays open while the
   // member asks why it was asked.
   const openQuestion =
-    result.kind !== "reply" ? null : explained ? (result.intent.parameters.explain === "why_question" ? clarifying : null) : brainAnswer ? null : (result.clarification ?? placeQuestion);
+    result.kind !== "reply" ? null : explained ? (result.intent.parameters.explain === "why_question" ? clarifying : null) : brainAnswer ? null : (result.clarification ?? placeQuestion ?? followUp);
   let mode: BrainMode =
     result.kind === "confirm_transcript"
       ? "clarify"
@@ -1165,6 +1171,7 @@ async function turnInEnglish(input: HomeTalkInput, speaking: Speaking) {
           : modeFor(result.proposal.kind, outcome ? outcome.status === "executed" : null);
   // "Near whose school?" is a question; a place answer that only invites narrowing is still an answer.
   if (placeQuestion && "children" in placeQuestion.parameters && openQuestion === placeQuestion) mode = "clarify";
+  if (followUp && openQuestion === followUp) mode = "clarify";
 
   let action: ConversationAction | null = null;
   const replyId = await recordMessage(admin, {
@@ -2119,4 +2126,10 @@ export async function answerReferral(input: {
     metadata: { referralAnswered: input.approvalId },
   });
   return ran ? { ok: true, text: done.text } : { ok: false, reason: done.text };
+}
+
+/** A question an executor left open: HomeTalk's next question about a HomeSend item. */
+function isIntakeQuestion(value: unknown): value is PendingClarification {
+  const pending = value as Partial<PendingClarification> | null | undefined;
+  return Boolean(pending && pending.action === "complete_homesend_item" && typeof pending.question === "string");
 }

@@ -25,6 +25,7 @@ import { placeRequestForTurn, type PlaceRequest } from "../homeplaces/request";
 import { householdNow, suggestPlaces } from "../homeplaces/service";
 import type { PlaceResult, PlacesProvider } from "../places/provider";
 import { answerWithHomeBrain, type HomeBrainAnswer } from "../homebrain/turn";
+import { fillFromEvidence } from "../homesend/completeness";
 import { decideConfirmation } from "../homesend/confirmation";
 import { detectInstructionInjection } from "../homesend/injection";
 import { reconcileAgainstRecords, type HomeSendCandidate } from "../homesend/reconcile";
@@ -154,13 +155,18 @@ async function goldenPlacesAnswer(c: HomeTalkCase, utterance: string, earlier: P
 }
 
 export async function observeHomeTalk(c: HomeTalkCase, models: Models = {}): Promise<Observation> {
-  return (await talkTurn(c, c.utterance, FRESH, models)).observed;
+  return (await talkTurn(c, c.utterance, startOf(c), models)).observed;
+}
+
+/** What the conversation holds before a case's first turn: nothing, or the question HomeTalk left open. */
+function startOf(c: HomeTalkCase): Carried {
+  return c.clarifying ? { ...FRESH, clarifying: c.clarifying } : FRESH;
 }
 
 /** Every turn of a conversation case, in order, each with what the one before it left behind. */
 export async function observeConversation(c: HomeTalkCase, models: Models = {}): Promise<Observation[]> {
   const observed: Observation[] = [];
-  let carried = FRESH;
+  let carried = startOf(c);
   for (const utterance of [c.utterance, ...(c.followUps ?? []).map((turn) => turn.utterance)]) {
     const turn = await talkTurn(c, utterance, carried, models);
     observed.push(turn.observed);
@@ -438,8 +444,10 @@ export async function observeHomeSend(c: HomeSendCase, models: Models = {}): Pro
   // A recorded reading goes through the same second look at its kind and
   // the same grounding a live one does:
   // the model names the date phrase, WonderHome decides the day and time.
-  const reading = models.classify && !c.recordedReading ? await models.classify(c.source, reference) : groundIntakeDate(reviewIntakeKind({ ...BLANK_READING, ...c.reading }), reference);
-  if (!reading) return { ...EMPTY, providerFailure: "unparseable", answer: "" };
+  const read = models.classify && !c.recordedReading ? await models.classify(c.source, reference) : groundIntakeDate(reviewIntakeKind({ ...BLANK_READING, ...c.reading }), reference);
+  if (!read) return { ...EMPTY, providerFailure: "unparseable", answer: "" };
+  // As ingest does: a detail the text states and the reading lost is taken from the text (`completeness.ts`).
+  const reading = fillFromEvidence(read.kind, read, c.source.channel === "file" ? null : c.source.text);
 
   const injection = detectInstructionInjection(c.source.text, c.source.subject);
   const understanding = buildUnderstanding(reading, {
@@ -482,7 +490,7 @@ export async function observeHomeSend(c: HomeSendCase, models: Models = {}): Pro
 
   const decision = decideConfirmation({
     kind,
-    extracted: { title: reading.title, needs: reading.needs, confidence: reading.confidence },
+    extracted: reading,
     understanding,
     reconciliation,
     subject,
@@ -500,6 +508,8 @@ export async function observeHomeSend(c: HomeSendCase, models: Models = {}): Pro
     subject.question,
     decision.reason,
     decision.question,
+    // What HomeSend reports missing; HomeTalk words the question (`hometalk/intake-questions.ts`).
+    decision.stillNeeded?.length ? `Still needed: ${decision.stillNeeded.join(", ")}` : null,
   ].filter((part): part is string => typeof part === "string" && part.length > 0);
 
   return {

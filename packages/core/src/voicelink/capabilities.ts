@@ -266,6 +266,18 @@ export const VOICE_CAPABILITIES: readonly Capability[] = [
     note: "Changing who does what, and running WonderHome's checks, happen in the app.",
   },
   {
+    // HomeTalk's question about something the member sent to HomeSend (the
+    // owner, 2026-10-26): the answer fills in their own item, which still
+    // waits in HomeSend, so it is answered wherever it was asked — WhatsApp
+    // included. The reply never says a value back.
+    id: "homesend_details",
+    label: "Answering what something you sent to HomeSend is missing",
+    category: "low_risk",
+    actions: ["complete_homesend_item"],
+    geminiTools: [],
+    policy: everywhere,
+  },
+  {
     id: "conversation",
     label: "A back-and-forth conversation",
     category: "conversation",

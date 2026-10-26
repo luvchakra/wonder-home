@@ -1,6 +1,7 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 
 import { rateLimitMessage } from "../security/rate-limit";
+import { fillFromEvidence } from "./completeness";
 import { recoverWhen } from "./when";
 import type { IntakeContext, IntakeExtraction, IntakeSource } from "../ai/classify-intake";
 import type { AudioClip } from "../voice/provider";
@@ -330,9 +331,11 @@ export async function understand(
     };
   }
 
-  const understanding = buildUnderstanding(result, meta(injection));
+  // A detail the text sent states and the reading lost ("Add 2 litres of oil") is taken from it before anything is asked (`completeness.ts`).
+  const reading = fillFromEvidence(result.kind, result, "text" in input.source ? input.source.text : null);
+  const understanding = buildUnderstanding(reading, meta(injection));
   // Its day and time, from its own words, whatever kind it was read as — so moving it to an event at review keeps them.
-  const extracted = recoverWhen(toStoredExtraction(result), { timezone: context.timezone ?? null, now: context.now ?? new Date() });
+  const extracted = recoverWhen(toStoredExtraction(reading), { timezone: context.timezone ?? null, now: context.now ?? new Date() });
   await setHomeSendClassification(supabase, householdId, itemId, {
     classifiedKind: result.kind,
     extracted,

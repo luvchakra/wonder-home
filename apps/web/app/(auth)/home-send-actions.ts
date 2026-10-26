@@ -243,7 +243,8 @@ function wasCorrected(intake: HomeSendItem | null, input: RouteInput): boolean |
 const receiptSchema = z.object({
   householdId: z.uuid(),
   itemId: z.uuid(),
-  merchant: z.string().trim().max(120).optional(),
+  // A receipt is complete with its shop and its day (`homesend/completeness.ts`).
+  merchant: z.string({ error: "Which shop is it from?" }).trim().min(1, { error: "Which shop is it from?" }).max(120),
   purchasedOn: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, { error: "When was it bought?" }),
   currency: z.string().trim().max(8).optional(),
   lines: z
