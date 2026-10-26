@@ -211,7 +211,7 @@ describe("several things at once (§10): each item on its own", () => {
       onTheList(items);
       const done = await executeIntent(intent({ parameters: { items: ["2 milk", "2 eggs", "2 bread"] } }), context());
       expect(done.ok && done.text).toBe(
-        "Added **Milk** (+2 L, now 4.5 L), **Eggs, Brown** (+2 pcs, now 10 pcs) and **Bread, White** (+2 loaves, now 3 loaves) to the [shopping list](/groceries?view=to-buy).",
+        "Added to the [shopping list](/groceries?view=to-buy):\n- **Milk** (+2 L, now 4.5 L)\n- **Eggs, Brown** (+2 pcs, now 10 pcs)\n- **Bread, White** (+2 loaves, now 3 loaves)",
       );
     });
 

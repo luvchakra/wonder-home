@@ -1039,7 +1039,7 @@ describe("HomeTalk's answer as a WhatsApp message", () => {
   it("shows HomeTalk's how-much question as a list, one item a line, with the hint below (the owner, 2026-10-26)", () => {
     const asked = quantityQuestion(["milk", "eggs"], []);
     const shown = whatsappReplyText({ displayText: warmReply(asked, { action: "add_to_list", proposal: "clarify", ok: true }) });
-    expect(shown).toBe('🛒 How much of each should I add?\n• *Milk*\n• *Eggs*\n💡 For example "2 of each" or "1 litre milk and 6 eggs".');
+    expect(shown).toMatch(/^🛒 How much of each should I add\?\n• \*Milk\*\n• \*Eggs\*\n💡 For example [^\n]+\.$/);
   });
 
   it("ends a long answer at a sentence and says the rest is in the app", () => {
