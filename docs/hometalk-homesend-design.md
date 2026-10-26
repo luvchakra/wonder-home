@@ -44,7 +44,7 @@ The person never chooses. Each message goes through these rules in order, and th
 
 | # | Message | Goes to | Why |
 |---|---|---|---|
-| 1 | Part of a burst: a forward plus the note typed straight after, within 30 s | Read together as one thing | One intent, sent as several messages |
+| 1 | Part of a burst, within 30 s and before the first is answered: a forward, photo or file plus the note typed straight after; or a typed message plus a **short note** typed after it (up to 6 words naming a household member, a day or time, or an amount, asking nothing itself: "for Manan", "Asmi Sunday", "due Friday", "2 litres") | Read together as one thing: one HomeSend item, the note as what the sender added, one reply | One intent, sent as several messages. Two requests or questions, a note that is itself for HomeTalk, or a message after the first was answered (rule 2) are never joined. A typed message for HomeSend waits up to 15 s for its note; the note's own run waits for it and stops once it is taken (`whatsapp/intake.ts` `typedBurstOf`, `claimLateNotes`, the owner 2026-10-26) |
 | 2 | A reply while **HomeTalk's question is open**: its last word in this member's WhatsApp conversation is a clarify question, from the last 15 min, and the member's previous message went to HomeTalk | **HomeTalk** | The reply is the answer ("coconut oil") |
 | 3 | A question ("what's for dinner?", "what are upcoming events") | **HomeTalk** | Something to answer, not to keep |
 | 4 | An everyday request ("add milk", "remind me…", "remember…", "remove…") | **HomeTalk** | HomeTalk does it, with an Undo |
@@ -186,7 +186,7 @@ No provider tells an app a balance in advance. The email comes at the first refu
 | HomeTalk understanding a sentence | ≤ 2 s | Fast tier (Haiku 5.5); rules first where they're sure |
 | HomeTalk composing an answer | ≤ 4 s | Balanced tier (Sonnet 5.5) |
 | HomeSend reading a message | ≤ 5 s text, ≤ 12 s file | Sonnet 5.5, not Opus (was 9–25 s on Opus) |
-| WhatsApp reply | ≤ 10 s after a burst settles | 8 s burst wait, then one pass; "typing…" shows from the start (a voice note to HomeTalk took 27 s on 2026-10-26) |
+| WhatsApp reply | ≤ 10 s after a burst settles | 8 s burst wait (15 s for a typed message headed for HomeSend, which a short note may follow), then one pass; "typing…" shows from the start (a voice note to HomeTalk took 27 s on 2026-10-26) |
 | Page reads | p95 ≤ 500 ms | One `Promise.all` wave; bounded lists |
 
 To measure: `updated_at - created_at` on `home_send_items`, and `hometalk_channel_events.latency_ms`.
@@ -242,6 +242,7 @@ To measure: `updated_at - created_at` on `home_send_items`, and `hometalk_channe
 | I-21 | No split of added on its own vs confirmed, nor why things failed safely | Not counted | Both in the platform-admin HomeSend metrics | Live (14-049) |
 | I-22 | Waiting items sat unfilled unless someone opened HomeSend | HomeTalk asked only about something just sent | HomeTalk offers, at most twice a day, to fill them in; "yes" asks item by item | Live (14-050) |
 | I-23 | WhatsApp refusals and connect replies were English only | Hard-coded strings | Closed refusal codes and `whatsapp.link.*` in eight languages | Live (14-051) |
+| I-24 | A typed notice, then "for Manan" 9 s later: asked "Who is it for?" and answered twice (2026-10-26, 21:04 IST) | The notice was read at its 8 s wait; the note reached WonderHome 11 s after it, so rule 2 took it as the answer. Typed messages sent together were also joined whatever they were | Rule 1 joins a typed message and a short note: the message waits up to 15 s for it, the note's run defers to it; two requests or questions stay apart | Live (this PR) |
 
 ---
 
