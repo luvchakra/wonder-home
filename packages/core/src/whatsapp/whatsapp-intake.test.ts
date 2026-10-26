@@ -3,6 +3,7 @@ import { describe, expect, it } from "vitest";
 import type { IntakeExtraction } from "../ai/classify-intake";
 import type { IngestDeps, IngestOutcome } from "../homesend/ingest";
 import { fakeSupabase } from "../homesend/testing";
+import { contentHash, normalizeText } from "../homesend/normalize";
 import { handleWhatsAppWebhook } from "../notifications/whatsapp-webhook";
 import { readInboundMessages } from "./inbound";
 import { groceryListNames, isForHomeTalk, isQuestionForWonderHome, namesTheSameThing, whatsappReplyText } from "./hometalk";
@@ -18,7 +19,7 @@ import { groundIntent } from "../conversation/grounding";
 import { readItemAmount } from "../conversation/quantity";
 import { readBareNumber } from "../commerce/bare-amount";
 import { NO_REFERENCES } from "../conversation/references";
-import { acknowledgementFor, addedReply, leadOf, processWhatsAppMessage, QUESTION_REPLY, receiveWhatsAppMessages, WHATSAPP_PROCESS_KIND, withAdded, type WhatsAppIntakeDeps } from "./intake";
+import { acknowledgementFor, addedReply, isBareDetail, isShortNote, leadOf, processWhatsAppMessage, QUESTION_REPLY, receiveWhatsAppMessages, WHATSAPP_PROCESS_KIND, withAdded, type WhatsAppIntakeDeps } from "./intake";
 import { CONNECT_CODE_LENGTH, LINK_REPLIES, connectMessage, generateConnectCode, hashConnectCode, readConnectCode, whatsappBusinessNumber, whatsappChatLink } from "./linking";
 
 /** The WhatsApp HomeSend spec: WhatsApp as an intake channel, never an authorization channel. */
@@ -826,7 +827,192 @@ describe("processing into HomeSend", () => {
     h.tables.whatsapp_messages![0]!.received_at = "2026-10-24T01:55:10.000Z";
     const waits: number[] = [];
     await processWhatsAppMessage(h.client, id, { config: CONFIG, fetch: replies().fetchImpl, ingest: { classify }, now: () => new Date("2026-10-24T01:55:12.000Z"), sleep: async (ms) => void waits.push(ms) });
-    expect(waits).toEqual([6000]);
+    // 8 s for the burst, then, being a typed message for HomeSend, up to 15 s in all for a short note typed after it.
+    expect(waits).toEqual([6000, 7000]);
+  });
+
+  /**
+   * The owner's WhatsApp test (2026-10-26, 21:04 IST): a typed notice, then "for Manan" typed 9 s
+   * later, which reached WonderHome 11 s after the notice: read alone at 8 s, asked "Who is it for?",
+   * and answered twice. Expected: one item for Manan, one reply, no who question.
+   */
+  async function typedAndNote(note: string, options: { sameDelivery?: boolean; noteFirst?: boolean } = {}) {
+    const { h, id } = await received("text");
+    h.tables.household_members = FAMILY();
+    const notice = h.tables.whatsapp_messages![0]!;
+    Object.assign(notice, { text_content: "Annual Day rehearsal on Saturday at 9 am. Children must bring a white kurta.", received_at: "2026-10-26T15:34:40.000Z", created_at: "2026-10-26T15:34:42.623Z" });
+    const noteRow = {
+      id: "m-note", household_id: HOUSEHOLD, member_id: MEMBER, provider_message_id: "wamid.note", message_type: "text", text_content: note, forwarded: false,
+      received_at: options.noteFirst ? "2026-10-26T15:34:40.000Z" : "2026-10-26T15:34:49.000Z", created_at: options.noteFirst ? "2026-10-26T15:34:42.100Z" : "2026-10-26T15:34:51.309Z",
+      processing_status: "received", attempts: 0, homesend_item_id: null, acknowledged_at: null, identity: { phone_number: `+${PRIYA}`, status: "active" },
+    };
+    if (options.sameDelivery || options.noteFirst) h.tables.whatsapp_messages!.push(noteRow);
+    const seen: string[] = [];
+    const reading: IngestDeps["classify"] = async (_household, source) => {
+      const text = (source as { text?: string }).text ?? "";
+      seen.push(text);
+      return extraction({
+        title: "Annual Day rehearsal", people: ["Asmi", "Manan"].filter((name) => text.includes(name)),
+        dueDate: /Sunday/.test(text) ? "2026-11-01" : "2026-10-31", dateText: /Sunday/.test(text) ? "Sunday" : "Saturday at 9 am",
+      });
+    };
+    const out = replies();
+    let clock = new Date("2026-10-26T15:34:48.500Z");
+    const waits: number[] = [];
+    // The note arrives while the notice's run waits, unless it came with the notice.
+    const sleep = async (ms: number) => {
+      waits.push(ms);
+      clock = new Date(clock.getTime() + ms);
+      if (!h.tables.whatsapp_messages!.some((row) => row.id === "m-note")) h.tables.whatsapp_messages!.push(noteRow);
+    };
+    const deps = { config: CONFIG, fetch: out.fetchImpl, ingest: { classify: reading }, ask: async () => "HomeTalk was not asked", now: () => clock, sleep };
+    return { h, noticeId: id, deps, seen, out, waits };
+  }
+
+  it("a typed notice and \"for Manan\" typed after it are one item for Manan, with one reply and no who question", async () => {
+    const { h, noticeId, deps, seen, out } = await typedAndNote("for Manan");
+    expect(await processWhatsAppMessage(h.client, noticeId, deps)).toBe("read");
+    // The note's own run finds it already read with the notice, and says nothing.
+    expect(await processWhatsAppMessage(h.client, "m-note", deps)).toBe("skipped");
+    expect(seen).toEqual(["Annual Day rehearsal on Saturday at 9 am. Children must bring a white kurta.\n\nThe sender added: for Manan"]);
+    expect(h.tables.home_send_items).toHaveLength(1);
+    const itemId = h.tables.home_send_items![0]!.id;
+    for (const message of h.tables.whatsapp_messages!) expect(message).toMatchObject({ processing_status: "processed", homesend_item_id: itemId });
+    expect(h.tables.home_send_items![0]!.external_id).toBe("whatsapp:wamid.T1");
+    expect(out.sent).toHaveLength(1);
+    expect(out.sent[0]!.text).not.toMatch(/Who is it for/);
+  });
+
+  it("the same, when the notice and the note come in one delivery", async () => {
+    const { h, noticeId, deps, seen, out, waits } = await typedAndNote("for Manan", { sameDelivery: true });
+    expect(await processWhatsAppMessage(h.client, noticeId, deps)).toBe("read");
+    expect(await processWhatsAppMessage(h.client, "m-note", deps)).toBe("skipped");
+    // Joined at the first claim: no longer wait for a note already there.
+    expect(waits).toEqual([]);
+    expect(seen).toEqual([expect.stringContaining("The sender added: for Manan")]);
+    expect(h.tables.home_send_items).toHaveLength(1);
+    expect(out.sent).toHaveLength(1);
+  });
+
+  it("\"Asmi Sunday\" after a typed notice fills who and the day, asking neither", async () => {
+    const { h, noticeId, deps, seen, out } = await typedAndNote("Asmi Sunday");
+    expect(await processWhatsAppMessage(h.client, noticeId, deps)).toBe("read");
+    expect(seen).toEqual([expect.stringMatching(/The sender added: Asmi Sunday$/)]);
+    expect(h.tables.home_send_items![0]!.extracted).toMatchObject({ people: ["Asmi"], dateText: "Sunday" });
+    expect(out.sent).toHaveLength(1);
+    expect(out.sent[0]!.text).not.toMatch(/Who is it for|Which day/);
+  });
+
+  it("the note delivered first, stamped the same second, is still one item with one reply, whichever run reads it", async () => {
+    for (const first of ["note", "notice"]) {
+      const { h, noticeId, deps, seen, out } = await typedAndNote("for Manan", { noteFirst: true });
+      const [one, two] = first === "note" ? ["m-note", noticeId] : [noticeId, "m-note"];
+      expect(await processWhatsAppMessage(h.client, one, deps)).toBe("read");
+      expect(await processWhatsAppMessage(h.client, two, deps)).toBe("skipped");
+      expect(seen).toEqual([expect.stringMatching(/^Annual Day rehearsal.*\n\nThe sender added: for Manan$/s)]);
+      expect(h.tables.home_send_items).toHaveLength(1);
+      expect(h.tables.home_send_items![0]!.external_id).toBe("whatsapp:wamid.T1");
+      expect(out.sent).toHaveLength(1);
+    }
+  });
+
+  it("a short note's own run waits for the typed message still being read, and stops once that run has taken it", async () => {
+    const { h, deps, out } = await typedAndNote("for Manan", { sameDelivery: true });
+    // The notice's run has claimed it alone and is waiting for a note.
+    Object.assign(h.tables.whatsapp_messages![0]!, { processing_status: "processing", attempts: 1 });
+    Object.assign(h.tables.whatsapp_messages![1]!, { received_at: "2026-10-26T15:34:44.000Z" });
+    const waits: number[] = [];
+    const noteRun = { ...deps, now: () => new Date("2026-10-26T15:34:51.400Z"), sleep: async (ms: number) => {
+      waits.push(ms);
+      // Meanwhile the notice's run takes the note.
+      Object.assign(h.tables.whatsapp_messages![1]!, { processing_status: "processing" });
+    } };
+    expect(await processWhatsAppMessage(h.client, "m-note", noteRun)).toBe("skipped");
+    // Until the notice's 15 s and a margin (15:34:57.000), not the note's own 8 s (15:34:52.000).
+    expect(waits).toEqual([5600]);
+    expect(out.typing).toEqual([]);
+    expect(out.sent).toEqual([]);
+  });
+
+  /** The owner resent the notice (a duplicate), then "for Manan" (2026-10-26, 21:07 IST): the note became its own item, Failed safely. */
+  async function onRecord(status: "classified" | "routed") {
+    const setup = await typedAndNote("for Manan", { sameDelivery: true });
+    const notice = setup.h.tables.whatsapp_messages![0]!.text_content as string;
+    setup.h.tables.home_send_items!.push({
+      id: "item-old", household_id: HOUSEHOLD, status, classified_kind: "school_item", content_hash: await contentHash(normalizeText(notice)),
+      extracted: { title: "Annual Day rehearsal", people: [] }, understanding: { references: [] }, created_at: "2026-10-26T15:34:48.392Z",
+    });
+    return setup;
+  }
+
+  it("a resent notice and \"for Manan\": one reply, the item still waiting set to Manan, no new item", async () => {
+    const { h, noticeId, deps, seen, out } = await onRecord("classified");
+    expect(await processWhatsAppMessage(h.client, noticeId, deps)).toBe("read");
+    expect(await processWhatsAppMessage(h.client, "m-note", deps)).toBe("skipped");
+    expect(seen).toEqual([]);
+    expect(h.tables.home_send_items).toHaveLength(1);
+    expect(h.tables.home_send_items![0]).toMatchObject({ id: "item-old", status: "classified", extracted: { title: "Annual Day rehearsal", people: ["Manan"], subjectMemberName: "Manan" } });
+    for (const message of h.tables.whatsapp_messages!) expect(message).toMatchObject({ processing_status: "processed", homesend_item_id: "item-old" });
+    expect(out.sent.map((sent) => sent.text)).toEqual(["Got it 👍 That's already in HomeSend — I've noted it's for Manan."]);
+  });
+
+  it("a resent notice already added, and a note: says it's handled, changes nothing, keeps nothing new", async () => {
+    const { h, noticeId, deps, seen, out } = await onRecord("routed");
+    expect(await processWhatsAppMessage(h.client, noticeId, deps)).toBe("read");
+    expect(seen).toEqual([]);
+    expect(h.tables.home_send_items).toHaveLength(1);
+    expect(h.tables.home_send_items![0]).toMatchObject({ id: "item-old", status: "routed", extracted: { title: "Annual Day rehearsal", people: [] } });
+    expect(out.sent.map((sent) => sent.text)).toEqual(["Got it 👍 That one's already been handled ✅ You can change who it's for in HomeSend."]);
+  });
+
+  it("a lone \"for Manan\", with nothing to join and no question open, is never a HomeSend item: a polite reply asks what it goes with", async () => {
+    const { h, id } = await received("text");
+    h.tables.household_members = FAMILY();
+    h.tables.whatsapp_messages![0]!.text_content = "for Manan";
+    const out = replies();
+    let asks = 0;
+    expect(await processWhatsAppMessage(h.client, id, { config: CONFIG, fetch: out.fetchImpl, ingest: { classify }, ask: async () => ((asks += 1), "x") })).toBe("read");
+    expect(h.tables.home_send_items).toEqual([]);
+    expect(h.tables.whatsapp_messages![0]).toMatchObject({ processing_status: "ignored", homesend_item_id: null });
+    expect(out.sent.map((sent) => sent.text)).toEqual(["Sorry, I didn't catch what that's about 🤔 Could you send the message it goes with?"]);
+    expect(asks).toBe(0);
+  });
+
+  it("\"add milk\" and \"what's for dinner?\" sent together are two things for HomeTalk, never joined", async () => {
+    const { h, id } = await received("text");
+    Object.assign(h.tables.whatsapp_messages![0]!, { text_content: "add milk", received_at: "2026-10-26T15:34:40.000Z" });
+    h.tables.whatsapp_messages!.push({
+      id: "m-2", household_id: HOUSEHOLD, member_id: MEMBER, provider_message_id: "wamid.2", message_type: "text", text_content: "what's for dinner?", forwarded: false,
+      received_at: "2026-10-26T15:34:44.000Z", created_at: "2026-10-26T15:34:45.000Z", processing_status: "received", attempts: 0, homesend_item_id: null, acknowledged_at: null, identity: { phone_number: `+${PRIYA}`, status: "active" },
+    });
+    const heard: string[] = [];
+    const out = replies();
+    const deps = { config: CONFIG, fetch: out.fetchImpl, ingest: { classify }, ask: async ({ text }: { text: string }) => (heard.push(text), `answered: ${text}`), now: () => new Date("2026-10-26T15:35:00.000Z") };
+    expect(await processWhatsAppMessage(h.client, id, deps)).toBe("read");
+    expect(await processWhatsAppMessage(h.client, "m-2", deps)).toBe("read");
+    expect(heard).toEqual(["add milk", "what's for dinner?"]);
+    expect(h.tables.home_send_items).toEqual([]);
+    expect(out.sent.map((sent) => sent.text)).toEqual(["answered: add milk", "answered: what's for dinner?"]);
+  });
+
+  it("\"for Manan\" 45 s later, after HomeTalk asked who, is still the answer to that question (rule 2)", async () => {
+    const { h, id } = await received("text");
+    h.tables.household_members = FAMILY();
+    const asked = new Date(Date.now() - 45 * 1000).toISOString();
+    Object.assign(h.tables.whatsapp_messages![0]!, { text_content: "for Manan", received_at: new Date().toISOString() });
+    h.tables.whatsapp_messages!.push({ id: "m-item", household_id: HOUSEHOLD, member_id: MEMBER, provider_message_id: "wamid.item", message_type: "text", text_content: "Annual Day rehearsal on Saturday at 9 am. Children must bring a white kurta.", forwarded: false, homesend_item_id: "item-1", received_at: new Date(Date.now() - 60 * 1000).toISOString(), processing_status: "processed", acknowledged_at: asked });
+    h.tables.home_send_items = [{ id: "item-1", household_id: HOUSEHOLD, status: "classified", classified_kind: "school_item", extracted: { title: "Annual Day rehearsal", people: [] } }];
+    h.tables.conversation_sessions = [{ id: "s-wa", household_id: HOUSEHOLD, member_id: MEMBER, surface: "whatsapp", status: "open", created_at: asked }];
+    h.tables.conversation_messages = [
+      { id: "c1", household_id: HOUSEHOLD, session_id: "s-wa", role: "assistant", metadata: { mode: "clarify", clarify: { action: "complete_homesend_item", parameters: { itemId: "item-1", field: "child" } } }, created_at: asked },
+    ];
+    const out = replies();
+    const heard: string[] = [];
+    const deps = { config: CONFIG, fetch: out.fetchImpl, ingest: { classify }, ask: async ({ text }: { text: string }) => (heard.push(text), "✅ Got it — that's for Manan. It's waiting in HomeSend for you to check."), sleep: async () => {} };
+    expect(await processWhatsAppMessage(h.client, id, deps)).toBe("read");
+    expect(heard).toEqual(["for Manan"]);
+    expect(h.tables.home_send_items).toHaveLength(1);
+    expect(out.sent).toHaveLength(1);
   });
 
   it("treats an instruction inside a forwarded message as content, never as a command", async () => {
@@ -1008,6 +1194,20 @@ describe("saying what it found", () => {
       "Got it 👍 I found something for a class outside school: *Karate exam*. 🏅 Who is it for — Asmi or Manan?",
     );
     expect(acknowledgementFor(outcome("event", "Riya's birthday party")).text).toBe("Got it 👍 I found an event: *Riya's birthday party*. 📅 It's waiting in HomeSend for you to check.");
+  });
+});
+
+describe("a short note on the message before it", () => {
+  const names = ["Asmi", "Manan", "Kunal"];
+  it("names a member, a day or time, or an amount, in up to six words, asking nothing", () => {
+    for (const note of ["for Manan", "Asmi Sunday", "it's for Asmi", "due Friday", "2 litres", "Manan's", "at 5 pm"]) expect(isShortNote(note, names), note).toBe(true);
+  });
+  it("alone, is only a detail when it says nothing but who, when or how much", () => {
+    for (const note of ["for Manan", "Asmi Sunday", "it's for Asmi", "due Friday", "2 litres"]) expect(isBareDetail(note, names), note).toBe(true);
+    for (const text of ["2 litres mustard oil", "Manan's karate on Sunday", "add milk"]) expect(isBareDetail(text, names), text).toBe(false);
+  });
+  it("is never a request, a question, something long or something naming nothing", () => {
+    for (const text of ["add milk", "what's for dinner?", "is it for Manan?", "remind me on Friday", "thanks", "ok", "Annual Day rehearsal on Saturday at 9 am for Manan", "coconut oil"]) expect(isShortNote(text, names), text).toBe(false);
   });
 });
 

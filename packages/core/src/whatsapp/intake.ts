@@ -10,7 +10,11 @@ import { enqueueClassifyRetry, type ClaimedJob, type JobHandler } from "../homes
 import { gateTranscript, TRANSCRIPT_CONFIDENCE_FLOOR, type TranscriptGate } from "../homesend/audio";
 import { sureClause, type AddedOnItsOwn } from "../homesend/auto-add";
 import { hearWhatsAppVoiceNote, ingestWhatsAppMedia, ingestWhatsAppText, IngestRejected, type IngestDeps, type IngestOutcome, type TranscribeResult } from "../homesend/ingest";
-import { FAILURE_REASON_COPY } from "../homesend/items";
+import { COMPLETENESS } from "../homesend/completeness";
+import { FAILURE_REASON_COPY, type HomeSendKind } from "../homesend/items";
+import { contentHash, normalizeText } from "../homesend/normalize";
+import { PENDING_STATUSES } from "../homesend/repository";
+import { readDetailAnswer } from "../hometalk/detail-answers";
 import { sendWhatsAppText, showWhatsAppTyping, type WhatsAppConfig } from "../notifications/whatsapp";
 import { log } from "../observability/logger";
 import { hitRateLimit } from "../security/rate-limit";
@@ -244,11 +248,17 @@ async function readMessage(admin: SupabaseClient, messageId: string, deps: Whats
   // Whichever run's update lands first reads it; every other run finds its
   // own message already taken and stops.
   let burst: MessageRow[] = [];
-  if (row.attempts === 0 && row.processing_status === "received") {
+  const sleep = deps.sleep ?? defaultSleep;
+  const fresh = row.attempts === 0 && row.processing_status === "received";
+  if (fresh) {
+    // A short note typed after a message still being read ("for Manan", the owner, 2026-10-26) is
+    // that message's to claim: its run waits until the message's longer wait is over, then stops if taken.
+    const about = await typedMessageNotedOn(admin, row).catch(() => null);
     // Shown at once, before the wait, by the run of the burst's first message only.
-    if (!(await waitsOnEarlierMessage(admin, row).catch(() => false))) showTyping(row.provider_message_id);
-    const wait = Math.max(0, new Date(row.received_at).getTime() + BURST_SETTLE_MS - now.getTime());
-    if (wait > 0) await (deps.sleep ?? defaultSleep)(Math.min(wait, BURST_SETTLE_MS));
+    if (!about && !(await waitsOnEarlierMessage(admin, row).catch(() => false))) showTyping(row.provider_message_id);
+    const until = Math.max(new Date(row.received_at).getTime() + BURST_SETTLE_MS, about ? new Date(about.received_at).getTime() + BURST_NOTE_SETTLE_MS + NOTE_DEFER_MARGIN_MS : 0);
+    const wait = Math.max(0, until - now.getTime());
+    if (wait > 0) await sleep(Math.min(wait, about ? BURST_WINDOW_MS : BURST_SETTLE_MS));
     const claimed = await claimBurst(admin, row);
     if (!claimed) return "skipped";
     row = claimed.lead;
@@ -256,12 +266,14 @@ async function readMessage(admin: SupabaseClient, messageId: string, deps: Whats
     // The first message's run showed it; this run, which reads the burst, keeps it showing.
     const first = [row, ...burst].sort(sentOrder)[0]!;
     if (!typing.shown && first.id !== found.id && to && !row.acknowledged_at) typing.keep(first.provider_message_id, { events, householdId: row.household_id });
+    // The message it waited on was read without it: this one is read on its own, and shows it now.
+    else if (about && !typing.shown) showTyping(row.provider_message_id);
     await settle({ attempts: row.attempts + 1 });
   } else {
     await settle({ processing_status: "processing", attempts: row.attempts + 1 });
     showTyping(row.provider_message_id);
   }
-  const together = burst.length > 0;
+  let together = burst.length > 0;
   const settleBurst = async (patch: Record<string, unknown>) => {
     if (together) await admin.from("whatsapp_messages").update(patch).in("id", burst.map((entry) => entry.id));
   };
@@ -376,6 +388,51 @@ async function readMessage(admin: SupabaseClient, messageId: string, deps: Whats
           }
         }
       }
+    }
+  }
+
+  // A typed message for HomeSend waits a little longer for the short note often typed straight after it:
+  // "Annual Day rehearsal on Saturday…" then "for Manan", 9 s later (the owner, 2026-10-26), was read
+  // alone at 8 s, asked "Who is it for?" and answered twice. The note joins it, read as one.
+  if (!together && isTypedMessage(row)) {
+    const names = await householdNames(admin, row.household_id).catch(() => [] as string[]);
+    if (isNoteEntry(row, names) && isBareDetail(row.text_content ?? "", names)) {
+      // A short note that joins nothing, with no question open, isn't content: never a HomeSend item and
+      // never Failed safely ("for Manan" alone, 2026-10-26, 21:08 IST). Asked for what it goes with.
+      events.push({ kind: "question_redirected", householdId: row.household_id, latencyMs: elapsed() });
+      await settle({ processing_status: "ignored" });
+      await say((await words())("whatsapp.noteAlone"));
+      await recordWhatsAppEvents(admin, events);
+      return "read";
+    }
+    if (fresh) {
+      const wait = Math.min(BURST_NOTE_SETTLE_MS - BURST_SETTLE_MS, new Date(row.received_at).getTime() + BURST_NOTE_SETTLE_MS - clock().getTime());
+      if (wait > 0) await sleep(wait);
+      burst = await claimLateNotes(admin, row, names).catch(() => []);
+      together = burst.length > 0;
+    }
+  }
+
+  // A typed message already on record, with a short note: the note goes onto that item, never a new one
+  // (the owner resent the notice, then "for Manan", 2026-10-26, 21:07 IST). One reply either way.
+  if (together && isTypedMessage(row) && burst.every((entry) => entry.message_type === "text" && !entry.forwarded)) {
+    const onRecord = await itemOnRecord(admin, row.household_id, row.text_content ?? "", now).catch(() => null);
+    if (onRecord) {
+      const t = await words();
+      const noted = onRecord.waiting ? await noteOnItem(admin, row.household_id, onRecord, burst.map((entry) => entry.text_content ?? ""), now).catch(() => null) : null;
+      const reply = !onRecord.waiting
+        ? t("whatsapp.ack.duplicateHandled")
+        : noted?.name
+          ? t("whatsapp.ack.duplicateFor", { name: noted.name })
+          : noted?.filled
+            ? t("whatsapp.ack.duplicateNoted")
+            : t("whatsapp.ack.duplicate");
+      await settle({ processing_status: "processed", failure_reason: null, homesend_item_id: onRecord.id });
+      await settleBurst({ processing_status: "processed", failure_reason: null, homesend_item_id: onRecord.id, acknowledged_at: now.toISOString() });
+      events.push({ kind: "message_processed", householdId: row.household_id, latencyMs: elapsed() }, { kind: "duplicate", householdId: row.household_id });
+      await say(reply);
+      await recordWhatsAppEvents(admin, events);
+      return "read";
     }
   }
 
@@ -674,6 +731,10 @@ export async function homeTalkAwaitsAnswer(admin: SupabaseClient, row: Pick<Mess
 export const BURST_WINDOW_MS = 30_000;
 /** How long a fresh message waits for the rest of its burst before it is read. */
 export const BURST_SETTLE_MS = 8_000;
+/** How long a typed message for HomeSend waits, in all, for a short note typed after it (9 s on 2026-10-26, 11 s to arrive). */
+export const BURST_NOTE_SETTLE_MS = 15_000;
+/** How much longer a short note's own run waits than the message it is about, so that message's run claims it. */
+const NOTE_DEFER_MARGIN_MS = 2_000;
 
 const defaultSleep = (ms: number) => new Promise<void>((resolve) => setTimeout(resolve, ms));
 
@@ -703,7 +764,14 @@ async function claimBurst(admin: SupabaseClient, row: MessageRow): Promise<{ lea
     .limit(10);
   const others = ((data ?? []) as MessageRow[]).filter((entry) => entry.message_type !== "unsupported" && entry.message_type !== "video" && (entry.message_type !== "text" || entry.text_content?.trim()));
   const files = [row, ...others].filter((entry) => entry.message_type !== "text").length;
-  const ids = [row.id, ...(files <= 1 ? others.map((entry) => entry.id) : [])];
+  let joined = files <= 1 ? others : [];
+  // Typed messages alone, with no forward, photo or file: only a short note joins the one message it is
+  // about. Two requests or questions ("add milk", "what's for dinner?") are each their own.
+  if (joined.length > 0 && ![row, ...joined].some((entry) => entry.message_type !== "text" || entry.forwarded)) {
+    const group = typedBurstOf([row, ...joined], await householdNames(admin, row.household_id).catch(() => [] as string[]));
+    joined = group.some((entry) => entry.id === row.id) ? group.filter((entry) => entry.id !== row.id) : [];
+  }
+  const ids = [row.id, ...joined.map((entry) => entry.id)];
   const { data: claimed } = await admin
     .from("whatsapp_messages")
     .update({ processing_status: "processing" })
@@ -717,6 +785,202 @@ async function claimBurst(admin: SupabaseClient, row: MessageRow): Promise<{ lea
     lead: { ...lead, identity: row.identity },
     rest: taken.filter((entry) => entry.id !== lead.id).sort(sentOrder),
   };
+}
+
+/**
+ * Short notes sent after this typed message, within the window, that no run
+ * has taken yet: claimed in one update, as `claimBurst` does. Empty when there
+ * are none, or another run took them first.
+ */
+async function claimLateNotes(admin: SupabaseClient, row: MessageRow, names: readonly string[]): Promise<MessageRow[]> {
+  const at = new Date(row.received_at).getTime();
+  const { data } = await admin
+    .from("whatsapp_messages")
+    .select(MESSAGE_COLUMNS)
+    .eq("household_id", row.household_id)
+    .eq("member_id", row.member_id)
+    .eq("processing_status", "received")
+    .eq("attempts", 0)
+    .neq("id", row.id)
+    .gte("received_at", row.received_at)
+    .lte("received_at", new Date(at + BURST_WINDOW_MS).toISOString())
+    .limit(10);
+  // Sent the same second or after: WhatsApp stamps to the second and may deliver the note first.
+  const notes = ((data ?? []) as MessageRow[]).filter((entry) => isNoteEntry(entry, names));
+  if (notes.length === 0) return [];
+  const { data: claimed } = await admin
+    .from("whatsapp_messages")
+    .update({ processing_status: "processing" })
+    .in("id", notes.map((entry) => entry.id))
+    .eq("processing_status", "received")
+    .select(MESSAGE_COLUMNS);
+  return ((claimed ?? []) as MessageRow[]).sort(sentOrder);
+}
+
+/**
+ * The typed message, sent just before this one and not yet answered, that
+ * this short note is about: its run claims the note after its longer wait.
+ * Null when this isn't a short note, or there is no such message.
+ */
+async function typedMessageNotedOn(admin: SupabaseClient, row: MessageRow): Promise<MessageRow | null> {
+  // Cheap first: only a short typed line can be a note, before anything is read.
+  const text = row.message_type === "text" && !row.forwarded ? (row.text_content ?? "").trim() : "";
+  if (!text || text.split(/\s+/).length > NOTE_MAX_WORDS || row.reply_to_provider_message_id) return null;
+  const at = new Date(row.received_at).getTime();
+  const { data } = await admin
+    .from("whatsapp_messages")
+    .select(MESSAGE_COLUMNS)
+    .eq("household_id", row.household_id)
+    .eq("member_id", row.member_id)
+    .in("processing_status", ["received", "processing"])
+    .neq("id", row.id)
+    .gte("received_at", new Date(at - BURST_WINDOW_MS).toISOString())
+    .lte("received_at", row.received_at)
+    .limit(10);
+  const earlier = ((data ?? []) as MessageRow[]).filter((entry) => !entry.acknowledged_at && !entry.homesend_item_id && isTypedMessage(entry));
+  if (earlier.length === 0) return null;
+  const names = await householdNames(admin, row.household_id);
+  if (!isNoteEntry(row, names)) return null;
+  return earlier.filter((entry) => !isNoteEntry(entry, names)).sort(sentOrder).at(-1) ?? null;
+}
+
+type ItemOnRecord = { id: string; waiting: boolean; classified_kind: HomeSendKind | null; extracted: Record<string, unknown> | null; understanding: Record<string, unknown> | null };
+
+/** How long an item already added or dismissed still counts as the one a resent message is about. */
+const HANDLED_RECENTLY_MS = 7 * 24 * 60 * 60 * 1000;
+
+/**
+ * The item this typed message already made, by the same content hash HomeSend's
+ * own duplicate check uses: still waiting, or added or dismissed in the last
+ * week. Null for anything else (a failed one is read again, as HomeSend does).
+ */
+async function itemOnRecord(admin: SupabaseClient, householdId: string, text: string, now: Date): Promise<ItemOnRecord | null> {
+  const normalized = normalizeText(text);
+  if (!normalized) return null;
+  const { data } = await admin
+    .from("home_send_items")
+    .select("id, status, classified_kind, extracted, understanding, created_at")
+    .eq("household_id", householdId)
+    .eq("content_hash", await contentHash(normalized))
+    .order("created_at", { ascending: false })
+    .limit(1)
+    .maybeSingle();
+  const item = data as (Omit<ItemOnRecord, "waiting"> & { status: string; created_at: string }) | null;
+  if (!item) return null;
+  if ((PENDING_STATUSES as readonly string[]).includes(item.status)) return { ...item, waiting: true };
+  const handled = ["routed", "dismissed", "undone"].includes(item.status) && now.getTime() - new Date(item.created_at).getTime() <= HANDLED_RECENTLY_MS;
+  return handled ? { ...item, waiting: false } : null;
+}
+
+/**
+ * Puts short notes onto an item still waiting in HomeSend: who it is for (one
+ * member the note names), and a day, time or amount the item's kind asks for,
+ * read as an answer to HomeTalk's question would be. Nothing reaches a domain table.
+ */
+async function noteOnItem(admin: SupabaseClient, householdId: string, item: ItemOnRecord, notes: readonly string[], now: Date): Promise<{ name: string | null; filled: boolean } | null> {
+  const [{ data: members }, { data: settings }] = await Promise.all([
+    admin.from("household_members").select("id, display_name, nickname").eq("household_id", householdId).eq("status", "active").limit(50),
+    admin.from("households").select("timezone").eq("id", householdId).maybeSingle(),
+  ]);
+  const timezone = (settings as { timezone?: string | null } | null)?.timezone ?? "Asia/Kolkata";
+  const people = ((members ?? []) as { display_name: string; nickname: string | null }[]).filter((member) => member.display_name);
+  const kind = item.classified_kind && item.classified_kind in COMPLETENESS ? (item.classified_kind as keyof typeof COMPLETENESS) : null;
+  let patch: Record<string, unknown> = {};
+  let name: string | null = null;
+  for (const note of notes) {
+    const said = new Set(note.toLowerCase().split(/\s+/).map((word) => word.replace(/['’]s$/, "").replace(/[^\p{L}]/gu, "")));
+    const named = people.filter((member) => [member.display_name.split(/\s+/)[0] ?? "", member.nickname ?? ""].some((word) => word.length >= 2 && said.has(word.toLowerCase())));
+    if (named.length === 1) name = named[0]!.display_name;
+    if (!kind) continue;
+    for (const spec of COMPLETENESS[kind]) {
+      if (spec.answer !== "date" && spec.answer !== "time" && spec.answer !== "quantity" && spec.answer !== "amount") continue;
+      const read = readDetailAnswer(kind, spec.field, note, { timezone, now });
+      if (read && read !== "skip") patch = { ...patch, ...read };
+    }
+  }
+  if (name) patch = { ...patch, subjectMemberName: name, people: [name] };
+  if (Object.keys(patch).length === 0) return { name: null, filled: false };
+  // The review reads who an item is for from its understanding's references (`homesend/resolve.ts`), as an answer to HomeTalk does.
+  const understanding = name && item.understanding ? { ...item.understanding, references: [{ text: name, candidates: [], confidence: 0 }] } : item.understanding;
+  const { data: updated } = await admin
+    .from("home_send_items")
+    .update({ extracted: { ...(item.extracted ?? {}), ...patch }, ...(understanding !== item.understanding ? { understanding } : {}) })
+    .eq("household_id", householdId)
+    .eq("id", item.id)
+    .eq("status", "classified")
+    .select("id");
+  return ((updated ?? []) as unknown[]).length > 0 ? { name, filled: true } : { name: null, filled: false };
+}
+
+/** The household's first names and nicknames, as a note would say them ("for Manan"). */
+async function householdNames(admin: SupabaseClient, householdId: string): Promise<string[]> {
+  const { data } = await admin.from("household_members").select("display_name, nickname").eq("household_id", householdId).eq("status", "active").limit(50);
+  return ((data ?? []) as { display_name: string | null; nickname: string | null }[]).flatMap((member) => [member.display_name?.trim().split(/\s+/)[0] ?? "", member.nickname?.trim() ?? ""]).filter(Boolean);
+}
+
+/** A typed message of the person's own that HomeSend may keep: not a forward, a quoted reply, a question, a request or a bare list. */
+function isTypedMessage(entry: Pick<MessageRow, "message_type" | "forwarded" | "text_content" | "reply_to_provider_message_id">): boolean {
+  const text = entry.message_type === "text" && !entry.forwarded ? (entry.text_content ?? "").trim() : "";
+  return Boolean(text) && !entry.reply_to_provider_message_id && !isForHomeTalk(text) && !groceryListNames(text);
+}
+
+function isNoteEntry(entry: Pick<MessageRow, "message_type" | "forwarded" | "text_content" | "reply_to_provider_message_id">, names: readonly string[]): boolean {
+  return entry.message_type === "text" && !entry.forwarded && !entry.reply_to_provider_message_id && isShortNote(entry.text_content ?? "", names);
+}
+
+/** The longest a note on the message before it is ("it's for Asmi on Sunday"). */
+const NOTE_MAX_WORDS = 6;
+const NOTE_DAY_OR_TIME =
+  /\b(?:today|tonight|tomorrow|tmrw|yesterday|morning|afternoon|evening|night|noon|midnight|weekend|week|month|due|am|pm|(?:mon|tues?|wed(?:nes)?|thu(?:rs?)?|fri|sat(?:ur)?|sun)(?:day)?|jan(?:uary)?|feb(?:ruary)?|april|apr|june?|july?|aug(?:ust)?|sept?(?:ember)?|oct(?:ober)?|nov(?:ember)?|dec(?:ember)?)\b/i;
+const NOTE_AMOUNT = /\d|\b(?:litres?|liters?|kgs?|grams?|ml|dozen|packets?|packs?|pieces?|pcs|bottles?|boxes?)\b/i;
+
+/**
+ * A short note on the message sent just before it: up to six words naming a
+ * household member, a day or time, or an amount, with no request or question
+ * of its own ("for Manan", "Asmi Sunday", "due Friday", "2 litres"). Pure.
+ */
+export function isShortNote(text: string, names: readonly string[]): boolean {
+  const line = text.trim();
+  if (!line || /\n/.test(line) || line.includes("?") || isForHomeTalk(line)) return false;
+  const words = line.split(/\s+/);
+  if (words.length > NOTE_MAX_WORDS) return false;
+  const said = new Set(words.map((word) => word.toLowerCase().replace(/['’]s$/, "").replace(/[^\p{L}]/gu, "")));
+  const names_ = names.map((name) => name.toLowerCase()).filter((name) => name.length >= 2);
+  return names_.some((name) => said.has(name)) || NOTE_DAY_OR_TIME.test(line) || NOTE_AMOUNT.test(line);
+}
+
+const NOTE_FILLER = /^(?:for|it|its|it's|is|this|that|that's|on|at|by|the|a|an|and|&|next|of|to|in)$/i;
+
+/**
+ * Whether a short note says nothing but who, when or how much ("for Manan",
+ * "Asmi Sunday", "due Friday"): alone, it is about something not sent, never
+ * content of its own ("2 litres mustard oil" is content). Pure.
+ */
+export function isBareDetail(text: string, names: readonly string[]): boolean {
+  if (!isShortNote(text, names)) return false;
+  const known = new Set(names.map((name) => name.toLowerCase()));
+  return text
+    .trim()
+    .split(/\s+/)
+    .map((word) => word.replace(/['’]s$/, "").replace(/[.,!]+$/, ""))
+    .filter(Boolean)
+    .every((word) => NOTE_FILLER.test(word) || known.has(word.toLowerCase()) || NOTE_DAY_OR_TIME.test(word) || NOTE_AMOUNT.test(word));
+}
+
+/**
+ * Of typed messages sent together (no forward, photo or file), the ones read
+ * as one: the single message that isn't a short note, with the short notes
+ * sent after it. Empty when there is no such message, or more than one, or it
+ * is a request or a question of its own. Pure.
+ */
+export function typedBurstOf<T extends Pick<MessageRow, "id" | "message_type" | "forwarded" | "text_content" | "reply_to_provider_message_id" | "received_at" | "created_at">>(entries: readonly T[], names: readonly string[]): T[] {
+  const notes = entries.filter((entry) => isNoteEntry(entry, names));
+  const others = entries.filter((entry) => !notes.includes(entry));
+  if (others.length !== 1 || !isTypedMessage(others[0]!)) return [];
+  const message = others[0]!;
+  // Sent the same second or after: WhatsApp stamps to the second and may deliver the note first.
+  const after = notes.filter((entry) => entry.received_at >= message.received_at);
+  return after.length > 0 ? [message, ...after] : [];
 }
 
 /** Sent order: WhatsApp's time to the second, then the order they arrived in. */
