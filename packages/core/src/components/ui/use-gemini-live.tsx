@@ -316,6 +316,17 @@ export function useGeminiLive(input: {
       // whichever comes first — and a connect that settles afterwards is
       // closed rather than adopted. Never a composer left "thinking".
       let ended = false;
+      // Google's reason goes back to the server too: a key out of credits is something an Admin must hear of.
+      const report = (event: unknown) => {
+        const close = event as { code?: unknown; reason?: unknown; message?: unknown } | null;
+        const reason = typeof close?.reason === "string" ? close.reason : typeof close?.message === "string" ? close.message : "";
+        if (!reason) return;
+        void fetch(`/api/v1/households/${householdId}/voice/gemini/closed`, {
+          method: "POST",
+          headers: { "content-type": "application/json" },
+          body: JSON.stringify({ code: typeof close?.code === "number" ? close.code : null, reason: reason.slice(0, 500) }),
+        }).catch(() => undefined);
+      };
       const fail = (message: string) => {
         if (ended) return;
         ended = true;
@@ -339,9 +350,14 @@ export function useGeminiLive(input: {
             if (reading.toolCalls.length > 0) void answerTools(reading.toolCalls, sessionId);
             if (reading.goingAway) callbacks.current.onError?.("Gemini is ending this voice session. Start it again to keep talking.");
           },
-          onerror: (event: unknown) => fail(withReason("The voice session had a problem. Nothing was changed by it.", event)),
-          onclose: (event: unknown) =>
-            fail(withReason(sessionRef.current ? "The voice session ended. Start it again to keep talking." : "Gemini voice could not connect just now. Nothing was changed.", event)),
+          onerror: (event: unknown) => {
+            report(event);
+            fail(withReason("The voice session had a problem. Nothing was changed by it.", event));
+          },
+          onclose: (event: unknown) => {
+            report(event);
+            fail(withReason(sessionRef.current ? "The voice session ended. Start it again to keep talking." : "Gemini voice could not connect just now. Nothing was changed.", event));
+          },
         },
       });
       const session = (await Promise.race([

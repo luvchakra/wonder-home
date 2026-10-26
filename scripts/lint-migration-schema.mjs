@@ -46,6 +46,8 @@ const NON_TENANT_TABLES = new Set([
   "platform_admins",
   "homesend_share_handoffs",
   "rate_limit_counters",
+  // Keyed by an API key's fingerprint: one key can serve the platform or several households; households are matched at read time.
+  "ai_key_alerts",
   "plan_prices",
   "payment_provider_plans",
   "public_holidays",

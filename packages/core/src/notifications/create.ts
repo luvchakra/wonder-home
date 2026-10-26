@@ -57,7 +57,8 @@ export type NotificationSourceType =
   | "event_change"
   | "weather_plan"
   | "goal_checkin"
-  | "chat_thread";
+  | "chat_thread"
+  | "ai_key";
 
 export async function createNotification(
   admin: SupabaseClient,

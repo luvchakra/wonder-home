@@ -2,6 +2,8 @@ import Anthropic from "@anthropic-ai/sdk";
 import { GoogleGenAI } from "@google/genai";
 import OpenAI from "openai";
 
+import { classifyKeyFailure, failureOf, noteKeyFailure, noteKeyWorking } from "./key-alerts";
+
 /**
  * Every model client WonderHome makes, with a time limit (Wave 5 §15, §16).
  *
@@ -45,13 +47,52 @@ export type ModelCallKind = keyof typeof MODEL_TIMEOUT_MS;
 const MAX_RETRIES = 1;
 
 export function anthropicClient(apiKey: string, kind: ModelCallKind): Anthropic {
-  return new Anthropic({ apiKey, timeout: MODEL_TIMEOUT_MS[kind], maxRetries: MAX_RETRIES });
+  return new Anthropic({ apiKey, timeout: MODEL_TIMEOUT_MS[kind], maxRetries: MAX_RETRIES, fetch: watchedFetch(apiKey, "anthropic") });
 }
 
 export function geminiClient(apiKey: string, kind: ModelCallKind): GoogleGenAI {
-  return new GoogleGenAI({ apiKey, httpOptions: { timeout: MODEL_TIMEOUT_MS[kind] } });
+  return watchGemini(new GoogleGenAI({ apiKey, httpOptions: { timeout: MODEL_TIMEOUT_MS[kind] } }), apiKey);
 }
 
 export function openaiClient(apiKey: string, kind: ModelCallKind): OpenAI {
-  return new OpenAI({ apiKey, timeout: MODEL_TIMEOUT_MS[kind], maxRetries: MAX_RETRIES });
+  return new OpenAI({ apiKey, timeout: MODEL_TIMEOUT_MS[kind], maxRetries: MAX_RETRIES, fetch: watchedFetch(apiKey, "openai") });
+}
+
+/**
+ * Every call's answer is shown to `key-alerts.ts`: a refusal that is about the
+ * key (out of credits, out of quota, not valid) is recorded so an Admin hears
+ * of it; a call that works clears it. The answer itself is passed on untouched.
+ */
+function watchedFetch(apiKey: string, provider: "anthropic" | "openai"): typeof fetch {
+  return async (input, init) => {
+    const response = await fetch(input, init);
+    if (response.ok) void noteKeyWorking(apiKey);
+    else if (response.status === 400 || response.status === 401 || response.status === 402 || response.status === 403 || response.status === 429) {
+      const text = await response.clone().text().catch(() => "");
+      const alert = classifyKeyFailure(provider, response.status, text);
+      if (alert) void noteKeyFailure(apiKey, provider, alert);
+    }
+    return response;
+  };
+}
+
+/** The Google SDK takes no fetch of its own, so its two calls WonderHome makes are watched where they are made. */
+function watchGemini(client: GoogleGenAI, apiKey: string): GoogleGenAI {
+  const watch = <A extends unknown[], R>(call: (...args: A) => Promise<R>, clears: boolean) =>
+    async (...args: A): Promise<R> => {
+      try {
+        const result = await call(...args);
+        if (clears) void noteKeyWorking(apiKey);
+        return result;
+      } catch (thrown) {
+        const { status, text } = failureOf(thrown);
+        const alert = classifyKeyFailure("google", status, text);
+        if (alert) void noteKeyFailure(apiKey, "google", alert);
+        throw thrown;
+      }
+    };
+  client.models.generateContent = watch(client.models.generateContent.bind(client.models), true);
+  // A voice token is minted even for a key with no credits left (2026-10-26), so minting one proves nothing.
+  client.authTokens.create = watch(client.authTokens.create.bind(client.authTokens), false);
+  return client;
 }
