@@ -259,9 +259,9 @@ test.describe("every signed-in screen loads", () => {
     await signIn(page);
     await page.goto("/home-send");
     const row = page.locator("li").filter({ hasText: "Mustard oil" }).first();
-    await expect(row).toContainText("97% sure");
+    await expect(row).toContainText("97% sure · every detail is in what you sent");
     await row.getByRole("button").first().click();
-    await expect(page.getByText(/High · 97% sure/)).toBeVisible();
+    await expect(page.getByText(/High · 97% sure · every detail is in what you sent/)).toBeVisible();
     await expect(page.getByText("Suggested · 97% sure").first()).toBeVisible();
     await expect(page.getByLabel(/Quantity/)).toHaveValue("2");
   });

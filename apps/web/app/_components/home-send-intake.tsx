@@ -5,6 +5,7 @@ import { useState, type ReactNode } from "react";
 
 import { isConsequentialInstruction } from "@wonderhome/core/homesend/audio";
 import { scorePercent } from "@wonderhome/core/homesend/auto-add";
+import { FROM_A_FILE } from "@wonderhome/core/homesend/verify";
 import type { DocumentPlan } from "@wonderhome/core/homesend/plan";
 import type { IntakeUnderstanding } from "@wonderhome/core/homesend/understanding";
 import { Alert } from "@wonderhome/core/ui/alert";
@@ -152,9 +153,21 @@ export function describeSource(
  * instruct WonderHome, that those instructions were ignored.
  */
 /** "97% sure": how sure the reading is, shown with every entry (the owner, 2026-10-26); null when it was not read. */
-export function percentSure(understanding: Pick<IntakeUnderstanding, "readable" | "score"> | null | undefined, words: HomeSendReviewLabels["found"]): string | null {
+export function percentSure(understanding: Pick<IntakeUnderstanding, "readable" | "score" | "check" | "confidence"> | null | undefined, words: HomeSendReviewLabels["found"]): string | null {
   const percent = understanding?.readable ? scorePercent(understanding.score) : null;
-  return percent === null ? null : fillIn(words.percentSure, { percent });
+  if (percent === null) return null;
+  // Why that number, in a few words (the owner, 2026-10-26): what the reading was checked against (`homesend/verify.ts`).
+  const unverified = understanding?.check?.unverified ?? [];
+  const why = understanding?.check?.verified
+    ? words.why.verified
+    : unverified.includes(FROM_A_FILE)
+      ? words.why.file
+      : unverified.length > 0
+        ? words.why.missing
+        : understanding?.confidence !== "high"
+          ? words.why.unsure
+          : null;
+  return [fillIn(words.percentSure, { percent }), why].filter(Boolean).join(" · ");
 }
 
 export function HomeSendFindings({
@@ -412,7 +425,7 @@ export function HomeSendConfirmStep({
         options={CATEGORIES.map((category) => ({ ...category, label: labels.options.kind[category.value] ?? category.value, detail: labels.options.kindDetail[category.value] ?? "" }))}
         groups={CATEGORY_GROUPS.map((group) => ({ id: group, label: labels.options.kindGroup[group] ?? group }))}
         // How sure, right on WonderHome's pick (the owner, 2026-10-26: the "What I found" box above is easy to scroll past).
-        words={percentSure(understanding, labels.found) ? { ...labels.picker, suggested: `${labels.picker.suggested} · ${percentSure(understanding, labels.found)}` } : labels.picker}
+        words={understanding?.readable && scorePercent(understanding.score) !== null ? { ...labels.picker, suggested: `${labels.picker.suggested} · ${fillIn(labels.found.percentSure, { percent: scorePercent(understanding.score)! })}` } : labels.picker}
       />
 
       {/* Nothing is asked until the person says what it is. */}
