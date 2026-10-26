@@ -105,6 +105,7 @@ export const homesendAr: AreaCatalog<typeof homesendEn> = {
   "homesend.source.emailAttachment": "مرفق بريد إلكتروني",
   "homesend.source.whatsapp": "رسالة WhatsApp",
   "homesend.source.whatsappMedia": "ملف أُرسل عبر WhatsApp",
+  "homesend.source.schoolChannel": "رسالة من قناة المدرسة",
   "homesend.source.whatsappPhoto": "صورة أُرسلت عبر WhatsApp",
   "homesend.source.whatsappVoice": "رسالة صوتية أُرسلت عبر WhatsApp",
   "homesend.source.whatsappPdf": "ملف PDF أُرسل عبر WhatsApp",

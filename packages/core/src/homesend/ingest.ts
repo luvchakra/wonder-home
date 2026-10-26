@@ -798,4 +798,62 @@ export async function ingestLink(
   return understand(supabase, actor.householdId, itemId, { source: { text }, channel: "link", context: { channel: "a shared web page", url: fetched.finalUrl }, text }, deps);
 }
 
+/**
+ * A message from a tracked school portal channel (story 08-031).
+ *
+ * Filed exactly like any other intake: understood, injection-scanned, and left
+ * for a person to confirm. A school channel is read-only and never an
+ * authorization channel, so nothing in a message decides who it belongs to or
+ * gets written on its own. Idempotent by the channel's own message id, so a
+ * continuous feed that re-delivers one files it once.
+ *
+ * `actor` is the member who tracks the channel — the Admin who added it — since
+ * every non-email intake carries the member who brought it in; the message did
+ * not come from that member. The caller (the school layer) builds `externalId`,
+ * `text` and the description from the channel and the message, so HomeSend keeps
+ * no dependency on the school domain.
+ */
+export async function ingestSchoolChannelMessage(
+  supabase: SupabaseClient,
+  actor: IngestActor,
+  input: { externalId: string; text: string; url?: string | null; from?: string | null; channelDescription?: string },
+  deps: IngestDeps = {},
+): Promise<IngestOutcome> {
+  const already = await alreadyReceived(supabase, actor.householdId, input.externalId);
+  if (already) return already;
+
+  const text = normalizeText(input.text);
+  if (!text) throw new IngestRejected("That message was empty.", "empty_message");
+  const hash = await contentHash(text);
+  const duplicate = await existingDuplicate(supabase, actor.householdId, hash);
+  if (duplicate) return duplicate;
+
+  const from = input.from?.trim() || null;
+  const itemId = crypto.randomUUID();
+  await createHomeSendItem(supabase, {
+    id: itemId,
+    householdId: actor.householdId,
+    createdByMemberId: actor.memberId,
+    source: "school_channel",
+    rawText: text,
+    contentType: "text/plain",
+    contentHash: hash,
+    externalId: input.externalId,
+    sourceUrl: input.url ? input.url.slice(0, 2048) : null,
+    senderAddress: from,
+  });
+  return understand(
+    supabase,
+    actor.householdId,
+    itemId,
+    {
+      source: { text },
+      channel: "school_channel",
+      context: { channel: input.channelDescription ?? "a message in a school class channel", url: input.url ?? undefined, from: from ?? undefined },
+      text,
+    },
+    deps,
+  );
+}
+
 export type { IntakeFileType };

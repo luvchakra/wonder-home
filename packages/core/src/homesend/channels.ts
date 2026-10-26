@@ -18,6 +18,9 @@ const GROUP: Record<HomeSendSource, Exclude<InboxChannel, "all">> = {
   pasted_text: "uploads",
   link: "uploads",
   audio_note: "uploads",
+  // A school channel message has no tab of its own; it sits with the other
+  // non-WhatsApp, non-email intakes under Uploads.
+  school_channel: "uploads",
 };
 
 export function channelOf(source: HomeSendSource): Exclude<InboxChannel, "all"> {
