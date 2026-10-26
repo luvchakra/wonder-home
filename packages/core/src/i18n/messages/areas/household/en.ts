@@ -131,6 +131,7 @@ export const householdEn = {
   "manage.resp.area.finance": "Money",
   "manage.resp.area.school": "School",
   "manage.resp.area.home": "Home",
+  "manage.resp.area.household": "Household help",
   "manage.resp.area.pets": "Pets",
   "manage.resp.area.kids": "Kids",
   "manage.resp.area.other": "Other",

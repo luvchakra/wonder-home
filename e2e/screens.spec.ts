@@ -93,6 +93,13 @@ test.describe("every signed-in screen loads", () => {
       { household_id: householdId, outcome_key: "pets.cared_for", primary_member_id: null, ai_mode: "prepare" },
     ]);
     if (seeded.error) throw seeded.error;
+    // A playbook in three areas, so Manage Household has groups to fold.
+    const playbook = await admin.from("playbook_items").insert([
+      { household_id: householdId, outcome_key: "laundry.ready", name: "Laundry", outcome_definition: "Clean clothes are folded and put away." },
+      { household_id: householdId, outcome_key: "meals.dinner_ready", name: "Cooking meals", outcome_definition: "Dinner is on the table on time." },
+      { household_id: householdId, outcome_key: "pets.cared_for", name: "Pet care", outcome_definition: "The pets are fed and well." },
+    ]);
+    if (playbook.error) throw playbook.error;
   });
 
   test.afterAll(async () => {
@@ -179,5 +186,19 @@ test.describe("every signed-in screen loads", () => {
     await expect(page.getByRole("combobox", { name: "How sure HomeSend must be to add on its own" })).toHaveValue("85");
     // Nothing overflows the phone width.
     expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(360);
+  });
+  test("Manage Household: the playbook is grouped into folded cards that open with their chevron", async ({ page }) => {
+    await signIn(page);
+    await page.goto("/household");
+    const playbook = page.locator("section#playbook");
+    const groups = playbook.locator("details");
+    // One card per area, alphabetical by its label, each closed with its count.
+    await expect(groups.locator("summary")).toHaveText([/Laundry\s*· 1/, /Meals\s*· 1/, /Pets\s*· 1/]);
+    const meals = groups.nth(1);
+    await expect(meals.getByText("Cooking meals")).toBeHidden();
+    await meals.locator("summary").click();
+    await expect(meals.getByText("Cooking meals")).toBeVisible();
+    await expect(groups.nth(2).getByText("Pet care")).toBeHidden();
+    expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(page.viewportSize()!.width);
   });
 });

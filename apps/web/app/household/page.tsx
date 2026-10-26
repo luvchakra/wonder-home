@@ -1,4 +1,4 @@
-import { Bell, BellRing, BookOpen, Bot, ChevronRight, Cog, FileClock, ListChecks, MapPin, Plug, ShieldCheck, Users, Wand2 } from "lucide-react";
+import { Baby, Bell, BellRing, BookOpen, Bot, ChevronDown, ChevronRight, Cog, FileClock, GraduationCap, HandHelping, House, ListChecks, MapPin, PawPrint, Plug, ShieldCheck, Shirt, ShoppingBasket, Users, UtensilsCrossed, Wallet, Wand2, type LucideIcon } from "lucide-react";
 
 import { loadHouseholdAddress } from "@wonderhome/core/household/address";
 import { assessSetup } from "@wonderhome/core/household/setup";
@@ -18,6 +18,7 @@ import { EmptyState } from "@wonderhome/core/ui/states";
 
 import { PlaybookRowControls, PolicyRowControls } from "../_components/playbook-controls";
 import { playbookControlLabels, policyCategoryWords } from "../_lib/manage-labels";
+import { groupByArea } from "../_lib/responsibility-groups";
 import { requireSession } from "../_lib/session";
 import { localizeSetup, setupProgressLabels } from "../_lib/setup-labels";
 
@@ -25,6 +26,19 @@ export const metadata = { title: "Manage Household" };
 export const dynamic = "force-dynamic";
 
 type PlaybookRow = { id: string; outcome_key: string; name: string; outcome_definition: string; operating_window: { startHour?: number; endHour?: number } | null; escalation: { afterHours?: number } | null; active: boolean };
+/** Each playbook area's tile: its own icon, in its domain's colour (principle 3). */
+const AREA_TILE: Record<string, { icon: LucideIcon; tone: IconTone }> = {
+  pets: { icon: PawPrint, tone: "care" },
+  kids: { icon: Baby, tone: "school" },
+  school: { icon: GraduationCap, tone: "school" },
+  finance: { icon: Wallet, tone: "money" },
+  home: { icon: House, tone: "home" },
+  household: { icon: HandHelping, tone: "people" },
+  groceries: { icon: ShoppingBasket, tone: "meals" },
+  meals: { icon: UtensilsCrossed, tone: "meals" },
+  laundry: { icon: Shirt, tone: "home" },
+};
+
 type PolicyRow = { id: string; category: string; name: string; active: boolean; rule: { limitMinor?: number; note?: string; condition?: { kind: "member_type"; memberType: string } | { kind: "hour_range"; startHour: number; endHour: number } } | null };
 type ResponsibilityRow = { ai_mode: AutonomyMode };
 
@@ -122,33 +136,50 @@ export default async function ManageHouseholdPage() {
               action={<PillLink href="/household/setup?step=playbook" tone="primary">{t("manage.playbook.write")}</PillLink>}
             />
           ) : (
-            <Card className="p-2">
-              <ul className="divide-y divide-[var(--wh-border)]">
-                {items.map((item) => (
-                  <li key={item.id} className="flex items-start gap-3 px-2 py-3">
-                    <IconTile icon={BookOpen} tone="home" size="sm" />
-                    <div className="min-w-0 flex-1">
-                      <p className="text-sm font-medium">{item.name}{!item.active ? <Badge className="ms-2">{t("manage.playbook.paused")}</Badge> : null}</p>
-                      <p className="text-xs text-[var(--wh-foreground-muted)]">{item.outcome_definition}</p>
-                    </div>
-                    <PlaybookRowControls
-                      householdId={householdId}
-                      active={item.active}
-                      existing={playbookOptions}
-                      labels={controlLabels}
-                      item={{
-                        outcomeKey: item.outcome_key,
-                        name: item.name,
-                        outcomeDefinition: item.outcome_definition,
-                        startHour: item.operating_window?.startHour ?? null,
-                        endHour: item.operating_window?.endHour ?? null,
-                        escalateAfterHours: item.escalation?.afterHours ?? null,
-                      }}
-                    />
-                  </li>
-                ))}
-              </ul>
-            </Card>
+            // Grouped by area, each a folded card (the owner, 2026-10-26): 28 outcomes in one list was a wall.
+            <div className="space-y-2">
+              {groupByArea(items, t)
+                .sort((a, b) => a.ownerName.localeCompare(b.ownerName))
+                .map((group) => {
+                  const tile = AREA_TILE[group.area] ?? { icon: BookOpen, tone: "home" as IconTone };
+                  return (
+                    <details key={group.area} className="group rounded-[var(--wh-radius)] border border-[var(--wh-border)] bg-[var(--wh-surface)]">
+                      <summary className="flex min-h-12 cursor-pointer list-none items-center gap-3 px-3 py-2 [&::-webkit-details-marker]:hidden">
+                        <IconTile icon={tile.icon} tone={tile.tone} size="sm" />
+                        <span className="min-w-0 flex-1 text-sm font-semibold break-words">
+                          {group.ownerName} <span className="font-normal whitespace-nowrap text-[var(--wh-foreground-subtle)]">· {group.rows.length}</span>
+                        </span>
+                        <ChevronDown aria-hidden className="size-4 shrink-0 text-[var(--wh-foreground-subtle)] transition-transform group-open:rotate-180" />
+                      </summary>
+                      <ul className="divide-y divide-[var(--wh-border)] border-t border-[var(--wh-border)] px-1">
+                        {group.rows.map((item) => (
+                          <li key={item.id} className="flex items-start gap-3 px-2 py-3">
+                            <IconTile icon={tile.icon} tone={tile.tone} size="sm" />
+                            <div className="min-w-0 flex-1">
+                              <p className="text-sm font-medium">{item.name}{!item.active ? <Badge className="ms-2">{t("manage.playbook.paused")}</Badge> : null}</p>
+                              <p className="text-xs text-[var(--wh-foreground-muted)]">{item.outcome_definition}</p>
+                            </div>
+                            <PlaybookRowControls
+                              householdId={householdId}
+                              active={item.active}
+                              existing={playbookOptions}
+                              labels={controlLabels}
+                              item={{
+                                outcomeKey: item.outcome_key,
+                                name: item.name,
+                                outcomeDefinition: item.outcome_definition,
+                                startHour: item.operating_window?.startHour ?? null,
+                                endHour: item.operating_window?.endHour ?? null,
+                                escalateAfterHours: item.escalation?.afterHours ?? null,
+                              }}
+                            />
+                          </li>
+                        ))}
+                      </ul>
+                    </details>
+                  );
+                })}
+            </div>
           )}
         </section>
 
