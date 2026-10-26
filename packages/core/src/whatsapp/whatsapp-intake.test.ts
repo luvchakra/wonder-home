@@ -8,6 +8,8 @@ import { readInboundMessages } from "./inbound";
 import { groceryListNames, isForHomeTalk, isQuestionForWonderHome, namesTheSameThing, whatsappReplyText } from "./hometalk";
 import { intakeQuestion, memberNamedInReply, questionIn } from "../hometalk/intake-questions";
 import { translatorFor } from "../i18n/translate";
+import { scorePercent, sureWhy } from "../homesend/auto-add";
+import { decideConfirmation } from "../homesend/confirmation";
 import { converse, type TurnInput } from "../conversation/engine";
 import { canExecute } from "../conversation/executor";
 import { groundIntent } from "../conversation/grounding";
@@ -471,6 +473,56 @@ describe("processing into HomeSend", () => {
     expect(out.sent[0]!.text).toBe("Added *Coconut oil* (2 L) to the shopping list.");
     expect(h.tables.whatsapp_events!.map((event) => event.kind)).toContain("clarification_answered");
     expect(h.tables.whatsapp_events!.find((event) => event.kind === "clarification_answered")!.latency_ms).toEqual(expect.any(Number));
+  });
+
+  // AT-H (docs/testing/2026-10-26-hometalk-homesend-acceptance.md): a grocery line sent on WhatsApp,
+  // end to end through HomeSend's real reading and scoring, under the household's approval settings.
+  // HomeSend's decision (`decideConfirmation`) stands in for the app's review; expected results written first.
+  describe("AT-H: WhatsApp end to end under the household's approval settings", () => {
+    const oil: IngestDeps["classify"] = async () => extraction({ kind: "grocery_item", title: "Mustard oil", quantity: 2, unit: "l", dueDate: null, dateText: null, schoolKind: null, notes: null, summary: "Buy 2 litres of mustard oil." });
+    const settingsCases: [id: string, autonomy: "execute" | "prepare", bar: number, expected: "added" | "waits"][] = [
+      ["AT-H01", "execute", 95, "added"],
+      ["AT-H02", "execute", 60, "added"],
+      ["AT-H03", "execute", 99, "waits"],
+      ["AT-H04", "prepare", 95, "waits"],
+      ["AT-H05", "prepare", 60, "waits"],
+    ];
+    for (const [caseId, autonomy, bar, expected] of settingsCases) {
+      it(`${caseId} "2 litres mustard oil", groceries ${autonomy === "execute" ? "Pre Approved" : "Wait for Approval"}, bar ${bar}% → ${expected}`, async () => {
+        const { h, id } = await received("text");
+        h.tables.whatsapp_messages![0]!.text_content = "2 litres mustard oil";
+        const out = replies();
+        const addOnItsOwn: WhatsAppIntakeDeps["addOnItsOwn"] = async ({ itemId }) => {
+          const item = h.tables.home_send_items!.find((row) => row.id === itemId)!;
+          const understanding = item.understanding as never as Parameters<typeof decideConfirmation>[0]["understanding"];
+          const decision = decideConfirmation({ kind: "grocery_item", extracted: item.extracted as never, understanding, reconciliation: null, subject: null, memberInitiated: true, autonomy, autoAddPercent: bar });
+          return decision.mode === "auto_apply" ? { title: "Mustard oil", where: "Groceries", percent: scorePercent(understanding?.score), why: sureWhy(understanding) } : null;
+        };
+        await processWhatsAppMessage(h.client, id, { config: CONFIG, fetch: out.fetchImpl, ingest: { classify: oil }, ask: async () => "x", addOnItsOwn });
+        const reply = out.sent[0]!.text;
+        if (expected === "added") {
+          expect(reply).toMatch(/^Added \*Mustard oil\* to Groceries \(9\d% sure — every detail is in what you sent\) — your household lets WonderHome add these on its own\. You can undo it in HomeSend\.$/);
+        } else {
+          expect(reply).toBe("Got it 👍 I found groceries: Mustard oil. It's waiting in HomeSend for you to check.");
+        }
+      });
+    }
+
+    it("AT-H06 a reading HomeSend scores at 97% clears the default bar on its own merits", async () => {
+      const { h, id } = await received("text");
+      h.tables.whatsapp_messages![0]!.text_content = "2 litres mustard oil";
+      await processWhatsAppMessage(h.client, id, { config: CONFIG, fetch: replies().fetchImpl, ingest: { classify: oil } });
+      expect((h.tables.home_send_items![0]!.understanding as { score: number }).score).toBeGreaterThan(0.95);
+    });
+
+    it("AT-H07 the member's language is used for WonderHome's own words", async () => {
+      const { h, id } = await received("text");
+      h.tables.whatsapp_messages![0]!.text_content = "2 litres mustard oil";
+      h.tables.household_members = [{ id: MEMBER, household_id: HOUSEHOLD, language: "hi" }];
+      const out = replies();
+      await processWhatsAppMessage(h.client, id, { config: CONFIG, fetch: out.fetchImpl, ingest: { classify: oil } });
+      expect(out.sent[0]!.text).toBe("मिल गया 👍 मुझे किराने का सामान मिला: Mustard oil। यह HomeSend में आपकी जाँच का इंतज़ार कर रहा है।");
+    });
   });
 
   /** The grocery catalog's everyday items, as `search_grocery_catalog_kind` finds them (by substring, like the real one). */
