@@ -19,6 +19,16 @@ Status and timings only (`whatsapp_messages`, `whatsapp_events`, project `kqxnda
 - **The note's own run** defers to that message (`typedMessageNotedOn`). It waits until the message's 15 s plus 2 s, shows no "typing…" of its own, and stops once the message's run has taken it. If that message was already answered, or is more than 30 s earlier, nothing changes: rule 2 answers HomeTalk's question, as before.
 - **Cost:** a lone typed notice for HomeSend now replies up to 7 s later. Questions, requests, answers to HomeTalk, forwards, photos, files and voice notes keep the 8 s wait.
 
+## Second case, same PR (the owner resent the test, 21:07–21:08 IST)
+The notice was sent again at 21:07:55 and correctly answered "That's already in HomeSend" (a duplicate of the 21:04 item, which is still `classified`). "for Manan" was sent at 21:08:02 and reached WonderHome at 21:08:04, after the notice had been read at 8 s. It became its own HomeSend item and was `failed`, so the reply was "⚠️ I kept that… Failed safely".
+- **A note on a message already on record** (`itemOnRecord`, `noteOnItem`): the item is matched by the same content hash HomeSend uses for duplicates.
+  - Still waiting: the note's who (one member it names) and any day, time or amount the item's kind asks for go onto it, read the way HomeTalk reads an answer. Reply: "Got it 👍 That's already in HomeSend — I've noted it's for Manan."
+  - Added, dismissed or undone in the last week: "That one's already been handled ✅ You can change who it's for in HomeSend." Nothing changes.
+  - Never a new item either way.
+- **A lone bare detail** (`isBareDetail`: nothing but a name, a day or time, an amount and filler words) that joins nothing and answers no open question is never a HomeSend item and never Failed safely. Reply: "Sorry, I didn't catch what that's about 🤔 Could you send the message it goes with?" "2 litres mustard oil" alone is still content.
+- New words `whatsapp.ack.duplicateFor`, `.duplicateNoted`, `.duplicateHandled` and `whatsapp.noteAlone`, in all eight languages. Events use the existing kinds (`duplicate`, `question_redirected`), so no migration.
+- **Left for the owner:** the stray item from 21:08 (`ae64740f-3542-46d6-8ea1-aed5cf441e67`, status `failed`) is in Failed safely. They can dismiss it there; it was not deleted.
+
 ## Verified
 - `whatsapp-intake.test.ts`, with expected results written first:
   - the owner's case (note arriving during the wait), the same delivery, and note-first in either run order: one item, one reply, no who question;
@@ -26,9 +36,12 @@ Status and timings only (`whatsapp_messages`, `whatsapp_events`, project `kqxnda
   - the note's run defers, then stops;
   - "add milk" and "what's for dinner?" are two HomeTalk answers;
   - "for Manan" 45 s later goes through rule 2;
-  - `isShortNote` cases.
+  - a resent notice plus "for Manan": the waiting item is set to Manan, with one reply and no new item;
+  - a resent notice already added plus a note: "already handled", and nothing changes;
+  - a lone "for Manan": no item, a polite reply, never Failed safely;
+  - `isShortNote` and `isBareDetail` cases.
 - The existing forward + note tests are unchanged. One expectation changed on purpose: "a fresh message waits a moment" now waits `[6000, 7000]`.
-- `npx vitest run packages/core/src/whatsapp packages/core/src/homesend packages/core/src/hometalk`: 618 passed. `npm run typecheck`: clean. `npm run eval`: see the PR.
+- Tests for whatsapp, homesend, hometalk, i18n and help: 729 passed. `npm run typecheck`: clean. `npm run eval` (deterministic): 196/196, Unsafe Action Rate 0/23. The provider run wasn't made: no prompt or engine change.
 
 ## Docs
 - Design §3.1 rule 1, §9 (speed) and §12 I-24 (`docs/hometalk-homesend-design.md`).

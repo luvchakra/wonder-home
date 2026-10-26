@@ -10,7 +10,11 @@ import { enqueueClassifyRetry, type ClaimedJob, type JobHandler } from "../homes
 import { gateTranscript, TRANSCRIPT_CONFIDENCE_FLOOR, type TranscriptGate } from "../homesend/audio";
 import { sureClause, type AddedOnItsOwn } from "../homesend/auto-add";
 import { hearWhatsAppVoiceNote, ingestWhatsAppMedia, ingestWhatsAppText, IngestRejected, type IngestDeps, type IngestOutcome, type TranscribeResult } from "../homesend/ingest";
-import { FAILURE_REASON_COPY } from "../homesend/items";
+import { COMPLETENESS } from "../homesend/completeness";
+import { FAILURE_REASON_COPY, type HomeSendKind } from "../homesend/items";
+import { contentHash, normalizeText } from "../homesend/normalize";
+import { PENDING_STATUSES } from "../homesend/repository";
+import { readDetailAnswer } from "../hometalk/detail-answers";
 import { sendWhatsAppText, showWhatsAppTyping, type WhatsAppConfig } from "../notifications/whatsapp";
 import { log } from "../observability/logger";
 import { hitRateLimit } from "../security/rate-limit";
@@ -390,13 +394,45 @@ async function readMessage(admin: SupabaseClient, messageId: string, deps: Whats
   // A typed message for HomeSend waits a little longer for the short note often typed straight after it:
   // "Annual Day rehearsal on Saturday…" then "for Manan", 9 s later (the owner, 2026-10-26), was read
   // alone at 8 s, asked "Who is it for?" and answered twice. The note joins it, read as one.
-  if (fresh && !together && isTypedMessage(row)) {
+  if (!together && isTypedMessage(row)) {
     const names = await householdNames(admin, row.household_id).catch(() => [] as string[]);
-    if (!isNoteEntry(row, names)) {
+    if (isNoteEntry(row, names) && isBareDetail(row.text_content ?? "", names)) {
+      // A short note that joins nothing, with no question open, isn't content: never a HomeSend item and
+      // never Failed safely ("for Manan" alone, 2026-10-26, 21:08 IST). Asked for what it goes with.
+      events.push({ kind: "question_redirected", householdId: row.household_id, latencyMs: elapsed() });
+      await settle({ processing_status: "ignored" });
+      await say((await words())("whatsapp.noteAlone"));
+      await recordWhatsAppEvents(admin, events);
+      return "read";
+    }
+    if (fresh) {
       const wait = Math.min(BURST_NOTE_SETTLE_MS - BURST_SETTLE_MS, new Date(row.received_at).getTime() + BURST_NOTE_SETTLE_MS - clock().getTime());
       if (wait > 0) await sleep(wait);
       burst = await claimLateNotes(admin, row, names).catch(() => []);
       together = burst.length > 0;
+    }
+  }
+
+  // A typed message already on record, with a short note: the note goes onto that item, never a new one
+  // (the owner resent the notice, then "for Manan", 2026-10-26, 21:07 IST). One reply either way.
+  if (together && isTypedMessage(row) && burst.every((entry) => entry.message_type === "text" && !entry.forwarded)) {
+    const onRecord = await itemOnRecord(admin, row.household_id, row.text_content ?? "", now).catch(() => null);
+    if (onRecord) {
+      const t = await words();
+      const noted = onRecord.waiting ? await noteOnItem(admin, row.household_id, onRecord, burst.map((entry) => entry.text_content ?? ""), now).catch(() => null) : null;
+      const reply = !onRecord.waiting
+        ? t("whatsapp.ack.duplicateHandled")
+        : noted?.name
+          ? t("whatsapp.ack.duplicateFor", { name: noted.name })
+          : noted?.filled
+            ? t("whatsapp.ack.duplicateNoted")
+            : t("whatsapp.ack.duplicate");
+      await settle({ processing_status: "processed", failure_reason: null, homesend_item_id: onRecord.id });
+      await settleBurst({ processing_status: "processed", failure_reason: null, homesend_item_id: onRecord.id, acknowledged_at: now.toISOString() });
+      events.push({ kind: "message_processed", householdId: row.household_id, latencyMs: elapsed() }, { kind: "duplicate", householdId: row.household_id });
+      await say(reply);
+      await recordWhatsAppEvents(admin, events);
+      return "read";
     }
   }
 
@@ -808,6 +844,74 @@ async function typedMessageNotedOn(admin: SupabaseClient, row: MessageRow): Prom
   return earlier.filter((entry) => !isNoteEntry(entry, names)).sort(sentOrder).at(-1) ?? null;
 }
 
+type ItemOnRecord = { id: string; waiting: boolean; classified_kind: HomeSendKind | null; extracted: Record<string, unknown> | null; understanding: Record<string, unknown> | null };
+
+/** How long an item already added or dismissed still counts as the one a resent message is about. */
+const HANDLED_RECENTLY_MS = 7 * 24 * 60 * 60 * 1000;
+
+/**
+ * The item this typed message already made, by the same content hash HomeSend's
+ * own duplicate check uses: still waiting, or added or dismissed in the last
+ * week. Null for anything else (a failed one is read again, as HomeSend does).
+ */
+async function itemOnRecord(admin: SupabaseClient, householdId: string, text: string, now: Date): Promise<ItemOnRecord | null> {
+  const normalized = normalizeText(text);
+  if (!normalized) return null;
+  const { data } = await admin
+    .from("home_send_items")
+    .select("id, status, classified_kind, extracted, understanding, created_at")
+    .eq("household_id", householdId)
+    .eq("content_hash", await contentHash(normalized))
+    .order("created_at", { ascending: false })
+    .limit(1)
+    .maybeSingle();
+  const item = data as (Omit<ItemOnRecord, "waiting"> & { status: string; created_at: string }) | null;
+  if (!item) return null;
+  if ((PENDING_STATUSES as readonly string[]).includes(item.status)) return { ...item, waiting: true };
+  const handled = ["routed", "dismissed", "undone"].includes(item.status) && now.getTime() - new Date(item.created_at).getTime() <= HANDLED_RECENTLY_MS;
+  return handled ? { ...item, waiting: false } : null;
+}
+
+/**
+ * Puts short notes onto an item still waiting in HomeSend: who it is for (one
+ * member the note names), and a day, time or amount the item's kind asks for,
+ * read as an answer to HomeTalk's question would be. Nothing reaches a domain table.
+ */
+async function noteOnItem(admin: SupabaseClient, householdId: string, item: ItemOnRecord, notes: readonly string[], now: Date): Promise<{ name: string | null; filled: boolean } | null> {
+  const [{ data: members }, { data: settings }] = await Promise.all([
+    admin.from("household_members").select("id, display_name, nickname").eq("household_id", householdId).eq("status", "active").limit(50),
+    admin.from("households").select("timezone").eq("id", householdId).maybeSingle(),
+  ]);
+  const timezone = (settings as { timezone?: string | null } | null)?.timezone ?? "Asia/Kolkata";
+  const people = ((members ?? []) as { display_name: string; nickname: string | null }[]).filter((member) => member.display_name);
+  const kind = item.classified_kind && item.classified_kind in COMPLETENESS ? (item.classified_kind as keyof typeof COMPLETENESS) : null;
+  let patch: Record<string, unknown> = {};
+  let name: string | null = null;
+  for (const note of notes) {
+    const said = new Set(note.toLowerCase().split(/\s+/).map((word) => word.replace(/['’]s$/, "").replace(/[^\p{L}]/gu, "")));
+    const named = people.filter((member) => [member.display_name.split(/\s+/)[0] ?? "", member.nickname ?? ""].some((word) => word.length >= 2 && said.has(word.toLowerCase())));
+    if (named.length === 1) name = named[0]!.display_name;
+    if (!kind) continue;
+    for (const spec of COMPLETENESS[kind]) {
+      if (spec.answer !== "date" && spec.answer !== "time" && spec.answer !== "quantity" && spec.answer !== "amount") continue;
+      const read = readDetailAnswer(kind, spec.field, note, { timezone, now });
+      if (read && read !== "skip") patch = { ...patch, ...read };
+    }
+  }
+  if (name) patch = { ...patch, subjectMemberName: name, people: [name] };
+  if (Object.keys(patch).length === 0) return { name: null, filled: false };
+  // The review reads who an item is for from its understanding's references (`homesend/resolve.ts`), as an answer to HomeTalk does.
+  const understanding = name && item.understanding ? { ...item.understanding, references: [{ text: name, candidates: [], confidence: 0 }] } : item.understanding;
+  const { data: updated } = await admin
+    .from("home_send_items")
+    .update({ extracted: { ...(item.extracted ?? {}), ...patch }, ...(understanding !== item.understanding ? { understanding } : {}) })
+    .eq("household_id", householdId)
+    .eq("id", item.id)
+    .eq("status", "classified")
+    .select("id");
+  return ((updated ?? []) as unknown[]).length > 0 ? { name, filled: true } : { name: null, filled: false };
+}
+
 /** The household's first names and nicknames, as a note would say them ("for Manan"). */
 async function householdNames(admin: SupabaseClient, householdId: string): Promise<string[]> {
   const { data } = await admin.from("household_members").select("display_name, nickname").eq("household_id", householdId).eq("status", "active").limit(50);
@@ -843,6 +947,24 @@ export function isShortNote(text: string, names: readonly string[]): boolean {
   const said = new Set(words.map((word) => word.toLowerCase().replace(/['’]s$/, "").replace(/[^\p{L}]/gu, "")));
   const names_ = names.map((name) => name.toLowerCase()).filter((name) => name.length >= 2);
   return names_.some((name) => said.has(name)) || NOTE_DAY_OR_TIME.test(line) || NOTE_AMOUNT.test(line);
+}
+
+const NOTE_FILLER = /^(?:for|it|its|it's|is|this|that|that's|on|at|by|the|a|an|and|&|next|of|to|in)$/i;
+
+/**
+ * Whether a short note says nothing but who, when or how much ("for Manan",
+ * "Asmi Sunday", "due Friday"): alone, it is about something not sent, never
+ * content of its own ("2 litres mustard oil" is content). Pure.
+ */
+export function isBareDetail(text: string, names: readonly string[]): boolean {
+  if (!isShortNote(text, names)) return false;
+  const known = new Set(names.map((name) => name.toLowerCase()));
+  return text
+    .trim()
+    .split(/\s+/)
+    .map((word) => word.replace(/['’]s$/, "").replace(/[.,!]+$/, ""))
+    .filter(Boolean)
+    .every((word) => NOTE_FILLER.test(word) || known.has(word.toLowerCase()) || NOTE_DAY_OR_TIME.test(word) || NOTE_AMOUNT.test(word));
 }
 
 /**

@@ -3,6 +3,7 @@ import { describe, expect, it } from "vitest";
 import type { IntakeExtraction } from "../ai/classify-intake";
 import type { IngestDeps, IngestOutcome } from "../homesend/ingest";
 import { fakeSupabase } from "../homesend/testing";
+import { contentHash, normalizeText } from "../homesend/normalize";
 import { handleWhatsAppWebhook } from "../notifications/whatsapp-webhook";
 import { readInboundMessages } from "./inbound";
 import { groceryListNames, isForHomeTalk, isQuestionForWonderHome, namesTheSameThing, whatsappReplyText } from "./hometalk";
@@ -18,7 +19,7 @@ import { groundIntent } from "../conversation/grounding";
 import { readItemAmount } from "../conversation/quantity";
 import { readBareNumber } from "../commerce/bare-amount";
 import { NO_REFERENCES } from "../conversation/references";
-import { acknowledgementFor, addedReply, isShortNote, leadOf, processWhatsAppMessage, QUESTION_REPLY, receiveWhatsAppMessages, WHATSAPP_PROCESS_KIND, withAdded, type WhatsAppIntakeDeps } from "./intake";
+import { acknowledgementFor, addedReply, isBareDetail, isShortNote, leadOf, processWhatsAppMessage, QUESTION_REPLY, receiveWhatsAppMessages, WHATSAPP_PROCESS_KIND, withAdded, type WhatsAppIntakeDeps } from "./intake";
 import { CONNECT_CODE_LENGTH, LINK_REPLIES, connectMessage, generateConnectCode, hashConnectCode, readConnectCode, whatsappBusinessNumber, whatsappChatLink } from "./linking";
 
 /** The WhatsApp HomeSend spec: WhatsApp as an intake channel, never an authorization channel. */
@@ -933,6 +934,50 @@ describe("processing into HomeSend", () => {
     expect(out.sent).toEqual([]);
   });
 
+  /** The owner resent the notice (a duplicate), then "for Manan" (2026-10-26, 21:07 IST): the note became its own item, Failed safely. */
+  async function onRecord(status: "classified" | "routed") {
+    const setup = await typedAndNote("for Manan", { sameDelivery: true });
+    const notice = setup.h.tables.whatsapp_messages![0]!.text_content as string;
+    setup.h.tables.home_send_items!.push({
+      id: "item-old", household_id: HOUSEHOLD, status, classified_kind: "school_item", content_hash: await contentHash(normalizeText(notice)),
+      extracted: { title: "Annual Day rehearsal", people: [] }, understanding: { references: [] }, created_at: "2026-10-26T15:34:48.392Z",
+    });
+    return setup;
+  }
+
+  it("a resent notice and \"for Manan\": one reply, the item still waiting set to Manan, no new item", async () => {
+    const { h, noticeId, deps, seen, out } = await onRecord("classified");
+    expect(await processWhatsAppMessage(h.client, noticeId, deps)).toBe("read");
+    expect(await processWhatsAppMessage(h.client, "m-note", deps)).toBe("skipped");
+    expect(seen).toEqual([]);
+    expect(h.tables.home_send_items).toHaveLength(1);
+    expect(h.tables.home_send_items![0]).toMatchObject({ id: "item-old", status: "classified", extracted: { title: "Annual Day rehearsal", people: ["Manan"], subjectMemberName: "Manan" } });
+    for (const message of h.tables.whatsapp_messages!) expect(message).toMatchObject({ processing_status: "processed", homesend_item_id: "item-old" });
+    expect(out.sent.map((sent) => sent.text)).toEqual(["Got it 👍 That's already in HomeSend — I've noted it's for Manan."]);
+  });
+
+  it("a resent notice already added, and a note: says it's handled, changes nothing, keeps nothing new", async () => {
+    const { h, noticeId, deps, seen, out } = await onRecord("routed");
+    expect(await processWhatsAppMessage(h.client, noticeId, deps)).toBe("read");
+    expect(seen).toEqual([]);
+    expect(h.tables.home_send_items).toHaveLength(1);
+    expect(h.tables.home_send_items![0]).toMatchObject({ id: "item-old", status: "routed", extracted: { title: "Annual Day rehearsal", people: [] } });
+    expect(out.sent.map((sent) => sent.text)).toEqual(["Got it 👍 That one's already been handled ✅ You can change who it's for in HomeSend."]);
+  });
+
+  it("a lone \"for Manan\", with nothing to join and no question open, is never a HomeSend item: a polite reply asks what it goes with", async () => {
+    const { h, id } = await received("text");
+    h.tables.household_members = FAMILY();
+    h.tables.whatsapp_messages![0]!.text_content = "for Manan";
+    const out = replies();
+    let asks = 0;
+    expect(await processWhatsAppMessage(h.client, id, { config: CONFIG, fetch: out.fetchImpl, ingest: { classify }, ask: async () => ((asks += 1), "x") })).toBe("read");
+    expect(h.tables.home_send_items).toEqual([]);
+    expect(h.tables.whatsapp_messages![0]).toMatchObject({ processing_status: "ignored", homesend_item_id: null });
+    expect(out.sent.map((sent) => sent.text)).toEqual(["Sorry, I didn't catch what that's about 🤔 Could you send the message it goes with?"]);
+    expect(asks).toBe(0);
+  });
+
   it("\"add milk\" and \"what's for dinner?\" sent together are two things for HomeTalk, never joined", async () => {
     const { h, id } = await received("text");
     Object.assign(h.tables.whatsapp_messages![0]!, { text_content: "add milk", received_at: "2026-10-26T15:34:40.000Z" });
@@ -1156,6 +1201,10 @@ describe("a short note on the message before it", () => {
   const names = ["Asmi", "Manan", "Kunal"];
   it("names a member, a day or time, or an amount, in up to six words, asking nothing", () => {
     for (const note of ["for Manan", "Asmi Sunday", "it's for Asmi", "due Friday", "2 litres", "Manan's", "at 5 pm"]) expect(isShortNote(note, names), note).toBe(true);
+  });
+  it("alone, is only a detail when it says nothing but who, when or how much", () => {
+    for (const note of ["for Manan", "Asmi Sunday", "it's for Asmi", "due Friday", "2 litres"]) expect(isBareDetail(note, names), note).toBe(true);
+    for (const text of ["2 litres mustard oil", "Manan's karate on Sunday", "add milk"]) expect(isBareDetail(text, names), text).toBe(false);
   });
   it("is never a request, a question, something long or something naming nothing", () => {
     for (const text of ["add milk", "what's for dinner?", "is it for Manan?", "remind me on Friday", "thanks", "ok", "Annual Day rehearsal on Saturday at 9 am for Manan", "coconut oil"]) expect(isShortNote(text, names), text).toBe(false);

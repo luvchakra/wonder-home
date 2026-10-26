@@ -4,6 +4,10 @@ import type { whatsappEn } from "./en";
 export const whatsappDe: AreaCatalog<typeof whatsappEn> = {
   "whatsapp.ack.gotIt": "Angekommen 👍",
   "whatsapp.ack.duplicate": "Angekommen 👍 Das ist schon in HomeSend.",
+  "whatsapp.ack.duplicateFor": "Angekommen 👍 Das ist schon in HomeSend – ich habe vermerkt, dass es für {name} ist.",
+  "whatsapp.ack.duplicateNoted": "Angekommen 👍 Das ist schon in HomeSend – ich habe deine Notiz dazugeschrieben.",
+  "whatsapp.ack.duplicateHandled": "Angekommen 👍 Das ist schon erledigt ✅ Für wen es ist, kannst du in HomeSend ändern.",
+  "whatsapp.noteAlone": "Entschuldige, ich habe nicht verstanden, worum es geht 🤔 Schickst du mir die Nachricht, zu der das gehört?",
   "whatsapp.ack.failed": "⚠️ Ich habe es aufbewahrt. {why} Es liegt in HomeSend unter Sicher angehalten.",
   "whatsapp.ack.unreadable": "WonderHome konnte es nicht lesen.",
   "whatsapp.ack.checkTranscript": "Angekommen 👍 Ich bin nicht sicher, ob ich die Sprachnachricht richtig verstanden habe – bitte prüfe in HomeSend, was sie sagt. 🎙️",
