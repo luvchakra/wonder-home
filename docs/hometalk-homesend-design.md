@@ -1,0 +1,241 @@
+# HomeTalk and HomeSend: how they should work together
+
+Owner's request, 2026-10-26: "a detailed design document … which should be ideally implemented for HomeTalk and HomeSend to work properly. Consider all the issues being faced and write down the solutions incorporated in design."
+
+This is the target design. Most of it is live. Section 12 says, issue by issue, what is live (with its PR) and what is still being built. Summary rules stay in `docs/agent-platform.md`; this file explains why the two parts are split the way they are, and how a message moves through them.
+
+---
+
+## 1. Principles
+
+1. **One door for conversation.** HomeTalk is the only part of WonderHome that talks with a person: it asks, answers and confirms (CLAUDE.md rule 13). This holds in the app, on WhatsApp, by voice and on Alexa.
+2. **HomeSend reads; it never talks.**
+   - HomeSend turns something to keep (a notice, photo, PDF, voice note, forwarded message or list) into an entry, and says what that entry still lacks.
+   - It never words or sends a question.
+3. **Nothing is guessed.** A detail the content didn't give is asked for, never invented. While WonderHome is still unsure, it asks one focused question.
+4. **The household decides how much happens on its own.** Two settings decide, and nothing else:
+   - each responsibility's autonomy ("Wait for Approval" or "Pre Approved");
+   - the Admin's confidence bar (more than 95% unless changed).
+5. **Some things always wait for a person, whatever the settings:**
+   - bills, health documents and receipts;
+   - photos and files;
+   - paying, ordering, changing who can do what, and deleting.
+6. **Every refusal and failure says why.** It says so in the app, on WhatsApp and by email where it matters. Nothing fails silently.
+7. **Polite and structured.** Short sentences, a "please" or "sorry" where it fits, and choices or needed parts set out as a list. Every message is in all eight languages.
+
+---
+
+## 2. Who does what
+
+| Part | Does | Never does |
+|---|---|---|
+| **HomeTalk** (`conversation/engine.ts`, `hometalk/`) | Understands a sentence; grounds it in the household; asks clarifying questions one at a time; carries the open question between turns; answers; makes changes through governed actions with an Undo; asks HomeSend's questions on its behalf | Reads files or long content itself; skips grounding; acts on a guess |
+| **HomeSend** (`homesend/`) | One intake pipeline (`ingest.ts` → `IntakeUnderstanding`); classifies and reads content; checks the reading word by word (`verify.ts`); scores it; reconciles with what's on record; reports what's missing (`completeness.ts`); decides confirm / wait / add on its own (`confirmation.ts`) | Talks to a person; adds anything without a confirm, unless the household pre-approved it and the reading clears the bar |
+| **HomeBrain** (`homebrain/`) | Reasoning and evidence for HomeTalk's answers | Decides anything; an unvalidated model answer never reaches a person |
+| **Channels** (app, WhatsApp, Gemini Live, Alexa, email) | Prove who is speaking; carry the words in and the reply out | Decide what happened; WhatsApp is never an authorization channel |
+
+---
+
+## 3. Routing: which part gets a message
+
+The person never chooses. Each message goes through these rules in order, and the first that matches wins.
+
+### 3.1 WhatsApp
+
+| # | Message | Goes to | Why |
+|---|---|---|---|
+| 1 | Part of a burst: a forward plus the note typed straight after, within 30 s | Read together as one thing | One intent, sent as several messages |
+| 2 | A reply while **HomeTalk's question is open**: its last word in this member's WhatsApp conversation is a clarify question, from the last 15 min, and the member's previous message went to HomeTalk | **HomeTalk** | The reply is the answer ("coconut oil") |
+| 3 | A question ("what's for dinner?", "what are upcoming events") | **HomeTalk** | Something to answer, not to keep |
+| 4 | An everyday request ("add milk", "remind me…", "remember…", "remove…") | **HomeTalk** | HomeTalk does it, with an Undo |
+| 5 | "undo", "take it back", "scratch that", or a short yes/no/ok | **HomeTalk** | A reply to what HomeTalk just said |
+| 6 | A **voice note** whose transcript matches 2–5 | **HomeTalk**, with the transcript | Speaking is typing aloud |
+| 7 | A voice note WonderHome isn't sure it heard right | "Check what I heard" (HomeSend's transcript check) | Never act on a doubtful transcript |
+| 8 | Anything else: a forward, photo, PDF, list, longer note, voice note reading out a notice | **HomeSend** | Something to keep |
+
+Rule 6 is still being built (issue I-11). The rest is live.
+
+### 3.2 The app
+
+- **HomeTalk (`/ai`):** what is typed or spoken is a turn. When it tells of a new dated thing ("Asmi has a karate exam on Sunday"), it is filed with HomeSend through `ingestText` (`file_with_homesend`), never written straight to a table.
+- **HomeSend (`/home-send`):** what is uploaded or pasted is content.
+
+---
+
+## 4. The life of something sent to HomeSend
+
+```
+received → understood → checked & scored → reconciled → completeness
+        → (questions, asked by HomeTalk) → decision → added / waits → Undo
+```
+
+1. **Received.** One pipeline for every source: paste, link, file, photo, WhatsApp, email, voice note or share sheet.
+   - Content is untrusted (`injection.ts`).
+   - A duplicate is recognised and never added twice.
+2. **Understood** (`ai/classify-intake.ts`). One model call reads the kind and its fields.
+   - On Anthropic this is `CLAUDE_INTAKE_MODEL`: Sonnet 5.5 by default, `WONDERHOME_AI_INTAKE_MODEL` to change it.
+   - Dates are worked out by WonderHome from the phrase the model quotes, never by the model's own arithmetic.
+3. **Checked and scored** (`verify.ts`, `understanding.ts`).
+
+   | Score | When |
+   |---|---|
+   | 97% | Every detail is in what was sent |
+   | 90% | The AI was clear, but some detail isn't in the text |
+   | 70% | Unsure |
+   | 40% | Guessing |
+
+   Photos and files can't be checked word by word, so they always wait.
+4. **Reconciled** (`reconcile.ts`). If it is already on record, the review offers keep / update / add anyway, never a silent duplicate.
+5. **Completeness** (`completeness.ts`).
+   - Each kind lists its required and useful details (section 6).
+   - HomeSend reports which are missing and why. It never words the question.
+6. **Questions.** HomeTalk asks the missing details one at a time, at most 3 per item, through its clarify machinery (`hometalk/intake-questions.ts`, action `complete_homesend_item`).
+   - Each answer is written back onto the item.
+   - After 3 questions, HomeTalk stops and says the rest can be filled in HomeSend.
+7. **Decision** (`confirmation.ts`):
+
+   | Situation | Outcome |
+   |---|---|
+   | A bill, health document or receipt | **govern**: always waits |
+   | Unreadable or unknown | **ask** what it is |
+   | Low confidence, or who it's for is unclear | **ask** that question |
+   | Possible duplicate; medium confidence below the bar; content with instructions in it; several needs; not sent by a member; photo or file; a required detail still missing | **prepare**: waits in HomeSend |
+   | Pre Approved, score above the household's bar, a grocery or school item, nothing required missing | **auto_apply**: added on its own, with an Undo |
+
+8. **Added through the governed write.** The same domain service a person's confirm uses (`home-send-auto.ts`, `home-send-writes.ts`), recorded as a change that can be undone, and marked `auto_added`.
+9. **The reply.**
+   - App: a notice with an Undo.
+   - WhatsApp: "Added *Maths worksheet* for Asmi to Kids & School … You can undo it in HomeSend", or "It's waiting in HomeSend for you to check".
+
+---
+
+## 5. HomeTalk's conversation state
+
+- **The open question.** A clarify turn records the action, what it awaits (`member`, `day`, `referent`, `quantity`, or a HomeSend detail), the choices, and the question. The next turn reads it.
+- **Answer or fresh request?** `clarify.ts` `isFreshRequest`:
+  - a reply that asks for something itself, or is longer than an answer would be, is a new request;
+  - a new request is never swallowed as an answer, and never counts as a failed one.
+- **The second ask** (`escalatedQuestion`). When an answer really can't be read:
+  - a different, polite question ("Sorry, I still couldn't tell…");
+  - the choices or the needed parts set out as a list;
+  - never the same question twice.
+- **Time limit.** An open question takes answers for 15 minutes on WhatsApp; after that, a new message is a new turn.
+- **One question at a time**, and never more than 3 for one item.
+
+---
+
+## 6. What makes an entry complete
+
+From `completeness.ts`. A required detail blocks adding; a useful detail is asked once and never insisted on.
+
+| Kind | Required | Useful |
+|---|---|---|
+| Grocery item | name | quantity + unit |
+| School item | child, title, due date | — |
+| Class outside school | child, class | date |
+| Event | title, date | time, where |
+| Bill | payee, amount, due date | — |
+| Health document | person, record type | date |
+| Receipt | merchant, date | — |
+
+**HomeTalk's own shopping-list requests follow the same idea.**
+- "Add oil" with no amount asks "How much coconut oil should I add?".
+- If the item is already on the list, it asks "How much more?" and offers "that's enough".
+- An explicit amount adds straight away.
+
+This is issue I-12, being built. Today a bare name adds the usual pack, or nothing if the item is already listed.
+
+---
+
+## 7. How sure, and why
+
+- Every entry shows its score with a short reason (live in #357 and #361):
+  - on the Needs review and Recently handled rows;
+  - in the review's "What I found" box;
+  - on WonderHome's pick ("Suggested · 97% sure");
+  - in the "added on its own" message.
+- The reasons: "every detail is in what you sent", "read from a photo or file", "some details aren't in what you sent", "the AI wasn't sure".
+- **The bar.** Settings → AI Assistant → "How sure HomeSend must be to add on its own".
+  - Choices: more than 60, 70, 80, 85, 90, 95 (recommended), 97 or 99%.
+  - Admins only, kept as a versioned policy. If the setting can't be read, the highest bar applies.
+- **Autonomy** (Manage Household → Responsibilities):
+  - **Wait for Approval:** HomeSend prepares the entry and adds it only after a person approves.
+  - **Pre Approved:** it is added on its own when it clears the bar, and the person is told afterwards.
+
+---
+
+## 8. Failures that must be visible
+
+| Failure | Where it shows | Clears |
+|---|---|---|
+| AI key out of credits, quota used up, or invalid (Anthropic, Google, OpenAI) | Email and notice to the Admin; banner on HomeTalk and Settings → AI Assistant; the live-voice button explains instead of connecting | Itself, on the next call that works |
+| Gemini closes a live voice session | The error message carries Google's code and reason; the server records an alert when it is about the key | — |
+| Content genuinely unreadable | HomeSend → Failed safely, with the reason | When it's read again, filled in by hand, or dismissed |
+| A question or request that isn't content | **Never** Failed safely: it goes to HomeTalk (section 3) | — |
+
+No provider tells an app a balance in advance. The email comes at the first refusal; quota refusals are emailed only after lasting 10 minutes. For warnings ahead of time, set low-balance alerts in the providers' own billing pages.
+
+---
+
+## 9. Speed
+
+| Step | Target | How |
+|---|---|---|
+| HomeTalk understanding a sentence | ≤ 2 s | Fast tier (Haiku 5.5); rules first where they're sure |
+| HomeTalk composing an answer | ≤ 4 s | Balanced tier (Sonnet 5.5) |
+| HomeSend reading a message | ≤ 5 s text, ≤ 12 s file | Sonnet 5.5, not Opus (was 9–25 s on Opus) |
+| WhatsApp reply | ≤ 10 s after a burst settles | 8 s burst wait, then one pass |
+| Page reads | p95 ≤ 500 ms | One `Promise.all` wave; bounded lists |
+
+To measure: `updated_at - created_at` on `home_send_items`, and `hometalk_channel_events.latency_ms`.
+
+---
+
+## 10. Words and messages
+
+- In the UI's own labels, in all eight languages (`i18n/messages`).
+- **WhatsApp replies:**
+  - never echo an amount, a health detail or a number from the content;
+  - say where to finish ("You can undo it in HomeSend");
+  - use WhatsApp bold, and write links in full.
+- **Questions:** one at a time, with choices when there are any ("Should I use coconut oil, mustard oil or sunflower oil?"), and an example of an answer that works.
+- **A second ask:** "Sorry, …", then a list. Never blame, never repeat.
+
+---
+
+## 11. Testing and watching
+
+- **Unit tests:** routing (`whatsapp-intake.test.ts`), clarify, completeness, confirmation, key alerts.
+- **`npm run eval`:** release gates block CI; Unsafe Action Rate stays 0. Every new question type has an eval case.
+- **Signed-in E2E** against the live project (`e2e/screens.spec.ts`): the % and its reason, the key-alert banner, the Settings bar, the review's "Still needed".
+- **Metrics:** HomeSend correction rate by kind, auto-added vs confirmed, failed-safely reasons, WhatsApp events (question answered, clarification asked or answered).
+
+---
+
+## 12. Issues faced, and how the design solves them
+
+| # | Issue (2026-10-25/26) | Root cause | Solution in this design | Status |
+|---|---|---|---|---|
+| I-1 | "undo" on WhatsApp landed in Failed safely; the milk stayed | Only questions and "add/remind…" texts reached HomeTalk | Routing rule 5: undo, yes/no and ok go to HomeTalk | Live (#357) |
+| I-2 | "coconut oil" (an answer to HomeTalk) became a HomeSend item without the 2 litres | WhatsApp didn't know HomeTalk had asked | Routing rule 2: an open clarify question takes the next short reply | Live (#360) |
+| I-3 | "Add 3 litres of oil", sent again, met "I still cannot tell which items you mean" | The stale open question read the new request as a failed answer, and the second ask dropped the choices | `isFreshRequest`; polite, listed second asks | Live (#362) |
+| I-4 | Groceries Pre Approved, still waiting for review | WhatsApp had no "add on its own" step; a likely duplicate always waits | `addOnItsOwn` from WhatsApp under the same decision; the duplicate rule kept on purpose | Live (#360) |
+| I-5 | HomeSend asked nothing; entries lacked quantity, dates, places | No idea of what an entry needs | `completeness.ts`; HomeTalk asks; the review shows "Still needed" | Live (#363) |
+| I-6 | "Why would HomeSend ask a question?" | Two parts were talking | HomeSend reports, HomeTalk asks (principles 1–2) | Live (#363) |
+| I-7 | A fixed 95% bar | Hard-coded | The Admin picks the bar | Live (#357) |
+| I-8 | Confidence not shown, or shown without a reason | Not surfaced | % with a reason on every entry | Live (#357, #361) |
+| I-9 | "Reading…" took 9–25 s | Intake used Opus | Sonnet 5.5 for intake, settable | Live (#357) |
+| I-10 | Gemini out of credits: voice silently stopped | Provider refusals weren't recorded | Key alerts by fingerprint; email, notice, banner, button reason | Live (#359, #360) |
+| I-11 | A WhatsApp voice note ("What are upcoming events") heard fine but put in Failed safely | Voice notes always went to HomeSend | Routing rule 6: a transcript is treated like typed text | In progress (session 01SztgaxajAfJzhTzWd2TV3x) |
+| I-12 | "Add oil" → "already on the list, nothing to add"; no quantity asked | Bare names never asked an amount | HomeTalk asks "how much?" (section 6) | In progress (session 011bFwDCeS2xGBdcHaNX8h5f) |
+| I-13 | Old questions sitting in Failed safely ("undo", "whats plan for the morning") | Mis-routed before I-1 and I-2 | Owner can dismiss them; tidy only with the owner's yes | Open |
+
+---
+
+## 13. Still to decide or build
+
+1. **Platform key alerts.** An alert on the deployment's own key (`WONDERHOME_AI_KEY`) is recorded but tells no one. It should go to the platform admin.
+2. **A HomeTalk answer that creates HomeSend content.** "Here's the school circular" typed into HomeTalk with a pasted body should file to HomeSend in one step and say so. This is partly done via `file_with_homesend`.
+3. **Questions in the app for waiting items.** HomeTalk could offer, unprompted, "2 things in HomeSend need a detail: shall we fill them in?". This needs the owner's yes, since it starts a conversation.
+4. **Multi-item WhatsApp messages** ("milk, eggs and bread"). Ask amounts for all in one question, not three.
+5. **Live provider evaluation of the intake model change** (`npm run eval -- --provider configured`). Run once with a key.
