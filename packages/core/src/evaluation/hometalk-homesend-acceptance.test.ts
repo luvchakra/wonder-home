@@ -305,12 +305,12 @@ describe("AT-F: \"N% sure — why\"", () => {
 
   it("AT-F05 no score, no claim", () => {
     expect(sureClause({ percent: null, why: "verified" })).toBe("");
-    expect(addedReply({ title: "Milk", where: "Groceries" })).toBe("Added *Milk* to Groceries — your household lets WonderHome add these on its own. You can undo it in HomeSend.");
+    expect(addedReply({ title: "Milk", where: "Groceries" })).toBe("✅ Added *Milk* to Groceries — your household lets WonderHome add these on its own. You can undo it in HomeSend.");
   });
 
   it("AT-F06 the WhatsApp reply carries the % and the reason, and says where to undo", () => {
     expect(addedReply({ title: "Maths worksheet", where: "Kids & School", percent: 97, why: "verified" }, "Asmi")).toBe(
-      "Added *Maths worksheet* for Asmi to Kids & School (97% sure — every detail is in what you sent) — your household lets WonderHome add these on its own. You can undo it in HomeSend.",
+      "✅ Added *Maths worksheet* for Asmi to Kids & School (97% sure — every detail is in what you sent) — your household lets WonderHome add these on its own. You can undo it in HomeSend.",
     );
   });
 

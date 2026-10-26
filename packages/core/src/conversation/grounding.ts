@@ -1,5 +1,6 @@
 import { matchBill } from "./bill-talk";
-import { groceryCandidates, quantityQuestion } from "./grocery-actions";
+import { readBareNumber, sayAmount } from "../commerce/bare-amount";
+import { bareItemOf, findGrocery, groceryCandidates, quantityQuestion } from "./grocery-actions";
 import { readItemAmount } from "./quantity";
 import type { GroceryItem } from "../commerce/inventory";
 import { matchCatalogRecipe } from "../meals/recipe-catalog";
@@ -303,6 +304,26 @@ export async function groundIntent(intent: HouseholdIntent, env: GroundingEnv): 
         const options = candidates.slice(0, 4).map((candidate) => ({ entityType: "consumable", entityId: candidate.id, label: candidate.name, source: "clarification" as const, at }));
         return clarify(grounded, "item", `Should I use ${joinOr(candidates.slice(0, 4).map((candidate) => candidate.name.toLowerCase()))}?`, options);
       }
+    }
+    // A number said with no unit (25-037): 2 milk is 2 L and 2 eggs 2 pcs,
+    // but 2000 milk is past anything bought at once — one "Did you mean…?",
+    // never a guess. "Yes" takes the amount it names.
+    for (const name of names) {
+      const read = readItemAmount(name);
+      if (!read.amount || read.amount.unit !== null || !read.item) continue;
+      const item = findGrocery(read.item, known);
+      if (!item) continue;
+      const reading = readBareNumber(read.amount.quantity, bareItemOf(item));
+      if (reading.kind !== "ask") continue;
+      const swap = (value: string) => (value === name ? read.item : value);
+      const parameters: Record<string, unknown> = {
+        ...grounded.parameters,
+        ...(typeof grounded.parameters.item === "string" ? { item: swap(grounded.parameters.item) } : {}),
+        ...(Array.isArray(grounded.parameters.items) ? { items: (grounded.parameters.items as string[]).map(swap) } : {}),
+        quantityFor: [read.item],
+        ...(reading.meant ? { quantityMeant: `${read.amount.more ? "more " : ""}${sayAmount(reading.meant)} ${read.item}` } : {}),
+      };
+      return clarify({ ...grounded, parameters }, "quantity", reading.question, []);
     }
   }
 

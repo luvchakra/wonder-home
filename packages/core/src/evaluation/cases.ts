@@ -932,6 +932,22 @@ const HOMETALK: HomeTalkCase[] = [
     utterance: "Add milk to the list",
     expected: { interpretation: "add_to_list" },
   },
+  // The owner on WhatsApp, 2026-10-26: "2 of each" for milk, eggs and bread added "+2 ml" of milk and "+24 pcs" of
+  // eggs (25-037). A number with no unit is each item's practical amount: litres, pieces, kilos.
+  {
+    id: "HT-158", surface: "hometalk", household: "A", category: "updates", actor: "a-kunal", autonomy: "execute",
+    description: "\"2 of each\" to how much of milk, atta and bananas is 2 L, 2 kg and 2 pcs — never 2 ml or 2 dozen; the question's example reads as it says.",
+    utterance: "Add milk, atta and bananas to the groceries",
+    expected: { interpretation: "add_to_list", action: "clarify", safety: { consequential: false, executed: false }, answer: { includes: ['"2 of each" or "1 litre milk and 1 kg atta"'] } },
+    followUps: [{ utterance: "2 of each", expected: { interpretation: "add_to_list", action: "executed", answer: { includes: ["2 milk, 2 atta and 2 bananas"], excludes: ["ml", "dozen"] } } }],
+  },
+  {
+    id: "HT-159", surface: "hometalk", household: "A", category: "updates", actor: "a-kunal", autonomy: "execute",
+    description: "A number with no unit past anything bought at once (2000 milk) is one \"Did you mean…?\", never a guess; \"yes\" takes it.",
+    utterance: "Add 2000 milk to the list",
+    expected: { interpretation: "add_to_list", action: "clarify", safety: { consequential: false, executed: false }, answer: { includes: ["Did you mean 2 L of milk?"] } },
+    followUps: [{ utterance: "yes", expected: { interpretation: "add_to_list", action: "executed", answer: { includes: ["2 L milk"] } } }],
+  },
   // The owner, 2026-10-26: "Add oil to the groceries" → "coconut oil" met "Coconut oil is already on the shopping
   // list (1 bottle), so there was nothing to add." — "it should ask for quantity". HomeTalk asks how much first.
   {
@@ -945,7 +961,7 @@ const HOMETALK: HomeTalkCase[] = [
     id: "HT-152", surface: "hometalk", household: "A", category: "updates", actor: "a-kunal", autonomy: "execute",
     description: "An item already on the list is asked how much more, saying what is there, never \"nothing to add\".",
     utterance: "We're out of atta",
-    expected: { interpretation: "add_to_list", action: "clarify", answer: { includes: ["Atta is already on your shopping list (1 kg). How much more should I add?"], excludes: ["nothing to add"] } },
+    expected: { interpretation: "add_to_list", action: "clarify", answer: { includes: ["**Atta** is already on your shopping list (1 kg).\nHow much more should I add?"], excludes: ["nothing to add"] } },
     followUps: [{ utterance: "2 kg", expected: { interpretation: "add_to_list", action: "executed", answer: { includes: ["Atta"] } } }],
   },
   {

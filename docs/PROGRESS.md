@@ -11,11 +11,11 @@ in `docs/progress/`; for the running log of what changed when, `tracking/PROGRES
 
 ## The whole picture
 
-**392 of 424 stories done — 92.5%**
+**393 of 425 stories done — 92.5%**
 
 | Status | Stories |
 |---|---:|
-| Done | 392 |
+| Done | 393 |
 | In Progress | 9 |
 | Blocked | 1 |
 | Not Started | 18 |
@@ -50,7 +50,7 @@ in `docs/progress/`; for the running log of what changed when, `tracking/PROGRES
 | 22 Internationalization and Localization | `████████░░` | 7 | 8 | 1 deferred |
 | 23 Smart Notifications | `██████████` | 13 | 13 | — |
 | 24 HomePlaces | `██████████` | 14 | 14 | — |
-| 25 HomeFood | `████████░░` | 28 | 35 | 7 not started |
+| 25 HomeFood | `████████░░` | 29 | 36 | 7 not started |
 | 26 HomeEvents | `███████░░░` | 15 | 19 | 1 in progress, 3 not started |
 | 27 Notification Channels and Events | `█████████░` | 24 | 25 | 1 blocked |
 
@@ -615,7 +615,7 @@ in `docs/progress/`; for the running log of what changed when, `tracking/PROGRES
 
 ### 25 — HomeFood
 
-28 of 35 done `████████░░`
+29 of 36 done `████████░░`
 
 | Story | Priority | Status | Notes |
 |---|---|---|---|
@@ -654,6 +654,7 @@ in `docs/progress/`; for the running log of what changed when, `tracking/PROGRES
 | `25-034` Instamart live on home.wonderapps.biz | P0 | Not Started | A person's errand, not code: apply at mcp.swiggy.com/builders/access (or builders@swiggy.in) with a short demo video of 25-032 on localhost, asking for Instamart with the redirect URI `https://home.wonderapps.biz/groceries/order/callback`; once allowlisted (staging first, production after 48 green hours), set `WONDERHOME_INSTAMART=on` in Vercel. Swiggy's guidelines ask for 7 days' notice before a launch. |
 | `25-035` A grocery sent in through HomeSend lands on To buy, like Groceries' own Add | P0 | Done | The owner, 2026-10-25 ("when user clicks on Add, it should create WonderHome specific data structure … aligned to existing entity structure"). HomeSend's Add (and each ticked need, and a document plan's grocery line) now goes through `addGrocery` in `home-send-writes.ts`, the same steps as Groceries' Add: an item already tracked by that name (similarity ≥ 0.8) is put on To buy rather than added a second time; a new one gets a counted unit (`normalizeUnit`, else pcs), the catalog entry when its name is in the catalog and it is counted the same way, and its amount on To buy (`homesend/record-types.ts` `groceryShape`). Before, it made a bare item with unit "unit", no catalog link and nothing on the list. Undo takes back only the list change for an item that was already there (recorded as "updated" with its list key) and retires an item it created. PR #329. |
 | `25-036` HomeTalk asks how much before it adds a grocery | P0 | Done | The owner, 2026-10-26 (WhatsApp: "Add oil to the groceries" → "coconut oil" met "Coconut oil is already on the shopping list (1 bottle), so there was nothing to add"; "it should ask for quantity"). An `add_to_list` naming an item with no amount is grounded to one clarify question (`grounding.ts`, awaiting `quantity`, wording `grocery-actions.ts` `quantityQuestion`): "How much coconut oil should I add? For example 1 litre or 2 bottles."; already on the list, "…is already on your shopping list (1 bottle). How much more should I add? Or say \"that's enough\" to leave it."; several bare items, one question. `clarify.ts` `answerQuantity` reads "2 litres", "1 bottle", "3", "a dozen", "2 of each", "1 litre coconut oil and 6 eggs" with `quantity.ts` and puts the amount back in front of the item, so the add runs through `adjustListEntry` as if said at first; "that's enough"/"none"/"no" becomes `keepAsIs` (nothing made, nothing added, said politely); an unreadable answer gets the stepwise second ask (`escalatedQuestion`). An explicit amount still adds at once; "make sure we have everything for pasta" keeps its at-home check. Works on WhatsApp through `homeTalkAwaitsAnswer`. Eval HT-07 changed and HT-151–154 added (golden household A has atta on the list); help ¶6 in all eight languages. PR #365. |
+| `25-037` A number said without a unit is the item's practical amount | P0 | Done | The owner on WhatsApp, 2026-10-26 ("define default unit amount for each, which is practical, 2 for milk should not be 2ml, should be 2L ... 2 for eggs should not be 2 dozen, should be 2 pieces"): "2 of each" for milk, eggs and bread added "+2 ml, now 2.502 L" and "+24 pcs, now 32 pcs", because a bare number was read in the unit the item is stored in. PR #373. One rule, `commerce/bare-amount.ts` (`bareRule`, `readBareNumber`), read from the item's unit and its catalog category, pack and ladder: liquids in litres (a liquid sold only in packs under 250 ml counts packs), counted things in pieces, an item kept in its own word (loaf, bunch, packet) in that word, loose weighed staples (kept in kg, a pack of 1 kg or more, or a ladder rung of 250 g or more; rice, atta, dal, sugar and vegetables by name when made by hand) in kg, small weighed things (spices, tea, butter, paneer, cheese) in the catalog's pack, with 50 or more read as grams. Lemons, apples and bananas kept by weight are asked about: no weight is guessed for a piece. Past what anyone buys at once (20 L, 25 kg, 60 pcs, 20 packs) it is one "Did you mean 2 L of milk?" in grounding, and "yes" takes it. Used by every HomeTalk grocery write (`grocery-actions.ts` `amountFor`: add, remove, we have, used, bought, so "2 of each" and an answer to how much), the how-much question's examples ("1 litre milk and 6 eggs", "2 of each" only when 2 reads for every item) and HomeSend's grocery add (`homesend/record-types.ts` `groceryAmount`). An explicit unit always wins. Help (meals-and-shopping §6) in all eight languages. Eval HT-158, HT-159. Note: `docs/progress/2026-10-26-practical-default-units.md`. |
 
 ### 26 — HomeEvents
 

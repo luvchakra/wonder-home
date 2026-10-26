@@ -369,13 +369,13 @@ describe("groceries in conversation (Groceries §5.3, cases A–H)", () => {
   it("B: \"add milk to the list\" asks how much before anything is written", async () => {
     const result = await ask("Add milk to the list");
     expect(result.kind === "reply" && result.proposal.kind).toBe("clarify");
-    expect(result.kind === "reply" && result.text).toBe("How much milk should I add? For example 1 litre or 2 bottles.");
+    expect(result.kind === "reply" && result.text).toBe("How much milk should I add? For example 1 litre or 500 ml.");
     expect(result.kind === "reply" && result.clarification?.parameters).toMatchObject({ awaiting: "quantity", quantityFor: ["milk"] });
   });
 
   it("B′: an item already on the list asks how much more, with what is there", async () => {
     const result = await ask("Add milk to the list", milkOnList);
-    expect(result.kind === "reply" && result.text).toBe('Milk is already on your shopping list (1 L). How much more should I add? Or say "that\'s enough" to leave it.');
+    expect(result.kind === "reply" && result.text).toBe('**Milk** is already on your shopping list (1 L).\nHow much more should I add?\nOr say "that\'s enough" to leave it.');
   });
 
   it("B″: the answer adds that much, through the same add", async () => {
@@ -404,9 +404,41 @@ describe("groceries in conversation (Groceries §5.3, cases A–H)", () => {
 
   it("B⁵: several bare items are one question; an amount said is never asked about", async () => {
     const both = await ask("add milk and eggs to the list");
-    expect(both.kind === "reply" && both.text).toMatch(/^How much of each should I add\? Milk, Eggs\./);
+    expect(both.kind === "reply" && both.text).toMatch(/^How much of each should I add\?\n- \*\*Milk\*\*\n- \*\*Eggs\*\*\nFor example/);
     const said = await ask("add 2 litres of milk to the list");
     expect(said.kind === "reply" && said.proposal.kind).toBe("executed");
+  });
+
+  // The owner on WhatsApp, 2026-10-26: "2 of each" added 2 ml of milk and 2 dozen eggs (25-037).
+  const owners: GroceryItem[] = [
+    { ...item("c-milk", "Milk", "ml"), toBuy: { entryId: "e-milk", quantity: 2500, unit: "ml", version: 1, source: "manual", mealId: null } },
+    { ...item("c-eggs", "Eggs, Brown", "dozen"), toBuy: { entryId: "e-eggs", quantity: 8, unit: "pcs", version: 1, source: "manual", mealId: null } },
+    { ...item("c-bread", "Bread, White", "loaf"), toBuy: { entryId: "e-bread", quantity: 1, unit: "loaf", version: 1, source: "manual", mealId: null } },
+  ];
+
+  it("B⁶: the how-much question's examples read as they say, and \"2 of each\" is one of each item's own", async () => {
+    const first = await ask("add milk, eggs and bread", owners);
+    expect(first.kind === "reply" && first.text).toBe(
+      'How much of each should I add?\n- **Milk** — 2.5 L already on the list\n- **Eggs, Brown** — 8 pcs already on the list\n- **Bread, White** — 1 loaf already on the list\nFor example "2 of each" or "1 litre milk and 6 eggs".\nOr say "that\'s enough" to leave them.',
+    );
+    const clarifying = first.kind === "reply" ? (first.clarification ?? null) : null;
+    const each = await ask("2 of each", owners, { clarifying });
+    expect(each.kind === "reply" && each.intent.parameters.items).toEqual(["2 milk", "2 eggs", "2 bread"]);
+    expect(each.kind === "reply" && each.proposal.kind).toBe("executed");
+    const example = await ask("1 litre milk and 6 eggs", owners, { clarifying });
+    expect(example.kind === "reply" && example.intent.parameters.items).toEqual(["1 litre milk", "6 eggs", "bread"]);
+  });
+
+  it("B⁷: a number past anything bought at once is one \"Did you mean…?\", and \"yes\" takes it", async () => {
+    const first = await ask("add 2000 milk to the list", owners);
+    expect(first.kind === "reply" && first.proposal.kind).toBe("clarify");
+    expect(first.kind === "reply" && first.text).toBe('Did you mean 2 L of milk? Say "yes", or tell me the amount with its unit, like "2 litres".');
+    const clarifying = first.kind === "reply" ? (first.clarification ?? null) : null;
+    const yes = await ask("yes", owners, { clarifying });
+    expect(yes.kind === "reply" && yes.intent.parameters).toMatchObject({ item: "2 L milk" });
+    expect(yes.kind === "reply" && yes.proposal.kind).toBe("executed");
+    const other = await ask("2 litres", owners, { clarifying });
+    expect(other.kind === "reply" && other.intent.parameters).toMatchObject({ item: "2 litres milk" });
   });
 
   it("C: \"make sure we have everything\" after planning pasta adds only what the recipe needs, for that meal", async () => {
