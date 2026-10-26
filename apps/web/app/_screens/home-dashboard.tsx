@@ -14,6 +14,7 @@ import {
 } from "lucide-react";
 import Link from "next/link";
 
+import { asAutonomyMode } from "@wonderhome/core/household/autonomy";
 import { listEvents } from "@wonderhome/core/family/repository";
 import { listPets } from "@wonderhome/core/home/repository";
 import type { Translate } from "@wonderhome/core/i18n/translate";
@@ -393,7 +394,7 @@ async function DashboardBody({ session, now }: { session: Session; now: Date }) 
           .from("responsibilities")
           .select("outcome_key, primary_member_id, backup_member_id, ai_mode, playbook_items(name, cadence)")
           .eq("household_id", householdId);
-        return (data as ResponsibilityJoinRow[] | null) ?? [];
+        return ((data as ResponsibilityJoinRow[] | null) ?? []).map((row) => ({ ...row, ai_mode: asAutonomyMode(row.ai_mode) }));
       } catch {
         return [];
       }

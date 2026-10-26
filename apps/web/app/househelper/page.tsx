@@ -19,6 +19,7 @@ import {
   isHouseholdAdmin,
   listMembers,
 } from "@wonderhome/core/identity/households";
+import { asAutonomyMode } from "@wonderhome/core/household/autonomy";
 import { AppShell } from "@wonderhome/core/shell/app-shell";
 import { ActionRow } from "@wonderhome/core/ui/action-row";
 import { Avatar } from "@wonderhome/core/ui/avatar";
@@ -178,7 +179,8 @@ export default async function HousehelperPage({
   const responsibilities = ((responsibilityRows.data as ResponsibilityRow[] | null) ?? []).map((row) => {
     const embedded = Array.isArray(row.playbook_items) ? row.playbook_items[0] : row.playbook_items;
     const starter = starterNames.get(row.outcome_key);
-    return embedded?.name || !starter ? row : { ...row, playbook_items: { name: starter } };
+    const read = { ...row, ai_mode: asAutonomyMode(row.ai_mode) };
+    return embedded?.name || !starter ? read : { ...read, playbook_items: { name: starter } };
   });
   const nameOf = (id: string | null) =>
     members.find((member) => member.id === id)?.displayName ?? null;

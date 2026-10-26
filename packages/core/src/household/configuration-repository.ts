@@ -4,7 +4,7 @@ import { recordAuditEvent, type AuditEventType } from "../api/audit";
 import { ApiError } from "../api/errors";
 import { createAdminClient } from "../db/admin";
 import { listMembers } from "../identity/households";
-import type { AutonomyMode } from "./autonomy";
+import { asAutonomyMode, type AutonomyMode } from "./autonomy";
 import type { ResolvedChange } from "./configuration-intent";
 import {
   canDependOn,
@@ -473,7 +473,7 @@ export async function listResponsibilities(
     outcomeKey: row.outcome_key as string,
     primaryMemberId: (row.primary_member_id as string | null) ?? null,
     backupMemberId: (row.backup_member_id as string | null) ?? null,
-    aiMode: row.ai_mode as AutonomyMode,
+    aiMode: asAutonomyMode(row.ai_mode),
     priority: Number(row.priority),
   }));
 }

@@ -4,7 +4,7 @@ import { loadHouseholdAddress } from "@wonderhome/core/household/address";
 import { assessSetup } from "@wonderhome/core/household/setup";
 import { loadSetupFacts } from "@wonderhome/core/household/setup-repository";
 import { listIntegrations } from "@wonderhome/core/integrations/repository";
-import type { AutonomyMode } from "@wonderhome/core/household/autonomy";
+import { asAutonomyMode, type AutonomyMode } from "@wonderhome/core/household/autonomy";
 import Link from "next/link";
 
 import { AppShell } from "@wonderhome/core/shell/app-shell";
@@ -64,7 +64,7 @@ export default async function ManageHouseholdPage() {
   const items = (playbook.data as PlaybookRow[] | null) ?? [];
   const playbookOptions = items.map((item) => ({ key: item.outcome_key, label: item.name }));
   const rules = (policies.data as PolicyRow[] | null) ?? [];
-  const modes = ((responsibilities.data as ResponsibilityRow[] | null) ?? []).map((row) => row.ai_mode);
+  const modes = ((responsibilities.data as ResponsibilityRow[] | null) ?? []).map((row) => asAutonomyMode(row.ai_mode));
   const modeCounts = (["prepare", "execute"] as const).map((mode) => ({ mode, count: modes.filter((m) => m === mode).length }));
   const attention = integrations.filter((integration) => integration.needsAttention).length;
 

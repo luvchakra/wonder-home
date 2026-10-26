@@ -3,6 +3,7 @@ import { describe, expect, it } from "vitest";
 import {
   AUTONOMY_DESCRIPTIONS,
   AUTONOMY_MODES,
+  asAutonomyMode,
   decideAutonomy,
   mayExecuteNow,
   type ProposedAction,
@@ -18,6 +19,13 @@ const action = (over: Partial<ProposedAction> = {}): ProposedAction => ({
 describe("autonomy decisions", () => {
   it("has two modes: prepare, which waits for a person, and execute (the owner, 2026-10-26)", () => {
     expect(AUTONOMY_MODES).toEqual(["prepare", "execute"]);
+  });
+
+  it("reads a stored value as execute only when it says so; anything else, an old observe or approve included, is prepare", () => {
+    expect(asAutonomyMode("execute")).toBe("execute");
+    for (const value of ["prepare", "observe", "approve", "", null, undefined, 3, "EXECUTE"]) {
+      expect(asAutonomyMode(value), String(value)).toBe("prepare");
+    }
   });
 
   it("lets reading and drafting happen in either mode", () => {
