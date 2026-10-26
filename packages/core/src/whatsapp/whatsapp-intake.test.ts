@@ -556,6 +556,45 @@ describe("processing into HomeSend", () => {
       });
     }
 
+    // I-24 (the owner, 2026-10-26, 8:47 PM IST): Mustard oil already on the shopping list. The app's review is
+    // stood in for by HomeSend's own decision, with the match it would find and the list's answer (1 L to buy).
+    const listedCases: [id: string, autonomy: "execute" | "prepare", bar: number, said: string, quantity: number | null, expected: string][] = [
+      ["AT-H08", "execute", 95, "2 litres mustard oil", 2, "✅ Added 2 L more *Mustard oil* (now 3 L) (97% sure — every detail is in what you sent) — your household lets WonderHome add these on its own. You can undo it in HomeSend."],
+      ["AT-H09", "prepare", 95, "2 litres mustard oil", 2, "Got it 👍 *Mustard oil* is already on your shopping list, so it's waiting in HomeSend for you to choose. 🛒"],
+      ["AT-H10", "execute", 99, "2 litres mustard oil", 2, "Got it 👍 *Mustard oil* is already on your shopping list, so it's waiting in HomeSend for you to choose. 🛒"],
+      // No amount: HomeTalk asks how much first (design §4.6); nothing is added, nothing is echoed.
+      ["AT-H11", "execute", 95, "mustard oil", null, "Got it 👍 I found groceries: Mustard oil. 🛒 How much should I get? For example 2 litres or 1 kg."],
+    ];
+    for (const [caseId, autonomy, bar, said, quantity, expected] of listedCases) {
+      it(`${caseId} "${said}" already on the list, groceries ${autonomy === "execute" ? "Pre Approved" : "Wait for Approval"}, bar ${bar}%`, async () => {
+        const { h, id } = await received("text");
+        h.tables.whatsapp_messages![0]!.text_content = said;
+        const out = replies();
+        const classifyListed: IngestDeps["classify"] = async () =>
+          extraction({ kind: "grocery_item", title: "Mustard oil", quantity, unit: quantity ? "l" : null, dueDate: null, dateText: null, schoolKind: null, notes: null, summary: `Buy ${said}.` });
+        const addOnItsOwn: WhatsAppIntakeDeps["addOnItsOwn"] = async ({ itemId }) => {
+          const item = h.tables.home_send_items!.find((row) => row.id === itemId)!;
+          const understanding = item.understanding as never as Parameters<typeof decideConfirmation>[0]["understanding"];
+          const decision = decideConfirmation({
+            kind: "grocery_item",
+            extracted: item.extracted as never,
+            understanding,
+            reconciliation: { message: "This looks like the same one — keep the existing one, or add this as new?", proposal: { type: "duplicate" } },
+            onShoppingList: true,
+            subject: null,
+            memberInitiated: true,
+            autonomy,
+            autoAddPercent: bar,
+          });
+          if (decision.mode !== "auto_apply") return decision.wait ? { waiting: decision.wait, title: "Mustard oil" } : null;
+          return { title: "Mustard oil", where: "Groceries", percent: scorePercent(understanding?.score), why: sureWhy(understanding), ...(decision.topUp ? { more: { added: { quantity: 2000, unit: "ml" }, now: { quantity: 3000, unit: "ml" } } } : {}) };
+        };
+        await processWhatsAppMessage(h.client, id, { config: CONFIG, fetch: out.fetchImpl, ingest: { classify: classifyListed }, ask: async () => "x", addOnItsOwn });
+        expect(out.sent).toHaveLength(1);
+        expect(out.sent[0]!.text).toBe(expected);
+      });
+    }
+
     it("AT-H06 a reading HomeSend scores at 97% clears the default bar on its own merits", async () => {
       const { h, id } = await received("text");
       h.tables.whatsapp_messages![0]!.text_content = "2 litres mustard oil";

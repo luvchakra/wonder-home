@@ -11,6 +11,7 @@ decision that shapes later work each earns a note, written before moving on.
 
 | Date | Note |
 |---|---|
+| 2026-10-26 | [A Pre Approved grocery already on the list is topped up; HomeSend says why something waits (25-038, 14-052)](2026-10-26-listed-grocery-topup.md) |
 | 2026-10-26 | [A number said without a unit is the item's practical amount (25-037)](2026-10-26-practical-default-units.md) |
 | 2026-10-26 | [Warm emojis on WhatsApp and HomeTalk replies](2026-10-26-warm-emoji-replies.md) |
 | 2026-10-26 | [WhatsApp "typing…" while WonderHome works; a spoken question about buying reaches HomeTalk](2026-10-26-whatsapp-typing.md) |

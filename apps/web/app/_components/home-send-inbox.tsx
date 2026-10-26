@@ -32,7 +32,14 @@ import { fillIn, type HomeSendPageLabels, type HomeSendSourceLabels } from "../_
 import { describeSource, HomeSendConfirmStep, percentSure, TranscriptCheck, type ReviewConfirmation, type ReviewReconciliation, type ReviewSubject } from "./home-send-intake";
 
 /** What the server prepared for an item already waiting (`home-send-review.ts`): who it is for, and whether it is already on record. */
-export type PreparedReview = { subject: ReviewSubject | null; reconciliation: ReviewReconciliation | null; confirmation?: ReviewConfirmation | null; plan?: DocumentPlan | null };
+export type PreparedReview = {
+  subject: ReviewSubject | null;
+  reconciliation: ReviewReconciliation | null;
+  confirmation?: ReviewConfirmation | null;
+  plan?: DocumentPlan | null;
+  /** Why it waits when it would otherwise be added on its own ("already on the shopping list"), worded on the server (I-24). */
+  waitWords?: string | null;
+};
 
 const KIND_PRESENTATION: Record<string, { icon: typeof Wallet; tone: IconTone }> = {
   bill: { icon: Wallet, tone: "money" },
@@ -404,9 +411,13 @@ export function HomeSendInbox({
               {pendingOthers.map((item) => {
                 const heard = uncheckedTranscript(item);
                 const presentation = item.source === "audio_note" && heard ? { icon: Mic, tone: "neutral" as IconTone, label: words.voiceNote } : presentationFor(item.classifiedKind, words.kind);
+                // Something that would be added on its own says why it waits, in a few words (I-24).
+                const waiting = reviews[item.id]?.waitWords;
                 const reason = heard
                   ? words.checkHeard
-                  : describeSource(item.understanding, { contentType: item.contentType, receivedAt: item.createdAt, from: item.createdByMemberId ? senders[item.createdByMemberId] : null }, review.source);
+                  : waiting
+                    ? waiting
+                    : describeSource(item.understanding, { contentType: item.contentType, receivedAt: item.createdAt, from: item.createdByMemberId ? senders[item.createdByMemberId] : null }, review.source);
                 const title = titleFor(item, review.source);
                 return (
                   <li key={item.id} className="flex items-center gap-3 py-2.5">
