@@ -2,6 +2,7 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 
 import { openSession, recordMessage } from "../conversation/repository";
 import type { Translate } from "../i18n/translate";
+import { choicesFor, type HomeTalkChoices } from "./choices";
 import { titlesFor, waitingForDetails, type IntakePerson } from "./intake-questions";
 
 /**
@@ -41,7 +42,7 @@ export async function offerToFillDetails(
   client: SupabaseClient,
   admin: SupabaseClient,
   input: { householdId: string; memberId: string; people: readonly IntakePerson[]; t: Translate; now: Date },
-): Promise<{ text: string; sessionId: string; messageId: string; at: string } | null> {
+): Promise<{ text: string; sessionId: string; messageId: string; at: string; choices: HomeTalkChoices | null } | null> {
   try {
     const waiting = await waitingForDetails(client, { householdId: input.householdId, people: input.people, now: input.now });
     if (waiting.length === 0) return null;
@@ -58,6 +59,10 @@ export async function offerToFillDetails(
     const text = titles
       ? input.t("homesend.offer.ask", { count: waiting.length, titles })
       : input.t("homesend.offer.askUntitled", { count: waiting.length });
+    // Titles ride on the question so ticking some of them fills in just those (`clarify.ts`).
+    const offeredTitles = waiting.flatMap((item) => (item.title?.trim() ? [{ id: item.itemId, title: item.title.trim() }] : []));
+    const clarifyParameters = { itemIds: waiting.map((item) => item.itemId), ...(offeredTitles.length === waiting.length ? { titles: offeredTitles } : {}) };
+    const choices = choicesFor({ action: "fill_homesend_details", target: { kind: "unspecified" }, parameters: clarifyParameters, question: text, utterance: "", asked: 1 }, { t: input.t, now: input.now, timezone: "UTC" });
     const messageId = await recordMessage(admin, {
       householdId: input.householdId,
       sessionId,
@@ -67,10 +72,12 @@ export async function offerToFillDetails(
         proposal: "clarify",
         intent: "fill_homesend_details",
         mode: "clarify",
-        clarify: { action: "fill_homesend_details", target: { kind: "unspecified" }, parameters: { itemIds: waiting.map((item) => item.itemId) }, question: text, utterance: "", asked: 1 },
+        clarify: { action: "fill_homesend_details", target: { kind: "unspecified" }, parameters: clarifyParameters, question: text, utterance: "", asked: 1 },
+        // The waiting items to tick, or Yes / Not now (`choices.ts`).
+        ...(choices ? { choices } : {}),
       },
     });
-    return { text, sessionId, messageId, at: input.now.toISOString() };
+    return { text, sessionId, messageId, at: input.now.toISOString(), choices };
   } catch {
     return null;
   }

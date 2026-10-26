@@ -102,7 +102,7 @@ const DEEPER =
 const PLANNING =
   /^(?:(?:i am|i'm|im|we are|we're|i was|we were)\s+(?:planning|thinking of planning|hoping to plan)(?:\s+(?:to have|to do|on|for))?|(?:i|we)\s+(?:want|would like|'d like|wanna)\s+to\s+plan|let'?s\s+plan|(?:i|we)\s+plan\s+to\s+have)\s+(?=\S)/i;
 
-const TAIL = /(?:[\s,]+(?:please|for me|thanks|thank you|now|right now))+$/i;
+const TAIL = /(?<!\bnot)(?:[\s,]+(?:please|for me|thanks|thank you|now|right now))+$/i;
 
 export function normaliseUtterance(utterance: string): Normalised {
   const original = utterance.trim();

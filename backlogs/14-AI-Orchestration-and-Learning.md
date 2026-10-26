@@ -56,6 +56,7 @@
 | 50 | P2 | 14-050 | HomeTalk offers to fill in details for waiting items | Done | PR #368. The owner said yes on 2026-10-26 ("go ahead with 14-050"). On opening HomeTalk, an adult with HomeSend items from the last two weeks that miss something HomeTalk can ask hears "2 things in HomeSend need a detail — … Shall we fill them in now?", at most once every twelve hours and never over an open question (`hometalk/details-offer.ts`). "Yes" runs `fill_homesend_details`: the first item's first question, the rest queued, each item after the last; "no" leaves them. Browser-checked at 360 px and desktop on the live project (offer on first load, once; "yes" → "First, Diwali dinner: Which day is it?"; the answer saved). Eval HT-156, HT-157; tests OF-01–OF-21. |
 | 51 | P1 | 14-051 | The rest of WhatsApp's words in the member's language | Done | PR #368. HomeSend's refusals carry a closed code (`IngestRejected.code`) and are said from `whatsapp.rejected.*`; the reply to a connect code is in the linked member's language (`whatsapp.link.*`). Only a code that names nobody, and the "not connected yet" reply, stay English: nobody is known yet. |
 | 52 | P0 | 14-052 | HomeSend says why something waits, and its reason matches its score | Done | PR #378. The owner, 2026-10-26: "2 litres mustard oil" on WhatsApp waited although groceries were Pre Approved ("its pre approved, still issue"); "Science project model · 70% sure · every detail is in what you sent"; Mustard oil waited at 97% with only "Review". `confirmation.ts`: a grocery already on the shopping list said with an amount goes through the same decision and is a top-up (`onShoppingList`, `topUp`, the HomeFood half is 25-039); a decision that holds something otherwise added on its own carries why (`wait`: on the list, Wait for Approval, below the bar). The Needs review row says it in a few words (`auto-add.ts` `waitRowWords`, `homesend.inbox.wait.*`), WhatsApp in a sentence (`whatsapp.wait.*`), HomeTalk in English, never with an amount; all eight languages. `sureWhy` says "verified" only in the 97% band. Every other duplicate keeps I-4's rule. Tests AT-F08–F11, AT-L, AT-M, AT-H08–H11, AT-J05–J06; browser-checked at 360 px and desktop on the live project. Design §4.7, §7, I-27. |
+| 53 | P1 | 14-053 | Answers to pick under HomeTalk's questions | Done | The owner, 2026-10-26 (principle 20). Every question with sensible answers carries localized choices (`hometalk/choices.ts`, `metadata.choices`): amounts by the one rule for amounts (25-037), names, days, times, record types, yes / not now, candidates, and checkboxes for which waiting items to fill in. App chips and checkboxes (`ui/answer-choices`); WhatsApp reply buttons or a list with a text fallback, read back by id. No preview card on a turn that only asked. Eval HT-162–HT-168 (HT-167 caught "not now" normalised to "not"); design I-28. |
 
 **Status flow:** `Not Started` → `In Progress` → `Blocked` → `Done`
 
@@ -643,6 +644,18 @@ Implement AI Orchestration & Learning as a first-class WonderHome domain. The mo
 - The decision names why it waits (on the list, Wait for Approval, below the bar); the Needs review row, WhatsApp and HomeTalk say it, in all eight languages, never with an amount.
 - Bills, school items and events keep the duplicate rule; bills, health documents, receipts, photos and files always wait.
 - "Every detail is in what you sent" only in the 97% band; otherwise unsure, missing details, or from a photo or file.
+
+### Story 14-053 — Answers to pick under HomeTalk's questions
+**Epic:** AI Orchestration & Learning
+**Priority:** P1
+**Goal:** A question with a known set of answers offers them to pick, in the app and on WhatsApp (principle 20).
+
+**Acceptance criteria**
+- Each choice's `say` reads back through the clarify step as the same answer as typing it; the engine and every gate are unchanged.
+- Amounts suit the item; who, day, time, record type, yes/no and which item each have their set; several-at-once is checkboxes with one Send.
+- The text box always stays; choices are disabled once answered; every label shows whole at 360 px with 44 px targets.
+- WhatsApp: buttons for 3 or fewer, a list for up to 10, a text fallback, never a health record's; a pick comes back as its words.
+- A turn that only asked shows no preview card.
 
 ## Module Completion Rule
 Complete dependency-ready P0 stories before P1/P2, but do not block unrelated work on unavailable external providers.

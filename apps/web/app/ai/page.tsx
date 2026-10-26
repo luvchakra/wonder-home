@@ -119,9 +119,11 @@ export default async function AiPage({ searchParams }: { searchParams: Promise<{
           action: message.action ? { id: message.action.id, status: message.action.status, preview: message.action.preview, fingerprint: message.action.fingerprint ?? null, awaitingAdult: message.action.awaitingAdult ?? null } : null,
           places: message.places ?? null,
           amaf: message.amaf ?? null,
+          choices: message.choices ?? null,
+          questionOnly: message.questionOnly === true,
         }));
       if (offered && !initialMessages.some((message) => message.id === offered.messageId)) {
-        initialMessages.push({ id: offered.messageId, role: "assistant", text: offered.text, at: offered.at, action: null, places: null, amaf: null });
+        initialMessages.push({ id: offered.messageId, role: "assistant", text: offered.text, at: offered.at, action: null, places: null, amaf: null, choices: offered.choices });
       }
       if (initialMessages.some((message) => message.places && message.places.length > 0)) {
         placeMarks = Object.fromEntries(knownPlaces.map((place) => [place.placeId, place.status]));

@@ -1,6 +1,7 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { auditChange } from "../api/audit";
 import { amafMarkFrom, type AmafMark } from "../amaf/session";
+import { readChoices, type HomeTalkChoices } from "../hometalk/choices";
 import { placesFrom, type PlaceSuggestion } from "../homeplaces/service";
 import type { PendingClarification } from "./clarify";
 import { readFocus, type FocusEntity } from "./references";
@@ -71,6 +72,10 @@ export type ConversationMessage = {
   places?: PlaceSuggestion[] | null;
   /** An Ask me about family question still waiting: the part of the app it fills. */
   amaf?: AmafMark | null;
+  /** The answers its question offered to pick (principle 20, `hometalk/choices.ts`). */
+  choices?: HomeTalkChoices | null;
+  /** A turn whose only effect was asking: its preview card is not shown. */
+  questionOnly?: boolean;
 };
 
 export type ReplyShown = { language: string; text: string | null; fallback: string | null };
@@ -172,6 +177,8 @@ export async function listMessages(
       localized: row.role === "assistant" ? replyShownFrom(row.metadata) : null,
       places: row.role === "assistant" ? placesFrom(row.metadata) : null,
       amaf: row.role === "assistant" ? amafMarkFrom(row.metadata as Record<string, unknown> | null) : null,
+      choices: row.role === "assistant" ? readChoices((row.metadata as { choices?: unknown } | null)?.choices) : null,
+      questionOnly: row.role === "assistant" && (row.metadata as { questionOnly?: unknown } | null)?.questionOnly === true,
     }))
     .reverse();
 }
