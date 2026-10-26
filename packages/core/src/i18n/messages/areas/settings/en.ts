@@ -20,6 +20,10 @@ export const settingsEn = {
   "settingsPage.ai.confirmRequested.title": "Ask before acting on what I say",
   "settingsPage.ai.confirmRequested.on": "On: HomeTalk asks you first, in the conversation, before it plans, adds or changes anything you asked for.",
   "settingsPage.ai.confirmRequested.off": "Off: when you ask HomeTalk to plan, add or change something, it does it straight away and tells you how to undo it. Paying, ordering and access changes always wait for your OK.",
+  "settingsPage.ai.autoAdd.title": "How sure HomeSend must be to add on its own",
+  "settingsPage.ai.autoAdd.detail": "For outcomes set to Pre Approved, what you send on WhatsApp, tell HomeTalk or share any other way is added without asking only when WonderHome is more sure than this. Bills, health documents, receipts, photos and files always wait for you.",
+  "settingsPage.ai.autoAdd.option": "More than {percent}%",
+  "settingsPage.ai.autoAdd.optionDefault": "More than {percent}% (recommended)",
   "settingsPage.ai.keySet": "Set {date}",
   "settingsPage.ai.badge.rulesOnly": "Rules only",
   "settingsPage.ai.ownKeyIntro":

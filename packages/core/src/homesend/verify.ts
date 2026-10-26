@@ -17,7 +17,7 @@ import type { IntakeExtraction } from "../ai/classify-intake";
 /** What a photo or a file leaves unchecked: there are no words of its own to check the reading against. */
 export const FROM_A_FILE = "the original, which can't be checked word by word";
 
-/** The bar for adding an entry on its own: strictly above 95%. */
+/** The default bar for adding an entry on its own: strictly above 95%. An Admin may pick another (`auto-add.ts`). */
 export const AUTO_APPLY_FLOOR = 0.95;
 /** A high reading whose every detail was found in what was sent. */
 export const VERIFIED_CONFIDENCE = 0.97;

@@ -6,7 +6,7 @@ import { z } from "zod";
 import { OBLIGATION_KINDS } from "../finance/payments";
 import { RECORD_TYPES } from "../health/records";
 import { SCHOOL_ITEM_KINDS } from "../school/items";
-import { CLAUDE_MODEL, GEMINI_MODEL, OPENAI_MODEL } from "./model-client";
+import { CLAUDE_INTAKE_MODEL, GEMINI_MODEL, OPENAI_MODEL } from "./model-client";
 import type { ModelProvider } from "./model-key";
 import { reviewIntakeKind } from "./intake-kind-check";
 import { anthropicClient, geminiClient, openaiClient } from "./provider-clients";
@@ -947,7 +947,7 @@ export async function classifyIntake(
                 ]
               : [{ type: "text", text: `${textPrompt(source, context)}\n\n${CLAUDE_TOOL_INSTRUCTION}` }];
         const response = await client.messages.create({
-          model: CLAUDE_MODEL,
+          model: CLAUDE_INTAKE_MODEL,
           max_tokens: 8192,
           system: INTAKE_SYSTEM_PROMPT,
           tools: [CLAUDE_INTAKE_TOOL],

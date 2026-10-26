@@ -122,6 +122,8 @@ export type HomeSendReviewLabels = {
     source: string;
     confidenceLabel: string;
     confidence: Record<IntakeUnderstanding["confidence"], string>;
+    /** "{percent}% sure": the reading's score, beside every entry. */
+    percentSure: string;
     heard: string;
     heardValue: string;
     instructionsIgnored: string;
@@ -444,6 +446,7 @@ export function homesendReviewLabels(t: Translate, language: string): HomeSendRe
       source: t("homesend.found.source"),
       confidenceLabel: t("homesend.found.confidence"),
       confidence: { high: t("homesend.found.high"), medium: t("homesend.found.medium"), low: t("homesend.found.low") },
+      percentSure: t("homesend.found.percentSure", keep("percent")),
       heard: t("homesend.found.heard"),
       heardValue: t("homesend.found.heardValue"),
       instructionsIgnored: t("homesend.found.instructionsIgnored"),

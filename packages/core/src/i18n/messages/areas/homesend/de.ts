@@ -120,6 +120,7 @@ export const homesendDe: AreaCatalog<typeof homesendEn> = {
   "homesend.found.alsoAsks": "Es wird außerdem nach {list} gefragt.",
   "homesend.found.source": "Quelle",
   "homesend.found.confidence": "Sicherheit",
+  "homesend.found.percentSure": "{percent} % sicher",
   "homesend.found.high": "Hoch",
   "homesend.found.medium": "Mittel",
   "homesend.found.low": "Niedrig",

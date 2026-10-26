@@ -20,6 +20,10 @@ export const settingsFr: AreaCatalog<typeof settingsEn> = {
   "settingsPage.ai.confirmRequested.title": "Demander avant d’agir sur ce que je dis",
   "settingsPage.ai.confirmRequested.on": "Activé : HomeTalk vous demande d’abord, dans la conversation, avant de planifier, d’ajouter ou de changer ce que vous avez demandé.",
   "settingsPage.ai.confirmRequested.off": "Désactivé : quand vous demandez à HomeTalk de planifier, d’ajouter ou de changer quelque chose, il le fait tout de suite et vous dit comment l’annuler. Les paiements, les commandes et les changements d’accès attendent toujours votre accord.",
+  "settingsPage.ai.autoAdd.title": "À quel point HomeSend doit être sûr pour ajouter seul",
+  "settingsPage.ai.autoAdd.detail": "Pour les résultats en « Pre Approved », ce que vous envoyez sur WhatsApp, dites à HomeTalk ou partagez autrement n’est ajouté sans demander que si WonderHome est plus sûr que cela. Factures, documents de santé, reçus, photos et fichiers vous attendent toujours.",
+  "settingsPage.ai.autoAdd.option": "Plus de {percent} %",
+  "settingsPage.ai.autoAdd.optionDefault": "Plus de {percent} % (recommandé)",
   "settingsPage.ai.keySet": "Définie le {date}",
   "settingsPage.ai.badge.rulesOnly": "Règles seules",
   "settingsPage.ai.ownKeyIntro":

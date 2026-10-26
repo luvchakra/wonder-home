@@ -4,6 +4,7 @@ import { GraduationCap, HeartPulse, Medal, Mic, PartyPopper, ReceiptText, Shield
 import { useState, type ReactNode } from "react";
 
 import { isConsequentialInstruction } from "@wonderhome/core/homesend/audio";
+import { scorePercent } from "@wonderhome/core/homesend/auto-add";
 import type { DocumentPlan } from "@wonderhome/core/homesend/plan";
 import type { IntakeUnderstanding } from "@wonderhome/core/homesend/understanding";
 import { Alert } from "@wonderhome/core/ui/alert";
@@ -150,6 +151,12 @@ export function describeSource(
  * is — in words, never a bare score — and, when the content tried to
  * instruct WonderHome, that those instructions were ignored.
  */
+/** "97% sure": how sure the reading is, shown with every entry (the owner, 2026-10-26); null when it was not read. */
+export function percentSure(understanding: Pick<IntakeUnderstanding, "readable" | "score"> | null | undefined, words: HomeSendReviewLabels["found"]): string | null {
+  const percent = understanding?.readable ? scorePercent(understanding.score) : null;
+  return percent === null ? null : fillIn(words.percentSure, { percent });
+}
+
 export function HomeSendFindings({
   understanding,
   contentType,
@@ -179,7 +186,10 @@ export function HomeSendFindings({
         {understanding.readable ? (
           <>
             <dt className="text-[var(--wh-foreground-subtle)]">{words.confidenceLabel}</dt>
-            <dd>{words.confidence[understanding.confidence]}</dd>
+            <dd>
+              {words.confidence[understanding.confidence]}
+              {percentSure(understanding, words) ? ` · ${percentSure(understanding, words)}` : ""}
+            </dd>
           </>
         ) : null}
         {understanding.provenance.transcriptConfidence !== null && understanding.provenance.transcriptConfidence < 1 ? (

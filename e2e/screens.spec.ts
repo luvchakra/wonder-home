@@ -162,4 +162,22 @@ test.describe("every signed-in screen loads", () => {
     await expect(pets.locator('button[name="aiMode"][value="execute"]')).toBeDisabled();
     await expect(pets.getByText("Give every responsibility here an owner first.")).toBeVisible();
   });
+  test("Settings → AI Assistant: an Admin picks how sure HomeSend must be to add on its own", async ({ page }) => {
+    await signIn(page);
+    await page.setViewportSize({ width: 360, height: 800 });
+    await page.goto("/settings/ai");
+    await expect(page.getByText(ERROR_SCREEN)).toHaveCount(0);
+    const picker = page.getByRole("combobox", { name: "How sure HomeSend must be to add on its own" });
+    await expect(picker).toHaveValue("95");
+    await expect(picker.locator("option")).toHaveText(["More than 60%", "More than 70%", "More than 80%", "More than 85%", "More than 90%", "More than 95% (recommended)", "More than 97%", "More than 99%"]);
+    await picker.selectOption("85");
+    await expect.poll(async () => {
+      const { data } = await admin.from("policies").select("rule").eq("household_id", householdId).eq("category", "ai_autonomy").eq("active", true).eq("name", "Add from HomeSend only when more sure than").maybeSingle();
+      return (data?.rule as { percent?: number } | undefined)?.percent ?? null;
+    }).toBe(85);
+    await page.reload();
+    await expect(page.getByRole("combobox", { name: "How sure HomeSend must be to add on its own" })).toHaveValue("85");
+    // Nothing overflows the phone width.
+    expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(360);
+  });
 });

@@ -93,3 +93,32 @@ describe("HomeSend confirmation strategy (Wave 3 §12)", () => {
     expect(decide({ memberInitiated: false }).mode).toBe("prepare");
   });
 });
+
+describe("the household's bar for adding on its own (the owner, 2026-10-26)", () => {
+  const unchecked = { readable: true, confidence: "high" as const, score: 0.9, check: { verified: false, unverified: ["the name"] }, safety: { instructionsIgnored: false, signals: [] } };
+  const unsure = { readable: true, confidence: "medium" as const, score: 0.7, check: { verified: false, unverified: ["the name"] }, safety: { instructionsIgnored: false, signals: [] } };
+
+  it("is 95% until an Admin picks another, and is strictly above", () => {
+    expect(decide({}).mode).toBe("auto_apply");
+    expect(decide({ understanding: unchecked }).mode).toBe("prepare");
+    expect(decide({ autoAddPercent: 97 }).mode).toBe("prepare");
+  });
+
+  it("follows a lower bar the Admin picked, for a clear or even a medium reading", () => {
+    expect(decide({ understanding: unchecked, autoAddPercent: 85 }).mode).toBe("auto_apply");
+    expect(decide({ understanding: unsure, autoAddPercent: 60 }).mode).toBe("auto_apply");
+    expect(decide({ understanding: unsure, autoAddPercent: 70 }).mode).toBe("prepare");
+  });
+
+  it("names the household's own bar when it waits", () => {
+    const sureButUnnamed = { ...unchecked, check: { verified: false, unverified: [] } };
+    expect(decide({ understanding: sureButUnnamed, autoAddPercent: 90 }).reason).toBe("WonderHome adds things on its own only when it is more than 90% sure, so a person looks first.");
+  });
+
+  it("never lets a low bar add a photo or file, a bill, or anything under Wait for Approval", () => {
+    const photo = { ...unchecked, check: { verified: false, unverified: ["the original, which can't be checked word by word"] } };
+    expect(decide({ understanding: photo, autoAddPercent: 60 }).mode).toBe("prepare");
+    expect(decide({ kind: "bill", autoAddPercent: 60 }).mode).toBe("govern");
+    expect(decide({ understanding: unchecked, autoAddPercent: 60, autonomy: "prepare" }).mode).toBe("prepare");
+  });
+});

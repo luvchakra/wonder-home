@@ -120,6 +120,7 @@ export const homesendZh: AreaCatalog<typeof homesendEn> = {
   "homesend.found.alsoAsks": "其中还需要：{list}。",
   "homesend.found.source": "来源",
   "homesend.found.confidence": "把握程度",
+  "homesend.found.percentSure": "{percent}% 把握",
   "homesend.found.high": "高",
   "homesend.found.medium": "中",
   "homesend.found.low": "低",

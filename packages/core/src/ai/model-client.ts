@@ -310,6 +310,18 @@ export const CLAUDE_MODEL = process.env.WONDERHOME_AI_MODEL?.trim() || "claude-o
 export const CLAUDE_UNDERSTANDING_MODEL = process.env.WONDERHOME_AI_UNDERSTANDING_MODEL?.trim() || process.env.WONDERHOME_AI_MODEL?.trim() || "claude-haiku-5-5";
 export const CLAUDE_ANSWER_MODEL = process.env.WONDERHOME_AI_ANSWER_MODEL?.trim() || process.env.WONDERHOME_AI_MODEL?.trim() || "claude-sonnet-5-5";
 
+/**
+ * The Claude model HomeSend reads with (owner's ask, 26 Oct 2026: a pasted
+ * bill sat on "Reading…" for 25 s, a one-line grocery ask for 9 s, nearly all
+ * of it one call to the model above). Reading a message, photo or PDF into
+ * the intake schema needs vision and care with dates and amounts, so it runs
+ * on the balanced tier rather than the fast one. Nothing it returns is acted
+ * on unchecked: `homesend/verify.ts` checks every detail against what was
+ * sent, and a person confirms below the household's bar. An operator moves
+ * it without a deploy; `WONDERHOME_AI_MODEL`, when set, still applies to all.
+ */
+export const CLAUDE_INTAKE_MODEL = process.env.WONDERHOME_AI_INTAKE_MODEL?.trim() || process.env.WONDERHOME_AI_MODEL?.trim() || "claude-sonnet-5-5";
+
 /** Same override, for a deployment whose configured provider is Google instead. */
 export const GEMINI_MODEL = process.env.WONDERHOME_AI_MODEL?.trim() || "gemini-flash-latest";
 

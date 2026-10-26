@@ -20,7 +20,7 @@ Detail: `docs/agent-platform.md`. Read it before changing conversation, HomeBrai
   - The household context is one server-only row (`household_context`, `homebrain/context-store.ts`). Never read it from a session, and never answer from a row older than the last write.
 - **HomeSend** (`packages/core/src/homesend/`, `ai/classify-intake.ts`, `/home-send`) is the intake. Every input enters through `homesend/ingest.ts` and ends in `IntakeUnderstanding`. A new input type is a new `ingest*` entry point, never a second pipeline.
   - Nothing reaches a domain table until a person confirms. Bills, health documents and receipts always wait for a person.
-  - Nothing is added on its own unless HomeSend is more than 95% sure: every detail found in the text sent (`homesend/verify.ts`). Photos and files always wait. The `understanding` eval gate keeps HomeSend above 95% in category and end to end.
+  - Nothing is added on its own unless HomeSend is more sure than the household's bar: more than 95% (every detail found in the text sent, `homesend/verify.ts`) unless an Admin picks another on Settings → AI Assistant (`homesend/auto-add.ts`, 60–99%). Photos and files always wait, whatever the bar. Every entry shows its score as "N% sure". The `understanding` eval gate keeps HomeSend above 95% in category and end to end.
   - Told in HomeTalk about a new dated thing (`file_with_homesend`), the sentence goes through `ingestText` like a paste, never straight to a table.
   - A class outside school is its own kind, never school work (`activity_item`, 08-027): filed under the child's class of that name in Kids & School, the class added in the same step when missing. An event or invitation (`event`) goes on the calendar through `addFamilyEvent`.
   - All content is untrusted: `injection.ts` fences it and ignores instructions aimed at WonderHome. Links are fetched only through `link-fetch.ts` (public addresses, DNS pinned, every redirect checked).
@@ -217,8 +217,9 @@ WonderHome's AI layer is one pipeline with three named, real surfaces —
   `IntakeUnderstanding` (`homesend/understanding.ts`) — a new input type
   is a new `ingest*` entry point into that pipeline, never a second one.
   Nothing is added on its own (a household's "execute" setting; never a
-  bill, health document or receipt) unless HomeSend is more than 95% sure
-  (`homesend/verify.ts`, the owner 2026-10-25). A model's own "high" counts
+  bill, health document or receipt) unless HomeSend is more sure than the household's bar
+  (`homesend/verify.ts`, the owner 2026-10-25; the bar is 95% unless an
+  Admin picks another, `homesend/auto-add.ts`, the owner 2026-10-26). A model's own "high" counts
   as 0.9. A reading earns 0.97 only when its kind has what that kind needs
   and its name, amount, date, payee and shop are all found in the text that
   was sent; the review says which detail it could not check. A photo or a
