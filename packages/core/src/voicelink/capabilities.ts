@@ -273,7 +273,7 @@ export const VOICE_CAPABILITIES: readonly Capability[] = [
     id: "homesend_details",
     label: "Answering what something you sent to HomeSend is missing",
     category: "low_risk",
-    actions: ["complete_homesend_item"],
+    actions: ["complete_homesend_item", "fill_homesend_details"],
     geminiTools: [],
     policy: everywhere,
   },

@@ -70,8 +70,14 @@ export type IngestOutcome = {
 };
 
 /** Refused before anything was kept — too big to take in, or nothing there. */
+/** Why something sent was refused, as a closed word, so a channel can say it in the person's own language (14-051). */
+export type IngestRejectedCode = "empty_message" | "empty_file" | "too_large_audio" | "too_large_text" | "too_large_file";
+
 export class IngestRejected extends Error {
-  constructor(message: string) {
+  constructor(
+    message: string,
+    readonly code: IngestRejectedCode | null = null,
+  ) {
     super(message);
     this.name = "IngestRejected";
   }
@@ -461,7 +467,7 @@ export async function ingestWhatsAppText(
   // record); the model reads the address as text rather than WonderHome
   // fetching it.
   const text = normalizeText(input.text);
-  if (!text) throw new IngestRejected("That message was empty.");
+  if (!text) throw new IngestRejected("That message was empty.", "empty_message");
   const hash = await contentHash(text);
   const duplicate = await existingDuplicate(supabase, input.householdId, hash);
   if (duplicate) return duplicate;
@@ -544,8 +550,8 @@ async function alreadyReceived(supabase: SupabaseClient, householdId: string, ex
 async function ingestFileFor(supabase: SupabaseClient, owner: FileOwner, input: IngestFileInput, deps: IngestDeps): Promise<IngestOutcome> {
   const actor = { householdId: owner.householdId, memberId: owner.memberId ?? "" };
   const isAttachment = owner.parentItemId !== null;
-  if (input.bytes.length === 0) throw new IngestRejected("That file is empty.");
-  if (input.bytes.length > MAX_BYTES.audio) throw new IngestRejected("That file is too large — please use one under 10MB.");
+  if (input.bytes.length === 0) throw new IngestRejected("That file is empty.", "empty_file");
+  if (input.bytes.length > MAX_BYTES.audio) throw new IngestRejected("That file is too large — please use one under 10MB.", "too_large_audio");
 
   const hash = await contentHash(input.bytes);
   if (!isAttachment) {
@@ -555,7 +561,9 @@ async function ingestFileFor(supabase: SupabaseClient, owner: FileOwner, input: 
 
   const detected = detectIntakeFile(input.bytes, input.claimedType, input.filename ?? null);
   if (detected.ok && input.bytes.length > MAX_BYTES[detected.family]) {
-    throw new IngestRejected(detected.family === "text" ? "That text file is too large — please paste the part that matters." : "That file is too large — please use one under 8MB.");
+    throw detected.family === "text"
+      ? new IngestRejected("That text file is too large — please paste the part that matters.", "too_large_text")
+      : new IngestRejected("That file is too large — please use one under 8MB.", "too_large_file");
   }
 
   const storedType: string = detected.ok ? detected.type : "application/octet-stream";

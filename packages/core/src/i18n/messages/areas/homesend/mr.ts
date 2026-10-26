@@ -395,4 +395,10 @@ export const homesendMr: AreaCatalog<typeof homesendEn> = {
   "homesend.install.desktop1": "अ‍ॅड्रेस बारच्या उजव्या टोकाला इन्स्टॉलचा आयकॉन शोधा.",
   "homesend.install.desktop2": "किंवा ब्राउझरचा मेनू उघडा आणि “Install WonderHome…” निवडा.",
   "homesend.install.other": "तुमच्या ब्राउझरचा मेनू उघडा आणि “Install app” किंवा “Add to Home screen” शोधा.",
+  // HomeTalk's offer to fill in what waits in HomeSend (14-050).
+  "homesend.offer.ask#one": "HomeSend मधील {count} गोष्टीत एक माहिती बाकी आहे — {titles}. आत्ता भरूया का? हो म्हणा, किंवा राहू देण्यासाठी नाही.",
+  "homesend.offer.ask#other": "HomeSend मधील {count} गोष्टींत माहिती बाकी आहे — {titles}. आत्ता भरूया का? हो म्हणा, किंवा राहू देण्यासाठी नाही.",
+  "homesend.offer.askUntitled#one": "HomeSend मधील {count} गोष्टीत एक माहिती बाकी आहे. आत्ता भरूया का? हो म्हणा, किंवा राहू देण्यासाठी नाही.",
+  "homesend.offer.askUntitled#other": "HomeSend मधील {count} गोष्टींत माहिती बाकी आहे. आत्ता भरूया का? हो म्हणा, किंवा राहू देण्यासाठी नाही.",
+  "homesend.offer.and": " आणि ",
 };

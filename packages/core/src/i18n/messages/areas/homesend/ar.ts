@@ -415,4 +415,10 @@ export const homesendAr: AreaCatalog<typeof homesendEn> = {
   "homesend.install.desktop1": "ابحث عن أيقونة التثبيت في الطرف الأيمن من شريط العنوان.",
   "homesend.install.desktop2": "أو افتح قائمة المتصفح واختر «تثبيت WonderHome…».",
   "homesend.install.other": "افتح قائمة المتصفح وابحث عن «تثبيت التطبيق» أو «إضافة إلى الشاشة الرئيسية».",
+  // HomeTalk's offer to fill in what waits in HomeSend (14-050).
+  "homesend.offer.ask#one": "ينقص {count} عنصرًا في HomeSend تفصيلٌ — {titles}. هل نكمله الآن؟ قل نعم، أو لا لتركه.",
+  "homesend.offer.ask#other": "تنقص {count} عناصر في HomeSend تفاصيل — {titles}. هل نكملها الآن؟ قل نعم، أو لا لتركها.",
+  "homesend.offer.askUntitled#one": "ينقص {count} عنصرًا في HomeSend تفصيلٌ. هل نكمله الآن؟ قل نعم، أو لا لتركه.",
+  "homesend.offer.askUntitled#other": "تنقص {count} عناصر في HomeSend تفاصيل. هل نكملها الآن؟ قل نعم، أو لا لتركها.",
+  "homesend.offer.and": " و",
 };

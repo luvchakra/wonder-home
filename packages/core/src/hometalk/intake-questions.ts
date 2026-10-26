@@ -323,6 +323,8 @@ export async function answerIntakeQuestion(
 
   const title = typeof filled.title === "string" ? filled.title : null;
   const next = intakeQuestion({ itemId: item.id, kind, extracted: filled as CompletenessReading, asked, people: input.people, ambiguous: patch && (field === "child" || field === "person") ? [] : ambiguousNames(understanding) });
+  // Filling in several waiting items (14-050): the rest of the queue rides on every question about this one.
+  if (next && Array.isArray(input.parameters.queue)) next.clarify.parameters.queue = input.parameters.queue;
   if (next) return { text: `${lead} ${next.question}`, clarify: next.clarify, handBack: false, stillNeeded: [], title };
   // Every detail still missing: the required ones, and useful ones never asked (one already asked isn't insisted on).
   const stillNeeded = missingDetails(kind, filled as CompletenessReading, { person: true })
@@ -336,4 +338,64 @@ export function handedBackText(lead: string, outcome: { added: AddedOnItsOwn | n
   if (outcome.added) return `${lead} Added **${outcome.added.title}** to ${outcome.added.where}${sureClause(outcome.added)} — your household lets WonderHome add these on its own. You can undo it in HomeSend.`;
   if (outcome.stillNeeded.length > 0) return `${lead} It's waiting in HomeSend — the ${listDetails(outcome.stillNeeded.map((label) => ({ label })))} can be filled in there.`;
   return `${lead} It's waiting in HomeSend for you to check.`;
+}
+
+// --- Filling in what waits in HomeSend (story 14-050) --------------------------------------
+
+/** How far back a waiting item is still offered; older ones are left for the HomeSend screen. */
+const OFFER_WINDOW_DAYS = 14;
+
+export type WaitingItem = { itemId: string; title: string | null };
+
+/**
+ * The member's waiting HomeSend items that HomeTalk could ask a question
+ * about, newest first: read, not yet added, from the last two weeks, and
+ * missing something it can ask (`intakeQuestion`). Through the member's own
+ * client, so RLS decides what they see.
+ */
+export async function waitingForDetails(client: SupabaseClient, input: { householdId: string; people: readonly IntakePerson[]; now: Date; limit?: number }): Promise<WaitingItem[]> {
+  const since = new Date(input.now.getTime() - OFFER_WINDOW_DAYS * 86_400_000).toISOString();
+  const { data, error } = await client
+    .from("home_send_items")
+    .select("id, status, classified_kind, extracted, understanding")
+    .eq("household_id", input.householdId)
+    .eq("status", "classified")
+    .gte("created_at", since)
+    .order("created_at", { ascending: false })
+    .limit(30);
+  if (error) return [];
+  const waiting: WaitingItem[] = [];
+  for (const row of (data ?? []) as ItemRow[]) {
+    if (!row.classified_kind || row.classified_kind === "unknown") continue;
+    const next = intakeQuestion({ itemId: row.id, kind: row.classified_kind, extracted: (row.extracted ?? null) as CompletenessReading, asked: [], people: input.people, ambiguous: ambiguousNames(row.understanding) });
+    if (next) waiting.push({ itemId: row.id, title: typeof row.extracted?.title === "string" ? row.extracted.title : null });
+    if (waiting.length >= (input.limit ?? 5)) break;
+  }
+  return waiting;
+}
+
+/**
+ * The first question about the first item in `queue` that still needs one,
+ * with the rest of the queue riding on it; null when none does any more.
+ */
+export async function nextQueuedQuestion(
+  client: SupabaseClient,
+  input: { householdId: string; queue: readonly string[]; people: readonly IntakePerson[] },
+): Promise<{ title: string | null; question: string; clarify: PendingClarification } | null> {
+  for (let index = 0; index < input.queue.length; index += 1) {
+    const item = await loadItem(client, input.householdId, input.queue[index]!);
+    if (!item || item.status !== "classified" || !item.classified_kind) continue;
+    const next = intakeQuestion({ itemId: item.id, kind: item.classified_kind, extracted: (item.extracted ?? null) as CompletenessReading, asked: [], people: input.people, ambiguous: ambiguousNames(item.understanding) });
+    if (!next) continue;
+    next.clarify.parameters.queue = input.queue.slice(index + 1);
+    return { title: typeof item.extracted?.title === "string" ? item.extracted.title : null, question: next.question, clarify: next.clarify };
+  }
+  return null;
+}
+
+/** "Maths worksheet and Diwali dinner" — at most three titles, for the offer. */
+export function titlesFor(items: readonly WaitingItem[], or = " and "): string {
+  const titles = items.map((item) => item.title?.trim()).filter((title): title is string => Boolean(title)).slice(0, 3);
+  if (titles.length <= 1) return titles[0] ?? "";
+  return `${titles.slice(0, -1).join(", ")}${or}${titles.at(-1)}`;
 }

@@ -395,4 +395,10 @@ export const homesendZh: AreaCatalog<typeof homesendEn> = {
   "homesend.install.desktop1": "在地址栏最右侧找到安装图标。",
   "homesend.install.desktop2": "或打开浏览器菜单，选择“安装 WonderHome…”。",
   "homesend.install.other": "打开浏览器菜单，找到“安装应用”或“添加到主屏幕”。",
+  // HomeTalk's offer to fill in what waits in HomeSend (14-050).
+  "homesend.offer.ask#one": "HomeSend 里有 {count} 项还缺一个信息——{titles}。现在补上吗？说“是”，或说“不”先放着。",
+  "homesend.offer.ask#other": "HomeSend 里有 {count} 项还缺信息——{titles}。现在补上吗？说“是”，或说“不”先放着。",
+  "homesend.offer.askUntitled#one": "HomeSend 里有 {count} 项还缺一个信息。现在补上吗？说“是”，或说“不”先放着。",
+  "homesend.offer.askUntitled#other": "HomeSend 里有 {count} 项还缺信息。现在补上吗？说“是”，或说“不”先放着。",
+  "homesend.offer.and": "和",
 };

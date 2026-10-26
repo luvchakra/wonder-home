@@ -395,4 +395,10 @@ export const homesendDe: AreaCatalog<typeof homesendEn> = {
   "homesend.install.desktop1": "Such das Installationssymbol am rechten Ende der Adressleiste.",
   "homesend.install.desktop2": "Oder öffne das Browsermenü und wähle „WonderHome installieren …“.",
   "homesend.install.other": "Öffne das Menü deines Browsers und such nach „App installieren“ oder „Zum Startbildschirm hinzufügen“.",
+  // HomeTalk's offer to fill in what waits in HomeSend (14-050).
+  "homesend.offer.ask#one": "{count} Eintrag in HomeSend fehlt noch eine Angabe – {titles}. Sollen wir ihn jetzt ergänzen? Sag ja, oder nein, um ihn liegen zu lassen.",
+  "homesend.offer.ask#other": "{count} Einträgen in HomeSend fehlt noch eine Angabe – {titles}. Sollen wir sie jetzt ergänzen? Sag ja, oder nein, um sie liegen zu lassen.",
+  "homesend.offer.askUntitled#one": "{count} Eintrag in HomeSend fehlt noch eine Angabe. Sollen wir ihn jetzt ergänzen? Sag ja, oder nein, um ihn liegen zu lassen.",
+  "homesend.offer.askUntitled#other": "{count} Einträgen in HomeSend fehlt noch eine Angabe. Sollen wir sie jetzt ergänzen? Sag ja, oder nein, um sie liegen zu lassen.",
+  "homesend.offer.and": " und ",
 };

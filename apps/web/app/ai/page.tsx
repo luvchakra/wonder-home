@@ -21,6 +21,8 @@ import type { PlaceMark } from "./place-cards";
 import { ConversationSearch } from "./conversation-search";
 import { WelcomeVoice } from "./welcome-voice";
 import { startWelcome } from "../_lib/hometalk-welcome";
+import { offerToFillDetails } from "@wonderhome/core/hometalk/details-offer";
+import { createAdminClient } from "@wonderhome/core/db/admin";
 import { assistantLabels, conversationSearchLabels } from "./hometalk-labels";
 
 export const metadata = { title: "HomeTalk" };
@@ -89,8 +91,22 @@ export default async function AiPage({ searchParams }: { searchParams: Promise<{
   // Straight after setup: the welcome is written into the conversation once,
   // before the history is read, so it is simply the newest messages.
   const welcomeWords = entitlement.allowed && welcoming ? await startWelcome(supabase, membership).catch(() => null) : null;
+  // Something in HomeSend is missing a detail HomeTalk can ask: offered once, as a question (14-050).
+  // HomeTalk's words are written with the service role; a server without one (E2E) simply makes no offer.
+  const offerAdmin = entitlement.allowed && !welcoming && membership.memberType === "adult" ? serviceClientOrNull() : null;
+  const offered =
+    offerAdmin
+      ? await offerToFillDetails(supabase, offerAdmin, {
+          householdId,
+          memberId: membership.memberId,
+          people: members.filter((member) => member.status === "active").map((member) => ({ id: member.id, displayName: member.displayName, nickname: member.nickname, memberType: member.memberType })),
+          t: locale.t,
+          now: new Date(),
+        })
+      : null;
   if (entitlement.allowed) {
-    const sessionId = welcoming ? await currentSessionId(supabase, householdId, membership.memberId) : openSessionId;
+    // The offer names the session it was said in, so the first load shows it without a second lookup (14-050).
+    const sessionId = offered ? offered.sessionId : welcoming ? await currentSessionId(supabase, householdId, membership.memberId) : openSessionId;
     if (sessionId) {
       const history = await listMessages(supabase, householdId, sessionId, 30).catch(() => []);
       initialMessages = history
@@ -104,6 +120,9 @@ export default async function AiPage({ searchParams }: { searchParams: Promise<{
           places: message.places ?? null,
           amaf: message.amaf ?? null,
         }));
+      if (offered && !initialMessages.some((message) => message.id === offered.messageId)) {
+        initialMessages.push({ id: offered.messageId, role: "assistant", text: offered.text, at: offered.at, action: null, places: null, amaf: null });
+      }
       if (initialMessages.some((message) => message.places && message.places.length > 0)) {
         placeMarks = Object.fromEntries(knownPlaces.map((place) => [place.placeId, place.status]));
       }
@@ -171,4 +190,12 @@ function shownText(message: ConversationMessage): string {
   if (shown.text) return shown.text;
   const t = requestT();
   return `${message.content}\n\n${t(englishNoticeKey(shown.fallback))}`;
+}
+
+function serviceClientOrNull() {
+  try {
+    return createAdminClient();
+  } catch {
+    return null;
+  }
 }

@@ -1,5 +1,7 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 
+import { en } from "../i18n/messages/en";
+
 /**
  * Linking a WhatsApp number to one adult member (the WhatsApp HomeSend spec
  * §11). A number becomes a member's only when:
@@ -94,13 +96,13 @@ export async function completeLink(
 }
 
 /** What WonderHome says back on WhatsApp after a CONNECT message. Nothing here names a household or a person. */
+/** The English replies to a connect code; sent in the member's language from the catalog (`whatsapp.link.*`, 14-051). */
 export const LINK_REPLIES: Record<LinkOutcome, string> = {
-  linked:
-    "WhatsApp connected ✓ Send or forward messages, photos, documents and voice notes here, and WonderHome will put them in your household's HomeSend for you to check. You can also ask me things, like \"what's on tomorrow?\" or \"add milk to the list\". You can disconnect any time in WonderHome.",
-  already_linked: "This number is already connected to your WonderHome account ✓",
-  invalid: "That code isn't one WonderHome recognises. In WonderHome, choose Connect WhatsApp and send the new code it shows.",
-  expired: "That code has expired. In WonderHome, choose Connect WhatsApp again for a new one.",
-  in_use: "This WhatsApp number is already connected to another WonderHome account. Disconnect it there first, then try again.",
+  linked: en["whatsapp.link.linked"],
+  already_linked: en["whatsapp.link.already_linked"],
+  invalid: en["whatsapp.link.invalid"],
+  expired: en["whatsapp.link.expired"],
+  in_use: en["whatsapp.link.in_use"],
 };
 
 /** What an unlinked number is told — the same whoever it is, so nothing about any household leaks. */

@@ -123,6 +123,25 @@ No product code changed because of these runs. The product behaved as the design
 
 Run them with `npx vitest run -t "AT-"`, or run the files above.
 
+## Follow-up: 14-050 and 14-051 (PR #368)
+
+| Case | Expected | Result |
+|---|---|---|
+| OF-01 | Only items still waiting, from the last two weeks, that miss something HomeTalk can ask | ✅ pass |
+| OF-02 | At most three titles named | ✅ pass |
+| OF-03 to OF-05 | Offered in a quiet conversation; never over an open question; at most once every twelve hours | ✅ pass |
+| OF-06 | Recorded as HomeTalk's own open question; opening HomeTalk again adds nothing | ✅ pass |
+| OF-07 | Nothing missing → no offer | ✅ pass |
+| OF-08 | Hindi member, one item → the Hindi singular wording | ✅ pass |
+| OF-09 to OF-16 | "yes", "Sure, let's do it", "ok" and "haan" fill in; "no" and "not now" decline; a new request stays a new request | ✅ pass |
+| OF-17 to OF-20 | Yes → the first item's first question, with the next queued; answering moves on to the next item; no → everything waits; nothing left → says so | ✅ pass |
+| OF-21 | A whole engine turn: "yes" with no proposal pending answers the offer | ✅ pass, after a product fix: the engine had replied "nothing waiting for a yes" (caught by eval HT-156) |
+| HT-156, HT-157 (eval) | "yes" → `fill_homesend_details`, done; a new request while the offer is open → that request | ✅ pass |
+| WhatsApp, 14-051 | A connect reply in the member's language (Spanish); a code that names nobody in English; a refusal in Hindi | ✅ pass |
+| Browser, live project, 360 px and desktop | The offer on first load, once; "yes" asks the first question; the answer is saved; no sideways scroll | ✅ pass, after a product fix: the offer showed only after a reload until the page used the offer's own session |
+
+Two product defects were found by these follow-up tests and fixed, as noted in the table. One E2E run failed once after a fresh build and did not reproduce in four further runs; its output was overwritten before it was captured.
+
 ## Every case and its result
 
 ### AT-A: Approval matrix: autonomy × bar × how sure (grocery and school work)

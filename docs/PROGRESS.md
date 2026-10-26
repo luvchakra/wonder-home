@@ -11,14 +11,14 @@ in `docs/progress/`; for the running log of what changed when, `tracking/PROGRES
 
 ## The whole picture
 
-**380 of 419 stories done — 90.7%**
+**390 of 420 stories done — 92.9%**
 
 | Status | Stories |
 |---|---:|
-| Done | 380 |
+| Done | 390 |
 | In Progress | 8 |
 | Blocked | 1 |
-| Not Started | 18 |
+| Not Started | 17 |
 | Deferred | 4 |
 
 ## By module
@@ -39,7 +39,7 @@ in `docs/progress/`; for the running log of what changed when, `tracking/PROGRES
 | 11 Bills, Fees & Finance | `█████████░` | 14 | 15 | 1 not started |
 | 12 Family Time & Social Activities | `██████████` | 9 | 9 | — |
 | 13 Maintenance, Laundry & Pet Care | `█████████░` | 10 | 11 | 1 in progress |
-| 14 AI Orchestration & Learning | `██████░░░░` | 33 | 50 | 2 in progress, 4 not started, 3 deferred |
+| 14 AI Orchestration & Learning | `████████░░` | 43 | 51 | 2 in progress, 3 not started, 3 deferred |
 | 15 Privacy, Security & Governance | `██████████` | 9 | 9 | — |
 | 16 Platform Admin & Operations | `██████████` | 8 | 8 | — |
 | 17 External Integrations | `██████████` | 9 | 9 | — |
@@ -74,15 +74,6 @@ in `docs/progress/`; for the running log of what changed when, `tracking/PROGRES
 | `14-037` Record index Phase 2: facts written when records are written | 14 AI Orchestration & Learning | P0 | Not Started |
 | `14-038` Record index Phase 3: the Calendar and HomeTalk read one projection | 14 AI Orchestration & Learning | P1 | Not Started |
 | `14-039` Record index Phase 4: structure-first retrieval and coverage misses | 14 AI Orchestration & Learning | P1 | Not Started |
-| `14-042` HomeSend and WhatsApp: small correctness fixes from the design audit | 14 AI Orchestration & Learning | P0 | Done — PR #366 |
-| `14-043` Every "added on its own" message says how sure and why | 14 AI Orchestration & Learning | P1 | Done — PR #366 |
-| `14-044` HomeTalk's questions about an item end well | 14 AI Orchestration & Learning | P1 | Done — PR #366 |
-| `14-045` A complete, Pre Approved item filed from HomeTalk adds on its own | 14 AI Orchestration & Learning | P1 | Done — PR #366 |
-| `14-046` A bare list on WhatsApp asks the amounts in one question | 14 AI Orchestration & Learning | P1 | Done — PR #366 |
-| `14-047` WhatsApp replies and HomeTalk's item questions in the household's language | 14 AI Orchestration & Learning | P1 | Done — PR #366 |
-| `14-048` An alert on the platform's own AI key reaches the platform admin | 14 AI Orchestration & Learning | P1 | Done — PR #366 |
-| `14-049` HomeSend metrics: added on its own vs confirmed, and why things failed safely | 14 AI Orchestration & Learning | P2 | Done — PR #366 |
-| `14-050` HomeTalk offers to fill in details for waiting items | 14 AI Orchestration & Learning | P2 | Not Started |
 | `21-011` Edit an appointment | 21 Health and Fitness | P2 | Not Started |
 | `22-008` Right-to-left readiness | 22 Internationalization and Localization | P1 | Deferred |
 | `25-004` Send to Cook over WhatsApp | 25 HomeFood | P1 | Not Started |
@@ -390,7 +381,7 @@ in `docs/progress/`; for the running log of what changed when, `tracking/PROGRES
 
 ### 14 — AI Orchestration & Learning
 
-33 of 50 done `██████░░░░`
+43 of 51 done `████████░░`
 
 | Story | Priority | Status | Notes |
 |---|---|---|---|
@@ -435,15 +426,16 @@ in `docs/progress/`; for the running log of what changed when, `tracking/PROGRES
 | `14-039` Record index Phase 4: structure-first retrieval and coverage misses | P1 | Not Started | Questions read into time/people/kind filters by rules; list questions get every match, not the top 12; a "nothing on record" answer that the index can find by words is logged as a coverage miss (table name only). Spec §6 |
 | `14-040` WhatsApp asks HomeTalk | P1 | Done | A linked adult's one-line question or everyday request on WhatsApp is answered by HomeTalk through the same gateway as Alexa (channel `whatsapp`, own conversation surface, `WHATSAPP_SCOPES`); school, health and money kept off; never a HomeSend item. Voice notes written down by the household's Gemini key when there is no Cloud Speech key. PRs #319, #320 |
 | `14-041` HomeSend reports what an entry lacks; HomeTalk asks | P0 | Done | PR #363 (the owner, 2026-10-26, then "isn't that HomeTalk's job" — strictly that design). `homesend/completeness.ts`: per-kind required and useful details, the content's own words first (`fillFromEvidence`); HomeSend only reports what is missing (`confirmation.ts` `stillNeeded`), never a question, and adds nothing on its own while a required one is missing. HomeTalk asks every question (`hometalk/intake-questions.ts`, action `complete_homesend_item` through the clarify machinery), in the app and on WhatsApp, one at a time, at most three; the HomeSend-side "Who is it for?" is folded into it. Answers go back onto the item, then HomeSend adds it or it waits. The review form says "Still needed" and keeps Add off. Eval HS-29–HS-35, HT-143–HT-150. |
-| `14-042` HomeSend and WhatsApp: small correctness fixes from the design audit | P0 | Done — PR #366 | Design audit 2026-10-26 (`docs/hometalk-homesend-design.md`). An unreadable stored bar means the highest bar (99%), not 95%; an answer to HomeTalk's question on WhatsApp is counted as `clarification_answered`; a voice note HomeTalk answered counts as "went to HomeTalk" for routing rule 2; WhatsApp latency is recorded when HomeTalk answers too. |
-| `14-043` Every "added on its own" message says how sure and why | P1 | Done — PR #366 | WhatsApp `addedReply`, HomeTalk's hand-back after its questions and the app notice carry the % and the score's reason (not the decision's), in the household's language. Design §7. |
-| `14-044` HomeTalk's questions about an item end well | P1 | Done — PR #366 | An answer that can't be read gets one polite, listed second ask before HomeTalk moves on; after three questions it names every detail still missing, useful ones too; E2E covers the review's "Still needed". Design §4.6, §5, §11. |
-| `14-045` A complete, Pre Approved item filed from HomeTalk adds on its own | P1 | Done — PR #366 | Told in HomeTalk about a new thing that needs no question (`file_with_homesend`), it is added on its own where the household pre-approved it and it clears the bar, with an Undo; otherwise it waits as today. Design §13.2. |
-| `14-046` A bare list on WhatsApp asks the amounts in one question | P1 | Done — PR #366 | "milk, eggs and bread" sent on WhatsApp is read as a shopping list; HomeTalk asks "How much of each?" once, not one question per item. Design §13.4. |
-| `14-047` WhatsApp replies and HomeTalk's item questions in the household's language | P1 | Done — PR #366 | WhatsApp acknowledgements, `addedReply` and the intake questions come from the catalog in all eight languages, not hard-coded English. Design §10. |
-| `14-048` An alert on the platform's own AI key reaches the platform admin | P1 | Done — PR #366 | A refusal of `WONDERHOME_AI_KEY` (out of credits, quota, rejected) is told to the platform admin by email and on the platform admin screen, and clears on the next call that works. Design §8, §13.1. |
-| `14-049` HomeSend metrics: added on its own vs confirmed, and why things failed safely | P2 | Done — PR #366 | The platform-admin HomeSend metrics split auto-added from confirmed and break failed-safely down by reason. Design §11. |
-| `14-050` HomeTalk offers to fill in details for waiting items | P2 | Not Started | Needs the owner's yes: it starts a conversation unprompted. "2 things in HomeSend need a detail: shall we fill them in?" Design §13.3. |
+| `14-042` HomeSend and WhatsApp: small correctness fixes from the design audit | P0 | Done | PR #366. Design audit 2026-10-26 (`docs/hometalk-homesend-design.md`). An unreadable stored bar means the highest bar (99%), not 95%; an answer to HomeTalk's question on WhatsApp is counted as `clarification_answered`; a voice note HomeTalk answered counts as "went to HomeTalk" for routing rule 2; WhatsApp latency is recorded when HomeTalk answers too. |
+| `14-043` Every "added on its own" message says how sure and why | P1 | Done | PR #366. WhatsApp `addedReply`, HomeTalk's hand-back after its questions and the app notice carry the % and the score's reason (not the decision's), in the household's language. Design §7. |
+| `14-044` HomeTalk's questions about an item end well | P1 | Done | PR #366. An answer that can't be read gets one polite, listed second ask before HomeTalk moves on; after three questions it names every detail still missing, useful ones too; E2E covers the review's "Still needed". Design §4.6, §5, §11. |
+| `14-045` A complete, Pre Approved item filed from HomeTalk adds on its own | P1 | Done | PR #366. Told in HomeTalk about a new thing that needs no question (`file_with_homesend`), it is added on its own where the household pre-approved it and it clears the bar, with an Undo; otherwise it waits as today. Design §13.2. |
+| `14-046` A bare list on WhatsApp asks the amounts in one question | P1 | Done | PR #366. "milk, eggs and bread" sent on WhatsApp is read as a shopping list; HomeTalk asks "How much of each?" once, not one question per item. Design §13.4. |
+| `14-047` WhatsApp replies and HomeTalk's item questions in the household's language | P1 | Done | PR #366. WhatsApp acknowledgements, `addedReply` and the intake questions come from the catalog in all eight languages, not hard-coded English. Design §10. |
+| `14-048` An alert on the platform's own AI key reaches the platform admin | P1 | Done | PR #366. A refusal of `WONDERHOME_AI_KEY` (out of credits, quota, rejected) is told to the platform admin by email and on the platform admin screen, and clears on the next call that works. Design §8, §13.1. |
+| `14-049` HomeSend metrics: added on its own vs confirmed, and why things failed safely | P2 | Done | PR #366. The platform-admin HomeSend metrics split auto-added from confirmed and break failed-safely down by reason. Design §11. |
+| `14-050` HomeTalk offers to fill in details for waiting items | P2 | Done | PR #368. The owner said yes on 2026-10-26 ("go ahead with 14-050"). On opening HomeTalk, an adult with HomeSend items from the last two weeks that miss something HomeTalk can ask hears "2 things in HomeSend need a detail — … Shall we fill them in now?", at most once every twelve hours and never over an open question (`hometalk/details-offer.ts`). "Yes" runs `fill_homesend_details`: the first item's first question, the rest queued, each item after the last; "no" leaves them. Browser-checked at 360 px and desktop on the live project (offer on first load, once; "yes" → "First, Diwali dinner: Which day is it?"; the answer saved). Eval HT-156, HT-157; tests OF-01–OF-21. |
+| `14-051` The rest of WhatsApp's words in the member's language | P1 | Done | PR #368. HomeSend's refusals carry a closed code (`IngestRejected.code`) and are said from `whatsapp.rejected.*`; the reply to a connect code is in the linked member's language (`whatsapp.link.*`). Only a code that names nobody, and the "not connected yet" reply, stay English: nobody is known yet. |
 
 ### 15 — Privacy, Security & Governance
 
