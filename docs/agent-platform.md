@@ -382,7 +382,8 @@ WonderHome's AI layer is one pipeline with three named, real surfaces —
 
   A model's reading names people by placeholder ("Child A"), and the letters
   move when a member is added, so `restoreParameterNames` puts real names back
-  into every string before anything is kept. Never store a placeholder.
+  into every string before anything is kept, and the intent keeps the
+  member's own words as its `utterance` (`reidentifyIntent`, I-26). Never store a placeholder.
   "Who is in the family" is answered from the whole member list by rules
   (`conversation/roster.ts`), never from what a model was shown.
 
