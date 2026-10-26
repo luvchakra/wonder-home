@@ -106,7 +106,12 @@ export async function handleWhatsAppWebhook(
       .eq("event_type", "sent")
       .eq("metadata->>providerMessageId", status.providerMessageId)
       .maybeSingle();
-    if (!sent) continue;
+    if (!sent) {
+      // A reply to someone's own message (not a notification): only a failure is worth a line, with WhatsApp's code
+      // (the owner's 20:19 voice note, 2026-10-26: accepted by WhatsApp, not seen, and nothing said why).
+      if (status.status === "failed") log.warn("whatsapp reply not delivered", { reason: String(status.errorCode ?? "unknown"), allow: ["reason"] });
+      continue;
+    }
     // A report WhatsApp repeats is recorded once.
     const { data: already } = await admin
       .from("notification_events")

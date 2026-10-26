@@ -7,11 +7,11 @@ import { en } from "../i18n/messages/en";
 import { translator, translatorFor, type Translate, type TranslationKey } from "../i18n/translate";
 import { openIntakeQuestion } from "../hometalk/intake-questions";
 import { enqueueClassifyRetry, type ClaimedJob, type JobHandler } from "../homesend/retry-queue";
-import { gateTranscript } from "../homesend/audio";
+import { gateTranscript, TRANSCRIPT_CONFIDENCE_FLOOR, type TranscriptGate } from "../homesend/audio";
 import { sureClause, type AddedOnItsOwn } from "../homesend/auto-add";
 import { hearWhatsAppVoiceNote, ingestWhatsAppMedia, ingestWhatsAppText, IngestRejected, type IngestDeps, type IngestOutcome, type TranscribeResult } from "../homesend/ingest";
 import { FAILURE_REASON_COPY } from "../homesend/items";
-import { sendWhatsAppText, type WhatsAppConfig } from "../notifications/whatsapp";
+import { sendWhatsAppText, showWhatsAppTyping, type WhatsAppConfig } from "../notifications/whatsapp";
 import { log } from "../observability/logger";
 import { hitRateLimit } from "../security/rate-limit";
 import { recordWhatsAppEvents, type WhatsAppEvent } from "./events";
@@ -68,6 +68,8 @@ export type WhatsAppIntakeDeps = {
    * this in advance (the owner, 2026-10-26).
    */
   addOnItsOwn?: (input: { householdId: string; memberId: string; itemId: string }) => Promise<AddedOnItsOwn | null>;
+  /** When "typing…" is shown once more while the work is still running; replaceable in tests. */
+  typingRefreshMs?: number;
 };
 
 export type ReceiveOutcome = { linked: number; queued: string[]; duplicates: number; unknown: number };
@@ -186,6 +188,16 @@ export type ProcessResult = "read" | "skipped" | "failed";
  * keyed by WhatsApp's message id, and the acknowledgement is sent once.
  */
 export async function processWhatsAppMessage(admin: SupabaseClient, messageId: string, deps: WhatsAppIntakeDeps): Promise<ProcessResult> {
+  const typing = typingIndicator(deps);
+  try {
+    return await readMessage(admin, messageId, deps, typing);
+  } finally {
+    // Done, answered or failed: "typing…" is never shown again after this.
+    typing.stop();
+  }
+}
+
+async function readMessage(admin: SupabaseClient, messageId: string, deps: WhatsAppIntakeDeps, typing: TypingIndicator): Promise<ProcessResult> {
   const { data } = await admin
     .from("whatsapp_messages")
     .select(
@@ -199,14 +211,23 @@ export async function processWhatsAppMessage(admin: SupabaseClient, messageId: s
   // The message this run reads: this one, or the one its burst is about.
   let row: MessageRow = found;
 
-  const now = deps.now?.() ?? new Date();
+  const clock = () => deps.now?.() ?? new Date();
+  const now = clock();
+  // From WhatsApp's time on the message to this moment: the reply's latency, not the run's start (5.7 s
+  // recorded for the owner's voice note of 2026-10-26, 20:19 IST, answered about 27 s after it was sent).
+  const elapsed = () => clock().getTime() - new Date(row.received_at).getTime();
   const to = row.identity?.phone_number ?? null;
   const events: WhatsAppEvent[] = [];
   const say = async (text: string) => {
+    typing.stop();
     if (!to || row.acknowledged_at) return;
     const sent = await sendWhatsAppText(deps.config, to, text, deps.fetch).catch(() => ({ ok: false as const }));
     events.push({ kind: sent.ok ? "ack_sent" : "ack_failed", householdId: row.household_id });
-    if (sent.ok) await admin.from("whatsapp_messages").update({ acknowledged_at: now.toISOString() }).eq("id", row.id);
+    if (sent.ok) await admin.from("whatsapp_messages").update({ acknowledged_at: clock().toISOString() }).eq("id", row.id);
+  };
+  // "typing…" while WonderHome works, once per burst, for a message that is still to be answered.
+  const showTyping = (providerMessageId: string) => {
+    if (to && !row.acknowledged_at) typing.show(providerMessageId, { events, householdId: row.household_id });
   };
   // WonderHome's own words on WhatsApp, in the member's language (14-047); HomeTalk's answers come translated already.
   let wordsRead: Promise<Translate> | null = null;
@@ -224,15 +245,21 @@ export async function processWhatsAppMessage(admin: SupabaseClient, messageId: s
   // own message already taken and stops.
   let burst: MessageRow[] = [];
   if (row.attempts === 0 && row.processing_status === "received") {
+    // Shown at once, before the wait, by the run of the burst's first message only.
+    if (!(await waitsOnEarlierMessage(admin, row).catch(() => false))) showTyping(row.provider_message_id);
     const wait = Math.max(0, new Date(row.received_at).getTime() + BURST_SETTLE_MS - now.getTime());
     if (wait > 0) await (deps.sleep ?? defaultSleep)(Math.min(wait, BURST_SETTLE_MS));
     const claimed = await claimBurst(admin, row);
     if (!claimed) return "skipped";
     row = claimed.lead;
     burst = claimed.rest;
+    // The first message's run showed it; this run, which reads the burst, keeps it showing.
+    const first = [row, ...burst].sort(sentOrder)[0]!;
+    if (!typing.shown && first.id !== found.id && to && !row.acknowledged_at) typing.keep(first.provider_message_id, { events, householdId: row.household_id });
     await settle({ attempts: row.attempts + 1 });
   } else {
     await settle({ processing_status: "processing", attempts: row.attempts + 1 });
+    showTyping(row.provider_message_id);
   }
   const together = burst.length > 0;
   const settleBurst = async (patch: Record<string, unknown>) => {
@@ -270,7 +297,7 @@ export async function processWhatsAppMessage(admin: SupabaseClient, messageId: s
     if (await homeTalkAwaitsAnswer(admin, row, now).catch(() => false)) {
       const answer = await deps.ask({ householdId: row.household_id, memberId: row.member_id, text: row.text_content, requestId: row.provider_message_id }).catch(() => null);
       if (answer) {
-        events.push({ kind: "clarification_answered", householdId: row.household_id, latencyMs: now.getTime() - new Date(row.received_at).getTime() });
+        events.push({ kind: "clarification_answered", householdId: row.household_id, latencyMs: elapsed() });
         await settle({ processing_status: "ignored" });
         await say(answer);
         await recordWhatsAppEvents(admin, events);
@@ -288,7 +315,7 @@ export async function processWhatsAppMessage(admin: SupabaseClient, messageId: s
     const answer = deps.ask
       ? await deps.ask({ householdId: row.household_id, memberId: row.member_id, text, requestId: row.provider_message_id }).catch(() => null)
       : null;
-    events.push({ kind: answer ? "question_answered" : "question_redirected", householdId: row.household_id, latencyMs: now.getTime() - new Date(row.received_at).getTime() });
+    events.push({ kind: answer ? "question_answered" : "question_redirected", householdId: row.household_id, latencyMs: elapsed() });
     await settle({ processing_status: "ignored" });
     await say(answer ?? (await words())("whatsapp.questionReply"));
     await recordWhatsAppEvents(admin, events);
@@ -302,7 +329,7 @@ export async function processWhatsAppMessage(admin: SupabaseClient, messageId: s
   if (ask && listed && (await allGroceries(admin, listed))) {
     const answer = await ask({ householdId: row.household_id, memberId: row.member_id, text: `Add ${listed.join(", ")} to the shopping list`, requestId: row.provider_message_id }).catch(() => null);
     if (answer) {
-      events.push({ kind: "question_answered", householdId: row.household_id, latencyMs: now.getTime() - new Date(row.received_at).getTime() });
+      events.push({ kind: "question_answered", householdId: row.household_id, latencyMs: elapsed() });
       await settle({ processing_status: "ignored" });
       await say(answer);
       await recordWhatsAppEvents(admin, events);
@@ -330,17 +357,18 @@ export async function processWhatsAppMessage(admin: SupabaseClient, messageId: s
         deps.ingest,
       );
       const gate = heard?.status === "transcribed" ? gateTranscript(heard) : null;
-      if (gate?.outcome === "confident") {
-        const spoken = gate.text;
+      const sure = gate ? heardForHomeTalk(gate) : null;
+      if (sure) {
+        const spoken = sure.text;
         const forHomeTalk = deps.ask ? isForHomeTalk(spoken) : isQuestionForWonderHome(spoken);
         const awaited =
           !forHomeTalk && deps.ask && !row.reply_to_provider_message_id && spoken.length <= 160 ? await homeTalkAwaitsAnswer(admin, row, now).catch(() => false) : false;
         if (forHomeTalk || awaited) {
           const answer = deps.ask
-            ? await deps.ask({ householdId: row.household_id, memberId: row.member_id, text: spoken, requestId: row.provider_message_id, spoken: { confidence: gate.confidence } }).catch(() => null)
+            ? await deps.ask({ householdId: row.household_id, memberId: row.member_id, text: spoken, requestId: row.provider_message_id, spoken: { confidence: sure.confidence } }).catch(() => null)
             : null;
           if (answer || forHomeTalk) {
-            events.push({ kind: !answer ? "question_redirected" : forHomeTalk ? "question_answered" : "clarification_answered", householdId: row.household_id, latencyMs: now.getTime() - new Date(row.received_at).getTime() });
+            events.push({ kind: !answer ? "question_redirected" : forHomeTalk ? "question_answered" : "clarification_answered", householdId: row.household_id, latencyMs: elapsed() });
             await settle({ processing_status: "ignored" });
             await say(answer ?? (await words())("whatsapp.questionReply"));
             await recordWhatsAppEvents(admin, events);
@@ -411,7 +439,7 @@ export async function processWhatsAppMessage(admin: SupabaseClient, messageId: s
   await settle({ processing_status: "processed", failure_reason: null, homesend_item_id: outcome.itemId });
   // The rest of the burst is part of this item, answered by this one reply.
   await settleBurst({ processing_status: "processed", failure_reason: null, homesend_item_id: outcome.itemId, acknowledged_at: now.toISOString() });
-  events.push({ kind: "message_processed", householdId: row.household_id, latencyMs: now.getTime() - new Date(row.received_at).getTime() });
+  events.push({ kind: "message_processed", householdId: row.household_id, latencyMs: elapsed() });
   if (!outcome.duplicate) events.push({ kind: "homesend_created", householdId: row.household_id });
   // What it still lacks is asked by HomeTalk, in this person's WhatsApp
   // conversation with it, one question at a time (`hometalk/intake-questions.ts`,
@@ -431,6 +459,101 @@ export async function processWhatsAppMessage(admin: SupabaseClient, messageId: s
   await say(added ? addedReply(added, undefined, t) : ack.text);
   await recordWhatsAppEvents(admin, events);
   return "read";
+}
+
+/**
+ * A voice note heard surely enough to go to HomeTalk. Paying or ordering
+ * needs a clearer transcript than an everyday line, but a question only asks:
+ * "Show me the to buy shopping cart for groceries" (the owner, 2026-10-26,
+ * 20:20 IST) was held to the buying bar for its "buy", at Gemini's 0.8, and
+ * filed in HomeSend as "Not sure yet" instead of answered. A spoken question
+ * clears the everyday bar; HomeTalk never pays or orders by voice either way.
+ */
+export function heardForHomeTalk(gate: TranscriptGate): { text: string; confidence: number } | null {
+  if (gate.outcome === "confident") return { text: gate.text, confidence: gate.confidence };
+  if (gate.outcome === "uncertain" && gate.consequential && gate.confidence >= TRANSCRIPT_CONFIDENCE_FLOOR && isQuestionForWonderHome(gate.text)) {
+    return { text: gate.text, confidence: gate.confidence };
+  }
+  return null;
+}
+
+/** WhatsApp clears "typing…" after about 25 seconds; it is shown once more at this point if the work is still running. */
+export const TYPING_REFRESH_MS = 20_000;
+
+type TypingIndicator = {
+  /** Whether this run asked WhatsApp to show it. */
+  readonly shown: boolean;
+  /** Shows it now, and once more later if the run is still working. */
+  show(providerMessageId: string, record: { events: WhatsAppEvent[]; householdId: string }): void;
+  /** Another run showed it: only the later refresh is this run's. */
+  keep(providerMessageId: string, record: { events: WhatsAppEvent[]; householdId: string }): void;
+  /** The reply is going out, or the run is over: nothing more is shown. */
+  stop(): void;
+};
+
+/**
+ * "typing…" in the person's chat (Meta's typing indicator, which also marks
+ * the message read). Never awaited: a slow or failed request never delays the
+ * message itself, and its outcome is recorded with the run's events if it has
+ * come back by then.
+ */
+function typingIndicator(deps: WhatsAppIntakeDeps): TypingIndicator {
+  let working = true;
+  let shown = false;
+  let timer: ReturnType<typeof setTimeout> | null = null;
+  const send = (providerMessageId: string, record: { events: WhatsAppEvent[]; householdId: string }) => {
+    void showWhatsAppTyping(deps.config, providerMessageId, deps.fetch).then((result) => {
+      record.events.push({ kind: result.ok ? "typing_shown" : "typing_failed", householdId: record.householdId });
+    });
+  };
+  const refreshLater = (providerMessageId: string, record: { events: WhatsAppEvent[]; householdId: string }) => {
+    if (timer || !working) return;
+    timer = setTimeout(() => {
+      if (working) send(providerMessageId, record);
+    }, deps.typingRefreshMs ?? TYPING_REFRESH_MS);
+    (timer as { unref?: () => void }).unref?.();
+  };
+  return {
+    get shown() {
+      return shown;
+    },
+    show(providerMessageId, record) {
+      if (shown || !working) return;
+      shown = true;
+      send(providerMessageId, record);
+      refreshLater(providerMessageId, record);
+    },
+    keep(providerMessageId, record) {
+      refreshLater(providerMessageId, record);
+    },
+    stop() {
+      working = false;
+      if (timer) clearTimeout(timer);
+      timer = null;
+    },
+  };
+}
+
+/**
+ * Whether a fresh message from the same person, sent just before this one, is
+ * still waiting to be read: its run shows "typing…" for both. Pure order, as
+ * the burst's own; unsure (a failed read) is no, and shows it.
+ */
+async function waitsOnEarlierMessage(admin: SupabaseClient, row: MessageRow): Promise<boolean> {
+  const at = new Date(row.received_at).getTime();
+  const { data, error } = await admin
+    .from("whatsapp_messages")
+    .select("id, received_at, created_at")
+    .eq("household_id", row.household_id)
+    .eq("member_id", row.member_id)
+    .eq("processing_status", "received")
+    .eq("attempts", 0)
+    .neq("id", row.id)
+    .gte("received_at", new Date(at - BURST_WINDOW_MS).toISOString())
+    .lte("received_at", row.received_at)
+    .limit(10);
+  if (error) return false;
+  return ((data ?? []) as MessageRow[]).some((entry) => sentOrder(entry, row) < 0);
 }
 
 /** The `whatsapp.process` job, for `drainJobs`. */

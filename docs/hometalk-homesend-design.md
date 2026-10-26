@@ -50,10 +50,12 @@ The person never chooses. Each message goes through these rules in order, and th
 | 4 | An everyday request ("add milk", "remind me…", "remember…", "remove…") | **HomeTalk** | HomeTalk does it, with an Undo |
 | 5 | "undo", "take it back", "scratch that", or a short yes/no/ok | **HomeTalk** | A reply to what HomeTalk just said |
 | 6 | A **voice note** whose transcript matches 2–5 | **HomeTalk**, with the transcript | Speaking is typing aloud |
-| 7 | A voice note WonderHome isn't sure it heard right | "Check what I heard" (HomeSend's transcript check) | Never act on a doubtful transcript |
+| 7 | A voice note WonderHome isn't sure it heard right | "Check what I heard" (HomeSend's transcript check) | Never act on a doubtful transcript. A spoken **question** that mentions buying or paying ("show me the to buy shopping cart") is held to the everyday bar, not the buying one: it only asks, and HomeTalk never pays or orders by voice (`heardForHomeTalk`, the owner 2026-10-26) |
 | 8 | Anything else: a forward, photo, PDF, list, longer note, voice note reading out a notice | **HomeSend** | Something to keep |
 
 All eight rules are live; rule 6 since #364 (issue I-11).
+
+Whichever rule applies, the person sees WhatsApp's blue ticks and "typing…" as soon as the message is picked up, before the burst wait, until the reply (shown once per burst, refreshed once while the work runs past ~20 s; `docs/external-providers.md`).
 
 ### 3.2 The app
 
@@ -184,7 +186,7 @@ No provider tells an app a balance in advance. The email comes at the first refu
 | HomeTalk understanding a sentence | ≤ 2 s | Fast tier (Haiku 5.5); rules first where they're sure |
 | HomeTalk composing an answer | ≤ 4 s | Balanced tier (Sonnet 5.5) |
 | HomeSend reading a message | ≤ 5 s text, ≤ 12 s file | Sonnet 5.5, not Opus (was 9–25 s on Opus) |
-| WhatsApp reply | ≤ 10 s after a burst settles | 8 s burst wait, then one pass |
+| WhatsApp reply | ≤ 10 s after a burst settles | 8 s burst wait, then one pass; "typing…" shows from the start (a voice note to HomeTalk took 27 s on 2026-10-26) |
 | Page reads | p95 ≤ 500 ms | One `Promise.all` wave; bounded lists |
 
 To measure: `updated_at - created_at` on `home_send_items`, and `hometalk_channel_events.latency_ms`.
