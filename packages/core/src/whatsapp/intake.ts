@@ -3,7 +3,8 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 import { auditChange } from "../api/audit";
 import { openIntakeQuestion } from "../hometalk/intake-questions";
 import { enqueueClassifyRetry, type ClaimedJob, type JobHandler } from "../homesend/retry-queue";
-import { ingestWhatsAppMedia, ingestWhatsAppText, IngestRejected, type IngestDeps, type IngestOutcome } from "../homesend/ingest";
+import { gateTranscript } from "../homesend/audio";
+import { hearWhatsAppVoiceNote, ingestWhatsAppMedia, ingestWhatsAppText, IngestRejected, type IngestDeps, type IngestOutcome, type TranscribeResult } from "../homesend/ingest";
 import { FAILURE_REASON_COPY } from "../homesend/items";
 import { sendWhatsAppText, type WhatsAppConfig } from "../notifications/whatsapp";
 import { log } from "../observability/logger";
@@ -50,7 +51,7 @@ export type WhatsAppIntakeDeps = {
    * session (`apps/web/app/_lib/whatsapp-hometalk.ts`). Returns the reply to
    * send, or null when it could not answer.
    */
-  ask?: (input: { householdId: string; memberId: string; text: string; requestId: string }) => Promise<string | null>;
+  ask?: (input: { householdId: string; memberId: string; text: string; requestId: string; spoken?: { confidence: number } }) => Promise<string | null>;
   /** Waiting for what the person sends straight after; replaceable in tests. */
   sleep?: (ms: number) => Promise<void>;
   /**
@@ -284,6 +285,47 @@ export async function processWhatsAppMessage(admin: SupabaseClient, messageId: s
     return "read";
   }
 
+  // A voice note is written down first, then read exactly like a typed
+  // message (the owner, 2026-10-26: "What are upcoming events", spoken, ended
+  // in Failed safely). A spoken question, request or answer goes to HomeTalk
+  // as speech, under the same WhatsApp scopes, so paying and ordering stay
+  // out; nothing is kept in HomeSend. Only a transcript heard surely enough
+  // goes there: an unsure one is checked in HomeSend as before, and a note
+  // read aloud stays HomeSend content, heard once.
+  const download = deps.download ?? ((id: string) => downloadWhatsAppMedia(deps.config, id, { fetch: deps.fetch }));
+  let voiceFile: MediaDownload | null = null;
+  let heard: TranscribeResult | null = null;
+  if (!together && row.message_type === "audio") {
+    voiceFile = await download(row.media_id ?? "").catch(() => null);
+    if (voiceFile?.ok) {
+      heard = await hearWhatsAppVoiceNote(
+        admin,
+        row.household_id,
+        { bytes: voiceFile.bytes, claimedType: row.media_mime_type ?? voiceFile.mimeType ?? "application/octet-stream", filename: row.media_filename },
+        deps.ingest,
+      );
+      const gate = heard?.status === "transcribed" ? gateTranscript(heard) : null;
+      if (gate?.outcome === "confident") {
+        const spoken = gate.text;
+        const forHomeTalk = deps.ask ? isForHomeTalk(spoken) : isQuestionForWonderHome(spoken);
+        const awaited =
+          !forHomeTalk && deps.ask && !row.reply_to_provider_message_id && spoken.length <= 160 ? await homeTalkAwaitsAnswer(admin, row, now).catch(() => false) : false;
+        if (forHomeTalk || awaited) {
+          const answer = deps.ask
+            ? await deps.ask({ householdId: row.household_id, memberId: row.member_id, text: spoken, requestId: row.provider_message_id, spoken: { confidence: gate.confidence } }).catch(() => null)
+            : null;
+          if (answer || forHomeTalk) {
+            events.push({ kind: answer ? "question_answered" : "question_redirected", householdId: row.household_id });
+            await settle({ processing_status: "ignored" });
+            await say(answer ?? QUESTION_REPLY);
+            await recordWhatsAppEvents(admin, events);
+            return "read";
+          }
+        }
+      }
+    }
+  }
+
   const externalId = `whatsapp:${row.provider_message_id}`.slice(0, 200);
   let outcome: IngestOutcome;
   try {
@@ -294,8 +336,7 @@ export async function processWhatsAppMessage(admin: SupabaseClient, messageId: s
       const content = [row.text_content?.trim() ?? "", ...passedOn].filter(Boolean).join("\n\n");
       outcome = await ingestWhatsAppText(admin, { householdId: row.household_id, memberId: row.member_id, externalId, text: withAdded(content, added) }, deps.ingest);
     } else {
-      const download = deps.download ?? ((id: string) => downloadWhatsAppMedia(deps.config, id, { fetch: deps.fetch }));
-      const file = await download(row.media_id ?? "");
+      const file = voiceFile ?? (await download(row.media_id ?? ""));
       if (!file.ok) {
         if (file.reason === "too_large") {
           await settle({ processing_status: "failed", failure_reason: "too_large" });
@@ -321,7 +362,8 @@ export async function processWhatsAppMessage(admin: SupabaseClient, messageId: s
           filename: row.media_filename,
           caption: [row.text_content?.trim(), ...added].filter(Boolean).join("\n") || null,
         },
-        deps.ingest,
+        // Already written down above: heard once, never twice.
+        heard ? { ...deps.ingest, transcribe: async () => heard } : deps.ingest,
       );
     }
   } catch (thrown) {
