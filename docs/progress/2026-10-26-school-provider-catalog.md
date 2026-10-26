@@ -65,3 +65,50 @@ the forward path, which needs no school cooperation at all.
 - `packages/core/src/school/providers.ts` (+ `providers.test.ts`)
 - `apps/web/app/api/v1/households/[householdId]/integrations/school/sync/route.ts`
 - Backlog: `backlogs/08-Kids-and-School-Intelligence.md` (08-028 Done, 08-029 Not Started)
+
+---
+
+## Also in this PR — track a school message channel from its link (08-030)
+
+The owner asked, next: after the account is connected, let a household paste a
+link to a message channel inside the portal — where messages arrive
+continuously — and have each message tracked and entered into WonderHome. The
+example: `https://www.looplearning.com/channel/2044541`.
+
+The network-free core, batched onto this PR because it extends the catalog:
+- `SchoolProviderDescriptor.channel?` — how a provider's channel links look
+  (hosts, path pattern capturing the id, an example). Loop Learning: `/channel/:id`.
+- `packages/core/src/school/channels.ts`:
+  - `parseSchoolChannel(url)` — recognises a pasted link by its host, extracts
+    the channel id, normalises the URL. A host no provider claims
+    (`unknown_provider`) or a non-channel path (`unsupported_path`) is refused
+    with a reason, never guessed — a misrecognised channel would file a
+    stranger's messages against a child.
+  - `toChannelIntake(channel, message)` — codifies how one message becomes a
+    **HomeSend review entry**: untrusted text with a context line and an
+    idempotency key `school_channel:provider:channel:messageId`, so a continuous
+    feed never files one twice.
+
+Why HomeSend, not the connector's direct-write path: a channel feed is free-form
+untrusted content, so it follows HomeSend's rule — understood, injection-scanned,
+nothing written until a person confirms. A school channel is never an
+authorisation channel (CLAUDE.md agent platform).
+
+Verified: `school/channels.test.ts` 8/8 (the owner's exact link, trailing
+slash / query / bare-host normalisation, wrong host, non-channel path, non-URL,
+idempotent keying, sender prefix). School suite 130/130; core + web typecheck
+clean. No migration, no secrets, no live polling.
+
+### Open / needs a person (08-031)
+The end-to-end live path — storing a connection's channels (table + RLS), a
+dedicated `school_channel` HomeSend source (migration to the `home_send_items`
+source check) with a DB-backed `ingestSchoolChannelMessage`, a schedule that
+polls each channel when its provider is live, and the UI to paste and manage a
+link — is the follow-up. It needs a live portal adapter, which does not exist
+yet. Nothing is ever written back to the portal; every message waits for a
+person to confirm.
+
+### Where the channel code lives
+- `packages/core/src/school/channels.ts` (+ `channels.test.ts`)
+- `packages/core/src/school/providers.ts` (the `channel` descriptor field)
+- Backlog: 08-030 Done, 08-031 Not Started
