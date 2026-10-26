@@ -95,8 +95,6 @@ export type HomeSendExtraction = {
   needs?: HomeSendSecondaryExtraction[];
   change?: "new" | "update" | "cancellation";
   confidence?: "high" | "medium" | "low";
-  /** What HomeSend asked about it on WhatsApp, one detail at a time (`completeness.ts`): the detail a reply would fill, and every one asked so far. */
-  asking?: { awaiting: string | null; asked: string[] };
 };
 
 /**

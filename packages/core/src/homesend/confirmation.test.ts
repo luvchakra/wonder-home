@@ -33,7 +33,7 @@ describe("HomeSend confirmation strategy (Wave 3 §12)", () => {
     const asmi = { memberId: "asmi", displayName: "Asmi", memberType: "child" as const };
     expect(decide({ ...worksheet, subject: { question: null, selected: asmi } }).mode).toBe("auto_apply");
     // A school item can't be added without its due date: it is asked, never guessed (the owner, 2026-10-26).
-    expect(decide({ ...worksheet, extracted: { ...worksheet.extracted, dueDate: null }, subject: { question: null, selected: asmi } })).toMatchObject({ mode: "ask", question: "When is it due?", reason: "It doesn't say the due date." });
+    expect(decide({ ...worksheet, extracted: { ...worksheet.extracted, dueDate: null }, subject: { question: null, selected: asmi } })).toMatchObject({ mode: "ask", question: null, reason: "It doesn't say the due date.", stillNeeded: ["due date"] });
     expect(decide({ ...worksheet, subject: null })).toMatchObject({ mode: "ask", question: "Who is this for?" });
   });
 
@@ -126,9 +126,9 @@ describe("the household's bar for adding on its own (the owner, 2026-10-26)", ()
 });
 
 describe("what an entry can't be added without (the owner, 2026-10-26)", () => {
-  it("asks for an event's day before anything else, and keeps a bill's question beside its hold", () => {
-    expect(decide({ kind: "event", extracted: { title: "Diwali dinner", needs: [], confidence: "high" } })).toMatchObject({ mode: "ask", question: "Which day is it?" });
-    expect(decide({ kind: "bill", extracted: { title: "Electricity", payee: "BESCOM", amount: 2140, needs: [], confidence: "high" } })).toMatchObject({ mode: "govern", question: "When is it due?" });
+  it("reports what is missing and never words the question itself — HomeTalk asks", () => {
+    expect(decide({ kind: "event", extracted: { title: "Diwali dinner", needs: [], confidence: "high" } })).toMatchObject({ mode: "ask", question: null, stillNeeded: ["day"], reason: "It doesn't say the day." });
+    expect(decide({ kind: "bill", extracted: { title: "Electricity", payee: "BESCOM", amount: 2140, needs: [], confidence: "high" } })).toMatchObject({ mode: "govern", question: null, stillNeeded: ["due date"] });
   });
 
   it("never holds a grocery item back for a quantity, which is only useful", () => {

@@ -3,11 +3,12 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 import { CONSUMABLE_CATEGORIES } from "@wonderhome/core/commerce/consumables";
 import { recordHomeSendChange } from "@wonderhome/core/homesend/changes";
 import type { HomeSendExtraction, HomeSendKind } from "@wonderhome/core/homesend/items";
-import { routeHomeSendItem } from "@wonderhome/core/homesend/repository";
+import { getHomeSendItem, routeHomeSendItem } from "@wonderhome/core/homesend/repository";
 import type { SubjectResolution } from "@wonderhome/core/homesend/resolve";
 import type { HouseholdMembership } from "@wonderhome/core/identity/schemas";
 import { SCHOOL_ITEM_KINDS } from "@wonderhome/core/school/items";
 
+import { prepareReview } from "./home-send-review";
 import { createNew, type RouteInput } from "./home-send-writes";
 
 /**
@@ -60,4 +61,25 @@ export async function autoApplyHomeSendItem(
     ...(created.changeType === "updated" ? { changeType: "updated" as const, previous: created.previous ?? {} } : {}),
   });
   return { changeId: change.id, title, where: item.kind === "grocery_item" ? "Groceries" : "Kids & School" };
+}
+
+/**
+ * HomeSend's own decision on an item nobody is reviewing right now — once
+ * HomeTalk has nothing left to ask about it, or a WhatsApp item arrives
+ * complete: the same review the app runs, as this member, and only an "add on
+ * its own" decision is acted on (Pre Approved and above the household's bar).
+ * Anything else stays waiting in HomeSend. Null when nothing was added.
+ */
+export async function addIfAllowed(
+  supabase: SupabaseClient,
+  membership: HouseholdMembership,
+  itemId: string,
+  options: { createdByMemberId?: string } = {},
+): Promise<{ title: string; where: string } | null> {
+  const item = await getHomeSendItem(supabase, membership.household.id, itemId);
+  if (!item || item.status !== "classified" || !item.classifiedKind) return null;
+  const review = await prepareReview(supabase, membership, { ...item, createdByMemberId: options.createdByMemberId ?? item.createdByMemberId });
+  if (review.confirmation.mode !== "auto_apply" || review.plan) return null;
+  const applied = await autoApplyHomeSendItem(supabase, membership, { id: item.id, kind: item.classifiedKind, extracted: item.extracted, subject: review.subject });
+  return applied ? { title: applied.title, where: applied.where } : null;
 }

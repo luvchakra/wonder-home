@@ -219,7 +219,7 @@ const SECTIONS: readonly SectionShape[] = [
   {
     id: "connections",
     group: "Privacy and trust",
-    updated: "2026-10-24",
+    updated: "2026-10-26",
     keywords: ["integration", "connect", "calendar", "email", "provider", "sync", "google", "portal", "whatsapp", "alexa", "smart home", "devices", "weather", "app", "apps", "api", "partner", "developer", "developer access", "key", "voice note", "question"],
   },
 ];

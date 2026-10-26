@@ -141,6 +141,12 @@ export type HomeTalkCase = CaseBase & {
    * compared; the case passes only if all of them do.
    */
   followUps?: readonly HomeTalkTurn[];
+  /**
+   * The question HomeTalk left open before this case's first turn, as the
+   * route keeps it on its last reply — e.g. its question about a HomeSend
+   * item (`hometalk/intake-questions.ts`). Absent, the conversation starts fresh.
+   */
+  clarifying?: import("../conversation/clarify").PendingClarification;
 };
 
 /** One later turn of a HomeTalk conversation. */

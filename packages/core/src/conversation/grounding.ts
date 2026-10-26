@@ -579,7 +579,7 @@ function billKey(label: string): string {
 /** Whether an intent is one grounding has anything to do for. */
 export function needsGrounding(intent: HouseholdIntent): boolean {
   // HomeSend grounds what it is told itself — its names through the same resolver, its day in household time.
-  return intent.action !== "unknown" && intent.action !== "greet" && intent.action !== "ask_status" && intent.action !== "check_agents" && intent.action !== "find_places" && intent.action !== "open_screen" && intent.action !== "file_with_homesend";
+  return intent.action !== "unknown" && intent.action !== "greet" && intent.action !== "ask_status" && intent.action !== "check_agents" && intent.action !== "find_places" && intent.action !== "open_screen" && intent.action !== "file_with_homesend" && intent.action !== "complete_homesend_item";
 }
 
 // ---------------------------------------------------------------------------

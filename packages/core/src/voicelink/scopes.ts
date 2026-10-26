@@ -92,6 +92,10 @@ const ACTION_SCOPE: Partial<Record<IntentAction, VoiceScope | "none">> = {
   // never certified, and is theirs to correct in the app: no scope beyond
   // being the linked member, like a question.
   set_preference: "none",
+  // Answering HomeTalk's question about something the member sent to HomeSend:
+  // it fills in their own item, which still waits there, and is only ever an
+  // answer to a question this channel's own conversation asked.
+  complete_homesend_item: "none",
   raise_service_request: "home.write",
   record_health_appointment: "health.write",
   log_health_issue: "health.write",

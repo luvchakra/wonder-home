@@ -1,42 +1,77 @@
-# HomeSend asks what an entry still lacks (story 14-041)
+# HomeSend reports what an entry lacks; HomeTalk asks (story 14-041)
 
-**Date:** 2026-10-26 · **PR:** #363 · **Owner's ask:** "HomeSend should be able to deeply analyse the structure of entity to be added and ask relevant questions to ensure entry added has complete info."
+**Date:** 2026-10-26 · **PR:** #363
+
+**Owner's ask:** "HomeSend should be able to deeply analyse the structure of entity to be added and ask relevant questions to ensure entry added has complete info."
+
+**Then, before merge:** "why would HomeSend ask a question, isn't that HomeTalk's job" → "ok. strictly implement this design."
+1. HomeSend never words or sends a question; it only reports what's missing.
+2. HomeTalk asks every question, in the app and on WhatsApp, through its clarify machinery.
+3. HomeTalk hands the answers back to HomeSend, which adds the entry or waits, per autonomy and the bar.
+4. The HomeSend-side "Who is it for?" WhatsApp question is folded into HomeTalk.
+5. The app's review form keeps "Still needed" and blocks Add.
+
+The first version of #363 had HomeSend asking on WhatsApp itself. The design change arrived while it was open: auto-merge was turned off, nothing of that version merged or went live, and it was reworked in place.
 
 ## What was done and why
 
-The gap: "Add 2 litres of oil" became "Coconut oil" with no quantity; events arrived with no day, bills with no due date, and nothing said so. Only "Who is it for?" was ever asked.
+The gap: "Add 2 litres of oil" became "Coconut oil" with no quantity, events arrived with no day and bills with no due date, and nothing said so.
 
-- **What makes an entry complete** — `packages/core/src/homesend/completeness.ts`, pure, derived from what each create in `home-send-writes.ts` takes. Required (cannot be added without) and useful (asked once):
+### HomeSend: what makes an entry complete
+`packages/core/src/homesend/completeness.ts` is pure, derived from what each create in `home-send-writes.ts` takes, and words no question. Required details cannot be added without; useful ones are asked once:
 
-  | Kind | Required | Useful |
-  |---|---|---|
-  | grocery_item | name | quantity + unit |
-  | school_item | child, title, due date | — |
-  | activity_item | child, class | day |
-  | event | title, day | start time, where |
-  | bill | payee, amount, due date | — |
-  | health_document | person, record type | date |
-  | receipt | shop, date | — |
+| Kind | Required | Useful |
+|---|---|---|
+| grocery_item | name | quantity + unit |
+| school_item | child, title, due date | — |
+| activity_item | child, class | day |
+| event | title, day | start time, where |
+| bill | payee, amount, due date | — |
+| health_document | person, record type | date |
+| receipt | shop, date | — |
 
-  Each detail carries one short question in the UI's words and the review input it fills.
-- **The reading's own evidence first** — `fillFromEvidence` runs in `ingest.ts` before the understanding is built: a grocery reading with no quantity takes the one quantity-with-unit the text sent states ("2 litres" → 2 l). Two amounts, or a bare number, stay missing; nothing is guessed.
-- **Nothing added while incomplete** — `confirmation.ts` computes the missing required details; a kind that may add on its own now asks the first one instead (`mode: "ask"`). Bills, health documents and receipts still always wait (`govern`), now with the question beside the hold.
-- **WhatsApp, one question at a time** (`whatsapp/intake.ts`). After ingest: who it is for first (existing flow), else the first missing detail. The item keeps `extracted.asking` (`awaiting`, `asked`). The next short reply (or a swipe-reply) is read as that detail by `completeness-answers.ts` (quantity + unit via `commerce/units`, a date phrase via the intake's `dayFromDateText`, a time, an amount, a record-type choice, or a few words; "skip" passes). Then the next detail, at most three per item; with nothing left to ask, `addOnItsOwn` runs (Pre Approved and above the bar) or it says it waits in HomeSend and what is left to fill there. A swiped reply that can't be read is asked again; an unswiped one falls through to the usual flow. Replies never say an amount, health detail or number back. HomeTalk's own clarify routing (#360) runs first and is unchanged.
-- **App review** (`_components/home-send-intake.tsx`): "Still needed: Amount, Due" above the fields, read live from the form; empty fields are marked (`data-missing`, `aria-invalid` for required) and Add / Add anyway / Add as new stay off while a required one is empty. Server side, `createNew` refuses a post without a required detail, and a receipt needs its shop. Payee, Amount, Due and Shop lost their "(optional)" in all eight languages.
-- **Help**: `help.guide.home-send.body.7` in all eight languages; keywords "still needed", "missing", "quantity".
+- **The content's own words first:** `fillFromEvidence` runs in `ingest.ts` before the understanding is built. "2 litres" in the text sent fills a lost quantity. Two amounts, or a bare number, stay missing.
+- **Reports, never asks:** `confirmation.ts` returns `stillNeeded` (labels). Nothing is added on its own while a required detail is missing. Bills, health documents and receipts still always wait.
+
+### HomeTalk asks every question
+`packages/core/src/hometalk/intake-questions.ts` holds every word of every question.
+- **Opening the question:**
+  - In the app: telling HomeTalk about something new (`file_with_homesend`) ends with the first question, left open on the reply.
+  - On WhatsApp: after HomeSend reads a message, `openIntakeQuestion` records HomeTalk's question in the member's WhatsApp conversation (`surface: "whatsapp"`). The acknowledgement is what HomeSend found plus HomeTalk's question. Without HomeTalk wired in, nothing is asked.
+- **Who it is for** is one of those questions, with the household's names as choices. The old HomeSend-side `whoForChoices` / `answerWhoFor` are gone.
+- **Reading the answer:** it is HomeTalk's own open question (`metadata.clarify`, action `complete_homesend_item`), so the next turn is read as its answer by `conversation/clarify.ts`.
+  - The reply is taken only when it reads as the detail asked, or as "skip"; anything else is a fresh request.
+  - On WhatsApp, the #360 routing sends the reply to HomeTalk when the open question is about the item just sent, and never after a newer item.
+  - Values are read by `hometalk/detail-answers.ts`: quantity and unit via `commerce/units`, a date via the intake's `dayFromDateText`, a time, an amount, a record type, a few words, or a name.
+- **Handing back:** the executor puts the answer on the item (as the member; RLS decides), then asks the next question (at most three per item) or hands the item back to HomeSend. `addIfAllowed` (`home-send-auto.ts`, shared with the WhatsApp path) adds it only where the household allows (Pre Approved and above the bar); otherwise it waits and the reply names what is left to fill in. A value is never said back.
+- **New action wiring:** `complete_homesend_item` has a REPLY_CLASSES entry (none: nothing is said back), consent level `draft`, and capability `homesend_details` (everywhere, `ACTION_SCOPE "none"`, like `set_preference`). It only fills in the member's own item, which still waits in HomeSend; no domain table is touched.
+
+### App review form
+`_components/home-send-intake.tsx` shows "Still needed: …" read live from the form, marks those fields (`data-missing`, plus `aria-invalid` on required ones), and keeps Add / Add anyway / Add as new off while a required one is empty. `createNew` refuses a post without one, and a receipt needs its shop. Payee, Amount, Due and Shop lost "(optional)" in all eight languages.
+
+### Help
+- `help.guide.home-send.body.7`: HomeSend says what's missing, HomeTalk asks.
+- The WhatsApp line in `connections.body.3`: "HomeTalk asks you right there" replaces "swipe to reply with their name".
+- All eight languages; both sections' `updated` dates set.
 
 ## Verified
 
-- Unit: `completeness.test.ts` (per kind, ordering, the three-question cap, every answer type, evidence), `confirmation.test.ts` (two fixtures given a due date, since an undated school item is now asked; new cases for event, bill, grocery), `whatsapp-intake.test.ts` (ask → answer → next question → added or waiting; skip; the cap; no amount echoed; swiped and unswiped unreadable replies; who-for then the next detail). 116 passing across those files.
-- `npm run eval` (deterministic): 179/179, Unsafe Action Rate 0/23, every blocking gate passes. New cases HS-29 (due date), HS-30 (class), HS-31 (amount), HS-32 (record type), HS-33 (day), HS-34 (shop), HS-35 (quantity from the text).
-- Typecheck (core and web), ESLint on the changed web files, `lint:help-links`.
-- E2E `e2e/screens.spec.ts` against the live project: a bill with no amount or due date shows "Still needed", marks Amount, and Add turns on only once both are filled. Its household and user are created and deleted by the spec.
+- **Unit:** 1,900 pass across conversation, voicelink, evaluation, homesend, whatsapp, hometalk, notifications, i18n and help.
+  - `completeness.test.ts`, `confirmation.test.ts` (reports `stillNeeded`, never a question).
+  - `hometalk/intake-questions.test.ts`: the question wording; who-for with choices; the clarify reading taking an answer and rejecting a new request; ask → answer → next → hand back; the cap; no amount said back; the WhatsApp question recorded as HomeTalk's.
+  - `hometalk/detail-answers.test.ts`.
+  - `whatsapp-intake.test.ts`: HomeTalk asks after ingest; nothing is asked without HomeTalk; a reply goes to HomeTalk and never into HomeSend; a question about another item never takes a reply.
+- **Eval:** `npm run eval` 187/187, Unsafe Action Rate 0/23, every blocking gate passes (voice: 32/32 actions placed).
+  - HS-29–HS-35: "Still needed", and that HomeSend words no question.
+  - HT-143–HT-150: HomeTalk reads a quantity, a date, an amount, a person, a record type, a place and "skip" as answers, and a new request as that request.
+- **Checks:** typecheck (core, web), ESLint on the changed web files, `lint:help-links`, build and `check:bundle`.
+- **E2E** `e2e/screens.spec.ts` on the live project: 18/18 mobile and desktop on the first version, including the "Still needed" bill case. The review form is unchanged since; the spec seeds and deletes its own household.
 
 ## Open
 
-- Free-text answers on WhatsApp (a payee, a shop, a class name) are taken as written; the review still shows them before anything is added unless the household's bar allows otherwise.
-- A provider run (`--provider configured`) was not repeated for this PR: the change is after the classifier, and the deterministic run covers it.
+- A provider run (`--provider configured`) was not repeated: the model's reading is unchanged, and the new turns are read by rules.
+- Free-text answers (a payee, a shop, a class, a place) are kept as written; the item still waits for review unless the household's bar allows otherwise.
 
 ## Cleanup
 
-No QA accounts or rows were created by hand; the E2E spec seeds and deletes its own household and user.
+No QA accounts or hand-inserted rows. The E2E spec creates and deletes its own household and user.

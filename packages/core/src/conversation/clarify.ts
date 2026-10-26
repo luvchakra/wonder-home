@@ -1,4 +1,7 @@
 import { carriesPlaceDetail } from "../homeplaces/request";
+import type { DetailField } from "../homesend/completeness";
+import type { HomeSendKind } from "../homesend/items";
+import { readDetailAnswer } from "../hometalk/detail-answers";
 import type { HouseholdIntent, IntentTarget } from "./intent";
 import { chooseCandidate, readFocus } from "./references";
 
@@ -120,6 +123,9 @@ export function answerClarification(
   utterance: string,
   context: { actorMemberId: string; channel: "text" | "voice" },
 ): HouseholdIntent | null {
+  // HomeTalk's question about a HomeSend item (`hometalk/intake-questions.ts`).
+  if (pending.action === "complete_homesend_item") return answerIntakeDetail(pending, utterance, context);
+
   // A grounding question (Wave 4): who, which day, or which of these.
   const awaiting = pending.parameters.awaiting;
   if (awaiting === "member" || awaiting === "day" || awaiting === "referent") {
@@ -219,6 +225,33 @@ const NEW_REQUEST = /\b(?:is|are|was|were|will|won'?t|isn'?t|can'?t|add|put|pay|
 export function isFreshRequest(utterance: string, awaiting: unknown): boolean {
   const said = stripFiller(utterance).replace(/[.!?]+$/, "").trim();
   return NEW_REQUEST.test(said) || said.split(/\s+/).length > (awaitingWordLimit[String(awaiting)] ?? 4);
+}
+
+/**
+ * The answer to "When is it due?", "How much should I get?" or "Who is it
+ * for — Asmi or Manan?" about a HomeSend item. Taken only when it reads as
+ * that detail (or as "skip"); a new request ("add milk", "what's on
+ * tomorrow?") is somebody moving on and is read as that request instead.
+ * The executor reads the value again, in the household's own time.
+ */
+function answerIntakeDetail(pending: PendingClarification, utterance: string, context: { actorMemberId: string; channel: "text" | "voice" }): HouseholdIntent | null {
+  const said = utterance.trim().replace(/[.!]+$/, "").trim();
+  const field = pending.parameters.field as DetailField | undefined;
+  const kind = pending.parameters.kind as HomeSendKind | undefined;
+  if (!said || !field || !kind || said.split(/\s+/).length > 8) return null;
+  const skip = readDetailAnswer(kind, "title", said, { timezone: "UTC", now: new Date() }) === "skip";
+  if (!skip && NEW_REQUEST.test(stripFiller(said))) return null;
+  if (!skip && field !== "child" && field !== "person" && readDetailAnswer(kind, field, said, { timezone: "UTC", now: new Date() }) === null) return null;
+  if ((field === "child" || field === "person") && said.split(/\s+/).length > 4) return null;
+  return {
+    action: "complete_homesend_item",
+    actorMemberId: context.actorMemberId,
+    channel: context.channel,
+    utterance,
+    target: { kind: "unspecified" },
+    parameters: { ...pending.parameters, answer: said },
+    confidence: 0.95,
+  };
 }
 
 /** A pending clarification's bookkeeping, which must not ride into the answered intent. */

@@ -99,6 +99,8 @@ const ACTION_KIND: Record<HouseholdIntent["action"], ProposedAction["kind"]> = {
   // Only a HomeSend item waiting for a person: nothing reaches a domain
   // table until someone confirms it there, so it is as harmless as a note.
   file_with_homesend: "draft",
+  // An answer put onto a HomeSend item that still waits there: no domain table is touched.
+  complete_homesend_item: "draft",
   set_preference: "draft",
   make_payment: "payment",
   // A bill on the list, a month marked paid and an amount noted are the
@@ -294,6 +296,8 @@ function summarize(intent: HouseholdIntent): string {
       return `Remember that ${intent.utterance.replace(/\.$/, "")}`;
     case "file_with_homesend":
       return "Put it in HomeSend for you to check";
+    case "complete_homesend_item":
+      return "Add your answer to what's waiting in HomeSend";
     case "make_payment":
       return `Pay the ${typeof intent.parameters.billLabel === "string" ? intent.parameters.billLabel : (intent.target.reference ?? "bill")}`;
     case "add_bill": {
@@ -354,6 +358,8 @@ function describeChanges(intent: HouseholdIntent): string[] {
       return ["Move the event", "Re-check anything that depended on the old time"];
     case "file_with_homesend":
       return ["Read it the way HomeSend reads anything you send", "Keep it in HomeSend until you confirm it — nothing is added before that"];
+    case "complete_homesend_item":
+      return ["Add your answer to the item in HomeSend", "Ask the next thing it needs, or leave it for you to check"];
     case "make_payment":
       return ["Take the payment", "Mark the bill as paid"];
     case "add_bill":

@@ -12,10 +12,14 @@ import type { HomeSendExtraction, HomeSendKind } from "./items";
  * (`confirmation.ts`), and the review keeps Add off until it is filled. A
  * **useful** detail is asked once if the reading lacks it, never insisted on.
  *
+ * HomeSend only reports what is missing and why; it never words or sends a
+ * question. HomeTalk asks, one focused question at a time, and hands the
+ * answers back (`hometalk/intake-questions.ts`, the owner 2026-10-26: "isn't
+ * that HomeTalk's job").
+ *
  * Pure. It reads only what the reading already holds: a detail the content
- * really said is never asked again, and an answer is never guessed — a reply
- * that can't be read as the detail asked is not taken (`completeness-answers.ts`).
- * Light enough for the review screen to import: nothing here reaches a model.
+ * really said is never reported missing. Light enough for the review screen
+ * to import: nothing here reaches a model.
  */
 
 export type DetailField =
@@ -34,7 +38,7 @@ export type DetailField =
   | "recordType"
   | "merchant";
 
-/** How a short reply to the question is read. */
+/** What kind of value a detail is, for HomeTalk reading an answer about it. */
 export type DetailAnswerType = "quantity" | "date" | "time" | "amount" | "person" | "choice" | "text";
 
 export type DetailSpec = {
@@ -43,55 +47,53 @@ export type DetailSpec = {
   answer: DetailAnswerType;
   /** The review form's input this detail fills, so the screen can mark it. */
   input: string;
-  /** One short, polite question in the UI's own words. */
-  question: string;
   /** The detail's name in a list ("Still needed: quantity, due date"). */
   label: string;
 };
 
 type CompleteKind = Exclude<HomeSendKind, "unknown">;
 
-const WHO = (input: string, question = "Who is it for?"): Omit<DetailSpec, "need"> => ({ field: input === "childMemberId" ? "child" : "person", answer: "person", input, question, label: "who it's for" });
+const WHO = (input: string): Omit<DetailSpec, "need"> => ({ field: input === "childMemberId" ? "child" : "person", answer: "person", input, label: "who it's for" });
 
 /** Each kind's details, in the order they are asked: required first, then useful. */
 export const COMPLETENESS: Record<CompleteKind, readonly DetailSpec[]> = {
   grocery_item: [
-    { field: "name", need: "required", answer: "text", input: "title", question: "What should go on the list?", label: "what it is" },
-    { field: "quantity", need: "useful", answer: "quantity", input: "quantity", question: "How much should I get? For example 2 litres or 1 kg.", label: "quantity" },
+    { field: "name", need: "required", answer: "text", input: "title", label: "what it is" },
+    { field: "quantity", need: "useful", answer: "quantity", input: "quantity", label: "quantity" },
   ],
   school_item: [
     { ...WHO("childMemberId"), need: "required" },
-    { field: "title", need: "required", answer: "text", input: "title", question: "What is it called?", label: "what it is" },
-    { field: "dueDate", need: "required", answer: "date", input: "dueDate", question: "When is it due?", label: "due date" },
+    { field: "title", need: "required", answer: "text", input: "title", label: "what it is" },
+    { field: "dueDate", need: "required", answer: "date", input: "dueDate", label: "due date" },
   ],
   activity_item: [
     { ...WHO("childMemberId"), need: "required" },
-    { field: "className", need: "required", answer: "text", input: "activityName", question: "Which class is it for?", label: "class" },
-    { field: "date", need: "useful", answer: "date", input: "dueDate", question: "Which day is it?", label: "day" },
+    { field: "className", need: "required", answer: "text", input: "activityName", label: "class" },
+    { field: "date", need: "useful", answer: "date", input: "dueDate", label: "day" },
   ],
   event: [
-    { field: "title", need: "required", answer: "text", input: "title", question: "What is the event called?", label: "what it is" },
-    { field: "date", need: "required", answer: "date", input: "dueDate", question: "Which day is it?", label: "day" },
-    { field: "time", need: "useful", answer: "time", input: "dueTime", question: "What time does it start?", label: "start time" },
-    { field: "where", need: "useful", answer: "text", input: "location", question: "Where is it?", label: "where" },
+    { field: "title", need: "required", answer: "text", input: "title", label: "what it is" },
+    { field: "date", need: "required", answer: "date", input: "dueDate", label: "day" },
+    { field: "time", need: "useful", answer: "time", input: "dueTime", label: "start time" },
+    { field: "where", need: "useful", answer: "text", input: "location", label: "where" },
   ],
   bill: [
-    { field: "payee", need: "required", answer: "text", input: "payee", question: "Who is the bill from?", label: "who it's from" },
-    { field: "amount", need: "required", answer: "amount", input: "amount", question: "How much is the bill?", label: "amount" },
-    { field: "dueDate", need: "required", answer: "date", input: "dueDate", question: "When is it due?", label: "due date" },
+    { field: "payee", need: "required", answer: "text", input: "payee", label: "who it's from" },
+    { field: "amount", need: "required", answer: "amount", input: "amount", label: "amount" },
+    { field: "dueDate", need: "required", answer: "date", input: "dueDate", label: "due date" },
   ],
   health_document: [
-    { ...WHO("subjectMemberId", "Whose record is it?"), need: "required" },
-    { field: "recordType", need: "required", answer: "choice", input: "healthRecordType", question: "What kind of record is it — a prescription, a lab report, a scan, a vaccination or something else?", label: "record type" },
-    { field: "date", need: "useful", answer: "date", input: "documentDate", question: "What date is on it?", label: "date" },
+    { ...WHO("subjectMemberId"), need: "required" },
+    { field: "recordType", need: "required", answer: "choice", input: "healthRecordType", label: "record type" },
+    { field: "date", need: "useful", answer: "date", input: "documentDate", label: "date" },
   ],
   receipt: [
-    { field: "merchant", need: "required", answer: "text", input: "merchant", question: "Which shop is it from?", label: "shop" },
-    { field: "date", need: "required", answer: "date", input: "purchasedOn", question: "What day was it bought?", label: "date" },
+    { field: "merchant", need: "required", answer: "text", input: "merchant", label: "shop" },
+    { field: "date", need: "required", answer: "date", input: "purchasedOn", label: "date" },
   ],
 };
 
-/** At most this many questions about one item on WhatsApp; the rest can be filled in in HomeSend. */
+/** At most this many details are asked about one item; the rest are filled in in HomeSend. */
 export const MAX_DETAIL_QUESTIONS = 3;
 
 /** What the reading holds, as far as completeness looks. */
@@ -166,26 +168,13 @@ export function listDetails(specs: readonly Pick<DetailSpec, "label">[]): string
   return `${labels.slice(0, -1).join(", ")} and ${labels.at(-1)}`;
 }
 
-/** What HomeSend has asked about an item on WhatsApp, kept on its reading. */
-export type DetailAsking = { awaiting: DetailField | null; asked: DetailField[] };
-
-export function askingOf(extracted: Record<string, unknown> | null | undefined): DetailAsking {
-  const raw = (extracted?.asking ?? null) as Partial<DetailAsking> | null;
-  return {
-    awaiting: typeof raw?.awaiting === "string" ? (raw.awaiting as DetailField) : null,
-    asked: Array.isArray(raw?.asked) ? (raw!.asked.filter((entry) => typeof entry === "string") as DetailField[]) : [],
-  };
-}
-
 /**
- * The next detail to ask about on WhatsApp: the first one missing that has
- * not been asked yet, while fewer than `MAX_DETAIL_QUESTIONS` have been.
- * Who it is for is asked by its own flow (with the household's names as
- * choices), so it is never asked here.
+ * The next missing detail not yet asked about, while fewer than
+ * `MAX_DETAIL_QUESTIONS` have been — what HomeTalk asks next.
  */
-export function nextDetailToAsk(kind: HomeSendKind | null, reading: CompletenessReading, asked: readonly DetailField[], options: { person?: boolean } = {}): DetailSpec | null {
+export function nextMissingDetail(kind: HomeSendKind | null, reading: CompletenessReading, asked: readonly DetailField[], options: { person?: boolean } = {}): DetailSpec | null {
   if (asked.length >= MAX_DETAIL_QUESTIONS) return null;
-  return missingDetails(kind, reading, options).find((spec) => spec.answer !== "person" && !asked.includes(spec.field)) ?? null;
+  return missingDetails(kind, reading, options).find((spec) => !asked.includes(spec.field)) ?? null;
 }
 
 // --- Reading a quantity ----------------------------------------------------------------

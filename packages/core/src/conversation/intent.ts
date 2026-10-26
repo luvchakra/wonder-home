@@ -44,6 +44,13 @@ export const INTENT_ACTIONS = [
    * owner, 2026-10-25: typed into HomeTalk, it had been read as a move).
    */
   "file_with_homesend",
+  /**
+   * The answer to HomeTalk's question about a HomeSend item ("When is it
+   * due?" — "Friday"): put onto the item, which still waits in HomeSend
+   * (`hometalk/intake-questions.ts`, the owner 2026-10-26). Only ever the
+   * answer to an open question; never read from a fresh sentence.
+   */
+  "complete_homesend_item",
   "set_preference",
   "make_payment",
   /** "Add the electricity bill, 2,400 due on the 5th every month" — a new bill on Bills (11-010); never a payment. */
@@ -160,7 +167,7 @@ export function disposeIntent(intent: HouseholdIntent): IntentDisposition {
   }
 
   // HomeSend reads the whole sentence itself, so being told about something new names no target here.
-  if (intent.target.kind === "unspecified" && intent.action !== "ask_status" && intent.action !== "check_agents" && intent.action !== "find_places" && intent.action !== "open_screen" && intent.action !== "file_with_homesend") {
+  if (intent.target.kind === "unspecified" && intent.action !== "ask_status" && intent.action !== "check_agents" && intent.action !== "find_places" && intent.action !== "open_screen" && intent.action !== "file_with_homesend" && intent.action !== "complete_homesend_item") {
     return { kind: "clarify", question: "Which one did you mean?" };
   }
 

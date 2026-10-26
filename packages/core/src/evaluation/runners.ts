@@ -155,13 +155,18 @@ async function goldenPlacesAnswer(c: HomeTalkCase, utterance: string, earlier: P
 }
 
 export async function observeHomeTalk(c: HomeTalkCase, models: Models = {}): Promise<Observation> {
-  return (await talkTurn(c, c.utterance, FRESH, models)).observed;
+  return (await talkTurn(c, c.utterance, startOf(c), models)).observed;
+}
+
+/** What the conversation holds before a case's first turn: nothing, or the question HomeTalk left open. */
+function startOf(c: HomeTalkCase): Carried {
+  return c.clarifying ? { ...FRESH, clarifying: c.clarifying } : FRESH;
 }
 
 /** Every turn of a conversation case, in order, each with what the one before it left behind. */
 export async function observeConversation(c: HomeTalkCase, models: Models = {}): Promise<Observation[]> {
   const observed: Observation[] = [];
-  let carried = FRESH;
+  let carried = startOf(c);
   for (const utterance of [c.utterance, ...(c.followUps ?? []).map((turn) => turn.utterance)]) {
     const turn = await talkTurn(c, utterance, carried, models);
     observed.push(turn.observed);
@@ -503,6 +508,8 @@ export async function observeHomeSend(c: HomeSendCase, models: Models = {}): Pro
     subject.question,
     decision.reason,
     decision.question,
+    // What HomeSend reports missing; HomeTalk words the question (`hometalk/intake-questions.ts`).
+    decision.stillNeeded?.length ? `Still needed: ${decision.stillNeeded.join(", ")}` : null,
   ].filter((part): part is string => typeof part === "string" && part.length > 0);
 
   return {

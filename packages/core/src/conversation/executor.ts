@@ -59,6 +59,13 @@ export type ExecutionContext = {
    * a row whose recipient is the speaker.
    */
   admin?: SupabaseClient;
+  /**
+   * HomeSend's own decision once HomeTalk has nothing left to ask about an
+   * item: the review the app runs, as this member — added on its own only
+   * where the household allows it (Pre Approved and above the bar), else
+   * null and it waits in HomeSend. Supplied by the route.
+   */
+  addFromHomeSend?: (itemId: string) => Promise<{ title: string; where: string } | null>;
 };
 
 export type ExecutionResult =
@@ -119,6 +126,8 @@ export function canExecute(intent: HouseholdIntent): boolean {
       return typeof intent.parameters.vital === "string" && typeof intent.parameters.reading === "string";
     case "file_with_homesend":
       return intent.utterance.trim().length > 0;
+    case "complete_homesend_item":
+      return typeof intent.parameters.itemId === "string" && typeof intent.parameters.field === "string" && typeof intent.parameters.answer === "string";
     case "set_fitness_goal":
       return (
         typeof intent.parameters.activity === "string" &&
@@ -158,7 +167,43 @@ async function fileWithHomeSend(intent: HouseholdIntent, context: ExecutionConte
   const title = outcome.item.extracted?.title?.trim();
   const kind = HOMESEND_KIND_WORDS[outcome.item.classifiedKind];
   const read = title && kind ? ` I read it as ${kind}: **${title}**.` : "";
-  return { ok: true, text: `It's in ${review} for you to check before anything is added.${read}`, result: { homeSendItemId: outcome.itemId } };
+  // What it still lacks is asked here, by HomeTalk, one thing at a time (`hometalk/intake-questions.ts`).
+  const { intakeQuestion } = await import("../hometalk/intake-questions");
+  const next = intakeQuestion({
+    itemId: outcome.itemId,
+    kind: outcome.item.classifiedKind,
+    extracted: outcome.item.extracted,
+    asked: [],
+    people: context.members,
+    ambiguous: outcome.item.understanding?.references.find((reference) => reference.candidates.length > 1)?.candidates ?? [],
+  });
+  return {
+    ok: true,
+    text: `It's in ${review} for you to check before anything is added.${read}${next ? ` ${next.question}` : ""}`,
+    result: { homeSendItemId: outcome.itemId, ...(next ? { clarify: next.clarify } : {}) },
+  };
+}
+
+/**
+ * The answer to HomeTalk's question about a HomeSend item: put onto the item
+ * (which still waits in HomeSend), then the next question, or — with nothing
+ * left to ask — HomeSend's own decision: added where the household allows it,
+ * else it waits. Never a value said back.
+ */
+async function completeHomeSendItem(intent: HouseholdIntent, context: ExecutionContext): Promise<ExecutionResult> {
+  const { answerIntakeQuestion, handedBackText } = await import("../hometalk/intake-questions");
+  const itemId = String(intent.parameters.itemId);
+  const answered = await answerIntakeQuestion(context.supabase, {
+    householdId: context.householdId,
+    parameters: intent.parameters,
+    answer: String(intent.parameters.answer ?? intent.utterance),
+    people: context.members,
+    timezone: context.timezone,
+    now: context.now ?? new Date(),
+  });
+  if (!answered.handBack) return { ok: true, text: answered.text, result: { homeSendItemId: itemId, ...(answered.clarify ? { clarify: answered.clarify } : {}) } };
+  const added = context.addFromHomeSend ? await context.addFromHomeSend(itemId).catch(() => null) : null;
+  return { ok: true, text: handedBackText(answered.text, { added, stillNeeded: answered.stillNeeded }), result: { homeSendItemId: itemId, ...(added ? { added: added.where } : {}) } };
 }
 
 /** Why an approved intent still cannot be done by WonderHome itself — said plainly, never as "on its way". */
@@ -230,6 +275,8 @@ async function runIntent(intent: HouseholdIntent, context: ExecutionContext): Pr
         return await moveSchoolItem(intent, context);
       case "file_with_homesend":
         return await fileWithHomeSend(intent, context);
+      case "complete_homesend_item":
+        return await completeHomeSendItem(intent, context);
       case "plan_event":
         return await putOnCalendar(intent, context);
       case "record_absence":

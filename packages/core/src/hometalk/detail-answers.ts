@@ -1,13 +1,13 @@
 import { dayFromDateText, timeFromDateText } from "../ai/classify-intake";
 import { RECORD_TYPES, type RecordType } from "../health/records";
-import { COMPLETENESS, readQuantity, type DetailField } from "./completeness";
-import type { HomeSendExtraction, HomeSendKind } from "./items";
+import { COMPLETENESS, readQuantity, type DetailField } from "../homesend/completeness";
+import type { HomeSendExtraction, HomeSendKind } from "../homesend/items";
 
 /**
- * Reading a short reply as the detail HomeSend asked about (`completeness.ts`,
- * the owner 2026-10-26): a quantity, an amount, a date phrase through the
- * intake's own date grounding, a time, a choice from a known set, or a few
- * words. Server-side only, beside the WhatsApp intake: it reaches the
+ * HomeTalk reading a short reply as the HomeSend detail it asked about
+ * (`hometalk/intake-questions.ts`, the owner 2026-10-26): a quantity, an
+ * amount, a date phrase through the intake's own date grounding, a time, a
+ * choice from a known set, or a few words. Server-side only: it reaches the
  * classifier's date rules. Pure, and never a guess — what can't be read as
  * the detail asked is null.
  */

@@ -32,6 +32,12 @@ export type ConfirmationDecision = {
   reason: string;
   /** The one question to ask, when `mode` is `ask`. */
   question: string | null;
+  /**
+   * What the entry can't be added without, by name ("due date"), in the order
+   * HomeTalk would ask (`completeness.ts`). HomeSend reports it and never words
+   * the question: HomeTalk asks, and the review shows "Still needed".
+   */
+  stillNeeded?: string[];
 };
 
 /**
@@ -99,8 +105,9 @@ export function decideConfirmation(input: ConfirmationInput): ConfirmationDecisi
   const missing = missingRequired(kind, input.extracted, { person: true });
 
   const consequential = CONSEQUENTIAL[kind];
-  // Held for a person whatever happens; what it still needs is asked there.
-  if (consequential) return { mode: "govern", reason: consequential, question: missing[0]?.question ?? null };
+  const stillNeeded = missing.length > 0 ? { stillNeeded: missing.map((spec) => spec.label) } : {};
+  // Held for a person whatever happens; what it still needs is reported beside it.
+  if (consequential) return { mode: "govern", reason: consequential, question: null, ...stillNeeded };
 
   const confidence = input.understanding?.confidence ?? input.extracted?.confidence ?? "low";
   const percent = input.autoAddPercent ?? DEFAULT_AUTO_ADD_PERCENT;
@@ -115,8 +122,9 @@ export function decideConfirmation(input: ConfirmationInput): ConfirmationDecisi
   if ((kind === "school_item" || kind === "activity_item") && !input.subject?.selected) return { mode: "ask", reason: "It doesn't say who it's for.", question: "Who is this for?" };
 
   // Nothing is added while something it can't be added without is missing
-  // (`completeness.ts`, the owner 2026-10-26): the first one is asked.
-  if (missing.length > 0) return { mode: "ask", reason: `It doesn't say the ${listDetails(missing)}.`, question: missing[0]!.question };
+  // (`completeness.ts`, the owner 2026-10-26). HomeSend says what is missing;
+  // HomeTalk is the one that asks.
+  if (missing.length > 0) return { mode: "ask", reason: `It doesn't say the ${listDetails(missing)}.`, question: null, ...stillNeeded };
 
   if (input.reconciliation) return { mode: "prepare", reason: input.reconciliation.message, question: null };
   if (confidence === "medium" && !aboveBar) return { mode: "prepare", reason: "WonderHome read it, but not surely enough to act on its own.", question: null };

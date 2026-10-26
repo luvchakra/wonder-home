@@ -7,21 +7,18 @@ import {
   listDetails,
   missingDetails,
   missingRequired,
-  nextDetailToAsk,
+  nextMissingDetail,
   readQuantity,
 } from "./completeness";
-import { readAmount, readDetailAnswer, readRecordType } from "./completeness-answers";
 
 const fields = (specs: readonly { field: string }[]) => specs.map((spec) => spec.field);
-// Monday 26 October 2026, 10:30 in Kolkata.
-const CLOCK = { timezone: "Asia/Kolkata", now: new Date("2026-10-26T05:00:00Z") };
 
 describe("what makes each HomeSend entry complete (the owner, 2026-10-26)", () => {
-  it("has one spec per kind, required details first, each with one short question", () => {
+  it("has one spec per kind, required details first, each named, never worded as a question", () => {
     for (const specs of Object.values(COMPLETENESS)) {
       const needs = specs.map((spec) => spec.need);
       expect(needs.indexOf("useful") === -1 || needs.lastIndexOf("required") < needs.indexOf("useful")).toBe(true);
-      for (const spec of specs) expect(spec.question).toMatch(/\?$|\?\s|e\.g\.|example/);
+      for (const spec of specs) expect(spec).not.toHaveProperty("question");
     }
   });
 
@@ -75,18 +72,19 @@ describe("what makes each HomeSend entry complete (the owner, 2026-10-26)", () =
   });
 });
 
-describe("asking on WhatsApp, one question at a time", () => {
-  it("asks the first missing detail not yet asked, never who it is for, and stops after three", () => {
-    expect(nextDetailToAsk("event", { title: "Dinner" }, [])?.field).toBe("date");
-    expect(nextDetailToAsk("event", { title: "Dinner" }, ["date"])?.field).toBe("time");
-    expect(nextDetailToAsk("school_item", { title: "Worksheet" }, [])?.field).toBe("dueDate");
-    expect(nextDetailToAsk("event", { title: "Dinner" }, ["date", "time", "where"])).toBeNull();
-    expect(nextDetailToAsk("bill", { title: "x" }, ["payee", "amount", "dueDate"].slice(0, MAX_DETAIL_QUESTIONS) as never)).toBeNull();
-    expect(nextDetailToAsk("grocery_item", { title: "Milk", quantity: 1 }, [])).toBeNull();
+describe("what HomeTalk asks about next", () => {
+  it("is the first missing detail not yet asked, and nothing after three", () => {
+    expect(nextMissingDetail("event", { title: "Dinner" }, [])?.field).toBe("date");
+    expect(nextMissingDetail("event", { title: "Dinner" }, ["date"])?.field).toBe("time");
+    expect(nextMissingDetail("school_item", { title: "Worksheet" }, [])?.field).toBe("child");
+    expect(nextMissingDetail("school_item", { title: "Worksheet" }, [], { person: true })?.field).toBe("dueDate");
+    expect(nextMissingDetail("event", { title: "Dinner" }, ["date", "time", "where"])).toBeNull();
+    expect(nextMissingDetail("bill", { title: "x" }, ["payee", "amount", "dueDate"].slice(0, MAX_DETAIL_QUESTIONS) as never)).toBeNull();
+    expect(nextMissingDetail("grocery_item", { title: "Milk", quantity: 1 }, [])).toBeNull();
   });
 });
 
-describe("reading a short answer as the detail asked — never a guess", () => {
+describe("reading a quantity", () => {
   it("reads a quantity and its unit", () => {
     expect(readQuantity("2 litres")).toEqual({ quantity: 2, unit: "l" });
     expect(readQuantity("1.5kg")).toEqual({ quantity: 1.5, unit: "kg" });
@@ -95,42 +93,6 @@ describe("reading a short answer as the detail asked — never a guess", () => {
     expect(readQuantity("two packets")).toEqual({ quantity: 2, unit: "packet" });
     expect(readQuantity("2 kg or 3 kg")).toBeNull();
     expect(readQuantity("lots")).toBeNull();
-  });
-
-  it("reads an amount, with or without a currency or Indian commas", () => {
-    expect(readAmount("₹2,140")).toBe(2140);
-    expect(readAmount("Rs 499.50")).toBe(499.5);
-    expect(readAmount("1,00,000 rupees")).toBe(100000);
-    expect(readAmount("about 2 or 3 thousand")).toBeNull();
-    expect(readAmount("not sure")).toBeNull();
-  });
-
-  it("reads a record type from a few words", () => {
-    expect(readRecordType("blood test report")).toBe("lab_result");
-    expect(readRecordType("prescription")).toBe("prescription");
-    expect(readRecordType("an x-ray")).toBe("imaging_report");
-    expect(readRecordType("banana")).toBeNull();
-  });
-
-  it("turns each answer type into the reading's own fields", () => {
-    expect(readDetailAnswer("grocery_item", "quantity", "2 litres", CLOCK)).toEqual({ quantity: 2, unit: "l" });
-    expect(readDetailAnswer("bill", "amount", "₹2,140", CLOCK)).toEqual({ amount: 2140 });
-    expect(readDetailAnswer("bill", "payee", "it's BESCOM", CLOCK)).toEqual({ payee: "BESCOM" });
-    expect(readDetailAnswer("event", "where", "At the Kapoors'.", CLOCK)).toEqual({ location: "the Kapoors'" });
-    expect(readDetailAnswer("event", "time", "8 pm", CLOCK)).toMatchObject({ dueTime: "20:00" });
-    expect(readDetailAnswer("event", "date", "tomorrow", CLOCK)).toMatchObject({ dueDate: "2026-10-27" });
-    expect(readDetailAnswer("school_item", "dueDate", "Friday", CLOCK)).toMatchObject({ dueDate: "2026-10-30" });
-    expect(readDetailAnswer("health_document", "date", "tomorrow", CLOCK)).toEqual({ documentDate: "2026-10-27" });
-    expect(readDetailAnswer("health_document", "recordType", "a prescription", CLOCK)).toEqual({ healthRecordType: "prescription" });
-    expect(readDetailAnswer("activity_item", "className", "Karate", CLOCK)).toEqual({ subject: "Karate" });
-  });
-
-  it("takes a pass as a pass, and anything it can't read as nothing", () => {
-    expect(readDetailAnswer("event", "time", "don't know", CLOCK)).toBe("skip");
-    expect(readDetailAnswer("event", "time", "Skip", CLOCK)).toBe("skip");
-    expect(readDetailAnswer("event", "date", "whenever", CLOCK)).toBeNull();
-    expect(readDetailAnswer("grocery_item", "quantity", "lots", CLOCK)).toBeNull();
-    expect(readDetailAnswer("bill", "amount", "", CLOCK)).toBeNull();
   });
 });
 
