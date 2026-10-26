@@ -3,7 +3,7 @@ import type { HomeSendExtraction, HomeSendKind } from "./items";
 import type { HomeSendReconciliation } from "./reconcile";
 import type { SubjectResolution } from "./resolve";
 import type { IntakeUnderstanding } from "./understanding";
-import { DEFAULT_AUTO_ADD_PERCENT } from "./auto-add";
+import { DEFAULT_AUTO_ADD_PERCENT, directAddAreaOf, NO_DIRECT_ADD, type DirectAdd } from "./auto-add";
 import { listDetails, missingRequired, type CompletenessReading } from "./completeness";
 import { FROM_A_FILE } from "./verify";
 
@@ -16,7 +16,10 @@ import { FROM_A_FILE } from "./verify";
  *     Admin picked (`auto-add.ts`, 95% unless changed);
  *   - medium confidence → prepare it and ask;
  *   - low confidence → ask one targeted question;
- *   - consequential → the existing governance, whatever the confidence.
+ *   - consequential (a bill, receipt or health document) → the existing
+ *     governance, whatever the confidence — unless an Admin turned on "Add
+ *     money entries directly" or "Add health entries directly", when it
+ *     goes through every rule above like a grocery (the owner, 2026-10-26).
  *
  * Pure: the same reading, household and setting always give the same
  * answer. Nothing here writes; the caller applies an `auto_apply` through
@@ -63,19 +66,25 @@ export type WaitingFor = {
 /**
  * The domains HomeSend may ever apply on its own, and the household outcome
  * whose autonomy setting decides it. A new grocery item or a new school
- * item is safe and reversible — one Undo removes it. A bill is money and a
- * health document is private: neither is here, so neither can be applied
- * without a person, whatever a setting says.
+ * item is safe and reversible — one Undo removes it. A bill, a receipt and
+ * a health document are here too, but are reached only when the Admin's
+ * matching "add directly" setting is on (`CONSEQUENTIAL` below): a bill
+ * entry is a record and a reminder, never a payment; a health record keeps
+ * its own privacy (self or guardian only).
  */
 export const AUTO_APPLY_OUTCOMES: Partial<Record<HomeSendKind, { outcomeKey: string; label: string }>> = {
   grocery_item: { outcomeKey: "groceries.stocked", label: "groceries" },
   school_item: { outcomeKey: "school.homework_done", label: "school work" },
+  bill: { outcomeKey: "finance.bills_paid", label: "the bills" },
+  receipt: { outcomeKey: "finance.budget_reviewed", label: "the budget check" },
+  health_document: { outcomeKey: "health.records_kept", label: "health records" },
 };
 
+/** Why a bill, receipt or health document waits while the household's "add directly" setting for it is off. */
 const CONSEQUENTIAL: Partial<Record<HomeSendKind, string>> = {
-  bill: "A bill is about money, so it always waits for a person — however clearly it was read.",
-  health_document: "A health document is private, so it always waits for a person — however clearly it was read.",
-  receipt: "A receipt becomes purchase history line by line, so a person confirms which lines are which — however clearly it was read.",
+  bill: "A bill is about money, so it waits for a person unless an Admin lets WonderHome add money entries directly.",
+  health_document: "A health document is private, so it waits for a person unless an Admin lets WonderHome add health entries directly.",
+  receipt: "A receipt becomes purchase history line by line, so it waits for a person unless an Admin lets WonderHome add money entries directly.",
 };
 
 const KIND_LABEL: Record<HomeSendKind, string> = {
@@ -108,6 +117,10 @@ export type ConfirmationInput = {
    * now 3 L" (design §6), not a duplicate to choose about (I-27).
    */
   onShoppingList?: boolean;
+  /** The Admin's "add money / health entries directly" settings (`auto-add.ts`); both off when unset. */
+  directAdd?: DirectAdd;
+  /** Already on record by a check of its own kind (a receipt with the same shop, day and total). */
+  duplicate?: boolean;
 };
 
 /** Why a clear reading still waits: what WonderHome could not find in what was sent. */
@@ -132,8 +145,10 @@ export function decideConfirmation(input: ConfirmationInput): ConfirmationDecisi
 
   const consequential = CONSEQUENTIAL[kind];
   const stillNeeded = missing.length > 0 ? { stillNeeded: missing.map((spec) => spec.label) } : {};
-  // Held for a person whatever happens; what it still needs is reported beside it.
-  if (consequential) return { mode: "govern", reason: consequential, question: null, ...stillNeeded };
+  // Held for a person unless the Admin's matching setting is on; what it still needs is reported beside it.
+  const directArea = directAddAreaOf(kind);
+  const allowed = directArea !== null && (input.directAdd ?? NO_DIRECT_ADD)[directArea];
+  if (consequential && !allowed) return { mode: "govern", reason: consequential, question: null, ...stillNeeded };
 
   const confidence = input.understanding?.confidence ?? input.extracted?.confidence ?? "low";
   const percent = input.autoAddPercent ?? DEFAULT_AUTO_ADD_PERCENT;
@@ -146,6 +161,8 @@ export function decideConfirmation(input: ConfirmationInput): ConfirmationDecisi
   }
   if (input.subject?.question) return { mode: "ask", reason: "It doesn't say who it's for.", question: input.subject.question };
   if ((kind === "school_item" || kind === "activity_item") && !input.subject?.selected) return { mode: "ask", reason: "It doesn't say who it's for.", question: "Who is this for?" };
+  // A health record is filed against one person, so it is never added on its own for "me" by default.
+  if (kind === "health_document" && !input.subject?.selected) return { mode: "ask", reason: "It doesn't say who it's for.", question: "Who is this for?", stillNeeded: ["who it's for"] };
 
   // Nothing is added while something it can't be added without is missing
   // (`completeness.ts`, the owner 2026-10-26). HomeSend says what is missing;
@@ -161,6 +178,7 @@ export function decideConfirmation(input: ConfirmationInput): ConfirmationDecisi
   if (listed && !hasAmount(input.extracted)) {
     return { mode: "prepare", reason: `${title} is already on your shopping list, so it waits for you to choose how much more.`, question: null, wait: { reason: "on_list", listed: true } };
   }
+  if (input.duplicate) return { mode: "prepare", reason: "This looks like one already recorded, so a person looks first.", question: null };
   if (confidence === "medium" && !aboveBar) return { mode: "prepare", reason: "WonderHome read it, but not surely enough to act on its own.", question: null };
   if (input.understanding?.safety.instructionsIgnored) {
     return { mode: "prepare", reason: "It contained instructions aimed at WonderHome, so a person looks first.", question: null };
@@ -183,15 +201,19 @@ export function decideConfirmation(input: ConfirmationInput): ConfirmationDecisi
   if (unverified.includes(FROM_A_FILE)) return { mode: "prepare", reason: notSureEnough(unverified, percent), question: null };
   if (!aboveBar) return { mode: "prepare", reason: notSureEnough(unverified, percent), question: null, wait: { reason: "below_bar", percent, ...onList } };
 
-  const decision = decideAutonomy(input.autonomy, { outcomeKey: outcome.outcomeKey, kind: "schedule", reversible: true });
+  // A bill, receipt or health entry is a record of the household's own, never a payment or an order.
+  const decision = decideAutonomy(input.autonomy, { outcomeKey: outcome.outcomeKey, kind: consequential ? "change" : "schedule", reversible: true });
   if (decision.outcome === "execute") {
     if (listed) {
       return { mode: "auto_apply", reason: `Your household lets WonderHome handle ${outcome.label} on its own, and this was clear, so it adds to what is already on the shopping list. Undo it any time.`, question: null, topUp: true };
     }
     return { mode: "auto_apply", reason: `Your household lets WonderHome handle ${outcome.label} on its own, and this was clear. Undo it any time.`, question: null };
   }
+  const reason = `Your household has ${outcome.label} set to “Wait for Approval”, so WonderHome asks first.`;
+  // The row and WhatsApp name groceries or school work; a bill, receipt or health entry waits with the reason alone.
+  if (consequential) return { mode: "prepare", reason, question: null };
   const area = kind === "grocery_item" ? "groceries" : "school";
-  return { mode: "prepare", reason: `Your household has ${outcome.label} set to “Wait for Approval”, so WonderHome asks first.`, question: null, wait: { reason: "wait_for_approval", area, ...onList } };
+  return { mode: "prepare", reason, question: null, wait: { reason: "wait_for_approval", area, ...onList } };
 }
 
 /** An amount was said ("2 litres", or a number alone, 25-037), not left for WonderHome to pick. */

@@ -138,7 +138,8 @@ describe("AT-A: the approval matrix — autonomy × bar × how sure (design §1.
 
 /**
  * AT-B: what always waits, under the most permissive settings a household can choose
- * (Pre Approved, bar 60%, a 97% reading). Expected from design §1.5 and §4.7.
+ * (Pre Approved, bar 60%, a 97% reading). Expected from design §1.5 and §4.7. AT-B01 to AT-B04
+ * are with "Add money / health entries directly" off, the default; AT-N covers them on.
  */
 describe("AT-B: always waits, whatever the settings (design §1.5)", () => {
   const permissive = (over: Partial<ConfirmationInput>) => decideConfirmation({
@@ -578,4 +579,147 @@ describe("AT-I: HomeTalk turns end to end under the general settings", () => {
       else expect(kind).toBe("needs_approval");
     });
   }
+});
+
+/**
+ * AT-N: "Add money entries directly" and "Add health entries directly" (the owner, 2026-10-26:
+ * "along with the % setting add setting feature to ask user if they want to add entries related
+ * to health, entries related to money directly in WonderHome if allowed in responsibilities").
+ *
+ * Expected, from design §1.5, §4.7 and §7, written before the code: with the matching setting OFF
+ * a bill, receipt or health document is `govern`, exactly as before (AT-B01 to AT-B04). With it
+ * ON it takes the grocery's path: added on its own only when its responsibility is Pre Approved
+ * AND the score is strictly above the bar; and it still waits for a photo or file, a duplicate,
+ * instructions aimed at WonderHome, several needs, or something not sent by a member; a required
+ * detail missing (bill: payee, amount, due date; receipt: shop, date; health: who, record type)
+ * or a low reading is asked. The other area's setting never opens it.
+ */
+describe("AT-N: adding money and health entries directly (the owner, 2026-10-26)", () => {
+  type Area = "money" | "health";
+  const BILL = { kind: "bill" as const, extracted: { title: "Electricity bill", payee: "BESCOM", amount: 2140, dueDate: "2026-11-05", needs: [], confidence: "high" as const }, subject: null };
+  const RECEIPT = { kind: "receipt" as const, extracted: { title: "DMart", merchant: "DMart", documentDate: "2026-10-25", needs: [], confidence: "high" as const }, subject: null };
+  const HEALTH = {
+    kind: "health_document" as const,
+    extracted: { title: "Blood test", healthRecordType: "lab_report", subjectMemberName: "Kunal", people: ["Kunal"], needs: [], confidence: "high" as const },
+    subject: { question: null, selected: { memberId: "m-kunal" } },
+  };
+  type Base = typeof BILL | typeof RECEIPT | typeof HEALTH;
+  const KINDS: [name: string, base: Base, area: Area][] = [
+    ["bill", BILL, "money"],
+    ["receipt", RECEIPT, "money"],
+    ["health document", HEALTH, "health"],
+  ];
+  const FILE = { ...READINGS.R97, check: { verified: false, unverified: [FROM_A_FILE] } };
+  const directly = (base: Base, on: Area[], autonomy: AutonomyMode, bar: number, reading: Reading, over: Partial<ConfirmationInput> = {}) =>
+    decideConfirmation({
+      kind: base.kind,
+      extracted: base.extracted as never,
+      understanding: READINGS[reading],
+      reconciliation: null,
+      subject: base.subject as never,
+      memberInitiated: true,
+      autonomy,
+      autoAddPercent: bar,
+      directAdd: { money: on.includes("money"), health: on.includes("health") },
+      ...over,
+    });
+  const DUPLICATE = { reconciliation: { message: "This looks like one already on record.", proposal: "duplicate" } as never };
+
+  // [suffix, what, setting on?, autonomy, bar, reading, over, expected]
+  const MATRIX: [suffix: string, what: string, on: boolean, autonomy: AutonomyMode, bar: number, reading: Reading, over: Partial<ConfirmationInput>, expected: string][] = [
+    ["01", "setting off, Pre Approved, 60%, 97% → govern (as today)", false, "execute", 60, "R97", {}, "govern"],
+    ["02", "setting off, Wait for Approval → govern", false, "prepare", 95, "R97", {}, "govern"],
+    ["03", "setting on, Pre Approved, 95%, 97% → added on its own", true, "execute", 95, "R97", {}, "auto_apply"],
+    ["04", "setting on, Wait for Approval, 95%, 97% → waits", true, "prepare", 95, "R97", {}, "prepare"],
+    ["05", "setting on, Pre Approved, 95%, 90% → waits (below the bar)", true, "execute", 95, "R90", {}, "prepare"],
+    ["06", "setting on, Pre Approved, 85%, 90% → added on its own", true, "execute", 85, "R90", {}, "auto_apply"],
+    ["07", "setting on, Pre Approved, 99%, 97% → waits (the bar is higher)", true, "execute", 99, "R97", {}, "prepare"],
+    ["08", "setting on, Pre Approved, 97%, 97% → waits (equal is not above)", true, "execute", 97, "R97", {}, "prepare"],
+    ["09", "setting on, Pre Approved, 60%, 70% → added on its own (the Admin chose 60%)", true, "execute", 60, "R70", {}, "auto_apply"],
+    ["10", "setting on, a photo or file → waits", true, "execute", 60, "R97", { understanding: FILE }, "prepare"],
+    ["11", "setting on, instructions aimed at WonderHome → waits", true, "execute", 60, "R97", { understanding: { ...READINGS.R97, safety: { signals: ["instruction"], instructionsIgnored: true } as never } }, "prepare"],
+    ["12", "setting on, not sent by a member (an email) → waits", true, "execute", 60, "R97", { memberInitiated: false }, "prepare"],
+    ["13", "setting on, a low reading → asked", true, "execute", 60, "R40", {}, "ask"],
+  ];
+  for (const [name, base, area] of KINDS) {
+    const prefix = area === "health" ? "AT-N3" : base.kind === "bill" ? "AT-N1" : "AT-N2";
+    for (const [suffix, what, on, autonomy, bar, reading, over, expected] of MATRIX) {
+      it(`${prefix}${suffix} a ${name}: ${what}`, () => {
+        expect(directly(base, on ? [area] : [], autonomy, bar, reading, over).mode).toBe(expected);
+      });
+    }
+    it(`${prefix}14 a ${name}: setting on, several needs in one message → waits`, () => {
+      expect(directly(base, [area], "execute", 60, "R97", { extracted: { ...base.extracted, needs: [{ title: "Something else" }] } as never }).mode).toBe("prepare");
+    });
+    it(`${prefix}15 a ${name}: only the other area's setting on → govern`, () => {
+      expect(directly(base, [area === "money" ? "health" : "money"], "execute", 60, "R97").mode).toBe("govern");
+    });
+    it(`${prefix}16 a ${name}: setting on, a duplicate → waits`, () => {
+      const over = base.kind === "receipt" ? { duplicate: true } : DUPLICATE;
+      expect(directly(base, [area], "execute", 60, "R97", over).mode).toBe("prepare");
+    });
+    it(`${prefix}17 a ${name}: setting on, a typed one (every detail in the text) is added, the same as a photo of it is not`, () => {
+      expect(directly(base, [area], "execute", 95, "R97").mode).toBe("auto_apply");
+      expect(directly(base, [area], "execute", 95, "R97", { understanding: FILE }).reason).toMatch(/photo or a file/);
+    });
+  }
+
+  it("AT-N118 a bill missing its amount, setting on → asked, the amount reported missing", () => {
+    const decision = directly(BILL, ["money"], "execute", 60, "R97", { extracted: { ...BILL.extracted, amount: null } as never });
+    expect(decision).toMatchObject({ mode: "ask", question: null, stillNeeded: ["amount"] });
+  });
+  it("AT-N119 a bill missing its payee and due date, setting on → asked, both reported", () => {
+    const decision = directly(BILL, ["money"], "execute", 60, "R97", { extracted: { ...BILL.extracted, payee: null, dueDate: null } as never });
+    expect(decision.mode).toBe("ask");
+    expect(decision.stillNeeded).toEqual(["who it's from", "due date"]);
+  });
+  it("AT-N218 a receipt missing its shop, setting on → asked", () => {
+    const decision = directly(RECEIPT, ["money"], "execute", 60, "R97", { extracted: { ...RECEIPT.extracted, merchant: null } as never });
+    expect(decision).toMatchObject({ mode: "ask", stillNeeded: ["shop"] });
+  });
+  it("AT-N318 a health document that doesn't say who it's for, setting on → asked, never filed for 'me' by default", () => {
+    const decision = directly(HEALTH, ["health"], "execute", 60, "R97", { subject: { question: null, selected: null } as never });
+    expect(decision).toMatchObject({ mode: "ask", question: "Who is this for?", stillNeeded: ["who it's for"] });
+  });
+  it("AT-N319 a health document missing its record type, setting on → asked", () => {
+    const decision = directly(HEALTH, ["health"], "execute", 60, "R97", { extracted: { ...HEALTH.extracted, healthRecordType: null } as never });
+    expect(decision).toMatchObject({ mode: "ask", stillNeeded: ["record type"] });
+  });
+  it("AT-N320 with the setting off, a missing detail is still reported beside govern (as AT-B02)", () => {
+    expect(directly(BILL, [], "execute", 60, "R97", { extracted: { ...BILL.extracted, amount: null } as never })).toMatchObject({ mode: "govern", stillNeeded: ["amount"] });
+  });
+  it("AT-N321 the reasons say which setting held it, and what was allowed", () => {
+    expect(directly(BILL, [], "execute", 60, "R97").reason).toMatch(/add money entries directly/);
+    expect(directly(HEALTH, [], "execute", 60, "R97").reason).toMatch(/add health entries directly/);
+    expect(directly(BILL, ["money"], "execute", 95, "R97").reason).toMatch(/the bills on its own/);
+    expect(directly(HEALTH, ["health"], "prepare", 95, "R97").reason).toMatch(/health records.*Wait for Approval/);
+  });
+  it("AT-N322 no setting given means both off", () => {
+    for (const [, base] of KINDS) {
+      expect(decideConfirmation({ kind: base.kind, extracted: base.extracted as never, understanding: READINGS.R97, reconciliation: null, subject: base.subject as never, memberInitiated: true, autonomy: "execute", autoAddPercent: 60 }).mode).toBe("govern");
+    }
+  });
+
+  it("AT-N323 the WhatsApp message for a bill names it and where, with how sure, and never an amount or number", () => {
+    const reply = addedReply({ title: "Electricity bill ₹2,140 due 05/11", where: "Bills", kind: "bill", percent: 97, why: "verified" });
+    expect(reply).toBe("✅ Added *Electricity bill due* to Bills (97% sure — every detail is in what you sent) — your household lets WonderHome add these on its own. You can undo it in HomeSend.");
+    expect(reply.replace("97%", "")).not.toMatch(/\d/);
+  });
+  it("AT-N324 the WhatsApp message for a health document never repeats its title or who it is for", () => {
+    const reply = addedReply({ title: "Blood test — HbA1c 6.1", where: "Health", kind: "health_document", percent: 97, why: "verified" }, "Kunal");
+    expect(reply).toBe("✅ Added *a health record* to Health (97% sure — every detail is in what you sent) — your household lets WonderHome add these on its own. You can undo it in HomeSend.");
+  });
+  it("AT-N325 a money title that is only numbers says 'an entry'", () => {
+    expect(addedReply({ title: "₹540", where: "Groceries", kind: "receipt" })).toContain("*an entry*");
+  });
+  it("AT-N326 the WhatsApp words exist in every language", async () => {
+    for (const language of LANGUAGE_CODES) {
+      const t = await translatorFor(language);
+      for (const key of ["whatsapp.addedHealthRecord", "whatsapp.addedMoneyEntry"] as const) {
+        const words = t(key);
+        expect(words, `${language} ${key}`).not.toBe(key);
+        expect(words.length).toBeGreaterThan(0);
+      }
+    }
+  });
 });

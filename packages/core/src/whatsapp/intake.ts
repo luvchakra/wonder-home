@@ -638,11 +638,16 @@ export function whatsappJobHandler(deps: WhatsAppIntakeDeps): JobHandler {
 
 /**
  * Said when an item was added on its own: what, where, and that it can be
- * taken back in HomeSend. Never an amount or a health detail, which are never
- * added on their own anyway.
+ * taken back in HomeSend. Never an amount, a health detail or a number
+ * (CLAUDE.md, External providers): a health document is "a health record",
+ * for nobody named, and a bill's or receipt's title loses its numbers.
  */
 export function addedReply(added: AddedOnItsOwn, forName?: string, t: Translate = ENGLISH): string {
-  const title = shortTitle(added.title) ?? "it";
+  if (added.kind === "health_document") {
+    return t("whatsapp.added", { title: t("whatsapp.addedHealthRecord"), where: added.where, sure: t === ENGLISH ? sureClause(added) : sureIn(t, added) });
+  }
+  const money = added.kind === "bill" || added.kind === "receipt";
+  const title = (money ? withoutNumbers(added.title) : shortTitle(added.title)) ?? (money ? t("whatsapp.addedMoneyEntry") : "it");
   const sure = t === ENGLISH ? sureClause(added) : sureIn(t, added);
   // More of a grocery already on the list (I-27): "Added 2 L more *Mustard oil* (now 3 L)".
   if (added.more) return t("whatsapp.addedMore", { amount: amountWords(added.more.added), title, now: amountWords(added.more.now), sure });
@@ -1130,6 +1135,11 @@ export function acknowledgementFor(
   if (wait?.reason === "wait_for_approval") return { text: `${t("whatsapp.ack.gotIt")} ${found} ${t(wait.area === "school" ? "whatsapp.wait.approvalSchool" : "whatsapp.wait.approvalGroceries")}`, asks: false };
   if (wait?.reason === "below_bar") return { text: `${t("whatsapp.ack.gotIt")} ${found} ${t("whatsapp.wait.belowBar", { percent: wait.percent ?? 95 })}`, asks: false };
   return { text: `${t("whatsapp.ack.gotIt")} ${found} ${t("whatsapp.ack.waiting")}`, asks: false };
+}
+
+/** A title with no digits or currency signs left in it, for a money entry's reply. */
+function withoutNumbers(value: string | null | undefined): string | null {
+  return shortTitle(value?.replace(/[\p{Sc}\d][\p{Sc}\d.,:/-]*/gu, " ").replace(/\s+/g, " "));
 }
 
 function shortTitle(value: string | null | undefined): string | null {

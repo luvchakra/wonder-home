@@ -7,6 +7,7 @@ import { toErrorBody } from "@wonderhome/core/api/errors";
 import { saveConfirmRequested } from "@wonderhome/core/conversation/consent-repository";
 import { asAutoAddPercent, AUTO_ADD_PERCENTS } from "@wonderhome/core/homesend/auto-add";
 import { saveAutoAddPercent } from "@wonderhome/core/household/auto-add-repository";
+import { saveDirectAdd } from "@wonderhome/core/household/direct-add-repository";
 import { createClient } from "@wonderhome/core/db/server";
 import { requireHouseholdAdmin } from "@wonderhome/core/identity/households";
 
@@ -46,6 +47,27 @@ export async function saveAutoAddPercentAction(_previous: ActionState, formData:
     const supabase = await createClient();
     const membership = await requireHouseholdAdmin(supabase, parsed.data.householdId);
     await saveAutoAddPercent(supabase, { householdId: parsed.data.householdId, actorMemberId: membership.memberId, percent: asAutoAddPercent(parsed.data.percent) });
+  } catch (thrown) {
+    return { error: toErrorBody(thrown, "privacy").body.error.message };
+  }
+  revalidatePath("/settings/ai");
+  return { notice: "saved" };
+}
+
+/**
+ * "Add money entries directly" / "Add health entries directly" (the owner,
+ * 2026-10-26): an Admin decides whether bills and receipts, or health
+ * documents, may be added on their own at all (`homesend/auto-add.ts`).
+ */
+const directAddSchema = z.object({ householdId: z.uuid(), area: z.enum(["money", "health"]), on: z.enum(["on", "off"]) });
+
+export async function saveDirectAddAction(_previous: ActionState, formData: FormData): Promise<ActionState> {
+  const parsed = directAddSchema.safeParse(Object.fromEntries(formData));
+  if (!parsed.success) return { error: "Please try again." };
+  try {
+    const supabase = await createClient();
+    const membership = await requireHouseholdAdmin(supabase, parsed.data.householdId);
+    await saveDirectAdd(supabase, { householdId: parsed.data.householdId, actorMemberId: membership.memberId, area: parsed.data.area, on: parsed.data.on === "on" });
   } catch (thrown) {
     return { error: toErrorBody(thrown, "privacy").body.error.message };
   }

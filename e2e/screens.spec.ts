@@ -194,6 +194,38 @@ test.describe("every signed-in screen loads", () => {
     // Nothing overflows the phone width.
     expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(360);
   });
+  // The owner, 2026-10-26: "add setting feature to ask user if they want to add entries related to health, entries related to money directly".
+  test("Settings → AI Assistant: an Admin turns on adding money and health entries directly, each saved on its own", async ({ page }) => {
+    await signIn(page);
+    await page.setViewportSize({ width: 360, height: 800 });
+    await page.goto("/settings/ai");
+    await expect(page.getByText(ERROR_SCREEN)).toHaveCount(0);
+    const money = page.getByRole("switch", { name: "Add money entries directly" });
+    const health = page.getByRole("switch", { name: "Add health entries directly" });
+    // Off until an Admin turns them on, each saying what that means and that photos and files still wait.
+    await expect(money).toHaveAttribute("aria-checked", "false");
+    await expect(health).toHaveAttribute("aria-checked", "false");
+    await expect(page.getByText("Off: every bill and receipt waits for you to check it.")).toBeVisible();
+    await expect(page.getByText(/can’t be checked word by word, so they still wait for you/).first()).toBeVisible();
+    const stored = (name: string) =>
+      expect.poll(async () => {
+        const { data } = await admin.from("policies").select("rule").eq("household_id", householdId).eq("category", "ai_autonomy").eq("active", true).eq("name", name).maybeSingle();
+        return (data?.rule as { on?: boolean } | undefined)?.on ?? null;
+      });
+    await money.click();
+    await expect(page.getByText(/^On: a bill or receipt you type/)).toBeVisible();
+    await stored("Add bills and receipts from HomeSend directly").toBe(true);
+    // The other one is untouched until it is flipped itself.
+    await stored("Add health documents from HomeSend directly").toBe(null);
+    await health.click();
+    await stored("Add health documents from HomeSend directly").toBe(true);
+    await page.reload();
+    await expect(page.getByRole("switch", { name: "Add money entries directly" })).toHaveAttribute("aria-checked", "true");
+    await expect(page.getByRole("switch", { name: "Add health entries directly" })).toHaveAttribute("aria-checked", "true");
+    // And back off: off is stored, not just absent.
+    await page.getByRole("switch", { name: "Add money entries directly" }).click();
+    await stored("Add bills and receipts from HomeSend directly").toBe(false);
+    expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(360);
   // Principle 20, the owner 2026-10-26: HomeTalk's question offers its answers to pick (story 14-053).
   test("HomeTalk: the latest question's answers are chips to pick, an answered one's are greyed", async ({ page }) => {
     const member = await admin.from("household_members").select("id").eq("household_id", householdId).eq("profile_id", userId).single();

@@ -48,7 +48,7 @@ export function groupByOwner(
 }
 
 /** The outcome areas the starter outcomes name; any other prefix is shown as written. */
-const KNOWN_AREAS = new Set(["laundry", "meals", "groceries", "finance", "school", "home", "household", "pets", "kids"]);
+const KNOWN_AREAS = new Set(["laundry", "meals", "groceries", "finance", "school", "home", "household", "pets", "kids", "health"]);
 
 /** An outcome's area is the part of its key before the dot: "laundry.ready" is laundry. */
 export function areaOf(outcomeKey: string): string {

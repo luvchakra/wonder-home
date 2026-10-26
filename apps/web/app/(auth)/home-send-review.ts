@@ -5,9 +5,13 @@ import { loadHouseholdContext } from "@wonderhome/core/context/repository";
 import { listResponsibilities } from "@wonderhome/core/household/configuration-repository";
 import type { AutonomyMode } from "@wonderhome/core/household/autonomy";
 import { loadAutoAddPercent } from "@wonderhome/core/household/auto-add-repository";
+import { loadDirectAdd } from "@wonderhome/core/household/direct-add-repository";
+import { duplicateReceipt } from "@wonderhome/core/commerce/receipt-stock";
+import { directAddAreaOf, NO_DIRECT_ADD, type DirectAdd } from "@wonderhome/core/homesend/auto-add";
 import { AUTO_APPLY_OUTCOMES, decideConfirmation, type ConfirmationDecision } from "@wonderhome/core/homesend/confirmation";
 import type { HouseholdContextItem } from "@wonderhome/core/context/types";
 import type { HomeSendExtraction, HomeSendKind } from "@wonderhome/core/homesend/items";
+import { listRecordedReceipts } from "@wonderhome/core/homesend/repository";
 import { buildDocumentPlan, readPlanContext, type DocumentPlan } from "@wonderhome/core/homesend/plan";
 import { reconcileHomeSend, type HomeSendReconciliation } from "@wonderhome/core/homesend/reconcile";
 import { adoptMatchedSubject, resolveIntakePeople, type SubjectResolution } from "@wonderhome/core/homesend/resolve";
@@ -114,6 +118,8 @@ export async function prepareReview(
   supabase: SupabaseClient,
   membership: HouseholdMembership,
   item: {
+    /** The item itself, so a receipt is never matched against its own recording. */
+    id?: string;
     classifiedKind: HomeSendKind | null;
     extracted: HomeSendExtraction | null;
     understanding: IntakeUnderstanding | null;
@@ -123,10 +129,37 @@ export async function prepareReview(
   },
 ): Promise<ReviewPreparation> {
   const kind = item.classifiedKind;
-  const confirm = (subject: SubjectResolution | null, reconciliation: HomeSendReconciliation | null, understanding: IntakeUnderstanding | null, autonomy: AutonomyMode, autoAddPercent?: number, onShoppingList?: boolean) =>
-    decideConfirmation({ kind, extracted: item.extracted, understanding, reconciliation, subject, memberInitiated: item.createdByMemberId !== null, autonomy, autoAddPercent, onShoppingList });
+  const confirm = (
+    subject: SubjectResolution | null,
+    reconciliation: HomeSendReconciliation | null,
+    understanding: IntakeUnderstanding | null,
+    autonomy: AutonomyMode,
+    autoAddPercent?: number,
+    onShoppingList?: boolean,
+    directAdd: DirectAdd = NO_DIRECT_ADD,
+    duplicate = false,
+  ) =>
+    decideConfirmation({ kind, extracted: item.extracted, understanding, reconciliation, subject, memberInitiated: item.createdByMemberId !== null, autonomy, autoAddPercent, onShoppingList, directAdd, duplicate });
+  // A bill, receipt or health document may be added on its own only when the
+  // Admin's matching "add directly" setting is on (the owner, 2026-10-26); off, or unreadable, it waits.
+  const area = directAddAreaOf(kind);
   // A receipt is matched line by line on its own confirm form (09-009): it is
   // for nobody in particular and never a second copy of a record.
+  if (kind === "receipt" && item.extracted?.title) {
+    const directAdd = await loadDirectAdd(supabase, membership.household.id).catch(() => NO_DIRECT_ADD);
+    if (!directAdd.money) return { subject: null, reconciliation: null, understanding: item.understanding, confirmation: confirm(null, null, item.understanding, "prepare") };
+    // The same shop, day and total as one already recorded is a duplicate, by the receipt's own check.
+    const read = item.extracted;
+    const [autonomy, autoAddPercent, duplicate] = await Promise.all([
+      autonomyFor(supabase, membership.household.id, kind),
+      loadAutoAddPercent(supabase, membership.household.id),
+      listRecordedReceipts(supabase, membership.household.id)
+        .then((recorded) => duplicateReceipt({ id: item.id ?? "", merchant: read.merchant ?? null, purchasedOn: read.documentDate ?? null, total: read.amount ?? null }, recorded) !== null)
+        // What is on record couldn't be read: treated as a duplicate, so a person looks first.
+        .catch(() => true),
+    ]);
+    return { subject: null, reconciliation: null, understanding: item.understanding, confirmation: confirm(null, null, item.understanding, autonomy, autoAddPercent, false, directAdd, duplicate) };
+  }
   if (!kind || kind === "unknown" || kind === "receipt" || !item.extracted?.title) {
     return { subject: null, reconciliation: null, understanding: item.understanding, confirmation: confirm(null, null, item.understanding, "prepare") };
   }
@@ -162,21 +195,22 @@ export async function prepareReview(
 
   // Who it is for: what the content said, or else whose record it matched.
   const subject = resolution ? adoptMatchedSubject(kind, resolution.subject, reconciliation?.existing.subjectMemberId, people) : null;
-  // The outcome's autonomy and the household's bar (`auto-add.ts`), read together.
+  // The outcome's autonomy, the household's bar and its "add directly" settings (`auto-add.ts`), read together.
   // A grocery it matched may be on the shopping list now: with an amount, that is a top-up, not a duplicate (I-27).
   const listedCheck = kind === "grocery_item" && reconciliation?.proposal.type === "duplicate";
-  const [autonomy, autoAddPercent, onShoppingList] = checked
+  const [autonomy, autoAddPercent, onShoppingList, directAdd] = checked
     ? await Promise.all([
         autonomyFor(supabase, membership.household.id, kind),
         AUTO_APPLY_OUTCOMES[kind] ? loadAutoAddPercent(supabase, membership.household.id) : undefined,
         listedCheck ? onTheList(supabase, membership.household.id, item.extracted.title) : false,
+        area ? loadDirectAdd(supabase, membership.household.id).catch(() => NO_DIRECT_ADD) : NO_DIRECT_ADD,
       ])
-    : (["prepare", undefined, false] as const);
+    : (["prepare", undefined, false, NO_DIRECT_ADD] as const);
   // A document with several records is reviewed as a plan (DDU 2.0), and
   // never applied on its own: every record in it waits for a person.
   const plan = wantsPlan(understanding) ? await planFor(supabase, membership, { understanding, createdAt: item.createdAt }, { people }).catch(() => null) : null;
   const confirmation = plan
     ? { mode: "prepare" as const, reason: "A document with several things in it waits for you to check each one.", question: null }
-    : confirm(subject, reconciliation, understanding, autonomy, autoAddPercent, onShoppingList);
+    : confirm(subject, reconciliation, understanding, autonomy, autoAddPercent, onShoppingList, directAdd);
   return { subject, reconciliation, understanding, confirmation, plan };
 }

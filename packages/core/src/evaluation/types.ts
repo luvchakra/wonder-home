@@ -176,6 +176,8 @@ export type HomeSendCase = CaseBase & {
   recordedReading?: boolean;
   memberInitiated?: boolean;
   autonomy?: "prepare" | "execute";
+  /** The Admin's "Add money / health entries directly" settings (`homesend/auto-add.ts`); both off when unset. */
+  directAdd?: Partial<import("../homesend/auto-add").DirectAdd>;
   transcriptConfidence?: number;
 };
 

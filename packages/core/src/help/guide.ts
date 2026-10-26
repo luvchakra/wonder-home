@@ -106,7 +106,7 @@ const SECTIONS: readonly SectionShape[] = [
     id: "home-send",
     group: "Everyday use",
     updated: "2026-10-26",
-    keywords: ["homesend", "upload", "photo", "pdf", "screenshot", "forward", "email", "share", "paperclip", "school notice", "receipt", "whatsapp", "voice note", "link", "undo", "still needed", "missing", "quantity", "fill in", "offer", "shopping list", "top up", "why waiting"],
+    keywords: ["homesend", "upload", "photo", "pdf", "screenshot", "forward", "email", "share", "paperclip", "school notice", "receipt", "whatsapp", "voice note", "link", "undo", "still needed", "missing", "quantity", "fill in", "offer", "shopping list", "top up", "why waiting", "add money entries directly", "add health entries directly", "bill", "health document"],
   },
   {
     id: "today-and-home",
@@ -153,7 +153,7 @@ const SECTIONS: readonly SectionShape[] = [
   {
     id: "health",
     group: "Everyday use",
-    updated: "2026-10-21",
+    updated: "2026-10-26",
     keywords: ["health", "fitness", "vitals", "weight", "blood pressure", "checkup", "appointment", "prescription", "medical record", "routine", "private", "who can see", "people I choose", "share", "sharing", "report", "lab report", "attach report", "read the report", "test results", "reference range", "suggested next steps", "follow-up", "recheck"],
   },
   {
@@ -213,8 +213,8 @@ const SECTIONS: readonly SectionShape[] = [
   {
     id: "ai-key",
     group: "Privacy and trust",
-    updated: "2026-10-16",
-    keywords: ["api key", "byok", "anthropic", "openai", "gemini", "model", "billing", "own key"],
+    updated: "2026-10-26",
+    keywords: ["api key", "byok", "anthropic", "openai", "gemini", "model", "billing", "own key", "add on its own", "how sure", "add money entries directly", "add health entries directly", "bills", "receipts", "health documents"],
   },
   {
     id: "connections",

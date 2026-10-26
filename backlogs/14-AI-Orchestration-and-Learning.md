@@ -58,6 +58,7 @@
 | 52 | P0 | 14-052 | HomeSend says why something waits, and its reason matches its score | Done | PR #378. The owner, 2026-10-26: "2 litres mustard oil" on WhatsApp waited although groceries were Pre Approved ("its pre approved, still issue"); "Science project model · 70% sure · every detail is in what you sent"; Mustard oil waited at 97% with only "Review". `confirmation.ts`: a grocery already on the shopping list said with an amount goes through the same decision and is a top-up (`onShoppingList`, `topUp`, the HomeFood half is 25-039); a decision that holds something otherwise added on its own carries why (`wait`: on the list, Wait for Approval, below the bar). The Needs review row says it in a few words (`auto-add.ts` `waitRowWords`, `homesend.inbox.wait.*`), WhatsApp in a sentence (`whatsapp.wait.*`), HomeTalk in English, never with an amount; all eight languages. `sureWhy` says "verified" only in the 97% band. Every other duplicate keeps I-4's rule. Tests AT-F08–F11, AT-L, AT-M, AT-H08–H11, AT-J05–J06; browser-checked at 360 px and desktop on the live project. Design §4.7, §7, I-27. |
 | 53 | P1 | 14-053 | Answers to pick under HomeTalk's questions | Done | The owner, 2026-10-26 (principle 20). Every question with sensible answers carries localized choices (`hometalk/choices.ts`, `metadata.choices`): amounts by the one rule for amounts (25-037), names, days, times, record types, yes / not now, candidates, and checkboxes for which waiting items to fill in. App chips and checkboxes (`ui/answer-choices`); WhatsApp reply buttons or a list with a text fallback, read back by id. No preview card on a turn that only asked. Eval HT-162–HT-168 (HT-167 caught "not now" normalised to "not"); design I-28. |
 | 54 | P1 | 14-054 | A finished turn's action preview behind an "i" beside its time | Done | The owner, 2026-10-26, 9:13 PM IST: "do not show separate card for action preview, rather show a small i icon left to time". `ui/preview-info`: a popover on a desktop, a bottom sheet on a phone; a preview waiting for a decision stays inline with its buttons. "Can be undone" only on a done turn that can be. Help ¶2 of HomeTalk in eight languages; signed-in E2E. |
+| 55 | P1 | 14-055 | Admins may let bills, receipts and health documents be added directly | Done | PR pending. The owner, 2026-10-26: "along with the % setting add setting feature to ask user if they want to add entries related to health, entries related to money directly in WonderHome if allowed in responsibilities". Two Admin switches on Settings → AI Assistant, off by default; on, the entry takes the grocery path (Pre Approved + above the bar + every other rule). Photos and files still wait. Starter outcomes `finance.budget_reviewed` and `health.records_kept` added. |
 
 **Status flow:** `Not Started` → `In Progress` → `Blocked` → `Done`
 
@@ -645,7 +646,6 @@ Implement AI Orchestration & Learning as a first-class WonderHome domain. The mo
 - The decision names why it waits (on the list, Wait for Approval, below the bar); the Needs review row, WhatsApp and HomeTalk say it, in all eight languages, never with an amount.
 - Bills, school items and events keep the duplicate rule; bills, health documents, receipts, photos and files always wait.
 - "Every detail is in what you sent" only in the 97% band; otherwise unsure, missing details, or from a photo or file.
-
 ### Story 14-053 — Answers to pick under HomeTalk's questions
 **Epic:** AI Orchestration & Learning
 **Priority:** P1
@@ -669,5 +669,16 @@ Implement AI Orchestration & Learning as a first-class WonderHome domain. The mo
 - "Can be undone" only when something was done and can be.
 - The "i" is named for a screen reader and is a 44 px target; the footer line doesn't wrap or overflow at 360 px.
 
+### Story 14-055 — Admins may let bills, receipts and health documents be added directly
+**Epic:** AI Orchestration & Learning
+**Priority:** P1
+**Goal:** The owner, 2026-10-26: "along with the % setting add setting feature to ask user if they want to add entries related to health, entries related to money directly in WonderHome if allowed in responsibilities".
+
+**Acceptance criteria**
+- Settings → AI Assistant has "Add money entries directly" (bills, receipts) and "Add health entries directly" (health documents), Admin-only, off by default, off when unreadable, versioned `policies` rows (`household/direct-add-repository.ts`).
+- With a setting on, `decideConfirmation` treats that kind like a grocery: its responsibility's autonomy (`finance.bills_paid`, `finance.budget_reviewed`, `health.records_kept`), the bar and every other rule. Photos and files, duplicates, injected instructions, several needs, non-member senders and a missing required detail still wait or ask.
+- Added through the same domain services as a person's confirm, marked `auto_added`, undoable; a bill is a record, never a payment; a health record is private to its person.
+- WhatsApp never echoes an amount, a health detail or a number.
+- Off, nothing changes (AT-B01 to AT-B04); AT-N covers the combinations; HS-36 to HS-38 keep the Unsafe Action Rate at zero.
 ## Module Completion Rule
 Complete dependency-ready P0 stories before P1/P2, but do not block unrelated work on unavailable external providers.

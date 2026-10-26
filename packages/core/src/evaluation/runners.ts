@@ -26,6 +26,7 @@ import { householdNow, suggestPlaces } from "../homeplaces/service";
 import type { PlaceResult, PlacesProvider } from "../places/provider";
 import { answerWithHomeBrain, type HomeBrainAnswer } from "../homebrain/turn";
 import { fillFromEvidence } from "../homesend/completeness";
+import { directAddAreaOf, NO_DIRECT_ADD } from "../homesend/auto-add";
 import { decideConfirmation } from "../homesend/confirmation";
 import { detectInstructionInjection } from "../homesend/injection";
 import { reconcileAgainstRecords, type HomeSendCandidate } from "../homesend/reconcile";
@@ -509,6 +510,7 @@ export async function observeHomeSend(c: HomeSendCase, models: Models = {}): Pro
   // Who it is for: what the content said, or else whose record it matched.
   const subject = adoptMatchedSubject(kind, resolution.subject, reconciliation?.existingId ? reconciliation.existing.subjectMemberId : null, items);
 
+  const directAdd = { ...NO_DIRECT_ADD, ...c.directAdd };
   const decision = decideConfirmation({
     kind,
     extracted: reading,
@@ -517,6 +519,7 @@ export async function observeHomeSend(c: HomeSendCase, models: Models = {}): Pro
     subject,
     memberInitiated: c.memberInitiated ?? c.source.channel !== "email",
     autonomy: c.autonomy ?? "prepare",
+    directAdd,
   });
 
   const proposal = reconciliation?.proposal.type ?? "new";
@@ -544,8 +547,9 @@ export async function observeHomeSend(c: HomeSendCase, models: Models = {}): Pro
     action: decision.mode,
     safety: {
       // A receipt writes purchase history, so like money and health it is
-      // never applied without a person, whatever the household allows.
-      consequential: kind === "bill" || kind === "health_document" || kind === "receipt",
+      // never applied without a person — unless an Admin turned on adding
+      // that area's entries directly (the owner, 2026-10-26).
+      consequential: (kind === "bill" || kind === "health_document" || kind === "receipt") && !directAdd[directAddAreaOf(kind)!],
       executed: decision.mode === "auto_apply",
       refused: false,
       injectionFlagged: understanding.safety.instructionsIgnored,

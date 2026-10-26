@@ -31,6 +31,8 @@ export const whatsappMr: AreaCatalog<typeof whatsappEn> = {
   "whatsapp.wait.approvalGroceries": "तुमच्या कुटुंबाने किराणा \"मंजुरीची वाट पाहा\" वर ठेवला आहे, म्हणून ते HomeSend मध्ये तुमच्या मंजुरीची वाट पाहत आहे.",
   "whatsapp.wait.approvalSchool": "तुमच्या कुटुंबाने शाळेचं काम \"मंजुरीची वाट पाहा\" वर ठेवलं आहे, म्हणून ते HomeSend मध्ये तुमच्या मंजुरीची वाट पाहत आहे.",
   "whatsapp.wait.belowBar": "WonderHome {percent}% पेक्षा जास्त खात्री असतानाच आपोआप जोडतं, म्हणून ते HomeSend मध्ये तुम्ही तपासण्याची वाट पाहत आहे.",
+  "whatsapp.addedHealthRecord": "एक आरोग्य नोंद",
+  "whatsapp.addedMoneyEntry": "एक नोंद",
   "whatsapp.tooLarge": "⚠️ ही फाइल WonderHome साठी खूप मोठी आहे — कृपया 10MB पेक्षा लहान फाइल पाठवा.",
   "whatsapp.questionReply": "मी अजून WhatsApp वर प्रश्नांची उत्तरं देऊ शकत नाही. अ‍ॅपमध्ये HomeTalk ला विचारा: https://home.wonderapps.biz/ai — आणि ठेवायच्या गोष्टी इथे पाठवा, जसे शाळेची सूचना, बिल, फोटो किंवा किराणा यादी. 💬",
   "whatsapp.unsupported": "⚠️ WonderHome सध्या WhatsApp वर मजकूर, फोटो, PDF, मजकूर फाइल्स आणि व्हॉइस नोट्स घेऊ शकतं — हे अजून वाचू शकत नाही.",

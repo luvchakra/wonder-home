@@ -57,6 +57,7 @@ Last updated: 2026-10-20 (25-003c, 25-005, H-1, H-2, H-3 done; 25-004 waits, as 
 |---|---|---|
 | HomeTalk should know the family members, and look in WonderHome's records when it doesn't know, then remember; a next HomeBrain that goes deep into every module, connects them and answers with the person's intent in mind | 14-024, 14-026 to 14-031 | Designed 2026-10-18 (`design/HOMEBRAIN-4.0-DEEP-HOUSEHOLD-INTELLIGENCE.md`); phase 0 done in #240, phase 2 (look deeper) Next |
 | Compare the HomeTalk/HomeSend design with the code; add what remains as stories and build them in order (2026-10-26) | 14-042 to 14-051 | Done: 14-042 to 14-049 (#366), acceptance tests (#367), 14-050 and 14-051 (#368) |
+| Let an Admin allow bills, receipts and health documents to be added directly, beside the % bar (owner, 2026-10-26) | 14-055 | Done (this PR) |
 | No separate OK: understand the intent and do what was asked during the conversation | 14-025 | Done in #240 |
 | The Voice settings page: say Gemini is the voice, and make the page more useful | 14-025 (with it) | Done in #240 |
 | Every family member logs in as themselves, matched by the email in their details, with any login method, and lands in the household with their role's menus | 01-010 | Done — #215, browser-checked 2026-10-18 |

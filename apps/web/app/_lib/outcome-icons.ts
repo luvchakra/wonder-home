@@ -1,4 +1,4 @@
-import { GraduationCap, HandHeart, ListChecks, PawPrint, ShoppingBasket, Utensils, Wallet, Wrench } from "lucide-react";
+import { GraduationCap, HandHeart, HeartPulse, ListChecks, PawPrint, ShoppingBasket, Utensils, Wallet, Wrench } from "lucide-react";
 import type { ComponentType } from "react";
 
 import type { IconTone } from "@wonderhome/core/ui/icon-tile";
@@ -17,6 +17,7 @@ const BY_PREFIX: Record<string, { icon: ComponentType<{ className?: string }>; t
   pet: { icon: PawPrint, tone: "care" },
   pets: { icon: PawPrint, tone: "care" },
   kids: { icon: HandHeart, tone: "people" },
+  health: { icon: HeartPulse, tone: "health" },
 };
 
 /** An outcome key's domain prefix decides its icon and tone — "laundry.ready" reads as a laundry row wherever it's listed. */
