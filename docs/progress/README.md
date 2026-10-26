@@ -12,6 +12,9 @@ decision that shapes later work each earns a note, written before moving on.
 | Date | Note |
 |---|---|
 | 2026-10-26 | [School channels, backend (08-031, PR A)](2026-10-26-school-channels-backend.md) |
+| 2026-10-26 | [HomeTalk files the member's own words with HomeSend, never the masked copy (I-26)](2026-10-26-unmasked-homesend-utterance.md) |
+| 2026-10-26 | [WhatsApp: a short note typed after a message is read with it](2026-10-26-whatsapp-typed-note-burst.md) |
+| 2026-10-26 | [An amount in another unit is converted or asked about, never refused raw (25-038)](2026-10-26-grocery-unit-refusals.md) |
 | 2026-10-26 | [HomeTalk replies laid out for a phone, with emojis throughout](2026-10-26-structured-replies.md) |
 | 2026-10-26 | [A number said without a unit is the item's practical amount (25-037)](2026-10-26-practical-default-units.md) |
 | 2026-10-26 | [Warm emojis on WhatsApp and HomeTalk replies](2026-10-26-warm-emoji-replies.md) |

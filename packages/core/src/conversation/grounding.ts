@@ -1,5 +1,6 @@
 import { matchBill } from "./bill-talk";
 import { readBareNumber, sayAmount } from "../commerce/bare-amount";
+import { readAcrossUnits } from "../commerce/pack-amount";
 import { bareItemOf, findGrocery, groceryCandidates, quantityQuestion } from "./grocery-actions";
 import { readItemAmount } from "./quantity";
 import type { GroceryItem } from "../commerce/inventory";
@@ -324,6 +325,28 @@ export async function groundIntent(intent: HouseholdIntent, env: GroundingEnv): 
         ...(reading.meant ? { quantityMeant: `${read.amount.more ? "more " : ""}${sayAmount(reading.meant)} ${read.item}` } : {}),
       };
       return clarify({ ...grounded, parameters }, "quantity", reading.question, []);
+    }
+    // Said in litres, kept in bottles (25-038): whole bottles of a known
+    // size go straight on; otherwise one question with practical choices —
+    // never a refusal after the fact.
+    const switching = grounded.parameters.switchUnit as { itemId?: unknown } | undefined;
+    for (const name of names) {
+      const read = readItemAmount(name);
+      if (!read.amount || read.amount.unit === null || !read.item) continue;
+      const item = findGrocery(read.item, known);
+      if (!item || switching?.itemId === item.id) continue;
+      const across = readAcrossUnits({ quantity: read.amount.quantity, unit: read.amount.unit }, item);
+      if (across.kind !== "ask") continue;
+      const swap = (value: string) => (value === name ? read.item : value);
+      const parameters: Record<string, unknown> = {
+        ...grounded.parameters,
+        ...(typeof grounded.parameters.item === "string" ? { item: swap(grounded.parameters.item) } : {}),
+        ...(Array.isArray(grounded.parameters.items) ? { items: (grounded.parameters.items as string[]).map(swap) } : {}),
+        quantityFor: [read.item],
+        unitAsk: { itemId: item.id, unit: across.switchTo, said: name },
+        choices: across.choices,
+      };
+      return clarify({ ...grounded, parameters }, "quantity", across.question, []);
     }
   }
 

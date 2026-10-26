@@ -3,7 +3,7 @@ import { z } from "zod";
 import { readHouseholdKey } from "@wonderhome/core/ai/credentials";
 import { createAnswerComposer, createClaudeUnderstanding, createGeminiUnderstanding, createOpenAIUnderstanding, createReplyTranslator, type AnswerComposer } from "@wonderhome/core/ai/model-client";
 import { platformKey, resolveModelKey } from "@wonderhome/core/ai/model-key";
-import { minimiseContext, restoreParameterNames, routeToProvider, unpseudonymise, type ContentClass, type ContextCandidate, type DataUsePolicy, type Person } from "@wonderhome/core/ai/privacy";
+import { minimiseContext, reidentifyIntent, routeToProvider, type ContentClass, type ContextCandidate, type DataUsePolicy, type Person } from "@wonderhome/core/ai/privacy";
 import { loadDataUse } from "@wonderhome/core/ai/privacy-repository";
 import { ApiError } from "@wonderhome/core/api/errors";
 import { FAIR_USE_DISCLOSURE } from "@wonderhome/core/billing/policies";
@@ -11,7 +11,7 @@ import { consume, may } from "@wonderhome/core/billing/repository";
 import { forgetHouseholdContext, householdContext, householdMemory, type HouseholdContext } from "@wonderhome/core/conversation/brain";
 import { personItems, type PersonLike } from "@wonderhome/core/context/builders";
 import { converse, pendingFrom, previewOf, PROPOSAL_TTL_MINUTES, resolveDeterministicIntent, type ConversationTurn, type RuntimeContext, type Understanding } from "@wonderhome/core/conversation/engine";
-import { canExecute, executeIntent, notYetDoable, undoExecuted, zonedTimeToUtcIso, type ExecutionContext } from "@wonderhome/core/conversation/executor";
+import { canExecute, executeIntent, failedReply, notYetDoable, undoExecuted, zonedTimeToUtcIso, type ExecutionContext } from "@wonderhome/core/conversation/executor";
 import { isUndo } from "@wonderhome/core/conversation/consent";
 import { UNDO_LINE, warmReply, warmUndo } from "@wonderhome/core/conversation/warmth";
 import { loadConfirmRequested } from "@wonderhome/core/conversation/consent-repository";
@@ -712,7 +712,7 @@ async function turnInEnglish(input: HomeTalkInput, speaking: Speaking) {
       if (turn.memory) await remember(admin, householdId, attributeMemory(turn.memory, people), { memberId: membership.memberId, displayName: membership.displayName });
       if (turn.proposal.kind === "executed") {
         const done = await executeIntent(turn.intent, execution);
-        text = done.ok ? done.text : `I tried, and it did not go through: ${done.reason}`;
+        text = done.ok ? done.text : failedReply(done);
         outcome = done.ok ? { status: "executed", result: done.result } : { status: "failed", result: { reason: done.reason } };
         partOutcome = done.ok ? "done" : "failed";
         if (done.ok) {
@@ -1125,7 +1125,7 @@ async function turnInEnglish(input: HomeTalkInput, speaking: Speaking) {
   } else if (result.kind === "reply" && result.proposal.kind === "executed") {
     if (result.memory) await remember(admin, householdId, attributeMemory(result.memory, people), { memberId: membership.memberId, displayName: membership.displayName });
     const done = await executeIntent(result.intent, execution);
-    text = done.ok ? done.text : `I tried, and it did not go through: ${done.reason}`;
+    text = done.ok ? done.text : failedReply(done);
     // What the executor asked next — HomeTalk's question about a HomeSend item — stays open for the next turn.
     if (done.ok && isIntakeQuestion(done.result.clarify)) followUp = done.result.clarify;
     outcome = done.ok ? { status: "executed", result: done.result } : { status: "failed", result: { reason: done.reason } };
@@ -1381,7 +1381,7 @@ async function carryOutApproved(input: {
   if (done.ok) forgetHouseholdContext(input.householdId);
 
   return {
-    text: done.ok ? warmReply(done.text, { action: intent.action, proposal: "executed", ok: true }) : `I have your go-ahead, and it did not go through: ${done.reason}`,
+    text: done.ok ? warmReply(done.text, { action: intent.action, proposal: "executed", ok: true }) : failedReply(done, "I have your go-ahead, and it did not go through"),
     action: { ...input.action, status, ...(done.ok && unchangedResult(done.result) ? { unchanged: true } : {}) },
     focus: done.ok ? focusFromResult(intent.action, done.result, new Date().toISOString()) : [],
   };
@@ -1830,32 +1830,24 @@ async function decideProviderRouting(
   const runtime: RuntimeContext | undefined = moment
     ? { role: moment.role, localDateTime: moment.localDateTime, pending: sentText("pending"), recent: sentText("recent")?.split(", ") ?? [], language: moment.language ?? null }
     : undefined;
-  const toHousehold = (understood: HouseholdIntent, pseudonyms: typeof minimised.pseudonyms): HouseholdIntent => {
-    // Every word the model wrote back ("Child A likes pink pasta") names a
-    // person by placeholder. Placeholders are only this turn's: a member
-    // added later shifts them, so one stored as-is would come to mean
-    // somebody else. Real names go back in before anything is kept.
-    const intent: HouseholdIntent = { ...understood, parameters: restoreParameterNames(understood.parameters, pseudonyms, people) };
-    if (intent.target.kind === "member" && intent.target.reference) {
-      const mapped = unpseudonymise(intent.target.reference, pseudonyms, people);
-      return {
-        ...intent,
-        target: { kind: "member", reference: mapped.reference },
-        parameters: mapped.memberId ? { ...intent.parameters, memberId: mapped.memberId } : intent.parameters,
-      };
-    }
-    return intent;
-  };
-  const understand: Understanding = async (_utterance, context) =>
-    toHousehold(await provider.understand(sentUtterance, { ...context, history: sentHistory, runtime }), minimised.pseudonyms);
+  // Every word the model wrote back ("Child A likes pink pasta") names a
+  // person by placeholder. Placeholders are only this turn's: a member
+  // added later shifts them, so one stored as-is would come to mean
+  // somebody else. Real names go back in before anything is kept, and the
+  // utterance is the member's own words, never the masked text the model
+  // read (I-26: "Child B has a karate exam" was filed with HomeSend).
+  const toHousehold = (understood: HouseholdIntent, said: string, pseudonyms: typeof minimised.pseudonyms): HouseholdIntent =>
+    reidentifyIntent(understood, said, pseudonyms, people);
+  const understand: Understanding = async (said, context) =>
+    toHousehold(await provider.understand(sentUtterance, { ...context, history: sentHistory, runtime }), said, minimised.pseudonyms);
   // One part of a longer request goes through the same minimisation on its
   // own, so the model reads only that part — and a part the household's
   // consent will not let leave is read by the rules instead.
-  const understandPart = (part: string): Understanding => async (_utterance, context) => {
+  const understandPart = (part: string): Understanding => async (said, context) => {
     const alone = minimiseContext([{ id: "utterance", contentClass: "general", need: "what was asked", text: part, relevant: true }], { policy, people });
     const sent = alone.included.find((entry) => entry.id === "utterance")?.text;
     if (!sent) return resolveDeterministicIntent(part, context);
-    return toHousehold(await provider.understand(sent, { ...context, history: sentHistory, runtime }), alone.pseudonyms);
+    return toHousehold(await provider.understand(sent, { ...context, history: sentHistory, runtime }), said, alone.pseudonyms);
   };
 
 

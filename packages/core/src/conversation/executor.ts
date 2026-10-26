@@ -71,7 +71,17 @@ export type ExecutionContext = {
 
 export type ExecutionResult =
   | { ok: true; text: string; result: Record<string, unknown> }
-  | { ok: false; reason: string };
+  | { ok: false; reason: string; sayAsIs?: boolean };
+
+/**
+ * What HomeTalk says when a write did not go through — the one place, for
+ * the app and WhatsApp alike. A refusal that is already a whole, polite
+ * answer (a question about the unit, what to do instead) is said as it is
+ * (25-038); anything else follows "I tried, and it did not go through".
+ */
+export function failedReply(done: { reason: string; sayAsIs?: boolean }, lead = "I tried, and it did not go through"): string {
+  return done.sayAsIs ? done.reason : `${lead}: ${done.reason}`;
+}
 
 /** Whether a governed write exists for this intent right now. */
 export function canExecute(intent: HouseholdIntent): boolean {
@@ -164,6 +174,11 @@ const HOMESEND_KIND_WORDS: Record<string, string> = {
  * HomeSend's own governed write (`addFromHomeSend`).
  */
 async function fileWithHomeSend(intent: HouseholdIntent, context: ExecutionContext): Promise<ExecutionResult> {
+  // The member's own words are filed, never a model's masked copy of them
+  // (I-26). A placeholder here means the words are not the member's: nothing
+  // is filed under a name nobody in the household has.
+  const { hasPlaceholderName } = await import("../ai/privacy");
+  if (hasPlaceholderName(intent.utterance)) return { ok: false, reason: "I didn't file that, because I lost track of who it is for. Could you say it again with their name?" };
   const { ingestText } = await import("../homesend/ingest");
   const outcome = await ingestText(context.supabase, { householdId: context.householdId, memberId: context.actorMemberId }, { text: intent.utterance });
   const review = linkTo("/home-send", "HomeSend");
@@ -344,7 +359,10 @@ async function runIntent(intent: HouseholdIntent, context: ExecutionContext): Pr
         return { ok: false, reason: notYetDoable(intent.action) };
     }
   } catch (thrown) {
-    if (thrown instanceof ApiError) return { ok: false, reason: thrown.message };
+    if (thrown instanceof ApiError) {
+      const sayAsIs = typeof thrown.details === "object" && thrown.details !== null && (thrown.details as { sayAsIs?: unknown }).sayAsIs === true;
+      return { ok: false, reason: thrown.message, ...(sayAsIs ? { sayAsIs } : {}) };
+    }
     console.error("[conversation] execution failed", { action: intent.action, error: thrown instanceof Error ? thrown.name : "unknown" });
     return { ok: false, reason: "Something went wrong on my side, and nothing was changed." };
   }

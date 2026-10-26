@@ -421,6 +421,17 @@ const CONNECTED: HomeTalkCase[] = [
     expected: { interpretation: "file_with_homesend", action: "executed", safety: { consequential: false } },
   },
   {
+    id: "HT-161", surface: "hometalk", household: "A", category: "privacy", actor: "a-kunal",
+    description: "I-26 (the owner, 2026-10-26): a child's dated class event is filed with HomeSend in the member's own words — the child by name and the place — never the placeholder the model read.",
+    utterance: "Asmi has a karate grading exam next Sunday at 10 am at the Koramangala dojo",
+    expected: {
+      interpretation: "file_with_homesend",
+      action: "executed",
+      safety: { consequential: false },
+      kept: { includes: ["Asmi has a karate grading exam", "Koramangala dojo"], excludes: ["Child A", "Child B"] },
+    },
+  },
+  {
     id: "HT-75", surface: "hometalk", household: "A", category: "cross_domain", actor: "a-kunal",
     description: "A conversation that crosses the home: December's calendar, then the internet bill, then dinner — each answered from its own records, none bleeding into the next.",
     utterance: "Any events in December?",
@@ -947,6 +958,15 @@ const HOMETALK: HomeTalkCase[] = [
     utterance: "Add 2000 milk to the list",
     expected: { interpretation: "add_to_list", action: "clarify", safety: { consequential: false, executed: false }, answer: { includes: ["Did you mean 2 L of milk?"] } },
     followUps: [{ utterance: "yes", expected: { interpretation: "add_to_list", action: "executed", answer: { includes: ["2 L milk"] } } }],
+  },
+  // The owner on WhatsApp, 2026-10-26, 9:03 PM: "add 1 litre coconut oil to the list" for coconut oil counted in
+  // bottles met "I tried, and it did not go through: Coconut oil is kept in bottle, so 1 l does not fit it" (25-038).
+  {
+    id: "HT-160", surface: "hometalk", household: "D", category: "updates", actor: "d-neha", autonomy: "execute",
+    description: "1 litre of an item counted in bottles of unknown size is one question with choices, never a raw refusal; \"count it in litres instead\" changes the unit and adds it.",
+    utterance: "add 1 litre coconut oil to the list",
+    expected: { interpretation: "add_to_list", action: "clarify", safety: { consequential: false, executed: false }, answer: { includes: ["How many bottles should I add for 1 litre?", "count it in litres instead"], excludes: ["does not fit", "I tried"] } },
+    followUps: [{ utterance: "count it in litres instead", expected: { interpretation: "add_to_list", action: "executed", answer: { includes: ["Coconut oil"], excludes: ["does not fit"] } } }],
   },
   // The owner, 2026-10-26: "Add oil to the groceries" → "coconut oil" met "Coconut oil is already on the shopping
   // list (1 bottle), so there was nothing to add." — "it should ask for quantity". HomeTalk asks how much first.

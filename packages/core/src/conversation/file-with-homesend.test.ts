@@ -1,11 +1,13 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import { decideConfirmation } from "../homesend/confirmation";
+import { intentFromModelOutput } from "../ai/model-client";
+import { minimiseContext, reidentifyIntent, type DataUsePolicy, type Person } from "../ai/privacy";
 import type { HouseholdIntent } from "./intent";
 
 /** What HomeSend read from the sentence: a complete grocery line, or a school item that names nobody. */
-const outcome = vi.hoisted(() => ({ current: null as unknown }));
-vi.mock("../homesend/ingest", () => ({ ingestText: async () => outcome.current }));
+const outcome = vi.hoisted(() => ({ current: null as unknown, filed: [] as string[] }));
+vi.mock("../homesend/ingest", () => ({ ingestText: async (_supabase: unknown, _actor: unknown, input: { text: string }) => (outcome.filed.push(input.text), outcome.current) }));
 
 const { executeIntent } = await import("./executor");
 
@@ -87,4 +89,52 @@ describe("AT-J: filed from HomeTalk, under the approval settings", () => {
       if (kind === "bill") expect(result.ok && result.text).not.toMatch(/2,?140/);
     });
   }
+});
+
+// I-26 (the owner, 2026-10-26): "Asmi has a karate grading exam next Sunday at 10 am at the
+// Koramangala dojo" was filed with HomeSend as "Child B has a karate grading exam …" — the masked
+// copy the model read, not the member's words.
+describe("I-26: what is filed is the member's own words", () => {
+  const said = "Asmi has a karate grading exam next Sunday at 10 am at the Koramangala dojo";
+  const people: Person[] = [
+    { id: "m-kunal", displayName: "Kunal Mehta", memberType: "adult" },
+    { id: "m-asmi", displayName: "Asmi", memberType: "child" },
+    { id: "m-manan", displayName: "Manan", memberType: "child" },
+  ];
+  const policy = { allowedClasses: ["general"], maxItems: 8 } as unknown as DataUsePolicy;
+
+  beforeEach(() => {
+    outcome.filed = [];
+    outcome.current = read("activity_item", { title: "Karate grading exam", people: ["Asmi"], dueDate: "2026-11-01" });
+  });
+
+  it("the model reads placeholders, and the sentence filed with HomeSend names Asmi and the dojo", async () => {
+    // Expected, written first: the provider sees "Child A" (never "Asmi"); ingestText receives `said` exactly.
+    const minimised = minimiseContext([{ id: "utterance", contentClass: "general", need: "what was asked", text: said, relevant: true }], { policy, people });
+    const sent = minimised.included[0]!.text;
+    expect(sent).not.toMatch(/Asmi/);
+    expect(sent).toMatch(/^Child [AB] has a karate grading exam/);
+
+    const fromModel = intentFromModelOutput(
+      { action: "file_with_homesend", target: { kind: "member", reference: sent.split(" has")[0]! }, parameters: { what: `${sent.split(" has")[0]} karate grading exam` }, confidence: 0.9 } as never,
+      { actorMemberId: "m-kunal", channel: "text", utterance: sent },
+    );
+    expect(fromModel.utterance).toBe(sent);
+
+    const household = reidentifyIntent(fromModel, said, minimised.pseudonyms, people);
+    expect(household.utterance).toBe(said);
+    expect(household.target).toEqual({ kind: "member", reference: "asmi" });
+    expect(household.parameters).toMatchObject({ what: "Asmi karate grading exam", memberId: "m-asmi" });
+    expect(JSON.stringify(household)).not.toMatch(/\b(Child|Adult|Helper) [A-Z]\b/);
+
+    const result = await executeIntent(household, context(async () => null));
+    expect(outcome.filed).toEqual([said]);
+    expect(result.ok).toBe(true);
+  });
+
+  it("files nothing when the words it was handed still carry a placeholder", async () => {
+    const result = await executeIntent({ ...intent, utterance: "Child B has a karate grading exam next Sunday at 10 am" }, context(async () => null));
+    expect(outcome.filed).toEqual([]);
+    expect(result).toEqual({ ok: false, reason: expect.stringMatching(/with their name/) });
+  });
 });
