@@ -626,6 +626,7 @@ export const KNOWLEDGE_REGISTRY = {
     example: { id: UUID_A, playbook_item_id: UUID_B, schedule: { frequency: "weekly" }, next_due_at: "2026-10-26T03:30:00Z", active: true, playbook_items: { name: "Water the plants", cadence: "weekly" } },
   },
   schedule_conflicts: { covered: "excluded", reason: "Clashes derived from the events, which are known; recomputed on each change." },
+  school_channels: { covered: "excluded", reason: "Which portal message channels a household tracks: connection config. The messages they bring in become HomeSend items, which are known." },
   school_communications: { covered: "builder", records: "communications" },
   school_documents: {
     covered: "registry",
