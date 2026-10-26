@@ -31,6 +31,7 @@
 | 25 | P2 | 08-025 | Add homework and Connect school sit under the child picker | Done | The owner, 2026-10-21 ("bring this row in between these lines, these should specific to each child"). The two actions moved out of the page header to a row between the child picker and the Overview/Homework/Calendar/Goals tabs (`school/page.tsx`). Add homework opens on the child picked above (`defaultChildId` on `AddHomeworkButton`); Connect school still opens Integrations, because a school portal is connected for the household. Help (Kids & School ¶1) in all eight languages. Browser QA at 360px and 1280px: the row sits between the pills and the tabs, no horizontal scroll, and picking the second child then Add homework shows that child in For. |
 | 26 | P2 | 08-026 | Touch the cat and it darts away | Done | The owner, 2026-10-21 ("if you try to touch the cat, it should quickly move away!"). A touch on the companion cat (or a mouse coming near it) sends it to the far side of its card from the finger in 140 ms, with a sideways skip, never past the card's edge (worked out from where it rests, so a second tap moves on from there rather than off the card); it strolls back after 1.5 s (`companion-card.tsx`, `flee`). A touch that arrives as two pointer events counts once. Still under reduced motion. Browser QA at 360px: the cat moved about 370px inside a card of 466px and came back. |
 | 27 | P0 | 08-027 | A class's exam or event, from HomeSend, on the Calendar | Done | The owner, 2026-10-24 ("this particular activity is actual Extra Curricular not school work. add more types so categorisation can be done properly"), on a WhatsApp forward about Asmi's karate exam that HomeSend filed as school work. A class's entries gain an exam (grading, belt test) and an event (a show, a match), each with a start and end time (migration `20261024130000_activity_note_exams_events`, applied live); every dated one is on the Calendar once on its day (`activityEntries`) and a HomeBrain fact with its time. HomeSend reads two new kinds — a class or activity outside school (`activity_item`, filed under the child's class of that name, the class added in the same step if the child has none) and an event or invitation (`event`, on the family calendar through `addFamilyEvent`); both are reviewed, reconciled and undoable (migration `20261024140000_homesend_activity_event_kinds`, applied live). Eval HS-20 (now an activity) and HS-21 (an invitation) |
+| 34 | P1 | 08-028 | A generic school-portal connector catalog | Done | The owner, 2026-10-26 ("create a generic connector… it could be any other portal for other schools"). The connector framework (08-002/08-003/08-008) was provider-neutral but registered no providers, so `getConnector("school", …)` was always null and the pipeline unreachable. New catalog `packages/core/src/school/providers.ts`: a `SchoolProviderDescriptor` (id, label, auth, scopes, `requiredEnv`, `adapterReady`, `portalUrl`) and `SCHOOL_PROVIDERS` — the forward path (`manual`, works for any school with no setup, items arrive via HomeSend), a `demo-school` fixture for development, and `loop-learning` named but `adapterReady:false` (off until `LOOPLEARNING_*` set, and still unconnectable until a real adapter ships — CLAUDE.md's bar). `schoolProviderAvailability`/`schoolProviderCatalog` gate on env; `connectable` is true only for the forward path and shipped+configured adapters, so a merely-named portal never masquerades as live. `registerSchoolProviders()` (idempotent) populates the shared registry and is called by the school sync route before `getConnector`; with no portal env — every deployment today — it registers nothing and the route still answers "not configured" honestly. Every registered connector is `live:false`. Tests `school/providers.test.ts` 10/10 (catalog order, env gating, connectable logic, no live adapter, idempotent registration, a full sync through a catalog provider); school suite 122/122, core typecheck + web typecheck clean. No migration, no secrets. Follow-up: the user-facing Connect-school screen (provider picker, per-portal auth + guardian consent, child-identity mapping) — 08-029. |
 
 **Status flow:** `Not Started` → `In Progress` → `Blocked` → `Done`
 
@@ -250,6 +251,41 @@ Implement Kids & School Intelligence as a first-class WonderHome domain. The mod
 **Acceptance criteria**
 - The school review offers "add this child" when no child matches, with the name prefilled.
 - Adding follows the same guardian rules as the Family screen; the notice is then confirmed for that child.
+
+**Definition of Done**
+- Domain behavior implemented and integrated with existing architecture.
+- UI behavior implemented where applicable, including loading/empty/error/unauthorized states.
+- API/OpenAPI and Supabase migrations/RLS are updated where applicable.
+- Relevant unit/integration/E2E tests pass.
+- Security/privacy/audit requirements are verified.
+- Story is marked `Done` in this file and `tracking/PROGRESS.md` only after evidence exists.
+
+### Story 08-028 — A generic school-portal connector catalog
+**Epic:** Documents, Communication & Deep Integrations
+**Priority:** P1
+**Goal:** Make the provider-neutral connector framework extensible and honest: one catalog where any school portal plugs in, the forward path that works for every school today, and no portal claiming a connection it does not have.
+
+**Acceptance criteria**
+- A single catalog lists every school-connection option with its availability, so adding a portal is a catalog entry plus an adapter, never a change to a domain module.
+- The forward path (HomeSend) is always available and needs no deployment setup; it works for any school.
+- A named portal stays off until its own environment variables are set, and unconnectable until a real adapter and its integration tests ship (CLAUDE.md). No portal is `live`, and a merely-named portal never reports as connected.
+- The existing school sync route resolves a connector from the catalog, and still answers "not configured" when none is.
+
+**Definition of Done**
+- Domain behavior implemented and integrated with existing architecture.
+- Relevant unit tests pass; core and web typecheck clean.
+- Security/privacy: no credentials in code; nothing live.
+- Story is marked `Done` in this file and `tracking/PROGRESS.md` only after evidence exists.
+
+### Story 08-029 — The Connect-school screen
+**Epic:** Documents, Communication & Deep Integrations
+**Priority:** P2
+**Goal:** Turn the catalog (08-028) into a user-facing connect flow: pick a provider, sign in or grant where the provider needs it, give a guardian's consent, and map the portal's child ids to the household's children — all read-only, nothing written back.
+
+**Acceptance criteria**
+- Kids & School's "Connect school" opens a screen listing the catalog with honest states: the forward path available now (linking to Add homework / forwarding), portals as "setup needed" or "coming soon".
+- A connectable portal collects its credential as a secret (never in code or a log), records a guardian's consent, and maps external child ids to members before any sync.
+- Words in all eight languages; browser-checked at 360px and desktop.
 
 **Definition of Done**
 - Domain behavior implemented and integrated with existing architecture.

@@ -11,11 +11,11 @@ in `docs/progress/`; for the running log of what changed when, `tracking/PROGRES
 
 ## The whole picture
 
-**390 of 420 stories done — 92.9%**
+**391 of 421 stories done — 92.9%**
 
 | Status | Stories |
 |---|---:|
-| Done | 390 |
+| Done | 391 |
 | In Progress | 8 |
 | Blocked | 1 |
 | Not Started | 17 |
@@ -33,7 +33,7 @@ in `docs/progress/`; for the running log of what changed when, `tracking/PROGRES
 | 05 Household Certification & Understanding | `██████████` | 12 | 12 | — |
 | 06 Actionable Notification Engine | `██████████` | 8 | 8 | — |
 | 07 Househelper & Home Operations | `██████████` | 10 | 10 | — |
-| 08 Kids & School Intelligence | `████████░░` | 22 | 26 | 3 in progress, 1 not started |
+| 08 Kids & School Intelligence | `████████░░` | 23 | 27 | 3 in progress, 1 not started |
 | 09 Commerce, Groceries & Pet Supplies | `██████████` | 9 | 9 | — |
 | 10 Meals & Cooking | `██████████` | 16 | 16 | — |
 | 11 Bills, Fees & Finance | `█████████░` | 14 | 15 | 1 not started |
@@ -253,7 +253,7 @@ in `docs/progress/`; for the running log of what changed when, `tracking/PROGRES
 
 ### 08 — Kids & School Intelligence
 
-22 of 26 done `████████░░`
+23 of 27 done `████████░░`
 
 | Story | Priority | Status | Notes |
 |---|---|---|---|
@@ -283,6 +283,7 @@ in `docs/progress/`; for the running log of what changed when, `tracking/PROGRES
 | `08-025` Add homework and Connect school sit under the child picker | P2 | Done | The owner, 2026-10-21 ("bring this row in between these lines, these should specific to each child"). The two actions moved out of the page header to a row between the child picker and the Overview/Homework/Calendar/Goals tabs (`school/page.tsx`). Add homework opens on the child picked above (`defaultChildId` on `AddHomeworkButton`); Connect school still opens Integrations, because a school portal is connected for the household. Help (Kids & School ¶1) in all eight languages. Browser QA at 360px and 1280px: the row sits between the pills and the tabs, no horizontal scroll, and picking the second child then Add homework shows that child in For. |
 | `08-026` Touch the cat and it darts away | P2 | Done | The owner, 2026-10-21 ("if you try to touch the cat, it should quickly move away!"). A touch on the companion cat (or a mouse coming near it) sends it to the far side of its card from the finger in 140 ms, with a sideways skip, never past the card's edge (worked out from where it rests, so a second tap moves on from there rather than off the card); it strolls back after 1.5 s (`companion-card.tsx`, `flee`). A touch that arrives as two pointer events counts once. Still under reduced motion. Browser QA at 360px: the cat moved about 370px inside a card of 466px and came back. |
 | `08-027` A class's exam or event, from HomeSend, on the Calendar | P0 | Done | The owner, 2026-10-24 ("this particular activity is actual Extra Curricular not school work. add more types so categorisation can be done properly"), on a WhatsApp forward about Asmi's karate exam that HomeSend filed as school work. A class's entries gain an exam (grading, belt test) and an event (a show, a match), each with a start and end time (migration `20261024130000_activity_note_exams_events`, applied live); every dated one is on the Calendar once on its day (`activityEntries`) and a HomeBrain fact with its time. HomeSend reads two new kinds — a class or activity outside school (`activity_item`, filed under the child's class of that name, the class added in the same step if the child has none) and an event or invitation (`event`, on the family calendar through `addFamilyEvent`); both are reviewed, reconciled and undoable (migration `20261024140000_homesend_activity_event_kinds`, applied live). Eval HS-20 (now an activity) and HS-21 (an invitation) |
+| `08-028` A generic school-portal connector catalog | P1 | Done | The owner, 2026-10-26 ("create a generic connector… it could be any other portal for other schools"). The connector framework (08-002/08-003/08-008) was provider-neutral but registered no providers, so `getConnector("school", …)` was always null and the pipeline unreachable. New catalog `packages/core/src/school/providers.ts`: a `SchoolProviderDescriptor` (id, label, auth, scopes, `requiredEnv`, `adapterReady`, `portalUrl`) and `SCHOOL_PROVIDERS` — the forward path (`manual`, works for any school with no setup, items arrive via HomeSend), a `demo-school` fixture for development, and `loop-learning` named but `adapterReady:false` (off until `LOOPLEARNING_*` set, and still unconnectable until a real adapter ships — CLAUDE.md's bar). `schoolProviderAvailability`/`schoolProviderCatalog` gate on env; `connectable` is true only for the forward path and shipped+configured adapters, so a merely-named portal never masquerades as live. `registerSchoolProviders()` (idempotent) populates the shared registry and is called by the school sync route before `getConnector`; with no portal env — every deployment today — it registers nothing and the route still answers "not configured" honestly. Every registered connector is `live:false`. Tests `school/providers.test.ts` 10/10 (catalog order, env gating, connectable logic, no live adapter, idempotent registration, a full sync through a catalog provider); school suite 122/122, core typecheck + web typecheck clean. No migration, no secrets. Follow-up: the user-facing Connect-school screen (provider picker, per-portal auth + guardian consent, child-identity mapping) — 08-029. |
 
 ### 09 — Commerce, Groceries & Pet Supplies
 
