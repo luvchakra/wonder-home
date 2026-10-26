@@ -108,7 +108,7 @@ received → understood → checked & scored → reconciled → completeness
    | Pre Approved, score above the household's bar, a grocery or school item (or a bill, receipt or health document with its setting on), nothing required missing | **auto_apply**: added on its own, with an Undo |
    | The same, for a grocery already on the shopping list said with an amount ("2 litres", or a number alone) | **auto_apply** as a top-up: added to the entry already there, the one HomeTalk's add would pick, never a second one (I-27) |
 
-   - Bills, school items, events and every other match keep the duplicate rule (I-4). Photos and files always wait; bills, receipts and health documents wait unless their "add directly" setting is on (I-28).
+   - Bills, school items, events and every other match keep the duplicate rule (I-4). Photos and files always wait; bills, receipts and health documents wait unless their "add directly" setting is on (I-29).
    - **Why it waits.** When something that would otherwise be added on its own waits for a reason the person can act on, the decision carries it (`wait`): already on the shopping list, the outcome set to Wait for Approval, or below the bar. The Needs review row says it in a few words; WhatsApp and HomeTalk say it in a sentence, never with an amount.
 
 8. **Added through the governed write.** The same domain service a person's confirm uses (`home-send-auto.ts`, `home-send-writes.ts`), recorded as a change that can be undone, and marked `auto_added`. A bill becomes an obligation, never a payment; a receipt records its lines as purchases (not what is at home or on the list), and Undo takes back every line; a health record is filed private to its person, through the same self-or-guardian rule and plan check as a person's confirm.
@@ -133,6 +133,11 @@ received → understood → checked & scored → reconciled → completeness
   - never the same question twice.
 - **Time limit.** An open question takes answers for 15 minutes on WhatsApp; after that, a new message is a new turn.
 - **One question at a time**, and never more than 3 for one item.
+- **Answers to pick** (principle 20, the owner 2026-10-26, I-28). A question with sensible answers carries them on its reply as `metadata.choices` (`hometalk/choices.ts`): `{ mode: "single" | "multi", choices: [{ label, say }], also?, health? }`.
+  - `label` is in the member's language; `say` is the exact English the clarify step already reads as that answer, so a pick is an ordinary turn and grounding and every gate run on it unchanged. `say: null` ("Another day…") focuses the text box.
+  - The sets: an amount (2–3 practical amounts for that item by the one rule for amounts, `commerce/bare-amount.ts`, from the catalog's unit, pack and ladder; then Skip, or That's enough when it is already on the list; "1 of each"/"2 of each" for several); who (the candidates, else the household's names); a day (Today, Tomorrow, the next weekend day, Another day…; Today, Yesterday for a receipt or health document); a time (9 am, 12 pm, 4 pm, 6 pm, Another time…); a record type; yes / not now; which item (the candidates); and which waiting items to fill in (checkboxes, all ticked, one Send — "Maths worksheet and Diwali dinner" fills in just those).
+  - The text box always stays. In the app the latest question's choices are chips (a radio group) or checkboxes (`ui/answer-choices`), greyed once answered. On WhatsApp they are reply buttons (3 or fewer) or a list (up to 10), each id `say:<words>`; a pick comes back as those words, and a failed interactive send goes as plain text. A health record's choices never go to WhatsApp. Voice reads the question only.
+  - A turn that only asked (`fill_homesend_details`, or `complete_homesend_item` that asked the next question) shows no preview card (`onlyAsked`): asking is not done, and there is nothing to undo.
 
 ---
 
@@ -172,7 +177,7 @@ Live since #365 (issue I-12).
 - **The bar.** Settings → AI Assistant → "How sure HomeSend must be to add on its own".
   - Choices: more than 60, 70, 80, 85, 90, 95 (recommended), 97 or 99%.
   - Admins only, kept as a versioned policy. If the setting can't be read, the highest bar applies.
-- **Money and health.** Settings → AI Assistant → "Add money entries directly" (bills, receipts) and "Add health entries directly" (health documents), right beside the bar (14-053, I-28).
+- **Money and health.** Settings → AI Assistant → "Add money entries directly" (bills, receipts) and "Add health entries directly" (health documents), right beside the bar (14-054, I-29).
   - Admins only, off by default, versioned policies; if a setting can't be read, it is off.
   - On, the entry still needs its responsibility Pre Approved and a score above the bar. The help line says photos and files still wait.
 - **Autonomy** (Manage Household → Responsibilities):
@@ -216,6 +221,7 @@ To measure: `updated_at - created_at` on `home_send_items`, and `hometalk_channe
   - say where to finish ("You can undo it in HomeSend");
   - use WhatsApp bold, and write links in full.
 - **Questions:** one at a time, with choices when there are any ("Should I use coconut oil, mustard oil or sunflower oil?"), and an example of an answer that works.
+- **Choices to pick** (§5): labels from `hometalk.choice.*` in all eight languages; what a pick sends is HomeTalk's English. On WhatsApp a button title is at most 20 characters and a list row 24; a label that would have to be cut sends the question as plain text instead (rule 11). No button ever carries an amount of money or a health detail.
 - **A second ask:** "Sorry, …", then a list. Never blame, never repeat.
 
 ---
@@ -261,7 +267,8 @@ To measure: `updated_at - created_at` on `home_send_items`, and `hometalk_channe
 | I-25 | The notice resent (a duplicate), then "for Manan": the note became its own item, Failed safely (2026-10-26, 21:08 IST) | Read alone at 8 s; a lone detail was kept as content | The longer wait joins it; a note on a message already on record goes onto that item (or says it was handled); a lone bare detail is never an item (`itemOnRecord`, `noteOnItem`, `isBareDetail`) | Live (this PR) |
 | I-26 | "Asmi has a karate grading exam…" filed with HomeSend as "Child B has…"; the review offered "Add Child B as a child" (the owner, 2026-10-26) | `file_with_homesend` filed `intent.utterance`, which a model reading carried as the masked text the provider read | `reidentifyIntent` (`ai/privacy.ts`): the reading keeps the member's own words and real names; nothing is filed with a placeholder in it; a placeholder in a reading is never offered as a child to add, the household is asked who; the eval masks as the route does and fails any case that keeps a placeholder (HT-161) | Live (this PR) |
 | I-27 | "2 litres mustard oil" on WhatsApp waited although groceries were Pre Approved and it read at 97%; a 70% item said "every detail is in what you sent"; a waiting row gave no reason | Any match on record meant "prepare" (I-4), even an item already on the shopping list said with an amount; `sureWhy` read only the check, not the score; the row showed only where it came from | A listed grocery with an amount is a top-up under the same decision (`onShoppingList`, `topUp`), with HomeTalk's "now 3 L" and Undo; no amount, Wait for Approval or below the bar waits and says why (`wait`); "verified" only in the 97% band; the row's reason in eight languages | Live (25-039, 14-052) |
-| I-28 | Bills, receipts and health documents always waited, even Pre Approved and clear (the owner, 2026-10-26: "along with the % setting add setting feature to ask user if they want to add entries related to health, entries related to money directly in WonderHome if allowed in responsibilities") | They were hard-coded `govern` | Two Admin switches beside the bar; on, the grocery path (autonomy, bar, every other rule); photos and files still wait | Live (14-053) |
+| I-28 | "First, Coconut oil: How much should I get? …" had to be typed; the answer to a question showed "ACTION PREVIEW · Done … Can be undone" | Questions carried no answers to pick; a question-only turn kept its executed preview | Choices on every question with sensible answers (§5), in the app and as WhatsApp buttons; no preview card on a turn that only asked; "not now" kept whole by the normaliser | Live (14-053) |
+| I-29 | Bills, receipts and health documents always waited, even Pre Approved and clear (the owner, 2026-10-26: "along with the % setting add setting feature to ask user if they want to add entries related to health, entries related to money directly in WonderHome if allowed in responsibilities") | They were hard-coded `govern` | Two Admin switches beside the bar; on, the grocery path (autonomy, bar, every other rule); photos and files still wait | Live (14-054) |
 
 ---
 

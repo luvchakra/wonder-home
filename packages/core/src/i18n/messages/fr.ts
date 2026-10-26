@@ -19,6 +19,7 @@ import { amafFr } from "./areas/amaf/fr";
 import { groceryFr } from "./areas/grocery/fr";
 import { welcomeFr } from "./areas/welcome/fr";
 import { whatsappFr } from "./areas/whatsapp/fr";
+import { choicesFr } from "./areas/choices/fr";
 
 export const fr: Catalog = {
   "common.next": "Suivant",
@@ -1006,4 +1007,5 @@ export const fr: Catalog = {
   ...groceryFr,
   ...welcomeFr,
   ...whatsappFr,
+  ...choicesFr,
 };

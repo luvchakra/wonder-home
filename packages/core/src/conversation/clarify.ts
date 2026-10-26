@@ -343,20 +343,48 @@ function answerIntakeDetail(pending: PendingClarification, utterance: string, co
 const OFFER_YES = /^(?:yes|yeah|yep|yup|sure|ok|okay|go ahead|let'?s (?:do it|go|do that)|please|fine|alright|all right|haan|ha|ji|si|oui|ja|是|好)(?:[ ,]+(?:please|sure|let'?s do it|go ahead))?[.!]*$/i;
 const OFFER_NO = /^(?:no|nope|not now|later|maybe later|skip|leave (?:it|them)|no thanks|nahi|nahin|non|nein|不)(?:[ ,]+(?:thanks|thank you))?[.!]*$/i;
 
-/** "Yes" fills in the waiting items one question at a time; "no" leaves them; anything else is a new request. */
+/**
+ * "Yes" fills in the waiting items one question at a time; "no" leaves them;
+ * naming some of the offered titles ("Maths worksheet and Diwali dinner",
+ * what the ticked choices send) fills in just those. Anything else is a new
+ * request.
+ */
 function answerDetailsOffer(pending: PendingClarification, utterance: string, context: { actorMemberId: string; channel: "text" | "voice" }): HouseholdIntent | null {
   const said = utterance.trim();
   const yes = OFFER_YES.test(said);
-  if (!yes && !OFFER_NO.test(said)) return null;
+  const picked = yes || OFFER_NO.test(said) ? null : offeredItemsNamed(pending.parameters.titles, said);
+  if (!yes && !picked && !OFFER_NO.test(said)) return null;
   return {
     action: "fill_homesend_details",
     actorMemberId: context.actorMemberId,
     channel: context.channel,
     utterance,
     target: { kind: "unspecified" },
-    parameters: { itemIds: pending.parameters.itemIds ?? [], ...(yes ? {} : { decline: true }) },
+    parameters: { itemIds: picked ?? pending.parameters.itemIds ?? [], ...(yes || picked ? {} : { decline: true }) },
     confidence: 0.95,
   };
+}
+
+/** The offered items a reply names, every part of it one of their titles; null when any part names none. */
+function offeredItemsNamed(titles: unknown, said: string): string[] | null {
+  const offered = (Array.isArray(titles) ? titles : []).flatMap((entry) => {
+    const record = entry as { id?: unknown; title?: unknown } | null;
+    return record && typeof record.id === "string" && typeof record.title === "string" ? [{ id: record.id, key: record.title.trim().toLowerCase() }] : [];
+  });
+  if (offered.length === 0) return null;
+  // Longest titles first, taken out whole, so "Bread and butter" stays one title; what's left must be only "and" and commas.
+  let rest = ` ${said.replace(/[.!]+$/, "").trim().toLowerCase()} `;
+  const ids: string[] = [];
+  for (const item of [...offered].sort((a, b) => b.key.length - a.key.length)) {
+    const at = rest.indexOf(` ${item.key} `) >= 0 ? rest.indexOf(` ${item.key} `) : rest.indexOf(` ${item.key},`);
+    if (at < 0 || !item.key) continue;
+    rest = `${rest.slice(0, at)} ${rest.slice(at + item.key.length + 1)}`;
+    ids.push(item.id);
+  }
+  if (rest.split(CONNECTORS).some((part) => part.trim() !== "")) return null;
+  const order = offered.map((item) => item.id);
+  ids.sort((a, b) => order.indexOf(a) - order.indexOf(b));
+  return ids.length > 0 ? ids : null;
 }
 
 /** A pending clarification's bookkeeping, which must not ride into the answered intent. */

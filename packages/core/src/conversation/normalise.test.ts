@@ -32,6 +32,12 @@ describe("normaliseUtterance", () => {
     expect(canon("What is on today, thanks?")).toBe("What is on today?");
   });
 
+  it("keeps the \"now\" of \"not now\", which is an answer, not a tail (HT-167)", () => {
+    expect(canon("not now")).toBe("not now");
+    expect(canon("Not now, thanks")).toBe("Not now");
+    expect(canon("Add milk now")).toBe("Add milk");
+  });
+
   it("never strips a word that starts a real sentence", () => {
     expect(canon("Soup for dinner tonight")).toBe("Soup for dinner tonight");
     expect(canon("Right now we are out of milk")).toBe("Right now we are out of milk");

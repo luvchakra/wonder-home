@@ -19,6 +19,7 @@ import { amafZh } from "./areas/amaf/zh";
 import { groceryZh } from "./areas/grocery/zh";
 import { welcomeZh } from "./areas/welcome/zh";
 import { whatsappZh } from "./areas/whatsapp/zh";
+import { choicesZh } from "./areas/choices/zh";
 
 export const zh: Catalog = {
   "common.next": "下一步",
@@ -1006,4 +1007,5 @@ export const zh: Catalog = {
   ...groceryZh,
   ...welcomeZh,
   ...whatsappZh,
+  ...choicesZh,
 };

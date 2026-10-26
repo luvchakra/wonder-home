@@ -1,3 +1,4 @@
+import { Check } from "lucide-react";
 import type React from "react";
 
 import { cn } from "../../lib/cn";
@@ -74,8 +75,11 @@ export function ChoiceChips({
                 "peer-checked:border-[var(--wh-primary)] peer-checked:bg-[var(--wh-primary-soft)] peer-checked:text-[var(--wh-primary)]",
                 "peer-focus-visible:outline-2 peer-focus-visible:outline-offset-2 peer-focus-visible:outline-[var(--wh-primary)]",
                 size === "sm" ? "min-h-10 min-w-11 px-2.5 text-xs" : "min-h-11 px-4 text-sm",
+                // A ticked box says so with a check too, never by its fill alone (rule 3).
+                type === "checkbox" && "gap-1.5 peer-checked:[&>svg]:block",
               )}
             >
+              {type === "checkbox" ? <Check aria-hidden className="hidden size-4 shrink-0" /> : null}
               {option.label}
             </span>
           </label>
