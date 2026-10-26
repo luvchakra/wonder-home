@@ -134,7 +134,7 @@ describe("several things at once (§10): each item on its own", () => {
     const done = await executeIntent(intent({ parameters: { items: ["milk", "bananas"] } }), context());
     expect(commerce.createConsumable).toHaveBeenCalledTimes(2);
     expect(inventory.adjustListEntry).toHaveBeenCalledTimes(2);
-    expect(done.ok && done.text).toMatch(/^Added \*\*Milk\*\* \(1 pc\) and \*\*Bananas\*\* \(1 pc\) to the \[shopping list\]/);
+    expect(done.ok && done.text).toMatch(/^Added to the \[shopping list\]\(\/groceries\?view=to-buy\):\n- \*\*Milk\*\* \(1 pc\)\n- \*\*Bananas\*\* \(1 pc\)/);
     expect(done.ok && focusFromResult("add_to_list", done.result, NOW.toISOString()).map((entity) => entity.label)).toEqual(["Milk", "Bananas"]);
   });
 
@@ -251,7 +251,7 @@ describe("several things at once (§10): each item on its own", () => {
     inventory.listGroceries.mockResolvedValue([grocery("c-pasta", "Pasta", { unit: "g", stock: { quantity: 500, unit: "g" } })]);
     const done = await executeIntent(intent({ parameters: { items: ["pasta", "tomatoes", "basil"], forMeal: "Tomato pasta" } }), context());
     expect(done.ok && done.text).toMatch(/^For tomato pasta, I checked what is at home and on the list\./);
-    expect(done.ok && done.text).toMatch(/Added \*\*Tomatoes\*\* \(1 pc\) and \*\*Basil\*\* \(1 pc\) to the .*; \*\*Pasta\*\* is already at home\./);
+    expect(done.ok && done.text).toMatch(/Added to the .*:\n- \*\*Tomatoes\*\* \(1 pc\)\n- \*\*Basil\*\* \(1 pc\)\n\*\*Pasta\*\* is already at home\./);
   });
 
   it("can be carried out with one item or several, and not with none", () => {

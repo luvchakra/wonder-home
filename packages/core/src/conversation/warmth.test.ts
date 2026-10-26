@@ -4,12 +4,13 @@ import { protectForTranslation } from "./reply-language";
 import { speakable } from "./speech";
 import { UNDO_LINE, warmReply, warmUndo } from "./warmth";
 
-describe("a warm emoji on HomeTalk's replies", () => {
+describe("HomeTalk's replies, warm and laid out", () => {
   it("leads a confirmation with what was done, and the Undo line closes it", () => {
     const text = `Added **Milk** to the [shopping list](/groceries?view=to-buy). ${UNDO_LINE}`;
-    expect(warmReply(text, { action: "add_to_list", proposal: "executed", ok: true })).toBe(`🛒 ${text}`);
+    expect(warmReply(text, { action: "add_to_list", proposal: "executed", ok: true })).toBe(`🛒 Added **Milk** to the [shopping list](/groceries?view=to-buy).\n${UNDO_LINE}`);
     expect(warmReply("Reminder set for **call the plumber**.", { action: "set_reminder", proposal: "executed", ok: true })).toBe("⏰ Reminder set for **call the plumber**.");
-    expect(warmReply("Recorded.", { action: "raise_service_request", proposal: "executed", ok: true })).toBe("✅ Recorded.");
+    expect(warmReply("Recorded.", { action: "raise_service_request", proposal: "executed", ok: true })).toBe("🔧 Recorded.");
+    expect(warmReply("Recorded.", { action: "complete_school_item", proposal: "executed", ok: true })).toBe("✅ Recorded.");
   });
 
   it("closes an ordinary answer warmly and leads a greeting or a place", () => {
@@ -18,9 +19,26 @@ describe("a warm emoji on HomeTalk's replies", () => {
     expect(warmReply("Here is what I would do — add milk. Shall I go ahead?", { action: "add_to_list", proposal: "needs_approval", ok: true })).toBe("📝 Here is what I would do — add milk. Shall I go ahead?");
   });
 
-  it("stays plain on questions, refusals, failures, the Why? evidence and money, health or a child", () => {
-    const plain = "Which day is it?";
-    expect(warmReply(plain, { action: "plan_event", proposal: "clarify", ok: true })).toBe(plain);
+  it("leads a question with what it is about, and puts each hint on its own line", () => {
+    expect(warmReply("Which day is it?", { action: "plan_event", proposal: "clarify", ok: true })).toBe("📅 Which day is it?");
+    expect(warmReply("Who did you mean?", { action: "unknown", proposal: "clarify", ok: true })).toBe("🤔 Who did you mean?");
+    // The owner's screenshot, 2026-10-26: one block of text, now a list with its hints below.
+    const asked = 'How much of each should I add?\n- **Milk** — 2.5 L already on the list\n- **Eggs, Brown** — 32 pcs already on the list\nFor example "2 of each" or "1 litre milk and 6 eggs, brown".\nOr say "that\'s enough" to leave them.';
+    expect(warmReply(asked, { action: "add_to_list", proposal: "clarify", ok: true })).toBe(
+      '🛒 How much of each should I add?\n- **Milk** — 2.5 L already on the list\n- **Eggs, Brown** — 32 pcs already on the list\n💡 For example "2 of each" or "1 litre milk and 6 eggs, brown".\nOr say "that\'s enough" to leave them.',
+    );
+    expect(warmReply('Which day do you mean? For example "tomorrow". Or say "skip".', { action: "plan_event", proposal: "clarify", ok: true })).toBe(
+      '📅 Which day do you mean?\n💡 For example "tomorrow".\nOr say "skip".',
+    );
+  });
+
+  it("leads a longer answer rather than closing it", () => {
+    expect(warmReply("Two things today.\n- **Milk** is low\n- **Bread** is low", { action: "ask_status", proposal: "answer", ok: true })).toBe("📋 Two things today.\n- **Milk** is low\n- **Bread** is low");
+  });
+
+  it("stays plain on refusals, failures, the Why? evidence and money, health or a child", () => {
+    expect(warmReply("I could not reach my model just now. Try again in a moment.", { action: "unknown", proposal: "clarify", ok: false })).toBe("I could not reach my model just now. Try again in a moment.");
+    expect(warmReply('How much is the bill? For example "2400".', { action: "add_bill", proposal: "clarify", ok: true })).toBe('How much is the bill?\nFor example "2400".');
     expect(warmReply("You need an Admin for that.", { action: "make_payment", proposal: "refused", ok: true })).toBe("You need an Admin for that.");
     expect(warmReply("I tried, and it did not go through.", { action: "add_to_list", proposal: "executed", ok: false })).toBe("I tried, and it did not go through.");
     expect(warmReply("Because the bill is due Friday.", { action: "unknown", proposal: "answer", ok: true, explained: true })).toBe("Because the bill is due Friday.");
@@ -37,6 +55,8 @@ describe("a warm emoji on HomeTalk's replies", () => {
   it("is never spoken", () => {
     const text = warmReply(`Added **Milk** to the [shopping list](/groceries). ${UNDO_LINE}`, { action: "add_to_list", proposal: "executed", ok: true });
     expect(speakable(text)).toBe("Added Milk to the shopping list. Say undo to take it back.");
+    const asked = warmReply('How much of each should I add?\n- **Milk**\n- **Eggs**\nFor example "2 of each".', { action: "add_to_list", proposal: "clarify", ok: true });
+    expect(speakable(asked)).toBe("How much of each should I add? Milk. Eggs. For example 2 of each.");
     expect(speakable(warmReply("Nothing is waiting on you today.", { action: "ask_status", proposal: "answer", ok: true }))).toBe("Nothing is waiting on you today.");
   });
 
