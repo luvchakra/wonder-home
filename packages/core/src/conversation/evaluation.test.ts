@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 
+import type { GroceryItem } from "../commerce/inventory";
 import { personItems } from "../context/builders";
 import type { PendingClarification } from "./clarify";
 import { applyCorrection, readCorrection } from "./corrections";
@@ -99,8 +100,10 @@ describe("§21 required examples — each is understood, and nothing is claimed 
     { say: "Move Manan's science project to Friday.", action: "adjust_schedule", kind: "needs_approval" },
     { say: "Mark Asmi's worksheet complete.", action: "complete_school_item", kind: "executed" },
     // Groceries
-    { say: "We're out of atta.", action: "add_to_list", kind: "executed" },
-    { say: "Add the same milk we bought last week.", action: "add_to_list", kind: "executed" },
+    // No amount said: how much is asked first (the owner, 2026-10-26).
+    { say: "We're out of atta.", action: "add_to_list", kind: "clarify" },
+    { say: "Add the same milk we bought last week.", action: "add_to_list", kind: "clarify" },
+    { say: "Add 2 litres of the same milk we bought last week.", action: "add_to_list", kind: "executed" },
     { say: "Remove the bananas.", action: "remove_from_list", kind: "executed" },
     // Meals
     { say: "What are we eating tonight?", action: "ask_status", kind: "answer" },
@@ -354,9 +357,56 @@ describe("groceries in conversation (Groceries §5.3, cases A–H)", () => {
     expect(result.kind === "reply" && result.intent.parameters.item).toBe("6 more Eggs");
   });
 
-  it("B: \"add milk to the list\" needs no question — the item's own step is the amount", async () => {
-    const result = await grocTurn("Add milk to the list");
+  // B changed by the owner's decision (2026-10-26): "it should ask for
+  // quantity". A bare name was once the item's usual step, or "already on
+  // the list, so there was nothing to add"; now HomeTalk asks how much first.
+  const ask = async (utterance: string, kitchen: GroceryItem[] = KITCHEN, over: Parameters<typeof turn>[1] = {}) =>
+    turn(utterance, { autonomyFor: () => "execute", ...over, ground: (intent) => groundIntent(intent, { ...env(over.references), groceries: async () => kitchen }) });
+  const milkOnList: GroceryItem[] = KITCHEN.map((entry) =>
+    entry.id === "c-milk" ? { ...entry, toBuy: { entryId: "e-milk", quantity: 1, unit: "l", version: 1, source: "manual", mealId: null } } : entry,
+  );
+
+  it("B: \"add milk to the list\" asks how much before anything is written", async () => {
+    const result = await ask("Add milk to the list");
+    expect(result.kind === "reply" && result.proposal.kind).toBe("clarify");
+    expect(result.kind === "reply" && result.text).toBe("How much milk should I add? For example 1 litre or 2 bottles.");
+    expect(result.kind === "reply" && result.clarification?.parameters).toMatchObject({ awaiting: "quantity", quantityFor: ["milk"] });
+  });
+
+  it("B′: an item already on the list asks how much more, with what is there", async () => {
+    const result = await ask("Add milk to the list", milkOnList);
+    expect(result.kind === "reply" && result.text).toBe('Milk is already on your shopping list (1 L). How much more should I add? Or say "that\'s enough" to leave it.');
+  });
+
+  it("B″: the answer adds that much, through the same add", async () => {
+    const first = await ask("Add milk to the list", milkOnList);
+    const clarifying = first.kind === "reply" ? (first.clarification ?? null) : null;
+    const result = await ask("2 litres", milkOnList, { clarifying });
+    expect(result.kind === "reply" && result.intent).toMatchObject({ action: "add_to_list", parameters: { item: "2 litres milk" } });
     expect(result.kind === "reply" && result.proposal.kind).toBe("executed");
+  });
+
+  it("B‴: \"that's enough\" leaves the list as it is", async () => {
+    const first = await ask("Add milk to the list", milkOnList);
+    const clarifying = first.kind === "reply" ? (first.clarification ?? null) : null;
+    const result = await ask("that's enough", milkOnList, { clarifying });
+    expect(result.kind === "reply" && result.intent.parameters).toMatchObject({ keepAsIs: true, item: "milk" });
+    expect(result.kind === "reply" && result.intent.parameters.awaiting).toBeUndefined();
+  });
+
+  it("B⁗: an unreadable answer gets the polite second ask, never the same question", async () => {
+    const first = await ask("Add milk to the list");
+    const clarifying = first.kind === "reply" ? (first.clarification ?? null) : null;
+    const result = await ask("lots", KITCHEN, { clarifying });
+    expect(result.kind === "reply" && result.proposal.kind).toBe("clarify");
+    expect(result.kind === "reply" && result.text).toContain("Sorry, I didn't catch how much of milk.");
+  });
+
+  it("B⁵: several bare items are one question; an amount said is never asked about", async () => {
+    const both = await ask("add milk and eggs to the list");
+    expect(both.kind === "reply" && both.text).toMatch(/^How much of each should I add\? Milk, Eggs\./);
+    const said = await ask("add 2 litres of milk to the list");
+    expect(said.kind === "reply" && said.proposal.kind).toBe("executed");
   });
 
   it("C: \"make sure we have everything\" after planning pasta adds only what the recipe needs, for that meal", async () => {

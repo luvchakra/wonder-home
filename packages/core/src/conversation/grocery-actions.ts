@@ -17,7 +17,10 @@ import { readItemAmount, type SpokenAmount } from "./quantity";
  *    the shopping list; "we have", "used" and "bought" change what is at
  *    home — and nothing else.
  *  - "Add 6 more" adds six to what is already on the list; it never
- *    replaces it. With no amount, one of the item's own steps is added.
+ *    replaces it. With no amount, HomeTalk asks how much first
+ *    (`quantityQuestion`, the owner, 2026-10-26); only a request that
+ *    reaches here unasked (a meal's ingredients) gets one of the item's own
+ *    steps.
  *  - Amounts are read by rules (`quantity.ts`), never by a model.
  *  - Every reply says the result in the item's own units, from what the
  *    database returned — never what was intended.
@@ -157,6 +160,41 @@ async function itemFor(context: Context, line: GroceryLine, items: GroceryItem[]
   return { item: fresh, created: true, usual: named?.pack ?? null };
 }
 
+/** "1 litre or 2 bottles" — examples in the units an item is kept in. */
+function quantityExamples(unit: string | null): string {
+  const key = unit ? unitInfo(unit).key : null;
+  if (key === "l" || key === "ml") return "1 litre or 2 bottles";
+  if (key === "kg" || key === "g") return "1 kg or 500 g";
+  if (key === "pcs") return "6 or a dozen";
+  if (key && key !== "dozen") return `1 ${englishCount(key, 1)} or 2 ${englishCount(key, 2)}`;
+  return "1 litre, 1 kg or 2 packets";
+}
+
+/**
+ * The one question HomeTalk asks before it adds an item named with no
+ * amount (the owner, 2026-10-26: "Add oil to the groceries" → "coconut oil"
+ * met "already on the shopping list, so there was nothing to add"; "it
+ * should ask for quantity"). An item already on the list is said with its
+ * amount, and "that's enough" leaves it as it is.
+ */
+export function quantityQuestion(names: readonly string[], items: readonly GroceryItem[]): string {
+  const known = names.map((name) => {
+    const item = findGrocery(name, items);
+    return { name: item?.name ?? titleCase(name.trim()), item };
+  });
+  if (known.length === 1) {
+    const { name, item } = known[0]!;
+    if (item?.toBuy) {
+      return `${name} is already on your shopping list (${say({ quantity: item.toBuy.quantity, unit: item.toBuy.unit })}). How much more should I add? Or say "that's enough" to leave it.`;
+    }
+    const counted = item && unitInfo(item.unit).key === "pcs";
+    return `How ${counted ? "many" : "much"} ${name.toLowerCase()} should I add? For example ${quantityExamples(item?.unit ?? null)}.`;
+  }
+  const listed = known.map(({ name, item }) => (item?.toBuy ? `${name} (already on the list, ${say({ quantity: item.toBuy.quantity, unit: item.toBuy.unit })})` : name));
+  const leave = known.some(({ item }) => item?.toBuy) ? ` Or say "that's enough" to leave them.` : "";
+  return `How much of each should I add? ${listed.join(", ")}. For example "2 of each" or "1 litre ${known[0]!.name.toLowerCase()} and 6 ${known[1]!.name.toLowerCase()}".${leave}`;
+}
+
 export type ListChangeEntry = { name: string; consumableId: string; created: boolean; delta: Amount; after: Amount };
 
 /** "Eggs (+6 pcs, now 12 pcs)" or "Bananas (1 pc)". */
@@ -167,19 +205,30 @@ function changeWords(entry: { name: string; delta: Amount; after: Amount }): str
 }
 
 /**
- * "Add 6 more eggs", "add milk and bananas", "add what pasta needs". A bare
- * name already on the list is left as it is — two people saying "add milk"
- * means milk, not twice the milk — and said so; an amount always adds.
+ * "Add 6 more eggs", "add milk and bananas", "add what pasta needs". An
+ * amount always adds. A bare name is asked about first (grounding's
+ * "quantity" question); "that's enough" comes back as `keepAsIs`, which
+ * leaves the list as it is and says so. A bare name that reaches here
+ * unasked and is already on the list is left as it is too.
  */
 export async function addToShoppingList(intent: HouseholdIntent, context: Context): Promise<{ text: string; result: Record<string, unknown> }> {
   const lines = linesOf(intent);
   if (lines.length === 0) throw ApiError.badRequest("What should I add?");
   const items = await listGroceries(context.supabase, context.householdId);
   const forMeal = typeof intent.parameters.forMeal === "string" ? intent.parameters.forMeal : null;
+  const keepAsIs = intent.parameters.keepAsIs === true;
   const changed: ListChangeEntry[] = [];
   const there: { name: string; consumableId: string; toBuy: Amount }[] = [];
   const atHome: string[] = [];
+  const leftOff: string[] = [];
   for (const line of lines) {
+    // "That's enough": nothing new is made, and nothing is added for it.
+    if (keepAsIs && !line.amount) {
+      const { item } = await itemFor(context, line, items, false);
+      if (item?.toBuy) there.push({ name: item.name, consumableId: item.id, toBuy: { quantity: item.toBuy.quantity, unit: item.toBuy.unit } });
+      else leftOff.push(item?.name ?? titleCase(line.item.trim()));
+      continue;
+    }
     const { item, created, usual } = await itemFor(context, line, items, true);
     if (!item) continue;
     // "Make sure we have everything for pasta": what is confirmed at home
@@ -201,8 +250,13 @@ export async function addToShoppingList(intent: HouseholdIntent, context: Contex
   const isAre = (count: number) => (count === 1 ? "is" : "are");
   const onIt = there.length > 0 ? `${names(there)} ${isAre(there.length)} already on the ${list} (${joinAll(there.map((entry) => say(entry.toBuy)))})` : "";
   const home = atHome.length > 0 ? `${names(atHome.map((name) => ({ name })))} ${isAre(atHome.length)} already at home` : "";
+  const notAdded = leftOff.length > 0 ? `I've not added ${names(leftOff.map((name) => ({ name })))}` : "";
   let text: string;
-  if (changed.length === 0) {
+  if (keepAsIs) {
+    const kept = there.length > 0 ? `${names(there)} ${isAre(there.length)} on it (${joinAll(there.map((entry) => say(entry.toBuy)))})` : "";
+    const lead = changed.length > 0 ? `Added ${joinAll(changed.map(changeWords))} to the ${list}.` : `Okay, I've left the ${list} as it is.`;
+    text = [lead, [kept, notAdded].filter(Boolean).join("; ")].filter(Boolean).join(" ").replace(/([^.])$/, "$1.");
+  } else if (changed.length === 0) {
     const reasons = [onIt, home].filter(Boolean).join("; ");
     text = `${forMeal ? `For ${forMeal.toLowerCase()}: ` : ""}${reasons ? `${reasons}, so there was nothing to add.` : "Nothing to add."}`;
   } else {

@@ -11,6 +11,7 @@ Detail: `docs/agent-platform.md`. Read it before changing conversation, HomeBrai
   - A correction replaces a pending proposal or undoes an executed write through its domain service, both kept on the record (`conversation/corrections.ts`).
   - Multi-request sentences are split (`conversation/decompose.ts`); a dependent part runs only if its earlier part happened.
   - Consent (`conversation/consent.ts`): an adult's everyday, undoable change is done at once ("Say undo to take it back"). Changes touching someone else are asked once. Paying and ordering always wait for a tap on screen. Child, helper and agent actions follow autonomy. An Admin's "Ask before acting" makes every act a question.
+  - An add to the shopping list with no amount asks how much first (awaiting `quantity`; "how much more" when it is already on the list, "that's enough" leaves it), the owner, 2026-10-26. An amount said adds at once; a meal's ingredients keep their at-home check.
   - A reminder is a notification to the speaker alone, held until `scheduled_for`. An add that changed nothing says "Nothing to change", never "Done".
   - Models see facts only. `withoutServerOnly` strips anything the server decides (ids, grounded dates, undo records). Replies are composed in English, the record; other languages go through `conversation/reply-language.ts`. A new action needs a `REPLY_CLASSES` entry.
   - Extend `conversation/evaluation.test.ts` when an understanding changes; never loosen it.

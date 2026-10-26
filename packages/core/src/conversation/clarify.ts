@@ -3,6 +3,7 @@ import type { DetailField } from "../homesend/completeness";
 import type { HomeSendKind } from "../homesend/items";
 import { readDetailAnswer } from "../hometalk/detail-answers";
 import type { HouseholdIntent, IntentTarget } from "./intent";
+import { readItemAmount } from "./quantity";
 import { chooseCandidate, readFocus } from "./references";
 
 /**
@@ -126,6 +127,9 @@ export function answerClarification(
   // HomeTalk's question about a HomeSend item (`hometalk/intake-questions.ts`).
   if (pending.action === "complete_homesend_item") return answerIntakeDetail(pending, utterance, context);
 
+  // "How much coconut oil should I add?"
+  if (pending.parameters.awaiting === "quantity") return answerQuantity(pending, utterance, context);
+
   // A grounding question (Wave 4): who, which day, or which of these.
   const awaiting = pending.parameters.awaiting;
   if (awaiting === "member" || awaiting === "day" || awaiting === "referent") {
@@ -210,7 +214,67 @@ export function answerClarification(
 }
 
 /** How long an answer to each grounding question can plausibly be. */
-const awaitingWordLimit: Record<string, number> = { member: 4, day: 5, referent: 6 };
+const awaitingWordLimit: Record<string, number> = { member: 4, day: 5, referent: 6, quantity: 8 };
+
+/** "That's enough", "none", "no thanks": leave the list as it is. */
+const ENOUGH = /^(?:no|nope|none|nothing|nothing more|no more|no need|no thanks?|no,? thank you|enough|that'?s enough|it'?s enough|that'?s fine|that'?s all|fine as it is|leave it|leave it as it is|leave them|skip|skip it|don'?t add (?:it|them|any(?:thing)?)|cancel)(?:,?\s*(?:thanks|thank you))?$/i;
+
+/** Lowercase, without a plural "s"/"es", for matching an answer's item to the one asked about. */
+function itemKey(value: string): string {
+  return value.trim().toLowerCase().replace(/\s+/g, " ").replace(/(?:es|s)$/, "");
+}
+
+/**
+ * The answer to "How much coconut oil should I add?" (the owner,
+ * 2026-10-26): "2 litres", "1 bottle", "3", "a dozen", "2 of each", or
+ * "1 litre coconut oil and 6 eggs" for several. Each amount is read by the
+ * rules (`quantity.ts`) and put back in front of the item it is for, so the
+ * add runs exactly as if it had been said in the first place. "That's
+ * enough" leaves the list as it is. A short answer that carries no amount
+ * comes back unchanged, so grounding asks again — the second time
+ * differently. A new request is somebody moving on (null).
+ */
+function answerQuantity(pending: PendingClarification, utterance: string, context: { actorMemberId: string; channel: "text" | "voice" }): HouseholdIntent | null {
+  const asked = Array.isArray(pending.parameters.quantityFor) ? (pending.parameters.quantityFor as unknown[]).filter((name): name is string => typeof name === "string") : [];
+  const raw = utterance.trim().replace(/[.!]+$/, "").trim();
+  if (!raw || asked.length === 0) return null;
+  const base = { actorMemberId: context.actorMemberId, channel: context.channel, utterance, action: pending.action, target: pending.target, confidence: 0.9 };
+  const rest = withoutGroundingState(pending.parameters);
+  if (ENOUGH.test(raw)) return { ...base, parameters: { ...rest, keepAsIs: true } };
+
+  const filled = stripFiller(raw);
+  const said = filled.replace(ORDER_VERBS, "").replace(DESTINATION, " ").replace(/\s{2,}/g, " ").replace(/\s+(?:of\s+)?each$/i, "").trim();
+  if (!said || said.split(/\s+/).length > awaitingWordLimit.quantity!) return null;
+
+  const amounts = new Map<string, string>();
+  const parts = said.split(CONNECTORS).map((part) => part.trim()).filter(Boolean);
+  for (const part of parts) {
+    const read = readItemAmount(part);
+    if (read.amount && read.item) {
+      const meant = asked.find((name) => itemKey(name) === itemKey(read.item)) ?? asked.find((name) => itemKey(name).includes(itemKey(read.item)) || itemKey(read.item).includes(itemKey(name)));
+      if (meant) amounts.set(meant, part);
+      continue;
+    }
+    // An amount on its own is for the one item asked about, or "2 of each".
+    if (parts.length === 1) {
+      for (const name of asked) {
+        const composed = `${part} ${name}`;
+        const back = readItemAmount(composed);
+        if (back.amount && itemKey(back.item) === itemKey(name)) amounts.set(name, composed);
+      }
+    }
+  }
+  // Nothing readable: a request of its own is somebody moving on; anything
+  // else is the same question, which grounding asks again differently.
+  if (amounts.size === 0) {
+    if (NEW_REQUEST.test(filled)) return null;
+    return { ...base, parameters: rest };
+  }
+  const names = typeof pending.parameters.item === "string" ? [pending.parameters.item] : Array.isArray(pending.parameters.items) ? (pending.parameters.items as unknown[]).filter((name): name is string => typeof name === "string") : asked;
+  const items = names.map((name) => amounts.get(name) ?? name);
+  // An item still without an amount is asked about again, alone.
+  return { ...base, parameters: { ...withoutItems(rest), items, ...(items.length === 1 ? { item: items[0] } : {}) } };
+}
 
 /** Words that make a reply a request of its own rather than an answer. */
 const NEW_REQUEST = /\b(?:is|are|was|were|will|won'?t|isn'?t|can'?t|add|put|pay|order|need|remind|move|plan|book|remove|mark|log|record|cancel|what|when|who|how|why)\b/i;
@@ -259,6 +323,7 @@ function withoutGroundingState(parameters: Record<string, unknown>): Record<stri
   const rest = { ...parameters };
   delete rest.awaiting;
   delete rest.candidates;
+  delete rest.quantityFor;
   return rest;
 }
 
@@ -343,6 +408,17 @@ export function escalatedQuestion(pending: PendingClarification): string {
         '- "tomorrow at 9am" or "next Friday"',
         '- a date, like "2 Oct"',
       ].join("\n");
+    case "quantity": {
+      const asked = Array.isArray(pending.parameters.quantityFor) ? (pending.parameters.quantityFor as unknown[]).filter((name): name is string => typeof name === "string") : [];
+      const what = asked.length === 1 ? ` of ${asked[0]!.toLowerCase()}` : "";
+      return [
+        `Sorry, I didn't catch how much${what}. Could you say it one of these ways?`,
+        '- "2 litres" or "500 g"',
+        '- "1 bottle" or "2 packets"',
+        '- just a number, like "3"',
+        `Or say "that's enough" to leave ${asked.length > 1 ? "them" : "it"}.`,
+      ].join("\n");
+    }
     case "referent": {
       const named = readFocus(pending.parameters.candidates).map((candidate) => `- ${candidate.label}`);
       return named.length > 0

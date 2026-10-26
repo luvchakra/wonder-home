@@ -185,6 +185,7 @@ The owner reads on a phone, where downloads fail. When a session makes a file fo
 - a table or spreadsheet → an HTML table;
 - SQL, code or config → a code block in its own language.
 If it can't be given that way (a video, a large photo), say so and offer another route, such as the owner's Google Drive. Never give a truncated block. The file is still sent.
+**Never paste a long document into chat** (owner, 2026-10-26): a design note, report or anything over about a screen goes as the file alone, with a few lines on what it covers. The HTML block is only for short files.
 
 ## Progress
 - `tracking/PROGRESS.md` is the source of truth. Every story status change is reflected there and in its module backlog. Never fabricate completion.

@@ -11,11 +11,11 @@ in `docs/progress/`; for the running log of what changed when, `tracking/PROGRES
 
 ## The whole picture
 
-**379 of 409 stories done — 92.7%**
+**380 of 410 stories done — 92.7%**
 
 | Status | Stories |
 |---|---:|
-| Done | 379 |
+| Done | 380 |
 | In Progress | 8 |
 | Blocked | 1 |
 | Not Started | 17 |
@@ -50,7 +50,7 @@ in `docs/progress/`; for the running log of what changed when, `tracking/PROGRES
 | 22 Internationalization and Localization | `████████░░` | 7 | 8 | 1 deferred |
 | 23 Smart Notifications | `██████████` | 13 | 13 | — |
 | 24 HomePlaces | `██████████` | 14 | 14 | — |
-| 25 HomeFood | `███████░░░` | 27 | 34 | 7 not started |
+| 25 HomeFood | `████████░░` | 28 | 35 | 7 not started |
 | 26 HomeEvents | `███████░░░` | 15 | 19 | 1 in progress, 3 not started |
 | 27 Notification Channels and Events | `█████████░` | 24 | 25 | 1 blocked |
 
@@ -599,7 +599,7 @@ in `docs/progress/`; for the running log of what changed when, `tracking/PROGRES
 
 ### 25 — HomeFood
 
-27 of 34 done `███████░░░`
+28 of 35 done `████████░░`
 
 | Story | Priority | Status | Notes |
 |---|---|---|---|
@@ -637,6 +637,7 @@ in `docs/progress/`; for the running log of what changed when, `tracking/PROGRES
 | `25-033` Pay an Instamart order with UPI | P1 | Not Started | Left open by 25-032: Swiggy's UPI flow returns PENDING_PAYMENT with an intent link or QR, then `check_payment_status` polling and `confirm_order`. Until then a cart Swiggy offers only UPI for says to order in the Swiggy app. |
 | `25-034` Instamart live on home.wonderapps.biz | P0 | Not Started | A person's errand, not code: apply at mcp.swiggy.com/builders/access (or builders@swiggy.in) with a short demo video of 25-032 on localhost, asking for Instamart with the redirect URI `https://home.wonderapps.biz/groceries/order/callback`; once allowlisted (staging first, production after 48 green hours), set `WONDERHOME_INSTAMART=on` in Vercel. Swiggy's guidelines ask for 7 days' notice before a launch. |
 | `25-035` A grocery sent in through HomeSend lands on To buy, like Groceries' own Add | P0 | Done | The owner, 2026-10-25 ("when user clicks on Add, it should create WonderHome specific data structure … aligned to existing entity structure"). HomeSend's Add (and each ticked need, and a document plan's grocery line) now goes through `addGrocery` in `home-send-writes.ts`, the same steps as Groceries' Add: an item already tracked by that name (similarity ≥ 0.8) is put on To buy rather than added a second time; a new one gets a counted unit (`normalizeUnit`, else pcs), the catalog entry when its name is in the catalog and it is counted the same way, and its amount on To buy (`homesend/record-types.ts` `groceryShape`). Before, it made a bare item with unit "unit", no catalog link and nothing on the list. Undo takes back only the list change for an item that was already there (recorded as "updated" with its list key) and retires an item it created. PR #329. |
+| `25-036` HomeTalk asks how much before it adds a grocery | P0 | Done | The owner, 2026-10-26 (WhatsApp: "Add oil to the groceries" → "coconut oil" met "Coconut oil is already on the shopping list (1 bottle), so there was nothing to add"; "it should ask for quantity"). An `add_to_list` naming an item with no amount is grounded to one clarify question (`grounding.ts`, awaiting `quantity`, wording `grocery-actions.ts` `quantityQuestion`): "How much coconut oil should I add? For example 1 litre or 2 bottles."; already on the list, "…is already on your shopping list (1 bottle). How much more should I add? Or say \"that's enough\" to leave it."; several bare items, one question. `clarify.ts` `answerQuantity` reads "2 litres", "1 bottle", "3", "a dozen", "2 of each", "1 litre coconut oil and 6 eggs" with `quantity.ts` and puts the amount back in front of the item, so the add runs through `adjustListEntry` as if said at first; "that's enough"/"none"/"no" becomes `keepAsIs` (nothing made, nothing added, said politely); an unreadable answer gets the stepwise second ask (`escalatedQuestion`). An explicit amount still adds at once; "make sure we have everything for pasta" keeps its at-home check. Works on WhatsApp through `homeTalkAwaitsAnswer`. Eval HT-07 changed and HT-151–154 added (golden household A has atta on the list); help ¶6 in all eight languages. PR #365. |
 
 ### 26 — HomeEvents
 

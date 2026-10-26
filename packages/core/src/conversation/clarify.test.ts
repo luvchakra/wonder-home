@@ -275,3 +275,52 @@ describe("answering a place question HomeTalk left open (the owner's report, 202
     expect(turn.kind === "reply" && turn.proposal.kind).toBe("answer");
   });
 });
+
+// The owner, 2026-10-26: "Add oil" → "coconut oil" met "already on the
+// shopping list, so there was nothing to add" — "it should ask for quantity".
+describe("answering \"how much should I add?\"", () => {
+  const asking = (items: string[]): PendingClarification => ({
+    action: "add_to_list",
+    target: { kind: "list", reference: "groceries" },
+    parameters: { ...(items.length === 1 ? { item: items[0] } : { items }), awaiting: "quantity", quantityFor: items },
+    question: "How much coconut oil should I add?",
+    utterance: "add coconut oil",
+    asked: 1,
+  });
+  const read = (pending: PendingClarification, said: string) => answerClarification(pending, said, { actorMemberId: "m-1", channel: "text" });
+
+  it.each([
+    ["2 litres", "2 litres coconut oil"],
+    ["1 bottle", "1 bottle coconut oil"],
+    ["3", "3 coconut oil"],
+    ["a dozen", "a dozen coconut oil"],
+    ["add 2 litres", "2 litres coconut oil"],
+    ["2 litres of coconut oil", "2 litres of coconut oil"],
+  ])("%s is the amount, in front of the item", (said, item) => {
+    const answered = read(asking(["coconut oil"]), said);
+    expect(answered).toMatchObject({ action: "add_to_list", parameters: { item, items: [item] } });
+    expect(answered?.parameters.awaiting).toBeUndefined();
+    expect(answered?.parameters.quantityFor).toBeUndefined();
+  });
+
+  it("several items: each named amount goes to its own item, and \"2 of each\" to all", () => {
+    expect(read(asking(["coconut oil", "eggs"]), "1 litre coconut oil and 6 eggs")?.parameters.items).toEqual(["1 litre coconut oil", "6 eggs"]);
+    expect(read(asking(["coconut oil", "eggs"]), "2 of each")?.parameters.items).toEqual(["2 coconut oil", "2 eggs"]);
+  });
+
+  it.each(["that's enough", "none", "no", "No thanks", "leave it"])("%s leaves the list as it is", (said) => {
+    expect(read(asking(["coconut oil"]), said)?.parameters).toMatchObject({ keepAsIs: true, item: "coconut oil" });
+  });
+
+  it("a short answer with no amount comes back unchanged, so grounding asks again — differently", () => {
+    const answered = read(asking(["coconut oil"]), "lots");
+    expect(answered?.parameters).toMatchObject({ item: "coconut oil" });
+    expect(answered?.parameters.awaiting).toBeUndefined();
+    expect(escalatedQuestion(asking(["coconut oil"]))).toMatch(/^Sorry, I didn't catch how much of coconut oil\. .*\n- "2 litres" or "500 g"/s);
+  });
+
+  it("a new request is somebody moving on, never an answer", () => {
+    expect(read(asking(["coconut oil"]), "add eggs to the list")).toBeNull();
+    expect(read(asking(["coconut oil"]), "what's for dinner tomorrow?")).toBeNull();
+  });
+});
