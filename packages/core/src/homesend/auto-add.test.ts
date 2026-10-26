@@ -33,7 +33,7 @@ describe("HomeSend's bar for adding on its own", () => {
     const added = { title: "Maths worksheet", where: "Kids & School", percent: 97, why: "verified" as const };
     expect(sureClause(added)).toBe(" (97% sure — every detail is in what you sent)");
     expect(sureClause({ percent: null })).toBe("");
-    expect(addedReply(added)).toBe("Added *Maths worksheet* to Kids & School (97% sure — every detail is in what you sent) — your household lets WonderHome add these on its own. You can undo it in HomeSend.");
+    expect(addedReply(added)).toBe("✅ Added *Maths worksheet* to Kids & School (97% sure — every detail is in what you sent) — your household lets WonderHome add these on its own. You can undo it in HomeSend.");
     expect(handedBackText("Got it, thanks.", { added, stillNeeded: [] })).toContain("to Kids & School (97% sure — every detail is in what you sent) —");
   });
 });

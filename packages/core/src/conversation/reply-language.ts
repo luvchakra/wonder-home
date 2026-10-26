@@ -51,6 +51,8 @@ const PATTERNS: readonly RegExp[] = [
   /\b\d[\d,]*(?:\.\d+)?\s?(?:INR|USD|EUR|GBP|AED|SGD|CAD|AUD)\b/g,
   // Any other number.
   /\d[\d,.]*/g,
+  // An emoji (`warmth.ts`): kept exactly where it was, never reworded.
+  /\p{Extended_Pictographic}(?:\u{FE0F}|\u{200D}\p{Extended_Pictographic})*\u{FE0F}?/gu,
 ];
 
 /**

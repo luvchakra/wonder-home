@@ -11,11 +11,9 @@ decision that shapes later work each earns a note, written before moving on.
 
 | Date | Note |
 |---|---|
-<<<<<<< Updated upstream
-| 2026-10-26 | [WhatsApp "typing…" while WonderHome works; a spoken question about buying reaches HomeTalk](2026-10-26-whatsapp-typing.md) |
-=======
 | 2026-10-26 | [A number said without a unit is the item's practical amount (25-037)](2026-10-26-practical-default-units.md) |
->>>>>>> Stashed changes
+| 2026-10-26 | [Warm emojis on WhatsApp and HomeTalk replies](2026-10-26-warm-emoji-replies.md) |
+| 2026-10-26 | [WhatsApp "typing…" while WonderHome works; a spoken question about buying reaches HomeTalk](2026-10-26-whatsapp-typing.md) |
 | 2026-10-26 | [A generic school-portal connector catalog (08-028)](2026-10-26-school-provider-catalog.md) |
 | 2026-10-26 | [HomeTalk offers to fill in waiting items (14-050); the rest of WhatsApp's words (14-051)](2026-10-26-hometalk-offer-and-whatsapp-words.md) |
 | 2026-10-26 | [HomeTalk/HomeSend design audit: what remained, built (14-042 to 14-049)](2026-10-26-design-audit-stories.md) |

@@ -13,6 +13,7 @@ import { personItems, type PersonLike } from "@wonderhome/core/context/builders"
 import { converse, pendingFrom, previewOf, PROPOSAL_TTL_MINUTES, resolveDeterministicIntent, type ConversationTurn, type RuntimeContext, type Understanding } from "@wonderhome/core/conversation/engine";
 import { canExecute, executeIntent, notYetDoable, undoExecuted, zonedTimeToUtcIso, type ExecutionContext } from "@wonderhome/core/conversation/executor";
 import { isUndo } from "@wonderhome/core/conversation/consent";
+import { UNDO_LINE, warmReply, warmUndo } from "@wonderhome/core/conversation/warmth";
 import { loadConfirmRequested } from "@wonderhome/core/conversation/consent-repository";
 import { approvalRefusal } from "@wonderhome/core/conversation/approval";
 import { referToAdult } from "@wonderhome/core/conversation/referral";
@@ -186,7 +187,6 @@ const RULES_SETTLE: ReadonlySet<HouseholdIntent["action"]> = new Set(["ask_statu
 
 /** What "undo" can take back (`undoExecuted`), so the reply offers it only where it works. */
 const UNDOABLE: ReadonlySet<HouseholdIntent["action"]> = new Set(["add_to_list", "set_reminder", "record_absence", "plan_event", "plan_meal"]);
-const UNDO_LINE = "Say **undo** to take it back.";
 
 /** What one HomeTalk turn is given. */
 export type HomeTalkInput = {
@@ -596,7 +596,7 @@ async function turnInEnglish(input: HomeTalkInput, speaking: Speaking) {
     if (undone.ok && last) {
       await markActionResult(admin, { actionId: last.id, status: "executed", result: { ...last.result, undoneAt: new Date().toISOString() } });
     }
-    const text = undone.ok ? undone.text : undone.reason;
+    const text = undone.ok ? warmUndo(undone.text) : undone.reason;
     const id = await recordMessage(admin, { householdId, sessionId, role: "assistant", content: text, metadata: { proposal: undone.ok ? "executed" : "refused", intent: "undo", mode: "answer", provider: routing.code, ...(last ? { undid: last.id } : {}) } });
     return { sessionId, memberMessageId, reply: { id, text, action: null, preview: null, proposal: undone.ok ? "executed" : "refused", mode: "answer" }, privacy: { provider: routing.code, disclosure: routing.disclosure } };
   }
@@ -725,6 +725,7 @@ async function turnInEnglish(input: HomeTalkInput, speaking: Speaking) {
 
       const partHedge = turn.proposal.kind !== "clarify" ? confidenceLead(turn.intent) : null;
       if (partHedge) text = `${partHedge} ${text}`;
+      text = warmReply(text, { action: turn.intent.action, proposal: turn.proposal.kind, ok: outcome?.status !== "failed" });
 
       // A question in the middle of a request is answered before anything
       // after it is done — and the question stays the last thing said, so
@@ -1147,6 +1148,11 @@ async function turnInEnglish(input: HomeTalkInput, speaking: Speaking) {
   // Confident enough to go on, not certain (§20): say who it was taken to be.
   const hedge = result.kind === "reply" && result.proposal.kind !== "clarify" ? confidenceLead(result.intent) : null;
   if (hedge) text = `${hedge} ${text}`;
+  // A warm emoji, after everything above was validated (`conversation/warmth.ts`).
+  if (result.kind === "reply") {
+    const proposal = brainAnswer ? (brainAnswer.mode === "clarify" ? "clarify" : "answer") : result.proposal.kind;
+    text = warmReply(text, { action: result.intent.action, proposal, ok: outcome?.status !== "failed", explained, classes: speaking.carried });
+  }
 
   // What HomeBrain's answer rested on, so "move it to Friday" after "when is
   // the Science project due?" means the project (homebrain/focus.ts).
@@ -1375,7 +1381,7 @@ async function carryOutApproved(input: {
   if (done.ok) forgetHouseholdContext(input.householdId);
 
   return {
-    text: done.ok ? done.text : `I have your go-ahead, and it did not go through: ${done.reason}`,
+    text: done.ok ? warmReply(done.text, { action: intent.action, proposal: "executed", ok: true }) : `I have your go-ahead, and it did not go through: ${done.reason}`,
     action: { ...input.action, status, ...(done.ok && unchangedResult(done.result) ? { unchanged: true } : {}) },
     focus: done.ok ? focusFromResult(intent.action, done.result, new Date().toISOString()) : [],
   };
