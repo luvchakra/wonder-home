@@ -49,11 +49,17 @@ The owner chose two, and named them: **Wait for Approval** (stored as `prepare`)
   - The row editor offers the same two choices.
   - None of the retired words appear, and there is no overflow.
 
-## Rollout
+## Rollout, and what went wrong
 
-The live migration is applied after this PR's production deploy is READY:
-- If it ran first, the old code could still write "observe" and be refused by the new check.
-- If the new code runs first, it reads an old value as prepare, which is safe.
+- **Plan:** apply the live migration after #351's production deploy was READY. Applying it first would let the old code write "observe" and be refused by the new check.
+- **What happened:**
+  - #351 first failed CI. The security suite caught a coverage count that went from 36 to 35.
+  - It was fixed and merged, but the scheduled check that should have applied the migration had not fired yet.
+  - For that gap, production ran the two-mode code against rows still stored as "observe". The Responsibilities page showed "Something went wrong": the group card looked up a label for "observe" and found none.
+  - The owner reported it. The migration was then applied (`two_autonomy_modes`) and verified: 36 prepare and 25 execute, the check allows only (prepare, execute), the default is prepare, and `wh.autonomy_for` for an unknown outcome returns prepare.
+- **The flaw in the plan:** "the new code reads an old value as prepare" held for the decision paths (the lookup, HomeTalk, HomeSend), but not for the screens, which read `ai_mode` straight from the table.
+- **The fix:** `asAutonomyMode()` (`household/autonomy.ts`) reads any stored value as "execute" only when it says so, else "prepare". `listResponsibilities`, the Responsibilities, Househelper, Home and Manage Household screens all read through it now. `decideAutonomy` also acts only on an explicit "execute".
+- **The lesson for future value changes:** the code that ships first must read both the old and the new values safely on every path, screens included. Or the migration ships first and writes only values the old code also accepts. CLAUDE.md now says a PR is done only once it has merged, deployed and had its live migration applied.
 
 ## Open
 

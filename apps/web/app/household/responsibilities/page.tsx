@@ -14,7 +14,7 @@ import { SectionHeader } from "@wonderhome/core/ui/section-header";
 import { SegmentedControl } from "@wonderhome/core/ui/segmented-control";
 import { EmptyState } from "@wonderhome/core/ui/states";
 
-import { AUTONOMY_MODES } from "@wonderhome/core/household/autonomy";
+import { AUTONOMY_MODES, asAutonomyMode } from "@wonderhome/core/household/autonomy";
 import { groupByArea, groupByOwner, sharedMode, type Row } from "../../_lib/responsibility-groups";
 import { AcceptRebalanceButton, AddResponsibilityButton, ResponsibilityGroup, ResponsibilityRow, type GroupAutonomyLabels } from "../../_components/responsibility-controls";
 import { cadenceLabel } from "../../_lib/cadence";
@@ -122,7 +122,7 @@ function renderResponsibilities({
   /** Set when a link elsewhere (Family status) pointed at one specific outcome — opens its detail immediately, rather than leaving the visitor to find it in the list themselves. */
   openOutcomeKey: string | null;
 }) {
-  const rows = (responsibilityRows.data as Row[] | null) ?? [];
+  const rows = ((responsibilityRows.data as Row[] | null) ?? []).map((row) => ({ ...row, ai_mode: asAutonomyMode(row.ai_mode) }));
   const nameOf = (id: string | null) => members.find((member) => member.id === id)?.displayName ?? null;
   const isMine = (row: Row) => row.primary_member_id === membership.memberId || row.backup_member_id === membership.memberId;
   const shown = rows.filter((row) => (active === "mine" ? isMine(row) : active === "family" ? row.primary_member_id !== membership.memberId : true));

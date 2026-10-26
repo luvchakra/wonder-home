@@ -25,6 +25,17 @@
 export const AUTONOMY_MODES = ["prepare", "execute"] as const;
 export type AutonomyMode = (typeof AUTONOMY_MODES)[number];
 
+/**
+ * A stored mode as the app may use it: "execute" only when it says so,
+ * anything else "prepare". Screens read `ai_mode` straight from the table,
+ * and an unexpected value must never crash one or act: on 2026-10-26 the
+ * Responsibilities page broke for the minutes between the two-mode code
+ * going live and the live migration moving "observe" rows to "prepare".
+ */
+export function asAutonomyMode(value: unknown): AutonomyMode {
+  return value === "execute" ? "execute" : "prepare";
+}
+
 export const AUTONOMY_DESCRIPTIONS: Record<AutonomyMode, string> = {
   prepare: "Get it ready, and do it once you say yes.",
   execute: "Handle it, and tell you what was done.",
