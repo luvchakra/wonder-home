@@ -209,6 +209,18 @@ const awaitingWordLimit: Record<string, number> = { member: 4, day: 5, referent:
 /** Words that make a reply a request of its own rather than an answer. */
 const NEW_REQUEST = /\b(?:is|are|was|were|will|won'?t|isn'?t|can'?t|add|put|pay|order|need|remind|move|plan|book|remove|mark|log|record|cancel|what|when|who|how|why)\b/i;
 
+/**
+ * Whether what was just said is a whole new request rather than an attempt to
+ * answer the open question: it asks for something itself, or is longer than
+ * an answer would be. Asking the question again after a fresh request is not
+ * the household repeating itself (the owner, 2026-10-26: "Add 3 litres of oil
+ * to the groceries" twice met "I still cannot tell which items you mean").
+ */
+export function isFreshRequest(utterance: string, awaiting: unknown): boolean {
+  const said = stripFiller(utterance).replace(/[.!?]+$/, "").trim();
+  return NEW_REQUEST.test(said) || said.split(/\s+/).length > (awaitingWordLimit[String(awaiting)] ?? 4);
+}
+
 /** A pending clarification's bookkeeping, which must not ride into the answered intent. */
 function withoutGroundingState(parameters: Record<string, unknown>): Record<string, unknown> {
   const rest = { ...parameters };
@@ -290,37 +302,48 @@ function answerGroundingQuestion(
 export function escalatedQuestion(pending: PendingClarification): string {
   switch (pending.parameters.awaiting) {
     case "member":
-      return 'I still cannot tell who you mean. Say their name as your household has it — for example "Asmi" — and I will take it from there.';
+      return 'Sorry, I still couldn\'t tell who you mean. Could you say their name as your household has it — for example "Asmi"? I\'ll take it from there.';
     case "day":
-      return 'I still cannot pin that down. Say it one of these ways — "later today", "in 2 hours", "tomorrow at 9am", "next Friday" or a date like "2 Oct".';
+      return [
+        "Sorry, I still couldn't pin down when. Could you say it one of these ways?",
+        '- "later today" or "in 2 hours"',
+        '- "tomorrow at 9am" or "next Friday"',
+        '- a date, like "2 Oct"',
+      ].join("\n");
     case "referent": {
-      const named = readFocus(pending.parameters.candidates).map((candidate) => `"${candidate.label}"`);
+      const named = readFocus(pending.parameters.candidates).map((candidate) => `- ${candidate.label}`);
       return named.length > 0
-        ? `I still cannot tell which one. Say ${named.join(" or ")}, or name the thing you mean.`
-        : "I still cannot tell which one you mean. Name the thing itself and I will take it from there.";
+        ? ["Sorry, I still couldn't tell which one you mean. Could you pick one?", ...named, "Or name the thing itself."].join("\n")
+        : "Sorry, I still couldn't tell which one you mean. Could you name the thing itself? I'll take it from there.";
     }
   }
+  const choices = readFocus(pending.parameters.candidates).map((candidate) => `- ${candidate.label}`);
   switch (pending.action) {
     case "order_items":
     case "add_to_list":
-      return (
-        "I still cannot tell which items you mean. Name them one by one and I will add them — " +
-        'for example "3 eggs, 1 packet of milk". You can also add them directly on the Groceries screen.'
-      );
+      return [
+        choices.length > 0 ? "Sorry, I still couldn't tell which one you'd like. Could you pick one?" : "Sorry, I still couldn't tell which items you'd like. Could you name each one with how much you need? For example:",
+        ...(choices.length > 0 ? choices : ["- 3 eggs", "- 1 packet of milk"]),
+        "You can also add them yourself on the Groceries screen.",
+      ].join("\n");
     case "make_payment":
-      return (
-        "I still do not have enough to pay anything safely. Tell me the bill by name and the amount — " +
-        'for example "pay the electricity bill, 2400". Nothing is paid until you confirm it.'
-      );
+      return [
+        "Sorry, I still don't have enough to pay anything safely. Could you tell me:",
+        "- the bill, by name",
+        "- the amount",
+        'For example "pay the electricity bill, 2400". Nothing is paid until you confirm it.',
+      ].join("\n");
     case "assign_responsibility":
-      return "I still do not know who should take it on. Give me a name from your household and I will set it up.";
+      return "Sorry, I still don't know who should take it on. Could you give me a name from your household? I'll set it up.";
     case "adjust_schedule":
-      return 'I still do not have both halves. Tell me what moves and when — for example "move karate to Friday at 5".';
+      return [
+        "Sorry, I still need two things. Could you tell me:",
+        "- what moves",
+        "- and when to",
+        'For example "move karate to Friday at 5".',
+      ].join("\n");
     default:
-      return (
-        "I am still not following, and asking the same thing again will not help. " +
-        "Say it in a different way, or tell me which part of the home it is about and I will take it from there."
-      );
+      return "Sorry, I'm still not following. Could you say it another way, or tell me which part of the home it's about? I'll take it from there.";
   }
 }
 

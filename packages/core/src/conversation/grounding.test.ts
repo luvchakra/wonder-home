@@ -1,5 +1,7 @@
 import { describe, expect, it } from "vitest";
 
+import { escalatedQuestion } from "./clarify";
+
 import { personItems } from "../context/builders";
 import { converse } from "./engine";
 import { groundIntent, type GroundingEnv } from "./grounding";
@@ -190,7 +192,31 @@ describe("the whole turn: grounding sits between understanding and any proposal"
   it("the same grounding question is never asked twice", async () => {
     const first = await converse({ ...base, utterance: "zorawar is away tomorrow", ground: (understood) => groundIntent(understood, env()), understand: () => intent({ target: { kind: "member", reference: "zorawar" } }) });
     const again = await converse({ ...base, utterance: "zoro", clarifying: first.kind === "reply" ? first.clarification : null, ground: (understood) => groundIntent(understood, env()) });
-    expect(again.kind === "reply" && again.text).toMatch(/^I still cannot tell who you mean/);
+    expect(again.kind === "reply" && again.text).toMatch(/^Sorry, I still couldn't tell who you mean/);
+  });
+
+  // The owner, 2026-10-26: "Add 3 litres of oil to the groceries", twice, met "I still cannot tell which items you mean".
+  it("a whole new request is asked the real question again, never told it already failed", async () => {
+    const first = await converse({ ...base, utterance: "zorawar is away tomorrow", ground: (understood) => groundIntent(understood, env()), understand: () => intent({ target: { kind: "member", reference: "zorawar" } }) });
+    const again = await converse({
+      ...base,
+      utterance: "zorawar is away tomorrow",
+      clarifying: first.kind === "reply" ? first.clarification : null,
+      ground: (understood) => groundIntent(understood, env()),
+      understand: () => intent({ target: { kind: "member", reference: "zorawar" } }),
+    });
+    expect(first.kind === "reply" && again.kind === "reply" && again.text).toBe(first.kind === "reply" ? first.text : "");
+    expect(again.kind === "reply" && again.text).not.toMatch(/still/);
+  });
+
+  it("the second ask for list items is polite and set out as steps", () => {
+    const text = escalatedQuestion({ action: "add_to_list", target: { kind: "list", reference: "groceries" }, parameters: {}, question: "", utterance: "", askedAt: "" } as unknown as Parameters<typeof escalatedQuestion>[0]);
+    expect(text.split("\n")).toEqual([
+      "Sorry, I still couldn't tell which items you'd like. Could you name each one with how much you need? For example:",
+      "- 3 eggs",
+      "- 1 packet of milk",
+      "You can also add them yourself on the Groceries screen.",
+    ]);
   });
 
   it("the rules' \"put that on the list\" resolves through the same grounding", async () => {
