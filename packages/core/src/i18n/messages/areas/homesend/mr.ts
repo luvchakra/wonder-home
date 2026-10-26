@@ -101,6 +101,7 @@ export const homesendMr: AreaCatalog<typeof homesendEn> = {
   "homesend.source.emailAttachment": "ईमेल अटॅचमेंट",
   "homesend.source.whatsapp": "एक WhatsApp मेसेज",
   "homesend.source.whatsappMedia": "WhatsApp वर पाठवलेली फाइल",
+  "homesend.source.schoolChannel": "शाळेच्या चॅनेलवरून एक संदेश",
   "homesend.source.whatsappPhoto": "WhatsApp वर पाठवलेला फोटो",
   "homesend.source.whatsappVoice": "WhatsApp वर पाठवलेली व्हॉइस नोट",
   "homesend.source.whatsappPdf": "WhatsApp वर पाठवलेली PDF",

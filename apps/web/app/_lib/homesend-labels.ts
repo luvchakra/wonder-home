@@ -425,6 +425,7 @@ export function homesendReviewLabels(t: Translate, language: string): HomeSendRe
         email_attachment: t("homesend.source.emailAttachment"),
         whatsapp: t("homesend.source.whatsapp"),
         whatsapp_media: t("homesend.source.whatsappMedia"),
+        school_channel: t("homesend.source.schoolChannel"),
       },
       content: {
         "application/pdf": t("homesend.source.pdf"),

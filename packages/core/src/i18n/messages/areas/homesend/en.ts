@@ -104,6 +104,7 @@ export const homesendEn = {
   "homesend.source.emailAttachment": "An email attachment",
   "homesend.source.whatsapp": "A WhatsApp message",
   "homesend.source.whatsappMedia": "A file sent on WhatsApp",
+  "homesend.source.schoolChannel": "A message from a school channel",
   "homesend.source.whatsappPhoto": "A photo sent on WhatsApp",
   "homesend.source.whatsappVoice": "A voice note sent on WhatsApp",
   "homesend.source.whatsappPdf": "A PDF sent on WhatsApp",

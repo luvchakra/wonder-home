@@ -101,6 +101,7 @@ export const homesendZh: AreaCatalog<typeof homesendEn> = {
   "homesend.source.emailAttachment": "一个邮件附件",
   "homesend.source.whatsapp": "一条 WhatsApp 消息",
   "homesend.source.whatsappMedia": "通过 WhatsApp 发送的文件",
+  "homesend.source.schoolChannel": "来自学校频道的一条消息",
   "homesend.source.whatsappPhoto": "通过 WhatsApp 发送的照片",
   "homesend.source.whatsappVoice": "通过 WhatsApp 发送的语音留言",
   "homesend.source.whatsappPdf": "通过 WhatsApp 发送的 PDF",
