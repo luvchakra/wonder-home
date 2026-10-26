@@ -242,4 +242,27 @@ test.describe("every signed-in screen loads", () => {
     await page.goto("/ai");
     await expect(page.getByText("The Gemini voice key needs attention")).toHaveCount(0);
   });
+  test("HomeSend shows how sure WonderHome is with each entry, on the list and in the review", async ({ page }) => {
+    const member = await admin.from("household_members").select("id").eq("household_id", householdId).eq("profile_id", userId).single();
+    if (member.error) throw member.error;
+    const understanding = {
+      kind: "grocery_item", readable: true, confidence: "high", score: 0.97, check: { verified: true, unverified: [] }, facts: [], change: "new",
+      safety: { signals: [], instructionsIgnored: false }, entities: [], references: [],
+      provenance: { url: null, sender: null, channel: "whatsapp", subject: null, filename: null, contentType: null, transcriptConfidence: null },
+      contentSummary: "A shopping-list line asking to buy mustard oil.",
+      candidateActions: [{ type: "add_grocery_item", confidence: 0.97, fields: { title: "Mustard oil", quantity: 2, unit: "l" } }],
+    };
+    const extracted = { title: "Mustard oil", quantity: 2, unit: "l", notes: null, payee: null, amount: null, people: [], needs: [], lines: [], dueDate: null, subject: null, summary: understanding.contentSummary, billKind: null, category: null, currency: null, secondary: null, confidence: "high", schoolKind: null, documentDate: null, healthRecordType: null, subjectMemberName: null };
+    const inserted = await admin.from("home_send_items").insert({ household_id: householdId, created_by_member_id: member.data.id, source: "pasted_text", raw_text: "2 litres mustard oil", content_type: "text/plain", status: "classified", classified_kind: "grocery_item", extracted, understanding });
+    if (inserted.error) throw inserted.error;
+
+    await signIn(page);
+    await page.goto("/home-send");
+    const row = page.locator("li").filter({ hasText: "Mustard oil" }).first();
+    await expect(row).toContainText("97% sure");
+    await row.getByRole("button").first().click();
+    await expect(page.getByText(/High · 97% sure/)).toBeVisible();
+    await expect(page.getByText("Suggested · 97% sure").first()).toBeVisible();
+    await expect(page.getByLabel(/Quantity/)).toHaveValue("2");
+  });
 });

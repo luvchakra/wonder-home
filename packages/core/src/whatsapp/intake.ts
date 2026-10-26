@@ -247,6 +247,23 @@ export async function processWhatsAppMessage(admin: SupabaseClient, messageId: s
     return "read";
   }
 
+  // An answer to the question HomeTalk just asked on WhatsApp ("Should I use
+  // coconut oil, mustard oil or sunflower oil?" — "coconut oil", the owner,
+  // 2026-10-26) goes back to HomeTalk, which finishes what was asked. Before
+  // this it became a new HomeSend item, without the 2 litres and waiting.
+  if (!together && row.message_type === "text" && row.text_content && deps.ask && !row.reply_to_provider_message_id && row.text_content.trim().length <= 160) {
+    if (await homeTalkAwaitsAnswer(admin, row, now).catch(() => false)) {
+      const answer = await deps.ask({ householdId: row.household_id, memberId: row.member_id, text: row.text_content, requestId: row.provider_message_id }).catch(() => null);
+      if (answer) {
+        events.push({ kind: "question_answered", householdId: row.household_id });
+        await settle({ processing_status: "ignored" });
+        await say(answer);
+        await recordWhatsAppEvents(admin, events);
+        return "read";
+      }
+    }
+  }
+
   // A reply to one of the person's own items that names someone in the
   // household answers that item's "who is this for?" (the owner's "asmi",
   // 2026-10-24): the item waits for them with that person picked, and the
@@ -432,6 +449,53 @@ async function answerWhoFor(admin: SupabaseClient, row: MessageRow, text: string
 export function addedReply(added: { title: string; where: string }, forName?: string): string {
   const title = shortTitle(added.title) ?? "it";
   return `Added *${title}*${forName ? ` for ${forName}` : ""} to ${added.where} — your household lets WonderHome add these on its own. You can undo it in HomeSend.`;
+}
+
+/** How long a question HomeTalk asked on WhatsApp still takes the person's next message as its answer. */
+const HOMETALK_ANSWER_WINDOW_MS = 15 * 60 * 1000;
+
+/**
+ * Whether the last thing said in this person's WhatsApp conversation with
+ * HomeTalk is a question still waiting for them — HomeTalk asked which one
+ * or whether, and nothing else has happened since — and their last WhatsApp
+ * message before this one went to HomeTalk, not to HomeSend.
+ */
+export async function homeTalkAwaitsAnswer(admin: SupabaseClient, row: Pick<MessageRow, "id" | "household_id" | "member_id">, now: Date): Promise<boolean> {
+  const since = new Date(now.getTime() - HOMETALK_ANSWER_WINDOW_MS).toISOString();
+  const [{ data: previous }, { data: session }] = await Promise.all([
+    admin
+      .from("whatsapp_messages")
+      .select("homesend_item_id, processing_status, message_type")
+      .eq("household_id", row.household_id)
+      .eq("member_id", row.member_id)
+      .neq("id", row.id)
+      .gte("received_at", since)
+      .order("received_at", { ascending: false })
+      .limit(1),
+    admin
+      .from("conversation_sessions")
+      .select("id")
+      .eq("household_id", row.household_id)
+      .eq("member_id", row.member_id)
+      .eq("surface", "whatsapp")
+      .eq("status", "open")
+      .order("created_at", { ascending: false })
+      .limit(1),
+  ]);
+  const last = ((previous ?? []) as { homesend_item_id: string | null; processing_status: string; message_type: string }[])[0];
+  if (!last || last.homesend_item_id || last.message_type !== "text") return false;
+  const sessionId = ((session ?? []) as { id: string }[])[0]?.id;
+  if (!sessionId) return false;
+  const { data: said } = await admin
+    .from("conversation_messages")
+    .select("role, metadata, created_at")
+    .eq("household_id", row.household_id)
+    .eq("session_id", sessionId)
+    .gte("created_at", since)
+    .order("created_at", { ascending: false })
+    .limit(1);
+  const latest = ((said ?? []) as { role: string; metadata: { mode?: unknown; proposal?: unknown } | null }[])[0];
+  return latest?.role === "assistant" && (latest.metadata?.mode === "clarify" || latest.metadata?.proposal === "clarify");
 }
 
 /** How long after sending something a plain name still answers who it is for. */

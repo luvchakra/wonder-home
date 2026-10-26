@@ -411,7 +411,8 @@ export function HomeSendConfirmStep({
         onChange={setKind}
         options={CATEGORIES.map((category) => ({ ...category, label: labels.options.kind[category.value] ?? category.value, detail: labels.options.kindDetail[category.value] ?? "" }))}
         groups={CATEGORY_GROUPS.map((group) => ({ id: group, label: labels.options.kindGroup[group] ?? group }))}
-        words={labels.picker}
+        // How sure, right on WonderHome's pick (the owner, 2026-10-26: the "What I found" box above is easy to scroll past).
+        words={percentSure(understanding, labels.found) ? { ...labels.picker, suggested: `${labels.picker.suggested} · ${percentSure(understanding, labels.found)}` } : labels.picker}
       />
 
       {/* Nothing is asked until the person says what it is. */}
