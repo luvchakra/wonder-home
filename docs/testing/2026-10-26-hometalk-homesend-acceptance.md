@@ -177,7 +177,7 @@ The owner, 2026-10-26: "2 litres mustard oil" on WhatsApp waited although grocer
 | AT-J05, AT-J06 | Told in HomeTalk, listed: Pre Approved → "Added 2 L more **Mustard oil** (now 3 L)"; Wait for Approval → "already on your shopping list" | ✅ pass |
 | Browser, live project, 360 px and desktop | Needs your review rows: "already on the shopping list", "below your bar of 95%", "groceries set to Wait for Approval"; the 70% school item reads "the AI wasn't sure"; no sideways scroll at 360 px. "Add anyway" on a listed 2 L item topped the one entry up from 1 L to 3 L, with no second item | ✅ pass |
 
-Touched suites: 2,001 / 2,001 pass (the acceptance file: 195). Evaluation: 196 / 196, Unsafe Action Rate 0 / 23. One test expectation was wrong (AT-H11, above); no product defect was found by these tests beyond the three reported.
+Touched suites: 2,018 / 2,018 pass (the acceptance file: 195). Evaluation: 197 / 197, Unsafe Action Rate 0 / 23. One test expectation was wrong (AT-H11, above); no product defect was found by these tests beyond the three reported.
 
 ## Every case and its result
 
