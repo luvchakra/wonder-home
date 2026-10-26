@@ -3,7 +3,9 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 import { auditChange } from "../api/audit";
 import { enqueueClassifyRetry, type ClaimedJob, type JobHandler } from "../homesend/retry-queue";
 import { ingestWhatsAppMedia, ingestWhatsAppText, IngestRejected, type IngestDeps, type IngestOutcome } from "../homesend/ingest";
-import { FAILURE_REASON_COPY } from "../homesend/items";
+import { askingOf, COMPLETENESS, listDetails, missingRequired, nextDetailToAsk, type CompletenessReading, type DetailField } from "../homesend/completeness";
+import { readDetailAnswer } from "../homesend/completeness-answers";
+import { FAILURE_REASON_COPY, type HomeSendKind } from "../homesend/items";
 import { sendWhatsAppText, type WhatsAppConfig } from "../notifications/whatsapp";
 import { log } from "../observability/logger";
 import { hitRateLimit } from "../security/rate-limit";
@@ -273,9 +275,22 @@ export async function processWhatsAppMessage(admin: SupabaseClient, messageId: s
     if (answered) {
       events.push({ kind: "clarification_answered", householdId: row.household_id });
       await settle({ processing_status: "ignored" });
-      // With who it is for known, the item carries on: added now where the household allows it, else it waits.
-      const added = deps.addOnItsOwn ? await deps.addOnItsOwn({ householdId: row.household_id, memberId: row.member_id, itemId: answered.itemId }).catch(() => null) : null;
-      await say(added ? addedReply(added, answered.name) : `Got it — that's for ${answered.name}. It's waiting in HomeSend for you to check.`);
+      // With who it is for known, the item carries on: the next detail it lacks is asked, else it is added where the household allows it, else it waits.
+      await say(await carryOn(admin, row, answered.itemId, deps, `Got it — that's for ${answered.name}.`, answered.name));
+      await recordWhatsAppEvents(admin, events);
+      return "read";
+    }
+  }
+
+  // A reply to the detail HomeSend just asked about ("When is it due?" —
+  // "Friday") fills that detail on the item, and the next one is asked
+  // (the owner, 2026-10-26). Never a new item of its own.
+  if (!together && row.message_type === "text" && row.text_content && (row.reply_to_provider_message_id || row.text_content.trim().length <= 60)) {
+    const answered = await answerDetail(admin, row, row.text_content, now, deps);
+    if (answered) {
+      events.push({ kind: "clarification_answered", householdId: row.household_id });
+      await settle({ processing_status: "ignored" });
+      await say(answered);
       await recordWhatsAppEvents(admin, events);
       return "read";
     }
@@ -358,8 +373,15 @@ export async function processWhatsAppMessage(admin: SupabaseClient, messageId: s
   await settleBurst({ processing_status: "processed", failure_reason: null, homesend_item_id: outcome.itemId, acknowledged_at: now.toISOString() });
   events.push({ kind: "message_processed", householdId: row.household_id, latencyMs: now.getTime() - new Date(row.received_at).getTime() });
   if (!outcome.duplicate) events.push({ kind: "homesend_created", householdId: row.household_id });
-  const ack = acknowledgementFor(outcome, { whoFor: await whoForChoices(admin, row.household_id, outcome).catch(() => []) });
+  const whoFor = await whoForChoices(admin, row.household_id, outcome).catch(() => []);
+  // Who it is for first; else the first detail the item can't be complete without, or would be better with (`completeness.ts`).
+  const detail = whoFor.length >= 2 || outcome.duplicate || outcome.state !== "needs_review" ? null : nextDetailToAsk(outcome.item.classifiedKind, (outcome.item.extracted ?? null) as CompletenessReading, []);
+  const ack = acknowledgementFor(outcome, { whoFor, detail: detail?.question });
   if (ack.asks) events.push({ kind: "clarification_requested", householdId: row.household_id });
+  if (ack.asks && (whoFor.length >= 2 || detail)) {
+    const awaiting: DetailField = detail?.field ?? (CHILD_KINDS.has(outcome.item.classifiedKind ?? "") ? "child" : "person");
+    await recordAsking(admin, row.household_id, outcome.itemId, (outcome.item.extracted ?? {}) as Record<string, unknown>, awaiting).catch(() => false);
+  }
   // Nothing left to ask: added now where the household allows it, else the acknowledgement says where it waits.
   const added =
     !ack.asks && !outcome.duplicate && outcome.state !== "failed" && deps.addOnItsOwn
@@ -404,17 +426,7 @@ async function answerWhoFor(admin: SupabaseClient, row: MessageRow, text: string
   // last thing they sent in the past half hour that is still waiting to
   // know who it is for (a plain "asmi" straight after the photo).
   const replying = Boolean(row.reply_to_provider_message_id);
-  let quotedQuery = admin
-    .from("whatsapp_messages")
-    .select("homesend_item_id")
-    .eq("household_id", row.household_id)
-    .eq("member_id", row.member_id);
-  quotedQuery = replying
-    ? quotedQuery.eq("provider_message_id", row.reply_to_provider_message_id!)
-    : quotedQuery.neq("id", row.id).not("homesend_item_id", "is", null).gte("received_at", new Date(now.getTime() - WHO_FOR_WINDOW_MS).toISOString()).order("received_at", { ascending: false }).limit(1);
-  const { data: quotedRows } = await quotedQuery;
-  const quoted = (Array.isArray(quotedRows) ? quotedRows[0] : quotedRows) as { homesend_item_id: string | null } | undefined;
-  const itemId = quoted?.homesend_item_id ?? null;
+  const itemId = await repliedItemId(admin, row, now);
   if (!itemId) return null;
   const [{ data: item }, { data: members }] = await Promise.all([
     admin.from("home_send_items").select("id, status, classified_kind, extracted, understanding").eq("household_id", row.household_id).eq("id", itemId).maybeSingle(),
@@ -449,6 +461,95 @@ async function answerWhoFor(admin: SupabaseClient, row: MessageRow, text: string
 export function addedReply(added: { title: string; where: string }, forName?: string): string {
   const title = shortTitle(added.title) ?? "it";
   return `Added *${title}*${forName ? ` for ${forName}` : ""} to ${added.where} — your household lets WonderHome add these on its own. You can undo it in HomeSend.`;
+}
+
+/** Keeps on the item what HomeSend is waiting to hear about it, and that it was asked. */
+async function recordAsking(admin: SupabaseClient, householdId: string, itemId: string, extracted: Record<string, unknown>, awaiting: DetailField | null): Promise<boolean> {
+  const asking = askingOf(extracted);
+  const asked = awaiting && !asking.asked.includes(awaiting) ? [...asking.asked, awaiting] : asking.asked;
+  const { error } = await admin
+    .from("home_send_items")
+    .update({ extracted: { ...extracted, asking: { awaiting, asked } } })
+    .eq("household_id", householdId)
+    .eq("id", itemId);
+  return !error;
+}
+
+/**
+ * What happens once a question about an item is answered: the next detail
+ * it lacks is asked (at most `MAX_DETAIL_QUESTIONS` in all); with nothing
+ * left to ask it is added where the household allows it, or else it waits in
+ * HomeSend, saying what it still needs there. `lead` opens the reply and
+ * never repeats what was answered.
+ */
+async function carryOn(admin: SupabaseClient, row: MessageRow, itemId: string, deps: WhatsAppIntakeDeps, lead: string, forName?: string): Promise<string> {
+  const { data } = await admin.from("home_send_items").select("id, status, classified_kind, extracted").eq("household_id", row.household_id).eq("id", itemId).maybeSingle();
+  const item = data as { id: string; status: string; classified_kind: HomeSendKind | null; extracted: Record<string, unknown> | null } | null;
+  if (!item || item.status !== "classified") return `${lead} It's in HomeSend.`;
+  const extracted = item.extracted ?? {};
+  const reading = extracted as CompletenessReading;
+  const next = nextDetailToAsk(item.classified_kind, reading, askingOf(extracted).asked);
+  if (next && (await recordAsking(admin, row.household_id, item.id, extracted, next.field).catch(() => false))) return `${lead} ${next.question}`;
+  await recordAsking(admin, row.household_id, item.id, extracted, null).catch(() => false);
+  const added = deps.addOnItsOwn ? await deps.addOnItsOwn({ householdId: row.household_id, memberId: row.member_id, itemId: item.id }).catch(() => null) : null;
+  if (added) return addedReply(added, forName);
+  const still = missingRequired(item.classified_kind, reading, { person: true });
+  if (still.length > 0) return `${lead} It's waiting in HomeSend — the ${listDetails(still)} can be filled in there.`;
+  return `${lead} It's waiting in HomeSend for you to check.`;
+}
+
+/** The item a short reply is about: the one swiped to, else the last thing sent in the past half hour. */
+async function repliedItemId(admin: SupabaseClient, row: MessageRow, now: Date): Promise<string | null> {
+  const replying = Boolean(row.reply_to_provider_message_id);
+  let quotedQuery = admin
+    .from("whatsapp_messages")
+    .select("homesend_item_id")
+    .eq("household_id", row.household_id)
+    .eq("member_id", row.member_id);
+  quotedQuery = replying
+    ? quotedQuery.eq("provider_message_id", row.reply_to_provider_message_id!)
+    : quotedQuery.neq("id", row.id).not("homesend_item_id", "is", null).gte("received_at", new Date(now.getTime() - WHO_FOR_WINDOW_MS).toISOString()).order("received_at", { ascending: false }).limit(1);
+  const { data: quotedRows } = await quotedQuery;
+  const quoted = (Array.isArray(quotedRows) ? quotedRows[0] : quotedRows) as { homesend_item_id: string | null } | undefined;
+  return quoted?.homesend_item_id ?? null;
+}
+
+/**
+ * Fills the detail HomeSend asked about an item from the person's reply —
+ * only their own item, in their household, still waiting for a person, and
+ * only as the detail asked, read by `readDetailAnswer` (never a guess). A
+ * reply it can't read is asked again only when it was swiped to the item;
+ * otherwise it is left for the rest of the flow. Null when this reply
+ * answers nothing.
+ */
+async function answerDetail(admin: SupabaseClient, row: MessageRow, text: string, now: Date, deps: WhatsAppIntakeDeps): Promise<string | null> {
+  const itemId = await repliedItemId(admin, row, now);
+  if (!itemId) return null;
+  const [{ data }, { data: household }] = await Promise.all([
+    admin.from("home_send_items").select("id, status, classified_kind, extracted").eq("household_id", row.household_id).eq("id", itemId).maybeSingle(),
+    admin.from("households").select("timezone").eq("id", row.household_id).maybeSingle(),
+  ]);
+  const item = data as { id: string; status: string; classified_kind: HomeSendKind | null; extracted: Record<string, unknown> | null } | null;
+  if (!item || item.status !== "classified" || !item.classified_kind) return null;
+  const extracted = item.extracted ?? {};
+  const { awaiting } = askingOf(extracted);
+  // Who it is for is answered by name (`answerWhoFor`), not here.
+  if (!awaiting || awaiting === "child" || awaiting === "person") return null;
+  const timezone = (household as { timezone?: string | null } | null)?.timezone || "Asia/Kolkata";
+  const read = readDetailAnswer(item.classified_kind, awaiting, text, { timezone, now });
+  if (read === null) {
+    if (!row.reply_to_provider_message_id) return null;
+    const asked = item.classified_kind === "unknown" ? undefined : COMPLETENESS[item.classified_kind].find((spec) => spec.field === awaiting);
+    return asked ? `Sorry, I didn't catch that. ${asked.question} You can also say skip.` : null;
+  }
+  const filledIn = read === "skip" ? extracted : { ...extracted, ...read };
+  const { error } = await admin
+    .from("home_send_items")
+    .update({ extracted: { ...filledIn, asking: { awaiting: null, asked: askingOf(extracted).asked } } })
+    .eq("household_id", row.household_id)
+    .eq("id", item.id);
+  if (error) return null;
+  return carryOn(admin, row, item.id, deps, read === "skip" ? "No problem." : "Got it, thanks.");
 }
 
 /** How long a question HomeTalk asked on WhatsApp still takes the person's next message as its answer. */
@@ -613,7 +714,7 @@ export const UNSUPPORTED_REPLY = "WonderHome can take text, photos, PDFs, text f
  * because saying back what was understood is the point. When the item names
  * someone WonderHome can't place, the question is asked here too.
  */
-export function acknowledgementFor(outcome: IngestOutcome, options: { whoFor?: readonly string[] } = {}): { text: string; asks: boolean } {
+export function acknowledgementFor(outcome: IngestOutcome, options: { whoFor?: readonly string[]; detail?: string | null } = {}): { text: string; asks: boolean } {
   if (outcome.duplicate) return { text: "Got it — that's already in HomeSend.", asks: false };
   if (outcome.state === "failed") {
     const why = outcome.failureReason ? FAILURE_REASON_COPY[outcome.failureReason] : "WonderHome couldn't read it.";
@@ -674,6 +775,8 @@ export function acknowledgementFor(outcome: IngestOutcome, options: { whoFor?: r
     const choices = `${whoFor.slice(0, -1).join(", ")} or ${whoFor[whoFor.length - 1]}`;
     return { text: `Got it 👍 ${found} Who is it for — ${choices}? Reply with their name.`, asks: true };
   }
+  // One question at a time, in WonderHome's own words: never an amount or a health detail said back.
+  if (options.detail) return { text: `Got it 👍 ${found} ${options.detail}`, asks: true };
   return { text: `Got it 👍 ${found} ${closing}`, asks: false };
 }
 

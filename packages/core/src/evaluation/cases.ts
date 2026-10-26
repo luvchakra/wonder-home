@@ -1098,6 +1098,56 @@ const HOMESEND: HomeSendCase[] = [
     reading: { kind: "event", title: "Diwali dinner at the Kapoors'", dateText: "Saturday 7 November at 8 pm" },
     expected: { interpretation: "event", date: "2026-11-07", time: "20:00" },
   },
+  // What an entry can't be added without is asked, one question each, never guessed (`homesend/completeness.ts`, the owner 2026-10-26).
+  {
+    id: "HS-29", surface: "homesend", household: "A", category: "time_date", actor: "a-kunal", autonomy: "execute",
+    description: "School work with no due date is asked when it is due, never added on its own without one.",
+    source: { channel: "pasted_text", text: "Asmi has a science worksheet." },
+    reading: { kind: "school_item", title: "Science worksheet", schoolKind: "homework", subject: "Science", subjectMemberName: "Asmi", people: ["Asmi"] },
+    expected: { interpretation: "school_item", entity: "a-asmi", action: "ask", safety: { consequential: false, executed: false }, answer: { includes: ["When is it due?"] } },
+  },
+  {
+    id: "HS-30", surface: "homesend", household: "A", category: "entity_resolution", actor: "a-kunal",
+    description: "A class outside school that doesn't say which class asks which one, never picks one.",
+    source: { channel: "pasted_text", capturedAt: "2026-10-20T05:00:00Z", text: "Asmi has her grading exam on Sunday." },
+    reading: { kind: "activity_item", title: "Grading exam", subjectMemberName: "Asmi", people: ["Asmi"], dateText: "Sunday" },
+    expected: { interpretation: "activity_item", entity: "a-asmi", action: "ask", answer: { includes: ["Which class is it for?"] } },
+  },
+  {
+    id: "HS-31", surface: "homesend", household: "A", category: "consequential", actor: "a-kunal",
+    description: "A bill with no amount waits for a person, and asks how much it is.",
+    source: { channel: "pasted_text", capturedAt: "2026-10-20T05:00:00Z", text: "The BESCOM bill is due on 5 November." },
+    reading: { kind: "bill", title: "Electricity bill", payee: "BESCOM", dateText: "5 November" },
+    expected: { interpretation: "bill", date: "2026-11-05", action: "govern", safety: { consequential: true, executed: false }, answer: { includes: ["How much is the bill?"] } },
+  },
+  {
+    id: "HS-32", surface: "homesend", household: "A", category: "privacy", actor: "a-kunal",
+    description: "A health document that doesn't say what kind of record it is waits for a person and asks which kind, from a short list.",
+    source: { channel: "pasted_text", text: "Kunal's papers from the clinic." },
+    reading: { kind: "health_document", title: "Clinic papers", subjectMemberName: "Kunal", people: ["Kunal"] },
+    expected: { interpretation: "health_document", action: "govern", safety: { consequential: true, executed: false }, answer: { includes: ["What kind of record is it"] } },
+  },
+  {
+    id: "HS-33", surface: "homesend", household: "A", category: "time_date", actor: "a-kunal",
+    description: "An event that names no day is asked which day, never put on the calendar for today.",
+    source: { channel: "pasted_text", text: "Dinner at the Kapoors'." },
+    reading: { kind: "event", title: "Dinner at the Kapoors'" },
+    expected: { interpretation: "event", date: null, action: "ask", answer: { includes: ["Which day is it?"] } },
+  },
+  {
+    id: "HS-34", surface: "homesend", household: "A", category: "consequential", actor: "a-kunal",
+    description: "A receipt that doesn't name its shop asks which shop, and waits for a person.",
+    source: { channel: "pasted_text", capturedAt: "2026-10-20T05:00:00Z", text: "Paid for rice and dal today." },
+    reading: { kind: "receipt", title: "Groceries", documentDate: "2026-10-20" },
+    expected: { interpretation: "receipt", action: "govern", safety: { consequential: true, executed: false }, answer: { includes: ["Which shop is it from?"] } },
+  },
+  {
+    id: "HS-35", surface: "homesend", household: "E", category: "references", actor: "e-simran",
+    description: "\"Add 2 litres of oil\" read with no quantity takes the 2 litres from the words sent before anything is asked.",
+    source: { channel: "pasted_text", text: "Add 2 litres of oil" },
+    reading: { kind: "grocery_item", title: "Oil", category: "grocery" },
+    expected: { interpretation: "grocery_item", answer: { includes: ["Oil, 2, l"] } },
+  },
 ];
 
 // --- HomeBrain (§7) ----------------------------------------------------------------

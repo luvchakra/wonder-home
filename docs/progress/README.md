@@ -11,6 +11,7 @@ decision that shapes later work each earns a note, written before moving on.
 
 | Date | Note |
 |---|---|
+| 2026-10-26 | [HomeSend asks what an entry still lacks (14-041)](2026-10-26-homesend-completeness.md) |
 | 2026-10-26 | [An email when an AI key stops working (out of credits, quota, invalid)](2026-10-26-ai-key-alerts.md) |
 | 2026-10-26 | [HomeSend: Admin-set bar, a score on every entry, faster reading; WhatsApp undo; playbook groups](2026-10-26-homesend-bar-speed-playbook.md) |
 | 2026-10-26 | [Signed-in E2E against the live project: first real run](2026-10-26-signed-in-e2e-live.md) |

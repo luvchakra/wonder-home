@@ -159,6 +159,8 @@ export const homesendEn = {
   "homesend.confirm.addAsNew": "Add as new",
   "homesend.confirm.addAnyway": "Add anyway",
   "homesend.confirm.recordPurchases": "Record purchases",
+  "homesend.confirm.stillNeeded": "Still needed: {list}",
+  "homesend.confirm.whoFor": "Who it's for",
   "homesend.confirm.add": "Add",
   "homesend.option.kind.bill": "A bill",
   "homesend.option.kind.schoolItem": "School work",
@@ -215,10 +217,10 @@ export const homesendEn = {
   // The kind-specific fields.
   "homesend.field.whatIsIt": "What is it?",
   "homesend.field.billKind": "Kind of bill",
-  "homesend.field.payee": "Payee (optional)",
-  "homesend.field.amount": "Amount (optional)",
+  "homesend.field.payee": "Payee",
+  "homesend.field.amount": "Amount",
   "homesend.field.currency": "Currency (optional)",
-  "homesend.field.due": "Due (optional)",
+  "homesend.field.due": "Due",
   "homesend.field.schoolKind": "Kind",
   "homesend.field.subject": "Subject (optional)",
   "homesend.field.starts": "Starts (optional)",
@@ -256,7 +258,7 @@ export const homesendEn = {
   "homesend.field.where": "Where (optional)",
 
   // A paid receipt's lines.
-  "homesend.receipt.shop": "Shop (optional)",
+  "homesend.receipt.shop": "Shop",
   "homesend.receipt.boughtOn": "Bought on",
   "homesend.receipt.currency": "Currency",
   "homesend.receipt.currencyPlaceholder": "e.g. JPY",

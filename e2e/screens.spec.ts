@@ -265,4 +265,34 @@ test.describe("every signed-in screen loads", () => {
     await expect(page.getByText("Suggested · 97% sure").first()).toBeVisible();
     await expect(page.getByLabel(/Quantity/)).toHaveValue("2");
   });
+
+  // The owner, 2026-10-26: HomeSend asks for what an entry still lacks, and Add waits for it.
+  test("HomeSend says what a bill still needs, marks it, and keeps Add off until it is filled in", async ({ page }) => {
+    const member = await admin.from("household_members").select("id").eq("household_id", householdId).eq("profile_id", userId).single();
+    if (member.error) throw member.error;
+    const understanding = {
+      kind: "bill", readable: true, confidence: "high", score: 0.9, check: { verified: true, unverified: [] }, facts: [], change: "new",
+      safety: { signals: [], instructionsIgnored: false }, entities: [], references: [],
+      provenance: { url: null, sender: null, channel: "pasted_text", subject: null, filename: null, contentType: null, transcriptConfidence: null },
+      contentSummary: "A water bill from BWSSB.",
+      candidateActions: [{ type: "add_bill", confidence: 0.9, fields: { title: "Water bill", payee: "BWSSB" } }],
+    };
+    const extracted = { title: "Water bill", payee: "BWSSB", amount: null, currency: null, dueDate: null, notes: null, quantity: null, unit: null, people: [], needs: [], lines: [], subject: null, summary: understanding.contentSummary, billKind: null, category: null, secondary: null, confidence: "high", schoolKind: null, documentDate: null, healthRecordType: null, subjectMemberName: null };
+    const inserted = await admin.from("home_send_items").insert({ household_id: householdId, created_by_member_id: member.data.id, source: "pasted_text", raw_text: "BWSSB water bill", content_type: "text/plain", status: "classified", classified_kind: "bill", extracted, understanding });
+    if (inserted.error) throw inserted.error;
+
+    await signIn(page);
+    await page.goto("/home-send");
+    await page.locator("li").filter({ hasText: "Water bill" }).first().getByRole("button").first().click();
+    await expect(page.getByRole("status").filter({ hasText: "Still needed: Amount, Due" })).toBeVisible();
+    await expect(page.getByLabel("Amount", { exact: true })).toHaveAttribute("aria-invalid", "true");
+    const add = page.getByRole("button", { name: "Add", exact: true });
+    await expect(add).toBeDisabled();
+    await page.getByLabel("Amount", { exact: true }).fill("640");
+    await expect(page.getByRole("status").filter({ hasText: "Still needed: Due" })).toBeVisible();
+    await expect(add).toBeDisabled();
+    await page.getByLabel("Due", { exact: true }).fill("2026-11-10");
+    await expect(page.getByText(/Still needed/)).toHaveCount(0);
+    await expect(add).toBeEnabled();
+  });
 });

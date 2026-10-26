@@ -147,6 +147,10 @@ export type HomeSendReviewLabels = {
     addAsNew: string;
     addAnyway: string;
     recordPurchases: string;
+    /** "Still needed: {list}" — what the entry lacks (`homesend/completeness.ts`). */
+    stillNeeded: string;
+    /** The child picker's detail, named in "Still needed". */
+    whoFor: string;
     add: string;
   };
   /** Option labels by their stored value; the value itself never changes. */
@@ -476,6 +480,8 @@ export function homesendReviewLabels(t: Translate, language: string): HomeSendRe
       addAsNew: t("homesend.confirm.addAsNew"),
       addAnyway: t("homesend.confirm.addAnyway"),
       recordPurchases: t("homesend.confirm.recordPurchases"),
+      stillNeeded: t("homesend.confirm.stillNeeded", keep("list")),
+      whoFor: t("homesend.confirm.whoFor"),
       add: t("homesend.confirm.add"),
     },
     picker: {

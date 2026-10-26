@@ -171,6 +171,8 @@ export const helpEn = {
     "Anything WonderHome cannot read is kept under \"Failed safely\", where you can fill it in by hand or dismiss it — it is never quietly dropped. Instructions hidden inside something you send are ignored, and the screen tells you so.",
   "help.guide.home-send.body.6":
     "Every change HomeSend makes can be undone from \"Recently handled\", one item at a time or a whole document at once. Where your household has them set up, a forwarding email address and WhatsApp feed the same inbox.",
+  "help.guide.home-send.body.7":
+    "When something you send is missing a detail it can't be added without — a bill's amount or due date, a school item's due date, an event's day, a receipt's shop — the review says “Still needed”, marks those fields and keeps Add off until they are filled in. Details that help but aren't essential, such as a grocery's quantity or an event's time and place, are listed too but never hold you up. WonderHome first takes what your own words already say (“2 litres of oil”) and never fills in a guess. On WhatsApp it asks one short question at a time, at most three for each thing you send — reply with the answer, or say skip — then adds it where your household allows that, or leaves it waiting in HomeSend. It never says an amount or a health detail back on WhatsApp.",
 
   // Home and Today
   "help.guide.today-and-home.title": "Home and Today",

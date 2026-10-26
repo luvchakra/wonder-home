@@ -153,6 +153,8 @@ export const helpEs: AreaCatalog<typeof helpEn> = {
     "Lo que WonderHome no puede leer se guarda en “Detenido con seguridad”, donde puedes rellenarlo a mano o descartarlo; nunca se pierde en silencio. Las instrucciones escondidas dentro de algo que envías se ignoran, y la pantalla te lo dice.",
   "help.guide.home-send.body.6":
     "Cada cambio que hace HomeSend se puede deshacer desde “Gestionado hace poco”, elemento a elemento o un documento entero a la vez. Donde tu hogar los tiene configurados, una dirección de correo de reenvío y WhatsApp alimentan la misma bandeja.",
+  "help.guide.home-send.body.7":
+    "Cuando a algo que envías le falta un dato sin el que no se puede añadir — el importe o el vencimiento de una factura, la fecha de entrega de una tarea escolar, el día de un evento, la tienda de un recibo —, la revisión dice «Falta», marca esos campos y deja Añadir desactivado hasta que se completen. Los datos que ayudan pero no son imprescindibles, como la cantidad de una compra o la hora y el lugar de un evento, también aparecen, pero nunca te detienen. WonderHome toma primero lo que ya dicen tus propias palabras («2 litros de aceite») y nunca rellena una suposición. En WhatsApp hace una pregunta corta cada vez, como mucho tres por cada cosa que envías — responde o di skip —, y luego lo añade donde tu hogar lo permite, o lo deja esperando en HomeSend. Nunca repite un importe ni un dato de salud en WhatsApp.",
 
   "help.guide.today-and-home.title": "Inicio y Hoy",
   "help.guide.today-and-home.summary": "Lo que te necesita ahora y la forma del día.",

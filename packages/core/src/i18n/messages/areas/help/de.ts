@@ -153,6 +153,8 @@ export const helpDe: AreaCatalog<typeof helpEn> = {
     "Was WonderHome nicht lesen kann, wird unter „Sicher angehalten“ aufbewahrt, wo du es von Hand ausfüllen oder verwerfen kannst – es wird nie stillschweigend fallen gelassen. Anweisungen, die in etwas versteckt sind, das du schickst, werden ignoriert, und der Bildschirm sagt dir das.",
   "help.guide.home-send.body.6":
     "Jede Änderung, die HomeSend macht, lässt sich unter „Zuletzt erledigt“ rückgängig machen, Punkt für Punkt oder ein ganzes Dokument auf einmal. Wo dein Haushalt sie eingerichtet hat, landen auch eine Weiterleitungs-E-Mail-Adresse und WhatsApp im selben Posteingang.",
+  "help.guide.home-send.body.7":
+    "Fehlt etwas, das Sie senden, eine Angabe, ohne die es nicht hinzugefügt werden kann — bei einer Rechnung Betrag oder Fälligkeit, bei Schulaufgaben die Fälligkeit, bei einem Termin der Tag, bei einem Kassenbon das Geschäft —, steht in der Prüfung „Noch nötig“, die Felder sind markiert, und Hinzufügen bleibt aus, bis sie ausgefüllt sind. Hilfreiche, aber nicht nötige Angaben, etwa die Menge eines Einkaufs oder Uhrzeit und Ort eines Termins, werden auch genannt, halten Sie aber nie auf. WonderHome nimmt zuerst, was Ihre eigenen Worte schon sagen („2 Liter Öl“), und setzt nie eine Vermutung ein. Auf WhatsApp fragt es eine kurze Frage nach der anderen, höchstens drei pro gesendeter Sache — antworten Sie oder schreiben Sie skip —, und fügt es dann hinzu, wo Ihr Haushalt das erlaubt, oder lässt es in HomeSend warten. Einen Betrag oder eine Gesundheitsangabe schreibt es auf WhatsApp nie zurück.",
 
   "help.guide.today-and-home.title": "Start und Heute",
   "help.guide.today-and-home.summary": "Was dich jetzt braucht, und wie der Tag aussieht.",

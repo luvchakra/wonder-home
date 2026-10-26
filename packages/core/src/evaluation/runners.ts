@@ -25,6 +25,7 @@ import { placeRequestForTurn, type PlaceRequest } from "../homeplaces/request";
 import { householdNow, suggestPlaces } from "../homeplaces/service";
 import type { PlaceResult, PlacesProvider } from "../places/provider";
 import { answerWithHomeBrain, type HomeBrainAnswer } from "../homebrain/turn";
+import { fillFromEvidence } from "../homesend/completeness";
 import { decideConfirmation } from "../homesend/confirmation";
 import { detectInstructionInjection } from "../homesend/injection";
 import { reconcileAgainstRecords, type HomeSendCandidate } from "../homesend/reconcile";
@@ -438,8 +439,10 @@ export async function observeHomeSend(c: HomeSendCase, models: Models = {}): Pro
   // A recorded reading goes through the same second look at its kind and
   // the same grounding a live one does:
   // the model names the date phrase, WonderHome decides the day and time.
-  const reading = models.classify && !c.recordedReading ? await models.classify(c.source, reference) : groundIntakeDate(reviewIntakeKind({ ...BLANK_READING, ...c.reading }), reference);
-  if (!reading) return { ...EMPTY, providerFailure: "unparseable", answer: "" };
+  const read = models.classify && !c.recordedReading ? await models.classify(c.source, reference) : groundIntakeDate(reviewIntakeKind({ ...BLANK_READING, ...c.reading }), reference);
+  if (!read) return { ...EMPTY, providerFailure: "unparseable", answer: "" };
+  // As ingest does: a detail the text states and the reading lost is taken from the text (`completeness.ts`).
+  const reading = fillFromEvidence(read.kind, read, c.source.channel === "file" ? null : c.source.text);
 
   const injection = detectInstructionInjection(c.source.text, c.source.subject);
   const understanding = buildUnderstanding(reading, {
@@ -482,7 +485,7 @@ export async function observeHomeSend(c: HomeSendCase, models: Models = {}): Pro
 
   const decision = decideConfirmation({
     kind,
-    extracted: { title: reading.title, needs: reading.needs, confidence: reading.confidence },
+    extracted: reading,
     understanding,
     reconciliation,
     subject,

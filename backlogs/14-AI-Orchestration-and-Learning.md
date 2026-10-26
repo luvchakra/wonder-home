@@ -44,6 +44,7 @@
 | 38 | P1 | 14-038 | Record index Phase 3: the Calendar and HomeTalk read one projection | Not Started | Time questions become one query over facts by time and people; the Calendar screen reads the same facts; `calendar/modules.ts` adapters become registry describers and `CALENDAR_SOURCE_RECORDS` goes away. Spec §5 |
 | 39 | P1 | 14-039 | Record index Phase 4: structure-first retrieval and coverage misses | Not Started | Questions read into time/people/kind filters by rules; list questions get every match, not the top 12; a "nothing on record" answer that the index can find by words is logged as a coverage miss (table name only). Spec §6 |
 | 40 | P1 | 14-040 | WhatsApp asks HomeTalk | Done | A linked adult's one-line question or everyday request on WhatsApp is answered by HomeTalk through the same gateway as Alexa (channel `whatsapp`, own conversation surface, `WHATSAPP_SCOPES`); school, health and money kept off; never a HomeSend item. Voice notes written down by the household's Gemini key when there is no Cloud Speech key. PRs #319, #320 |
+| 41 | P0 | 14-041 | HomeSend asks what an entry still lacks | Done | PR #363 (the owner, 2026-10-26). `homesend/completeness.ts`: a per-kind spec of required and useful details, from what each create takes; the reading's own words first (`fillFromEvidence`: "Add 2 litres of oil" keeps its 2 litres); `confirmation.ts` asks the first required one and adds nothing while one is missing. WhatsApp asks one detail at a time (at most three), reads each reply as its type (`completeness-answers.ts`), then adds or leaves it waiting. The review says "Still needed", marks the fields and keeps Add off; `createNew` refuses a post that skips one. Eval HS-29–HS-35. |
 
 **Status flow:** `Not Started` → `In Progress` → `Blocked` → `Done`
 
@@ -516,6 +517,17 @@ Implement AI Orchestration & Learning as a first-class WonderHome domain. The mo
 - A holiday on a Friday or Monday gives a three-day weekend; on a Thursday or Tuesday, four with one day taken off; on a weekend or a Wednesday, none.
 - Only the next six months, never one that has already begun, and never one with something on for the family.
 - Holidays are the household's country's national days, the same list the Calendar shows.
+
+### Story 14-041 — HomeSend asks what an entry still lacks
+**Epic:** AI Orchestration & Learning
+**Priority:** P0
+**Goal:** HomeSend knows what each kind of entry needs to be complete, takes what the content already says, and asks a person only for what it really doesn't — never a guess.
+
+**Acceptance criteria**
+- Each kind has required details (cannot be added without) and useful ones (asked once if missing): grocery name (quantity useful); school work's child, title and due date; a class's child and class (day useful); an event's title and day (time and where useful); a bill's payee, amount and due date; a health document's person and record type (date useful); a receipt's shop and date.
+- Nothing is added on its own while a required detail is missing; the first one is asked.
+- On WhatsApp one short question at a time, at most three per item; each reply is read as the detail asked (quantity and unit, a date phrase, a time, an amount, a choice, a few words) or not at all. Amounts and health details are never said back.
+- The review says "Still needed", marks those fields and keeps Add off until the required ones are filled.
 
 ## Module Completion Rule
 Complete dependency-ready P0 stories before P1/P2, but do not block unrelated work on unavailable external providers.

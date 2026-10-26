@@ -153,6 +153,8 @@ export const helpFr: AreaCatalog<typeof helpEn> = {
     "Ce que WonderHome ne peut pas lire est conservé sous « Arrêté par sécurité », où vous pouvez le compléter à la main ou l’écarter — rien n’est jamais abandonné en silence. Les instructions cachées dans ce que vous envoyez sont ignorées, et l’écran vous le signale.",
   "help.guide.home-send.body.6":
     "Chaque changement effectué par HomeSend peut être annulé depuis « Traité récemment », élément par élément ou un document entier d’un coup. Là où votre foyer les a configurés, une adresse e-mail de transfert et WhatsApp alimentent la même boîte de réception.",
+  "help.guide.home-send.body.7":
+    "Quand il manque à ce que vous envoyez une information sans laquelle on ne peut pas l'ajouter — le montant ou l'échéance d'une facture, la date de rendu d'un devoir, le jour d'un événement, le magasin d'un ticket —, la vérification affiche « Il manque », signale ces champs et laisse Ajouter désactivé jusqu'à ce qu'ils soient remplis. Les informations utiles mais pas indispensables, comme la quantité d'une course ou l'heure et le lieu d'un événement, sont aussi indiquées, sans jamais vous bloquer. WonderHome reprend d'abord ce que disent déjà vos propres mots (« 2 litres d'huile ») et ne remplit jamais une supposition. Sur WhatsApp, il pose une courte question à la fois, trois au plus pour chaque envoi — répondez, ou dites skip —, puis l'ajoute là où votre foyer l'autorise, ou le laisse en attente dans HomeSend. Il ne répète jamais un montant ni une information de santé sur WhatsApp.",
 
   "help.guide.today-and-home.title": "Accueil et Aujourd’hui",
   "help.guide.today-and-home.summary": "Ce qui a besoin de vous maintenant, et l’allure de la journée.",
