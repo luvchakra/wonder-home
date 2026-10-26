@@ -613,6 +613,15 @@ async function main() {
     !serverAutonomy.error && serverAutonomy.data === "prepare",
     serverAutonomy.error?.code ?? `value=${JSON.stringify(serverAutonomy.data)}`,
   );
+  // The live data must hold only values the code knows (the 2026-10-26 outage: two-mode code met rows still
+  // stored as "observe", and the Responsibilities page broke until the migration ran). Keep in step with
+  // AUTONOMY_MODES (packages/core/src/household/autonomy.ts).
+  const unknownModes = await admin.from("responsibilities").select("ai_mode").not("ai_mode", "in", "(prepare,execute)").limit(5);
+  check(
+    "every responsibility's autonomy is one the code knows (prepare or execute)",
+    !unknownModes.error && (unknownModes.data ?? []).length === 0,
+    unknownModes.error?.code ?? `found=${JSON.stringify((unknownModes.data ?? []).map((row) => row.ai_mode))}`,
+  );
   const anonAutonomy = await anon.rpc("autonomy_for", { p_household_id: nobody, p_outcome_key: "groceries.stocked" });
   check("anonymous cannot read a household's autonomy", anonAutonomy.error?.code === "42501", anonAutonomy.error?.code ?? "no error");
   const anonUsage = await anon.rpc("record_usage", {

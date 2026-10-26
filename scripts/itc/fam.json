@@ -23,7 +23,7 @@
 {"id":"IT-HH-07","h":"A","a":"a-kunal","t":["What's the rule for screen time?"]},
 {"id":"IT-HH-08","h":"A","a":"a-kunal","t":["Dinner is at 8 now"]},
 {"id":"IT-HH-09","h":"A","a":"a-kunal","t":["Stop asking me before you do things"]},
-{"id":"IT-HH-11","h":"A","a":"a-asmi","autonomy":"observe","t":["Add chocolate to the list"]},
+{"id":"IT-HH-11","h":"A","a":"a-asmi","autonomy":"prepare","t":["Add chocolate to the list"]},
 {"id":"IT-HH-14","h":"A","a":"a-kunal","t":["What's our address?"]},
 {"id":"IT-OUT-01","h":"A","a":"a-kunal","t":["Check on things"]},
 {"id":"IT-OUT-02","h":"A","a":"a-kunal","t":["How is the home doing?"]},

@@ -337,8 +337,10 @@ export function ResponsibilityGroup({
   const [state, formAction, pending] = useActionState<ActionState, FormData>(setGroupAutonomyAction, {});
   const listId = `group-${title.replace(/\W+/g, "-").toLowerCase()}`;
   // Spoken in full; shown short, so the label, the dropdown and the chevron fit one row on a phone.
-  const heading = currentMode ? labels.options[currentMode].heading : labels.title;
-  const shown = currentMode ? labels.options[currentMode].short : labels.mixed;
+  // A mode the labels don't know (never expected; screens read through asAutonomyMode) reads as mixed, never a crash.
+  const option = currentMode ? labels.options[currentMode] : undefined;
+  const heading = option?.heading ?? labels.title;
+  const shown = option?.short ?? labels.mixed;
   const toggleList = () => setOpen((value) => !value);
 
   const row = (
@@ -362,7 +364,7 @@ export function ResponsibilityGroup({
           <ChevronsUpDown aria-hidden className="size-3.5 shrink-0 text-[var(--wh-foreground-subtle)]" />
         </button>
       ) : (
-        <span className="min-w-0 flex-1 text-xs text-[var(--wh-foreground-muted)]">{currentMode ? shown : null}</span>
+        <span className="min-w-0 flex-1 text-xs text-[var(--wh-foreground-muted)]">{option ? shown : null}</span>
       )}
       <button
         type="button"

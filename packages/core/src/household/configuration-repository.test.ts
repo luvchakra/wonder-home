@@ -14,9 +14,9 @@ const MEMBERS: ConfigMember[] = [
 
 /** The stored responsibilities, as the table returns them (snake case). */
 const STORED = [
-  { outcome_key: "laundry.ready", primary_member_id: MEMBERS[0]!.id, backup_member_id: MEMBERS[1]!.id, ai_mode: "observe", priority: 1 },
+  { outcome_key: "laundry.ready", primary_member_id: MEMBERS[0]!.id, backup_member_id: MEMBERS[1]!.id, ai_mode: "prepare", priority: 1 },
   { outcome_key: "home.cleaning", primary_member_id: MEMBERS[1]!.id, backup_member_id: null, ai_mode: "prepare", priority: 2 },
-  { outcome_key: "meals.dinner_ready", primary_member_id: null, backup_member_id: null, ai_mode: "approve", priority: 3 },
+  { outcome_key: "meals.dinner_ready", primary_member_id: null, backup_member_id: null, ai_mode: "prepare", priority: 3 },
 ];
 
 /**
