@@ -25,14 +25,14 @@ import { handleHomeTalkRequest } from "@/app/_lib/hometalk-gateway";
  * replays the first answer instead of acting twice.
  */
 export function whatsappAsk(admin: SupabaseClient): NonNullable<WhatsAppIntakeDeps["ask"]> {
-  return async ({ householdId, memberId, text, requestId }) => {
+  return async ({ householdId, memberId, text, requestId, spoken }) => {
     const { data } = await admin.from("household_members").select("profile_id").eq("household_id", householdId).eq("id", memberId).maybeSingle();
     const profileId = (data as { profile_id: string | null } | null)?.profile_id ?? null;
     if (!profileId) return null;
     try {
       const response = await withMemberSession(admin, profileId, (supabase) =>
         handleHomeTalkRequest(
-          { channel: "whatsapp", householdId, memberId, requestId, input: { text, modality: "text" } },
+          { channel: "whatsapp", householdId, memberId, requestId, input: spoken ? { text, modality: "voice", transcriptConfidence: spoken.confidence } : { text, modality: "text" } },
           { supabase },
           { scopes: WHATSAPP_SCOPES, whatsapp: true },
         ),

@@ -497,6 +497,35 @@ export async function ingestWhatsAppMedia(
   );
 }
 
+/**
+ * Writes down a WhatsApp voice note before any HomeSend item exists, so a
+ * spoken question or request can go to HomeTalk like a typed one and leave
+ * nothing behind (the owner, 2026-10-26: "What are upcoming events" ended in
+ * Failed safely). The same checks as `ingestFileFor` come first — a real,
+ * playable voice note, short enough, through the safety scan — and anything
+ * else is null, left to `ingestWhatsAppMedia` exactly as before. A result is
+ * meant to be handed back to it as `transcribe`, so a note that stays
+ * HomeSend content is heard once.
+ */
+export async function hearWhatsAppVoiceNote(
+  supabase: SupabaseClient,
+  householdId: string,
+  input: IngestFileInput,
+  deps: IngestDeps = {},
+): Promise<TranscribeResult | null> {
+  if (input.bytes.length === 0 || input.bytes.length > MAX_BYTES.audio) return null;
+  const detected = detectIntakeFile(input.bytes, input.claimedType, input.filename ?? null);
+  if (!detected.ok || detected.family !== "audio") return null;
+  if ((audioDurationSeconds(input.bytes, detected.type) ?? 0) > MAX_AUDIO_SECONDS) return null;
+  const scanned = await (deps.scan ?? defaultScan)(input.bytes, detected.type).catch((): MalwareScanOutcome => ({ scanned: false }));
+  if (scanned.scanned && !scanned.clean) return null;
+  const clip: AudioClip = { base64: Buffer.from(input.bytes).toString("base64"), mimeType: detected.type };
+  return (deps.transcribe ?? defaultTranscribe)(supabase, householdId, clip).catch((error: unknown): TranscribeResult => {
+    logTranscriptionFailure("unknown", clip, error);
+    return { status: "failed" };
+  });
+}
+
 /** What the model is told about where a WhatsApp item came from: a channel, never a number. */
 const WHATSAPP_CONTEXT: IntakeContext = { channel: "a message a household member sent or forwarded to WonderHome on WhatsApp" };
 
