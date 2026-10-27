@@ -58,11 +58,6 @@ function fakeDatabase() {
       delete: () => ((mode = "delete"), builder),
       eq: (column: string, value: unknown) => (filters.push((row) => row[column] === value || (column === "id" && row.id === value)), builder),
       in: (column: string, values: unknown[]) => (filters.push((row) => values.includes(String(row[column]))), builder),
-      or: (expression: string) => {
-        const at = expression.split("expires_at.gt.")[1]!;
-        filters.push((row) => row.expires_at === null || String(row.expires_at) > at);
-        return builder;
-      },
       order: () => builder,
       limit: (n: number) => ((limit = n), builder),
       maybeSingle: async () => ({ data: run().data[0] ?? null, error: null }),
@@ -177,6 +172,14 @@ describe("facts written when records are written (14-037)", () => {
     expect(db.facts.size).toBe(0);
   });
 
+  it("a fact past its table's window is not read", async () => {
+    const db = fakeDatabase();
+    db.write("school_teachers", teacher());
+    await drainHousehold(db.admin, HOUSEHOLD);
+    for (const fact of db.facts.values()) fact.expires_at = "2026-10-01T00:00:00.000Z";
+    expect(await factsForTurn(db.admin, { householdId: HOUSEHOLD, timezone: "Asia/Kolkata", now: NOW })).toEqual([]);
+  });
+
   it("a turn drains only its own household's queue", async () => {
     const db = fakeDatabase();
     db.write("school_teachers", teacher());
@@ -205,7 +208,7 @@ describe("facts written when records are written (14-037)", () => {
     const admin = {
       rpc: async () => ({ data: null, error: { code: "PGRST202" } }),
       from: () => {
-        const builder = { select: () => builder, eq: () => builder, or: () => builder, order: () => builder, limit: async () => ({ data: null, error: missing }) };
+        const builder = { select: () => builder, eq: () => builder, order: () => builder, limit: async () => ({ data: null, error: missing }) };
         return builder;
       },
     } as unknown as SupabaseClient;

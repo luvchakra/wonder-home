@@ -267,9 +267,8 @@ export async function factsForTurn(admin: SupabaseClient, scope: { householdId: 
 export async function readFacts(admin: SupabaseClient, scope: { householdId: string; timezone: string; now: Date }): Promise<HouseholdContextItem[] | "unavailable"> {
   const { data, error } = await admin
     .from("household_facts")
-    .select("item, day, current")
+    .select("item, day, current, expires_at")
     .eq("household_id", scope.householdId)
-    .or(`expires_at.is.null,expires_at.gt.${scope.now.toISOString()}`)
     .order("written_at", { ascending: false })
     .limit(FACTS_READ_LIMIT);
   if (error) {
@@ -278,7 +277,9 @@ export async function readFacts(admin: SupabaseClient, scope: { householdId: str
   }
   const today = isoDateIn(scope.now, scope.timezone);
   factsReady = true;
-  return ((data ?? []) as Pick<FactRow, "item" | "day" | "current">[]).map((row) => factItem(row, today));
+  // Facts past their table's window are left out here (no value is ever interpolated into a PostgREST filter); the next write or drain removes them.
+  const nowIso = scope.now.toISOString();
+  return ((data ?? []) as Pick<FactRow, "item" | "day" | "current" | "expires_at">[]).filter((row) => !row.expires_at || new Date(row.expires_at).toISOString() > nowIso).map((row) => factItem(row, today));
 }
 
 let factsReady: boolean | null = null;
