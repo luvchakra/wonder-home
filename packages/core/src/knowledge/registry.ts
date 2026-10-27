@@ -628,6 +628,7 @@ export const KNOWLEDGE_REGISTRY = {
   schedule_conflicts: { covered: "excluded", reason: "Clashes derived from the events, which are known; recomputed on each change." },
   school_channels: { covered: "excluded", reason: "Which portal message channels a household tracks: connection config. The messages they bring in become HomeSend items, which are known." },
   school_communications: { covered: "builder", records: "communications" },
+  school_portal_credentials: { covered: "excluded", reason: "Credentials (a connected school portal's sign-in). Never readable; the messages a portal brings in become HomeSend items, which are known." },
   school_documents: {
     covered: "registry",
     domain: "school",

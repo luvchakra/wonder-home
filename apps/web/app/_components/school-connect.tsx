@@ -1,7 +1,7 @@
 "use client";
 
-import { ExternalLink, GraduationCap, Plug, Radio, Send } from "lucide-react";
-import { useActionState } from "react";
+import { CheckCircle2, ExternalLink, GraduationCap, Pencil, Plug, PlugZap, Radio, RefreshCw, Send } from "lucide-react";
+import { useActionState, useState } from "react";
 
 import { Alert } from "@wonderhome/core/ui/alert";
 import { Badge, PillLink } from "@wonderhome/core/ui/pill";
@@ -13,9 +13,13 @@ import { Select } from "@wonderhome/core/ui/select";
 
 import {
   connectSchoolPortalAction,
+  connectSchoolPortalWithCredentialsAction,
   disconnectSchoolPortalAction,
+  fetchSchoolPortalNowAction,
   setSchoolChannelActiveAction,
+  testSchoolPortalConnectionAction,
   trackSchoolChannelAction,
+  updateSchoolPortalCredentialsAction,
 } from "../(auth)/school-actions";
 import type { ActionState } from "../(auth)/actions";
 import type { SchoolConnectLabels } from "../_lib/school-connect-labels";
@@ -26,7 +30,15 @@ export type PortalView = {
   id: string;
   label: string;
   blurb: string;
+  /** How the portal is connected: a sign-in ("credentials") or just a registered integration. */
+  auth: "manual" | "credentials" | "oauth";
   connected: boolean;
+  /** For a credentials portal: the username it is signed in as, or null when not. */
+  connectedAs: string | null;
+  /** For a credentials portal: the stored portal URL (never the password), to prefill the edit form. */
+  connectedUrl: string | null;
+  /** Whether a live data fetch exists for this provider yet. */
+  adapterReady: boolean;
   integrationId: string | null;
   statusLabel: string | null;
   hasChannels: boolean;
@@ -109,6 +121,118 @@ function TrackChannelForm({
   );
 }
 
+/** The sign-in form for a portal you connect with a username and password. */
+function PortalSignInForm({ householdId, portal, labels }: { householdId: string; portal: PortalView; labels: SchoolConnectLabels }) {
+  const [state, action, pending] = useActionState(connectSchoolPortalWithCredentialsAction, EMPTY);
+  return (
+    <form action={action} className="mt-3 space-y-2">
+      <input type="hidden" name="householdId" value={householdId} />
+      <input type="hidden" name="provider" value={portal.id} />
+      <Field label={labels.urlLabel} name="url" inputMode="url" defaultValue={portal.portalUrl ?? ""} placeholder="https://www.looplearning.com" />
+      <Field label={labels.usernameLabel} name="username" autoComplete="off" />
+      <Field label={labels.passwordLabel} name="password" type="password" autoComplete="off" />
+      <p className="text-[0.6875rem] text-[var(--wh-foreground-subtle)]">{labels.credentialsNote}</p>
+      <Button type="submit" variant="secondary" disabled={pending} className="gap-2">
+        <Plug aria-hidden className="size-4" /> {labels.signIn}
+      </Button>
+      <Notice state={state} />
+    </form>
+  );
+}
+
+/** The edit form for a connected portal: change the URL, username, or password (blank keeps it). */
+function PortalEditForm({
+  householdId,
+  portal,
+  labels,
+  onDone,
+}: {
+  householdId: string;
+  portal: PortalView;
+  labels: SchoolConnectLabels;
+  onDone: () => void;
+}) {
+  const [state, action, pending] = useActionState(updateSchoolPortalCredentialsAction, EMPTY);
+  return (
+    <form action={action} className="mt-2 space-y-2">
+      <input type="hidden" name="householdId" value={householdId} />
+      <input type="hidden" name="integrationId" value={portal.integrationId ?? ""} />
+      <input type="hidden" name="provider" value={portal.id} />
+      <Field label={labels.urlLabel} name="url" inputMode="url" defaultValue={portal.connectedUrl ?? portal.portalUrl ?? ""} />
+      <Field label={labels.usernameLabel} name="username" autoComplete="off" defaultValue={portal.connectedAs ?? ""} />
+      <Field label={labels.passwordLabel} name="password" type="password" autoComplete="off" placeholder={labels.keepPassword} />
+      <div className="flex items-center gap-2">
+        <Button type="submit" variant="secondary" disabled={pending}>
+          {labels.editSave}
+        </Button>
+        <Button type="button" variant="quiet" onClick={onDone} className="px-3">
+          {labels.editCancel}
+        </Button>
+      </div>
+      <Notice state={state} />
+    </form>
+  );
+}
+
+/** The connected state for a credentials portal: who and where it is signed in, edit, test, fetch, disconnect. */
+function PortalConnected({ householdId, portal, labels }: { householdId: string; portal: PortalView; labels: SchoolConnectLabels }) {
+  const [editing, setEditing] = useState(false);
+  const [fetchState, fetchNow, fetching] = useActionState(fetchSchoolPortalNowAction, EMPTY);
+  const [testState, test, testing] = useActionState(testSchoolPortalConnectionAction, EMPTY);
+  const [disconnectState, disconnect, disconnecting] = useActionState(disconnectSchoolPortalAction, EMPTY);
+  return (
+    <div className="mt-3 space-y-3">
+      <div>
+        <p className="inline-flex items-center gap-1.5 text-sm font-medium text-[var(--wh-handled)]">
+          <CheckCircle2 aria-hidden className="size-4" /> {labels.connectedAs} {portal.connectedAs}
+        </p>
+        {portal.connectedUrl ? (
+          <p className="truncate text-xs text-[var(--wh-foreground-muted)]">{portal.connectedUrl.replace(/^https?:\/\//, "")}</p>
+        ) : null}
+      </div>
+
+      {editing ? (
+        <PortalEditForm householdId={householdId} portal={portal} labels={labels} onDone={() => setEditing(false)} />
+      ) : (
+        <div className="flex flex-wrap items-center gap-2">
+          <Button type="button" variant="secondary" onClick={() => setEditing(true)} className="gap-2">
+            <Pencil aria-hidden className="size-4" /> {labels.edit}
+          </Button>
+          <form action={test}>
+            <input type="hidden" name="householdId" value={householdId} />
+            <input type="hidden" name="provider" value={portal.id} />
+            <Button type="submit" variant="secondary" disabled={testing} className="gap-2">
+              <PlugZap aria-hidden className="size-4" /> {labels.test}
+            </Button>
+          </form>
+        </div>
+      )}
+      <Notice state={testState} />
+
+      <div className="rounded-[var(--wh-radius-sm)] border border-[var(--wh-border)] p-3">
+        <p className="text-sm font-medium">{labels.fetchTitle}</p>
+        <p className="text-xs text-[var(--wh-foreground-muted)]">{labels.fetchLede}</p>
+        <form action={fetchNow} className="mt-2">
+          <input type="hidden" name="householdId" value={householdId} />
+          <input type="hidden" name="provider" value={portal.id} />
+          <Button type="submit" variant="secondary" disabled={fetching} className="gap-2">
+            <RefreshCw aria-hidden className="size-4" /> {labels.fetchNow}
+          </Button>
+        </form>
+        <Notice state={fetchState} />
+      </div>
+      <form action={disconnect}>
+        <input type="hidden" name="householdId" value={householdId} />
+        <input type="hidden" name="provider" value={portal.id} />
+        <Button type="submit" variant="quiet" disabled={disconnecting} className="px-3">
+          {labels.disconnect}
+        </Button>
+      </form>
+      <Notice state={disconnectState} />
+    </div>
+  );
+}
+
 function PortalCard({
   householdId,
   portal,
@@ -122,6 +246,8 @@ function PortalCard({
 }) {
   const [connectState, connect, connecting] = useActionState(connectSchoolPortalAction, EMPTY);
   const [disconnectState, disconnect, disconnecting] = useActionState(disconnectSchoolPortalAction, EMPTY);
+  const isCredentials = portal.auth === "credentials";
+  const connected = isCredentials ? portal.connectedAs !== null : portal.connected;
 
   return (
     <Card className="p-4">
@@ -130,7 +256,7 @@ function PortalCard({
         <div className="min-w-0 flex-1">
           <div className="flex flex-wrap items-center gap-2">
             <p className="text-sm font-semibold">{portal.label}</p>
-            {portal.connected ? <Badge tone="handled">{labels.connectedBadge}</Badge> : <Badge>{labels.setupNeeded}</Badge>}
+            {connected ? <Badge tone="handled">{labels.connectedBadge}</Badge> : <Badge>{labels.setupNeeded}</Badge>}
           </div>
           <p className="mt-0.5 text-xs text-[var(--wh-foreground-muted)]">{portal.blurb}</p>
           {portal.portalUrl ? (
@@ -144,33 +270,40 @@ function PortalCard({
             </a>
           ) : null}
 
-          <div className="mt-3">
-            {portal.connected ? (
-              <form action={disconnect}>
-                <input type="hidden" name="householdId" value={householdId} />
-                <input type="hidden" name="provider" value={portal.id} />
-                <Button type="submit" variant="quiet" disabled={disconnecting} className="px-3">
-                  {labels.disconnect}
-                </Button>
-              </form>
+          {isCredentials ? (
+            connected ? (
+              <PortalConnected householdId={householdId} portal={portal} labels={labels} />
             ) : (
-              <form action={connect}>
-                <input type="hidden" name="householdId" value={householdId} />
-                <input type="hidden" name="provider" value={portal.id} />
-                <Button type="submit" variant="secondary" disabled={connecting} className="gap-2">
-                  <Plug aria-hidden className="size-4" /> {labels.connect}
-                </Button>
-              </form>
-            )}
-            <Notice state={connectState} />
-            <Notice state={disconnectState} />
-          </div>
+              <PortalSignInForm householdId={householdId} portal={portal} labels={labels} />
+            )
+          ) : (
+            <>
+              <div className="mt-3">
+                {connected ? (
+                  <form action={disconnect}>
+                    <input type="hidden" name="householdId" value={householdId} />
+                    <input type="hidden" name="provider" value={portal.id} />
+                    <Button type="submit" variant="quiet" disabled={disconnecting} className="px-3">
+                      {labels.disconnect}
+                    </Button>
+                  </form>
+                ) : (
+                  <form action={connect}>
+                    <input type="hidden" name="householdId" value={householdId} />
+                    <input type="hidden" name="provider" value={portal.id} />
+                    <Button type="submit" variant="secondary" disabled={connecting} className="gap-2">
+                      <Plug aria-hidden className="size-4" /> {labels.connect}
+                    </Button>
+                  </form>
+                )}
+                <Notice state={connectState} />
+                <Notice state={disconnectState} />
+              </div>
+              {connected ? <p className="mt-3 text-xs text-[var(--wh-foreground-subtle)]">{labels.notLiveNote}</p> : null}
+            </>
+          )}
 
-          {portal.connected ? (
-            <p className="mt-3 text-xs text-[var(--wh-foreground-subtle)]">{labels.notLiveNote}</p>
-          ) : null}
-
-          {portal.connected && portal.hasChannels ? (
+          {connected && portal.hasChannels ? (
             <div className="mt-3 border-t border-[var(--wh-border)] pt-3">
               <p className="text-sm font-medium">{labels.channelsTitle}</p>
               <p className="text-xs text-[var(--wh-foreground-muted)]">{labels.channelsLede}</p>
