@@ -6,6 +6,8 @@ export const whatsappEn = {
   "whatsapp.ack.duplicateNoted": "Got it 👍 That's already in HomeSend — I've added your note to it.",
   "whatsapp.ack.duplicateHandled": "Got it 👍 That one's already been handled ✅ You can change who it's for in HomeSend.",
   "whatsapp.noteAlone": "Sorry, I didn't catch what that's about 🤔 Could you send the message it goes with?",
+  "whatsapp.answerUnread": "Sorry, I couldn't take that as an answer 🤔 Could you answer my last question again, or pick one of its choices?",
+  "whatsapp.leftAlone": "Okay, I've left it as it is 👍 Nothing was added or changed.",
   "whatsapp.ack.failed": "⚠️ I kept that. {why} It's in HomeSend under Failed safely.",
   "whatsapp.ack.unreadable": "WonderHome couldn't read it.",
   "whatsapp.ack.checkTranscript": "Got it 👍 I'm not sure I heard that voice note right — please check what it says in HomeSend. 🎙️",

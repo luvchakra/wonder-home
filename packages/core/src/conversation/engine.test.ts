@@ -256,3 +256,30 @@ describe("HomeBrain 2.0 modes in the engine (Wave 2 §11)", () => {
   });
 });
 
+
+// The owner, 2026-10-27: a tapped "Skip" to "How much maps link should I add?" must leave things as they are.
+describe("\"skip\", \"leave it\", \"never mind\"", () => {
+  const howMuch = { action: "add_to_list" as const, target: { kind: "list" as const, reference: "groceries" }, parameters: { item: "maps link", awaiting: "quantity", quantityFor: ["maps link"] }, question: "How much maps link should I add?", utterance: "add maps link", asked: 1 };
+  const who = { action: "assign_responsibility" as const, target: { kind: "unspecified" as const }, parameters: { awaiting: "member" }, question: "Who should take it on?", utterance: "assign the laundry", asked: 1 };
+
+  it("to a how-much question leave the list as it is, never \"nothing waiting for a yes\"", async () => {
+    for (const utterance of ["skip", "leave it", "never mind", "no thanks", "that's enough"]) {
+      const result = await converse(turn({ utterance, clarifying: howMuch }));
+      expect(result.kind === "reply" && result.intent, utterance).toMatchObject({ action: "add_to_list", parameters: { keepAsIs: true } });
+    }
+  });
+
+  it("to any other question close it, nothing done, said politely", async () => {
+    for (const utterance of ["skip", "Never mind.", "leave it", "no thanks"]) {
+      const result = await converse(turn({ utterance, clarifying: who }));
+      expect(result, utterance).toMatchObject({ kind: "reply", text: "Okay, I've left it as it is. Nothing was added or changed.", proposal: { kind: "answer" }, clarification: null, record: false });
+    }
+  });
+
+  it("with nothing asked and nothing waiting, say so; with a proposal waiting, \"leave it\" still declines it", async () => {
+    const lone = await converse(turn({ utterance: "skip" }));
+    expect(lone).toMatchObject({ kind: "reply", text: "Okay. Nothing is waiting on you, so I've left everything as it is.", record: false });
+    const pending = pendingFrom({ id: "a-9", summary: "Add coriander to the grocery list", createdAt: NOW });
+    expect(await converse(turn({ utterance: "leave it", pending, clarifying: who }))).toMatchObject({ kind: "reject", actionId: "a-9" });
+  });
+});

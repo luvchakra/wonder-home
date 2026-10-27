@@ -64,7 +64,9 @@ export function readInboundMessages(payload: unknown, now: Date = new Date()): W
       const read = readBody(kind, message);
       if (!read) continue;
       const context = message.context as { id?: unknown; forwarded?: unknown; frequently_forwarded?: unknown } | undefined;
-      const replyTo = stringOf(context?.id);
+      // A tapped button or list row carries the message it sat on as `context.id`; it is a pick, not a
+      // swipe-reply, so it reads like typed words (a tapped "Skip" missed HomeTalk's open question, 2026-10-27).
+      const replyTo = kind === "interactive" || kind === "button" ? null : stringOf(context?.id);
       const forwarded = context?.forwarded === true || context?.frequently_forwarded === true;
       out.push({ ...base, ...read, ...(replyTo && replyTo.length <= 200 ? { replyTo } : {}), ...(forwarded ? { forwarded } : {}) });
     }

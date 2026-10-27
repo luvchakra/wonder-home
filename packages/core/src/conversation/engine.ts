@@ -2,7 +2,7 @@ import { normaliseUtterance } from "./normalise";
 import { readWhyQuestion } from "../homebrain/why";
 import type { AutonomyMode } from "../household/autonomy";
 import type { PermissionContext } from "../identity/permissions";
-import { answerClarification, clarificationFrom, escalatedQuestion, isFreshRequest, type PendingClarification } from "./clarify";
+import { answerClarification, clarificationFrom, escalatedQuestion, isFreshRequest, leavesQuestion, type PendingClarification } from "./clarify";
 import { resolveFixtureIntent } from "./fixtures";
 import { needsGrounding, type Grounding } from "./grounding";
 import {
@@ -11,6 +11,7 @@ import {
   type HouseholdIntent,
   type PendingProposal,
 } from "./intent";
+import { isLeaveIt, LEFT_AS_IT_IS, NOTHING_TO_LEAVE } from "./leave-it";
 import { extractMemory, type Memory } from "./memory";
 import { needsRecording, proposeFromIntent, type ActionPreview, type Proposal } from "./proposal";
 import type { FocusEntity } from "./references";
@@ -171,7 +172,11 @@ export async function converse(raw: TurnInput): Promise<TurnResult> {
   const answersOffer = input.clarifying?.action === "fill_homesend_details" && !input.pending;
   // So does a yes to "Did you mean 2 L of milk?" (25-037).
   const answersMeant = input.clarifying?.parameters.awaiting === "quantity" && typeof input.clarifying.parameters.quantityMeant === "string" && !input.pending;
-  const short = answersOffer || answersMeant ? ({ kind: "not_a_short_reply" } as const) : resolveShortReply(input.utterance, input.pending, now);
+  // "Leave it", "never mind" to an open question, with no proposal waiting, answers that question (2026-10-27).
+  // Read before normalising too: "no thanks" normalises to a bare "no".
+  const leaveWords = isLeaveIt(raw.utterance) ? raw.utterance : input.utterance;
+  const leavesIt = !input.pending && isLeaveIt(leaveWords);
+  const short = answersOffer || answersMeant || (leavesIt && input.clarifying) ? ({ kind: "not_a_short_reply" } as const) : resolveShortReply(input.utterance, input.pending, now);
   switch (short.kind) {
     case "approve":
       // Not "done": nothing has run yet. The route carries it out through the
@@ -199,6 +204,13 @@ export async function converse(raw: TurnInput): Promise<TurnResult> {
       };
     case "not_a_short_reply":
       break;
+  }
+
+  // "Skip" to a question with no "leave it" of its own closes it with nothing done; with nothing asked
+  // and nothing waiting, it is said plainly. Never "I did not follow that", never a HomeSend item.
+  if (leavesIt && (!input.clarifying || leavesQuestion(input.clarifying, leaveWords))) {
+    const text = input.clarifying ? LEFT_AS_IT_IS : NOTHING_TO_LEAVE;
+    return { kind: "reply", intent: unknownIntent(input), proposal: { kind: "answer", summary: text }, text, record: false, memory: null, clarification: null };
   }
 
   const understand = input.understand ?? resolveDeterministicIntent;
