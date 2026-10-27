@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 
 import { INTENT_ACTIONS } from "../conversation/intent";
-import { intentFromModelOutput, readIntentOutput, systemFor, tidyIntentOutput, translationSystemFor, withoutServerOnly } from "./model-client";
+import { anthropicAnswerMessages, answerMessages, intentFromModelOutput, readIntentOutput, systemBlocksFor, systemFor, tidyIntentOutput, translationSystemFor, withoutServerOnly } from "./model-client";
 
 /** The model's structured output as a lenient parse sees it: details not stated are simply absent. */
 type Loose = Parameters<typeof intentFromModelOutput>[0];
@@ -134,6 +134,39 @@ describe("the prompt contract (Wave 4 §17)", () => {
     expect(system).toMatch(/Keep an item, a task, a reminder's words and a person's name exactly as the person said them/);
     // An English speaker's prompt says nothing about language.
     expect(systemFor({ role: "an adult of the household", localDateTime: "x", language: null })).not.toMatch(/The person's language/);
+  });
+});
+
+describe("the cached prefix (HomeBrain 4.0 §3.6, 14-027)", () => {
+  const runtime = { role: "an adult of the household", localDateTime: "Tuesday 27 October 2026, 15:10 (Asia/Kolkata)" };
+
+  it("understanding: the fixed instructions are one cached block, and the moment comes after it, uncached", () => {
+    const blocks = systemBlocksFor(runtime);
+    expect(blocks).toHaveLength(2);
+    expect(blocks[0]!.cache_control).toEqual({ type: "ephemeral" });
+    expect(blocks[0]!.text).toBe(systemFor(undefined));
+    expect(blocks[1]!.cache_control).toBeUndefined();
+    expect(blocks[1]!.text).toMatch(/15:10/);
+    // The same words every provider reads.
+    expect(blocks.map((block) => block.text).join("\n\n")).toBe(systemFor(runtime));
+    // Two moments share the cached block byte for byte.
+    expect(systemBlocksFor({ ...runtime, localDateTime: "Tuesday 27 October 2026, 15:11 (Asia/Kolkata)" })[0]).toEqual(blocks[0]);
+  });
+
+  it("an answer: the facts come first and are cached; the time, the asker, a draft's problems and the question come after", () => {
+    const input = { question: "what is for dinner?", facts: [{ id: "F1", text: "Dinner tonight is dal." }], viewer: "an adult", localNow: "Tuesday 27 October 2026, 7:00 pm" };
+    const [turn] = anthropicAnswerMessages(input);
+    const content = turn!.content as { type: "text"; text: string; cache_control?: unknown }[];
+    expect(content[0]).toEqual({ type: "text", text: "FACTS:\n[F1] Dinner tonight is dal.", cache_control: { type: "ephemeral" } });
+    expect(content[1]!.cache_control).toBeUndefined();
+    expect(content[1]!.text).toMatch(/^Now: Tuesday 27 October 2026, 7:00 pm\.\nAsking: an adult\.\n\nQUESTION: what is for dinner\?$/);
+    // A regeneration changes only what comes after the cached facts.
+    const [again] = anthropicAnswerMessages({ ...input, problems: ["it named a meal no fact holds"] });
+    const retried = again!.content as { text: string }[];
+    expect(retried[0]).toEqual(content[0]);
+    expect(retried[1]!.text).toMatch(/YOUR PREVIOUS ANSWER WAS NOT USED[\s\S]*using only the facts above/);
+    // Other providers get the same words in the same order, as one string.
+    expect(answerMessages(input)[0]!.content).toBe(`${content[0]!.text}\n\n${content[1]!.text}`);
   });
 });
 

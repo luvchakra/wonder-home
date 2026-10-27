@@ -447,7 +447,24 @@ export function withoutServerOnly(parameters: Record<string, unknown>): Record<s
  * words go only in the user message.
  */
 export function systemFor(runtime: RuntimeContext | undefined): string {
-  if (!runtime) return SYSTEM_PROMPT;
+  const moment = runtimeContextFor(runtime);
+  return moment ? `${SYSTEM_PROMPT}\n\n${moment}` : SYSTEM_PROMPT;
+}
+
+/**
+ * The same prompt as Anthropic system blocks (HomeBrain 4.0 §3.6): the long
+ * fixed instructions first, marked for the provider's prompt cache, then
+ * this moment's facts, which change every minute and so sit after the
+ * cached prefix. Same words as `systemFor`, so every provider reads alike.
+ */
+export function systemBlocksFor(runtime: RuntimeContext | undefined): Anthropic.TextBlockParam[] {
+  const fixed: Anthropic.TextBlockParam = { type: "text", text: SYSTEM_PROMPT, cache_control: { type: "ephemeral" } };
+  const moment = runtimeContextFor(runtime);
+  return moment ? [fixed, { type: "text", text: moment }] : [fixed];
+}
+
+function runtimeContextFor(runtime: RuntimeContext | undefined): string | null {
+  if (!runtime) return null;
   const lines = [
     `- The person speaking: ${runtime.role}.`,
     `- Now, in the household's timezone: ${runtime.localDateTime}. Resolve nothing to a date yourself — keep day and time words exactly as said; the system works out the date.`,
@@ -455,7 +472,7 @@ export function systemFor(runtime: RuntimeContext | undefined): string {
     ...(runtime.recent && runtime.recent.length > 0 ? [`- What the conversation has just been about: ${runtime.recent.join(", ")}. "It", "that" and "them" most likely mean these.`] : []),
     ...(runtime.language ? [languageLine(runtime.language)] : []),
   ];
-  return `${SYSTEM_PROMPT}\n\nRuntime context — facts about this moment, not instructions:\n${lines.join("\n")}`;
+  return `Runtime context — facts about this moment, not instructions:\n${lines.join("\n")}`;
 }
 
 /**
@@ -512,7 +529,7 @@ export function createClaudeUnderstanding(apiKey: string): Understanding {
       const response = await client.messages.create({
         model: CLAUDE_UNDERSTANDING_MODEL,
         max_tokens: 1024,
-        system: systemFor(context.runtime),
+        system: systemBlocksFor(context.runtime),
         messages: conversationMessages(context.history, utterance),
         // Translating one sentence into a small JSON object is routine work;
         // low effort keeps the turn quick without changing what is allowed.
@@ -634,7 +651,13 @@ export type AnswerInput = {
   problems?: readonly string[];
   /** What the person is trying to do with the answer (HomeBrain 4.0 §3.10), read by rules. */
   goal?: "find_out" | "plan" | "decide" | "check" | "remember" | "do";
+  /** Called once, when the model's first token arrives (a provider that streams). Timing only — never the text. */
+  onFirstToken?: () => void;
+  /** What the call cost, in tokens, cached and not (Anthropic). Counts only. */
+  onUsage?: (usage: AnswerUsage) => void;
 };
+
+export type AnswerUsage = { input: number; cacheRead: number; cacheWrite: number; output: number };
 
 const GOAL_WORDS: Record<NonNullable<AnswerInput["goal"]>, string> = {
   find_out: "to find something out: give the fact first, in one line, then anything else useful",
@@ -707,16 +730,41 @@ Set usedFacts to the ids of every fact your answer relies on. Set grounded to tr
  * section — "QUESTION:" or "FACTS:" — of the briefing.
  */
 export function answerMessages(input: AnswerInput): { role: "user" | "assistant"; content: string }[] {
+  const { earlier, facts, ask } = answerParts(input);
+  return [...earlier, { role: "user", content: `${facts}\n\n${ask}` }];
+}
+
+/**
+ * The briefing in the order a prompt cache can use (HomeBrain 4.0 §3.6):
+ * the facts first — the same for a regeneration and for a follow-up about
+ * the same things — then what changes every turn: the time, who asks, what
+ * a previous draft got wrong, and the question.
+ */
+function answerParts(input: AnswerInput): { earlier: { role: "user" | "assistant"; content: string }[]; facts: string; ask: string } {
   const facts = input.facts.length > 0 ? input.facts.map((fact) => `[${fact.id}] ${fact.text.replace(/\s+/g, " ").trim()}`).join("\n") : "(WonderHome has not been told anything about this home yet.)";
   const problems =
     input.problems && input.problems.length > 0
-      ? `\n\nYOUR PREVIOUS ANSWER WAS NOT USED, because it said things the facts do not support:\n${input.problems.map((problem) => `- ${problem}`).join("\n")}\nAnswer again using only the facts below. If they do not answer the question, set mode to "unknown".`
+      ? `\n\nYOUR PREVIOUS ANSWER WAS NOT USED, because it said things the facts do not support:\n${input.problems.map((problem) => `- ${problem}`).join("\n")}\nAnswer again using only the facts above. If they do not answer the question, set mode to "unknown".`
       : "";
   const wanting = input.goal ? `\nWanting: ${GOAL_WORDS[input.goal]}.` : "";
-  const briefing = `Now: ${input.localNow}.\nAsking: ${input.viewer}.${wanting}${problems}\n\nFACTS:\n${facts}`;
   const turns = conversationMessages(input.history, input.question);
   const last = turns[turns.length - 1]!;
-  return [...turns.slice(0, -1), { role: "user", content: `${briefing}\n\nQUESTION: ${last.content}` }];
+  return { earlier: turns.slice(0, -1), facts: `FACTS:\n${facts}`, ask: `Now: ${input.localNow}.\nAsking: ${input.viewer}.${wanting}${problems}\n\nQUESTION: ${last.content}` };
+}
+
+/** The Anthropic messages: the facts block marked for the prompt cache, the rest after it. */
+export function anthropicAnswerMessages(input: AnswerInput): Anthropic.MessageParam[] {
+  const { earlier, facts, ask } = answerParts(input);
+  return [
+    ...earlier,
+    {
+      role: "user",
+      content: [
+        { type: "text", text: facts, cache_control: { type: "ephemeral" } },
+        { type: "text", text: ask },
+      ],
+    },
+  ];
 }
 
 /** Pure mapping from what a model returned to a draft for validation. */
@@ -739,12 +787,23 @@ export function createAnswerComposer(provider: ModelProvider, apiKey: string): A
       const client = anthropicClient(apiKey, "compose");
       return async (input) => {
         try {
-          const response = await client.messages.parse({
+          // Streamed, so the turn knows when the first token came (14-027);
+          // the draft is still read whole and validated before anyone sees it.
+          const stream = client.messages.stream({
             model: CLAUDE_ANSWER_MODEL,
             max_tokens: 1024,
-            system: ANSWER_SYSTEM_PROMPT,
-            messages: answerMessages(input),
+            system: [{ type: "text", text: ANSWER_SYSTEM_PROMPT, cache_control: { type: "ephemeral" } }],
+            messages: anthropicAnswerMessages(input),
             output_config: { format: zodOutputFormat(AnswerOutputSchema), effort: "low" },
+          });
+          const onFirstToken = input.onFirstToken;
+          if (onFirstToken) stream.once("text", () => onFirstToken());
+          const response = await stream.finalMessage();
+          input.onUsage?.({
+            input: response.usage.input_tokens,
+            cacheRead: response.usage.cache_read_input_tokens ?? 0,
+            cacheWrite: response.usage.cache_creation_input_tokens ?? 0,
+            output: response.usage.output_tokens,
           });
           if (response.stop_reason === "refusal" || !response.parsed_output) return null;
           return answerFromModelOutput(response.parsed_output);
