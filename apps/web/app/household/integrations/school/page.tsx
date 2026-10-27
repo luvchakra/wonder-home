@@ -3,6 +3,7 @@ import { ShieldCheck } from "lucide-react";
 import { listIntegrations } from "@wonderhome/core/integrations/repository";
 import { listMembers } from "@wonderhome/core/identity/households";
 import { listSchoolChannels } from "@wonderhome/core/school/channel-repository";
+import { schoolPortalCredentialStatus } from "@wonderhome/core/school/portal-credentials";
 import { schoolProviderCatalog } from "@wonderhome/core/school/providers";
 import { AppShell } from "@wonderhome/core/shell/app-shell";
 import { EmptyState } from "@wonderhome/core/ui/states";
@@ -46,13 +47,16 @@ export default async function ConnectSchoolPage() {
     );
   }
 
-  const [integrations, channels, members] = await Promise.all([
+  const [integrations, channels, members, portalSignins] = await Promise.all([
     listIntegrations(supabase, householdId).catch(() => []),
     listSchoolChannels(supabase, householdId).catch(() => []),
     listMembers(supabase, householdId, membership.household.ownerMemberId).catch(() => []),
+    schoolPortalCredentialStatus(supabase, householdId).catch(() => []),
   ]);
 
   const schoolIntegrations = integrations.filter((integration) => integration.kind === "school");
+  // Which connection is signed in, and as whom (never the password).
+  const signedInAs = new Map(portalSignins.map((signin) => [signin.integrationId, signin.username]));
   const children: ChildOption[] = members
     .filter((member) => member.memberType === "child")
     .map((member) => ({ id: member.id, name: member.displayName }));
@@ -67,7 +71,10 @@ export default async function ConnectSchoolPage() {
         id: entry.id,
         label: entry.label,
         blurb: entry.blurb,
+        auth: entry.auth,
         connected: Boolean(connection),
+        connectedAs: connection ? signedInAs.get(connection.id) ?? null : null,
+        adapterReady: entry.adapterReady,
         integrationId: connection?.id ?? null,
         statusLabel: connection?.statusLabel ?? null,
         hasChannels: Boolean(entry.channel),

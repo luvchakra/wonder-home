@@ -45,6 +45,8 @@ export const AUDIT_EVENTS = [
   "policy.updated",
   "integration.connected",
   "integration.disconnected",
+  "school.portal_connected",
+  "school.portal_disconnected",
   "ai.key_set",
   "ai.key_removed",
   "ai.voice_key_set",

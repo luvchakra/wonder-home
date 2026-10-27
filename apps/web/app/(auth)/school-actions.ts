@@ -9,6 +9,7 @@ import { requireHouseholdAdmin, requireMembership } from "@wonderhome/core/ident
 import { connectIntegration, disconnectIntegration } from "@wonderhome/core/integrations/repository";
 import { addSchoolChannel, setSchoolChannelActive } from "@wonderhome/core/school/channel-repository";
 import { parseSchoolChannel } from "@wonderhome/core/school/channels";
+import { setSchoolPortalCredentials } from "@wonderhome/core/school/portal-credentials";
 import { getSchoolProvider } from "@wonderhome/core/school/providers";
 import { addSchoolItem } from "@wonderhome/core/calendar/add-event";
 import { cancelSchoolItem, updateSchoolItem } from "@wonderhome/core/school/repository";
@@ -695,4 +696,75 @@ export async function setSchoolChannelActiveAction(_previous: ActionState, formD
   return asSchoolAdmin(parsed.data.householdId, (supabase) =>
     setSchoolChannelActive(supabase, { householdId: parsed.data.householdId, id: parsed.data.id, active: parsed.data.active === "true" }),
   );
+}
+
+const portalCredentialsSchema = z.object({
+  householdId: z.uuid(),
+  provider: z.string().trim().min(1).max(64),
+  url: z.string().trim().url({ error: "Enter the portal's web address." }).max(2048),
+  username: z.string().trim().min(1, { error: "Enter the username." }).max(320),
+  password: z.string().min(1, { error: "Enter the password." }).max(1024),
+});
+
+/**
+ * Sign a school portal in and keep it connected (story 08-032).
+ *
+ * An Admin's act. The sign-in is stored where nothing reachable from a browser
+ * can read it back (`school_portal_credentials`); the connection then stays
+ * until a person disconnects it. No portal is live yet, so this stores the
+ * sign-in and connects the account; the working fetch follows once the portal's
+ * own requests are known.
+ */
+export async function connectSchoolPortalWithCredentialsAction(_previous: ActionState, formData: FormData): Promise<ActionState> {
+  const parsed = portalCredentialsSchema.safeParse({
+    householdId: field(formData, "householdId"),
+    provider: field(formData, "provider"),
+    url: field(formData, "url"),
+    username: field(formData, "username"),
+    password: field(formData, "password"),
+  });
+  if (!parsed.success) return { error: parsed.error.issues[0]?.message ?? "Please check the details above." };
+
+  const descriptor = getSchoolProvider(parsed.data.provider);
+  if (!descriptor || descriptor.auth !== "credentials") return { error: "That is not a school portal you can sign in to." };
+
+  return asSchoolAdmin(parsed.data.householdId, async (supabase, actor) => {
+    const { id } = await connectIntegration(supabase, {
+      householdId: parsed.data.householdId,
+      kind: "school",
+      provider: descriptor.id,
+      scopes: descriptor.scopes,
+      actorMemberId: actor.memberId,
+    });
+    await setSchoolPortalCredentials(supabase, {
+      householdId: parsed.data.householdId,
+      integrationId: id,
+      portalUrl: parsed.data.url,
+      username: parsed.data.username,
+      password: parsed.data.password,
+      setByMemberId: actor.memberId,
+    });
+  });
+}
+
+const fetchNowSchema = z.object({ householdId: z.uuid(), provider: z.string().trim().min(1).max(64) });
+
+/**
+ * Fetch a connected portal's last day on demand (story 08-032).
+ *
+ * The control is here now; the fetch itself turns on once the portal's adapter
+ * ships (no portal has a live adapter yet — CLAUDE.md). Until then this answers
+ * honestly that the account is connected but the data fetch is not live.
+ */
+export async function fetchSchoolPortalNowAction(_previous: ActionState, formData: FormData): Promise<ActionState> {
+  const parsed = fetchNowSchema.safeParse({ householdId: field(formData, "householdId"), provider: field(formData, "provider") });
+  if (!parsed.success) return { error: "Please try again." };
+
+  const descriptor = getSchoolProvider(parsed.data.provider);
+  if (!descriptor || descriptor.auth !== "credentials") return { error: "That is not a school portal." };
+  if (!descriptor.adapterReady) {
+    return { notice: "Connected. The homework fetch for this portal is not live yet — it turns on once its sign-in requests are captured." };
+  }
+  // A live adapter runs the governed sync here (08-033).
+  return asSchoolAdmin(parsed.data.householdId, async () => {});
 }

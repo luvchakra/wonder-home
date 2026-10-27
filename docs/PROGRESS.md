@@ -11,14 +11,14 @@ in `docs/progress/`; for the running log of what changed when, `tracking/PROGRES
 
 ## The whole picture
 
-**399 of 431 stories done — 92.6%**
+**399 of 433 stories done — 92.1%**
 
 | Status | Stories |
 |---|---:|
 | Done | 399 |
-| In Progress | 10 |
+| In Progress | 11 |
 | Blocked | 1 |
-| Not Started | 17 |
+| Not Started | 18 |
 | Deferred | 4 |
 
 ## By module
@@ -33,7 +33,7 @@ in `docs/progress/`; for the running log of what changed when, `tracking/PROGRES
 | 05 Household Certification & Understanding | `██████████` | 12 | 12 | — |
 | 06 Actionable Notification Engine | `██████████` | 8 | 8 | — |
 | 07 Househelper & Home Operations | `██████████` | 10 | 10 | — |
-| 08 Kids & School Intelligence | `████████░░` | 24 | 30 | 5 in progress, 1 not started |
+| 08 Kids & School Intelligence | `███████░░░` | 24 | 32 | 6 in progress, 2 not started |
 | 09 Commerce, Groceries & Pet Supplies | `██████████` | 9 | 9 | — |
 | 10 Meals & Cooking | `██████████` | 16 | 16 | — |
 | 11 Bills, Fees & Finance | `█████████░` | 14 | 15 | 1 not started |
@@ -66,6 +66,8 @@ in `docs/progress/`; for the running log of what changed when, `tracking/PROGRES
 | `08-023` The cat walks, goes back and forth, and goes round its whole list | 08 Kids & School Intelligence | P1 | In Progress |
 | `08-029` The Connect-school screen | 08 Kids & School Intelligence | P2 | In Progress |
 | `08-031` Store, poll and file a school channel | 08 Kids & School Intelligence | P1 | In Progress |
+| `08-032` Connect Loop Learning with a sign-in, stored securely | 08 Kids & School Intelligence | P1 | In Progress |
+| `08-033` Fetch Loop Learning homework on demand and twice daily | 08 Kids & School Intelligence | P1 | Not Started |
 | `11-011` Payees beyond the catalogue's cities, and outside India | 11 Bills, Fees & Finance | P2 | Not Started |
 | `13-009` A pet's likes, dislikes, favourites, fears and allergies | 13 Maintenance, Laundry & Pet Care | P1 | In Progress |
 | `14-021` HomeBrain 3.0 phase B — retrieval and one pass | 14 AI Orchestration & Learning | P0 | Deferred |
@@ -255,7 +257,7 @@ in `docs/progress/`; for the running log of what changed when, `tracking/PROGRES
 
 ### 08 — Kids & School Intelligence
 
-24 of 30 done `████████░░`
+24 of 32 done `███████░░░`
 
 | Story | Priority | Status | Notes |
 |---|---|---|---|
@@ -289,6 +291,8 @@ in `docs/progress/`; for the running log of what changed when, `tracking/PROGRES
 | `08-029` The Connect-school screen | P2 | In Progress | Built (PR B): a Connect-school screen at `/household/integrations/school` the "School" integration card and Kids & School's "Connect school" now open (the card was a dead tap before). It leads with the forward path (available now, links to Kids & School), then lists the catalog's portals, each honest about not being live; an Admin connects/disconnects a portal (`connectIntegration`), and for a portal with channels pastes a class-group/notice-board link to track (recognised by 08-030's parser), optionally about one child, and stops/resumes it. All actions are Admin-gated (the guardian-consent gate); words in all eight languages; help §School body.12 in eight languages, section `updated`. Verified: web build ✓, route smoke test (307 → sign-in, no 500, no runtime errors), core+web typecheck, lint, 666 unit tests, check:bundle, lint:help-links. **Remaining before Done:** interactive 360px/desktop visual QA of the populated screen (needs a signed-in admin household; do on the deployed site), and the external-child-id → portal-id mapping UI (deferred; the forward path and channels need no provider child-id). |
 | `08-030` Track a school message channel from its link | P1 | Done | The owner, 2026-10-26 ("after login… user can give a direct link within the portal where messages come in continuously… tracked and entered in WonderHome as entries", e.g. `https://www.looplearning.com/channel/2044541`). The provider-neutral, network-free core: a `channel` shape on `SchoolProviderDescriptor` (hosts + path pattern + example; Loop Learning's `/channel/:id`), and `packages/core/src/school/channels.ts` — `parseSchoolChannel(url)` recognises a pasted link by its host, extracts the channel id and normalises the URL (a host no provider claims, or a non-channel path, is refused with a reason, never guessed), and `toChannelIntake(channel, message)` codifies how one message becomes a HomeSend review entry: untrusted text with a context line and an idempotency key `school_channel:provider:channel:messageId`, so a continuous feed never files one twice. The rule it keeps (CLAUDE.md agent platform): every channel message is untrusted and goes through HomeSend — understood, injection-scanned, nothing written until a person confirms; a channel is never an authorisation channel. Tests `school/channels.test.ts` 8/8 (the owner's exact link, trailing slash/query/bare-host normalisation, wrong host, non-channel path, non-URL, idempotent keying, sender prefix); school suite 130/130; core + web typecheck clean. No migration, no secrets, no live polling. |
 | `08-031` Store, poll and file a school channel | P1 | In Progress | Follow-up of 08-030, needs a live adapter (CLAUDE.md). **PR A (backend), done:** `school_channels` table + RLS (Admin writes; members read; a child-tied channel seen only by those who may see that child) and the HomeSend `school_channel` source (migration `20261026210000`, applied live, `home_send_items` source check widened; `get_advisors` clean for the new table). `channel-repository.ts` (add/reactivate keyed by connection+channel, stop/resume keeping the cursor, record poll). `ingestSchoolChannelMessage` files a channel message as a `school_channel` intake — understood, injection-scanned, idempotent by the channel message key, awaiting a person; read-only, never an auth channel; built with no school→HomeSend dependency (primitives in). Source label in eight languages. Tests: `school-channel.test.ts` 3, `test-school-channels-rls.mjs` 6, per-row-helper guard 5, homesend/school/i18n suites 586. **PR B (UI + poll), built:** `channel-sync.ts` `syncSchoolChannels` (pure, port-driven: fetch per channel → file each via HomeSend → advance cursor; skips a channel with no member to file under), the channel paste/manage UI inside the Connect-school screen (08-029), and an Admin poll route (`integrations/school/channels/sync`) with a provider→fetcher registry that is empty today, so it reports "no live school provider to poll yet" honestly. Tests: `channel-sync.test.ts` 3. **Remaining before Done:** a live portal adapter to register a real fetcher (none exists; CLAUDE.md), and the same interactive visual QA as 08-029. Nothing is written back to the portal; every message waits for a person to confirm. |
+| `08-032` Connect Loop Learning with a sign-in, stored securely | P1 | In Progress | The owner, 2026-10-27 ("take url, username and password and save in WonderHome securely… remain connected till user disconnects… the button should reflect it"). Loop Learning (Podar schools) has no public API — a parent signs in with a username and password — so a connection keeps that sign-in. **Built (this PR):** `school_portal_credentials` (migration `20261027090000`, applied live) stores url+username+password with NO select policy and the select grant revoked on the row (select granted only on the non-secret columns so an update's WHERE still works); nothing reachable from a browser reads it — the server reads it with the service role. `school_portal_credential_status` (SECURITY DEFINER, Admin-only) says a portal is connected and as whom, never the password. `portal-credentials.ts` (set/clear/status + a service-role reader for the connector). The Connect-school screen shows url/username/password for a `credentials` portal; on connect the **button changes to "Connected as <username>"** with Disconnect, and the account stays connected until disconnected. Eight languages. Tests: `test-school-portal-credentials-rls.mjs` 7/7 (the password is unreadable even to the Admin who set it; the status RPC never returns it; a non-admin cannot write; the service role can read it; replace and clear work); per-row-helper guard 5/5; school+homesend 565; typecheck/lint/knowledge/bundle/secret/migration clean; advisors show nothing on the new table. **Not yet:** the live fetch (08-033) — no portal is live; the account is connected but nothing is pulled until Loop Learning's own requests are captured (the owner is capturing them). |
+| `08-033` Fetch Loop Learning homework on demand and twice daily | P1 | Not Started | The owner, 2026-10-27 ("add a section to fetch data from last one day on demand… by default fetch daily twice and create entries on WonderHome per settings"). Needs Loop Learning's private endpoints, which the owner is capturing from a logged-in session (chosen: "you capture, I build"). Build: a `loop-learning` adapter (HTTP login + fetch tasks/notices/exams) behind the connector; the on-demand "Fetch now (last 24h)" button (already on the screen, wired to `fetchSchoolPortalNowAction`, which today answers honestly that the fetch is not live) files results through HomeSend per the household's approval settings (confirm-before-write; auto-add only above the Admin's bar); a twice-daily platform cron polls every connected portal and files new items since the last run. Nothing is written back to the portal. `adapterReady` flips to true for loop-learning once the adapter and its tests ship (CLAUDE.md). |
 
 ### 09 — Commerce, Groceries & Pet Supplies
 
@@ -720,4 +724,4 @@ in `docs/progress/`; for the running log of what changed when, `tracking/PROGRES
 | `27-024` The notification center | P0 | Done | The owner, 2026-10-22: "add notification center where adult can update their notification choices". Settings → Notifications opens with one row per kind (`_components/notification-center-card.tsx`, `ExpandableRow`): the collapsed row says in words whether it comes, when and where; opened, "Get these", "When" and "Where" change it, each saving at once and only that kind (`saveReminderKindAction`), so an untouched kind keeps following the household's starting timing. It replaces the separate timing and "What goes where" cards (both removed). A kind or channel an Admin turned off for the household says so and is not offered. Words in eight languages; help ¶8 and the reminder-timing FAQ |
 | `27-025` Household notifications for Admins | P0 | Done | The owner, 2026-10-22: "notification related admin settings that can control the notification experience of all users". Manage Household → Household notifications (`/household/notifications`, Admins only): each kind on or off for everyone and its starting timing; which channels beyond the app may reach anyone; whether an unanswered reminder takes the second-channel step and the backup step; the household's quiet hours. Kept as two versioned, audited `policies` rows (`notifications/household-settings.ts`; Quiet hours keeps HomeTalk's row), written only when something changed and only real choices. Enforced on the server: `reconcile.ts` (kinds off, starting timing, both steps, quiet hours) and `deliverNotification` (a channel off holds everything but a critical alert). A person narrows these and never widens them. Help ¶15 in eight languages |
 
-_Generated 2026-10-26 from 28 backlog files._
+_Generated 2026-10-27 from 28 backlog files._

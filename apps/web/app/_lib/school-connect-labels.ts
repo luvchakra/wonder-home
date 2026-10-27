@@ -24,6 +24,15 @@ export type SchoolConnectLabels = {
   channelResume: string;
   channelNone: string;
   channelStoppedBadge: string;
+  urlLabel: string;
+  usernameLabel: string;
+  passwordLabel: string;
+  credentialsNote: string;
+  signIn: string;
+  connectedAs: string;
+  fetchTitle: string;
+  fetchLede: string;
+  fetchNow: string;
 };
 
 export function schoolConnectLabels(t: Translate): SchoolConnectLabels {
@@ -50,5 +59,14 @@ export function schoolConnectLabels(t: Translate): SchoolConnectLabels {
     channelResume: t("school.connect.channels.resume"),
     channelNone: t("school.connect.channels.none"),
     channelStoppedBadge: t("school.connect.channels.stopped"),
+    urlLabel: t("school.connect.signin.url"),
+    usernameLabel: t("school.connect.signin.username"),
+    passwordLabel: t("school.connect.signin.password"),
+    credentialsNote: t("school.connect.signin.note"),
+    signIn: t("school.connect.signin.connect"),
+    connectedAs: t("school.connect.signin.connectedAs"),
+    fetchTitle: t("school.connect.fetch.title"),
+    fetchLede: t("school.connect.fetch.lede"),
+    fetchNow: t("school.connect.fetch.now"),
   };
 }
