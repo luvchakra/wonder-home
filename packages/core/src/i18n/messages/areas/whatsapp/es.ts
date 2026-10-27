@@ -8,6 +8,8 @@ export const whatsappEs: AreaCatalog<typeof whatsappEn> = {
   "whatsapp.ack.duplicateNoted": "Recibido 👍 Eso ya está en HomeSend — he añadido tu nota.",
   "whatsapp.ack.duplicateHandled": "Recibido 👍 Eso ya está resuelto ✅ Puedes cambiar para quién es en HomeSend.",
   "whatsapp.noteAlone": "Perdona, no he entendido de qué se trata 🤔 ¿Me envías el mensaje al que corresponde?",
+  "whatsapp.answerUnread": "Perdona, no he podido tomarlo como respuesta 🤔 ¿Puedes responder de nuevo a mi última pregunta o elegir una de sus opciones?",
+  "whatsapp.leftAlone": "Vale, lo he dejado como estaba 👍 No se ha añadido ni cambiado nada.",
   "whatsapp.ack.failed": "⚠️ Lo guardé. {why} Está en HomeSend, en Detenido con seguridad.",
   "whatsapp.ack.unreadable": "WonderHome no pudo leerlo.",
   "whatsapp.ack.checkTranscript": "Recibido 👍 No estoy seguro de haber entendido bien esa nota de voz; revisa lo que dice en HomeSend, por favor. 🎙️",

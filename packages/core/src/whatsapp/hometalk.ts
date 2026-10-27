@@ -1,4 +1,5 @@
 import { isUndo } from "../conversation/consent";
+import { isLeaveIt } from "../conversation/leave-it";
 import type { HomeTalkResponse } from "../hometalk/contract";
 
 /**
@@ -43,10 +44,10 @@ export function isQuestionForWonderHome(text: string): boolean {
   return line !== null && (line.endsWith("?") || QUESTION_OPENING.test(line));
 }
 
-/** A question, a one-line everyday request ("add milk to the list", "remind me to call the plumber at 5"), or a reply to HomeTalk ("undo", "yes"). */
+/** A question, a one-line everyday request ("add milk to the list", "remind me to call the plumber at 5"), or a reply to HomeTalk ("undo", "yes", "skip"). */
 export function isForHomeTalk(text: string): boolean {
   const line = shortLine(text);
-  return line !== null && (isQuestionForWonderHome(line) || REQUEST_OPENING.test(line) || isUndo(line) || REPLY_TO_HOMETALK.test(line));
+  return line !== null && (isQuestionForWonderHome(line) || REQUEST_OPENING.test(line) || isUndo(line) || REPLY_TO_HOMETALK.test(line) || isLeaveIt(line));
 }
 
 /**

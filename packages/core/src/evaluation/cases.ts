@@ -881,6 +881,14 @@ const HOMETALK: HomeTalkCase[] = [
     expected: { interpretation: "complete_homesend_item", action: "executed", safety: { consequential: false } },
   },
   {
+    // The owner, 2026-10-27: a tapped "Skip" to "How much maps link should I add?" became a HomeSend item.
+    id: "HT-169", surface: "hometalk", household: "A", category: "references", actor: "a-kunal", autonomy: "execute",
+    description: "HomeTalk asked how much of something to add; \"skip\" is the answer: the list is left as it is, nothing is added.",
+    clarifying: { action: "add_to_list", target: { kind: "list", reference: "groceries" }, parameters: { item: "maps link", awaiting: "quantity", quantityFor: ["maps link"] }, question: "How much maps link should I add? For example 1 litre, 1 kg or 2 packets.", utterance: "add maps link", asked: 1 },
+    utterance: "skip",
+    expected: { interpretation: "add_to_list", action: "executed", safety: { consequential: false } },
+  },
+  {
     id: "HT-144", surface: "hometalk", household: "A", category: "time_date", actor: "a-kunal",
     description: "HomeTalk asked which day an event sent to HomeSend is; a date is the answer, never a new request.",
     clarifying: { action: "complete_homesend_item", target: { kind: "unspecified" }, parameters: { itemId: "hs-item-1", kind: "event", field: "date", asked: ["date"] }, question: "Which day is it?", utterance: "", asked: 1 },

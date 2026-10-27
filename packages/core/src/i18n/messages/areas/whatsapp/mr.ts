@@ -8,6 +8,8 @@ export const whatsappMr: AreaCatalog<typeof whatsappEn> = {
   "whatsapp.ack.duplicateNoted": "मिळालं 👍 हे आधीच HomeSend मध्ये आहे — मी तुमची टीप त्यात जोडली आहे.",
   "whatsapp.ack.duplicateHandled": "मिळालं 👍 हे आधीच हाताळलं गेलं आहे ✅ हे कोणासाठी आहे ते तुम्ही HomeSend मध्ये बदलू शकता.",
   "whatsapp.noteAlone": "माफ करा, हे कशाबद्दल आहे ते मला कळलं नाही 🤔 हे ज्या संदेशासोबत आहे तो पाठवाल का?",
+  "whatsapp.answerUnread": "माफ करा, हे उत्तर म्हणून मला समजलं नाही 🤔 माझ्या शेवटच्या प्रश्नाचं उत्तर पुन्हा द्याल का, किंवा त्यातला एक पर्याय निवडाल का?",
+  "whatsapp.leftAlone": "ठीक आहे, मी ते तसंच ठेवलं 👍 काहीही जोडलं किंवा बदललं नाही.",
   "whatsapp.ack.failed": "⚠️ मी हे ठेवलं. {why} हे HomeSend मध्ये \"सुरक्षितपणे थांबवलेले\" मध्ये आहे.",
   "whatsapp.ack.unreadable": "WonderHome हे वाचू शकलं नाही.",
   "whatsapp.ack.checkTranscript": "मिळालं 👍 तो व्हॉइस नोट मी बरोबर ऐकला याची खात्री नाही — कृपया HomeSend मध्ये त्यात काय आहे ते तपासा. 🎙️",

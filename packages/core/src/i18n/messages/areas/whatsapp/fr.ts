@@ -8,6 +8,8 @@ export const whatsappFr: AreaCatalog<typeof whatsappEn> = {
   "whatsapp.ack.duplicateNoted": "Bien reçu 👍 C'est déjà dans HomeSend — j'y ai ajouté votre note.",
   "whatsapp.ack.duplicateHandled": "Bien reçu 👍 C'est déjà traité ✅ Vous pouvez changer pour qui c'est dans HomeSend.",
   "whatsapp.noteAlone": "Désolé, je n'ai pas compris de quoi il s'agit 🤔 Pouvez-vous envoyer le message qui va avec ?",
+  "whatsapp.answerUnread": "Désolé, je n'ai pas pu le prendre comme réponse 🤔 Pouvez-vous répondre à nouveau à ma dernière question, ou choisir l'une de ses options ?",
+  "whatsapp.leftAlone": "D'accord, je l'ai laissé tel quel 👍 Rien n'a été ajouté ni modifié.",
   "whatsapp.ack.failed": "⚠️ Je l'ai gardé. {why} C'est dans HomeSend, sous Arrêté par sécurité.",
   "whatsapp.ack.unreadable": "WonderHome n'a pas pu le lire.",
   "whatsapp.ack.checkTranscript": "Bien reçu 👍 Je ne suis pas sûr d'avoir bien entendu ce message vocal — vérifiez ce qu'il dit dans HomeSend, s'il vous plaît. 🎙️",

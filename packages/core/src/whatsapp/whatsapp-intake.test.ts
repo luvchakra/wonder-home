@@ -559,6 +559,90 @@ describe("processing into HomeSend", () => {
     expect(h.tables.whatsapp_events!.find((event) => event.kind === "clarification_answered")!.latency_ms).toEqual(expect.any(Number));
   });
 
+  // The owner, 2026-10-27, 14:55 IST: "How much maps link should I add?" offered "Skip"; the tap came back with
+  // WhatsApp's context.id, was read as a swipe-reply, missed rule 2, and became a HomeSend item that failed safely.
+  describe("\"skip\" to HomeTalk's how-much question (2026-10-27)", () => {
+    const now = new Date();
+    const talk = (utterance: string, clarifying: TurnInput["clarifying"] = null) =>
+      converse({
+        utterance, channel: "text", actor: { memberId: MEMBER, roles: ["head"] }, pending: null, clarifying, autonomyFor: () => "execute", entitledFor: () => true, executable: canExecute, sessionId: "s-wa", now,
+        ground: (intent) => groundIntent(intent, { people: [], viewerMemberId: MEMBER, timezone: "Asia/Kolkata", now, references: async () => NO_REFERENCES, groceries: async () => [] }),
+      });
+    const howMuch = {
+      action: "add_to_list" as const, target: { kind: "list" as const, reference: "groceries" }, asked: 1, utterance: "add maps link",
+      question: "How much maps link should I add? For example 1 litre, 1 kg or 2 packets.",
+      parameters: { item: "maps link", awaiting: "quantity", quantityFor: ["maps link"] },
+    };
+    const asked = async (text: string) => {
+      const { h, id } = await received("text");
+      h.tables.whatsapp_messages![0]!.text_content = text;
+      const at = new Date(Date.now() - 30 * 1000).toISOString();
+      h.tables.whatsapp_messages!.push({ id: "m-ask", household_id: HOUSEHOLD, member_id: MEMBER, provider_message_id: "wamid.ask", message_type: "text", homesend_item_id: null, received_at: at, processing_status: "ignored" });
+      h.tables.conversation_sessions = [{ id: "s-wa", household_id: HOUSEHOLD, member_id: MEMBER, surface: "whatsapp", status: "open", created_at: at }];
+      h.tables.conversation_messages = [
+        { id: "c2", household_id: HOUSEHOLD, session_id: "s-wa", role: "assistant", metadata: { mode: "clarify", proposal: "clarify", clarify: howMuch, choices: { mode: "single", choices: [{ label: "Skip", say: "skip" }] } }, created_at: new Date(Date.now() - 18 * 1000).toISOString() },
+      ];
+      h.tables.home_send_items = [];
+      return { h, id };
+    };
+
+    it("a tapped choice reads as its words, not as a swipe-reply; a swiped reply keeps what it replies to", () => {
+      const [tap, swipe] = readInboundMessages(
+        JSON.parse(
+          delivery([
+            { id: "wamid.TAP", from: PRIYA, timestamp: "1790000010", type: "interactive", context: { id: "wamid.QUESTION" }, interactive: { type: "button_reply", button_reply: { id: "say:skip", title: "Skip" } } },
+            { id: "wamid.SWIPE", from: PRIYA, timestamp: "1790000011", type: "text", context: { id: "wamid.OLD" }, text: { body: "this one" } },
+          ]),
+        ),
+      );
+      expect(tap).toMatchObject({ type: "text", text: "skip" });
+      expect(tap!.replyTo).toBeUndefined();
+      expect(swipe).toMatchObject({ replyTo: "wamid.OLD" });
+    });
+
+    it("goes to HomeTalk, which adds nothing and says so politely; never a HomeSend item", async () => {
+      const { h, id } = await asked("skip");
+      const out = replies();
+      const turns: Awaited<ReturnType<typeof talk>>[] = [];
+      await processWhatsAppMessage(h.client, id, {
+        config: CONFIG, fetch: out.fetchImpl, ingest: { classify },
+        ask: async ({ text }) => {
+          const turn = await talk(text ?? "", howMuch);
+          turns.push(turn);
+          return "Okay, I've left the shopping list as it is. I've not added **Maps link**.";
+        },
+      });
+      expect(turns).toHaveLength(1);
+      expect(turns[0]!.kind === "reply" && turns[0]!.intent).toMatchObject({ action: "add_to_list", parameters: { item: "maps link", keepAsIs: true } });
+      expect(h.tables.home_send_items).toEqual([]);
+      expect(h.tables.whatsapp_messages![0]).toMatchObject({ processing_status: "ignored", homesend_item_id: null });
+      expect(out.sent.map((sent) => sent.text)).toEqual(["Okay, I've left the shopping list as it is. I've not added **Maps link**."]);
+    });
+
+    it("when HomeTalk can't take the answer, it is asked again politely, never kept in HomeSend", async () => {
+      const { h, id } = await asked("skip");
+      const out = replies();
+      await processWhatsAppMessage(h.client, id, { config: CONFIG, fetch: out.fetchImpl, ingest: { classify }, ask: async () => null });
+      expect(h.tables.home_send_items).toEqual([]);
+      expect(h.tables.whatsapp_messages![0]).toMatchObject({ processing_status: "ignored", homesend_item_id: null });
+      expect(out.sent.map((sent) => sent.text)).toEqual(["Sorry, I couldn't take that as an answer 🤔 Could you answer my last question again, or pick one of its choices?"]);
+    });
+
+    it("a lone \"skip\" with no question open is never a HomeSend item", async () => {
+      for (const ask of [async ({ text }: { text?: string }) => (await talk(text ?? "")).kind === "reply" ? "Okay. Nothing is waiting on you, so I've left everything as it is." : null, undefined]) {
+        const { h, id } = await received("text");
+        h.tables.whatsapp_messages![0]!.text_content = "skip";
+        h.tables.home_send_items = [];
+        const out = replies();
+        expect(await processWhatsAppMessage(h.client, id, { config: CONFIG, fetch: out.fetchImpl, ingest: { classify }, ...(ask ? { ask } : {}) })).toBe("read");
+        expect(h.tables.home_send_items).toEqual([]);
+        expect(h.tables.whatsapp_messages![0]).toMatchObject({ processing_status: "ignored", homesend_item_id: null });
+        expect(out.sent.map((sent) => sent.text)).toEqual([ask ? "Okay. Nothing is waiting on you, so I've left everything as it is." : "Okay, I've left it as it is 👍 Nothing was added or changed."]);
+      }
+      expect(isForHomeTalk("skip") && isForHomeTalk("never mind") && isForHomeTalk("No thanks.")).toBe(true);
+    });
+  });
+
   // AT-H (docs/testing/2026-10-26-hometalk-homesend-acceptance.md): a grocery line sent on WhatsApp,
   // end to end through HomeSend's real reading and scoring, under the household's approval settings.
   // HomeSend's decision (`decideConfirmation`) stands in for the app's review; expected results written first.
