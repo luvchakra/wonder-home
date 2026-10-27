@@ -66,9 +66,30 @@ export type GroceryItem = {
   /** The shared catalog entry it was picked from (25-006): its picture, pack and nutrients. */
   catalog: CatalogEntry | null;
   lastPurchasedOn: string | null;
+  /**
+   * The most recent of the item's own, its stock's and its open to-buy
+   * entry's `updated_at` — "last touched", for the "Recently updated" sort
+   * (25-0xx). Always set: an item at least has its own row's timestamp.
+   */
+  updatedAt: string;
   stock: GroceryStock | null;
   toBuy: GroceryToBuy | null;
 };
+
+/** The latest of some ISO timestamps, ignoring blanks; "" when there are none. */
+function latestOf(times: (string | null | undefined)[]): string {
+  let best = "";
+  let bestMs = -Infinity;
+  for (const time of times) {
+    if (!time) continue;
+    const ms = Date.parse(time);
+    if (Number.isNaN(ms) ? time > best : ms > bestMs) {
+      best = time;
+      bestMs = Number.isNaN(ms) ? bestMs : ms;
+    }
+  }
+  return best;
+}
 
 /** Low, none, enough — or unknown, when nobody has said how much there is. */
 export function stockStatus(
@@ -92,10 +113,10 @@ export function itemBaseUnit(item: Pick<GroceryItem, "unit">): string {
 }
 
 const ITEM_COLUMNS =
-  "id, name, category, unit, step, low_level, storage, note, aliases, image_path, last_purchased_on, " +
+  "id, name, category, unit, step, low_level, storage, note, aliases, image_path, last_purchased_on, updated_at, " +
   `grocery_catalog(${CATALOG_COLUMNS}), ` +
-  "inventory_balances(quantity, unit, confirmed_at, source, version, use_by, use_by_basis, household_members(display_name)), " +
-  "shopping_list_entries(id, quantity, unit, version, source, meal_id, state)";
+  "inventory_balances(quantity, unit, confirmed_at, updated_at, source, version, use_by, use_by_basis, household_members(display_name)), " +
+  "shopping_list_entries(id, quantity, unit, updated_at, version, source, meal_id, state)";
 
 function toItem(row: Row, imageUrls: Map<string, string>): GroceryItem {
   const balanceRow = (
@@ -108,6 +129,14 @@ function toItem(row: Row, imageUrls: Map<string, string>): GroceryItem {
   ) as Row[];
   const open = entries.find((entry) => entry.state === "to_buy");
   const confirmer = balanceRow?.household_members as Row | null | undefined;
+  // "Last touched": the most recent of the item, its stock and its open
+  // to-buy entry. A closed entry does not count — it is not in `entries`,
+  // which the query narrows to `to_buy`.
+  const updatedAt = latestOf([
+    row.updated_at as string | null | undefined,
+    balanceRow?.updated_at as string | null | undefined,
+    open?.updated_at as string | null | undefined,
+  ]);
   const imagePath = (row.image_path as string | null) ?? null;
   const catalogRow = (Array.isArray(row.grocery_catalog) ? row.grocery_catalog[0] : row.grocery_catalog) as Row | null | undefined;
   return {
@@ -127,6 +156,7 @@ function toItem(row: Row, imageUrls: Map<string, string>): GroceryItem {
     imageUrl: imagePath ? (imageUrls.get(imagePath) ?? null) : null,
     catalog: catalogRow ? toCatalogEntry(catalogRow, process.env.NEXT_PUBLIC_SUPABASE_URL ?? "") : null,
     lastPurchasedOn: (row.last_purchased_on as string | null) ?? null,
+    updatedAt,
     stock: balanceRow
       ? {
           quantity: Number(balanceRow.quantity),

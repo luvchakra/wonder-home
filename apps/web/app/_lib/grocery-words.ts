@@ -60,6 +60,11 @@ export function groceryWords(translate: Translate, language: string | undefined)
     search: t("grocery.search"),
     filterLegend: t("grocery.filter.legend"),
     filterAll: t("grocery.filter.all"),
+    sort: {
+      label: t("grocery.sort.label"),
+      name: t("grocery.sort.name"),
+      recent: t("grocery.sort.recent"),
+    },
     inStock: t("grocery.col.inStock"),
     toBuy: t("grocery.col.toBuy"),
     status: {

@@ -131,6 +131,7 @@ export default async function GroceriesPage({
     ...stepperOf(item),
     imageUrl: item.imageUrl ?? item.catalog?.imageUrl ?? null,
     nutrition: nutritionOf(item),
+    updatedAt: item.updatedAt,
     status: stockStatus(item),
     stockText: item.stock
       ? sayAmount(

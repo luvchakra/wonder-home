@@ -129,13 +129,13 @@ export function GroceryRow({
   as: Tag = "li",
 }: GroceryRowProps) {
   const icon = groceryIcon(name, category);
-  const label = "text-[0.6875rem] font-semibold tracking-wide whitespace-nowrap text-[var(--wh-foreground-subtle)] uppercase";
+  const label = "text-[0.6875rem] leading-none font-semibold tracking-wide whitespace-nowrap text-[var(--wh-foreground-subtle)] uppercase";
   return (
     <Tag
       className={cn(
         // Phone: picture · name · chevron, then the amounts across the whole
         // card. Wider: one line, amounts before the chevron.
-        "relative grid grid-cols-[2.5rem_minmax(0,1fr)_auto] items-start gap-x-3 gap-y-2 py-2.5 pr-1 pl-3 sm:grid-cols-[2.5rem_minmax(0,1fr)_auto_auto] sm:items-center sm:gap-x-4",
+        "relative grid grid-cols-[2.5rem_minmax(0,1fr)_auto] items-start gap-x-3 gap-y-1 py-1.5 pr-1 pl-3 sm:grid-cols-[2.5rem_minmax(0,1fr)_auto_auto] sm:items-center sm:gap-x-4",
         className,
       )}
     >
@@ -143,7 +143,7 @@ export function GroceryRow({
         aria-hidden
         title={statusLabel}
         className={cn(
-          "absolute top-2.5 bottom-2.5 left-0 w-1 rounded-full",
+          "absolute top-2 bottom-2 left-0 w-1 rounded-full",
           BAR[status],
         )}
       />
@@ -181,12 +181,12 @@ export function GroceryRow({
       </Link>
       {/* In stock and To buy as two equal cells, each its label over its
           control, so the two steppers line up under each other row to row. */}
-      <div className="col-span-3 row-start-2 grid grid-cols-2 gap-3 sm:col-span-1 sm:col-start-3 sm:row-start-1 sm:grid-cols-[9.5rem_9.5rem]">
-        <div className="flex min-w-0 flex-col items-start gap-1">
+      <div className="col-span-3 row-start-2 grid grid-cols-2 gap-x-3 gap-y-1 sm:col-span-1 sm:col-start-3 sm:row-start-1 sm:grid-cols-[9.5rem_9.5rem]">
+        <div className="flex min-w-0 flex-col items-start gap-0.5">
           <span className={label}>{stockLabel}</span>
           {stockControl ?? <span className="flex min-h-9 items-center text-sm font-semibold tabular-nums">{stockText}</span>}
         </div>
-        <div className="flex min-w-0 flex-col items-start gap-1">
+        <div className="flex min-w-0 flex-col items-start gap-0.5">
           <span className={label}>{toBuyLabel}</span>
           {stepper}
         </div>

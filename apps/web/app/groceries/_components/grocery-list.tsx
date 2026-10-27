@@ -1,8 +1,8 @@
 "use client";
 
-import { CircleCheck, CircleHelp, Search, ShoppingBasket, ShoppingCart } from "lucide-react";
+import { ArrowDownUp, CircleCheck, CircleHelp, Search, ShoppingBasket, ShoppingCart } from "lucide-react";
 import { useRouter } from "next/navigation";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 
 import { SwipeToDismiss } from "@wonderhome/core/ui/swipe-to-dismiss";
 
@@ -10,6 +10,10 @@ import { adjustListAction } from "../../(auth)/grocery-actions";
 import { newKey } from "./amounts";
 
 const SWIPE_HINT_KEY = "wh.groceries.swipeHint";
+const SORT_KEY = "wh.groceries.sort";
+
+/** How the list is ordered: by name (the default) or most recently touched. */
+export type GrocerySort = "name" | "recent";
 
 import {
   GroceryRow,
@@ -38,6 +42,8 @@ export type ListItem = {
   imageUrl: string | null;
   /** "155 kcal · 13 g protein per 100 g", or null when no source has it (25-012). */
   nutrition: string | null;
+  /** When the item, its stock or its to-buy was last touched — for "Recently updated". */
+  updatedAt: string;
   status: GroceryStatus;
   stockText: string;
   /** What is at home, in the item's base unit; null when nobody has counted it. */
@@ -73,6 +79,29 @@ export function GroceryList({
   const router = useRouter();
   const [query, setQuery] = useState("");
   const [category, setCategory] = useState<string | null>(null);
+  // The sort is a per-device choice (the swipe hint already uses localStorage):
+  // it opens on the saved order, falling back to name. Written on every change.
+  const [sort, setSort] = useState<GrocerySort>("name");
+  useEffect(() => {
+    let saved: string | null = null;
+    try {
+      saved = window.localStorage.getItem(SORT_KEY);
+    } catch {
+      /* no stored preference */
+    }
+    if (saved !== "recent" && saved !== "name") return;
+    // Reading the browser's own storage has to wait for the browser.
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    setSort(saved);
+  }, []);
+  const chooseSort = (next: GrocerySort) => {
+    setSort(next);
+    try {
+      window.localStorage.setItem(SORT_KEY, next);
+    } catch {
+      /* preference not saved this time */
+    }
+  };
   // At home and Not counted yet are ways in (the owner, 2026-10-20: "make the cards clickable"):
   // a tap shows just the items they count, a second tap goes back to the list.
   const [stockFilter, setStockFilter] = useState<"home" | "uncounted" | null>(null);
@@ -91,8 +120,20 @@ export function GroceryList({
     [items],
   );
   const needle = query.trim().toLowerCase();
-  const shown = items.filter(
-    (item) =>
+  // Stable, with a clear tiebreak: "recent" is newest first and falls back to
+  // name, "name" is the server's own order (name asc) made explicit. The id
+  // breaks a tie so the order never flickers between reads.
+  const byName = (a: ListItem, b: ListItem) =>
+    a.name.localeCompare(b.name, words.language) || a.id.localeCompare(b.id);
+  const compare =
+    sort === "recent"
+      ? (a: ListItem, b: ListItem) =>
+          (Date.parse(b.updatedAt) || 0) - (Date.parse(a.updatedAt) || 0) ||
+          byName(a, b)
+      : byName;
+  const shown = items
+    .filter(
+      (item) =>
       // To buy follows the steppers: an item taken off the list leaves this view at once and stays under All.
       // A card's filter shows every item it counts, on the list or not, as its number does.
       (stockFilter === "home"
@@ -105,7 +146,8 @@ export function GroceryList({
         [item.name, item.category, ...item.aliases].some((text) =>
           text.toLowerCase().includes(needle),
         )),
-  );
+    )
+    .sort(compare);
 
   const toBuyNow = items.filter(
     (item) => item.toBuy && (onList[item.id] ?? 0) > 0,
@@ -237,23 +279,47 @@ export function GroceryList({
         </ul>
       ) : null}
 
-      <div className="relative">
-        <label htmlFor="grocery-search" className="sr-only">
-          {words.search}
-        </label>
-        <Search
-          aria-hidden
-          className="pointer-events-none absolute top-1/2 left-3.5 size-4 -translate-y-1/2 text-[var(--wh-foreground-subtle)]"
-        />
-        <input
-          id="grocery-search"
-          type="search"
-          value={query}
-          onChange={(event) => setQuery(event.target.value)}
-          placeholder={words.search}
-          autoComplete="off"
-          className="block h-11 w-full rounded-[var(--wh-radius-pill)] border border-[var(--wh-border)] bg-[var(--wh-surface)] pr-4 pl-10 text-[0.9375rem] shadow-[var(--wh-shadow-card)] placeholder:text-[var(--wh-foreground-subtle)] focus-visible:border-[var(--wh-primary)] focus-visible:outline-none"
-        />
+      {/* Search and the sort share one row; the sort is picked, not typed
+          (rule 20), on the OS's own picker (`Select`'s reasoning). The search
+          takes the rest and may shrink, so a long sort label never overflows
+          at 360px. */}
+      <div className="flex items-stretch gap-2">
+        <div className="relative min-w-0 flex-1">
+          <label htmlFor="grocery-search" className="sr-only">
+            {words.search}
+          </label>
+          <Search
+            aria-hidden
+            className="pointer-events-none absolute top-1/2 left-3.5 size-4 -translate-y-1/2 text-[var(--wh-foreground-subtle)]"
+          />
+          <input
+            id="grocery-search"
+            type="search"
+            value={query}
+            onChange={(event) => setQuery(event.target.value)}
+            placeholder={words.search}
+            autoComplete="off"
+            className="block h-11 w-full rounded-[var(--wh-radius-pill)] border border-[var(--wh-border)] bg-[var(--wh-surface)] pr-4 pl-10 text-[0.9375rem] shadow-[var(--wh-shadow-card)] placeholder:text-[var(--wh-foreground-subtle)] focus-visible:border-[var(--wh-primary)] focus-visible:outline-none"
+          />
+        </div>
+        <div className="relative shrink-0">
+          <label htmlFor="grocery-sort" className="sr-only">
+            {words.sort.label}
+          </label>
+          <ArrowDownUp
+            aria-hidden
+            className="pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2 text-[var(--wh-foreground-subtle)]"
+          />
+          <select
+            id="grocery-sort"
+            value={sort}
+            onChange={(event) => chooseSort(event.target.value as GrocerySort)}
+            className="h-11 appearance-none rounded-[var(--wh-radius-pill)] border border-[var(--wh-border)] bg-[var(--wh-surface)] py-0 pr-3.5 pl-9 text-[0.8125rem] font-medium text-[var(--wh-foreground-muted)] shadow-[var(--wh-shadow-card)] focus-visible:border-[var(--wh-primary)] focus-visible:outline-none"
+          >
+            <option value="name">{words.sort.name}</option>
+            <option value="recent">{words.sort.recent}</option>
+          </select>
+        </div>
       </div>
 
       {categories.length > 1 ? (

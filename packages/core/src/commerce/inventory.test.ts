@@ -5,6 +5,7 @@ import {
   adjustListEntry,
   changeStock,
   itemStep,
+  listGroceries,
   markBought,
   stockStatus,
 } from "./inventory";
@@ -279,5 +280,44 @@ describe("marking bought", () => {
       stockAfter: 2000,
       replayed: false,
     });
+  });
+});
+
+/** A consumables list query that resolves to the given rows (image_path null, so no storage call). */
+function listClient(rows: unknown[]) {
+  const chain: Record<string, unknown> = {};
+  for (const method of ["select", "eq", "order"]) chain[method] = () => chain;
+  (chain as { then: unknown }).then = (resolve: (value: Response) => unknown) =>
+    resolve({ data: rows, error: null });
+  return { from: () => chain } as never;
+}
+
+describe("listGroceries updatedAt (Recently updated sort)", () => {
+  const row = (over: Record<string, unknown>) => ({
+    id: ITEM, name: "Milk", category: "grocery", unit: "l", step: null, low_level: null,
+    storage: null, note: null, aliases: [], image_path: null, last_purchased_on: null,
+    grocery_catalog: null, inventory_balances: null, shopping_list_entries: [], ...over,
+  });
+
+  it("is the item's own updated_at when nothing else has changed", async () => {
+    const [item] = await listGroceries(listClient([row({ updated_at: "2026-10-01T00:00:00Z" })]), HOUSEHOLD);
+    expect(item?.updatedAt).toBe("2026-10-01T00:00:00Z");
+  });
+
+  it("is the stock's updated_at when the stock changed most recently", async () => {
+    const [item] = await listGroceries(listClient([row({
+      updated_at: "2026-10-01T00:00:00Z",
+      inventory_balances: { quantity: 2, unit: "ml", confirmed_at: "2026-10-01T00:00:00Z", updated_at: "2026-10-20T09:00:00Z", source: "stated", version: 1, use_by: null, use_by_basis: null },
+    })]), HOUSEHOLD);
+    expect(item?.updatedAt).toBe("2026-10-20T09:00:00Z");
+  });
+
+  it("is the open to-buy entry's updated_at when the list changed most recently", async () => {
+    const [item] = await listGroceries(listClient([row({
+      updated_at: "2026-10-01T00:00:00Z",
+      inventory_balances: { quantity: 2, unit: "ml", confirmed_at: "2026-10-01T00:00:00Z", updated_at: "2026-10-05T00:00:00Z", source: "stated", version: 1, use_by: null, use_by_basis: null },
+      shopping_list_entries: [{ id: "e1", quantity: 1000, unit: "ml", updated_at: "2026-10-26T18:30:00Z", version: 1, source: "manual", meal_id: null, state: "to_buy" }],
+    })]), HOUSEHOLD);
+    expect(item?.updatedAt).toBe("2026-10-26T18:30:00Z");
   });
 });

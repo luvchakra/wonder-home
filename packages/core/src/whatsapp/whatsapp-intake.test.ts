@@ -836,7 +836,7 @@ describe("processing into HomeSend", () => {
   // The owner, 2026-10-26: "coconut oil" met "already on the shopping list, so there was nothing to add" — "it should ask for quantity".
   it("HomeTalk's how-much question is answered on WhatsApp: \"2 litres\" adds 2 litres of coconut oil", async () => {
     const oil = {
-      id: "c-oil", name: "Coconut oil", category: "grocery", unit: "l", step: null, lowLevel: null, storage: null, note: null, aliases: [], imageUrl: null, imagePath: null, catalog: null, lastPurchasedOn: null, stock: null,
+      id: "c-oil", name: "Coconut oil", category: "grocery", unit: "l", step: null, lowLevel: null, storage: null, note: null, aliases: [], imageUrl: null, imagePath: null, catalog: null, lastPurchasedOn: null, updatedAt: "2026-09-20T00:00:00Z", stock: null,
       toBuy: { entryId: "e-oil", quantity: 1000, unit: "ml", version: 1, source: "manual", mealId: null },
     };
     const now = new Date();
@@ -881,7 +881,7 @@ describe("processing into HomeSend", () => {
   // the unit change the Groceries screen makes, then 1 litre added.
   it("1 litre of coconut oil kept in bottles is asked about on WhatsApp, and \"count it in litres instead\" answers it", async () => {
     const oil = {
-      id: "c-oil", name: "Coconut oil", category: "grocery", unit: "bottle", step: null, lowLevel: null, storage: null, note: null, aliases: [], imageUrl: null, imagePath: null, catalog: null, lastPurchasedOn: null, stock: null,
+      id: "c-oil", name: "Coconut oil", category: "grocery", unit: "bottle", step: null, lowLevel: null, storage: null, note: null, aliases: [], imageUrl: null, imagePath: null, catalog: null, lastPurchasedOn: null, updatedAt: "2026-09-20T00:00:00Z", stock: null,
       toBuy: { entryId: "e-oil", quantity: 1, unit: "bottle", version: 1, source: "manual", mealId: null },
     };
     const now = new Date();
@@ -921,7 +921,7 @@ describe("processing into HomeSend", () => {
   // "Milk (+2 ml, now 2.502 L), Eggs, Brown (+24 pcs, now 32 pcs)" (25-037).
   it("\"2 of each\" on WhatsApp is 2 L of milk, 2 eggs and 2 loaves — never 2 ml or 2 dozen", async () => {
     const kept = (id: string, name: string, unit: string, toBuy: { quantity: number; unit: string }) => ({
-      id, name, category: "grocery", unit, step: null, lowLevel: null, storage: null, note: null, aliases: [], imageUrl: null, imagePath: null, catalog: null, lastPurchasedOn: null, stock: null,
+      id, name, category: "grocery", unit, step: null, lowLevel: null, storage: null, note: null, aliases: [], imageUrl: null, imagePath: null, catalog: null, lastPurchasedOn: null, updatedAt: "2026-09-20T00:00:00Z", stock: null,
       toBuy: { entryId: `e-${id}`, ...toBuy, version: 1, source: "manual", mealId: null },
     });
     const kitchen = [kept("c-milk", "Milk", "ml", { quantity: 2500, unit: "ml" }), kept("c-eggs", "Eggs, Brown", "dozen", { quantity: 8, unit: "pcs" }), kept("c-bread", "Bread, White", "loaf", { quantity: 1, unit: "loaf" })];
