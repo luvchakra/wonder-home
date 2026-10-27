@@ -9,7 +9,7 @@ import { requireHouseholdAdmin, requireMembership } from "@wonderhome/core/ident
 import { connectIntegration, disconnectIntegration } from "@wonderhome/core/integrations/repository";
 import { addSchoolChannel, setSchoolChannelActive } from "@wonderhome/core/school/channel-repository";
 import { parseSchoolChannel } from "@wonderhome/core/school/channels";
-import { setSchoolPortalCredentials } from "@wonderhome/core/school/portal-credentials";
+import { setSchoolPortalCredentials, updateSchoolPortalCredentials } from "@wonderhome/core/school/portal-credentials";
 import { getSchoolProvider } from "@wonderhome/core/school/providers";
 import { addSchoolItem } from "@wonderhome/core/calendar/add-event";
 import { cancelSchoolItem, updateSchoolItem } from "@wonderhome/core/school/repository";
@@ -766,5 +766,68 @@ export async function fetchSchoolPortalNowAction(_previous: ActionState, formDat
     return { notice: "Connected. The homework fetch for this portal is not live yet — it turns on once its sign-in requests are captured." };
   }
   // A live adapter runs the governed sync here (08-033).
+  return asSchoolAdmin(parsed.data.householdId, async () => {});
+}
+
+const updateCredentialsSchema = z.object({
+  householdId: z.uuid(),
+  integrationId: z.uuid(),
+  provider: z.string().trim().min(1).max(64),
+  url: z.string().trim().url({ error: "Enter the portal's web address." }).max(2048),
+  username: z.string().trim().min(1, { error: "Enter the username." }).max(320),
+  // Blank keeps the stored password — the field never shows the current one.
+  password: z.union([z.string().max(1024), z.literal("")]).optional(),
+});
+
+/**
+ * Change a connected portal's sign-in — its web address, username, and the
+ * password only when a new one is typed (story 08-032). An Admin's act; the
+ * stored password is never read back to the browser, so "leave blank to keep"
+ * means the field simply is not written, never compared.
+ */
+export async function updateSchoolPortalCredentialsAction(_previous: ActionState, formData: FormData): Promise<ActionState> {
+  const parsed = updateCredentialsSchema.safeParse({
+    householdId: field(formData, "householdId"),
+    integrationId: field(formData, "integrationId"),
+    provider: field(formData, "provider"),
+    url: field(formData, "url"),
+    username: field(formData, "username"),
+    password: field(formData, "password"),
+  });
+  if (!parsed.success) return { error: parsed.error.issues[0]?.message ?? "Please check the details above." };
+
+  const descriptor = getSchoolProvider(parsed.data.provider);
+  if (!descriptor || descriptor.auth !== "credentials") return { error: "That is not a school portal you can sign in to." };
+
+  return asSchoolAdmin(parsed.data.householdId, (supabase, actor) =>
+    updateSchoolPortalCredentials(supabase, {
+      householdId: parsed.data.householdId,
+      integrationId: parsed.data.integrationId,
+      portalUrl: parsed.data.url,
+      username: parsed.data.username,
+      password: parsed.data.password || null,
+      actorMemberId: actor.memberId,
+    }),
+  );
+}
+
+/**
+ * Test a connected portal's sign-in on demand (story 08-032).
+ *
+ * The real sign-in test runs server-side with the service-role-read password
+ * once the portal's adapter ships (08-033); no portal is live yet, so this
+ * answers honestly that the test turns on with the fetch rather than pretending
+ * a round-trip happened.
+ */
+export async function testSchoolPortalConnectionAction(_previous: ActionState, formData: FormData): Promise<ActionState> {
+  const parsed = fetchNowSchema.safeParse({ householdId: field(formData, "householdId"), provider: field(formData, "provider") });
+  if (!parsed.success) return { error: "Please try again." };
+
+  const descriptor = getSchoolProvider(parsed.data.provider);
+  if (!descriptor || descriptor.auth !== "credentials") return { error: "That is not a school portal." };
+  if (!descriptor.adapterReady) {
+    return { notice: "Sign-in saved. A live connection test turns on once this portal's sign-in requests are captured." };
+  }
+  // A live adapter signs in with the stored credentials and reports here (08-033).
   return asSchoolAdmin(parsed.data.householdId, async () => {});
 }

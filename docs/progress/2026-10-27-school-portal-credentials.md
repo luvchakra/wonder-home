@@ -32,18 +32,28 @@ The secure connect, end to end.
   fetch is not live until the adapter ships).
 - **Connect-school screen**: a `credentials` portal (Loop Learning) shows a
   URL/username/password form; once connected the **button changes** to
-  "Connected as <username>" with Disconnect and a "Fetch now (last 24h)"
-  section. The account stays connected until disconnected. Nine new strings in
-  all eight languages.
+  "Connected as <username>" (with the stored URL beneath it) plus Edit, Test
+  connection, a "Fetch now (last 24h)" section, and Disconnect. The account
+  stays connected until disconnected. Nine + five new strings in all eight
+  languages.
+- **One place for every portal's sign-in, editable** (owner, 2026-10-27): each
+  portal card is that portal's management view — the stored URL and username
+  show on it, **Edit** opens a prefilled form (URL + username; the password
+  field is blank and "leave blank to keep the current password", so the stored
+  password is never read back to edit it), and **Test connection** checks the
+  sign-in on demand. `updateSchoolPortalCredentials` writes only the non-secret
+  columns when the password is left blank. The live Test/Fetch stay honest
+  (answer that they turn on once the adapter ships) until 08-033.
 - Audit events `school.portal_connected` / `school.portal_disconnected` (never
   carry the password). `school_portal_credentials` registered as excluded in the
   knowledge registry.
 
 ## Verified
-- `test-school-portal-credentials-rls.mjs` 7/7: the password is unreadable even
+- `test-school-portal-credentials-rls.mjs` 8/8: the password is unreadable even
   to the Admin who set it; the status RPC never returns it; a non-admin cannot
-  write; the service role can read it to run the connector; replace and clear
-  work; another household sees nothing.
+  write; the service role can read it to run the connector; an Admin can change
+  the URL and username while the password stays unread and unchanged; replace
+  and clear work; another household sees nothing.
 - Per-row-helper RLS guard 5/5; school + homesend suites 565/565; core + web
   typecheck clean; web lint clean; `npm run build -w apps/web` ✓; check:bundle,
   lint:help-links, lint:knowledge, lint:migrations, lint:secrets all clean.

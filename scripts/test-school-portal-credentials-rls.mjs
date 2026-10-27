@@ -99,6 +99,21 @@ test("another household sees nothing and cannot write into ours", () => {
   );
 });
 
+test("an Admin can change the url and username while keeping the password unread", () => {
+  // The exact shape updateSchoolPortalCredentials uses when the password field is
+  // left blank: it writes only the non-secret columns, so "keep" never reads the
+  // password to compare it.
+  asProfile(
+    HEAD,
+    `update public.school_portal_credentials set portal_url = 'https://portal.podar.test', username = 'parent@example.test' where household_id = '${household}' and integration_id = '${integration}';`,
+    options,
+  );
+  const row = asProfile(HEAD, `select username || '|' || portal_url from public.school_portal_credential_status('${household}');`, options);
+  assert.match(row, /parent@example\.test\|https:\/\/portal\.podar\.test/);
+  // The password the server reads is still the one first stored — the update never touched it.
+  assert.equal(psql(`select password from public.school_portal_credentials where household_id = '${household}';`, options).trim(), "the-secret");
+});
+
 test("an Admin can replace and clear the sign-in", () => {
   asProfile(HEAD, `update public.school_portal_credentials set password = 'rotated' where household_id = '${household}';`, options);
   assert.equal(psql(`select password from public.school_portal_credentials where household_id = '${household}';`, options).trim(), "rotated");

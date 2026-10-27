@@ -33,6 +33,11 @@ export type SchoolConnectLabels = {
   fetchTitle: string;
   fetchLede: string;
   fetchNow: string;
+  edit: string;
+  editCancel: string;
+  editSave: string;
+  keepPassword: string;
+  test: string;
 };
 
 export function schoolConnectLabels(t: Translate): SchoolConnectLabels {
@@ -68,5 +73,10 @@ export function schoolConnectLabels(t: Translate): SchoolConnectLabels {
     fetchTitle: t("school.connect.fetch.title"),
     fetchLede: t("school.connect.fetch.lede"),
     fetchNow: t("school.connect.fetch.now"),
+    edit: t("school.connect.signin.edit"),
+    editCancel: t("school.connect.signin.cancel"),
+    editSave: t("school.connect.signin.save"),
+    keepPassword: t("school.connect.signin.keepPassword"),
+    test: t("school.connect.signin.test"),
   };
 }

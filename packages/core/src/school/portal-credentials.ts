@@ -85,6 +85,39 @@ export async function setSchoolPortalCredentials(
   });
 }
 
+/**
+ * Change a stored sign-in: the URL, the username, and the password when a new
+ * one is given. A blank password keeps the current one — the password column
+ * has no select grant, so "keep" means simply not writing it, never reading it
+ * to compare. The caller's session must be an Admin's.
+ */
+export async function updateSchoolPortalCredentials(
+  supabase: SupabaseClient,
+  input: { householdId: string; integrationId: string; portalUrl: string; username: string; password?: string | null; actorMemberId: string },
+): Promise<void> {
+  const changes: Record<string, string> = { portal_url: input.portalUrl, username: input.username };
+  if (input.password) changes.password = input.password;
+
+  const { error } = await supabase
+    .from("school_portal_credentials")
+    .update(changes)
+    .eq("household_id", input.householdId)
+    .eq("integration_id", input.integrationId);
+  if (error) {
+    if (error.code === "42501") throw ApiError.forbidden("Only an Admin can change a school portal's sign-in.");
+    throw new Error(`updateSchoolPortalCredentials failed: ${error.code ?? "unknown"}`);
+  }
+
+  await auditChange({
+    householdId: input.householdId,
+    actorMemberId: input.actorMemberId,
+    eventType: "school.portal_connected",
+    targetTable: "school_portal_credentials",
+    targetId: input.integrationId,
+    metadata: { username: input.username, changed: input.password ? "url_username_password" : "url_username" },
+  });
+}
+
 /** Forget a connection's sign-in. */
 export async function clearSchoolPortalCredentials(
   supabase: SupabaseClient,
