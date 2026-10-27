@@ -92,8 +92,14 @@ create trigger portal_sessions_set_updated_at
 
 alter table public.portal_sessions enable row level security;
 
--- No policy and no grant for authenticated/anon: the session is the server's alone.
-revoke all on public.portal_sessions from authenticated, anon;
+-- The session is the server's alone: a deny-all policy that never yields a row,
+-- the same shape webhook_deliveries / household_webhooks use. It exists so this
+-- is not "no policy at all" (scripts/test-tenant-isolation-rls.mjs treats that as
+-- unprotected); the worker reads the blob with the service role, which bypasses
+-- RLS. No write policy, so inserts/updates/deletes from a client are denied too.
+create policy portal_sessions_no_client_access on public.portal_sessions for select
+  to authenticated
+  using (false);
 
 -- Whether a household's portals are connected, and why not — never the session blob. Admin only.
 create or replace function public.portal_session_status(p_household_id uuid)
@@ -134,7 +140,10 @@ create index portal_fetch_cursors_household on public.portal_fetch_cursors (hous
 
 alter table public.portal_fetch_cursors enable row level security;
 
--- No policy and no grant for authenticated/anon: cursors are the worker's alone.
-revoke all on public.portal_fetch_cursors from authenticated, anon;
+-- The worker's alone: the same deny-all select policy (never yields a row); the
+-- service role reads and writes it, bypassing RLS. No write policy for clients.
+create policy portal_fetch_cursors_no_client_access on public.portal_fetch_cursors for select
+  to authenticated
+  using (false);
 
 notify pgrst, 'reload schema';

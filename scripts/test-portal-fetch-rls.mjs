@@ -69,12 +69,13 @@ test("members see the tracked pages; another household sees nothing", () => {
   assert.equal(asProfile(OUTSIDER, `select count(*) from public.portal_scrape_urls where household_id = '${household}';`, options).trim(), "0");
 });
 
-test("the session blob is unreadable from a browser, readable by the service role", () => {
+test("the session blob is invisible from a browser, readable by the service role", () => {
   psql(
     `insert into public.portal_sessions (household_id, integration_id, session, state) values ('${household}', '${integration}', 'storage-state-blob', 'connected');`,
     options,
   );
-  assert.throws(() => asProfile(HEAD, `select session from public.portal_sessions where household_id = '${household}';`, options), /permission denied|denied for/i);
+  // The deny-all policy yields no rows to any session, so the blob never leaves the server.
+  assert.equal(asProfile(HEAD, `select count(*) from public.portal_sessions where household_id = '${household}';`, options).trim(), "0");
   assert.equal(psql(`select session from public.portal_sessions where household_id = '${household}';`, options).trim(), "storage-state-blob");
 });
 
@@ -84,12 +85,12 @@ test("the status RPC gives the state to an Admin, never the session, and nothing
   assert.equal(asProfile(ADULT, `select count(*) from public.portal_session_status('${household}');`, options).trim(), "0");
 });
 
-test("fetch cursors are the worker's alone — authenticated cannot read them", () => {
+test("fetch cursors are the worker's alone — a browser session sees none", () => {
   psql(
     `insert into public.portal_fetch_cursors (household_id, integration_id, scrape_url, item_hash) values ('${household}', '${integration}', 'https://app.looplearning.com/task/list', '${HASH}');`,
     options,
   );
-  assert.throws(() => asProfile(HEAD, `select item_hash from public.portal_fetch_cursors where household_id = '${household}';`, options), /permission denied|denied for/i);
+  assert.equal(asProfile(HEAD, `select count(*) from public.portal_fetch_cursors where household_id = '${household}';`, options).trim(), "0");
   assert.equal(psql(`select count(*) from public.portal_fetch_cursors where household_id = '${household}';`, options).trim(), "1");
 });
 
