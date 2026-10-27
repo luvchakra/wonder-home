@@ -1,8 +1,8 @@
-# Fly config for the WonderHome portal fetch worker (story 08-033).
-# This runs apps/portal-worker (headless Playwright), NOT the Next.js web app
-# (that runs on Vercel). See https://fly.io/docs/reference/configuration/
+# fly.toml app configuration file generated for wonder-home on 2026-10-27T17:48:57Z
+#
+# See https://fly.io/docs/reference/configuration/ for information about how to use this file.
+#
 
-# Singapore (sin) — nearest region available on this account to Supabase (ap-south-1, Mumbai).
 app = 'wonder-home'
 primary_region = 'sin'
 
@@ -27,3 +27,4 @@ primary_region = 'sin'
   memory = '2gb'
   cpu_kind = 'shared'
   cpus = 1
+  memory_mb = 2048
