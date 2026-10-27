@@ -4,6 +4,7 @@ import { createAdminClient } from "@wonderhome/core/db/admin";
 import { runHealthReminderSweep } from "@wonderhome/core/health/reminders";
 import { runMeasurementRoutineSweep } from "@wonderhome/core/health/routine-reminders";
 import { keepStoresWarm } from "@wonderhome/core/homebrain/context-store";
+import { CLOCK_DRAIN_LIMIT, drainKnowledge } from "@wonderhome/core/knowledge/facts";
 import { sleepDueHouseholds } from "@wonderhome/core/homebrain/sleep/run";
 import { drainJobs } from "@wonderhome/core/homesend/retry-queue";
 import { notificationJobHandlers } from "@wonderhome/core/notifications/retry-handler";
@@ -117,6 +118,13 @@ async function dispatch(request: Request): Promise<Response> {
   } catch (thrown) {
     log.warn("context keep-warm failed", { reason: thrown instanceof Error ? thrown.name : "unknown" });
   }
+  // And writes the record index's facts for records whose own drain did not run (14-037): a write outside a request, a failed try.
+  let facts = 0;
+  try {
+    facts = (await drainKnowledge(admin, { limit: CLOCK_DRAIN_LIMIT, now })).written;
+  } catch (thrown) {
+    log.warn("knowledge drain failed", { reason: thrown instanceof Error ? thrown.name : "unknown" });
+  }
   after(async () => {
     // Deliveries that failed for a reason worth another try (story 27-010), worked by the same clock.
     try {
@@ -135,7 +143,7 @@ async function dispatch(request: Request): Promise<Response> {
       log.warn("homebrain sleep tick failed", { reason: thrown instanceof Error ? thrown.name : "unknown" });
     }
   });
-  return Response.json({ ok: true, households: households.length, delivered, advanced, health, noticed, digests, warmed }, { headers: { "cache-control": "no-store" } });
+  return Response.json({ ok: true, households: households.length, delivered, advanced, health, noticed, digests, warmed, facts }, { headers: { "cache-control": "no-store" } });
 }
 
 export const POST = dispatch;

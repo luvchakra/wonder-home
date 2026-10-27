@@ -1,6 +1,6 @@
 # The household record index
 
-**Status:** Phase 1 shipped (story 14-036, 2026-10-23). Phases 2–4 are stories 14-037 to 14-039.
+**Status:** Phase 1 shipped (story 14-036, 2026-10-23). Phase 2's first part shipped (14-037, 2026-10-27): registered tables as facts. The rest of Phase 2 is 14-058; Phases 3–4 are 14-038 and 14-039.
 **Owner's ask (2026-10-23):** "HomeTalk must know each and everything being added to WonderHome. But it seems that it doesn't know most of it. How can we ensure that this is better designed?"
 
 ## 1. The problem
@@ -77,6 +77,16 @@ The golden evaluation (`npm run eval`) has HT-141: "Who is Asmi's class teacher?
 - A generic trigger on every registered table queues `(table, id)` in a `knowledge_outbox`. A worker runs the registry's describer and upserts the fact within seconds, after the response.
 - Before answering, a turn drains anything still queued for its household, so it never answers from data older than the last save.
 - This replaces whole-snapshot rebuilds of `household_context`. The nightly sleep, "look deeper" and the evaluation move to it behind the 158-case evaluation gate.
+
+### What 14-037 built (2026-10-27)
+
+- `household_facts` and `knowledge_outbox` (migration `20261027120000_household_facts`), both deny-all.
+- `wh.queue_knowledge` on the 14 `registry` tables in stored domains. People and health stay read live for the person asking, so they have no stored facts. The migration queues every existing record, so the first drains backfill.
+- The worker (`knowledge/facts.ts`): claims queued records (a claim lasts a minute; one written again while held goes back to the queue), reads each once with the service role, runs the registry's describer and upserts the fact. A record gone, inactive or out of its window loses its fact. A failure is tried five times.
+- When it runs: after the response that wrote (`after()`, through the context write listener), on the five-minute delivery clock (300 per tick), and before a turn, for its own household (at most 100, while the stored row is read).
+- The stored context's rebuild no longer reads registered tables once `household_facts` exists. The turn and the nightly sleep get the facts in their place (`withFacts`). Without the table, everything reads as before, so the migration and the code are safe in either order.
+
+What waits for 14-058: builder tables as facts (one per occurrence for repeating things), the whole-snapshot rebuild retired, "look deeper" and the evaluation reading facts, and a fact re-described when a name it quotes changes (a member's or an embedded parent's).
 
 ## 5. Phase 3: one projection for the Calendar and HomeTalk (14-038)
 

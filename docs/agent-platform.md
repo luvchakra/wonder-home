@@ -136,6 +136,14 @@ WonderHome's AI layer is one pipeline with three named, real surfaces —
   reads and holds it to the same domain gates and `filterForViewer`. Never
   read the row from a session, and never let a turn answer from a row older
   than the last write. Without the table, reads fall back to the live path.
+  Since the record index Phase 2 (story 14-037, `knowledge/facts.ts`), the
+  registry's tables in stored domains are not in that row: each record is a
+  fact in `household_facts` (deny-all), written after the response from
+  `knowledge_outbox`, which the `wh.queue_knowledge` trigger fills. A turn
+  drains its own household's queue (at most 100 records) while the row is
+  read, then reads the facts in place of the row's own read of those tables.
+  A new registered table needs the queue trigger; `lint:knowledge` fails
+  without it.
   Since HomeBrain 4.0 (spec `design/HOMEBRAIN-4.0-DEEP-HOUSEHOLD-INTELLIGENCE.md`):
   - **Look deeper.** Before "not on record", a turn reads the question's
     domains again, live, through the viewer's own session

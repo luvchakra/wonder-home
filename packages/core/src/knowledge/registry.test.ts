@@ -107,6 +107,15 @@ describe("the coverage lint", () => {
     expect(problems).toEqual([expect.stringContaining("pets: read as knowledge (builder) but has no wh.mark_context_stale trigger")]);
   });
 
+  it("fails a registry table in a stored domain without the queue trigger, and passes with it (14-037)", () => {
+    const withRegistry = `export const KNOWLEDGE_REGISTRY = {\n  gift_plans: {\n    covered: "registry",\n    domain: "calendar",\n  },\n  helper_profiles: {\n    covered: "registry",\n    domain: "people",\n  },\n} as const;`;
+    const tables = "create table public.gift_plans (id uuid, household_id uuid);\ncreate table public.helper_profiles (id uuid, household_id uuid);";
+    const queue = `do $t$ declare name text; begin foreach name in array array['gift_plans'] loop execute format('create trigger q after insert on public.%I for each row execute function wh.queue_knowledge()', name); end loop; end; $t$;`;
+    const stale = trigger("'gift_plans', 'helper_profiles'");
+    expect(lintKnowledge([["1.sql", tables], ["2.sql", stale]], withRegistry)).toEqual([expect.stringContaining("gift_plans: a registry table in a stored domain but has no wh.queue_knowledge trigger")]);
+    expect(lintKnowledge([["1.sql", tables], ["2.sql", stale], ["3.sql", queue]], withRegistry)).toEqual([]);
+  });
+
   it("passes when every table is named and triggered, and ignores platform tables", () => {
     const problems = lintKnowledge([["1.sql", "create table public.pets (id uuid, household_id uuid);\ncreate table public.jobs (household_id uuid);\ncreate table public.plans (key text);"], ["2.sql", trigger("'pets'")]], registry);
     expect(problems).toEqual([]);

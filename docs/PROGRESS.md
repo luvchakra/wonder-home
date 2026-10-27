@@ -11,14 +11,14 @@ in `docs/progress/`; for the running log of what changed when, `tracking/PROGRES
 
 ## The whole picture
 
-**400 of 435 stories done — 92%**
+**400 of 434 stories done — 92.2%**
 
 | Status | Stories |
 |---|---:|
 | Done | 400 |
 | In Progress | 10 |
 | Blocked | 1 |
-| Not Started | 20 |
+| Not Started | 19 |
 | Deferred | 4 |
 
 ## By module
@@ -39,7 +39,7 @@ in `docs/progress/`; for the running log of what changed when, `tracking/PROGRES
 | 11 Bills, Fees & Finance | `█████████░` | 14 | 15 | 1 not started |
 | 12 Family Time & Social Activities | `██████████` | 9 | 9 | — |
 | 13 Maintenance, Laundry & Pet Care | `█████████░` | 10 | 11 | 1 in progress |
-| 14 AI Orchestration & Learning | `████████░░` | 48 | 57 | 1 in progress, 5 not started, 3 deferred |
+| 14 AI Orchestration & Learning | `████████░░` | 48 | 56 | 1 in progress, 4 not started, 3 deferred |
 | 15 Privacy, Security & Governance | `██████████` | 9 | 9 | — |
 | 16 Platform Admin & Operations | `██████████` | 8 | 8 | — |
 | 17 External Integrations | `██████████` | 9 | 9 | — |
@@ -74,7 +74,6 @@ in `docs/progress/`; for the running log of what changed when, `tracking/PROGRES
 | `14-022` HomeBrain 3.0 phase C — one answer source | 14 AI Orchestration & Learning | P0 | Deferred |
 | `14-023` HomeBrain 3.0 phase D — keep-warm hardening | 14 AI Orchestration & Learning | P1 | Deferred |
 | `14-031` HomeBrain 4.0 phase 7 — keep it whole | 14 AI Orchestration & Learning | P1 | In Progress |
-| `14-037` Record index Phase 2: facts written when records are written | 14 AI Orchestration & Learning | P0 | Not Started |
 | `14-038` Record index Phase 3: the Calendar and HomeTalk read one projection | 14 AI Orchestration & Learning | P1 | Not Started |
 | `14-039` Record index Phase 4: structure-first retrieval and coverage misses | 14 AI Orchestration & Learning | P1 | Not Started |
 | `14-056` HomeBrain 4.0 phase 3b — one structured call: answer or intent | 14 AI Orchestration & Learning | P0 | Not Started |
@@ -392,7 +391,7 @@ in `docs/progress/`; for the running log of what changed when, `tracking/PROGRES
 
 ### 14 — AI Orchestration & Learning
 
-48 of 57 done `████████░░`
+48 of 56 done `████████░░`
 
 | Story | Priority | Status | Notes |
 |---|---|---|---|
@@ -432,7 +431,6 @@ in `docs/progress/`; for the running log of what changed when, `tracking/PROGRES
 | `14-034` Long weekends from public holidays | P1 | Done | The owner, 2026-10-19: "add public holidays so it suggests long weekends". `calendar/holidays.ts` (`listHouseholdHolidays`: the household's country, national days, six months ahead) feeds HomeBrain's context as `holiday` items (calendar, general), in the store and the live read. `free_window` leads with the long weekends a holiday makes — a Friday or Monday (three days), a Thursday or Tuesday with one day taken off (four) — where nothing is on for the family, never one already begun. A rule reads "which weekend is free for a trip?" as a HomeBrain question; a trip fact is not cut to "this weekend". Golden case HT-119 (Gandhi Jayanti in household A). Help Calendar ¶10 in 8 languages (PR #255). Destinations for those weekends: 24-011. "Which are the next long weekends coming up" (live, 2026-10-20) was answered with the calendar's next three months: it is now read as this question (`tripQuestion` names "long weekends", the rule pattern takes it) and answered with only the long weekends, up to five, or says there are none; golden case HT-120 |
 | `14-035` The Home cat thinks something new each load | P2 | Done | The owner, 2026-10-21 ("only a small portion of the cat is visible now, show the max possible portion of cat, it should be moving a bit. no thought bubble appearing, use ai to create something new on every page load"). On a phone the cozy corner's cat is drawn whole in the header's corner (`HeroCat`, the same shapes as the scene), breathing gently (`wh-cat-bob`) and blinking, with a thought bubble. The thought is written by the platform's model (`home/cat-thoughts.ts`): only the language is sent, never anything of a household; a batch of sixteen per language is kept per server for three hours, each load picks one, and every line is checked first (one short sentence, no numbers, links, quotes or emoji). A page never waits on it beyond 1.2 s once per server; a failed batch is not asked again for 15 minutes; without a key or a batch the cat thinks one of eight built-in lines (`today.thought.*`, eight languages). Tests: 4. Follow-up the same day (the owner: "show a think bubble over the cat in available area, in thought bubble show useful info. it should appear randomly, with seamless animation, it should speak in cat language"): the bubble now says what is on record for the viewer — tonight's dinner, today's and tomorrow's calendar, how much is on the list to buy (`home/cat-facts.ts`, rules and catalog keys only, read through the viewer's own session; tested) — wrapped in a cat's voice ("Meow! …", "Purr… …", in each language), with a passing thought now and then. It rises and fades at random moments with a new line each time (`CatThoughtBubble`; one thought stays under reduced motion). On a phone the cat and its bubble sit in their own row under the greeting; on a wider screen the bubble finds the cat's head and takes the first spot clear of the greeting and the date card. Browser QA at 360, 412, 1024 and 1280px: the bubble covered neither the greeting nor the date card, no horizontal scroll. Help (Today and Home ¶8) in all eight languages. |
 | `14-036` The household record index, Phase 1: every table is knowledge or excluded with a reason | P0 | Done | The owner, 2026-10-23: "HomeTalk must know each and everything being added to WonderHome… how can we ensure that this is better designed?". Measured: 22 of 75 household-record tables were never read by HomeBrain, and 41 tables it did read had no stale trigger. `knowledge/registry.ts` names all 168 household tables (55 read by a builder, 20 by the new generic describer `knowledge/describe.ts`, 93 excluded with a reason: credentials, settings, telemetry, change logs, FamilyChat). The 20 newly known: child goals and check-ins, study sessions, school documents and teachers, availability, offices, helper profiles, weekly meal templates, budgets, order lines, purchases, gift plans, appliance services, backup services, routines, moved or cancelled occurrences, report readings, measurement routines, workouts. `npm run lint:knowledge` (CI) fails on an unnamed table or a missing stale trigger; migrations `20261023160000` and `20261023180000` add the triggers (applied live). Every registry select verified against the live database. `knowledge/registry.test.ts` runs each entry's example row (69 tests); eval HT-141 (159/159). Spec `design/HOUSEHOLD-RECORD-INDEX.md` |
-| `14-037` Record index Phase 2: facts written when records are written | P0 | Not Started | `household_facts` (deny-all RLS) with a generic trigger into `knowledge_outbox`; a worker describes and upserts each change after the response; a turn drains its household's queue before answering. Replaces whole-snapshot rebuilds of `household_context`. Spec §4 |
 | `14-038` Record index Phase 3: the Calendar and HomeTalk read one projection | P1 | Not Started | Time questions become one query over facts by time and people; the Calendar screen reads the same facts; `calendar/modules.ts` adapters become registry describers and `CALENDAR_SOURCE_RECORDS` goes away. Spec §5 |
 | `14-039` Record index Phase 4: structure-first retrieval and coverage misses | P1 | Not Started | Questions read into time/people/kind filters by rules; list questions get every match, not the top 12; a "nothing on record" answer that the index can find by words is logged as a coverage miss (table name only). Spec §6 |
 | `14-040` WhatsApp asks HomeTalk | P1 | Done | A linked adult's one-line question or everyday request on WhatsApp is answered by HomeTalk through the same gateway as Alexa (channel `whatsapp`, own conversation surface, `WHATSAPP_SCOPES`); school, health and money kept off; never a HomeSend item. Voice notes written down by the household's Gemini key when there is no Cloud Speech key. PRs #319, #320 |

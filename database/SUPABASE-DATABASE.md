@@ -37,6 +37,7 @@ Use Supabase PostgreSQL as used by the WonderArk core architecture, with `@supab
 - `conversation_sessions.surface`: where a conversation happens — `app` (web, PWA, in-app Gemini Voice) or `alexa`. Pending questions and proposals hang off the session, so they never cross surfaces; household data is shared (voice phase 5)
 - `hometalk_channel_events`: one closed-word row per HomeTalk turn or channel event (channel, outcome, latency, replayed) — never any content; service-role only, swept after 90 days by `/platform/retention`, read by `GET /platform-admin/voice-metrics` (voice phase 6)
 - `voice_oauth_grants`: OAuth codes and access/refresh tokens WonderHome issued to a voice provider, stored only as SHA-256 hashes; no session can read it
+- `household_facts` and `knowledge_outbox` (record index Phase 2, story 14-037): one HomeBrain fact per registered record, written by the knowledge worker after the response from a queue the `wh.queue_knowledge` trigger fills on every registered table in a stored domain. Deny-all to every session; the server claims the queue with `claim_knowledge_outbox` / `finish_knowledge_outbox` (service role only). The outbox has no foreign key to `households`, so a household's cascading delete is never refused by its own queue
 - `ai_corrections`: append-only correction evidence, one row per corrected field, admin-readable, server-written (Wave 5 §13)
 - `agent_runs`
 - `approvals`

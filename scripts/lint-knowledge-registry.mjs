@@ -10,6 +10,9 @@
  *   3. Every table read as knowledge (`builder` or `registry`) carries the
  *      `wh.mark_context_stale` trigger, so a write that goes round a service
  *      still marks HomeBrain's stored context stale.
+ *   4. Every `registry` table in a stored domain (not people or health, which
+ *      are read live for the person asking) carries the `wh.queue_knowledge`
+ *      trigger, so its facts are written when its records are (Phase 2).
  */
 import { readdirSync, readFileSync } from "node:fs";
 
@@ -36,19 +39,32 @@ export function householdTables(migrations) {
   return new Set([...tables.entries()].filter(([, tenant]) => tenant).map(([name]) => name));
 }
 
-/** Tables a migration gives the context-stale trigger, by name in an array or a direct `create trigger`. */
-export function staleTriggered(migrations) {
+/** Tables a migration gives a trigger function (`wh.<fn>`), by name in an array or a direct `create trigger`. */
+export function staleTriggered(migrations, fn = "mark_context_stale") {
   const triggered = new Set();
+  const named = new RegExp(fn);
+  const direct = new RegExp(`create\\s+(?:or\\s+replace\\s+)?trigger\\s+\\w+[\\s\\S]*?\\bon\\s+(?:public\\.)?(\\w+)[\\s\\S]*?execute\\s+function\\s+wh\\.${fn}`, "gi");
   for (const [, raw] of migrations) {
     const sql = raw.replace(/--[^\n]*/g, "");
-    if (!/mark_context_stale/.test(sql)) continue;
+    if (!named.test(sql)) continue;
     for (const block of sql.matchAll(/foreach\s+\w+\s+in\s+array\s+array\s*\[([\s\S]*?)\]\s*loop([\s\S]*?)end\s+loop/gi)) {
-      if (!/mark_context_stale/.test(block[2])) continue;
+      if (!named.test(block[2])) continue;
       for (const name of block[1].matchAll(/'(\w+)'/g)) triggered.add(name[1]);
     }
-    for (const match of sql.matchAll(/create\s+(?:or\s+replace\s+)?trigger\s+\w+[\s\S]*?\bon\s+(?:public\.)?(\w+)[\s\S]*?execute\s+function\s+wh\.mark_context_stale/gi)) triggered.add(match[1]);
+    for (const match of sql.matchAll(direct)) triggered.add(match[1]);
   }
   return triggered;
+}
+
+/** Domains read live for the person asking (`homebrain/context-store.ts` LIVE_DOMAINS): their tables have no stored facts. */
+const LIVE_DOMAINS = new Set(["people", "notifications", "hometalk", "health", "attention"]);
+
+/** `registry` tables whose facts are written when their records are (`knowledge/facts.ts` FACT_TABLES). */
+export function factTables(source) {
+  const tables = new Set();
+  const body = source.slice(source.indexOf("export const KNOWLEDGE_REGISTRY"));
+  for (const match of body.matchAll(/^ {2}(\w+): \{\s*covered: "registry",\s*domain: "(\w+)"/gm)) if (!LIVE_DOMAINS.has(match[2])) tables.add(match[1]);
+  return tables;
 }
 
 export function registryEntries(source) {
@@ -70,6 +86,10 @@ export function lintKnowledge(migrations, registrySource) {
   for (const [table, covered] of [...entries.entries()].sort()) {
     if (!tables.has(table)) problems.push(`${table}: named in knowledge/registry.ts but no migration creates it with a household_id`);
     else if (covered !== "excluded" && covered !== "live" && !triggered.has(table)) problems.push(`${table}: read as knowledge (${covered}) but has no wh.mark_context_stale trigger; add it in a migration`);
+  }
+  const queued = staleTriggered(migrations, "queue_knowledge");
+  for (const table of [...factTables(registrySource)].sort()) {
+    if (tables.has(table) && !queued.has(table)) problems.push(`${table}: a registry table in a stored domain but has no wh.queue_knowledge trigger; add it in a migration so its facts are written`);
   }
   return problems;
 }
