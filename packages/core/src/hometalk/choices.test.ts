@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { answerClarification, type PendingClarification } from "../conversation/clarify";
+import { answerClarification, leavesQuestion, type PendingClarification } from "../conversation/clarify";
 import { normaliseUtterance } from "../conversation/normalise";
 import { en } from "../i18n/messages/en";
 import { hi } from "../i18n/messages/hi";
@@ -300,5 +300,63 @@ describe("a turn that only asked shows no preview card", () => {
     expect(onlyAsked({ action: "complete_homesend_item", proposal: "executed", askedNext: false })).toBe(false);
     expect(onlyAsked({ action: "add_to_list", proposal: "executed", askedNext: false })).toBe(false);
     expect(onlyAsked({ action: "fill_homesend_details", proposal: "clarify", askedNext: false })).toBe(false);
+  });
+});
+
+// The owner, 2026-10-27: "How much maps link should I add?" offered only "Skip"; the tapped "Skip" became a
+// HomeSend item and failed safely. Every pick, in every set, must be read by the question it belongs to.
+describe("every choice set's say round-trips through its own question", () => {
+  const candidates = [
+    { entityType: "consumable", entityId: "1", label: "Coconut oil", source: "clarification", at: "2026-10-26T00:00:00Z" },
+    { entityType: "consumable", entityId: "2", label: "Mustard oil", source: "clarification", at: "2026-10-26T00:00:00Z" },
+  ];
+  const people = [{ id: "c1", displayName: "Asmi Sharma" }, { id: "c2", displayName: "Manan Sharma" }];
+  const sets: [string, PendingClarification][] = [
+    ["amount, one item", quantity],
+    ["amount, an item not in the catalog", pending({ action: "add_to_list", target: { kind: "list", reference: "groceries" }, parameters: { item: "maps link", awaiting: "quantity", quantityFor: ["maps link"] }, question: "How much maps link should I add? For example 1 litre, 1 kg or 2 packets." })],
+    ["amount, already on the list", pending({ ...quantity, question: 'How much more should I add? Or say "that\'s enough" to leave it.' })],
+    ["amount, several", pending({ action: "add_to_list", parameters: { items: ["milk", "eggs"], awaiting: "quantity", quantityFor: ["milk", "eggs"] } })],
+    ["amount, in another unit", pending({ action: "add_to_list", parameters: { item: "coconut oil", awaiting: "quantity", quantityFor: ["coconut oil"], unitAsk: { itemId: "c", unit: "l", said: "1 litre coconut oil" }, choices: ["1 bottle", "2 bottles", "Count it in litres instead"] } })],
+    ["who", pending({ action: "assign_responsibility", parameters: { awaiting: "member" } })],
+    ["which day", pending({ action: "set_reminder", parameters: { awaiting: "day", what: "call the plumber" } })],
+    ["which item", pending({ action: "add_to_list", parameters: { awaiting: "referent", candidates } })],
+    ["the offer, one", pending({ action: "fill_homesend_details", parameters: { itemIds: ["hs-1"] } })],
+    ["the offer, several", pending({ action: "fill_homesend_details", parameters: { itemIds: ["a", "b"], titles: [{ id: "a", title: "Maths worksheet" }, { id: "b", title: "Diwali dinner" }] } })],
+    ["item: who it's for", intake("child", "school_item", { choices: people })],
+    ["item: how much", intake("quantity", "grocery_item", { title: "Coconut oil" })],
+    ["item: due", intake("dueDate", "school_item")],
+    ["item: date", intake("date", "receipt")],
+    ["item: time", intake("time", "event")],
+    ["item: record type", intake("recordType", "health_document")],
+  ];
+
+  it("each set is offered, and each pick's words are an answer to it (or leave it, with nothing done)", () => {
+    for (const [name, asked] of sets) {
+      const set = choicesFor(asked, context);
+      expect(set, name).not.toBeNull();
+      for (const choice of [...set!.choices, ...(set!.also ?? [])]) {
+        if (choice.say === null) continue;
+        const answered = answerClarification(asked, choice.say, actor);
+        expect(answered !== null || leavesQuestion(asked, choice.say), `${name}: ${choice.say}`).toBe(true);
+      }
+    }
+  });
+
+  it("\"skip\" to a how-much question is an answer that leaves the list as it is", () => {
+    const maps = sets[1]![1];
+    expect(says(choicesFor(maps, context))).toEqual(["skip"]);
+    expect(answerClarification(maps, "skip", actor)?.parameters).toMatchObject({ keepAsIs: true });
+  });
+
+  it("every \"leave it\" is read by every question: its own way, or the question closes", () => {
+    for (const word of ["skip", "Skip", "leave it", "never mind", "Nevermind.", "no thanks", "that's enough", "That’s enough!"]) {
+      for (const [name, asked] of sets) {
+        const answered = answerClarification(asked, word, actor);
+        expect(answered !== null || leavesQuestion(asked, word), `${name}: ${word}`).toBe(true);
+      }
+      expect(answerClarification(quantity, word, actor)?.parameters, word).toMatchObject({ keepAsIs: true });
+      expect(answerClarification(sets[8]![1], word, actor)?.parameters, word).toMatchObject({ decline: true });
+      expect(readDetailAnswer("school_item", "dueDate", word, { timezone: "Asia/Kolkata", now: MONDAY }), word).toBe("skip");
+    }
   });
 });

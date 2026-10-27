@@ -1,6 +1,7 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 
 import { auditChange } from "../api/audit";
+import { isLeaveIt } from "../conversation/leave-it";
 import { searchWords } from "../commerce/catalog-curated";
 import { parseHouseholdSettings, parseMemberChoices, resolvePreferences } from "../i18n/preferences";
 import { en } from "../i18n/messages/en";
@@ -327,6 +328,15 @@ async function readMessage(admin: SupabaseClient, messageId: string, deps: Whats
         await recordWhatsAppEvents(admin, events);
         return "read";
       }
+      // A short reply to the open question is an answer even when HomeTalk couldn't take it: asked again,
+      // politely, never kept as a HomeSend item ("skip", 2026-10-27, failed safely as unreadable).
+      if (row.text_content.trim().split(/\s+/).length <= NOTE_MAX_WORDS) {
+        events.push({ kind: "question_redirected", householdId: row.household_id, latencyMs: elapsed() });
+        await settle({ processing_status: "ignored" });
+        await say((await words())("whatsapp.answerUnread"));
+        await recordWhatsAppEvents(admin, events);
+        return "read";
+      }
     }
   }
 
@@ -342,6 +352,16 @@ async function readMessage(admin: SupabaseClient, messageId: string, deps: Whats
     events.push({ kind: answer ? "question_answered" : "question_redirected", householdId: row.household_id, latencyMs: elapsed() });
     await settle({ processing_status: "ignored" });
     await (answer ? sayHomeTalk(answer) : say((await words())("whatsapp.questionReply")));
+    await recordWhatsAppEvents(admin, events);
+    return "read";
+  }
+
+  // A lone "skip", "never mind" or "no thanks" with no HomeTalk to take it is about nothing to keep: never a
+  // HomeSend item (the "skip" that failed safely, 2026-10-27; the same guard as a lone bare detail, #377).
+  if (!together && text && isLeaveIt(text)) {
+    events.push({ kind: "question_redirected", householdId: row.household_id, latencyMs: elapsed() });
+    await settle({ processing_status: "ignored" });
+    await say((await words())("whatsapp.leftAlone"));
     await recordWhatsAppEvents(admin, events);
     return "read";
   }

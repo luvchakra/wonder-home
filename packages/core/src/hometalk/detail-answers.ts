@@ -1,3 +1,4 @@
+import { isLeaveIt } from "../conversation/leave-it";
 import { dayFromDateText, timeFromDateText } from "../ai/classify-intake";
 import { RECORD_TYPES, type RecordType } from "../health/records";
 import { COMPLETENESS, readQuantity, type DetailField } from "../homesend/completeness";
@@ -55,7 +56,7 @@ export function readDetailAnswer(
 ): Partial<HomeSendExtraction> | "skip" | null {
   const said = text.trim().replace(/[*_~`]/g, "");
   if (!said || said.length > 160) return null;
-  if (SKIP.test(said)) return "skip";
+  if (SKIP.test(said) || isLeaveIt(said)) return "skip";
   const spec = kind === "unknown" ? undefined : COMPLETENESS[kind].find((entry) => entry.field === field);
   if (!spec) return null;
   switch (spec.answer) {

@@ -4,6 +4,7 @@ import type { DetailField } from "../homesend/completeness";
 import type { HomeSendKind } from "../homesend/items";
 import { readDetailAnswer } from "../hometalk/detail-answers";
 import type { HouseholdIntent, IntentTarget } from "./intent";
+import { isLeaveIt } from "./leave-it";
 import { readItemAmount } from "./quantity";
 import { chooseCandidate, readFocus } from "./references";
 
@@ -114,6 +115,17 @@ export function extractItems(utterance: string): string[] {
 }
 
 /**
+ * Whether this reply leaves a question that has no "leave it" of its own: the
+ * amount, a HomeSend detail and the offer to fill details in read "skip"
+ * themselves; any other question ("Who did you mean?", "Which dish?") closes
+ * with nothing done (`engine.ts`). Pure.
+ */
+export function leavesQuestion(pending: PendingClarification, utterance: string): boolean {
+  if (!isLeaveIt(utterance)) return false;
+  return pending.action !== "complete_homesend_item" && pending.action !== "fill_homesend_details" && pending.parameters.awaiting !== "quantity";
+}
+
+/**
  * The answer, folded into the question it answers.
  *
  * Returns null when the new turn genuinely does not answer it — somebody
@@ -219,7 +231,7 @@ export function answerClarification(
 /** How long an answer to each grounding question can plausibly be. */
 const awaitingWordLimit: Record<string, number> = { member: 4, day: 5, referent: 6, quantity: 8 };
 
-/** "That's enough", "none", "no thanks": leave the list as it is. */
+/** "None", "nothing", "don't add it": leave the list as it is. The shared "leave it" words are `isLeaveIt`. */
 const ENOUGH = /^(?:no|nope|none|nothing|nothing more|no more|no need|no thanks?|no,? thank you|enough|that'?s enough|it'?s enough|that'?s fine|that'?s all|fine as it is|leave it|leave it as it is|leave them|skip|skip it|don'?t add (?:it|them|any(?:thing)?)|cancel)(?:,?\s*(?:thanks|thank you))?$/i;
 
 /** "Yes" to "Did you mean 500 g of rice?". */
@@ -246,7 +258,7 @@ function answerQuantity(pending: PendingClarification, utterance: string, contex
   if (!raw || asked.length === 0) return null;
   const base = { actorMemberId: context.actorMemberId, channel: context.channel, utterance, action: pending.action, target: pending.target, confidence: 0.9 };
   const rest = withoutGroundingState(pending.parameters);
-  if (ENOUGH.test(raw)) return { ...base, parameters: { ...rest, keepAsIs: true } };
+  if (isLeaveIt(raw) || ENOUGH.test(raw)) return { ...base, parameters: { ...rest, keepAsIs: true } };
   // "Count it in litres instead" (25-038): the item's unit changes the way the
   // Groceries screen changes it, and the amount first said is added in it.
   const unitAsk = pending.parameters.unitAsk as { itemId?: unknown; unit?: unknown; said?: unknown } | undefined;
@@ -352,8 +364,9 @@ const OFFER_NO = /^(?:no|nope|not now|later|maybe later|skip|leave (?:it|them)|n
 function answerDetailsOffer(pending: PendingClarification, utterance: string, context: { actorMemberId: string; channel: "text" | "voice" }): HouseholdIntent | null {
   const said = utterance.trim();
   const yes = OFFER_YES.test(said);
-  const picked = yes || OFFER_NO.test(said) ? null : offeredItemsNamed(pending.parameters.titles, said);
-  if (!yes && !picked && !OFFER_NO.test(said)) return null;
+  const no = OFFER_NO.test(said) || isLeaveIt(said);
+  const picked = yes || no ? null : offeredItemsNamed(pending.parameters.titles, said);
+  if (!yes && !picked && !no) return null;
   return {
     action: "fill_homesend_details",
     actorMemberId: context.actorMemberId,

@@ -11,6 +11,7 @@ decision that shapes later work each earns a note, written before moving on.
 
 | Date | Note |
 |---|---|
+| 2026-10-27 | ["Skip" answers HomeTalk's question, never a HomeSend item (25-040)](2026-10-27-skip-answers-clarify.md) |
 | 2026-10-27 | [HomeBrain 4.0 phase 3a: cached prompts, a streamed answer call, turn timings (14-027)](2026-10-27-homebrain-one-pass-phase-3a.md) |
 | 2026-10-27 | [Record index Phase 2, first part: facts written when records are written (14-037)](2026-10-27-record-index-facts.md) |
 | 2026-10-27 | [Connect Loop Learning with a sign-in, stored securely (08-032)](2026-10-27-school-portal-credentials.md) |
