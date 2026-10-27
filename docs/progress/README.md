@@ -11,6 +11,7 @@ decision that shapes later work each earns a note, written before moving on.
 
 | Date | Note |
 |---|---|
+| 2026-10-27 | [Portal fetch: Connect-school UI + twice-daily schedule (08-033 complete)](2026-10-27-portal-fetch-ui-schedule-08-033.md) |
 | 2026-10-27 | [Portal fetch: extraction + filing (08-033, slice 5)](2026-10-27-portal-extraction-filing-08-033.md) |
 | 2026-10-27 | [Portal fetch: the Fly worker + Playwright adapter (08-033, slice 4)](2026-10-27-portal-worker-08-033.md) |
 | 2026-10-27 | [Groceries: sort by Recently updated, compact & realigned cards (25-042)](2026-10-27-groceries-sort-compact.md) |
