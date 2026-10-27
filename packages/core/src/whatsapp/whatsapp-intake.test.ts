@@ -628,6 +628,47 @@ describe("processing into HomeSend", () => {
       expect(out.sent.map((sent) => sent.text)).toEqual(["Sorry, I couldn't take that as an answer 🤔 Could you answer my last question again, or pick one of its choices?"]);
     });
 
+    // The owner, 2026-10-27, 14:55 IST: "Skip" came back quoting HomeTalk's question and failed safely in HomeSend.
+    it("a swipe-reply quoting HomeTalk's own question goes to HomeTalk, never a HomeSend item", async () => {
+      // Expected: one HomeTalk turn reading "2 packets" as the answer; no HomeSend item; the row ignored.
+      const { h, id } = await asked("2 packets");
+      h.tables.whatsapp_messages![0]!.reply_to_provider_message_id = "wamid.QUESTION";
+      h.tables.whatsapp_messages![1]!.hometalk_reply_id = "wamid.QUESTION";
+      const out = replies();
+      const heard: string[] = [];
+      await processWhatsAppMessage(h.client, id, {
+        config: CONFIG, fetch: out.fetchImpl, ingest: { classify },
+        ask: async ({ text }) => {
+          heard.push(text ?? "");
+          return (await talk(text ?? "", howMuch)).kind === "reply" ? "Okay, I've left the shopping list as it is." : null;
+        },
+      });
+      expect(heard).toEqual(["2 packets"]);
+      expect(h.tables.home_send_items).toEqual([]);
+      expect(h.tables.whatsapp_messages![0]).toMatchObject({ processing_status: "ignored", homesend_item_id: null });
+    });
+
+    it("a swipe-reply quoting something other than HomeTalk's question keeps today's routing", async () => {
+      // Expected: rule 2 is not used; a short detail quoting the member's own earlier message never reaches the
+      // open-question path (no HomeTalk turn for "for Manan").
+      const { h, id } = await asked("for Manan");
+      h.tables.whatsapp_messages![0]!.reply_to_provider_message_id = "wamid.ask";
+      h.tables.whatsapp_messages![1]!.hometalk_reply_id = "wamid.QUESTION";
+      const out = replies();
+      const heard: string[] = [];
+      await processWhatsAppMessage(h.client, id, { config: CONFIG, fetch: out.fetchImpl, ingest: { classify }, ask: async ({ text }) => (heard.push(text ?? ""), "answered") });
+      expect(heard).toEqual([]);
+    });
+
+    it("HomeTalk's reply is remembered, so a later swipe-reply to it can be recognised", async () => {
+      // Expected: the row carries WhatsApp's id for HomeTalk's reply.
+      const { h, id } = await received("text");
+      h.tables.whatsapp_messages![0]!.text_content = "what's for dinner?";
+      const out = replies();
+      await processWhatsAppMessage(h.client, id, { config: CONFIG, fetch: out.fetchImpl, ingest: { classify }, ask: async () => "Dal and rice 😊" });
+      expect(h.tables.whatsapp_messages![0]).toMatchObject({ hometalk_reply_id: "wamid.reply1" });
+    });
+
     it("a lone \"skip\" with no question open is never a HomeSend item", async () => {
       for (const ask of [async ({ text }: { text?: string }) => (await talk(text ?? "")).kind === "reply" ? "Okay. Nothing is waiting on you, so I've left everything as it is." : null, undefined]) {
         const { h, id } = await received("text");

@@ -1,4 +1,4 @@
-import { distanceLabel } from "../places/provider";
+import { distanceLabel, mapsLink } from "../places/provider";
 import type { PlaceRequest } from "./request";
 import type { PlacesOutcome } from "./service";
 
@@ -29,7 +29,10 @@ export function placesReply(request: PlaceRequest, outcome: PlacesOutcome): stri
     case "found": {
       const lines = outcome.places.map((place) => {
         const facts = [place.kind, distanceLabel(place.distanceMeters), place.rating !== null ? `★${place.rating.toFixed(1)}` : null].filter(Boolean).join(" · ");
-        return `- **${place.name}**${facts ? ` — ${facts}` : ""}${place.saved ? " (saved)" : ""}`;
+        // Asked for ("add maps link"), each place carries its Google Maps link in the words too, which is
+        // all WhatsApp shows (the owner, 2026-10-27); otherwise the cards under the reply carry it.
+        const link = request.mapLinks ? ` · [Map](${place.mapsUri ?? mapsLink({ name: place.name, formattedAddress: place.address, placeId: place.placeId })})` : "";
+        return `- **${place.name}**${facts ? ` — ${facts}` : ""}${place.saved ? " (saved)" : ""}${link}`;
       });
       const count = outcome.places.length;
       const intro =

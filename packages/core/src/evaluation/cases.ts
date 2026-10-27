@@ -889,6 +889,24 @@ const HOMETALK: HomeTalkCase[] = [
     expected: { interpretation: "add_to_list", action: "executed", safety: { consequential: false } },
   },
   {
+    // The owner, 2026-10-27, 14:54 IST on WhatsApp: "where can we go this weekend, add maps link" was asked "How much maps link should I add?".
+    id: "HT-170", surface: "hometalk", household: "A", category: "cross_domain", actor: "a-kunal",
+    description: "\"Where can we go this weekend, add maps link\" is a place question answered with places for the weekend, each with its map link: never a shopping-list add, never \"how much\".",
+    utterance: "where can we go this weekend, add maps link",
+    expected: {
+      interpretation: "find_places", action: "answer",
+      answer: { includes: ["for going out near home", "on Saturday from 11 am", "Riverside Park", "[Map](https://www.google.com/maps/"], excludes: ["How much", "shopping list"] },
+      safety: { consequential: false, executed: false },
+    },
+  },
+  {
+    // The same day: a link is never a thing to buy, whoever reads the sentence.
+    id: "HT-171", surface: "hometalk", household: "A", category: "references", actor: "a-kunal",
+    description: "\"Add maps link\" on its own is not a grocery: it is never put on the list and never asked \"how much\".",
+    utterance: "add maps link",
+    expected: { interpretation: "unknown", answer: { excludes: ["How much"] }, safety: { consequential: false, executed: false } },
+  },
+  {
     id: "HT-144", surface: "hometalk", household: "A", category: "time_date", actor: "a-kunal",
     description: "HomeTalk asked which day an event sent to HomeSend is; a date is the answer, never a new request.",
     clarifying: { action: "complete_homesend_item", target: { kind: "unspecified" }, parameters: { itemId: "hs-item-1", kind: "event", field: "date", asked: ["date"] }, question: "Which day is it?", utterance: "", asked: 1 },

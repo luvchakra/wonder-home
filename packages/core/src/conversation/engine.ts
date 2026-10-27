@@ -15,7 +15,7 @@ import { isLeaveIt, LEFT_AS_IT_IS, NOTHING_TO_LEAVE } from "./leave-it";
 import { extractMemory, type Memory } from "./memory";
 import { needsRecording, proposeFromIntent, type ActionPreview, type Proposal } from "./proposal";
 import type { FocusEntity } from "./references";
-import { resolveRuleIntent, rulesAnswerItself, sameRuleReading } from "./rules";
+import { notAThingToBuy, resolveRuleIntent, rulesAnswerItself, sameRuleReading } from "./rules";
 
 /**
  * One turn of conversation, from what was said to what WonderHome says back.
@@ -290,6 +290,13 @@ export async function converse(raw: TurnInput): Promise<TurnResult> {
       // stands; a consequential act still waits for a person's yes.
       intent = { ...intent, parameters: filled, confidence: Math.max(intent.confidence, rules.confidence) };
     }
+  }
+
+  // A link, a map or directions is never a thing to buy, whoever read it as one: "add maps link" is never
+  // put on the list or asked "how much" (the owner, 2026-10-27).
+  if (intent.action === "add_to_list" && !answered) {
+    const named = [intent.parameters.item, ...(Array.isArray(intent.parameters.items) ? intent.parameters.items : [])].filter((entry): entry is string => typeof entry === "string");
+    if (named.length > 0 && named.every(notAThingToBuy)) intent = { ...intent, action: "unknown", target: { kind: "unspecified" }, parameters: {}, confidence: 0 };
   }
 
   // Outside what this channel may ask for: refused before anything is asked

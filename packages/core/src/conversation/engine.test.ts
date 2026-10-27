@@ -283,3 +283,35 @@ describe("\"skip\", \"leave it\", \"never mind\"", () => {
     expect(await converse(turn({ utterance: "leave it", pending, clarifying: who }))).toMatchObject({ kind: "reject", actionId: "a-9" });
   });
 });
+
+// The owner, 2026-10-27, 14:54 IST: "where can we go this weekend, add maps link" was asked "How much maps link should I add?".
+describe("a link is never a thing to buy", () => {
+  const ground: TurnInput["ground"] = (intent) =>
+    groundIntent(intent, { people: [], viewerMemberId: "priya", timezone: "Asia/Kolkata", now: NOW, references: async () => NO_REFERENCES, groceries: async () => [] });
+  const modelAdds = (item: string): TurnInput["understand"] =>
+    async (utterance, context) => ({ action: "add_to_list", actorMemberId: context.actorMemberId, target: { kind: "list", reference: "groceries" }, parameters: { item }, confidence: 0.9, channel: context.channel, utterance, understanding: { source: "model", provider: "anthropic" } });
+
+  it("the whole question is a place question with map links, never a list add or a how-much question", async () => {
+    // Expected: find_places, read with the map links; nothing proposed for the list.
+    const result = await converse(turn({ utterance: "where can we go this weekend, add maps link", ground }));
+    expect(result.kind === "reply" && result.intent).toMatchObject({ action: "find_places" });
+    expect(result.kind === "reply" && result.text).not.toMatch(/how much/i);
+  });
+
+  it("\"add maps link\" is never put on the list or asked how much, whether the rules or a model read it", async () => {
+    // Expected: not add_to_list, no "how much", no clarification awaiting a quantity.
+    for (const understand of [undefined, modelAdds("maps link")]) {
+      const result = await converse(turn({ utterance: "add maps link", ground, ...(understand ? { understand } : {}) }));
+      expect(result.kind === "reply" && result.intent.action).not.toBe("add_to_list");
+      expect(result.kind === "reply" && result.text).not.toMatch(/how much/i);
+      expect(result.kind === "reply" ? result.clarification?.parameters.awaiting : null).not.toBe("quantity");
+    }
+  });
+
+  it("\"add milk\" still asks how much, as before", async () => {
+    // Expected: add_to_list for milk, awaiting its quantity.
+    const result = await converse(turn({ utterance: "add milk", ground }));
+    expect(result.kind === "reply" && result.intent).toMatchObject({ action: "add_to_list", parameters: { item: "milk" } });
+    expect(result.kind === "reply" && result.text).toMatch(/How much milk should I add\?/);
+  });
+});

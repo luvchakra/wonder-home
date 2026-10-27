@@ -39,3 +39,16 @@ describe("the premise rule: a part that leans on an earlier one waits for it to 
     expect(heldBecause("add bread", [{ part: "pay the water bill", outcome: "failed" }])).toBeNull();
   });
 });
+
+// The owner, 2026-10-27: "add maps link" was split off and read as a grocery.
+describe("a part about the answer stays with its question", () => {
+  it("\"add maps link\" after a question is part of that question", () => {
+    // Expected: one request, the question with its link ask.
+    expect(splitRequest("where can we go this weekend, add maps link")).toEqual(["where can we go this weekend, add maps link"]);
+    expect(splitRequest("suggest dinner places nearby and add the map links too")).toEqual(["suggest dinner places nearby and add the map links too"]);
+  });
+
+  it("two real requests are still split", () => {
+    expect(splitRequest("where can we go this weekend, add milk")).toEqual(["where can we go this weekend", "add milk"]);
+  });
+});

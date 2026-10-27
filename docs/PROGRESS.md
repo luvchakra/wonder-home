@@ -11,11 +11,11 @@ in `docs/progress/`; for the running log of what changed when, `tracking/PROGRES
 
 ## The whole picture
 
-**401 of 435 stories done — 92.2%**
+**403 of 437 stories done — 92.2%**
 
 | Status | Stories |
 |---|---:|
-| Done | 401 |
+| Done | 403 |
 | In Progress | 10 |
 | Blocked | 1 |
 | Not Started | 19 |
@@ -49,8 +49,8 @@ in `docs/progress/`; for the running log of what changed when, `tracking/PROGRES
 | 21 Health and Fitness | `█████████░` | 11 | 12 | 1 not started |
 | 22 Internationalization and Localization | `████████░░` | 7 | 8 | 1 deferred |
 | 23 Smart Notifications | `██████████` | 13 | 13 | — |
-| 24 HomePlaces | `██████████` | 14 | 14 | — |
-| 25 HomeFood | `████████░░` | 32 | 39 | 7 not started |
+| 24 HomePlaces | `██████████` | 15 | 15 | — |
+| 25 HomeFood | `████████░░` | 33 | 40 | 7 not started |
 | 26 HomeEvents | `███████░░░` | 15 | 19 | 1 in progress, 3 not started |
 | 27 Notification Channels and Events | `█████████░` | 24 | 25 | 1 blocked |
 
@@ -603,7 +603,7 @@ in `docs/progress/`; for the running log of what changed when, `tracking/PROGRES
 
 ### 24 — HomePlaces
 
-14 of 14 done `██████████`
+15 of 15 done `██████████`
 
 | Story | Priority | Status | Notes |
 |---|---|---|---|
@@ -621,10 +621,11 @@ in `docs/progress/`; for the running log of what changed when, `tracking/PROGRES
 | `24-012` Added places apart from saved ones, and first | P1 | Done | The owner, 2026-10-21. `household_places.origin` ('added' from the place book's own search, 'suggestion' from a HomeTalk answer; existing rows told apart by `kind`). /places lists Added by you, then Saved from HomeTalk, then Not for us, with counts; `rankPlaces` gives an added place +2.5 (a saved one +1.5). Test: added outranks suggested. Waits on migration `20261021001000_household_places_origin.sql` (until then a place with no kind reads as added). Live 2026-10-21: migration on the live project. |
 | `24-013` A place question is answered, never asked "what kind of place?" twice | P0 | Done | The owner's report, 2026-10-21: "can we go somewhere out tomorrow" got "Tell me what kind of place you have in mind…", and the answer "dinner nearby home" got the identical question back. Causes: the route's `findPlaces` re-ran `isPlaceQuestion` on the words after the model had already said `find_places`, and neither "go somewhere out" (no asking word it knew, and only "go out" as a kind) nor "dinner nearby home" (no asking word at all) passed, so both fell to a fixed question that was never stored as an open question. Now a turn known to be a place question is read with `asked` (`homeplaces/request.ts`): no kind named is going out (`assumed: "kind"`), answered and said back with "Say dinner, a park or a mall to narrow it"; "tomorrow" is tomorrow's window (`dayOffset`); the short "dinner nearby home" reads by rules; each reply keeps its reading (`metadata.placeRequest`) and a follow-up within 30 minutes is read with it (`placeRequestFrom`, `lastReplyMetadata`), so the day and anchor carry. The narrowing line and "whose school?" are open questions (`placesOpenQuestion`; `clarify.ts` answers `find_places` with a short reply that carries a kind, day, place or child's name), and a "whose school?" left unanswered is answered near home, said back (`WHICH_SCHOOL_FALLBACK`). Golden HT-135 to HT-137; the evaluation now runs place questions through the real reading, ranking and reply against golden places |
 | `24-014` A school or place Google Maps lists is found by the picker | P0 | Done | The owner's report, 2026-10-22: "euro school thane" found nothing in the school picker while Google Maps listed four EuroSchools. Cause: a school search sent `includedPrimaryTypes` (school, primary_school, secondary_school, preschool), which keeps a place only when its *primary* type is one of those, and Google files many Indian schools under other categories ("ICSE school", "International school"). Autocomplete now runs unfiltered and reads each prediction's own `types`: schools first, a bare city or road dropped, other places after (`places/google.ts`'s `forKind`). When autocomplete has no school (or, for an address, office or place, nothing at all), the same words go to `places:searchText`, the search behind the Maps search box, which forgives "euro school" for "EuroSchool"; its places say how far they are from home, and autocomplete's own answer stands if that second look fails. HomePlaces' `findNearby` had the same weakness: a strict `includedType` (a getaway's `tourist_attraction`) that leaves nothing is asked again once with the type as a preference. Unit tests in `google.test.ts` |
+| `24-015` "Where can we go this weekend, add maps link" is answered with weekend places and their map links | P0 | Done | The owner on WhatsApp, 2026-10-27, 14:54 IST, was asked "How much maps link should I add?". "Where can we go" is now going out (`GENERIC_OUTING`), "this weekend" the coming Saturday or today at the weekend (`weekend`, `service.ts` `windowFor`), and an asked-for map link ("add maps link", "directions") puts each place's Google Maps link in the words (`mapLinks`, `answer.ts`), which is all WhatsApp shows. Eval HT-170. Note: `docs/progress/2026-10-27-maps-link-and-quoted-skip.md`. |
 
 ### 25 — HomeFood
 
-32 of 39 done `████████░░`
+33 of 40 done `████████░░`
 
 | Story | Priority | Status | Notes |
 |---|---|---|---|
@@ -667,6 +668,7 @@ in `docs/progress/`; for the running log of what changed when, `tracking/PROGRES
 | `25-038` An amount in another unit than the item is counted in is converted or asked about, never refused raw | P0 | Done | The owner on WhatsApp, 2026-10-26, 9:03 PM ("what is this???"): "add 1 litre coconut oil to the list" for Coconut oil counted in bottles met "I tried, and it did not go through: Coconut oil is kept in bottle, so 1 l does not fit it". PR #376. One rule, `commerce/pack-amount.ts` (`readAcrossUnits`): with a known pack (the catalog's pack) the amount becomes whole packs, within 5% ("Added Coconut oil (+1 bottle, 1 L, now 2 bottles)"), and "2 bottles" of an item kept in litres is twice its pack; otherwise grounding asks once through the quantity clarify ("Coconut oil is kept in bottles. How many bottles should I add for 1 litre?") with `choices` in its parameters: 1 bottle, 2 bottles, "Count it in litres instead", which changes the unit through `unit-change.ts` (as the Groceries screen does) and adds the amount. A refusal that still reaches a grocery write (add, remove, stock, bought) is said in words with what to do (`inItsUnit`), and `executor.ts` `failedReply` says such answers as they are, for the app and WhatsApp alike. Tests `conversation/grocery-units.test.ts`, the WhatsApp case in `whatsapp-intake.test.ts`, eval HT-160. Help (Meals and shopping) in eight languages. |
 | `25-039` A Pre Approved grocery already on the shopping list is topped up, not held | P0 | Done | The owner on WhatsApp, 2026-10-26, 8:47 PM IST: "2 litres mustard oil" → "It's waiting in HomeSend for you to check" ("its pre approved, still issue"); scored 97% and verified, groceries Pre Approved, bar 95%, Mustard oil already on the list. Cause: any match on record held the item (I-4's duplicate rule). Now, as HomeTalk does (design §6): a HomeSend grocery already on the shopping list, said with an amount (or a number alone, 25-037), Pre Approved and above the bar, is added on its own to the entry already there through the same governed write and Undo (`home-send-writes.ts` `addGrocery`, which now picks the item HomeTalk's add would pick, `trackedGrocery` → `findGrocery`, so look-alikes never get a third entry). WhatsApp says "✅ Added 2 L more *Mustard oil* (now 3 L) (97% sure — …) — … You can undo it in HomeSend."; HomeTalk says the same. No amount, Wait for Approval or below the bar → it waits, and the reply says "*Mustard oil* is already on your shopping list, so it's waiting in HomeSend for you to choose." (`whatsapp.wait.*`, eight languages). A tracked item not on the list keeps the duplicate rule. Governance half and row reasons: 14-052. Help (HomeSend ¶8) in eight languages. PR #378. Note: `docs/progress/2026-10-26-listed-grocery-topup.md`. |
 | `25-040` "Skip" to the how-much question leaves the list, never a HomeSend item | P0 | Done | The owner's Failed safely list, 2026-10-27, 14:55 IST: "How much maps link should I add?" offered one choice, Skip; the tapped Skip became HomeSend item 66b981e8 and failed safely as unreadable. Cause: WhatsApp sends a tapped button with `context.id` (the message it sat on), so it was stored as a swipe-reply and routing rule 2 (`homeTalkAwaitsAnswer`) never looked at it; `answerQuantity` already read "skip". Fix: a tap reads like typed words (`whatsapp/inbound.ts`); one "leave it" list (`conversation/leave-it.ts`: skip, leave it, never mind, no thanks, that's enough…) read by the amount (`keepAsIs`), HomeSend details (skip), the fill-in offer (decline) and every other question, which closes with "Okay, I've left it as it is. Nothing was added or changed." (`engine.ts`, `clarify.ts` `leavesQuestion`); a short reply to an open question HomeTalk can't take gets a polite second ask (`whatsapp.answerUnread`), and a lone "skip" goes to HomeTalk or, without it, gets `whatsapp.leftAlone` — never HomeSend. Tests: every choice set's `say` round-trips (`hometalk/choices.test.ts`), the WhatsApp cases, engine cases; eval HT-169. Note: `docs/progress/2026-10-27-skip-answers-clarify.md`. |
+| `25-041` A link is never a grocery; a swiped "Skip" on HomeTalk's question reaches HomeTalk | P0 | Done | The owner on WhatsApp, 2026-10-27, 14:54–14:55 IST: "…, add maps link" was split off and asked "How much maps link should I add?"; "Skip", swiped onto it, failed safely. A part only about the answer stays with its question (`decompose.ts`); "add maps link" is never `add_to_list` from the rules or a model (`rules.ts` `notAThingToBuy`, `engine.ts`); "add milk" still asks how much. HomeTalk's WhatsApp reply id is kept (`whatsapp_messages.hometalk_reply_id`, migration `20261027150000`) and a swipe-reply quoting it is routing rule 2; one quoting anything else is unchanged. Eval HT-171; WhatsApp and engine tests. Note: `docs/progress/2026-10-27-maps-link-and-quoted-skip.md`. |
 
 ### 26 — HomeEvents
 
