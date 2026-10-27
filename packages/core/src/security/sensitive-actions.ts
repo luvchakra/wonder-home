@@ -144,6 +144,16 @@ export const SENSITIVE_ACTIONS: readonly SensitiveAction[] = [
     recordedIn: "packages/core/src/integrations/repository.ts",
   },
   {
+    event: "school.portal_connected",
+    because: "A parent's sign-in to a child's school portal is now stored, and the account stays linked until someone takes it down.",
+    recordedIn: "packages/core/src/school/portal-credentials.ts",
+  },
+  {
+    event: "school.portal_disconnected",
+    because: "The household's stored sign-in to a school portal was removed — as worth recording as storing it.",
+    recordedIn: "packages/core/src/school/portal-credentials.ts",
+  },
+  {
     event: "ai.key_set",
     because: "Changes which company's servers answer for this household.",
     recordedIn: "packages/core/src/ai/credentials.ts",
@@ -588,6 +598,10 @@ export function describeAuditEvent(
       return { title: "An account was connected", detail: stringOr(metadata.provider, null) };
     case "integration.disconnected":
       return { title: "An account was disconnected", detail: stringOr(metadata.provider, null) };
+    case "school.portal_connected":
+      return { title: "A school portal was connected", detail: stringOr(metadata.username, null) };
+    case "school.portal_disconnected":
+      return { title: "A school portal was disconnected", detail: null };
     case "ai.key_set":
       return { title: "The household's own AI key was set", detail: stringOr(metadata.provider, null) };
     case "ai.key_removed":
