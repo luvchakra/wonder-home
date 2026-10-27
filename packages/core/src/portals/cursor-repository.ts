@@ -1,5 +1,7 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 
+import type { PortalCursorStore } from "./fetch-connection";
+
 /**
  * The idempotency cursor for a scheduled portal fetch (story 08-033).
  *
@@ -43,4 +45,13 @@ export async function recordSeen(
     .from("portal_fetch_cursors")
     .upsert(rows, { onConflict: "integration_id,scrape_url,item_hash", ignoreDuplicates: true });
   if (error) throw new Error(`recordSeen failed: ${error.code ?? "unknown"}`);
+}
+
+/** The `PortalCursorStore` the fetch orchestrator consumes, backed by `portal_fetch_cursors`. */
+export function portalCursorStore(adminClient: SupabaseClient, input: { householdId: string; integrationId: string }): PortalCursorStore {
+  return {
+    loadSeen: (scrapeUrl) => loadSeenHashes(adminClient, { integrationId: input.integrationId, scrapeUrl }),
+    recordSeen: (scrapeUrl, hashes) =>
+      recordSeen(adminClient, { householdId: input.householdId, integrationId: input.integrationId, scrapeUrl, hashes: [...hashes] }),
+  };
 }
