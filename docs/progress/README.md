@@ -11,6 +11,7 @@ decision that shapes later work each earns a note, written before moving on.
 
 | Date | Note |
 |---|---|
+| 2026-10-27 | [Portal fetch: the Fly worker + Playwright adapter (08-033, slice 4)](2026-10-27-portal-worker-08-033.md) |
 | 2026-10-27 | [Groceries: sort by Recently updated, compact & realigned cards (25-042)](2026-10-27-groceries-sort-compact.md) |
 | 2026-10-27 | [Portal fetch: the orchestrator (08-033, slice 3)](2026-10-27-portal-fetch-orchestrator-08-033.md) |
 | 2026-10-27 | [Portal fetch: data model (08-033, slice 2)](2026-10-27-portal-data-model-08-033.md) |
