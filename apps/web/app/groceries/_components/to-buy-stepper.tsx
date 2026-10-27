@@ -224,7 +224,7 @@ export function ToBuyStepper({
           disabled={removing}
           aria-label={fill(words.stepper.removeLabel, { name: item.name })}
           onClick={() => void remove()}
-          className="mt-1 inline-flex min-h-9 items-center gap-1 rounded-full px-2 text-xs font-semibold text-[var(--wh-foreground-muted)] hover:bg-[var(--wh-surface-muted)] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--wh-primary)] disabled:opacity-60"
+          className="mt-0.5 inline-flex min-h-9 items-center gap-1 rounded-full px-2 text-xs font-semibold text-[var(--wh-foreground-muted)] hover:bg-[var(--wh-surface-muted)] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--wh-primary)] disabled:opacity-60"
         >
           <X className="size-3.5" aria-hidden /> {words.stepper.remove}
         </button>

@@ -189,6 +189,7 @@ async function itemFor(context: Context, line: GroceryLine, items: GroceryItem[]
     imagePath: null,
     catalog: null,
     lastPurchasedOn: null,
+    updatedAt: new Date().toISOString(),
     stock: null,
     toBuy: null,
   };
