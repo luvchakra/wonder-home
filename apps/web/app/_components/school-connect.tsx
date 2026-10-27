@@ -1,6 +1,6 @@
 "use client";
 
-import { CheckCircle2, ExternalLink, GraduationCap, Pencil, Plug, PlugZap, Radio, RefreshCw, Send } from "lucide-react";
+import { AlertTriangle, CheckCircle2, ExternalLink, FileText, GraduationCap, Pencil, Plug, PlugZap, Radio, RefreshCw, Send } from "lucide-react";
 import { useActionState, useState } from "react";
 
 import { Alert } from "@wonderhome/core/ui/alert";
@@ -12,10 +12,13 @@ import { IconTile } from "@wonderhome/core/ui/icon-tile";
 import { Select } from "@wonderhome/core/ui/select";
 
 import {
+  addPortalScrapeUrlAction,
   connectSchoolPortalAction,
   connectSchoolPortalWithCredentialsAction,
   disconnectSchoolPortalAction,
   fetchSchoolPortalNowAction,
+  removePortalScrapeUrlAction,
+  setPortalScrapeUrlEnabledAction,
   setSchoolChannelActiveAction,
   testSchoolPortalConnectionAction,
   trackSchoolChannelAction,
@@ -25,6 +28,7 @@ import type { ActionState } from "../(auth)/actions";
 import type { SchoolConnectLabels } from "../_lib/school-connect-labels";
 
 export type ChannelView = { id: string; url: string; childName: string | null; active: boolean };
+export type ScrapeUrlView = { id: string; url: string; kind: string; childName: string | null; enabled: boolean };
 
 export type PortalView = {
   id: string;
@@ -37,6 +41,8 @@ export type PortalView = {
   connectedAs: string | null;
   /** For a credentials portal: the stored portal URL (never the password), to prefill the edit form. */
   connectedUrl: string | null;
+  /** The worker's connection state: connected / reconnect_needed / never — or null if no session yet. */
+  connectionState: "connected" | "reconnect_needed" | "never" | null;
   /** Whether a live data fetch exists for this provider yet. */
   adapterReady: boolean;
   integrationId: string | null;
@@ -45,6 +51,8 @@ export type PortalView = {
   channelExample: string | null;
   portalUrl: string | null;
   channels: ChannelView[];
+  /** Post-auth pages the worker reads for this connection. */
+  scrapeUrls: ScrapeUrlView[];
 };
 
 export type ChildOption = { id: string; name: string };
@@ -174,8 +182,125 @@ function PortalEditForm({
   );
 }
 
+/** One tracked page: its address, what it is, who it's for, and stop/remove. */
+function ScrapeRow({ householdId, page, labels }: { householdId: string; page: ScrapeUrlView; labels: SchoolConnectLabels }) {
+  const [toggleState, toggle, toggling] = useActionState(setPortalScrapeUrlEnabledAction, EMPTY);
+  const [removeState, remove, removing] = useActionState(removePortalScrapeUrlAction, EMPTY);
+  return (
+    <li className="flex items-center gap-2 py-2">
+      <IconTile icon={FileText} tone={page.enabled ? "school" : "neutral"} />
+      <div className="min-w-0 flex-1">
+        <p className="truncate text-sm font-medium">{page.url.replace(/^https?:\/\//, "")}</p>
+        <p className="text-xs text-[var(--wh-foreground-muted)]">
+          {labels.pageKind[page.kind] ?? page.kind}
+          {page.childName ? ` · ${page.childName}` : ""}
+          {page.enabled ? "" : ` · ${labels.pageStoppedBadge}`}
+        </p>
+        <Notice state={toggleState} />
+        <Notice state={removeState} />
+      </div>
+      <form action={toggle}>
+        <input type="hidden" name="householdId" value={householdId} />
+        <input type="hidden" name="id" value={page.id} />
+        <input type="hidden" name="enabled" value={page.enabled ? "false" : "true"} />
+        <Button type="submit" variant="quiet" disabled={toggling} className="px-2 text-xs">
+          {page.enabled ? labels.pageStop : labels.pageResume}
+        </Button>
+      </form>
+      <form action={remove}>
+        <input type="hidden" name="householdId" value={householdId} />
+        <input type="hidden" name="id" value={page.id} />
+        <Button type="submit" variant="quiet" disabled={removing} className="px-2 text-xs">
+          {labels.pageRemove}
+        </Button>
+      </form>
+    </li>
+  );
+}
+
+/** Add a post-auth page for the worker to read. */
+function AddScrapeForm({
+  householdId,
+  portal,
+  childOptions,
+  labels,
+}: {
+  householdId: string;
+  portal: PortalView;
+  childOptions: ChildOption[];
+  labels: SchoolConnectLabels;
+}) {
+  const [state, action, pending] = useActionState(addPortalScrapeUrlAction, EMPTY);
+  return (
+    <form action={action} className="mt-3 space-y-2">
+      <input type="hidden" name="householdId" value={householdId} />
+      <input type="hidden" name="integrationId" value={portal.integrationId ?? ""} />
+      <Field label={labels.pageUrlLabel} name="url" inputMode="url" placeholder={portal.connectedUrl ?? "https://…"} />
+      <Select label={labels.pageKindLabel} name="kind" defaultValue="generic">
+        {(["homework", "calendar", "messages", "results", "generic"] as const).map((k) => (
+          <option key={k} value={k}>
+            {labels.pageKind[k] ?? k}
+          </option>
+        ))}
+      </Select>
+      <Select label={labels.pageForChild} name="childMemberId" defaultValue="">
+        <option value="">{labels.pageAnyChild}</option>
+        {childOptions.map((child) => (
+          <option key={child.id} value={child.id}>
+            {child.name}
+          </option>
+        ))}
+      </Select>
+      <Button type="submit" variant="secondary" disabled={pending} className="gap-2">
+        <Plug aria-hidden className="size-4" /> {labels.pageAdd}
+      </Button>
+      <Notice state={state} />
+    </form>
+  );
+}
+
+/** The "pages to read" section of a connected portal. */
+function PagesToRead({
+  householdId,
+  portal,
+  childOptions,
+  labels,
+}: {
+  householdId: string;
+  portal: PortalView;
+  childOptions: ChildOption[];
+  labels: SchoolConnectLabels;
+}) {
+  return (
+    <div className="rounded-[var(--wh-radius-sm)] border border-[var(--wh-border)] p-3">
+      <p className="text-sm font-medium">{labels.pagesTitle}</p>
+      <p className="text-xs text-[var(--wh-foreground-muted)]">{labels.pagesLede}</p>
+      {portal.scrapeUrls.length > 0 ? (
+        <ul className="mt-1 divide-y divide-[var(--wh-border)]">
+          {portal.scrapeUrls.map((page) => (
+            <ScrapeRow key={page.id} householdId={householdId} page={page} labels={labels} />
+          ))}
+        </ul>
+      ) : (
+        <p className="mt-2 text-xs text-[var(--wh-foreground-subtle)]">{labels.pagesNone}</p>
+      )}
+      <AddScrapeForm householdId={householdId} portal={portal} childOptions={childOptions} labels={labels} />
+    </div>
+  );
+}
+
 /** The connected state for a credentials portal: who and where it is signed in, edit, test, fetch, disconnect. */
-function PortalConnected({ householdId, portal, labels }: { householdId: string; portal: PortalView; labels: SchoolConnectLabels }) {
+function PortalConnected({
+  householdId,
+  portal,
+  childOptions,
+  labels,
+}: {
+  householdId: string;
+  portal: PortalView;
+  childOptions: ChildOption[];
+  labels: SchoolConnectLabels;
+}) {
   const [editing, setEditing] = useState(false);
   const [fetchState, fetchNow, fetching] = useActionState(fetchSchoolPortalNowAction, EMPTY);
   const [testState, test, testing] = useActionState(testSchoolPortalConnectionAction, EMPTY);
@@ -191,6 +316,13 @@ function PortalConnected({ householdId, portal, labels }: { householdId: string;
         ) : null}
       </div>
 
+      {portal.connectionState === "reconnect_needed" ? (
+        <Alert tone="attention" className="flex items-start gap-2">
+          <AlertTriangle aria-hidden className="mt-0.5 size-4 shrink-0" />
+          <span>{labels.reconnectNeeded}</span>
+        </Alert>
+      ) : null}
+
       {editing ? (
         <PortalEditForm householdId={householdId} portal={portal} labels={labels} onDone={() => setEditing(false)} />
       ) : (
@@ -200,7 +332,7 @@ function PortalConnected({ householdId, portal, labels }: { householdId: string;
           </Button>
           <form action={test}>
             <input type="hidden" name="householdId" value={householdId} />
-            <input type="hidden" name="provider" value={portal.id} />
+            <input type="hidden" name="integrationId" value={portal.integrationId ?? ""} />
             <Button type="submit" variant="secondary" disabled={testing} className="gap-2">
               <PlugZap aria-hidden className="size-4" /> {labels.test}
             </Button>
@@ -209,12 +341,14 @@ function PortalConnected({ householdId, portal, labels }: { householdId: string;
       )}
       <Notice state={testState} />
 
+      <PagesToRead householdId={householdId} portal={portal} childOptions={childOptions} labels={labels} />
+
       <div className="rounded-[var(--wh-radius-sm)] border border-[var(--wh-border)] p-3">
         <p className="text-sm font-medium">{labels.fetchTitle}</p>
         <p className="text-xs text-[var(--wh-foreground-muted)]">{labels.fetchLede}</p>
         <form action={fetchNow} className="mt-2">
           <input type="hidden" name="householdId" value={householdId} />
-          <input type="hidden" name="provider" value={portal.id} />
+          <input type="hidden" name="integrationId" value={portal.integrationId ?? ""} />
           <Button type="submit" variant="secondary" disabled={fetching} className="gap-2">
             <RefreshCw aria-hidden className="size-4" /> {labels.fetchNow}
           </Button>
@@ -272,7 +406,7 @@ function PortalCard({
 
           {isCredentials ? (
             connected ? (
-              <PortalConnected householdId={householdId} portal={portal} labels={labels} />
+              <PortalConnected householdId={householdId} portal={portal} childOptions={childOptions} labels={labels} />
             ) : (
               <PortalSignInForm householdId={householdId} portal={portal} labels={labels} />
             )

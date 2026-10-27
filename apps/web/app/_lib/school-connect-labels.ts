@@ -38,6 +38,21 @@ export type SchoolConnectLabels = {
   editSave: string;
   keepPassword: string;
   test: string;
+  reconnectNeeded: string;
+  pagesTitle: string;
+  pagesLede: string;
+  pagesNone: string;
+  pageUrlLabel: string;
+  pageKindLabel: string;
+  pageForChild: string;
+  pageAnyChild: string;
+  pageAdd: string;
+  pageRemove: string;
+  pageStop: string;
+  pageResume: string;
+  pageStoppedBadge: string;
+  /** Kind → human label, keyed by PortalScrapeKind (homework/calendar/messages/results/generic). */
+  pageKind: Record<string, string>;
 };
 
 export function schoolConnectLabels(t: Translate): SchoolConnectLabels {
@@ -78,5 +93,25 @@ export function schoolConnectLabels(t: Translate): SchoolConnectLabels {
     editSave: t("school.connect.signin.save"),
     keepPassword: t("school.connect.signin.keepPassword"),
     test: t("school.connect.signin.test"),
+    reconnectNeeded: t("school.connect.reconnect.needed"),
+    pagesTitle: t("school.connect.pages.title"),
+    pagesLede: t("school.connect.pages.lede"),
+    pagesNone: t("school.connect.pages.none"),
+    pageUrlLabel: t("school.connect.pages.urlLabel"),
+    pageKindLabel: t("school.connect.pages.kindLabel"),
+    pageForChild: t("school.connect.pages.forChild"),
+    pageAnyChild: t("school.connect.pages.anyChild"),
+    pageAdd: t("school.connect.pages.add"),
+    pageRemove: t("school.connect.pages.remove"),
+    pageStop: t("school.connect.pages.stop"),
+    pageResume: t("school.connect.pages.resume"),
+    pageStoppedBadge: t("school.connect.pages.stopped"),
+    pageKind: {
+      homework: t("school.connect.pages.kind.homework"),
+      calendar: t("school.connect.pages.kind.calendar"),
+      messages: t("school.connect.pages.kind.messages"),
+      results: t("school.connect.pages.kind.results"),
+      generic: t("school.connect.pages.kind.generic"),
+    },
   };
 }

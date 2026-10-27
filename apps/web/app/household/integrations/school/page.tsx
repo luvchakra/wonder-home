@@ -4,6 +4,8 @@ import { listIntegrations } from "@wonderhome/core/integrations/repository";
 import { listMembers } from "@wonderhome/core/identity/households";
 import { listSchoolChannels } from "@wonderhome/core/school/channel-repository";
 import { schoolPortalCredentialStatus } from "@wonderhome/core/school/portal-credentials";
+import { listPortalScrapeUrls } from "@wonderhome/core/portals/scrape-url-repository";
+import { portalSessionStatus } from "@wonderhome/core/portals/session-repository";
 import { schoolProviderCatalog } from "@wonderhome/core/school/providers";
 import { AppShell } from "@wonderhome/core/shell/app-shell";
 import { EmptyState } from "@wonderhome/core/ui/states";
@@ -47,16 +49,19 @@ export default async function ConnectSchoolPage() {
     );
   }
 
-  const [integrations, channels, members, portalSignins] = await Promise.all([
+  const [integrations, channels, members, portalSignins, scrapeUrls, sessionStates] = await Promise.all([
     listIntegrations(supabase, householdId).catch(() => []),
     listSchoolChannels(supabase, householdId).catch(() => []),
     listMembers(supabase, householdId, membership.household.ownerMemberId).catch(() => []),
     schoolPortalCredentialStatus(supabase, householdId).catch(() => []),
+    listPortalScrapeUrls(supabase, householdId).catch(() => []),
+    portalSessionStatus(supabase, householdId).catch(() => []),
   ]);
 
   const schoolIntegrations = integrations.filter((integration) => integration.kind === "school");
   // Which connection is signed in, and as whom and where (never the password).
   const signedInAs = new Map(portalSignins.map((signin) => [signin.integrationId, signin]));
+  const sessionStateBy = new Map(sessionStates.map((s) => [s.integrationId, s]));
   const children: ChildOption[] = members
     .filter((member) => member.memberType === "child")
     .map((member) => ({ id: member.id, name: member.displayName }));
@@ -68,6 +73,8 @@ export default async function ConnectSchoolPage() {
       const connection = schoolIntegrations.find((integration) => integration.provider === entry.id) ?? null;
       const ours = connection ? channels.filter((channel) => channel.integrationId === connection.id) : [];
       const signin = connection ? signedInAs.get(connection.id) ?? null : null;
+      const session = connection ? sessionStateBy.get(connection.id) ?? null : null;
+      const pages = connection ? scrapeUrls.filter((page) => page.integrationId === connection.id) : [];
       return {
         id: entry.id,
         label: entry.label,
@@ -76,6 +83,7 @@ export default async function ConnectSchoolPage() {
         connected: Boolean(connection),
         connectedAs: signin?.username ?? null,
         connectedUrl: signin?.portalUrl ?? null,
+        connectionState: session?.state ?? null,
         adapterReady: entry.adapterReady,
         integrationId: connection?.id ?? null,
         statusLabel: connection?.statusLabel ?? null,
@@ -87,6 +95,13 @@ export default async function ConnectSchoolPage() {
           url: channel.url,
           childName: channel.childMemberId ? childName.get(channel.childMemberId) ?? null : null,
           active: channel.active,
+        })),
+        scrapeUrls: pages.map((page) => ({
+          id: page.id,
+          url: page.url,
+          kind: page.kind,
+          childName: page.childMemberId ? childName.get(page.childMemberId) ?? null : null,
+          enabled: page.enabled,
         })),
       };
     });

@@ -3,13 +3,14 @@
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
 
-import { toErrorBody } from "@wonderhome/core/api/errors";
+import { ApiError, toErrorBody } from "@wonderhome/core/api/errors";
 import { createClient } from "@wonderhome/core/db/server";
 import { requireHouseholdAdmin, requireMembership } from "@wonderhome/core/identity/households";
 import { connectIntegration, disconnectIntegration } from "@wonderhome/core/integrations/repository";
 import { addSchoolChannel, setSchoolChannelActive } from "@wonderhome/core/school/channel-repository";
 import { parseSchoolChannel } from "@wonderhome/core/school/channels";
-import { setSchoolPortalCredentials, updateSchoolPortalCredentials } from "@wonderhome/core/school/portal-credentials";
+import { schoolPortalCredentialStatus, setSchoolPortalCredentials, updateSchoolPortalCredentials } from "@wonderhome/core/school/portal-credentials";
+import { addPortalScrapeUrl, removePortalScrapeUrl, setPortalScrapeUrlEnabled, type PortalScrapeKind } from "@wonderhome/core/portals/scrape-url-repository";
 import { getSchoolProvider } from "@wonderhome/core/school/providers";
 import { addSchoolItem } from "@wonderhome/core/calendar/add-event";
 import { cancelSchoolItem, updateSchoolItem } from "@wonderhome/core/school/repository";
@@ -747,26 +748,85 @@ export async function connectSchoolPortalWithCredentialsAction(_previous: Action
   });
 }
 
-const fetchNowSchema = z.object({ householdId: z.uuid(), provider: z.string().trim().min(1).max(64) });
+const fetchNowSchema = z.object({ householdId: z.uuid(), integrationId: z.uuid() });
 
 /**
- * Fetch a connected portal's last day on demand (story 08-032).
- *
- * The control is here now; the fetch itself turns on once the portal's adapter
- * ships (no portal has a live adapter yet — CLAUDE.md). Until then this answers
- * honestly that the account is connected but the data fetch is not live.
+ * Fetch a connected portal on demand (story 08-033): enqueue a job for the Fly
+ * worker, which signs in, reads the tracked pages and files what it finds
+ * through HomeSend for confirmation. An Admin's act (the RPC enforces it);
+ * deduped to the open job.
  */
 export async function fetchSchoolPortalNowAction(_previous: ActionState, formData: FormData): Promise<ActionState> {
-  const parsed = fetchNowSchema.safeParse({ householdId: field(formData, "householdId"), provider: field(formData, "provider") });
+  const parsed = fetchNowSchema.safeParse({ householdId: field(formData, "householdId"), integrationId: field(formData, "integrationId") });
   if (!parsed.success) return { error: "Please try again." };
-
-  const descriptor = getSchoolProvider(parsed.data.provider);
-  if (!descriptor || descriptor.auth !== "credentials") return { error: "That is not a school portal." };
-  if (!descriptor.adapterReady) {
-    return { notice: "Connected. The homework fetch for this portal is not live yet — it turns on once its sign-in requests are captured." };
+  try {
+    const supabase = await createClient();
+    await requireMembership(supabase, parsed.data.householdId);
+    const { error } = await supabase.rpc("enqueue_portal_fetch_job", { p_integration_id: parsed.data.integrationId });
+    if (error) return { error: "Couldn’t start a fetch just now. Please try again." };
+    revalidatePath("/household/integrations/school");
+    return { notice: "Fetch started. Anything new will appear in HomeSend for you to confirm." };
+  } catch (thrown) {
+    return { error: toErrorBody(thrown, "school").body.error.message };
   }
-  // A live adapter runs the governed sync here (08-033).
-  return asSchoolAdmin(parsed.data.householdId, async () => {});
+}
+
+const PORTAL_SCRAPE_KINDS = ["homework", "calendar", "messages", "results", "generic"] as const;
+const scrapeUrlSchema = z.object({
+  householdId: z.uuid(),
+  integrationId: z.uuid(),
+  url: z.string().trim().min(1, { error: "Enter the page's web address." }).max(2048),
+  kind: z.enum(PORTAL_SCRAPE_KINDS).optional(),
+  childMemberId: z.union([z.uuid(), z.literal("")]).optional(),
+});
+
+/**
+ * Track a post-auth page of a connected portal for the worker to read (08-033).
+ * The portal's own web address is read on the server (never trusted from the
+ * form) so the page is validated same-site against it.
+ */
+export async function addPortalScrapeUrlAction(_previous: ActionState, formData: FormData): Promise<ActionState> {
+  const parsed = scrapeUrlSchema.safeParse({
+    householdId: field(formData, "householdId"),
+    integrationId: field(formData, "integrationId"),
+    url: field(formData, "url"),
+    kind: field(formData, "kind"),
+    childMemberId: field(formData, "childMemberId"),
+  });
+  if (!parsed.success) return { error: parsed.error.issues[0]?.message ?? "Please check the details above." };
+
+  return asSchoolAdmin(parsed.data.householdId, async (supabase, actor) => {
+    const status = await schoolPortalCredentialStatus(supabase, parsed.data.householdId);
+    const portalUrl = status.find((row) => row.integrationId === parsed.data.integrationId)?.portalUrl;
+    if (!portalUrl) throw ApiError.badRequest("Connect the portal first.");
+    await addPortalScrapeUrl(supabase, {
+      householdId: parsed.data.householdId,
+      integrationId: parsed.data.integrationId,
+      portalUrl,
+      url: parsed.data.url,
+      kind: (parsed.data.kind ?? "generic") as PortalScrapeKind,
+      childMemberId: parsed.data.childMemberId || null,
+      createdBy: actor.memberId,
+    });
+  });
+}
+
+const scrapeUrlIdSchema = z.object({ householdId: z.uuid(), id: z.uuid() });
+
+export async function removePortalScrapeUrlAction(_previous: ActionState, formData: FormData): Promise<ActionState> {
+  const parsed = scrapeUrlIdSchema.safeParse({ householdId: field(formData, "householdId"), id: field(formData, "id") });
+  if (!parsed.success) return { error: "Please try again." };
+  return asSchoolAdmin(parsed.data.householdId, (supabase) => removePortalScrapeUrl(supabase, { householdId: parsed.data.householdId, id: parsed.data.id }));
+}
+
+const scrapeUrlEnabledSchema = z.object({ householdId: z.uuid(), id: z.uuid(), enabled: z.enum(["true", "false"]) });
+
+export async function setPortalScrapeUrlEnabledAction(_previous: ActionState, formData: FormData): Promise<ActionState> {
+  const parsed = scrapeUrlEnabledSchema.safeParse({ householdId: field(formData, "householdId"), id: field(formData, "id"), enabled: field(formData, "enabled") });
+  if (!parsed.success) return { error: "Please try again." };
+  return asSchoolAdmin(parsed.data.householdId, (supabase) =>
+    setPortalScrapeUrlEnabled(supabase, { householdId: parsed.data.householdId, id: parsed.data.id, enabled: parsed.data.enabled === "true" }),
+  );
 }
 
 const updateCredentialsSchema = z.object({
@@ -812,22 +872,21 @@ export async function updateSchoolPortalCredentialsAction(_previous: ActionState
 }
 
 /**
- * Test a connected portal's sign-in on demand (story 08-032).
- *
- * The real sign-in test runs server-side with the service-role-read password
- * once the portal's adapter ships (08-033); no portal is live yet, so this
- * answers honestly that the test turns on with the fetch rather than pretending
- * a round-trip happened.
+ * Test a connected portal's sign-in on demand (story 08-033): enqueue a fetch so
+ * the worker signs in; the connection state (connected / reconnect needed) then
+ * updates on the card. Same governed path as "Fetch now".
  */
 export async function testSchoolPortalConnectionAction(_previous: ActionState, formData: FormData): Promise<ActionState> {
-  const parsed = fetchNowSchema.safeParse({ householdId: field(formData, "householdId"), provider: field(formData, "provider") });
+  const parsed = fetchNowSchema.safeParse({ householdId: field(formData, "householdId"), integrationId: field(formData, "integrationId") });
   if (!parsed.success) return { error: "Please try again." };
-
-  const descriptor = getSchoolProvider(parsed.data.provider);
-  if (!descriptor || descriptor.auth !== "credentials") return { error: "That is not a school portal." };
-  if (!descriptor.adapterReady) {
-    return { notice: "Sign-in saved. A live connection test turns on once this portal's sign-in requests are captured." };
+  try {
+    const supabase = await createClient();
+    await requireMembership(supabase, parsed.data.householdId);
+    const { error } = await supabase.rpc("enqueue_portal_fetch_job", { p_integration_id: parsed.data.integrationId });
+    if (error) return { error: "Couldn’t start a check just now. Please try again." };
+    revalidatePath("/household/integrations/school");
+    return { notice: "Checking the sign-in… the connection state updates here once the worker signs in." };
+  } catch (thrown) {
+    return { error: toErrorBody(thrown, "school").body.error.message };
   }
-  // A live adapter signs in with the stored credentials and reports here (08-033).
-  return asSchoolAdmin(parsed.data.householdId, async () => {});
 }
