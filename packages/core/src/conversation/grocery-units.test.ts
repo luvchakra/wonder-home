@@ -70,6 +70,7 @@ function oil(pack: { quantity: number; unit: string } | null, toBuy: number | nu
     imagePath: null,
     catalog: pack ? ({ pack, ladder: { unit: "bottle", sizes: [1] }, category: "grocery", subcategory: null } as unknown as GroceryItem["catalog"]) : null,
     lastPurchasedOn: null,
+    updatedAt: "2026-09-20T00:00:00Z",
     stock: null,
     toBuy: toBuy === null ? null : { entryId: "e-oil", quantity: toBuy, unit: "bottle", version: 1, source: "manual", mealId: null },
   };

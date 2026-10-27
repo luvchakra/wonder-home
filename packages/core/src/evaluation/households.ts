@@ -71,7 +71,7 @@ function groceryOf(item: Consumable, listed: GoldenHousehold["shoppingList"]): G
   const unit = unitInfo(item.unit).key;
   return {
     id: item.id, name: item.name, category: item.category, unit, step: null, lowLevel: null, storage: null, note: null, aliases: [],
-    imageUrl: null, imagePath: null, catalog: null, lastPurchasedOn: item.lastPurchasedOn ?? null, stock: null,
+    imageUrl: null, imagePath: null, catalog: null, lastPurchasedOn: item.lastPurchasedOn ?? null, updatedAt: item.lastPurchasedOn ? `${item.lastPurchasedOn}T00:00:00Z` : "2026-09-01T00:00:00Z", stock: null,
     toBuy: onList ? { entryId: `list-${item.id}`, quantity: onList.quantity, unit, version: 1, source: "manual", mealId: null } : null,
   };
 }
