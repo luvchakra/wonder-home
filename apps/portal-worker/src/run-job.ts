@@ -5,11 +5,10 @@ import { portalCursorStore } from "@wonderhome/core/portals/cursor-repository";
 import { fetchConnection, type ScrapeTarget } from "@wonderhome/core/portals/fetch-connection";
 import { GenericAdapter } from "@wonderhome/core/portals/generic-adapter";
 import { resolveAdapter } from "@wonderhome/core/portals/registry";
+import { homeSendPortalFiler } from "@wonderhome/core/portals/homesend-filer";
+import { extractGenericItems } from "@wonderhome/core/portals/page-extract";
 import { portalSessionStore, setPortalSessionState } from "@wonderhome/core/portals/session-repository";
 import { readSchoolPortalCredentials } from "@wonderhome/core/school/portal-credentials";
-
-import { placeholderExtractor } from "./extractor";
-import { loggingFiler } from "./filer";
 
 /**
  * Run one fetch job: read the connection's sign-in, resolve its adapter, and run
@@ -55,6 +54,7 @@ export async function runFetchJob(input: {
   }));
 
   const adapter = resolveAdapter({ portalUrl: creds.portalUrl, providerId, adapters: [GenericAdapter], fallback: GenericAdapter });
+  const memberId = await filingMember(adminClient, integrationId, householdId);
 
   const result = await fetchConnection({
     connectionId: integrationId,
@@ -64,8 +64,8 @@ export async function runFetchJob(input: {
     store: portalSessionStore(adminClient, { householdId, integrationId }),
     credentials: async () => ({ username: creds.username, password: creds.password }),
     targets,
-    extractor: placeholderExtractor,
-    filer: loggingFiler(log),
+    extractor: { extract: async ({ text, target }) => extractGenericItems(text, target) },
+    filer: homeSendPortalFiler(adminClient, { householdId, memberId }),
     cursors: portalCursorStore(adminClient, { householdId, integrationId }),
     onState: (state, reason) => setPortalSessionState(adminClient, { householdId, integrationId, state, reason: reason ?? null }),
   });
@@ -80,4 +80,15 @@ export async function runFetchJob(input: {
       `pages=${result.targets.length} (${failures} failed) filed=${result.filed}`,
   );
   return { state: "connected", filed: result.filed };
+}
+
+/** The member a fetched item is filed as: whoever connected the portal, else any member of the household. */
+async function filingMember(adminClient: SupabaseClient, integrationId: string, householdId: string): Promise<string> {
+  const { data: cred } = await adminClient.from("school_portal_credentials").select("set_by_member_id").eq("integration_id", integrationId).maybeSingle();
+  const setBy = (cred as Row | null)?.set_by_member_id as string | null | undefined;
+  if (setBy) return setBy;
+  const { data: member } = await adminClient.from("household_members").select("id").eq("household_id", householdId).limit(1).maybeSingle();
+  const id = (member as Row | null)?.id as string | undefined;
+  if (!id) throw new Error("no household member to file as");
+  return id;
 }
