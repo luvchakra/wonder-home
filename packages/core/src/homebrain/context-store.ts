@@ -13,6 +13,7 @@ import { householdMemory, setContextWriteListener } from "../context/invalidatio
 import { filterForViewer } from "../context/privacy";
 import { attachLinks, type LinkKind } from "./sleep/links";
 import { attachHomeSendEvidence } from "../context/provenance";
+import { FACT_TABLE_NAMES, factsAvailable, factsForTurn, readFacts, scheduleKnowledgeDrain } from "../knowledge/facts";
 import { CONTEXT_ADAPTERS, mergeRecords, gatherHouseholdContext, HOLIDAYS_AHEAD_DAYS, listAbsences, listBeliefs, listEventGuests, listFoodPreferences, listMemories, setContextStoreReader, type ContextSnapshot, type GatherOptions } from "../context/repository";
 import type { ContextDomain, ContextScope, ContextViewer, HouseholdContextItem } from "../context/types";
 
@@ -140,8 +141,12 @@ export async function readStoreRecords(admin: SupabaseClient, scope: BuildScope)
   // live read runs. People are read too — every summary names its people —
   // though their items are the live read's at turn time, never the store's.
   // Registry adapters (`knowledge/registry.ts`) read with no window, so every store domain's run here too.
+  // Once the record index is there (14-037), registered tables are facts of their own, written when their records are, and the rebuild no longer reads them.
+  const registryAsFacts = await factsAvailable(admin);
   const plain = CONTEXT_ADAPTERS.filter(
-    (adapter) => (adapter.domain === "people" || STORE_DOMAINS.includes(adapter.domain)) && (adapter.registry === true || !["calendar", "absences", "meals", "preferences"].includes(adapter.domain)),
+    (adapter) =>
+      (adapter.domain === "people" || STORE_DOMAINS.includes(adapter.domain)) &&
+      (adapter.registry === true ? !registryAsFacts : !["calendar", "absences", "meals", "preferences"].includes(adapter.domain)),
   );
   const results = await Promise.all([
     ...plain.map((adapter) => guard(adapter.label, () => adapter.read(admin, fullScope))),
@@ -240,12 +245,29 @@ export async function rebuildStoredContext(admin: SupabaseClient, scope: BuildSc
   return { version, items, unavailable, builtAt: scope.now, staleSince: null };
 }
 
-/** A rebuild of one household, by its own name and zone; nothing when the household is gone. */
+/**
+ * A rebuild of one household, by its own name and zone; nothing when the
+ * household is gone. The items returned also carry the household's facts
+ * (record index Phase 2), so the nightly sleep sees every record; the stored
+ * row holds only what the rebuild read.
+ */
 export async function rebuildHousehold(admin: SupabaseClient, householdId: string, now: Date = new Date()): Promise<StoredContext | null> {
   const { data } = await admin.from("households").select("name, timezone").eq("id", householdId).maybeSingle();
   const household = data as { name: string; timezone: string } | null;
   if (!household) return null;
-  return rebuildStoredContext(admin, { householdId, householdName: household.name, timezone: household.timezone, now });
+  const scope = { householdId, householdName: household.name, timezone: household.timezone, now };
+  const [stored, facts] = await Promise.all([rebuildStoredContext(admin, scope), readFacts(admin, scope)]);
+  return { ...stored, items: withFacts(stored.items, facts) };
+}
+
+/**
+ * Stored items with the household's facts in place of whatever the store
+ * read from the same tables (a row built before the record index existed).
+ * "unavailable" facts leave the stored items as they are.
+ */
+export function withFacts(items: readonly HouseholdContextItem[], facts: readonly HouseholdContextItem[] | "unavailable"): HouseholdContextItem[] {
+  if (facts === "unavailable") return [...items];
+  return [...items.filter((item) => !FACT_TABLE_NAMES.has(item.source.type)), ...facts];
 }
 
 /** At most this many stored contexts are rebuilt per delivery tick: the clock is every five minutes, and a turn rebuilds its own anyway. */
@@ -352,6 +374,16 @@ export function markStoredContextStale(householdId: string, schedule: Schedule |
   }
 }
 
+/** After a write: its household's queued records become facts once the response has gone (record index Phase 2). */
+function drainAfterWrite(householdId: string, schedule: Schedule | null): void {
+  if (!schedule) return;
+  try {
+    scheduleKnowledgeDrain(createAdminClient(), householdId, schedule);
+  } catch {
+    // No service role: the delivery clock drains it.
+  }
+}
+
 // --- the turn's read ------------------------------------------------------------------
 
 /** The stored context as it is, rebuilt first when it is missing or behind — once per household at a time on this instance. */
@@ -393,14 +425,18 @@ export async function readContextThroughStore(supabase: SupabaseClient, scope: C
   } catch {
     return null;
   }
-  const stored = await currentStoredContext(admin, { householdId: scope.householdId, householdName: scope.householdName, timezone: scope.timezone, now: scope.now });
+  // The household's own queue is drained while the stored row is read, so a record saved just before this turn is known to it.
+  const [stored, facts] = await Promise.all([
+    currentStoredContext(admin, { householdId: scope.householdId, householdName: scope.householdName, timezone: scope.timezone, now: scope.now }),
+    factsForTurn(admin, scope),
+  ]);
   if (!stored) return null;
 
   const wanted = options.domains ? new Set<ContextDomain>(options.domains) : null;
   const liveDomains = LIVE_DOMAINS.filter((domain) => domain !== "people" && (!wanted || wanted.has(domain)));
   const live = await gatherHouseholdContext(supabase, scope, { agenda: options.agenda, domains: liveDomains });
 
-  const fromStore = storedItemsForViewer(stored.items, live.scope.viewer, wanted);
+  const fromStore = storedItemsForViewer(withFacts(stored.items, facts), live.scope.viewer, wanted);
   const liveIds = new Set(live.items.map((item) => item.id));
   const merged = [...live.items, ...fromStore.filter((item) => !liveIds.has(item.id))];
   const fresh = applyFreshness(merged, scope.now);
@@ -429,6 +465,9 @@ export function enableContextStore(options: { schedule?: Schedule | null } = {})
       readContextThroughStore(supabase, scope, gather),
     ),
   );
-  setContextWriteListener((householdId) => markStoredContextStale(householdId, schedule));
+  setContextWriteListener((householdId) => {
+    markStoredContextStale(householdId, schedule);
+    drainAfterWrite(householdId, schedule);
+  });
   return true;
 }
