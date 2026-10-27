@@ -20,22 +20,37 @@ const log = (message: string) => console.log(new Date().toISOString(), message);
 const sleep = (ms: number) => new Promise<void>((resolve) => setTimeout(resolve, ms));
 
 async function main(): Promise<void> {
-  const admin = createAdminClient();
-  const browser = createPlaywrightBrowser({ proxyServer: process.env.PORTAL_PROXY_SERVER });
+  // Start the health endpoint first, before anything that can throw, so the
+  // platform sees a live machine and the logs are readable even when the config
+  // is incomplete.
   const server = startHealthServer(PORT, log);
 
+  let browser: ReturnType<typeof createPlaywrightBrowser> | null = null;
   let running = true;
   const shutdown = async (signal: string) => {
     if (!running) return;
     running = false;
     log(`[worker] ${signal} — shutting down`);
     server.close();
-    await browser.shutdown().catch(() => {});
+    await browser?.shutdown().catch(() => {});
     process.exit(0);
   };
   process.on("SIGTERM", () => void shutdown("SIGTERM"));
   process.on("SIGINT", () => void shutdown("SIGINT"));
 
+  // Missing secrets must not crash-loop the machine: log plainly and keep the
+  // health endpoint up so the operator can set them and redeploy.
+  let admin: ReturnType<typeof createAdminClient>;
+  try {
+    admin = createAdminClient();
+    browser = createPlaywrightBrowser({ proxyServer: process.env.PORTAL_PROXY_SERVER });
+  } catch (thrown) {
+    log(`[worker] startup config error: ${thrown instanceof Error ? thrown.message : "error"}`);
+    log("[worker] set NEXT_PUBLIC_SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY and NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY (fly secrets set) and redeploy. Health is up; not processing jobs.");
+    return; // the http server keeps the process alive
+  }
+
+  const activeBrowser = browser!; // assigned above; the catch returned otherwise
   log("[worker] started");
   while (running) {
     try {
@@ -48,7 +63,7 @@ async function main(): Promise<void> {
       try {
         const outcome = await runFetchJob({
           adminClient: admin,
-          browser,
+          browser: activeBrowser,
           integrationId: job.integrationId,
           householdId: job.householdId,
           log,
