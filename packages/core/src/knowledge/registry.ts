@@ -597,6 +597,7 @@ export const KNOWLEDGE_REGISTRY = {
   playbook_items: { covered: "builder", records: "responsibilities" },
   policies: { covered: "excluded", reason: "Versioned household rules (autonomy, notifications), enforced where they apply." },
   portal_fetch_cursors: { covered: "excluded", reason: "Idempotency bookkeeping for portal fetches (hashes of items already filed); the items themselves become HomeSend items, which are known." },
+  portal_fetch_jobs: { covered: "excluded", reason: "Queue of portal fetches for the worker (which connection to run, how it went); no portal content, operational." },
   portal_scrape_urls: { covered: "excluded", reason: "Which post-auth portal pages a household has WonderHome read: connection config. What they bring in becomes HomeSend items, which are known." },
   portal_sessions: { covered: "excluded", reason: "A connected portal's persisted browser session (cookies/tokens): credentials, never readable; the server reads it with the service role to run the fetch." },
   privacy_requests: { covered: "excluded", reason: "Data export and deletion requests." },

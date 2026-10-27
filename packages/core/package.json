@@ -20,6 +20,7 @@
     "./home/*": "./src/home/*.ts",
     "./help/*": "./src/help/*.ts",
     "./school/*": "./src/school/*.ts",
+    "./portals/*": "./src/portals/*.ts",
     "./location/*": "./src/location/*.ts",
     "./amaf/*": "./src/amaf/*.ts",
     "./places/*": "./src/places/*.ts",
