@@ -25,6 +25,14 @@ const STARTS_A_REQUEST =
 
 const JOINER = new RegExp(`\\s*(?:,\\s*|;\\s*|\\.\\s+)?(?:\\b(?:and then|then|and also|and)\\s+)?(?=\\b${STARTS_A_REQUEST}\\b)`, "gi");
 
+/**
+ * A part that only asks how the answer before it is given ("add maps link",
+ * "include directions"): part of that question, never a request of its own.
+ * "Where can we go this weekend, add maps link" became a shopping-list add
+ * of "maps link" (the owner, 2026-10-27).
+ */
+const ABOUT_THE_ANSWER = /^(?:please\s+)?(?:add|put|include|share|send|give(?: me| us)?|with)\s+(?:the |a |its |their |google )*(?:maps?|locations?|directions|links?)(?:\s+links?)?(?:\s+(?:too|as well|also|please|for (?:each|them|all|every one)))*$/i;
+
 /** At most this many parts from one sentence; anything longer is read as one request. */
 export const MAX_PARTS = 4;
 
@@ -66,6 +74,14 @@ export function splitRequest(utterance: string): string[] {
     )
     .filter((part) => part.length > 0);
 
+  // A part about the answer stays with the part before it.
+  const merged = cleaned.reduce<string[]>((kept, part) => {
+    if (kept.length > 0 && ABOUT_THE_ANSWER.test(part)) kept[kept.length - 1] = `${kept[kept.length - 1]}, ${part}`;
+    else kept.push(part);
+    return kept;
+  }, []);
+  if (merged.length < 2) return [utterance];
+  if (merged.length !== cleaned.length) return merged.some((part) => part.split(/\s+/).length < 2) || merged.length > MAX_PARTS ? [utterance] : merged;
   if (cleaned.length < 2 || cleaned.length > MAX_PARTS) return [utterance];
   // A part too short to be a request on its own ("and get") means the split
   // was wrong; read the whole thing as one request instead.

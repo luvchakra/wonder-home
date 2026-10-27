@@ -241,6 +241,9 @@ async function readMessage(admin: SupabaseClient, messageId: string, deps: Whats
       : await sendWhatsAppText(deps.config, to, text, deps.fetch).catch(() => ({ ok: false as const }));
     events.push({ kind: sent.ok ? "ack_sent" : "ack_failed", householdId: row.household_id });
     if (sent.ok) await admin.from("whatsapp_messages").update({ acknowledged_at: clock().toISOString() }).eq("id", row.id);
+    // HomeTalk's own message is remembered, so a swipe-reply quoting it reaches HomeTalk (rule 2). Apart from the
+    // acknowledgement, so a database without the column yet loses only this (2026-10-27).
+    if (sent.ok && sent.providerMessageId) await Promise.resolve(admin.from("whatsapp_messages").update({ hometalk_reply_id: sent.providerMessageId }).eq("id", row.id)).catch(() => null);
   };
   // "typing…" while WonderHome works, once per burst, for a message that is still to be answered.
   const showTyping = (providerMessageId: string) => {
@@ -318,7 +321,9 @@ async function readMessage(admin: SupabaseClient, messageId: string, deps: Whats
   // HomeTalk's questions about something just sent ("When is it due?",
   // "Who is it for — Asmi or Manan?") are answered the same way: HomeTalk
   // asks every question, and the answer goes back onto the item.
-  if (!together && row.message_type === "text" && row.text_content && deps.ask && !row.reply_to_provider_message_id && row.text_content.trim().length <= 160) {
+  // A swipe-reply counts only when it quotes HomeTalk's own message: "skip", swiped onto "How much maps link
+  // should I add?", failed safely in HomeSend (the owner, 2026-10-27). One quoting anything else keeps rule 8.
+  if (!together && row.message_type === "text" && row.text_content && deps.ask && row.text_content.trim().length <= 160 && (await answersHomeTalk(admin, row))) {
     if (await homeTalkAwaitsAnswer(admin, row, now).catch(() => false)) {
       const answer = await deps.ask({ householdId: row.household_id, memberId: row.member_id, text: row.text_content, requestId: row.provider_message_id }).catch(() => null);
       if (answer) {
@@ -406,7 +411,7 @@ async function readMessage(admin: SupabaseClient, messageId: string, deps: Whats
         const spoken = sure.text;
         const forHomeTalk = deps.ask ? isForHomeTalk(spoken) : isQuestionForWonderHome(spoken);
         const awaited =
-          !forHomeTalk && deps.ask && !row.reply_to_provider_message_id && spoken.length <= 160 ? await homeTalkAwaitsAnswer(admin, row, now).catch(() => false) : false;
+          !forHomeTalk && deps.ask && spoken.length <= 160 && (await answersHomeTalk(admin, row)) ? await homeTalkAwaitsAnswer(admin, row, now).catch(() => false) : false;
         if (forHomeTalk || awaited) {
           const answer = deps.ask
             ? await deps.ask({ householdId: row.household_id, memberId: row.member_id, text: spoken, requestId: row.provider_message_id, spoken: { confidence: sure.confidence } }).catch(() => null)
@@ -761,6 +766,24 @@ async function openChoices(admin: SupabaseClient, row: Pick<MessageRow, "househo
  * or whether, and nothing else has happened since — and their last WhatsApp
  * message before this one went to HomeTalk, not to HomeSend.
  */
+/**
+ * Whether a message can be an answer to HomeTalk: not a swipe-reply, or a swipe-reply quoting a message
+ * HomeTalk sent this member (`hometalk_reply_id`). Unreadable (the column not there yet) is "no", as before.
+ */
+async function answersHomeTalk(admin: SupabaseClient, row: Pick<MessageRow, "household_id" | "member_id" | "reply_to_provider_message_id">): Promise<boolean> {
+  if (!row.reply_to_provider_message_id) return true;
+  const { data, error } = await Promise.resolve(
+    admin
+      .from("whatsapp_messages")
+      .select("id")
+      .eq("household_id", row.household_id)
+      .eq("member_id", row.member_id)
+      .eq("hometalk_reply_id", row.reply_to_provider_message_id)
+      .limit(1),
+  ).catch(() => ({ data: null, error: true }));
+  return !error && Array.isArray(data) && data.length > 0;
+}
+
 export async function homeTalkAwaitsAnswer(admin: SupabaseClient, row: Pick<MessageRow, "id" | "household_id" | "member_id">, now: Date): Promise<boolean> {
   const since = new Date(now.getTime() - HOMETALK_ANSWER_WINDOW_MS).toISOString();
   const [{ data: previous }, { data: session }] = await Promise.all([

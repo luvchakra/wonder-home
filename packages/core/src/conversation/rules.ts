@@ -159,6 +159,15 @@ function reminder(what: string, when: string | undefined, time: string | undefin
 }
 
 /**
+ * A link, a map, directions or a location is never something to buy: "add
+ * maps link" asks for links in an answer, and is never asked "how much"
+ * (the owner, 2026-10-27).
+ */
+export function notAThingToBuy(what: string): boolean {
+  return /\b(?:links?|urls?|maps?|directions|locations?)\b/i.test(what);
+}
+
+/**
  * "Milk and bananas" is two things to add, not one called "milk and
  * bananas" — split the way an order's items are, so each is matched,
  * added or found already there on its own.
@@ -574,7 +583,7 @@ const RULES: readonly Rule[] = [
     pattern: /^add\s+(?:some |a |an |more )?(.+)$/i,
     read: (match) => {
       const what = item(match[1]!);
-      if (/\b(?:to|into|onto|on|in|for|as|at|by|reminder|appointment|event|meeting|note|calendar|tomorrow|today|tonight)\b/i.test(what) || what.split(" ").length > 8) return null;
+      if (/\b(?:to|into|onto|on|in|for|as|at|by|reminder|appointment|event|meeting|note|calendar|tomorrow|today|tonight)\b/i.test(what) || what.split(" ").length > 8 || notAThingToBuy(what)) return null;
       return { action: "add_to_list", target: { kind: "list", reference: "groceries" }, parameters: { item: what }, confidence: 0.86 };
     },
   },
@@ -583,7 +592,7 @@ const RULES: readonly Rule[] = [
     read: (match) => {
       const what = item(match[1]!);
       // "get ready for tomorrow" is not a shopping request.
-      if (/^(?:ready|going|started|back|out|up|home|to |it |that |this |the )/i.test(what) || what.split(" ").length > 5) return null;
+      if (/^(?:ready|going|started|back|out|up|home|to |it |that |this |the )/i.test(what) || what.split(" ").length > 5 || notAThingToBuy(what)) return null;
       return { action: "add_to_list", target: { kind: "list", reference: "groceries" }, parameters: { item: what }, confidence: 0.78 };
     },
   },

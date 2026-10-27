@@ -54,6 +54,10 @@ export type PlaceRequest = {
   placeType?: string;
   /** Days from today the window falls on: 1 for "tomorrow". Absent is today. */
   dayOffset?: number;
+  /** "This weekend": the next Saturday, or today when today is Saturday or Sunday (`service.ts` `windowFor`). */
+  weekend?: true;
+  /** "Add maps link": each place in the reply carries its Google Maps link (the owner, 2026-10-27). */
+  mapLinks?: true;
   /** What was taken rather than said, and is said back: "kind" when no kind of place was named. */
   assumed?: "kind";
   /** The question HomeTalk already asked about this request ("whose school?"), so it is never asked again. */
@@ -91,9 +95,13 @@ const OUTING = /\b(hang ?out|chill|fun|play(?:ground| area)?|parks?|things to do
  * Going out with no kind of place named: "can we go somewhere out", "a day
  * out". A place question all the same; its kind is assumed and said back.
  */
-const GENERIC_OUTING = /\b(?:go(?:ing)? out|go(?:ing)? somewhere|somewhere out|out somewhere|outing|day out|somewhere to go|step out)\b/i;
+const GENERIC_OUTING = /\bwhere (?:can|could|should|shall) (?:we|i) go\b|\b(?:go(?:ing)? out|go(?:ing)? somewhere|somewhere out|out somewhere|outing|day out|somewhere to go|step out)\b/i;
 /** "A two-day vacation plan", "a weekend getaway", "somewhere for a short trip": a getaway, not a dinner. */
 const GETAWAY = /\b(vacations?|holidays?|getaways?|trips?|staycations?|weekend away|road ?trips?|excursions?|places? to travel|travel plan)\b/i;
+/** "This weekend", "on the weekend": a day, not a getaway (a "weekend away" is read first, as one). */
+const WEEKEND = /\b(?:this|the|on the|over the|coming) weekend\b|^weekend\b/i;
+/** Asking for the map links ("add maps link", "with directions", "share the location link"). */
+const MAP_LINKS = /\b(?:google )?maps?(?: links?)?\b|\bdirections\b|\blocation links?\b|\blinks?\b/i;
 const DAYS: Record<string, number> = { one: 1, a: 1, two: 2, three: 3, four: 4, five: 5, six: 6, seven: 7, couple: 2 };
 const CUISINE = /\b(pizza|biryani|dosa|burgers?|sushi|chinese|italian|south indian|north indian|thai|mexican|vegetarian|vegan|pure veg|ice ?cream|desserts?|coffee)\b/i;
 const CHILDREN = /\b(kids?|child(?:ren)?|son|daughter|little ones?|family|her|him|them)\b|\b\w+'s school\b|after school/i;
@@ -135,6 +143,11 @@ function tripDays(lower: string): number {
 }
 
 export function readPlaceRequest(utterance: string, options: PlaceReadOptions = {}): PlaceRequest | null {
+  const request = readRequest(utterance, options);
+  return request && MAP_LINKS.test(utterance) ? { ...request, mapLinks: true } : request;
+}
+
+function readRequest(utterance: string, options: PlaceReadOptions): PlaceRequest | null {
   const said = utterance.trim();
   if (!options.asked && !isPlaceQuestion(said)) return null;
   const lower = said.toLowerCase();
@@ -177,6 +190,7 @@ export function readPlaceRequest(utterance: string, options: PlaceReadOptions = 
   // A time said before carries to a new day ("dinner tonight", then "tomorrow instead" is dinner tomorrow).
   const when = saidWhen ?? (earlier && earlier.when.kind !== "now" && earlier.when.kind !== "trip" ? earlier.when : null);
   const dayOffset = saidDay ?? earlier?.dayOffset ?? 0;
+  const weekend = saidDay === null && (WEEKEND.test(lower) || (earlier?.weekend === true && !earlier.dayOffset));
   const radiusMeters = anchor.kind === "school" || anchor.kind === "work" ? 4_000 : 6_000;
 
   const eat = EAT.exec(said);
@@ -185,13 +199,16 @@ export function readPlaceRequest(utterance: string, options: PlaceReadOptions = 
   // No kind named this turn ("near Anya's school", "tomorrow instead"): the
   // turn before's, when that one named it.
   if (!eat && !outing && !GENERIC_OUTING.test(said) && earlier && earlier.assumed !== "kind") {
-    const { asked: _asked, dayOffset: _day, ...kept } = earlier;
+    const { asked: _asked, dayOffset: _day, weekend: _weekend, mapLinks: _links, ...kept } = earlier;
     void _asked;
     void _day;
+    void _weekend;
+    void _links;
     return settle(
       { ...kept, anchor, radiusMeters, forChildren: earlier.forChildren || CHILDREN.test(said) || anchor.kind === "school", ...(asked ? { asked } : {}) },
       when,
       dayOffset,
+      weekend,
     );
   }
 
@@ -218,7 +235,7 @@ export function readPlaceRequest(utterance: string, options: PlaceReadOptions = 
     assumed = "kind";
   }
 
-  return settle({ purpose, query, label, forChildren, anchor, when: { kind: "now" }, radiusMeters, ...(assumed ? { assumed } : {}), ...(asked ? { asked } : {}) }, when, dayOffset);
+  return settle({ purpose, query, label, forChildren, anchor, when: { kind: "now" }, radiusMeters, ...(assumed ? { assumed } : {}), ...(asked ? { asked } : {}) }, when, dayOffset, weekend);
 }
 
 /**
@@ -226,11 +243,11 @@ export function readPlaceRequest(utterance: string, options: PlaceReadOptions = 
  * time said is that day's daytime — lunch time to eat, late morning to go
  * out — and the day itself is kept on the request (`dayOffset`).
  */
-function settle(request: PlaceRequest, when: PlaceWhen | null, dayOffset: number): PlaceRequest {
-  if (dayOffset <= 0) return { ...request, when: when ?? { kind: "now" } };
+function settle(request: PlaceRequest, when: PlaceWhen | null, dayOffset: number, weekend = false): PlaceRequest {
+  if (dayOffset <= 0 && !weekend) return { ...request, when: when ?? { kind: "now" } };
   const daytime = request.purpose === "eat" ? MEALS.lunch! : OUTING_DAYTIME;
   const later: PlaceWhen = when && when.kind !== "now" ? when : { kind: "today", minute: daytime.minute, forMinutes: daytime.forMinutes, label: clock(daytime.minute) };
-  return { ...request, when: later, dayOffset };
+  return dayOffset > 0 ? { ...request, when: later, dayOffset } : { ...request, when: later, weekend: true };
 }
 
 /** "Tomorrow" is 1, "day after tomorrow" 2, "today"/"tonight" 0; null when no day is said. */
@@ -302,6 +319,7 @@ export function placeRequestFrom(metadata: unknown): PlaceRequest | null {
     radiusMeters: raw.radiusMeters,
     ...(typeof raw.placeType === "string" ? { placeType: raw.placeType } : {}),
     ...(typeof raw.dayOffset === "number" && raw.dayOffset > 0 && raw.dayOffset <= 7 ? { dayOffset: raw.dayOffset } : {}),
+    ...(raw.weekend === true ? { weekend: true as const } : {}),
     ...(raw.assumed === "kind" ? { assumed: "kind" as const } : {}),
     ...(raw.asked === "which_child" ? { asked: "which_child" as const } : {}),
   };

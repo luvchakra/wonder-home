@@ -123,3 +123,11 @@ describe("reading a place question", () => {
   });
 });
 
+
+// The owner, 2026-10-27: "where can we go this weekend, add maps link".
+describe("this weekend, with map links", () => {
+  it("is going out at the weekend, its places with their map links", () => {
+    expect(readPlaceRequest("where can we go this weekend, add maps link")).toMatchObject({ purpose: "outing", label: "going out", assumed: "kind", weekend: true, mapLinks: true, when: { kind: "today", minute: 11 * 60 } });
+    expect(readPlaceRequest("where can we go for dinner")).not.toHaveProperty("mapLinks");
+  });
+});

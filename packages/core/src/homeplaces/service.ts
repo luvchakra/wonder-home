@@ -219,7 +219,9 @@ const WEEKDAYS = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Frida
 
 function windowFor(request: PlaceRequest, context: PlacesContext, anchor: Anchor): Window {
   // Another day ("tomorrow"): that day's weekday, and its times are never "already gone".
-  const offset = request.when.kind === "trip" ? 0 : Math.max(request.dayOffset ?? 0, 0);
+  // "This weekend": the coming Saturday, or today on a Saturday or Sunday.
+  const weekendOffset = context.now.day === 0 || context.now.day === 6 ? 0 : 6 - context.now.day;
+  const offset = request.when.kind === "trip" ? 0 : Math.max(request.dayOffset ?? (request.weekend ? weekendOffset : 0), 0);
   const day = (context.now.day + offset) % 7;
   const minute = offset > 0 ? 0 : context.now.minute;
   const on = offset === 0 ? "" : offset === 1 ? "tomorrow " : `on ${WEEKDAYS[day]} `;
