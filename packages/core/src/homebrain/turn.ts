@@ -1,4 +1,4 @@
-import type { AnswerComposer } from "../ai/model-client";
+import type { AnswerComposer, AnswerUsage } from "../ai/model-client";
 import { minimiseContext, pseudonymiseText, restoreNames, type DataUsePolicy, type Person } from "../ai/privacy";
 import { describeLocalNow } from "../context/format";
 import { isoDay } from "../context/normalize";
@@ -81,6 +81,13 @@ export type HomeBrainAnswer = {
   facts: GroundedFact[];
   /** The deeper look, when one ran (§3.7): for `homebrain_misses` and the store repair. */
   deepRead?: DeepReadRecord;
+  /**
+   * Where this answer's time went (HomeBrain 4.0 §3.6): choosing the facts,
+   * and when the model's first token arrived (epoch ms; null without a
+   * streamed model call). Usage is tokens, cached and not, summed over the
+   * drafts. Numbers only.
+   */
+  timings?: { retrieveMs: number; firstTokenAt: number | null; usage?: AnswerUsage };
 };
 
 /**
@@ -141,7 +148,9 @@ async function answerOnce(turn: HomeBrainTurn): Promise<HomeBrainAnswer> {
   if (held) return { ...base, text: held, mode: "answer", source: "deterministic" };
 
   const semantic = turn.semantic ? await turn.semantic.catch(() => undefined) : undefined;
+  const groundingStarted = performance.now();
   const facts = groundFacts(turn.items, reading, { timezone: turn.timezone, today: isoDay(turn.now, turn.timezone), semantic });
+  const timings: NonNullable<HomeBrainAnswer["timings"]> = { retrieveMs: Math.round(performance.now() - groundingStarted), firstTokenAt: null };
   const validation = { attempts: 0, rejected: [] as ViolationKind[] };
   let factsSent = 0;
 
@@ -185,7 +194,22 @@ async function answerOnce(turn: HomeBrainTurn): Promise<HomeBrainAnswer> {
           // A composer that throws — a timeout, an outage it did not catch
           // itself — is a model with no answer, never an error the person sees.
           try {
-            return await compose({ question, facts: request.facts, history, viewer: turn.viewer.roleLabel, localNow, problems: request.problems, goal: reading.goal });
+            return await compose({
+              question,
+              facts: request.facts,
+              history,
+              viewer: turn.viewer.roleLabel,
+              localNow,
+              problems: request.problems,
+              goal: reading.goal,
+              onFirstToken: () => {
+                timings.firstTokenAt ??= Date.now();
+              },
+              onUsage: (usage) => {
+                const sum = timings.usage ?? { input: 0, cacheRead: 0, cacheWrite: 0, output: 0 };
+                timings.usage = { input: sum.input + usage.input, cacheRead: sum.cacheRead + usage.cacheRead, cacheWrite: sum.cacheWrite + usage.cacheWrite, output: sum.output + usage.output };
+              },
+            });
           } catch {
             return null;
           }
@@ -226,6 +250,7 @@ async function answerOnce(turn: HomeBrainTurn): Promise<HomeBrainAnswer> {
           facts,
           factsSent,
           validation,
+          timings,
           // A day is said as a day ("Sat 10 Oct"), never as the ISO the facts carry for the model (say.ts).
           text: isoDaysInWords(restoreNames(outcome.draft.text, minimised.pseudonyms, turn.people)),
           mode: outcome.draft.mode,
@@ -237,7 +262,7 @@ async function answerOnce(turn: HomeBrainTurn): Promise<HomeBrainAnswer> {
 
   // No model, or none whose answer could be stood behind: the facts themselves.
   const deterministic = composeFromFacts(facts, reading);
-  if (deterministic) return { reading, facts, factsSent, validation, text: deterministic, mode: "answer", source: "deterministic" };
-  if (reading.broad) return { reading, facts, factsSent, validation, text: null, mode: "answer", source: "none" };
-  return { reading, facts, factsSent, validation, text: unknownAnswer(reading), mode: "unknown", source: "not_on_record" };
+  if (deterministic) return { reading, facts, factsSent, validation, timings, text: deterministic, mode: "answer", source: "deterministic" };
+  if (reading.broad) return { reading, facts, factsSent, validation, timings, text: null, mode: "answer", source: "none" };
+  return { reading, facts, factsSent, validation, timings, text: unknownAnswer(reading), mode: "unknown", source: "not_on_record" };
 }

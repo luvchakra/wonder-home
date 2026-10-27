@@ -11,14 +11,14 @@ in `docs/progress/`; for the running log of what changed when, `tracking/PROGRES
 
 ## The whole picture
 
-**399 of 433 stories done — 92.1%**
+**400 of 435 stories done — 92%**
 
 | Status | Stories |
 |---|---:|
-| Done | 399 |
-| In Progress | 11 |
+| Done | 400 |
+| In Progress | 10 |
 | Blocked | 1 |
-| Not Started | 18 |
+| Not Started | 20 |
 | Deferred | 4 |
 
 ## By module
@@ -39,7 +39,7 @@ in `docs/progress/`; for the running log of what changed when, `tracking/PROGRES
 | 11 Bills, Fees & Finance | `█████████░` | 14 | 15 | 1 not started |
 | 12 Family Time & Social Activities | `██████████` | 9 | 9 | — |
 | 13 Maintenance, Laundry & Pet Care | `█████████░` | 10 | 11 | 1 in progress |
-| 14 AI Orchestration & Learning | `████████░░` | 47 | 55 | 2 in progress, 3 not started, 3 deferred |
+| 14 AI Orchestration & Learning | `████████░░` | 48 | 57 | 1 in progress, 5 not started, 3 deferred |
 | 15 Privacy, Security & Governance | `██████████` | 9 | 9 | — |
 | 16 Platform Admin & Operations | `██████████` | 8 | 8 | — |
 | 17 External Integrations | `██████████` | 9 | 9 | — |
@@ -73,11 +73,12 @@ in `docs/progress/`; for the running log of what changed when, `tracking/PROGRES
 | `14-021` HomeBrain 3.0 phase B — retrieval and one pass | 14 AI Orchestration & Learning | P0 | Deferred |
 | `14-022` HomeBrain 3.0 phase C — one answer source | 14 AI Orchestration & Learning | P0 | Deferred |
 | `14-023` HomeBrain 3.0 phase D — keep-warm hardening | 14 AI Orchestration & Learning | P1 | Deferred |
-| `14-027` HomeBrain 4.0 phase 3 — one pass over the store | 14 AI Orchestration & Learning | P0 | In Progress |
 | `14-031` HomeBrain 4.0 phase 7 — keep it whole | 14 AI Orchestration & Learning | P1 | In Progress |
 | `14-037` Record index Phase 2: facts written when records are written | 14 AI Orchestration & Learning | P0 | Not Started |
 | `14-038` Record index Phase 3: the Calendar and HomeTalk read one projection | 14 AI Orchestration & Learning | P1 | Not Started |
 | `14-039` Record index Phase 4: structure-first retrieval and coverage misses | 14 AI Orchestration & Learning | P1 | Not Started |
+| `14-056` HomeBrain 4.0 phase 3b — one structured call: answer or intent | 14 AI Orchestration & Learning | P0 | Not Started |
+| `14-057` HomeBrain 4.0 phase 3c — the reply streamed to the person | 14 AI Orchestration & Learning | P0 | Not Started |
 | `21-011` Edit an appointment | 21 Health and Fitness | P2 | Not Started |
 | `22-008` Right-to-left readiness | 22 Internationalization and Localization | P1 | Deferred |
 | `25-004` Send to Cook over WhatsApp | 25 HomeFood | P1 | Not Started |
@@ -391,7 +392,7 @@ in `docs/progress/`; for the running log of what changed when, `tracking/PROGRES
 
 ### 14 — AI Orchestration & Learning
 
-47 of 55 done `████████░░`
+48 of 57 done `████████░░`
 
 | Story | Priority | Status | Notes |
 |---|---|---|---|
@@ -421,7 +422,7 @@ in `docs/progress/`; for the running log of what changed when, `tracking/PROGRES
 | `14-024` HomeBrain 4.0 phase 0 — hearing it right | P0 | Done | PR #240. Built: `conversation/normalise.ts` runs first in `converse` and in the HomeTalk turn (the stored message keeps the person's words); \"I am planning X\" reads as \"plan X\"; `ROSTER_QUESTION` plus `ROSTER_ALSO` and a trailing \"in this household\"; `people` words put people in focus, and `relevantAnswers` lets people and pets answer when they are the focus. Browser-checked on the live project: Gemini's exact sentence gets the roster. Spec §3.1–§3.2. `conversation/normalise.ts` (lead-ins, wrappers, repeats; a "check the database" marker); every rule and the roster read the canonical sentence; `ROSTER_QUESTION` widened ("in this household", "who all", "who lives in this house"); people and pets answer questions about them (out of `BACKGROUND` when asked). The owner's report 2026-10-18: Gemini's "Okay, so. Okay, who are the family members in this household?" got "couldn't find the list". Golden HT-100, HT-101 |
 | `14-025` HomeBrain 4.0 phase 1 — do what was asked | P0 | Done | PR #240. Built: `conversation/consent.ts` (act / confirm / step_up; children and helpers keep autonomy) through `proposeFromIntent`'s `requestedBy: \"person\"`; `readPlan` (the day out of the name, the time of day from the name, guests); a gathering stays an event, not a meal; \"undo\" (`isUndo`, `undoExecuted` now also cancels an event and removes a meal); \"Say undo to take it back\" on undoable replies; Gemini in the app gets `in_app` for plans, what is at home and who does what (Alexa unchanged); the `ask_household` tool and Gemini's instructions pass requests through; the Settings → AI Assistant switch is a `policies` row (`ai_autonomy`), no migration. As built differently from the spec: no `do_household_change` tool (ask_household already reaches the engine) and no Undo chip yet (voice and typed \"undo\" work). Voice settings page reworked too (the owner's ask): what is really speaking, Gemini Live first, tips, Alexa link, Google-only controls hidden when unused. Browser-checked: movie night executed on Friday 6–11 pm, undo cancelled it, the switch made the next plan a question. Spec §3.9. The owner, 2026-10-18: "it should just understand user intent and do what is asked during conversation, no separate okay required". `conversation/consent.ts`: Act (everyday reversible changes the person asked for run at once, with undo by voice or chip), Confirm in the conversation (others' duties, guests, medium-confidence grounding), App with step-up (payments, orders, access, deleting). `decideAutonomy` gains `requestedBy`. Gemini in the app gets the app's policy and a `do_household_change` tool; Alexa unchanged. Settings → AI Assistant switch "Ask before acting on what I say" (default off, a `policies` row). Footer, CLAUDE.md and help in 8 languages. Golden HT-103 to HT-107, HT-110 |
 | `14-026` HomeBrain 4.0 phase 2 — look deeper | P0 | Done | PR #241. Built: `homebrain/deep-read.ts` — before "not on record" (or "unknown", or when the person says "look again"/"check the database"), `answerWithHomeBrain` reads up to 3 of the question's domains live through the viewer's own session (`gatherHouseholdContext`, RLS decides), within 1.5 s, merges live over stored and answers again; with nothing either, "I looked through everything WonderHome has". A find marks the store stale (`invalidateHouseholdContext`) and every look leaves one content-free `homebrain_misses` row (migrations `20261018290000` and `20261018291000`, live, a deny-all policy; `verify:live` checks it). As built: the golden case is unit-level (`homebrain/evaluations.test.ts` "Looking deeper"), since the eval runner has no live read; HT-102 not added. Spec §3.7–§3.8 |
-| `14-027` HomeBrain 4.0 phase 3 — one pass over the store | P0 | In Progress | PR #241 built the token budget only: `groundFacts` stops choosing facts at about 8k tokens (`FACT_TOKEN_BUDGET`), the first fact always kept. Still open: `homebrain/retrieve.ts`'s lexical index, `homebrain/one-pass.ts` (one structured answer-or-intent call, cached household prefix, streaming), the understand call dropped for questions, the timings and the 2.5 s p95. Spec §3.4, §3.6 (was 14-021) |
+| `14-027` HomeBrain 4.0 phase 3a — one pass over the store: cached prompts, the answer call streamed, timings | P0 | Done | PR #241 built the token budget (`FACT_TOKEN_BUDGET`). This PR (2026-10-27): the understanding prompt (about 4k tokens) and the answer prompt are cached prefixes, the facts block comes before what changes each turn so a regeneration reuses it, the Anthropic answer call is streamed so the turn records when its first token came, and each turn records `store`, `retrieve`, `firstToken` and the answer's tokens (cached and not). Measured: retrieval is 12 ms warm for 2,000 facts, inside §3.4's 20 ms, so no separate lexical index was built (`groundFacts` is the retrieval). Split out: 14-056 (one structured answer-or-intent call, understand dropped for questions) and 14-057 (the reply streamed to the person, validated sentence by sentence; typed p95 2.5 s to the first token). Spec §3.4, §3.6 (was 14-021). Note `docs/progress/2026-10-27-homebrain-one-pass-phase-3a.md` |
 | `14-028` HomeBrain 4.0 phase 4 — the household graph | P1 | Done | PR #241. Built: `homebrain/graph.ts` — typed edges (about_person, same_day, needs, responsible_for, routed_from) over the viewer's own items, so no edge reaches what they may not see; `groundFacts` follows one link from every fact it is sure of (two for a plan or a decision, only same_day and needs) and offers what it reaches at 0.45, below the 0.5 a rules answer is made of, never overruling the person or the part of the home a reading set. As built differently from the spec: the graph is derived on the turn, not stored (no `graph` column), and guests, recipes, places and pets' carers are not edges yet (guests ride on the event item). Golden HT-111 (with 14-029). Spec §3.3–§3.4 |
 | `14-029` HomeBrain 4.0 phase 5 — inferences with evidence | P1 | Done | PR #241. Built: `homebrain/insights.ts` — night_before (an evening plan before a child's exam), meal_short, away_but_assigned (the cook away), bill_before_trip, routine_gap (one owner away, no backup) and count (guests coming, the yeses added up); each is a `domain: "insight"` fact sent with its evidence, leading a decision and following the fact for a plain question. `validate.ts` gains `unsupported_inference`: a model's own "because / which means / so you'll" is refused unless it cites an inference fact; the answer prompt says so. As built: guest_food and school_kit wait on records WonderHome does not keep (a guest's food preference; what a school item needs bought), and clashes stay in `context/conflicts.ts`. Golden HT-111 in `npm run eval`; HT-108/HT-109 as unit cases. Spec §3.5 |
 | `14-030` HomeBrain 4.0 phase 6 — answers shaped by the goal | P1 | Done | PR #241. Built: `homebrain/goal.ts` (`readGoal`: find_out, plan, decide, check, remember, do, by rules on the question's own words) on every reading; a plan or a decision follows two links; the rules answer is shaped by it (to decide: what the rules noticed leads; to check whether anything is there: "Yes." first; never a yes the record does not say), and the model is told the goal (`AnswerInput.goal`). Spec §3.10 |
@@ -450,6 +451,8 @@ in `docs/progress/`; for the running log of what changed when, `tracking/PROGRES
 | `14-053` Answers to pick under HomeTalk's questions | P1 | Done | The owner, 2026-10-26 (principle 20). Every question with sensible answers carries localized choices (`hometalk/choices.ts`, `metadata.choices`): amounts by the one rule for amounts (25-037), names, days, times, record types, yes / not now, candidates, and checkboxes for which waiting items to fill in. App chips and checkboxes (`ui/answer-choices`); WhatsApp reply buttons or a list with a text fallback, read back by id. No preview card on a turn that only asked. Eval HT-162–HT-168 (HT-167 caught "not now" normalised to "not"); design I-28. |
 | `14-054` A finished turn's action preview behind an "i" beside its time | P1 | Done | The owner, 2026-10-26, 9:13 PM IST: "do not show separate card for action preview, rather show a small i icon left to time". `ui/preview-info`: a popover on a desktop, a bottom sheet on a phone; a preview waiting for a decision stays inline with its buttons. "Can be undone" only on a done turn that can be. Help ¶2 of HomeTalk in eight languages; signed-in E2E. |
 | `14-055` Admins may let bills, receipts and health documents be added directly | P1 | Done | PR pending. The owner, 2026-10-26: "along with the % setting add setting feature to ask user if they want to add entries related to health, entries related to money directly in WonderHome if allowed in responsibilities". Two Admin switches on Settings → AI Assistant, off by default; on, the entry takes the grocery path (Pre Approved + above the bar + every other rule). Photos and files still wait. Starter outcomes `finance.budget_reviewed` and `health.records_kept` added. |
+| `14-056` HomeBrain 4.0 phase 3b — one structured call: answer or intent | P0 | Not Started | Split from 14-027. `homebrain/one-pass.ts`: for a turn the rules cannot settle, one model call returns `mode` (answer, clarify, not_on_record, action), `text`, `usedFacts`, `goal` and an optional `intent` in `IntentOutputSchema`, so a question no longer waits on the understanding call first (production 2026-10-13 to 27: understanding p50 2.8 s before the answer's 3.6 s) and an action goes straight into ground → gate → propose. Every gate runs on its output; HT eval cases for questions and actions; Unsafe Action Rate stays 0. Spec §3.6 |
+| `14-057` HomeBrain 4.0 phase 3c — the reply streamed to the person | P0 | Not Started | Split from 14-027. A streamed endpoint and the HomeTalk client showing words as they arrive; the draft carries `usedFacts` before its text, and each sentence is shown only after `validate.ts` passes it against those facts (never an unvalidated word); a sentence that fails stops the stream and the deterministic answer replaces it. Voice speaks sentence chunks through `speakable`. Goal: typed p95 2.5 s to the first token, read from `timings.firstToken`. Needs 14-056 |
 
 ### 15 — Privacy, Security & Governance
 

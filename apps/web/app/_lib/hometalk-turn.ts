@@ -494,7 +494,14 @@ async function turnInEnglish(input: HomeTalkInput, speaking: Speaking) {
   // below; a correction is always one request about one earlier one.
   const parts = readCorrection(body.utterance) ? [body.utterance] : splitRequest(body.utterance);
   const mayBeQuestion = parts.length === 1 && (routing.compose !== undefined || quick.action === "ask_status" || quick.action === "unknown");
-  const brainRead = mayBeQuestion ? readBrain() : null;
+  // When the household's facts were in hand, for the turn's timings (14-027).
+  let storeReadAt: number | null = null;
+  const brainRead = mayBeQuestion
+    ? readBrain().then((read) => {
+        storeReadAt = Date.now();
+        return read;
+      })
+    : null;
   brainRead?.catch(() => undefined);
   // What the question is close to in meaning (HomeBrain Sleep), alongside the read, bounded and never awaited past its budget.
   const brainMeaning = mayBeQuestion
@@ -1230,8 +1237,20 @@ async function turnInEnglish(input: HomeTalkInput, speaking: Speaking) {
       ...(brainAnswer && brainAnswer.validation.attempts > 0 ? { brainValidation: brainAnswer.validation } : {}),
       // Where the time went, in milliseconds: understanding (the first
       // model call, or none), composing (the brain read plus the second
-      // call), and the whole turn so far. Numbers only.
-      timings: { understand: understoodAt - startedAt, compose: composedAt - understoodAt, total: Date.now() - startedAt, quick: plainQuestion },
+      // call), and the whole turn so far. Then (14-027) when the household's
+      // facts were in hand, how long choosing among them took, when the
+      // answer's first model token came, and the answer's tokens, cached
+      // and not. Numbers only.
+      timings: {
+        understand: understoodAt - startedAt,
+        compose: composedAt - understoodAt,
+        total: Date.now() - startedAt,
+        quick: plainQuestion,
+        ...(storeReadAt !== null ? { store: storeReadAt - startedAt } : {}),
+        ...(brainAnswer?.timings ? { retrieve: brainAnswer.timings.retrieveMs } : {}),
+        ...(brainAnswer?.timings?.firstTokenAt ? { firstToken: brainAnswer.timings.firstTokenAt - startedAt } : {}),
+        ...(brainAnswer?.timings?.usage ? { tokens: brainAnswer.timings.usage } : {}),
+      },
     },
   });
 

@@ -709,6 +709,27 @@ describe("A HomeBrain turn", () => {
     expect(answer.validation).toEqual({ attempts: 2, rejected: ["unsupported_action"] });
   });
 
+  it("says where its time went: choosing the facts, the first token of the first draft, and tokens summed over drafts (14-027)", async () => {
+    let calls = 0;
+    const answer = await turn("Which bills are due this week?", async (input) => {
+      calls += 1;
+      input.onFirstToken?.();
+      input.onFirstToken?.();
+      input.onUsage?.({ input: 100, cacheRead: calls === 1 ? 0 : 1500, cacheWrite: calls === 1 ? 1500 : 0, output: 40 });
+      const electricity = input.facts.find((fact) => fact.text.includes("Electricity"))!;
+      return calls === 1
+        ? { text: "I've paid the Electricity bill.", mode: "answer", grounded: true, usedFacts: [electricity.id] }
+        : { text: "The Electricity bill of ₹2,400 is due on Friday.", mode: "answer", grounded: true, usedFacts: [electricity.id] };
+    });
+    expect(answer.source).toBe("model_regenerated");
+    expect(answer.timings!.retrieveMs).toBeGreaterThanOrEqual(0);
+    expect(answer.timings!.firstTokenAt).toEqual(expect.any(Number));
+    expect(answer.timings!.usage).toEqual({ input: 200, cacheRead: 1500, cacheWrite: 1500, output: 80 });
+    // No model, no first token.
+    const plain = await turn("Which bills are due this week?", null);
+    expect(plain.timings).toMatchObject({ firstTokenAt: null });
+  });
+
   it("falls back to the facts themselves when the model keeps inventing", async () => {
     const answer = await turn("Which bills are due this week?", async () => ({ text: "Priya will pay the ₹9,999 bill.", mode: "answer", grounded: true, usedFacts: [] }));
     expect(answer.source).toBe("deterministic");
