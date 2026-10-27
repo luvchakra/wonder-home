@@ -1,0 +1,6 @@
+# Fly-only files for the portal worker (apps/portal-worker). Vercel builds the
+# web app and has no use for them; keeping them out of its build context avoids
+# Vercel's post-build static patch step failing on them.
+Dockerfile
+.dockerignore
+fly.toml
