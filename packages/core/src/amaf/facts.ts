@@ -595,7 +595,7 @@ export const AMAF_FACTS: readonly AmafFact[] = [
       return words.length >= 3 && named.length >= 2 && !readTimeRange(text) ? { kind: "value", value: { fact: "household.address", text } } : { kind: "unclear" };
     },
     same: (stored, value) => value.fact === "household.address" && (norm(String(stored.value)).includes(norm(value.text)) || norm(value.text).includes(norm(String(stored.value)))),
-    section: () => ({ label: "places", href: "/household/address" }),
+    section: () => ({ label: "places", href: "/settings?tab=household#address" }),
   },
   {
     key: "child.school_hours",

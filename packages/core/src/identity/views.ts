@@ -61,7 +61,7 @@ const SECTIONS: readonly (ViewSection & { requires: Permission | null })[] = [
   {
     key: "manage",
     label: "Manage Household",
-    href: "/household",
+    href: "/settings?tab=household",
     purpose: "Playbook, policies and AI autonomy",
     requires: "household.manage",
   },

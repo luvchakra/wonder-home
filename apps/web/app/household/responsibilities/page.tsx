@@ -224,7 +224,7 @@ function renderResponsibilities({
                 <li key={conflict.id}>
                   {admin ? (
                     <Link
-                      href="/household/setup?step=responsibilities"
+                      href="/household/responsibilities"
                       className="flex min-h-14 items-center gap-3 rounded-[var(--wh-radius-sm)] px-1 py-2 transition-colors hover:bg-[var(--wh-surface)]/60"
                     >
                       <span className="min-w-0 flex-1">
@@ -310,7 +310,7 @@ function renderResponsibilities({
         ) : null}
 
         {shown.length === 0 ? (
-          <EmptyState icon={ListChecks} title={rows.length === 0 ? t("manage.resp.emptyTitle") : t("manage.resp.nothingHere")} description={rows.length === 0 ? t("manage.resp.emptyLede") : t("manage.resp.nothingMatches")} action={admin && rows.length === 0 ? <PillLink href="/household">{t("manage.resp.setUpPlaybook")}</PillLink> : null} />
+          <EmptyState icon={ListChecks} title={rows.length === 0 ? t("manage.resp.emptyTitle") : t("manage.resp.nothingHere")} description={rows.length === 0 ? t("manage.resp.emptyLede") : t("manage.resp.nothingMatches")} action={admin && rows.length === 0 ? <PillLink href="/settings?tab=household">{t("manage.resp.setUpPlaybook")}</PillLink> : null} />
         ) : (
           <div className="space-y-4">
             {(grouping === "outcome" ? groupByArea(shown, t) : groupByOwner(shown, members, nobodyYet)).map((group) => (

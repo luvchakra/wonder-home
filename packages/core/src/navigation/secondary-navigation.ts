@@ -22,7 +22,6 @@ export type SecondaryNavKey =
   | "homesend"
   | "places"
   | "chat"
-  | "manage"
   | "settings";
 
 export type SecondaryNavItem = {
@@ -43,7 +42,6 @@ export type SecondaryNavItem = {
     | "send"
     | "map-pin"
     | "message-circle"
-    | "settings-2"
     | "user-round-cog";
   tone: "primary" | "school" | "money" | "meals" | "care" | "home" | "people" | "ai" | "health" | "neutral";
   /** One line of purpose, shown as the card subtitle. */
@@ -60,8 +58,10 @@ export type SecondaryNavItem = {
 
 /**
  * The nav drawer / More page's section groupings, in display order. Three
- * domain groups and Manage (design/UI-SIMPLIFICATION-v1.md M8): food and the
- * home are one group, and Notifications is not listed — the bell is its door.
+ * domain groups (design/UI-SIMPLIFICATION-v1.md M8): food and the home are one
+ * group, Notifications is not listed (the bell is its door), and Manage holds
+ * only Settings, whose doors are the profile card, the account menu and the
+ * sidebar's foot — Manage Household is Settings' Household tab now.
  */
 export const SECONDARY_GROUP_ORDER = ["family", "home", "ai", "manage"] as const;
 export type SecondaryNavGroup = (typeof SECONDARY_GROUP_ORDER)[number];
@@ -86,7 +86,6 @@ export const SECONDARY_NAVIGATION: readonly SecondaryNavItem[] = [
   { key: "certification", label: "HomeBrain", href: "/certification", icon: "badge-check", tone: "ai", purpose: "Your home, understood", requires: null, adultOnly: true, group: "ai" },
   { key: "homesend", label: "HomeSend", href: "/home-send", icon: "send", tone: "ai", purpose: "Send WonderHome anything", requires: null, adultOnly: true, group: "ai" },
   { key: "places", label: "HomePlaces", href: "/places", icon: "map-pin", tone: "ai", purpose: "Places your family likes", requires: null, group: "ai" },
-  { key: "manage", label: "Manage Household", href: "/household", icon: "settings-2", tone: "neutral", purpose: "Playbook, policies, AI autonomy", requires: ["household.manage"], group: "manage" },
   { key: "settings", label: "Settings & Profile", href: "/settings", icon: "user-round-cog", tone: "neutral", purpose: "You, your preferences, your privacy", requires: null, group: "manage" },
 ] as const;
 

@@ -37,6 +37,9 @@ const nextConfig: NextConfig = {
       { source: "/household/connections", destination: "/settings/connections#accounts", permanent: true },
       { source: "/household/integrations/school", destination: "/settings/connections#school", permanent: true },
       { source: "/household/integrations", destination: "/settings/connections", permanent: true },
+      { source: "/household", destination: "/settings?tab=household", permanent: true },
+      { source: "/household/address", destination: "/settings?tab=household#address", permanent: true },
+      { source: "/household/activity", destination: "/settings?tab=household#activity", permanent: true },
     ];
   },
   async headers() {

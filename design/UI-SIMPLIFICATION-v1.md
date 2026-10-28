@@ -1,6 +1,6 @@
 # UI simplification: one place for each job
 
-**Status:** Approved by the owner on 2026-10-28: D1–D6 as recommended. Built as stories 00-013 to 00-016 (`backlogs/00-Project-Bootstrap-and-Architecture.md`).
+**Status:** Approved by the owner on 2026-10-28: D1–D6 as recommended. Built the same day as stories 00-013 to 00-016 (#424, #425, #428 and the last part); the few places the build departed from this text say so where they occur.
 **Asked for:** "Simplify the UI. Similar functional aspects in one place, merge wherever possible. Make it simple."
 **Rules applied:** `docs/design-principles.md` 6 (five areas), 13 (one door), 14 (no two buttons for the same job), 17 (group by decision), 21 (card opens to detail), 23 (every setting has one editor).
 
@@ -123,20 +123,21 @@ Today Settings is personal and Manage Household (`/household`) is a second group
 - **You** (everyone): profile, Language & Region, Notifications, Privacy, Location sharing, Assistant & voice, Connections, Your plan.
 - **Household** (Admins only; the tab is hidden for everyone else):
   - Address. One editor; `/places` shows the home and links here.
-  - How we run things: Playbook, Policies, AI autonomy.
+  - How we run things: Playbook, Policies, AI autonomy, each with its add form beside its list (they lived only in the setup walk-through before).
+  - Teach WonderHome (decided while building: it stays with the household's rules rather than moving to HomeBrain → Review).
   - Responsibilities (link).
   - Activity log.
 
 Inside the **You** tab:
-- **Assistant & voice** merges `/settings/ai`, `/settings/voice` and the voice key. The voice key lives **only** here; it is no longer on both pages.
-- **AI data sharing** lives only in Privacy. The assistant page shows the value and links there.
+- **AI Assistant and Voice stay two pages** (decided while building, 2026-10-28). They edit different keys: the AI page holds the Gemini Live key, the Voice page the Google speech key. Neither is a second editor of the other.
+- **AI data sharing** already has one editor, on the AI page; Privacy shows the value and links there.
 - **Location sharing**: Family keeps the toggle only for a child, where a guardian sets it. For yourself, Family shows the value and links to Settings.
 
 Redirects:
 - `/household` → `/settings?tab=household`
 - `/household/address` → `/settings?tab=household#address`
 - `/household/activity` → `/settings?tab=household#activity`
-- `/settings/voice` → `/settings/ai`
+- (`/settings/voice` stays; see above.)
 
 ### M7. Fewer doors into the same page
 
@@ -171,7 +172,7 @@ Settings (profile card at the top) · Help · About · Sign out
 | Setup wizards | 2 | 1 |
 | Doors into Settings | 5 | 2 |
 | More menu | 5 groups, 15 items, plus a sub-menu | 3 groups, 11 items, no sub-menu |
-| Signed-in routes removed (redirected) | | 14: `/today`, `/household`, `/household/members`, `/household/address`, `/household/connections`, `/household/integrations`, `/household/integrations/school`, `/household/notifications`, `/household/delivery`, `/household/setup`, `/household/activity`, `/settings/whatsapp`, `/settings/voice-assistants`, `/settings/voice` |
+| Signed-in routes removed (redirected) | | 14 as built: `/today`, `/household`, `/household/members`, `/household/address`, `/household/connections`, `/household/integrations`, `/household/integrations/school`, `/household/notifications`, `/household/delivery`, `/household/setup`, `/household/activity`, `/settings/whatsapp`, `/settings/voice-assistants`, and `/family/events/*` (moved to `/calendar/events/*`). `/settings/voice` stays (§4 M6). |
 
 Counts come from the route inventory taken on 2026-10-28 (`apps/web/app/**/page.tsx`, `packages/core/src/navigation/*`).
 

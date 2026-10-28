@@ -121,7 +121,7 @@ export default async function PlacesPage() {
   const ourRow = (place: OurPlace) => {
     const look =
       place.kind === "home"
-        ? { icon: House, tone: "home" as const, title: t("placeBook.ours.home"), editHref: isAdmin ? "/household/address" : null }
+        ? { icon: House, tone: "home" as const, title: t("placeBook.ours.home"), editHref: isAdmin ? "/settings?tab=household#address" : null }
         : place.kind === "school"
           ? { icon: School, tone: "school" as const, title: place.name, editHref: canChange && place.memberIds[0] ? `/school?child=${place.memberIds[0]}` : null }
           : { icon: Briefcase, tone: "primary" as const, title: place.name, editHref: canChange ? "/family" : null };
@@ -179,7 +179,7 @@ export default async function PlacesPage() {
                     title={t("placeBook.ours.addHome")}
                     meta={t("placeBook.ours.addHomeLede")}
                     action={
-                      <Link href="/household/address" aria-label={t("placeBook.ours.addHome")} title={t("placeBook.ours.addHome")} className={ICON_LINK}>
+                      <Link href="/settings?tab=household#address" aria-label={t("placeBook.ours.addHome")} title={t("placeBook.ours.addHome")} className={ICON_LINK}>
                         <Pencil aria-hidden className="size-4" />
                       </Link>
                     }

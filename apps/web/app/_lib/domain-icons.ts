@@ -7,7 +7,6 @@ import {
   MapPin,
   MessageCircle,
   Send,
-  Settings2,
   ShoppingBasket,
   UserRoundCog,
   Utensils,
@@ -32,6 +31,5 @@ export const DOMAIN_ICONS: Record<SecondaryNavItem["icon"], ComponentType<{ clas
   "map-pin": MapPin,
   "message-circle": MessageCircle,
   send: Send,
-  "settings-2": Settings2,
   "user-round-cog": UserRoundCog,
 };

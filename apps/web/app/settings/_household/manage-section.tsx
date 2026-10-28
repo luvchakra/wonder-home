@@ -1,4 +1,4 @@
-import { Baby, Bell, BookOpen, Bot, ChevronDown, ChevronRight, Cog, FileClock, GraduationCap, HandHelping, House, ListChecks, MapPin, PawPrint, Plug, ShieldCheck, Shirt, ShoppingBasket, Users, UtensilsCrossed, Wallet, Wand2, type LucideIcon } from "lucide-react";
+import { Baby, Bell, BookOpen, Bot, ChevronDown, ChevronRight, FileClock, GraduationCap, HandHelping, House, ListChecks, MapPin, MessageSquareText, PawPrint, Plug, ShieldCheck, Shirt, ShoppingBasket, Users, UtensilsCrossed, Wallet, Wand2, type LucideIcon } from "lucide-react";
 
 import { loadHouseholdAddress } from "@wonderhome/core/household/address";
 import { assessSetup } from "@wonderhome/core/household/setup";
@@ -6,24 +6,22 @@ import { loadSetupFacts } from "@wonderhome/core/household/setup-repository";
 import { listIntegrations } from "@wonderhome/core/integrations/repository";
 import { asAutonomyMode, type AutonomyMode } from "@wonderhome/core/household/autonomy";
 import Link from "next/link";
+import { UNDERSTOOD_SHAPES } from "@wonderhome/core/household/configuration-intent";
 
-import { AppShell } from "@wonderhome/core/shell/app-shell";
 import { Card } from "@wonderhome/core/ui/card";
 import { IconTile, type IconTone } from "@wonderhome/core/ui/icon-tile";
 import { Badge, PillLink } from "@wonderhome/core/ui/pill";
-import { QuoteCard } from "@wonderhome/core/ui/quote-card";
 import { SectionHeader } from "@wonderhome/core/ui/section-header";
 import { SetupProgressCard } from "@wonderhome/core/ui/setup-progress";
 import { EmptyState } from "@wonderhome/core/ui/states";
 
-import { PlaybookRowControls, PolicyRowControls } from "../_components/playbook-controls";
-import { playbookControlLabels, policyCategoryWords } from "../_lib/manage-labels";
-import { groupByArea } from "../_lib/responsibility-groups";
-import { requireSession } from "../_lib/session";
-import { localizeSetup, setupProgressLabels } from "../_lib/setup-labels";
-
-export const metadata = { title: "Manage Household" };
-export const dynamic = "force-dynamic";
+import { applyConfigurationAction, previewConfigurationAction, savePlaybookAction, savePolicyAction } from "../../(auth)/configuration-actions";
+import { PlaybookForm, PolicyForm, TeachForm } from "../../_components/config-forms";
+import { PlaybookRowControls, PolicyRowControls } from "../../_components/playbook-controls";
+import { configFormLabels, playbookControlLabels, policyCategoryWords } from "../../_lib/manage-labels";
+import { groupByArea } from "../../_lib/responsibility-groups";
+import type { Session } from "../../_lib/session";
+import { localizeSetup, setupProgressLabels } from "../../_lib/setup-labels";
 
 type PlaybookRow = { id: string; outcome_key: string; name: string; outcome_definition: string; operating_window: { startHour?: number; endHour?: number } | null; escalation: { afterHours?: number } | null; active: boolean };
 /** Each playbook area's tile: its own icon, in its domain's colour (principle 3). */
@@ -43,27 +41,18 @@ type PolicyRow = { id: string; category: string; name: string; active: boolean; 
 type ResponsibilityRow = { ai_mode: AutonomyMode };
 
 /**
- * Manage Household (requirements §21), for Admins: members, responsibilities,
- * the playbook, policies, AI autonomy, integrations and house settings — each
- * with a live count so the screen tells you the state of things before you
- * tap in.
+ * The household's side of Settings (requirements §21, design/UI-SIMPLIFICATION-v1.md
+ * M5 and M6), for Admins — the page checks `household.manage` before rendering it.
+ * What Manage Household and the setup walk-through held: where setup stands,
+ * the household's own links, then the playbook, policies, AI autonomy and
+ * teaching WonderHome, each with its add form beside its list.
  */
-export default async function ManageHouseholdPage() {
-  const session = await requireSession("/household");
-  const { supabase, membership, view, viewer, secondary, locale } = session;
+export async function ManageSection({ session }: { session: Session }) {
+  const { supabase, membership, locale } = session;
   const { t } = locale;
   const householdId = membership.household.id;
-  const shell = { active: "more" as const, viewer, secondary, pathname: "/household", back: { href: "/more", label: t("common.back") }, title: t("nav.item.manage") };
 
-  if (!view.permissions.includes("household.manage")) {
-    return (
-      <AppShell {...shell}>
-        <EmptyState icon={ShieldCheck} title={t("manage.forAdmins")} description={t("manage.forAdminsLede")} />
-      </AppShell>
-    );
-  }
-
-  const [{ count: memberCount }, playbook, policies, responsibilities, integrations, setupFacts, address, { count: connectionCount }] = await Promise.all([
+  const [{ count: memberCount }, playbook, policies, responsibilities, integrations, setupFacts, address] = await Promise.all([
     supabase.from("household_members").select("id", { count: "exact", head: true }).eq("household_id", householdId).eq("status", "active"),
     supabase.from("playbook_items").select("id, outcome_key, name, outcome_definition, operating_window, escalation, active").eq("household_id", householdId).order("name"),
     supabase.from("policies").select("id, category, name, active, rule").eq("household_id", householdId).eq("active", true).order("category"),
@@ -71,10 +60,10 @@ export default async function ManageHouseholdPage() {
     listIntegrations(supabase, householdId).catch(() => []),
     loadSetupFacts(supabase, membership.household).catch(() => null),
     loadHouseholdAddress(supabase, householdId).catch(() => null),
-    supabase.from("connections").select("id", { count: "exact", head: true }).eq("household_id", householdId),
   ]);
   const setup = setupFacts ? localizeSetup(assessSetup(setupFacts), t) : null;
   const controlLabels = playbookControlLabels(t);
+  const formLabels = configFormLabels(t);
 
   const items = (playbook.data as PlaybookRow[] | null) ?? [];
   const playbookOptions = items.map((item) => ({ key: item.outcome_key, label: item.name }));
@@ -85,36 +74,30 @@ export default async function ManageHouseholdPage() {
 
   type SectionLink = { href: string; icon: typeof Users; tone: IconTone; title: string; meta: string; badge?: { label: string; tone: "attention" | "handled" | "neutral" } };
   const link = {
-    setup: { href: "/household/setup", icon: Wand2, tone: "primary", title: t("manage.section.setup"), meta: t("manage.section.setupMeta") },
-    address: { href: "/household/address", icon: MapPin, tone: "home", title: t("manage.section.address"), meta: address?.formattedAddress ?? t("manage.section.addressMeta") },
+    setup: { href: "/onboarding", icon: Wand2, tone: "primary", title: t("manage.section.setup"), meta: t("manage.section.setupMeta") },
+    address: { href: "#address", icon: MapPin, tone: "home", title: t("manage.section.address"), meta: address?.formattedAddress ?? t("manage.section.addressMeta") },
     members: { href: "/family", icon: Users, tone: "people", title: t("manage.section.members"), meta: t("manage.section.membersMeta", { count: memberCount ?? 0 }) },
-    settings: { href: "/settings", icon: Cog, tone: "neutral", title: t("manage.section.houseSettings"), meta: `${membership.household.name} · ${membership.household.timezone}` },
     responsibilities: { href: "/household/responsibilities", icon: ListChecks, tone: "primary", title: t("nav.item.responsibilities"), meta: t("manage.section.responsibilitiesMeta", { count: modes.length }) },
     playbook: { href: "#playbook", icon: BookOpen, tone: "home", title: t("manage.section.playbook"), meta: t("manage.section.playbookMeta", { count: items.filter((i) => i.active).length }) },
     policies: { href: "#policies", icon: ShieldCheck, tone: "money", title: t("manage.section.policies"), meta: t("manage.section.policiesMeta", { count: rules.length }) },
+    teach: { href: "#teach", icon: MessageSquareText, tone: "ai", title: t("settingsHome.teach"), meta: t("manage.setup.teach.purpose") },
     autonomy: { href: "#autonomy", icon: Bot, tone: "ai", title: t("manage.section.autonomy"), meta: (["prepare", "execute"] as const).map((mode) => t(`manage.mode.${mode}`)).join(" · ") },
     notifications: { href: "/settings/notifications#household", icon: Bell, tone: "attention", title: t("manage.section.notifications"), meta: t("manage.section.notificationsMeta") },
     integrations: { href: "/settings/connections", icon: Plug, tone: "care", title: t("connectionsPage.title"), meta: t("manage.section.integrationsMeta", { count: integrations.length }), badge: attention > 0 ? { label: t("manage.section.needYou", { count: attention }), tone: "attention" } : undefined },
-    connections: { href: "/settings/connections#accounts", icon: Plug, tone: "primary", title: t("manage.section.connections"), meta: t("manage.section.connectionsMeta", { count: connectionCount ?? 0 }) },
-    activity: { href: "/household/activity", icon: FileClock, tone: "neutral", title: t("manage.section.activity"), meta: t("manage.section.activityMeta") },
+    activity: { href: "#activity", icon: FileClock, tone: "neutral", title: t("manage.section.activity"), meta: t("manage.section.activityMeta") },
   } satisfies Record<string, SectionLink>;
   // Grouped by what the reader is deciding (principle 17, the owner 2026-10-26). "How the home runs" lists
   // the sections below in the order they appear. The setup card above already opens the walk-through, so its
   // row shows only when that card can't (principle 14).
   const groups: { id: string; title: string; links: SectionLink[] }[] = [
-    { id: "household", title: t("manage.group.household"), links: [...(setup ? [] : [link.setup]), link.members, link.address, link.settings] },
-    { id: "running", title: t("manage.group.running"), links: [link.responsibilities, link.playbook, link.policies, link.autonomy] },
+    { id: "household", title: t("manage.group.household"), links: [...(setup ? [] : [link.setup]), link.members, link.address] },
+    { id: "running", title: t("manage.group.running"), links: [link.responsibilities, link.playbook, link.policies, link.autonomy, link.teach] },
     { id: "notifications", title: t("manage.group.notifications"), links: [link.notifications] },
     { id: "records", title: t("manage.group.records"), links: [link.integrations, link.activity] },
   ];
 
   return (
-    <AppShell {...shell}>
-      <div className="space-y-6">
-        <header className="wh-rise hidden lg:block">
-          <h1 className="text-[1.625rem] font-bold tracking-tight sm:text-3xl">{t("nav.item.manage")}</h1>
-          <p className="text-sm text-[var(--wh-foreground-muted)]">{t("manage.lede", { household: membership.household.name })}</p>
-        </header>
+    <>
 
         {setup ? <SetupProgressCard assessment={setup} variant="full" labels={setupProgressLabels(setup, t)} /> : null}
 
@@ -149,7 +132,7 @@ export default async function ManageHouseholdPage() {
               tone="home"
               title={t("manage.playbook.emptyTitle")}
               description={t("manage.playbook.emptyLede")}
-              action={<PillLink href="/household/setup?step=playbook" tone="primary">{t("manage.playbook.write")}</PillLink>}
+              action={<PillLink href="#add-playbook" tone="primary">{t("manage.playbook.write")}</PillLink>}
             />
           ) : (
             // Grouped by area, each a folded card (the owner, 2026-10-26): 28 outcomes in one list was a wall.
@@ -197,6 +180,9 @@ export default async function ManageHouseholdPage() {
                 })}
             </div>
           )}
+          <div id="add-playbook" className="mt-3 scroll-mt-20">
+            <PlaybookForm action={savePlaybookAction} householdId={householdId} existing={playbookOptions} labels={formLabels} />
+          </div>
         </section>
 
         <section id="policies">
@@ -207,7 +193,7 @@ export default async function ManageHouseholdPage() {
               tone="money"
               title={t("manage.policies.emptyTitle")}
               description={t("manage.policies.emptyLede")}
-              action={<PillLink href="/household/setup?step=policies" tone="primary">{t("manage.policies.set")}</PillLink>}
+              action={<PillLink href="#add-policy" tone="primary">{t("manage.policies.set")}</PillLink>}
             />
           ) : (
             <Card className="p-2">
@@ -238,6 +224,9 @@ export default async function ManageHouseholdPage() {
               </ul>
             </Card>
           )}
+          <div id="add-policy" className="mt-3 scroll-mt-20">
+            <PolicyForm action={savePolicyAction} householdId={householdId} labels={formLabels} />
+          </div>
         </section>
 
         <section id="autonomy">
@@ -257,8 +246,13 @@ export default async function ManageHouseholdPage() {
           <p className="mt-2 text-xs text-[var(--wh-foreground-subtle)]">{t("manage.autonomy.note")}</p>
         </section>
 
-        <QuoteCard>{t("manage.quote")}</QuoteCard>
-      </div>
-    </AppShell>
+        <section id="teach" className="scroll-mt-20">
+          <SectionHeader title={t("settingsHome.teach")} />
+          <Card className="space-y-3 p-4">
+            <p className="text-sm text-[var(--wh-foreground-muted)]">{t("manage.setup.teach.purpose")}</p>
+            <TeachForm preview={previewConfigurationAction} apply={applyConfigurationAction} householdId={householdId} shapes={[...UNDERSTOOD_SHAPES]} labels={formLabels} />
+          </Card>
+        </section>
+    </>
   );
 }

@@ -69,7 +69,7 @@ export async function saveResponsibilityAction(
       responsibility,
     });
 
-    revalidatePath("/household/setup");
+    revalidatePath("/settings");
     revalidatePath("/household/responsibilities");
     revalidatePath("/househelper");
     return { notice: `Saved. ${saved.downstream.join(" ")}` };
@@ -126,7 +126,7 @@ export async function setGroupAutonomyAction(_previous: ActionState, formData: F
     const members = await listMembers(supabase, householdId, membership.household.ownerMemberId);
     const changed = await setAutonomyForOutcomes(supabase, { householdId, actorMemberId: membership.memberId, members, outcomeKeys, aiMode });
     revalidatePath("/household/responsibilities");
-    revalidatePath("/household/setup");
+    revalidatePath("/settings");
     revalidatePath("/househelper");
     return { notice: `Updated ${changed} responsibilit${changed === 1 ? "y" : "ies"}.` };
   } catch (thrown) {
@@ -154,7 +154,7 @@ export async function removeResponsibilityAction(_previous: ActionState, formDat
       actorMemberId: membership.memberId,
       outcomeKey: parsed.data.outcomeKey,
     });
-    revalidatePath("/household/setup");
+    revalidatePath("/settings");
     revalidatePath("/household/responsibilities");
     revalidatePath("/househelper");
     return { notice: "Removed. Nobody is assigned to this outcome anymore — add it again whenever you're ready." };
@@ -206,8 +206,7 @@ export async function savePlaybookAction(
       dependsOnKey: dependsOnKey || null,
     });
 
-    revalidatePath("/household/setup");
-    revalidatePath("/household");
+    revalidatePath("/settings");
     return { notice: `Saved. ${saved.downstream.join(" ")}` };
   } catch (thrown) {
     return { error: toErrorBody(thrown, "configuration").body.error.message };
@@ -264,8 +263,7 @@ export async function savePolicyAction(
       condition,
     });
 
-    revalidatePath("/household/setup");
-    revalidatePath("/household");
+    revalidatePath("/settings");
     return { notice: `Saved. ${saved.downstream.join(" ")}` };
   } catch (thrown) {
     return { error: toErrorBody(thrown, "configuration").body.error.message };
@@ -386,8 +384,7 @@ export async function applyConfigurationAction(
       change: proposal.change,
     });
 
-    revalidatePath("/household/setup");
-    revalidatePath("/household");
+    revalidatePath("/settings");
     revalidatePath("/household/responsibilities");
     revalidatePath("/househelper");
 
@@ -421,8 +418,7 @@ export async function setPlaybookActiveAction(_previous: ActionState, formData: 
       outcomeKey: parsed.data.outcomeKey,
       active: parsed.data.active === "true",
     });
-    revalidatePath("/household");
-    revalidatePath("/household/setup");
+    revalidatePath("/settings");
     return { notice: parsed.data.active === "true" ? "Resumed. WonderHome plans around it again." : "Paused. It stays on record; WonderHome just stops planning around it." };
   } catch (thrown) {
     return { error: toErrorBody(thrown, "configuration").body.error.message };
@@ -439,8 +435,7 @@ export async function retirePolicyAction(_previous: ActionState, formData: FormD
     const supabase = await createClient();
     const membership = await requireHouseholdAdmin(supabase, parsed.data.householdId);
     await retirePolicy(supabase, { householdId: parsed.data.householdId, actorMemberId: membership.memberId, policyId: parsed.data.policyId });
-    revalidatePath("/household");
-    revalidatePath("/household/setup");
+    revalidatePath("/settings");
     return { notice: "Stood down. Until you set another, WonderHome asks before anything this covered." };
   } catch (thrown) {
     return { error: toErrorBody(thrown, "configuration").body.error.message };

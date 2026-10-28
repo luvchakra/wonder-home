@@ -13,7 +13,6 @@ import {
   MessageCircle,
   Mic,
   Send,
-  Settings2,
   ShoppingBasket,
   User,
   UserRoundCog,
@@ -89,7 +88,6 @@ export const SECONDARY_ICONS: Record<SecondaryNavItem["icon"], ComponentType<{ c
   "map-pin": MapPin,
   "message-circle": MessageCircle,
   send: Send,
-  "settings-2": Settings2,
   "user-round-cog": UserRoundCog,
 };
 

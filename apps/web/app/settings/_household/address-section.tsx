@@ -1,52 +1,35 @@
-import { MapPin, ShieldCheck } from "lucide-react";
+import { MapPin } from "lucide-react";
 
 import { loadHouseholdAddress } from "@wonderhome/core/household/address";
 import { mapsLink } from "@wonderhome/core/places/provider";
-import { AppShell } from "@wonderhome/core/shell/app-shell";
 import { Card } from "@wonderhome/core/ui/card";
 import { IconTile } from "@wonderhome/core/ui/icon-tile";
 import { PrivacyNote } from "@wonderhome/core/ui/privacy-note";
-import { QuoteCard } from "@wonderhome/core/ui/quote-card";
-import { EmptyState } from "@wonderhome/core/ui/states";
 
 import { HomeAddressEditor } from "../../_components/home-address-editor";
 import { placeSearchLabels } from "../../_lib/place-labels";
 import { homeMapImage, placeSearchAvailable } from "../../_lib/places";
-import { requireSession } from "../../_lib/session";
-
-export const metadata = { title: "Home address" };
-export const dynamic = "force-dynamic";
+import type { Session } from "../../_lib/session";
 
 /**
- * The household's home address, for Admins (Manage Household). The same
+ * The household's home address, for Admins (Settings → Household). The same
  * write path setup uses: picked from Google Maps when the deployment has a
  * key, typed when it does not. Who can see it is said on the page.
  */
-export default async function HomeAddressPage() {
-  const session = await requireSession("/household/address");
-  const { supabase, membership, view, viewer, secondary, locale } = session;
+export async function AddressSection({ session }: { session: Session }) {
+  const { supabase, membership, locale } = session;
   const { t } = locale;
   const householdId = membership.household.id;
-  const shell = { active: "more" as const, viewer, secondary, pathname: "/household", back: { href: "/household", label: t("common.back") }, title: t("manage.section.address") };
-
-  if (!view.permissions.includes("household.manage")) {
-    return (
-      <AppShell {...shell}>
-        <EmptyState icon={ShieldCheck} title={t("manage.forAdmins")} description={t("manage.forAdminsLede")} />
-      </AppShell>
-    );
-  }
 
   const address = await loadHouseholdAddress(supabase, householdId).catch(() => null);
   const map = await homeMapImage(address?.location ?? null);
   const available = placeSearchAvailable();
 
   return (
-    <AppShell {...shell}>
-      <div className="space-y-6">
-        <header className="wh-rise space-y-1">
-          <h1 className="hidden text-[1.625rem] font-bold tracking-tight sm:text-3xl lg:block">{t("manage.section.address")}</h1>
-          <p className="text-[0.9375rem] text-[var(--wh-foreground-muted)]">{t("address.lede", { household: membership.household.name })}</p>
+    <section id="address" className="scroll-mt-20 space-y-3">
+        <header>
+          <h2 className="text-lg font-semibold tracking-tight">{t("manage.section.address")}</h2>
+          <p className="mt-0.5 text-sm text-[var(--wh-foreground-muted)]">{t("address.lede", { household: membership.household.name })}</p>
         </header>
 
         <Card className="space-y-4 p-4">
@@ -79,8 +62,6 @@ export default async function HomeAddressPage() {
           <PrivacyNote line={t("privacyNote.line")} more={t("privacyNote.more")} />
         </Card>
 
-        <QuoteCard>{t("address.quote")}</QuoteCard>
-      </div>
-    </AppShell>
+    </section>
   );
 }

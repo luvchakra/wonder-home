@@ -84,7 +84,7 @@ export function SetupProgressCard({
   assessment,
   variant,
   daysLeft,
-  manageHref = "/household/setup",
+  manageHref = "/settings?tab=household",
   className,
   labels,
 }: {

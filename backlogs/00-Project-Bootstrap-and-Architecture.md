@@ -19,7 +19,7 @@
 | 13 | P1 | 00-013 | UI simplification: one door per page, a smaller More menu, one Notifications page (M1, M7, M8) | Done | design/UI-SIMPLIFICATION-v1.md; Settings → Notifications holds the household choices and delivery |
 | 14 | P1 | 00-014 | UI simplification: Family is the one people page; Today is the Calendar's Day view (M3, M4) | Done | Invite, add, remove and relationships on Family; Today's plan under today in the Calendar's Day view; events at /calendar/events |
 | 15 | P1 | 00-015 | UI simplification: one Connections page under Settings (M2) | Done | Settings → Connections: WhatsApp, Voice assistants, Connect school, Websites and services, Shopping, Providers, devices, weather and partner keys; five old pages redirect |
-| 16 | P1 | 00-016 | UI simplification: Settings with You and Household tabs; one setup wizard (M5, M6) | Not Started | design/UI-SIMPLIFICATION-v1.md |
+| 16 | P1 | 00-016 | UI simplification: Settings with You and Household tabs; one setup wizard (M5, M6) | Done | Manage Household, its address and activity pages and the setup walk-through fold into Settings → Household; playbook and policy add forms and Teach WonderHome moved there; /onboarding is the one guided setup |
 
 ## Purpose
 This is the mandatory greenfield bootstrap for the WonderHome repository. The project is a new repository and will use the WonderArk/founder-collab technical stack as its baseline.
