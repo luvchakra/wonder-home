@@ -71,7 +71,7 @@ export const SCREENS: readonly Screen[] = [
   fromSecondary("health", "health", ["health", "fitness", "health and fitness", "health & fitness"]),
   fromSecondary("review", "certification", ["homebrain review", "homebrain", "review", "certification"]),
   fromSecondary("homesend", "homesend", ["homesend", "home send", "homesend inbox", "uploads"]),
-  fromSecondary("notifications", "notifications", ["notifications", "reminders", "alerts", "inbox"]),
+  { key: "notifications", label: "Notifications", href: "/notifications", words: ["notifications", "reminders", "alerts", "inbox"] },
   fromSecondary("manage", "manage", ["manage household", "household settings", "manage the household", "playbook"]),
   fromSecondary("settings", "settings", ["settings", "my settings", "profile", "my profile", "settings and profile", "preferences"]),
   { key: "help", label: "Help", href: "/help", words: ["help page", "help pages", "user guide", "guide", "help screen"] },

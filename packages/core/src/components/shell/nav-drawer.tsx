@@ -126,9 +126,9 @@ function NavDrawer({
   groupLabels?: ShellLabels["groups"];
 }) {
   const close = () => onOpenChange(false);
-  // The bell in the header is the way into Notifications, as in the desktop sidebar.
+  // Settings' door is the account menu (design/UI-SIMPLIFICATION-v1.md M7).
   const sections = groupSecondaryNavigation(
-    secondary.filter((item) => item.key !== "notifications"),
+    secondary.filter((item) => item.key !== "settings"),
     groupLabels,
   );
 
