@@ -62,7 +62,7 @@ export async function AccountsSection({ session }: { session: Session }) {
   return (
     <section id="accounts" className="scroll-mt-20 space-y-4">
       <header>
-        <h2 className="text-lg font-semibold tracking-tight">{t("manage.connections.title")}</h2>
+        <h2 className="text-lg font-semibold tracking-tight">{t("connectionsPage.accounts")}</h2>
         <p className="mt-0.5 text-sm text-[var(--wh-foreground-muted)]">{t("manage.connections.lede")}</p>
       </header>
       <ConnectionsManager

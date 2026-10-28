@@ -68,6 +68,7 @@ export const fr: Catalog = {
   "connectionsPage.lede": "Tout ce à quoi WonderHome est relié, au même endroit : pour qui, si cela fonctionne, et la seule chose à faire.",
   "connectionsPage.meta": "WhatsApp, assistants vocaux, école et autres services",
   "connectionsPage.shopping": "Courses",
+  "connectionsPage.accounts": "Sites web et services",
   "nav.purpose.responsibilities": "Des rôles clairs, moins de chaos",
   "nav.purpose.school": "Toutes les infos de l’école au même endroit",
   "nav.purpose.househelper": "Une aide qui fonctionne",

@@ -78,6 +78,7 @@ export const en = {
   "connectionsPage.lede": "Everything WonderHome is linked to, in one place: who it is for, whether it works, and the one thing to do.",
   "connectionsPage.meta": "WhatsApp, voice assistants, school and other services",
   "connectionsPage.shopping": "Shopping",
+  "connectionsPage.accounts": "Websites and services",
   "nav.purpose.responsibilities": "Clear roles, less chaos",
   "nav.purpose.school": "All school info in one place",
   "nav.purpose.househelper": "Support that works",

@@ -68,6 +68,7 @@ export const zh: Catalog = {
   "connectionsPage.lede": "WonderHome 连接的一切都在这里：给谁用、是否正常，以及要做的那一件事。",
   "connectionsPage.meta": "WhatsApp、语音助手、学校和其他服务",
   "connectionsPage.shopping": "购物",
+  "connectionsPage.accounts": "网站和服务",
   "nav.purpose.responsibilities": "分工明确，少些忙乱",
   "nav.purpose.school": "学校信息，一处尽览",
   "nav.purpose.househelper": "得力的帮手",

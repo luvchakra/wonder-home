@@ -64,7 +64,7 @@ Today the same idea, "WonderHome is linked to an outside thing", lives on `/hous
 | **Voice assistants**: Alexa and others, who each speaks for, unlink | `/settings/voice-assistants` |
 | **School**: portals, forward-a-circular address | `/household/integrations/school`, school-kind connections |
 | **Calendar & e-mail** | calendar and email kinds |
-| **Shopping**: Swiggy Instamart, connect/disconnect | the connect block on `/groceries/order` (ordering itself stays there) |
+| **Shopping**: Swiggy Instamart, whether it is connected | a row that leads to `/groceries/order`, where connecting stays beside ordering (decided while building, 2026-10-28) |
 | **Weather, payments, smart home, devices** | the remaining integration kinds and devices |
 | **Developer keys** (Admin) | developer keys |
 

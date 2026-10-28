@@ -68,6 +68,7 @@ export const hi: Catalog = {
   "connectionsPage.lede": "WonderHome जिन चीज़ों से जुड़ा है, सब एक जगह: किसके लिए है, काम कर रहा है या नहीं, और करने वाली एक बात।",
   "connectionsPage.meta": "WhatsApp, वॉइस असिस्टेंट, स्कूल और दूसरी सेवाएँ",
   "connectionsPage.shopping": "ख़रीदारी",
+  "connectionsPage.accounts": "वेबसाइटें और सेवाएँ",
   "nav.purpose.responsibilities": "साफ़ ज़िम्मेदारियाँ, कम उलझन",
   "nav.purpose.school": "स्कूल की सारी जानकारी एक जगह",
   "nav.purpose.househelper": "ऐसी मदद जो काम आए",

@@ -68,6 +68,7 @@ export const mr: Catalog = {
   "connectionsPage.lede": "WonderHome ज्यांच्याशी जोडलेले आहे ते सर्व एका ठिकाणी: कोणासाठी आहे, चालते का, आणि करायची एक गोष्ट.",
   "connectionsPage.meta": "WhatsApp, व्हॉइस असिस्टंट, शाळा आणि इतर सेवा",
   "connectionsPage.shopping": "खरेदी",
+  "connectionsPage.accounts": "वेबसाइट्स आणि सेवा",
   "nav.purpose.responsibilities": "स्पष्ट जबाबदाऱ्या, कमी गोंधळ",
   "nav.purpose.school": "शाळेची सगळी माहिती एकाच ठिकाणी",
   "nav.purpose.househelper": "उपयोगी पडणारी मदत",

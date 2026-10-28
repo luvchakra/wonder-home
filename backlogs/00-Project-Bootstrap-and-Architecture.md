@@ -18,7 +18,7 @@
 | 12 | P1 | 00-012 | Bars step aside while reading on a phone | Done | `ScrollChrome` (`shell/scroll-chrome.tsx`): scrolling down hides the header first, then the tab bar with its raised button; any scroll up, the top and the end of the page bring both back. Phones only, reduced motion without the slide, HomeTalk's own scroller untouched. Browser-checked 2026-10-18 against the live project at 360px and 1280px with QA accounts (cleaned up afterwards): the header hides after about 40px, the tab bar only after 280px (raised from 120 so the two are visibly staged), and a 20px scroll up brings both back |
 | 13 | P1 | 00-013 | UI simplification: one door per page, a smaller More menu, one Notifications page (M1, M7, M8) | Done | design/UI-SIMPLIFICATION-v1.md; Settings → Notifications holds the household choices and delivery |
 | 14 | P1 | 00-014 | UI simplification: Family is the one people page; Today is the Calendar's Day view (M3, M4) | Done | Invite, add, remove and relationships on Family; Today's plan under today in the Calendar's Day view; events at /calendar/events |
-| 15 | P1 | 00-015 | UI simplification: one Connections page under Settings (M2) | Not Started | design/UI-SIMPLIFICATION-v1.md |
+| 15 | P1 | 00-015 | UI simplification: one Connections page under Settings (M2) | Done | Settings → Connections: WhatsApp, Voice assistants, Connect school, Websites and services, Shopping, Providers, devices, weather and partner keys; five old pages redirect |
 | 16 | P1 | 00-016 | UI simplification: Settings with You and Household tabs; one setup wizard (M5, M6) | Not Started | design/UI-SIMPLIFICATION-v1.md |
 
 ## Purpose

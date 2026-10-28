@@ -68,6 +68,7 @@ export const ar: Catalog = {
   "connectionsPage.lede": "كل ما يرتبط به WonderHome في مكان واحد: لمن هو، وهل يعمل، والشيء الوحيد الذي يجب فعله.",
   "connectionsPage.meta": "واتساب والمساعدات الصوتية والمدرسة وخدمات أخرى",
   "connectionsPage.shopping": "التسوق",
+  "connectionsPage.accounts": "المواقع والخدمات",
   "nav.purpose.responsibilities": "أدوار واضحة، فوضى أقل",
   "nav.purpose.school": "كل معلومات المدرسة في مكان واحد",
   "nav.purpose.househelper": "مساعدة تنجح",
