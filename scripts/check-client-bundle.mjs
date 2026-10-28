@@ -136,4 +136,17 @@ if (import.meta.url === `file://${process.argv[1]}`) {
     process.exit(1);
   }
   console.log(`No WonderJobs client code in client chunks (${careers.length} markers checked).`);
+
+  // zod is ~90 KB gzipped: it validates on the server, and a client screen imports
+  // option lists from a zod-free module instead (voice/settings-options.ts,
+  // performance audit 2026-10-28).
+  const zod = ["$ZodError", "$ZodType"];
+  const zodHits = leaks(staticDir, zod);
+  if (zodHits.length > 0) {
+    console.error("zod is in client JavaScript; validate on the server instead:");
+    for (const { path, phrase } of zodHits.slice(0, 20)) console.error(`  ${path.replace(`${ROOT}/`, "")}: "${phrase}"`);
+    console.error("A client component imports a module that imports zod. Move the constants it needs into a zod-free module.");
+    process.exit(1);
+  }
+  console.log(`No zod in client chunks (${zod.length} markers checked).`);
 }

@@ -29,9 +29,9 @@ import {
   type LiveEngine,
   type RecognitionModel,
   type VoiceGender,
-  type VoiceSettings,
   type VoiceTier,
-} from "@wonderhome/core/voice/settings";
+} from "@wonderhome/core/voice/settings-options";
+import type { VoiceSettings } from "@wonderhome/core/voice/settings";
 
 import type { ActionState } from "../(auth)/actions";
 import { SavedKeyRow } from "./ai-key-form";
