@@ -104,8 +104,11 @@ comment on function public.enqueue_connection_fetch_job is 'An adult enqueues a 
 revoke all on function public.enqueue_connection_fetch_job(uuid) from public, anon;
 grant execute on function public.enqueue_connection_fetch_job(uuid) to authenticated;
 
--- The worker claims the next pending job; now also returns the connection it is for.
-create or replace function public.claim_portal_fetch_job()
+-- The worker claims the next pending job; now also returns the connection it is
+-- for. The return columns change, so the function is dropped and recreated (a
+-- plain create-or-replace cannot change a function's return type).
+drop function if exists public.claim_portal_fetch_job();
+create function public.claim_portal_fetch_job()
 returns table (id uuid, household_id uuid, integration_id uuid, connection_id uuid, attempts int)
 language plpgsql
 security definer
@@ -128,6 +131,9 @@ begin
   return next;
 end;
 $$;
+
+revoke all on function public.claim_portal_fetch_job() from public, anon, authenticated;
+grant execute on function public.claim_portal_fetch_job() to service_role;
 
 -- The twice-daily sweep: enqueue every connected browser-automation connection
 -- with no open job (alongside the legacy school integrations).
