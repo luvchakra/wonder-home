@@ -8,6 +8,7 @@ import { saveConfirmRequested } from "@wonderhome/core/conversation/consent-repo
 import { asAutoAddPercent, AUTO_ADD_PERCENTS } from "@wonderhome/core/homesend/auto-add";
 import { saveAutoAddPercent } from "@wonderhome/core/household/auto-add-repository";
 import { saveDirectAdd } from "@wonderhome/core/household/direct-add-repository";
+import { RETENTION_WINDOW_CHOICES, saveRetentionWindow } from "@wonderhome/core/privacy/retention-window-repository";
 import { createClient } from "@wonderhome/core/db/server";
 import { requireHouseholdAdmin } from "@wonderhome/core/identity/households";
 
@@ -51,6 +52,31 @@ export async function saveAutoAddPercentAction(_previous: ActionState, formData:
     return { error: toErrorBody(thrown, "privacy").body.error.message };
   }
   revalidatePath("/settings/ai");
+  return { notice: "saved" };
+}
+
+/**
+ * How long passed, handled entries are kept before periodic cleanup removes
+ * them (the owner, 2026-10-28; `docs/data-retention.md`): an Admin picks the
+ * household's retention window, or turns cleanup off. Picked, not typed.
+ */
+const retentionWindowSchema = z.object({
+  householdId: z.uuid(),
+  window: z.enum(["off", ...RETENTION_WINDOW_CHOICES.map(String)] as [string, ...string[]]),
+});
+
+export async function saveRetentionWindowAction(_previous: ActionState, formData: FormData): Promise<ActionState> {
+  const parsed = retentionWindowSchema.safeParse(Object.fromEntries(formData));
+  if (!parsed.success) return { error: "Please try again." };
+  try {
+    const supabase = await createClient();
+    const membership = await requireHouseholdAdmin(supabase, parsed.data.householdId);
+    const days = parsed.data.window === "off" ? null : Number(parsed.data.window);
+    await saveRetentionWindow(supabase, { householdId: parsed.data.householdId, actorMemberId: membership.memberId, days });
+  } catch (thrown) {
+    return { error: toErrorBody(thrown, "privacy").body.error.message };
+  }
+  revalidatePath("/settings/privacy");
   return { notice: "saved" };
 }
 

@@ -392,6 +392,8 @@ export const helpEs: AreaCatalog<typeof helpEn> = {
     "Ajustes → Privacidad y seguridad te permite descargar una copia de tus datos tras confirmar tu contraseña. También puedes pedir que se borren tus datos: hay una cuenta atrás de 30 días que puedes cancelar, y lo que comparte el hogar, como el manual y lo que se pagó, se queda con el hogar. La persona propietaria del hogar primero cede ese papel a otra persona.",
   "help.guide.privacy.body.4":
     "Un Admin decide en Ajustes → Asistente de IA qué tipos de información puede compartir el asistente con el servicio de IA: datos de los niños, salud, importes y facturas, dónde está la gente, mensajes privados. Lo que no está permitido queda fuera de todo lo que envía el asistente. Los datos de los niños están permitidos desde el principio, para que HomeTalk y HomeBrain puedan usar lo que les cuentas de tus hijos; un Admin puede desmarcarlos allí. Lo demás espera a que un Admin lo permita.",
+  "help.guide.privacy.body.5":
+    "En Ajustes → Privacidad y seguridad, un Admin también puede elegir cuánto tiempo se conservan las entradas ya pasadas y resueltas antes de limpiarlas — los días libres pasados de un ayudante, registros antiguos de cambios del calendario —, para no guardar datos antiguos sobre las personas que ya nadie necesita. Los registros de salud, dinero y seguridad nunca se limpian, y la limpieza se puede desactivar.",
 
   "help.guide.ai-key.title": "Qué modelo mueve al asistente",
   "help.guide.ai-key.summary": "El nuestro por defecto; el tuyo si lo prefieres.",

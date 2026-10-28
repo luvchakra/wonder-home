@@ -608,6 +608,7 @@ export const KNOWLEDGE_REGISTRY = {
   recipe_ingredients: { covered: "builder", records: "meals" },
   recipes: { covered: "builder", records: "meals" },
   reminder_preferences: { covered: "excluded", reason: "When each kind of reminder lands: settings." },
+  retention_cleanup_runs: { covered: "excluded", reason: "A counts-only record that retention cleanup ran; never holds the content it removed (docs/data-retention.md)." },
   responsibilities: { covered: "builder", records: "responsibilities" },
   routines: {
     covered: "registry",

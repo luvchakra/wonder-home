@@ -13,6 +13,9 @@
 | 7 | P0 | 15-007 | Privacy Center | Done | Step-up that actually verifies; export, deletion with a grace window, retention applied by a nightly sweep |
 | 8 | P0 | 15-008 | Security testing | Done | Nine-area suite with a deterministic signal; SSRF guard, prompt-injection and session-abuse coverage |
 | 9 | P0 | 15-009 | Hardening against AI-assisted reverse engineering | Done | The owner, 2026-10-21 (a hardening prompt). Audit and fixes in `docs/progress/2026-10-21-reverse-engineering-hardening.md`. Fixed: an open redirect after sign-in (`/\evil.com` passed the `?next=` check; one `security/same-site-path.ts` check now backs all five places); the full API description (`/api/v1/openapi`) is for signed-in members in production; the sign-in gate is deny-by-default (`/health`, `/home-send` and `/onboarding` were reachable to their pages signed out); `robots.txt` refuses AI crawlers and lets search engines read only the landing and legal pages; signed-in pages carry noindex and every page `X-Robots-Tag: noai, noimageai`; sign-in, sign-up, password reset and phone codes are throttled per hashed address (`auth.attempt`); a 429 carries `Retry-After`; every rate-limit refusal is logged; HomeBrain's answer prompt treats facts as data and never reveals its instructions, and a fact can no longer start a line of its own; `check:bundle` fails if a prompt reaches client JavaScript; a proprietary `LICENSE`; a canary record in the partner sandbox; draft terms for legal review (`docs/legal/TERMS-DRAFT.md`). Owner actions listed in the note. |
+| 10 | P1 | 15-010 | Data retention: periodic cleanup framework (phase 1) | Done | The owner, 2026-10-28. Soft-delete→grace→purge framework; Admin retention window (default 90d, Privacy Centre, 8 languages); nightly cleanup engine on `/platform/retention`; counts-only audit (`retention_cleanup_runs`); soft-delete enabled for `availability_exceptions` and `family_event_changes`; hard purge gated off (G7). Design + open questions in `docs/data-retention.md`; `docs/progress/2026-10-28-data-retention-cleanup.md`. |
+| 11 | P1 | 15-011 | Data retention phase 2: passed calendar events + HomeSend, enable purge | Not Started | Awaiting owner Q1 (events: ephemera vs keepsake) and Q4 (when hard purge may run on live). Adds `soft_deleted_at` + reader filters (incl. a resurrection test) to `family_events` and `home_send_items` (+ Storage objects); enables the gated purge behind a confirmed policy, optionally dry-run first. `docs/data-retention.md` §10. |
+| 12 | P2 | 15-012 | Data retention phase 3: child-conservative school items + "recently cleaned" view | Not Started | Awaiting owner Q3. Handled `school_items` on a longer, child-conservative window; a member-facing "recently cleaned / restore" view; per-category windows if wanted. `docs/data-retention.md` §10. |
 
 **Status flow:** `Not Started` → `In Progress` → `Blocked` → `Done`
 
@@ -208,6 +211,43 @@ injection .
 - Relevant unit/integration/E2E tests pass.
 - Security/privacy/audit requirements are verified.
 - Story is marked `Done` in this file and `tracking/PROGRESS.md` only after evidence exists.
+
+### Story 15-010 — Data retention: periodic cleanup framework (phase 1)
+**Epic:** AI Privacy, Audit, Privacy Center & Security Testing
+**Priority:** P1 — the owner, 2026-10-28
+**Goal:** Clean up passed household ephemera periodically, reducing stored
+personal information, under a soft-delete → grace → purge lifecycle that is
+reversible before any irreversible step and never touches health, money,
+safety or a child's records. Full design and the open questions for the owner
+are in `docs/data-retention.md`.
+
+**Acceptance criteria**
+- An Admin sets the household's retention window (default 90 days, or off) in the Privacy Centre, stored as a versioned `policies` row; the words exist in all eight languages.
+- A nightly job (on `/platform/retention`) soft-deletes passed, handled rows older than the window, bounded and idempotent, failing to the safe side (keep) when the setting cannot be read.
+- Phase 1 enables `availability_exceptions` and `family_event_changes` only; health, financial and child records are exempt by omission.
+- A counts-only audit row (`retention_cleanup_runs`) records each run without re-storing any removed content; it is admin-read and server-write only.
+- The irreversible hard purge is gated off and does not run against live data (guardrail G7).
+
+**Definition of Done**
+- Implemented, typechecked, linted; unit tests (cleanup engine, window repository) and the new RLS test pass; build and `check:bundle` pass.
+- Migration is additive and safe in either order; applied live after deploy is READY.
+- Marked `Done` here and in `tracking/PROGRESS.md` only after evidence exists (`docs/progress/2026-10-28-data-retention-cleanup.md`).
+
+### Story 15-011 — Data retention phase 2: passed calendar events + HomeSend, enable purge
+**Epic:** AI Privacy, Audit, Privacy Center & Security Testing
+**Priority:** P1 — blocked on owner Q1 and Q4 (`docs/data-retention.md` §9)
+**Goal:** Extend cleanup to passed one-off `family_events` and handled
+`home_send_items` (including their Storage objects), with `soft_deleted_at`
+reader filters and a test proving no reminder resurrects; and enable the gated
+hard purge for soft-deleted rows past their grace window once the owner
+confirms the policy, optionally with a dry-run report first.
+
+### Story 15-012 — Data retention phase 3: child-conservative school items + "recently cleaned" view
+**Epic:** AI Privacy, Audit, Privacy Center & Security Testing
+**Priority:** P2 — blocked on owner Q3 (`docs/data-retention.md` §9)
+**Goal:** Clean handled `school_items` on a longer, child-conservative window,
+and give members a "recently cleaned / restore" view over soft-deleted rows in
+the grace window; add per-category windows if the household wants them.
 
 ## Module Completion Rule
 Complete dependency-ready P0 stories before P1/P2, but do not block unrelated work on unavailable external providers.

@@ -6,6 +6,7 @@ import type { Permission } from "@wonderhome/core/identity/permissions";
 import type { DeliveryChannel } from "@wonderhome/core/notifications/channels";
 import { EXPORT_SECTIONS, sectionsFor } from "@wonderhome/core/privacy/export";
 import { retentionSchedule } from "@wonderhome/core/privacy/retention";
+import { RETENTION_WINDOW_CHOICES } from "@wonderhome/core/privacy/retention-window-repository";
 import type { SpeechKeySource } from "@wonderhome/core/voice/platform-key";
 import { LIVE_ENGINE_LABELS, RECOGNITION_MODEL_LABELS, TIER_LABELS, VOICE_LANGUAGES, type VoiceSettings } from "@wonderhome/core/voice/settings";
 import type { Capability } from "@wonderhome/core/voicelink/capabilities";
@@ -188,6 +189,21 @@ export function retentionRows(t: Translate, format: Formatter) {
     days: retentionDays(t, format, rule.days),
     kept: rule.days === null,
   }));
+}
+
+/** The retention-window control: how long passed, handled entries are kept before cleanup. */
+export function retentionWindowLabels(t: Translate) {
+  const option: Record<string, string> = { off: t("settingsPage.privacy.cleanup.option.off") };
+  for (const days of RETENTION_WINDOW_CHOICES) {
+    option[String(days)] = t(`settingsPage.privacy.cleanup.option.${days}` as TranslationKey);
+  }
+  return {
+    title: t("settingsPage.privacy.cleanup.title"),
+    detail: t("settingsPage.privacy.cleanup.detail"),
+    option,
+    adminDecides: t("settingsPage.adminDecides"),
+    options: ["off", ...RETENTION_WINDOW_CHOICES.map(String)] as const,
+  };
 }
 
 /** What an export holds for this person (mirrors `describeExport`, from the same sections). */
