@@ -179,6 +179,41 @@ describe("fetchConnection", () => {
     expect(h.filed.flat()).toHaveLength(1);
   });
 
+  it("re-logs in when the adapter reports signed-out even without a URL change", async () => {
+    // A portal that renders a login form in-place (no redirect): the URL stays a
+    // normal content path, so detection has to come from the adapter, not the URL.
+    const INBOX = "https://portal.example.com/inbox";
+    let reloggedIn = false;
+    const inPlaceLogin: PortalAdapter = {
+      id: "t",
+      matches: () => true,
+      isAuthenticated: async (page) => reloggedIn || page.currentUrl() !== INBOX,
+      login: async () => {
+        reloggedIn = true;
+        return { status: "authenticated" };
+      },
+    };
+    const filed: RawPortalItem[][] = [];
+    const credentials = vi.fn(async () => ({ username: "u", password: "p" }));
+    const result = await fetchConnection({
+      connectionId: "c1",
+      portalUrl: PORTAL,
+      browser: new FakeBrowser(new FakePage({ [INBOX]: "Homework for today" })),
+      adapter: inPlaceLogin,
+      store: memStore(),
+      credentials,
+      targets: [{ url: INBOX, kind: "messages", childMemberId: null }],
+      extractor: { extract: async () => [item({ sourceUrl: INBOX })] },
+      filer: { file: async ({ items }) => void filed.push(items) },
+      cursors: memCursors(),
+    });
+    expect(result).toMatchObject({ ok: true, state: "connected", reAuthenticated: true, filed: 1 });
+    expect(result.ok && result.targets[0]).toMatchObject({ url: INBOX, finalUrl: INBOX, read: 1, fresh: 1 });
+    expect(result.ok && result.targets[0]).not.toHaveProperty("error");
+    expect(credentials).toHaveBeenCalled();
+    expect(filed.flat()).toHaveLength(1);
+  });
+
   it("never files a logged-out page — a wall that can't re-login is reconnect_needed", async () => {
     const onState = vi.fn();
     const page = new FakePage({ [LOGOUT]: "Session expired!" }, new Set(), { [NOTICES]: LOGOUT });

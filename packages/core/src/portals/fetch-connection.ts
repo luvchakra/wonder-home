@@ -109,6 +109,13 @@ export async function fetchConnection(deps: FetchConnectionDeps): Promise<FetchC
   let reAuthenticated = session.reAuthenticated;
   let reAuthFailed: ReconnectReason | null = null;
 
+  // A page that bounced to an auth wall: the adapter says we're not signed in,
+  // or the URL is a login / logout page. Asking the adapter keeps this generic —
+  // a portal that shows an in-place login form (no URL change), or one a provider
+  // adapter knows better than the URL heuristic, is caught the same way.
+  const signedOut = async (url: string): Promise<boolean> =>
+    looksLikeAuthWall(url) || !(await deps.adapter.isAuthenticated(page));
+
   for (const target of deps.targets) {
     let finalUrl = target.url;
     let chars = 0;
@@ -116,14 +123,16 @@ export async function fetchConnection(deps: FetchConnectionDeps): Promise<FetchC
       await page.goto(target.url);
       finalUrl = page.currentUrl();
 
-      // Bounced to an auth wall with a stale reused session → re-login once and retry.
-      if (looksLikeAuthWall(finalUrl) && !reAuthenticated && !reAuthFailed) {
+      // Stale reused session → re-login once in-context and retry.
+      let walled = await signedOut(finalUrl);
+      if (walled && !reAuthenticated && !reAuthFailed) {
         const reauth = await reauthenticate(deps, page);
         if (reauth.ok) {
           reAuthenticated = true;
           await deps.onState?.("connected");
           await page.goto(target.url);
           finalUrl = page.currentUrl();
+          walled = await signedOut(finalUrl);
         } else {
           reAuthFailed = reauth.reason;
         }
@@ -131,7 +140,7 @@ export async function fetchConnection(deps: FetchConnectionDeps): Promise<FetchC
 
       // Still walled (re-login failed, or it genuinely needs the owner): never
       // file the logged-out page; record it and leave the connection for reconnect.
-      if (looksLikeAuthWall(finalUrl)) {
+      if (walled) {
         const text = await page.textContent();
         targets.push({ url: target.url, finalUrl, chars: text.trim().length, read: 0, fresh: 0, error: "auth_wall" });
         continue;
