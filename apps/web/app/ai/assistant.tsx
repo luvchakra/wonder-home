@@ -14,6 +14,7 @@ import {
   Users,
 } from "lucide-react";
 import Link from "next/link";
+import { useLoadedLater } from "@wonderhome/core/shell/when-idle";
 import { Fragment, useCallback, useEffect, useRef, useState, type ReactNode } from "react";
 
 import type { ActionPreview as ActionPreviewShape } from "@wonderhome/core/conversation/proposal";
@@ -33,7 +34,6 @@ import type { AssistantLabels, SuggestionKey } from "./hometalk-labels";
 import { Pill } from "@wonderhome/core/ui/pill";
 import { ReplyText } from "@wonderhome/core/ui/reply-text";
 
-import { HomeSendSheet } from "../_components/home-send-sheet";
 import { PlaceCards, type PlaceMark } from "./place-cards";
 import type { HomeSendReviewLabels } from "../_lib/homesend-labels";
 
@@ -46,6 +46,8 @@ import type { HomeSendReviewLabels } from "../_lib/homesend-labels";
  * consent is a thing the server records rather than a thing the client claims.
  */
 type ActionState = "proposed" | "approved" | "rejected" | "executed" | "failed" | "expired";
+
+const loadHomeSendSheet = () => import("../_components/home-send-sheet").then((module) => ({ default: module.HomeSendSheet }));
 
 export type AssistantMessage = {
   id: string;
@@ -158,6 +160,10 @@ export function Assistant({
   const [editing, setEditing] = useState<{ id: string; text: string } | null>(null);
   /** HomeSend: a photo, file or pasted forward — the composer's second door (rule 13). */
   const [homeSendOpen, setHomeSendOpen] = useState(false);
+  // HomeSend's sheet and its review steps load after the page (audit B8):
+  // warmed once the page is idle, fetched at once if Attach comes first, and
+  // open the moment they are here.
+  const [HomeSendSheet, fetchHomeSend] = useLoadedLater(loadHomeSendSheet);
   const sentInitial = useRef(false);
   const scrollerRef = useRef<HTMLDivElement>(null);
   const composerRef = useRef<HTMLDivElement>(null);
@@ -747,7 +753,10 @@ export function Assistant({
           onLiveEnd={() => void endLiveSession()}
           onError={(message) => setError(message)}
           onStateChange={onComposerState}
-          onAttach={() => setHomeSendOpen(true)}
+          onAttach={() => {
+            fetchHomeSend();
+            setHomeSendOpen(true);
+          }}
           disabled={busy}
           initialValue={editing?.text ?? ""}
           autoFocus={Boolean(editing)}
@@ -769,7 +778,9 @@ export function Assistant({
         </p>
       </div>
 
-      <HomeSendSheet householdId={householdId} kids={kids} canAddChild={canAddChild} open={homeSendOpen} onOpenChange={setHomeSendOpen} onDocumentApplied={postDocumentReceipt} labels={homeSendLabels} />
+      {HomeSendSheet ? (
+        <HomeSendSheet householdId={householdId} kids={kids} canAddChild={canAddChild} open={homeSendOpen} onOpenChange={setHomeSendOpen} onDocumentApplied={postDocumentReceipt} labels={homeSendLabels} />
+      ) : null}
     </div>
   );
 }
