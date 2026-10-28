@@ -126,7 +126,9 @@ async function TodayBody({ session, active, now }: { session: Session; active: "
     seesMoney ? settle(listObligations(supabase, householdId), []) : ok([]),
     seesSchool ? settle(listSchoolItems(supabase, householdId), []) : ok([]),
     listMembers(supabase, householdId, membership.household.ownerMemberId).catch(() => []),
-    isChild ? ok(null) : settle(householdAgenda(supabase, householdId, view), null),
+    // The household agenda (a 6-domain scan) feeds only the "household" tab's
+    // needsYou + predictions, so compute it only there — not on mine/family.
+    isChild || active !== "household" ? ok(null) : settle(householdAgenda(supabase, householdId, view), null),
     isChild ? ok([]) : settle(listConsumables(supabase, householdId), []),
     // What a meal here can change to, or a new one be planned from (the owner, 2026-10-20).
     isChild ? Promise.resolve([]) : listRecipeChoices(supabase, householdId).catch(() => []),
