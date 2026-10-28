@@ -12,7 +12,7 @@ decision that shapes later work each earns a note, written before moving on.
 | Date | Note |
 |---|---|
 | 2026-10-28 | [UI simplification, part 1: doors, the More menu, one Notifications page (00-013)](2026-10-28-ui-simplification-m1-nav.md) |
-| 2026-10-28 | [Performance backlog: B1 policy helpers in set form, …](2026-10-28-performance-backlog.md) |
+| 2026-10-28 | [Performance backlog: B1 policy helpers in set form, B2–B3 lazy voice and shell menus, …](2026-10-28-performance-backlog.md) |
 | 2026-10-28 | [Data retention: periodic cleanup framework (phase 1)](2026-10-28-data-retention-cleanup.md) |
 | 2026-10-28 | [UI simplification design: one place for each job (proposed)](2026-10-28-ui-simplification-design.md) |
 | 2026-10-28 | [Performance audit: child-visibility RLS in set form, near-term windows, zod out of the browser](2026-10-28-performance-audit.md) |
