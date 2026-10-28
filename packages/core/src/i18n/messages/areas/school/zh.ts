@@ -100,6 +100,7 @@ export const schoolZh: AreaCatalog<typeof schoolEn> = {
   "school.connect.conns.lede": "登录一次，WonderHome 便会读取作业和通知并放入 HomeSend，由你确认。连接在「连接」页面创建和测试——它适用于任何门户，在 WonderHome 的任何地方都能用。",
   "school.connect.conns.none": "尚无网站连接。",
   "school.connect.conns.manage": "管理连接",
+  "school.connect.conns.choose": "选择连接",
   "school.connect.setupNeeded": "需要设置",
   "school.connect.notLiveNote": "此门户尚未上线。您现在可以设置；待其连接建成后，便会开始接收内容。",
   "school.connect.portals": "学校门户",

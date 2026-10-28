@@ -100,6 +100,7 @@ export const schoolAr: AreaCatalog<typeof schoolEn> = {
   "school.connect.conns.lede": "سجّل الدخول مرة واحدة ويقرأ WonderHome الواجبات والإشعارات ويضعها في HomeSend لتؤكّدها. يُنشأ الاتصال ويُختبر من صفحة الاتصالات — وهو يعمل مع أي بوابة، في أي مكان في WonderHome.",
   "school.connect.conns.none": "لا توجد اتصالات مواقع بعد.",
   "school.connect.conns.manage": "إدارة الاتصالات",
+  "school.connect.conns.choose": "أي اتصال",
   "school.connect.setupNeeded": "يلزم الإعداد",
   "school.connect.notLiveNote": "هذه البوابة غير مفعّلة بعد. يمكنك إعدادها الآن، وستبدأ في جلب المحتوى بعد إنشاء اتصالها.",
   "school.connect.portals": "بوابات المدرسة",

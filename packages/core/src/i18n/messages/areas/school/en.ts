@@ -99,6 +99,7 @@ export const schoolEn = {
   "school.connect.conns.lede": "Sign in once and WonderHome reads homework and notices and files them in HomeSend for you to confirm. Create and test the connection on the Connections page — it works for any portal, anywhere in WonderHome.",
   "school.connect.conns.none": "No website connections yet.",
   "school.connect.conns.manage": "Manage connections",
+  "school.connect.conns.choose": "Which connection",
   "school.connect.setupNeeded": "Setup needed",
   "school.connect.notLiveNote": "This portal isn’t live yet. You can set it up now; it will start bringing things in once its connection is built.",
   "school.connect.portals": "School portals",

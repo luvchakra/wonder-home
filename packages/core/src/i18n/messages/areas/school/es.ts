@@ -100,6 +100,7 @@ export const schoolEs: AreaCatalog<typeof schoolEn> = {
   "school.connect.conns.lede": "Inicia sesión una vez y WonderHome lee las tareas y los avisos y los deja en HomeSend para que los confirmes. La conexión se crea y se prueba en la página Conexiones: funciona para cualquier portal, en cualquier parte de WonderHome.",
   "school.connect.conns.none": "Aún no hay conexiones de sitios web.",
   "school.connect.conns.manage": "Gestionar conexiones",
+  "school.connect.conns.choose": "Qué conexión",
   "school.connect.setupNeeded": "Configuración necesaria",
   "school.connect.notLiveNote": "Este portal aún no está activo. Puedes configurarlo ahora; empezará a traer contenido cuando se complete su conexión.",
   "school.connect.portals": "Portales escolares",
