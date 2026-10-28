@@ -24,7 +24,7 @@ type Row = Record<string, unknown>;
 export async function listSchoolItems(
   supabase: SupabaseClient,
   householdId: string,
-  options: { childMemberId?: string } = {},
+  options: { childMemberId?: string; id?: string; dueFrom?: Date; dueTo?: Date } = {},
 ): Promise<SchoolItem[]> {
   let query = supabase
     .from("school_items")
@@ -35,6 +35,11 @@ export async function listSchoolItems(
     .order("due_at", { ascending: true, nullsFirst: false });
 
   if (options.childMemberId) query = query.eq("child_member_id", options.childMemberId);
+  // One row by id: a write path reading back the item it changes, not the whole history.
+  if (options.id) query = query.eq("id", options.id);
+  // A near-term window for a caller that shows only those days; without one, every item.
+  if (options.dueFrom) query = query.gte("due_at", options.dueFrom.toISOString());
+  if (options.dueTo) query = query.lte("due_at", options.dueTo.toISOString());
 
   const { data, error } = await query;
   if (error) throw new Error(`listSchoolItems failed: ${error.code ?? "unknown"}`);

@@ -9,7 +9,7 @@ import {
   Wallet,
 } from "lucide-react";
 
-import { describePredictionBasis, predictHousehold } from "@wonderhome/core/ai/predictions";
+import { describePredictionBasis, lookAheadWindow, predictHousehold } from "@wonderhome/core/ai/predictions";
 import { listConsumables } from "@wonderhome/core/commerce/repository";
 import { listEvents } from "@wonderhome/core/family/repository";
 import { listObligations } from "@wonderhome/core/finance/repository";
@@ -120,11 +120,13 @@ async function TodayBody({ session, active, now }: { session: Session; active: "
   const seesMoney = view.permissions.includes("finance.view");
   const seesSchool = view.permissions.includes("school.manage") || view.permissions.includes("school.view_own");
 
+  // Bills and school items only for today and the look-ahead, never the whole history.
+  const ahead = lookAheadWindow(now);
   const [eventsR, mealsR, obligationsR, schoolItemsR, members, agendaR, consumablesR, recipeChoices, catalog] = await Promise.all([
     settle(listEvents(supabase, householdId, { from: dayStart, to: dayEnd }), []),
     isChild ? ok([]) : settle(listMeals(supabase, householdId, { from: today, to: today }), []),
-    seesMoney ? settle(listObligations(supabase, householdId), []) : ok([]),
-    seesSchool ? settle(listSchoolItems(supabase, householdId), []) : ok([]),
+    seesMoney ? settle(listObligations(supabase, householdId, { dueFrom: ahead.billsFrom, dueTo: ahead.billsTo }), []) : ok([]),
+    seesSchool ? settle(listSchoolItems(supabase, householdId, { dueFrom: ahead.schoolFrom, dueTo: ahead.schoolTo }), []) : ok([]),
     listMembers(supabase, householdId, membership.household.ownerMemberId).catch(() => []),
     // The household agenda (a 6-domain scan) feeds only the "household" tab's
     // needsYou + predictions, so compute it only there — not on mine/family.
