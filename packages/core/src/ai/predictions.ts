@@ -39,6 +39,20 @@ export type Prediction = {
 };
 
 export const HORIZON_DAYS = 14;
+
+/**
+ * The rows the look-ahead (and Today, which reads the same rows for the day)
+ * can ever use: bills due from today to the horizon, school items due around
+ * today to the horizon. Two days of margin each side absorb the household's
+ * time zone, so a row a prediction or today's list would show is never left
+ * out — only history and the far future are (performance audit, 2026-10-28).
+ */
+export function lookAheadWindow(now: Date): { billsFrom: string; billsTo: string; schoolFrom: Date; schoolTo: Date } {
+  const margin = 2 * 86_400_000;
+  const to = new Date(now.getTime() + HORIZON_DAYS * 86_400_000 + margin);
+  const from = new Date(now.getTime() - margin);
+  return { billsFrom: from.toISOString().slice(0, 10), billsTo: to.toISOString().slice(0, 10), schoolFrom: from, schoolTo: to };
+}
 export const STOCK_OUT = { windowDays: 7, minItems: 3 } as const;
 export const BILL_BUNCH = { windowDays: 5, minBills: 2 } as const;
 export const HEAVY_WEEK = { minOtherItems: 3 } as const;

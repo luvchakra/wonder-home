@@ -120,7 +120,7 @@ export async function reviseExisting(
 ): Promise<{ routedTable: string; routedId: string; changeType: "updated" | "cancelled"; previous: Record<string, unknown>; domain: "bill" | "school_item" }> {
   const householdId = input.householdId;
   if (input.kind === "school_item") {
-    const existing = (await listSchoolItems(supabase, householdId)).find((item) => item.id === input.existingId);
+    const existing = (await listSchoolItems(supabase, householdId, { id: input.existingId }))[0];
     if (!existing) throw new Error("existing school item not found");
     const previous = { dueAt: existing.dueAt?.toISOString() ?? null, dueTimeKnown: existing.dueTimeKnown, endsAt: existing.endsAt?.toISOString() ?? null, status: existing.status };
     if (input.decision === "cancel") {
@@ -138,7 +138,7 @@ export async function reviseExisting(
     return { routedTable: "school_items", routedId: existing.id, changeType: "updated", previous, domain: "school_item" };
   }
   if (input.kind === "bill") {
-    const existing = (await listObligations(supabase, householdId)).find((bill) => bill.id === input.existingId);
+    const existing = (await listObligations(supabase, householdId, { id: input.existingId }))[0];
     if (!existing) throw new Error("existing bill not found");
     const previous = { dueOn: existing.dueOn, amountMinor: existing.amountMinor, status: existing.status };
     if (input.decision === "cancel") {

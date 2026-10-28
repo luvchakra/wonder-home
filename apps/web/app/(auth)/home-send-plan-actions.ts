@@ -120,14 +120,14 @@ function routeInputFor(entry: PlanEntry, householdId: string, itemId: string): R
 async function verifyUpdate(supabase: Supabase, householdId: string, entry: PlanEntry, timezone: string): Promise<void> {
   const record = entry.record;
   if (entry.domain === "bill") {
-    const bill = (await listObligations(supabase, householdId)).find((row) => row.id === entry.existing?.id);
+    const bill = entry.existing?.id ? (await listObligations(supabase, householdId, { id: entry.existing.id }))[0] : undefined;
     if (!bill) throw new Error("not found after update");
     if (record.date && bill.dueOn !== record.date) throw new Error("due date did not change");
     if (record.amount !== null && bill.amountMinor !== Math.round(record.amount * 100)) throw new Error("amount did not change");
     return;
   }
   if (entry.domain === "school_item" && record.date) {
-    const item = (await listSchoolItems(supabase, householdId)).find((row) => row.id === entry.existing?.id);
+    const item = entry.existing?.id ? (await listSchoolItems(supabase, householdId, { id: entry.existing.id }))[0] : undefined;
     const day = item?.dueAt ? new Intl.DateTimeFormat("en-CA", { timeZone: timezone }).format(item.dueAt) : null;
     if (day !== record.date) throw new Error("date did not change");
   }

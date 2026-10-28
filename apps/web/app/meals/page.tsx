@@ -101,7 +101,7 @@ export default async function MealsPage({
   const weekDates = weekDays(weekStart);
   const thisWeek = weekStartOf(today);
 
-  const entitlement = await may(supabase, householdId, "meals.planning");
+  const entitlementCheck = may(supabase, householdId, "meals.planning");
   const active = tab === "recipes" || tab === "preferences" || tab === "template" ? tab : "plan";
   const shell = {
     active: "more" as const,
@@ -113,6 +113,39 @@ export default async function MealsPage({
     wide: active === "plan",
   };
 
+  // The plan check runs alongside the reads it gates; a refused plan drops them.
+  const reads = Promise.all([
+    // Every meal from today on, read once: the agenda assesses them and the
+    // week below is the same rows, not a second read.
+    mealAgenda(supabase, householdId).catch(() => null),
+    listMembers(
+      supabase,
+      householdId,
+      membership.household.ownerMemberId,
+    ).catch(() => []),
+    // The household's own recipes, whole: their cards, their edit forms and the pickers.
+    listRecipesForEdit(supabase, householdId).catch(() => []),
+    supabase
+      .from("food_preferences")
+      .select("id, member_id, kind, subject")
+      .eq("household_id", householdId)
+      .order("kind"),
+    listRecipeChoices(supabase, householdId).catch(() => []),
+    // What is at home and on the list, for each meal's shortfall (25-003a).
+    listGroceries(supabase, householdId).catch(() => [] as GroceryItem[]),
+    // WonderHome's own dishes (25-022): the Recipes tab, and the recipe picker in Plan a meal.
+    active !== "preferences"
+      ? listCatalogRecipes(supabase, publicEnv().NEXT_PUBLIC_SUPABASE_URL).catch(() => [])
+      : Promise.resolve([]),
+    // The week being planned, past days included, bounded to its seven days.
+    active === "plan" ? listMeals(supabase, householdId, { from: weekDates[0], to: weekDates[6] }).catch(() => [] as Meal[]) : Promise.resolve([] as Meal[]),
+    // The week template (the owner, 2026-10-20): its options, and whether WonderHome has planned this week from it.
+    active === "plan" || active === "template" ? listTemplateOptions(supabase, householdId).catch(() => [] as TemplateOption[]) : Promise.resolve([] as TemplateOption[]),
+    active === "plan" ? weekPlanned(supabase, householdId, weekStart) : Promise.resolve(null),
+  ]);
+  // Marks a refusal handled when the page returns early; `await reads` below still throws.
+  reads.catch(() => undefined);
+  const entitlement = await entitlementCheck;
   if (!entitlement.allowed) {
     return (
       <AppShell {...shell}>
@@ -126,36 +159,7 @@ export default async function MealsPage({
     );
   }
 
-  const [agenda, members, recipes, preferenceRows, recipeChoices, groceries, catalog, firstWeekMeals, templateOptions, weekRecord] =
-    await Promise.all([
-      // Every meal from today on, read once: the agenda assesses them and the
-      // week below is the same rows, not a second read.
-      mealAgenda(supabase, householdId).catch(() => null),
-      listMembers(
-        supabase,
-        householdId,
-        membership.household.ownerMemberId,
-      ).catch(() => []),
-      // The household's own recipes, whole: their cards, their edit forms and the pickers.
-      listRecipesForEdit(supabase, householdId).catch(() => []),
-      supabase
-        .from("food_preferences")
-        .select("id, member_id, kind, subject")
-        .eq("household_id", householdId)
-        .order("kind"),
-      listRecipeChoices(supabase, householdId).catch(() => []),
-      // What is at home and on the list, for each meal's shortfall (25-003a).
-      listGroceries(supabase, householdId).catch(() => [] as GroceryItem[]),
-      // WonderHome's own dishes (25-022): the Recipes tab, and the recipe picker in Plan a meal.
-      active !== "preferences"
-        ? listCatalogRecipes(supabase, publicEnv().NEXT_PUBLIC_SUPABASE_URL).catch(() => [])
-        : Promise.resolve([]),
-      // The week being planned, past days included, bounded to its seven days.
-      active === "plan" ? listMeals(supabase, householdId, { from: weekDates[0], to: weekDates[6] }).catch(() => [] as Meal[]) : Promise.resolve([] as Meal[]),
-      // The week template (the owner, 2026-10-20): its options, and whether WonderHome has planned this week from it.
-      active === "plan" || active === "template" ? listTemplateOptions(supabase, householdId).catch(() => [] as TemplateOption[]) : Promise.resolve([] as TemplateOption[]),
-      active === "plan" ? weekPlanned(supabase, householdId, weekStart) : Promise.resolve(null),
-    ]);
+  const [agenda, members, recipes, preferenceRows, recipeChoices, groceries, catalog, firstWeekMeals, templateOptions, weekRecord] = await reads;
   const adult = membership.memberType === "adult";
   // Each week WonderHome picks from the template and plans it, accepted by
   // default: the first time an adult opens a week not yet past that it has

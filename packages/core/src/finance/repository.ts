@@ -32,14 +32,21 @@ type Row = Record<string, unknown>;
 export async function listObligations(
   supabase: SupabaseClient,
   householdId: string,
+  options: { id?: string; dueFrom?: string; dueTo?: string } = {},
 ): Promise<Obligation[]> {
-  const { data, error } = await supabase
+  let query = supabase
     .from("obligations")
     .select(
       "id, name, kind, payee, amount_minor, currency, due_on, recurrence, bill_type, responsible_member_id, status, requires_review, updated_at",
     )
     .eq("household_id", householdId)
     .order("due_on", { ascending: true, nullsFirst: false });
+  // One row by id: a write path reading back the bill it changes, not the whole history.
+  if (options.id) query = query.eq("id", options.id);
+  // A near-term window (ISO days) for a caller that shows only those days; without one, every bill.
+  if (options.dueFrom) query = query.gte("due_on", options.dueFrom);
+  if (options.dueTo) query = query.lte("due_on", options.dueTo);
+  const { data, error } = await query;
 
   if (error)
     throw new Error(`listObligations failed: ${error.code ?? "unknown"}`);

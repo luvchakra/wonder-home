@@ -71,19 +71,12 @@ export default async function SchoolPage({ searchParams }: { searchParams: Promi
 
   if (view.tone === "child") redirect("/?tab=school");
 
-  const entitlement = await may(supabase, householdId, "school.connector");
+  const entitlementCheck = may(supabase, householdId, "school.connector");
   const active = tab === "homework" || tab === "calendar" || tab === "goals" ? tab : "overview";
   const shell = { active: "more" as const, viewer, secondary, pathname: "/school", back: { href: "/more", label: t("common.back") }, title: t("nav.item.school") };
 
-  if (!entitlement.allowed) {
-    return (
-      <AppShell {...shell}>
-        <EmptyState icon={GraduationCap} tone="school" title={t("school.notInPlan")} description={entitlement.reason} />
-      </AppShell>
-    );
-  }
-
-  const [agenda, members, integrations, enrolments, teachers, activities, periods, exams, examTypes, goals, checkIns] = await Promise.all([
+  // The plan check runs alongside the reads it gates; a refused plan drops them.
+  const reads = Promise.all([
     // The agenda reads the household's school work and messages once; the
     // lists below are those same rows, not a second read of them.
     schoolAgenda(supabase, householdId).catch(() => null),
@@ -102,6 +95,18 @@ export default async function SchoolPage({ searchParams }: { searchParams: Promi
     active === "goals" ? listGoals(supabase, householdId).catch(() => []) : Promise.resolve([]),
     active === "goals" ? listCheckIns(supabase, householdId).catch(() => []) : Promise.resolve([]),
   ]);
+  // Marks a refusal handled when the page returns early; `await reads` below still throws.
+  reads.catch(() => undefined);
+  const entitlement = await entitlementCheck;
+  if (!entitlement.allowed) {
+    return (
+      <AppShell {...shell}>
+        <EmptyState icon={GraduationCap} tone="school" title={t("school.notInPlan")} description={entitlement.reason} />
+      </AppShell>
+    );
+  }
+
+  const [agenda, members, integrations, enrolments, teachers, activities, periods, exams, examTypes, goals, checkIns] = await reads;
 
   const children = members.filter((member) => member.memberType === "child");
   // One child at a time (the owner, 2026-10-19: no "Everyone"): the one asked for, else the first.

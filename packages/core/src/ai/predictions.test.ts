@@ -3,7 +3,7 @@ import { describe, expect, it } from "vitest";
 import type { Consumable } from "../commerce/consumables";
 import type { Obligation } from "../finance/payments";
 import type { SchoolItem } from "../school/items";
-import { predictBillBunching, predictHeavySchoolWeeks, predictHousehold, predictStockOuts } from "./predictions";
+import { lookAheadWindow, predictBillBunching, predictHeavySchoolWeeks, predictHousehold, predictStockOuts } from "./predictions";
 
 const NOW = new Date("2026-09-24T09:00:00Z");
 
@@ -119,5 +119,36 @@ describe("looking ahead (story 14-008)", () => {
       now: NOW,
     });
     expect(all.map((prediction) => prediction.domain)).toEqual(["bills", "groceries"]);
+  });
+});
+
+describe("the look-ahead window a caller reads (performance audit, 2026-10-28)", () => {
+  const day = (offset: number) => new Date(NOW.getTime() + offset * 86_400_000);
+  const offsets = Array.from({ length: 60 }, (_, index) => index - 30);
+  const bills = offsets.map((offset) => bill(`bill ${offset}`, day(offset).toISOString().slice(0, 10), 1000));
+  const items = offsets.flatMap((offset) => [
+    school(`exam ${offset}`, "exam", day(offset).toISOString()),
+    school(`worksheet ${offset}`, "worksheet", day(offset).toISOString()),
+    school(`project ${offset}`, "project", day(offset).toISOString()),
+  ]);
+
+  it("predicts exactly what the whole history predicts", () => {
+    const ahead = lookAheadWindow(NOW);
+    const windowedBills = bills.filter((row) => row.dueOn! >= ahead.billsFrom && row.dueOn! <= ahead.billsTo);
+    const windowedItems = items.filter((row) => row.dueAt! >= ahead.schoolFrom && row.dueAt! <= ahead.schoolTo);
+    expect(windowedBills.length).toBeLessThan(bills.length);
+    expect(windowedItems.length).toBeLessThan(items.length);
+    const input = { consumables: [], childName: () => "Anya", now: NOW };
+    expect(predictHousehold({ ...input, obligations: windowedBills, schoolItems: windowedItems })).toEqual(
+      predictHousehold({ ...input, obligations: bills, schoolItems: items }),
+    );
+  });
+
+  it("keeps today, in any time zone, and the whole horizon", () => {
+    const ahead = lookAheadWindow(NOW);
+    expect(ahead.billsFrom <= "2026-09-23").toBe(true);
+    expect(ahead.billsTo >= "2026-10-08").toBe(true);
+    expect(ahead.schoolFrom.getTime()).toBeLessThanOrEqual(new Date("2026-09-23T10:00:00Z").getTime());
+    expect(ahead.schoolTo.getTime()).toBeGreaterThanOrEqual(new Date("2026-10-08T09:00:00Z").getTime());
   });
 });
