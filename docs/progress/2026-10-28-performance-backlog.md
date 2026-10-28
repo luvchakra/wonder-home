@@ -172,3 +172,27 @@ All of this is in `apps/web/app/_lib/hometalk-turn.ts` and `packages/core/src/ho
 - `npm run eval` (deterministic): 211 of 211 cases. Unsafe actions are 0 of 26. All gates pass except operations, which is "not yet" as before.
 - Typecheck is clean, and ESLint is clean on `hometalk-turn.ts`.
 - **Not measured end to end:** a live turn needs the service-role key, which this container does not have. The saving is counted in round trips from the code path.
+
+## B6 + B10: `/ai` history alongside the offer; a loading shape per screen
+
+They are batched because both are about how soon `/ai` shows something.
+
+**B6** (`ai/page.tsx`):
+- The open session's history (`listMessages`) now starts alongside `offerToFillDetails` instead of after it.
+- The offer is said in that same session, because `openSession` finds the member's current one. So the history read in parallel is the right one.
+- The page already appends the offer's message when the read missed it.
+- Only when the offer had to open a new session is that session read after it, as before.
+- This saves **1 sequential round trip** on every adult load of `/ai` on a server with the service role, which is production.
+- `offerToFillDetails` itself is 3–4 round trips: what is waiting, the session, its recent messages, and the write.
+- When the history already holds 30 messages, the list can now show the offer plus the 30 before it. Before, it showed 29 before it. Nothing is lost or reordered.
+
+**B10:**
+- `_components/screen-loading.tsx` holds the root skeleton, now with a shape: `dashboard` (as before), `list` (heading, tabs, rows) or `chat` (turns, then the composer).
+- `loading.tsx` now exists for `/ai` (chat), and for `/family`, `/groceries` and `/meals` (list).
+- The root `loading.tsx` renders the same markup as before.
+
+**Verified** against a production build pointed at the live project, signed in as the QA household, at 360 px:
+- `/ai`, `/family`, `/groceries` and `/meals` each answer 200, and the streamed HTML carries the route's own loading shape before the screen.
+- Each then renders its heading (HomeTalk, Our Family, Groceries, Meals & Cooking), with no horizontal overflow and no console errors.
+- Typecheck is clean, and ESLint is clean on the changed files.
+- **Not exercised here:** the offer path needs the service-role key, which this container does not have.

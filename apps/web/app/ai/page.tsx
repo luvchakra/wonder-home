@@ -94,6 +94,10 @@ export default async function AiPage({ searchParams }: { searchParams: Promise<{
   // Something in HomeSend is missing a detail HomeTalk can ask: offered once, as a question (14-050).
   // HomeTalk's words are written with the service role; a server without one (E2E) simply makes no offer.
   const offerAdmin = entitlement.allowed && !welcoming && membership.memberType === "adult" ? serviceClientOrNull() : null;
+  // The open session's history is read alongside the offer (audit B6): the
+  // offer is said in that same session unless it had to open a new one, and
+  // then that one is read after it, as before.
+  const openHistory = entitlement.allowed && !welcoming && openSessionId ? listMessages(supabase, householdId, openSessionId, 30).catch(() => []) : null;
   const offered =
     offerAdmin
       ? await offerToFillDetails(supabase, offerAdmin, {
@@ -108,7 +112,7 @@ export default async function AiPage({ searchParams }: { searchParams: Promise<{
     // The offer names the session it was said in, so the first load shows it without a second lookup (14-050).
     const sessionId = offered ? offered.sessionId : welcoming ? await currentSessionId(supabase, householdId, membership.memberId) : openSessionId;
     if (sessionId) {
-      const history = await listMessages(supabase, householdId, sessionId, 30).catch(() => []);
+      const history = await (openHistory && sessionId === openSessionId ? openHistory : listMessages(supabase, householdId, sessionId, 30).catch(() => []));
       initialMessages = history
         .filter((message) => message.role !== "system")
         .map((message) => ({
