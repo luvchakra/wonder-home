@@ -11,21 +11,21 @@ in `docs/progress/`; for the running log of what changed when, `tracking/PROGRES
 
 ## The whole picture
 
-**409 of 445 stories done — 91.9%**
+**410 of 445 stories done — 92.1%**
 
 | Status | Stories |
 |---|---:|
-| Done | 409 |
+| Done | 410 |
 | In Progress | 10 |
 | Blocked | 1 |
-| Not Started | 21 |
+| Not Started | 20 |
 | Deferred | 4 |
 
 ## By module
 
 | Module | Progress | Done | Total | Left |
 |---|---|---:|---:|---|
-| 00 Project Bootstrap & Architecture | `█████████░` | 15 | 16 | 1 not started |
+| 00 Project Bootstrap & Architecture | `██████████` | 16 | 16 | — |
 | 01 Identity & Family Accounts | `██████████` | 14 | 14 | — |
 | 02 Household Configuration & Playbook | `██████████` | 9 | 9 | — |
 | 03 Outcome & Routine Engine | `██████████` | 8 | 8 | — |
@@ -58,7 +58,6 @@ in `docs/progress/`; for the running log of what changed when, `tracking/PROGRES
 
 | Story | Module | Priority | Status |
 |---|---|---|---|
-| `00-016` UI simplification: Settings with You and Household tabs; one setup wizard (M5, M6) | 00 Project Bootstrap & Architecture | P1 | Not Started |
 | `04-017` Voice evaluation, metrics and release gates | 04 Conversation, Voice & Text | P0 | In Progress |
 | `04-025` Leaving the app floats Gemini's voice on a real phone | 04 Conversation, Voice & Text | P1 | Not Started |
 | `08-016` A child's timetable and exams in their details in Family, and the day's lessons in Calendar's day view | 08 Kids & School Intelligence | P2 | Not Started |
@@ -99,7 +98,7 @@ in `docs/progress/`; for the running log of what changed when, `tracking/PROGRES
 
 ### 00 — Project Bootstrap & Architecture
 
-15 of 16 done `█████████░`
+16 of 16 done `██████████`
 
 | Story | Priority | Status | Notes |
 |---|---|---|---|
@@ -118,7 +117,7 @@ in `docs/progress/`; for the running log of what changed when, `tracking/PROGRES
 | `00-013` UI simplification: one door per page, a smaller More menu, one Notifications page (M1, M7, M8) | P1 | Done | design/UI-SIMPLIFICATION-v1.md; Settings → Notifications holds the household choices and delivery |
 | `00-014` UI simplification: Family is the one people page; Today is the Calendar's Day view (M3, M4) | P1 | Done | Invite, add, remove and relationships on Family; Today's plan under today in the Calendar's Day view; events at /calendar/events |
 | `00-015` UI simplification: one Connections page under Settings (M2) | P1 | Done | Settings → Connections: WhatsApp, Voice assistants, Connect school, Websites and services, Shopping, Providers, devices, weather and partner keys; five old pages redirect |
-| `00-016` UI simplification: Settings with You and Household tabs; one setup wizard (M5, M6) | P1 | Not Started | design/UI-SIMPLIFICATION-v1.md |
+| `00-016` UI simplification: Settings with You and Household tabs; one setup wizard (M5, M6) | P1 | Done | Manage Household, its address and activity pages and the setup walk-through fold into Settings → Household; playbook and policy add forms and Teach WonderHome moved there; /onboarding is the one guided setup |
 
 ### 01 — Identity & Family Accounts
 

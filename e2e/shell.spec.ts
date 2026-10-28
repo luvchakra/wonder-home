@@ -14,11 +14,8 @@ const GATED_AREAS = [
   "/ai",
   "/family",
   "/more",
-  "/household",
   "/household/home",
   "/household/responsibilities",
-  "/household/setup",
-  "/household/activity",
   "/settings/connections",
   "/school",
   "/groceries",
@@ -49,6 +46,9 @@ test("folded screens send a visitor on to their one home (design/UI-SIMPLIFICATI
     ["/household/connections", "/settings/connections"],
     ["/settings/whatsapp", "/settings/connections"],
     ["/settings/voice-assistants", "/settings/connections"],
+    ["/household", "/settings"],
+    ["/household/address", "/settings"],
+    ["/household/activity", "/settings"],
     ["/family/events/00000000-0000-4000-8000-000000000000", "/calendar/events/00000000-0000-4000-8000-000000000000"],
   ]) {
     await page.goto(from);

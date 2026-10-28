@@ -75,7 +75,7 @@ const SECTIONS: readonly SectionShape[] = [
   {
     id: "first-week",
     group: "Getting started",
-    updated: "2026-10-17",
+    updated: "2026-10-28",
     keywords: ["setup", "onboarding", "get started", "progress", "checklist", "100%", "wizard", "guided setup"],
   },
   {
@@ -93,7 +93,7 @@ const SECTIONS: readonly SectionShape[] = [
   {
     id: "talk-to-wonderhome",
     group: "Everyday use",
-    updated: "2026-10-26",
+    updated: "2026-10-28",
     keywords: ["pick an answer", "choices", "buttons", "tap to answer", "ask me about family", "amaf", "put it back", "redo", "interview", "questions about my family", "approve", "approval", "ask a grown-up", "child request", "helper request", "decline", "after school", "after work", "office hours", "school hours", "place book", "saved places", "ai", "assistant", "chat", "voice", "speak", "microphone", "ask", "command", "hometalk", "remind me", "reminder", "correct", "edit", "search messages", "places", "restaurant", "dinner", "park", "nearby", "map", "homeplaces", "welcome", "getting to know", "vacation", "getaway", "trip", "weekend", "holiday", "look again", "check again", "database", "how many", "guests coming", "should we", "noticed", "likes", "food preferences", "who likes what", "what do you know"],
   },
   {
@@ -135,7 +135,7 @@ const SECTIONS: readonly SectionShape[] = [
   {
     id: "bills",
     group: "Everyday use",
-    updated: "2026-10-21",
+    updated: "2026-10-28",
     keywords: ["bill", "payment", "money", "finance", "due", "overdue", "budget", "anomaly", "pay", "transaction", "currency", "payee", "electricity", "rent", "emi", "earlier bills", "past bills", "coming up", "pay ahead", "next month", "paid"],
   },
   {
@@ -177,13 +177,13 @@ const SECTIONS: readonly SectionShape[] = [
   {
     id: "househelp",
     group: "Your household",
-    updated: "2026-10-18",
+    updated: "2026-10-28",
     keywords: ["househelper", "helper", "maid", "cook", "driver", "schedule", "leave", "absence", "away", "cover", "backup"],
   },
   {
     id: "outcomes",
     group: "Your household",
-    updated: "2026-10-26",
+    updated: "2026-10-28",
     keywords: ["outcome", "responsibility", "playbook", "routine", "policy", "owner", "who does what", "backup", "workload", "share the load", "fair", "balance"],
   },
   {
@@ -195,7 +195,7 @@ const SECTIONS: readonly SectionShape[] = [
   {
     id: "ai-autonomy",
     group: "Privacy and trust",
-    updated: "2026-10-26",
+    updated: "2026-10-28",
     keywords: ["autonomy", "permission", "approve", "execute", "automation", "control", "ai settings"],
   },
   {

@@ -43,7 +43,7 @@ export const WHATS_NEW: readonly WhatsNewEntry[] = [
   { id: "eventPage", at: "2026-10-17T15:24:35Z", icon: "event", href: "/family" },
   { id: "homePlaces", at: "2026-10-17T11:01:51Z", icon: "places", href: "/ai" },
   { id: "memberLanguages", at: "2026-10-17T06:20:41Z", icon: "languages", href: "/settings/language-region" },
-  { id: "homeOnMap", at: "2026-10-17T05:48:27Z", icon: "home", href: "/household/address", audience: "admin" },
+  { id: "homeOnMap", at: "2026-10-17T05:48:27Z", icon: "home", href: "/settings?tab=household#address", audience: "admin" },
 ];
 
 /** Entries still recent enough to show at all (within `WHATS_NEW_DAYS` of `now`), for this reader. */

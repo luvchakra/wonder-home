@@ -35,13 +35,11 @@ const SCREENS = [
   "/ai",
   "/family",
   "/more",
-  "/household",
+  "/settings?tab=household",
   "/household/home",
   "/household/responsibilities",
   "/household/responsibilities?group=outcome",
   "/household/responsibilities?tab=mine",
-  "/household/setup",
-  "/household/activity",
   "/settings/connections",
   "/school",
   "/groceries",
@@ -320,9 +318,9 @@ test.describe("every signed-in screen loads", () => {
     expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(page.viewportSize()!.width);
   });
 
-  test("Manage Household: the playbook is grouped into folded cards that open with their chevron", async ({ page }) => {
+  test("Settings → Household: the playbook is grouped into folded cards that open with their chevron", async ({ page }) => {
     await signIn(page);
-    await page.goto("/household");
+    await page.goto("/settings?tab=household");
     const playbook = page.locator("section#playbook");
     const groups = playbook.locator("details");
     // One card per area, alphabetical by its label, each closed with its count.
@@ -334,14 +332,14 @@ test.describe("every signed-in screen loads", () => {
     await expect(groups.nth(2).getByText("Pet care")).toBeHidden();
     expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(page.viewportSize()!.width);
   });
-  test("Manage Household: the links are grouped under four headings, with no second door to setup", async ({ page }) => {
+  test("Settings → Household: the links are grouped under four headings, with no second door to setup", async ({ page }) => {
     await signIn(page);
-    await page.goto("/household");
+    await page.goto("/settings?tab=household");
     const headings = page.locator("section[id^='manage-'] h2, section[id^='manage-'] h3");
     await expect(headings).toHaveText(["Your household", "How the home runs", "Notifications", "Connections and records"]);
-    await expect(page.locator("#manage-running a")).toHaveText([/Responsibilities/, /Household playbook/, /Policies/, /AI autonomy/]);
+    await expect(page.locator("#manage-running a")).toHaveText([/Responsibilities/, /Household playbook/, /Policies/, /AI autonomy/, /Teach WonderHome/]);
     // The setup card opens the walk-through; the list doesn't repeat it.
-    await expect(page.locator("section[id^='manage-'] a[href='/household/setup']")).toHaveCount(0);
+    await expect(page.locator("section[id^='manage-'] a[href='/onboarding']")).toHaveCount(0);
     expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(page.viewportSize()!.width);
   });
   test("an AI key out of credits is said on HomeTalk and on Settings → AI Assistant", async ({ page }) => {

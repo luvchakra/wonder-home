@@ -215,7 +215,7 @@ const FALLBACK_LINKS: Record<string, { href: string; label: TranslationKey }> = 
   health_appointment: { href: "/health", label: "notifications.link.health" },
   health_routine: { href: "/health", label: "notifications.link.health" },
   health_checkup: { href: "/health", label: "notifications.link.health" },
-  approval: { href: "/household", label: "notifications.link.approval" },
+  approval: { href: "/settings?tab=household", label: "notifications.link.approval" },
   homesend_item: { href: "/home-send", label: "notifications.link.homeSend" },
   event_change: { href: "/calendar", label: "notifications.link.calendar" },
   event_replies: { href: "/calendar", label: "notifications.link.calendar" },

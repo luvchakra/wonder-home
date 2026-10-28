@@ -14,16 +14,11 @@ import type { ComponentType } from "react";
 import { listAuditEvents } from "@wonderhome/core/api/audit";
 import { listMembers } from "@wonderhome/core/identity/households";
 import { describeAuditEvent } from "@wonderhome/core/security/sensitive-actions";
-import { AppShell } from "@wonderhome/core/shell/app-shell";
 import { Card } from "@wonderhome/core/ui/card";
 import { IconTile, type IconTone } from "@wonderhome/core/ui/icon-tile";
-import { QuoteCard } from "@wonderhome/core/ui/quote-card";
 import { EmptyState } from "@wonderhome/core/ui/states";
 
-import { formatDate, formatTime, requireSession } from "../../_lib/session";
-
-export const metadata = { title: "Activity" };
-export const dynamic = "force-dynamic";
+import { formatDate, formatTime, type Session } from "../../_lib/session";
 
 /**
  * The household's activity trail (story 15-006).
@@ -51,33 +46,11 @@ const PRESENTATION: Record<string, { icon: ComponentType<{ className?: string }>
   support: { icon: ShieldCheck, tone: "attention" },
 };
 
-export default async function ActivityPage() {
-  const session = await requireSession("/household/activity");
-  const { supabase, membership, view, viewer, secondary, locale } = session;
+export async function ActivitySection({ session }: { session: Session }) {
+  const { supabase, membership, locale } = session;
   const { t } = locale;
   const householdId = membership.household.id;
   const timezone = membership.household.timezone;
-
-  const shell = {
-    active: "more" as const,
-    viewer,
-    secondary,
-    pathname: "/household/activity",
-    back: { href: "/household", label: t("manage.backToManage") },
-    title: t("manage.section.activity"),
-  };
-
-  if (!view.permissions.includes("household.manage")) {
-    return (
-      <AppShell {...shell}>
-        <EmptyState
-          icon={FileClock}
-          title={t("manage.forAdmins")}
-          description={t("manage.activity.adminOnlyLede")}
-        />
-      </AppShell>
-    );
-  }
 
   const [events, members] = await Promise.all([
     listAuditEvents(supabase, householdId, 100).catch(() => []),
@@ -88,10 +61,9 @@ export default async function ActivityPage() {
     id ? (members.find((member) => member.id === id)?.displayName ?? t("manage.activity.somebodyGone")) : "WonderHome";
 
   return (
-    <AppShell {...shell}>
-      <div className="space-y-5">
-        <header className="wh-rise">
-          <h1 className="text-[1.625rem] font-bold tracking-tight sm:text-3xl">{t("manage.section.activity")}</h1>
+    <section id="activity" className="scroll-mt-20 space-y-3">
+        <header>
+          <h2 className="text-lg font-semibold tracking-tight">{t("manage.section.activity")}</h2>
           <p className="mt-0.5 text-sm text-[var(--wh-foreground-muted)]">{t("manage.activity.lede")}</p>
         </header>
 
@@ -136,8 +108,6 @@ export default async function ActivityPage() {
           <p>{t("manage.activity.notHereBody")}</p>
         </Card>
 
-        <QuoteCard>{t("manage.activity.quote")}</QuoteCard>
-      </div>
-    </AppShell>
+    </section>
   );
 }

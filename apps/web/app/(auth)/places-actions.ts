@@ -83,8 +83,7 @@ export async function setHomeAddressAction(_previous: ActionState, formData: For
     const membership = await requireHouseholdAdmin(supabase, householdId.data);
     const result = await saveAddressFromForm(supabase, membership, formData);
     if (result === "empty") return { error: "Search for your address and pick it, or type it in." };
-    revalidatePath("/household/address");
-    revalidatePath("/household");
+    revalidatePath("/settings");
     return { notice: "Home address saved." };
   } catch (thrown) {
     if (thrown instanceof PlacesUnavailableError) return { error: "That place could not be read just now. Try again, or type the address in." };
@@ -100,8 +99,7 @@ export async function removeHomeAddressAction(_previous: ActionState, formData: 
     const supabase = await createClient();
     await requireHouseholdAdmin(supabase, householdId.data);
     await removeHouseholdAddress(supabase, householdId.data);
-    revalidatePath("/household/address");
-    revalidatePath("/household");
+    revalidatePath("/settings");
     return { notice: "Home address removed." };
   } catch (thrown) {
     return { error: toErrorBody(thrown, "household").body.error.message };

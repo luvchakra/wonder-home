@@ -17,6 +17,8 @@ import { Button } from "@wonderhome/core/ui/button";
 import { Card } from "@wonderhome/core/ui/card";
 import { IconTile, type IconTone } from "@wonderhome/core/ui/icon-tile";
 import { QuoteCard } from "@wonderhome/core/ui/quote-card";
+import { SegmentedControl } from "@wonderhome/core/ui/segmented-control";
+import type { Translate } from "@wonderhome/core/i18n/translate";
 import { SectionHeader } from "@wonderhome/core/ui/section-header";
 import { loadVoiceSettings } from "@wonderhome/core/voice/repository";
 import { describeVoice } from "@wonderhome/core/voice/settings";
@@ -29,6 +31,9 @@ import { MemberAvatarControl } from "../_components/member-avatar-control";
 import { MemberProfileForm } from "../_components/member-profile-form";
 import { officeField } from "../_lib/office-field";
 import { requireSession, roleWords } from "../_lib/session";
+import { ActivitySection } from "./_household/activity-section";
+import { AddressSection } from "./_household/address-section";
+import { ManageSection } from "./_household/manage-section";
 
 export const metadata = { title: "Settings & Profile" };
 export const dynamic = "force-dynamic";
@@ -70,9 +75,31 @@ function SettingsGroup({ title, rows }: { title: string; rows: Row[] }) {
  * school and every other service) and the plan. Nothing is listed that is not built, and a row only
  * appears where this person can use what it opens.
  */
-export default async function SettingsPage() {
-  const session = await requireSession("/settings");
+export default async function SettingsPage({ searchParams }: { searchParams: Promise<{ tab?: string }> }) {
+  const [{ tab }, session] = await Promise.all([searchParams, requireSession("/settings")]);
   const { supabase, membership, view, viewer, secondary } = session;
+  // Admins get a second tab with the household's own settings (design/UI-SIMPLIFICATION-v1.md M6);
+  // everyone else sees only theirs, and the household tab is never rendered for them.
+  const isAdmin = view.permissions.includes("household.manage");
+  const tabs = isAdmin ? <SettingsTabs active={tab === "household" ? "household" : "you"} t={session.locale.t} /> : null;
+  if (isAdmin && tab === "household") {
+    const { t } = session.locale;
+    return (
+      <AppShell active="more" viewer={viewer} secondary={secondary} pathname="/settings" back={{ href: "/more", label: t("common.back") }} title={t("nav.item.settings")}>
+        <div className="space-y-6">
+          <header className="wh-rise hidden lg:block">
+            <h1 className="text-[1.625rem] font-bold tracking-tight sm:text-3xl">{t("nav.item.settings")}</h1>
+            <p className="mt-0.5 text-sm text-[var(--wh-foreground-muted)]">{t("manage.lede", { household: membership.household.name })}</p>
+          </header>
+          {tabs}
+          <ManageSection session={session} />
+          <AddressSection session={session} />
+          <ActivitySection session={session} />
+          <QuoteCard>{t("manage.quote")}</QuoteCard>
+        </div>
+      </AppShell>
+    );
+  }
   const householdId = membership.household.id;
   const whatsappReady = whatsappConfigFromEnv() !== null && whatsappBusinessNumber() !== null;
   const [user, { data: preferenceRows }, credential, voiceSettings, members, subscription, plans, whatsappLinks, myOffice, mySharing] = await Promise.all([
@@ -149,6 +176,8 @@ export default async function SettingsPage() {
           <p className="mt-0.5 text-sm text-[var(--wh-foreground-muted)]">{t("settingsHome.lede", { household: membership.household.name })}</p>
         </header>
 
+        {tabs}
+
         <Card className="space-y-4 p-5">
           <div className="flex items-start justify-between gap-3">
             <div className="min-w-0 flex-1">
@@ -220,5 +249,19 @@ export default async function SettingsPage() {
         <QuoteCard>{t("settingsHome.quote")}</QuoteCard>
       </div>
     </AppShell>
+  );
+}
+
+/** You and Household: the one switch between a person's own settings and the household's. */
+function SettingsTabs({ active, t }: { active: "you" | "household"; t: Translate }) {
+  return (
+    <SegmentedControl
+      label={t("nav.item.settings")}
+      active={active}
+      segments={[
+        { key: "you", label: t("settingsHome.tab.you"), href: "/settings" },
+        { key: "household", label: t("settingsHome.tab.household"), href: "/settings?tab=household" },
+      ]}
+    />
   );
 }
