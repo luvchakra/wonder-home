@@ -5,6 +5,7 @@ import { loadDataUse } from "@wonderhome/core/ai/privacy-repository";
 import { buildPersonalView } from "@wonderhome/core/identity/views";
 import { listPrivacyRequests } from "@wonderhome/core/privacy/repository";
 import { DELETION_GRACE_DAYS } from "@wonderhome/core/privacy/retention";
+import { loadRetentionWindow } from "@wonderhome/core/privacy/retention-window-repository";
 import { latestVerification } from "@wonderhome/core/security/step-up-repository";
 import { checkStepUp } from "@wonderhome/core/security/step-up";
 import { AppShell } from "@wonderhome/core/shell/app-shell";
@@ -25,6 +26,7 @@ import {
   DeletionForm,
   ExportForm,
 } from "../../_components/privacy-forms";
+import { RetentionWindowPicker } from "../../_components/retention-window-picker";
 import { formatDate, requireSession } from "../../_lib/session";
 import {
   cancelDeletionLabels,
@@ -34,6 +36,7 @@ import {
   exportFormLabels,
   exportLines,
   retentionRows,
+  retentionWindowLabels,
 } from "../../_lib/settings-labels";
 
 export const metadata = { title: "Privacy" };
@@ -59,11 +62,12 @@ export default async function PrivacyCentrePage() {
   const view = buildPersonalView(membership);
   const now = new Date();
 
-  const [dataUse, requests, exportProof, deletionProof] = await Promise.all([
+  const [dataUse, requests, exportProof, deletionProof, retentionWindow] = await Promise.all([
     loadDataUse(supabase, householdId),
     listPrivacyRequests(supabase, householdId).catch(() => []),
     latestVerification(supabase, membership.memberId, "export"),
     latestVerification(supabase, membership.memberId, "deletion"),
+    loadRetentionWindow(supabase, householdId),
   ]);
 
   const mayExport = checkStepUp(exportProof, "export", now).ok;
@@ -72,7 +76,10 @@ export default async function PrivacyCentrePage() {
     (request) => request.kind === "deletion" && (request.status === "pending" || request.status === "ready"),
   );
   const isOwner = membership.roles.includes("head");
+  const manages = view.permissions.includes("household.manage");
+  const windowValue = retentionWindow.days === null ? "off" : String(retentionWindow.days);
   const { t, format, preferences } = session.locale;
+  const cleanupLabels = retentionWindowLabels(t);
   // The link keeps its own styling wherever the sentence puts it.
   const [changeBefore, changeAfter] = t("settingsPage.privacy.changeIn", { link: "{link}" }).split("{link}");
 
@@ -127,6 +134,15 @@ export default async function PrivacyCentrePage() {
                 </li>
               ))}
             </ul>
+          </Card>
+          <Card className="mt-3">
+            <RetentionWindowPicker
+              householdId={householdId}
+              value={windowValue}
+              options={cleanupLabels.options}
+              manages={manages}
+              labels={cleanupLabels}
+            />
           </Card>
         </section>
 

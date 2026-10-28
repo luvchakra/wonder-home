@@ -11,6 +11,7 @@ import { whatsappConfigFromEnv } from "@wonderhome/core/notifications/whatsapp";
 import { WHATSAPP_PROCESS_KIND, whatsappJobHandler } from "@wonderhome/core/whatsapp/intake";
 import { pruneExpiredShareHandoffs } from "@wonderhome/core/homesend/share-handoff";
 import { log } from "@wonderhome/core/observability/logger";
+import { runRetentionCleanup, type CleanupSummary } from "@wonderhome/core/privacy/cleanup";
 import { fulfillMaturedDeletions } from "@wonderhome/core/privacy/fulfill-deletion";
 import { purgeExpired, summarise } from "@wonderhome/core/privacy/purge";
 
@@ -80,6 +81,20 @@ export async function POST(request: Request) {
         reason: thrown instanceof Error ? thrown.message : "unknown",
         allow: ["reason"],
       });
+    }
+
+    // Periodic cleanup of passed household ephemera (the owner, 2026-10-28,
+    // `docs/data-retention.md`): the household's OWN retention window applied
+    // to records a person created, soft-delete only (the hard purge is gated
+    // off, G7). Folded in here for the same reasons the sweeps below are, and
+    // because it belongs beside `purgeExpired` — this is retention too.
+    let cleanupSummary: CleanupSummary | null = null;
+    let cleanupError: string | undefined;
+    try {
+      cleanupSummary = await runRetentionCleanup(admin);
+    } catch (thrown) {
+      cleanupError = thrown instanceof Error ? thrown.message : "unknown";
+      log.error("retention cleanup failed", { reason: cleanupError, allow: ["reason"] });
     }
 
     // Not a retention sweep at all — folded into this route rather than
@@ -171,8 +186,9 @@ export async function POST(request: Request) {
       routineReminderSummary,
       smartReminderSummary,
       jobsSummary,
+      cleanupSummary,
       failed: failed.length,
-      allow: ["summary", "handoffsDeleted", "deletionsFulfilled", "deletionsFailed", "reminderSummary", "routineReminderSummary", "smartReminderSummary", "jobsSummary", "failed"],
+      allow: ["summary", "handoffsDeleted", "deletionsFulfilled", "deletionsFailed", "reminderSummary", "routineReminderSummary", "smartReminderSummary", "jobsSummary", "cleanupSummary", "failed"],
     });
 
     // Counts only. What was deleted is exactly what must not be reported back.
@@ -206,10 +222,11 @@ export async function POST(request: Request) {
         routineReminders: routineReminderSummary ?? { error: routineReminderError },
         smartReminders: smartReminderSummary ?? { error: smartReminderError },
         jobs: jobsSummary ?? { error: jobsError },
+        cleanup: cleanupSummary ?? { error: cleanupError },
         reconciliation: reconciliation ?? { error: reconciliationError },
       },
       {
-        status: failed.length > 0 || deletionsFailed !== 0 || reminderError || routineReminderError || smartReminderError || jobsError || reconciliationError ? 207 : 200,
+        status: failed.length > 0 || deletionsFailed !== 0 || reminderError || routineReminderError || smartReminderError || jobsError || cleanupError || reconciliationError ? 207 : 200,
         headers: { "cache-control": "no-store" },
       },
     );

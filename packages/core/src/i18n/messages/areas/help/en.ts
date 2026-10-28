@@ -428,6 +428,8 @@ export const helpEn = {
     "Settings → Privacy & security lets you download a copy of your data after confirming your password. You can also ask for your data to be deleted: there is a 30-day countdown you can call off, and things the household shares, such as the playbook and what was paid, stay with the household. The household's owner hands that role to someone else first.",
   "help.guide.privacy.body.4":
     "An Admin decides in Settings → AI Assistant what kinds of information the assistant may share with the AI service — children's details, health, amounts and bills, where people are, private messages. What is not allowed is left out of anything the assistant sends. Children's details are allowed from the start, so HomeTalk and HomeBrain can use what you tell them about your children; an Admin can untick them there. The rest waits until an Admin allows it.",
+  "help.guide.privacy.body.5":
+    "Settings → Privacy & security also lets an Admin choose how long passed, handled entries are kept before they are cleaned up — a helper's past days off, old calendar change records — so old details about people are not kept with nobody needing them. Health, money and safety records are never cleaned up, and cleanup can be turned off.",
 
   // Which model powers the assistant
   "help.guide.ai-key.title": "Which model powers the assistant",
