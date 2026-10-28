@@ -19,7 +19,7 @@ import { listPets } from "@wonderhome/core/home/repository";
 import type { Translate } from "@wonderhome/core/i18n/translate";
 import { describeAction, isFamilyMoment, type FamilyEvent } from "@wonderhome/core/family/schedule";
 import { onboardingSummary, type OnboardingSummary } from "@wonderhome/core/household/onboarding";
-import { loadOnboarding, loadOnboardingSnapshot } from "@wonderhome/core/household/onboarding-repository";
+import { loadOnboarding, loadOnboardingFacts } from "@wonderhome/core/household/onboarding-repository";
 import { assessSetup } from "@wonderhome/core/household/setup";
 import { shouldOfferLocaleSetup } from "@wonderhome/core/i18n/preferences";
 import { loadSetupFacts } from "@wonderhome/core/household/setup-repository";
@@ -384,30 +384,42 @@ async function DashboardBody({ session, now }: { session: Session; now: Date }) 
   // the next two weeks below are the events still to end within them.
   const shared = homeRows(supabase, householdId, membership.household.timezone, now.getTime());
   const fortnight = now.getTime() + 14 * 86_400_000;
+  // Members, pets and responsibilities are read once: this screen shows them
+  // and guided setup's progress is worked out from the same rows (audit B7).
+  // Setup gets the reads as they are, so a read that fails hides its card as
+  // before rather than showing progress from an empty list.
+  const membersRead = listMembers(supabase, householdId, membership.household.ownerMemberId);
+  const petsRead = listPets(supabase, householdId);
+  // The same join the Responsibilities and Househelper screens read, so
+  // "3 responsibilities" here means the same three rows those screens show.
+  const responsibilitiesRead: Promise<ResponsibilityJoinRow[]> = Promise.resolve(
+    supabase
+      .from("responsibilities")
+      .select("outcome_key, primary_member_id, backup_member_id, ai_mode, playbook_items(name, cadence)")
+      .eq("household_id", householdId),
+  ).then(({ data, error }) => {
+    if (error) throw new Error(`responsibilities failed: ${error.code ?? "unknown"}`);
+    return ((data as ResponsibilityJoinRow[] | null) ?? []).map((row) => ({ ...row, ai_mode: asAutonomyMode(row.ai_mode) }));
+  });
   const [agenda, members, upcoming, setupFacts, onboarding, responsibilityRows, pets] = await Promise.all([
     householdAgenda(supabase, householdId, view, { events: shared.events, meals: shared.meals }),
-    listMembers(supabase, householdId, membership.household.ownerMemberId).catch(() => []),
+    membersRead.catch(() => []),
     shared.events
       .then((rows) => rows.filter((event) => event.endsAt.getTime() >= now.getTime() && event.startsAt.getTime() <= fortnight))
       .catch(() => []),
     manages ? loadSetupFacts(supabase, membership.household).catch(() => null) : Promise.resolve(null),
     // Guided setup still under way (story 02-009): its own resume row.
-    manages ? loadOnboardingProgress(supabase, membership.household).catch(() => null) : Promise.resolve(null),
-    // The same join the Responsibilities and Househelper screens read, so
-    // "3 responsibilities" here means the same three rows those screens show.
-    (async (): Promise<ResponsibilityJoinRow[]> => {
-      try {
-        const { data } = await supabase
-          .from("responsibilities")
-          .select("outcome_key, primary_member_id, backup_member_id, ai_mode, playbook_items(name, cadence)")
-          .eq("household_id", householdId);
-        return ((data as ResponsibilityJoinRow[] | null) ?? []).map((row) => ({ ...row, ai_mode: asAutonomyMode(row.ai_mode) }));
-      } catch {
-        return [];
-      }
-    })(),
+    manages
+      ? loadOnboardingProgress(supabase, householdId, {
+          members: membersRead,
+          pets: petsRead,
+          responsibilities: responsibilitiesRead,
+          availability: helperReads.then(([, windows]) => windows),
+        }).catch(() => null)
+      : Promise.resolve(null),
+    responsibilitiesRead.catch(() => [] as ResponsibilityJoinRow[]),
     // The household's pets, under the family on Home (the Family screen's own rows).
-    listPets(supabase, householdId).catch(() => []),
+    petsRead.catch(() => []),
   ]);
 
   const setup = setupFacts ? localizeSetup(assessSetup(setupFacts), t) : null;
@@ -954,10 +966,21 @@ async function DashboardBody({ session, now }: { session: Session; now: Date }) 
 /** Guided setup's progress, while it is still under way — nothing once it is finished or never begun. */
 async function loadOnboardingProgress(
   supabase: Session["supabase"],
-  household: { id: string; ownerMemberId: string | null },
+  householdId: string,
+  rows: {
+    members: Promise<HouseholdMember[]>;
+    pets: Promise<{ id: string; name: string; species: string }[]>;
+    responsibilities: Promise<ResponsibilityJoinRow[]>;
+    availability: Promise<AvailabilityWindowRow[]>;
+  },
 ): Promise<OnboardingSummary | null> {
-  const state = await loadOnboarding(supabase, household.id);
+  const state = await loadOnboarding(supabase, householdId);
   if (!state || state.status === "completed") return null;
-  const snapshot = await loadOnboardingSnapshot(supabase, household, state);
-  return onboardingSummary(snapshot.facts);
+  const facts = await loadOnboardingFacts(supabase, householdId, state, {
+    members: rows.members,
+    pets: rows.pets,
+    responsibilityKeys: rows.responsibilities.then((list) => list.map((row) => row.outcome_key)),
+    availability: rows.availability.then((list) => list.map((row) => ({ memberId: row.member_id, dayOfWeek: Number(row.day_of_week) }))),
+  });
+  return onboardingSummary(facts);
 }

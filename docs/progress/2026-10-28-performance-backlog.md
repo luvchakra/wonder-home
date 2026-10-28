@@ -196,3 +196,33 @@ They are batched because both are about how soon `/ai` shows something.
 - Each then renders its heading (HomeTalk, Our Family, Groceries, Meals & Cooking), with no horizontal overflow and no console errors.
 - Typecheck is clean, and ESLint is clean on the changed files.
 - **Not exercised here:** the offer path needs the service-role key, which this container does not have.
+
+## B7: Admin Home's setup progress from rows Home already read
+
+**What the audit found:**
+- The setup count itself, `household_setup_counts`, is one RPC of 16 counts in Home's first wave, about 6 ms warm.
+- Working those counts out from Home's own rows would need reads Home does not do: playbook items, policies, assets, obligations, food preferences, recipes and enrolments. So it stays.
+- The repeated reads came from guided setup's progress card. While setup is under way, `loadOnboardingSnapshot` read members, pets, responsibilities and availability a second time, all rows Home had just read.
+
+**What changed**
+- **`household/onboarding-repository.ts`:**
+  - The facts are now built by one pure `factsFrom`, which `loadOnboardingSnapshot` also uses.
+  - The new `loadOnboardingFacts` takes the members, pets, responsibility keys and helpers' working days as promises, and reads only the school enrolments, alongside them.
+- **`_screens/home-dashboard.tsx`:**
+  - Members, pets and responsibilities are each read once.
+  - Setup's progress gets the reads as they are, plus the availability windows Home already reads for its helper card. A read that fails still hides the setup card, rather than showing progress from an empty list.
+
+**Numbers:** Supabase REST calls on Home, for an Admin whose guided setup is under way.
+
+| | `main` | B7 |
+|---|---|---|
+| REST calls | 39 | 36 |
+| Repeated table reads | `member_availability` ×2, `responsibilities` ×2 (plus `household_members`, the session's own) | none beyond the session's own `household_members` |
+
+With B4, Home went from 42 calls to 36.
+
+**Verified**
+- **Rendered text unchanged:** Home's text on `main` and this branch was identical, with guided setup in progress for the QA household. That includes the card's "43% · Household setup · Good start · Next: Review home responsibilities".
+- **Unit test:** `household/onboarding-facts.test.ts` checks the facts from given rows: inactive members left out, a child's school from the enrolments, a helper's working days counted once per weekday, an accepted responsibility not suggested again. It also checks that only `school_enrolments` is read.
+- vitest over `household`: 19 files, 289 tests pass.
+- Typecheck is clean, and ESLint is clean on the dashboard.

@@ -111,7 +111,7 @@ Not applied yet; for the owner to accept. Each was earned by a measured finding 
 - **B4c** (new, from B4): Meals reads `recipes` and `consumables` twice each with different columns (`listRecipesForEdit` / `recipesWithIngredients`, `listGroceries` / `listConsumables`).
 - **B5** (done, [backlog note](2026-10-28-performance-backlog.md#b5-the-hometalk-turn); a stale context is served only when behind by age alone): HomeTalk turn batching (`pendingAmaf`, `pendingWelcome` and the main reads in one wave). Check the rate limit before `consume`. Serve a stale `household_context` and rebuild it in `after()`. Move the `homebrain_misses` insert from `void` to `after()`.
 - **B6** (done, [backlog note](2026-10-28-performance-backlog.md#b6--b10-ai-history-alongside-the-offer-a-loading-shape-per-screen)): `/ai`: start `listMessages` alongside `offerToFillDetails`.
-- **B7**: Admin Home: work out setup counts from the rows the dashboard already reads.
+- **B7** (done, [backlog note](2026-10-28-performance-backlog.md#b7-admin-homes-setup-progress-from-rows-home-already-read); the one-RPC count stays, the setup card stops re-reading): Admin Home: work out setup counts from the rows the dashboard already reads.
 - **B8**: `next/dynamic` for `HomeSendSheet` and the below-the-fold finance, meal and health forms.
 - **B9**: narrow the middleware matcher (static `js`, `css`, `woff2`, `json`, `txt`, and webhook APIs).
 - **B10** (done, same note): `loading.tsx` for `/ai`, `/family`, `/groceries` and `/meals`.
