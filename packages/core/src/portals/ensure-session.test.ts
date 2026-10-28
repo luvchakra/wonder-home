@@ -135,7 +135,7 @@ describe("ensureSession", () => {
   it("stops and asks to reconnect on a bad password — no retry loop", async () => {
     const h = harness(new FakePage({ startAuthed: false }), memStore(), { username: CORRECT.username, password: "wrong" });
     const result = await h.run();
-    expect(result).toEqual({ ok: false, state: "reconnect_needed", reason: "bad_password" });
+    expect(result).toMatchObject({ ok: false, state: "reconnect_needed", reason: "bad_password" });
     expect(h.store.value).toBeNull(); // nothing saved
     expect(h.sleep).not.toHaveBeenCalled();
   });
@@ -143,7 +143,7 @@ describe("ensureSession", () => {
   it("surfaces a verification demand as reconnect_needed, never bypasses it", async () => {
     const h = harness(new FakePage({ startAuthed: false, outcome: "verify" }));
     const result = await h.run();
-    expect(result).toEqual({ ok: false, state: "reconnect_needed", reason: "verification" });
+    expect(result).toMatchObject({ ok: false, state: "reconnect_needed", reason: "verification" });
   });
 
   it("retries transient failures with backoff, then succeeds", async () => {
@@ -159,7 +159,7 @@ describe("ensureSession", () => {
     const page = new FakePage({ startAuthed: false, transientBefore: 99 });
     const h = harness(page);
     const result = await h.run();
-    expect(result).toEqual({ ok: false, state: "reconnect_needed", reason: "login_failed" });
+    expect(result).toMatchObject({ ok: false, state: "reconnect_needed", reason: "login_failed" });
     expect(page.clicks).toBe(3); // default maxAttempts
     expect(h.sleep).toHaveBeenCalledTimes(2); // backoff between attempts, not after the last
   });

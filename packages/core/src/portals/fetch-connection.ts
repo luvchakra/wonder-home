@@ -1,6 +1,6 @@
 import { looksLikeAuthWall, type LoginHints, type PortalAdapter, type PortalBrowser, type PortalCredentials } from "./adapter";
 import { itemHash } from "./dedupe";
-import { ensureSession, type ConnectionState, type ReconnectReason, type SessionStore } from "./ensure-session";
+import { ensureSession, type ConnectionState, type LoginDiagnostic, type ReconnectReason, type SessionStore } from "./ensure-session";
 
 const DEFAULT_MAX_LOGIN_ATTEMPTS = 3;
 
@@ -84,7 +84,7 @@ export type TargetOutcome = {
 };
 
 export type FetchConnectionResult =
-  | { ok: false; state: "reconnect_needed"; reason: ReconnectReason; targets?: TargetOutcome[] }
+  | { ok: false; state: "reconnect_needed"; reason: ReconnectReason; targets?: TargetOutcome[]; diagnostic?: LoginDiagnostic }
   | { ok: true; state: "connected"; reAuthenticated: boolean; filed: number; targets: TargetOutcome[] };
 
 export async function fetchConnection(deps: FetchConnectionDeps): Promise<FetchConnectionResult> {
@@ -97,7 +97,7 @@ export async function fetchConnection(deps: FetchConnectionDeps): Promise<FetchC
     hints: deps.hints,
     onState: deps.onState,
   });
-  if (!session.ok) return { ok: false, state: "reconnect_needed", reason: session.reason };
+  if (!session.ok) return { ok: false, state: "reconnect_needed", reason: session.reason, diagnostic: session.diagnostic };
 
   const { page } = session;
   const targets: TargetOutcome[] = [];
