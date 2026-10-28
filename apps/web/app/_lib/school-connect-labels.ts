@@ -53,6 +53,11 @@ export type SchoolConnectLabels = {
   pageStoppedBadge: string;
   /** Kind → human label, keyed by PortalScrapeKind (homework/calendar/messages/results/generic). */
   pageKind: Record<string, string>;
+  pollChecking: string;
+  pollOkTest: string;
+  pollOkFetch: string;
+  pollFailed: string;
+  pollSlow: string;
 };
 
 export function schoolConnectLabels(t: Translate): SchoolConnectLabels {
@@ -113,5 +118,10 @@ export function schoolConnectLabels(t: Translate): SchoolConnectLabels {
       results: t("school.connect.pages.kind.results"),
       generic: t("school.connect.pages.kind.generic"),
     },
+    pollChecking: t("school.connect.poll.checking"),
+    pollOkTest: t("school.connect.poll.okTest"),
+    pollOkFetch: t("school.connect.poll.okFetch"),
+    pollFailed: t("school.connect.poll.failed"),
+    pollSlow: t("school.connect.poll.slow"),
   };
 }
