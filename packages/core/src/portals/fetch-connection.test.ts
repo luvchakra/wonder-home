@@ -14,6 +14,7 @@ import type { SessionStore } from "./ensure-session";
 const PORTAL = "https://portal.example.com/login";
 const HOMEWORK = "https://portal.example.com/task/list";
 const NOTICES = "https://portal.example.com/channel/42";
+const LOGOUT = "https://portal.example.com/logout";
 
 const authed: PortalAdapter = { id: "t", matches: () => true, isAuthenticated: async () => true, login: async () => ({ status: "authenticated" }) };
 const dead: PortalAdapter = { id: "t", matches: () => true, isAuthenticated: async () => false, login: async () => ({ status: "invalid_credentials" }) };
@@ -23,9 +24,18 @@ class FakePage implements PortalPage {
   constructor(
     private readonly text: Record<string, string> = {},
     private readonly throwOn: Set<string> = new Set(),
+    /** target url -> the auth-wall url it bounces to (a stale session) */
+    private readonly redirects: Record<string, string> = {},
+    /** how many times the redirect fires before the target serves normally */
+    private redirectTimes = Number.POSITIVE_INFINITY,
   ) {}
   async goto(url: string) {
     if (this.throwOn.has(url)) throw new Error("navigation failed");
+    if (this.redirects[url] && this.redirectTimes > 0) {
+      this.redirectTimes -= 1;
+      this.url = this.redirects[url]!;
+      return;
+    }
     this.url = url;
   }
   currentUrl() {
@@ -151,6 +161,53 @@ describe("fetchConnection", () => {
     const result = await h.run();
     expect(result).toEqual({ ok: false, state: "reconnect_needed", reason: "bad_password" });
     expect(h.filed).toHaveLength(0);
+  });
+
+  it("re-logs in and retries when a reused session bounced to an auth wall", async () => {
+    const h = harness({
+      // Reused session looks authed, but the channel bounces to /logout once;
+      // after the in-context re-login it serves the real page.
+      adapter: authed,
+      page: new FakePage({ [NOTICES]: "Homework for today" }, new Set(), { [NOTICES]: LOGOUT }, 1),
+      targets: [{ url: NOTICES, kind: "messages", childMemberId: null }],
+      itemsByUrl: { [NOTICES]: [item({ title: "Homework", kind: "messages", sourceUrl: NOTICES })] },
+    });
+    const result = await h.run();
+    expect(result).toMatchObject({ ok: true, state: "connected", reAuthenticated: true, filed: 1 });
+    expect(result.ok && result.targets[0]).toMatchObject({ url: NOTICES, finalUrl: NOTICES, fresh: 1 });
+    expect(h.credentials).toHaveBeenCalled();
+    expect(h.filed.flat()).toHaveLength(1);
+  });
+
+  it("never files a logged-out page — a wall that can't re-login is reconnect_needed", async () => {
+    const onState = vi.fn();
+    const page = new FakePage({ [LOGOUT]: "Session expired!" }, new Set(), { [NOTICES]: LOGOUT });
+    const filed: RawPortalItem[][] = [];
+    // Reused session passes the base check, but the real page bounces to /logout
+    // and the stored password no longer works, so re-login fails.
+    const reuseThenCantRelogin: PortalAdapter = {
+      id: "t",
+      matches: () => true,
+      isAuthenticated: async () => true,
+      login: async () => ({ status: "invalid_credentials" }),
+    };
+    const result = await fetchConnection({
+      connectionId: "c1",
+      portalUrl: PORTAL,
+      browser: new FakeBrowser(page),
+      adapter: reuseThenCantRelogin,
+      store: memStore(),
+      credentials: async () => ({ username: "u", password: "p" }),
+      targets: [{ url: NOTICES, kind: "messages", childMemberId: null }],
+      extractor: { extract: async () => [item({})] },
+      filer: { file: async ({ items }) => void filed.push(items) },
+      cursors: memCursors(),
+      onState,
+    });
+    expect(result).toMatchObject({ ok: false, state: "reconnect_needed", reason: "bad_password" });
+    expect(result.ok === false && result.targets?.[0]).toMatchObject({ finalUrl: LOGOUT, error: "auth_wall" });
+    expect(filed).toHaveLength(0);
+    expect(onState).toHaveBeenCalledWith("reconnect_needed", "bad_password");
   });
 
   it("isolates a page that fails — the others still file", async () => {
