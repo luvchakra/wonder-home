@@ -100,6 +100,7 @@ export const schoolHi: AreaCatalog<typeof schoolEn> = {
   "school.connect.conns.lede": "एक बार साइन इन करें और WonderHome होमवर्क व सूचनाएँ पढ़कर HomeSend में रख देता है, जिन्हें आप पुष्टि करते हैं। कनेक्शन बनाना और जाँचना Connections पेज पर होता है — यह किसी भी पोर्टल के लिए, WonderHome में कहीं भी काम करता है।",
   "school.connect.conns.none": "अभी कोई वेबसाइट कनेक्शन नहीं है।",
   "school.connect.conns.manage": "कनेक्शन प्रबंधित करें",
+  "school.connect.conns.choose": "कौन-सा कनेक्शन",
   "school.connect.setupNeeded": "सेटअप ज़रूरी",
   "school.connect.notLiveNote": "यह पोर्टल अभी चालू नहीं है। आप अभी सेटअप कर सकते हैं; इसका कनेक्शन बनने के बाद यह चीज़ें लाना शुरू करेगा।",
   "school.connect.portals": "स्कूल पोर्टल",

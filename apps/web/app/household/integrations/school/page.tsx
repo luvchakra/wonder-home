@@ -1,6 +1,7 @@
 import { ShieldCheck } from "lucide-react";
 
 import { listConnections } from "@wonderhome/core/connections/repository";
+import { connectionSessionStatus } from "@wonderhome/core/portals/session-repository";
 import { AppShell } from "@wonderhome/core/shell/app-shell";
 import { EmptyState } from "@wonderhome/core/ui/states";
 
@@ -42,11 +43,16 @@ export default async function ConnectSchoolPage() {
     );
   }
 
-  const connectionRows = await listConnections(supabase, householdId, { connectorType: "browser-automation" }).catch(() => []);
+  const [connectionRows, sessionStates] = await Promise.all([
+    listConnections(supabase, householdId, { connectorType: "browser-automation" }).catch(() => []),
+    connectionSessionStatus(supabase, householdId).catch(() => []),
+  ]);
+  const stateBy = new Map(sessionStates.map((s) => [s.connectionId, s.state]));
   const connections: SchoolConnectionView[] = connectionRows.map((connection) => ({
     id: connection.id,
     name: connection.name,
     url: typeof connection.params.url === "string" ? connection.params.url : null,
+    connectionState: stateBy.get(connection.id) ?? null,
   }));
 
   return (
@@ -56,7 +62,7 @@ export default async function ConnectSchoolPage() {
           <h1 className="text-[1.625rem] font-bold tracking-tight sm:text-3xl">{t("school.connect.title")}</h1>
           <p className="text-sm text-[var(--wh-foreground-muted)]">{t("school.connect.lede")}</p>
         </header>
-        <SchoolConnect connections={connections} connectionsHref="/household/connections" forwardHref="/school" labels={schoolConnectLabels(t)} />
+        <SchoolConnect householdId={householdId} connections={connections} connectionsHref="/household/connections" forwardHref="/school" labels={schoolConnectLabels(t)} />
       </div>
     </AppShell>
   );
