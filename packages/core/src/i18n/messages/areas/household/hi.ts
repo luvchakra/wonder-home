@@ -44,6 +44,7 @@ export const householdHi: AreaCatalog<typeof householdEn> = {
   "manage.connections.remove": "हटाएँ",
   "manage.connections.keepSecret": "मौजूदा मान रखने के लिए खाली छोड़ें",
   "manage.connections.linkHint": "यह अलग तरीके से जुड़ता है — इसे इसके अपने पेज पर सेट करें।",
+  "manage.connections.toggleDetails": "विवरण दिखाएँ या छिपाएँ",
   "manage.connections.status.created": "सेट किया गया",
   "manage.connections.status.connected": "जुड़ा हुआ",
   "manage.connections.status.reconnect_needed": "फिर से जोड़ना ज़रूरी",

@@ -42,6 +42,7 @@ export const householdEn = {
   "manage.connections.remove": "Remove",
   "manage.connections.keepSecret": "Leave blank to keep the current value",
   "manage.connections.linkHint": "This one connects a different way — set it up on its own page.",
+  "manage.connections.toggleDetails": "Show or hide details",
   "manage.connections.status.created": "Set up",
   "manage.connections.status.connected": "Connected",
   "manage.connections.status.reconnect_needed": "Reconnect needed",

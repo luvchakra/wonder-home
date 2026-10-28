@@ -44,6 +44,7 @@ export const householdDe: AreaCatalog<typeof householdEn> = {
   "manage.connections.remove": "Entfernen",
   "manage.connections.keepSecret": "Leer lassen, um den aktuellen Wert zu behalten",
   "manage.connections.linkHint": "Diese verbindet sich anders — richte sie auf ihrer eigenen Seite ein.",
+  "manage.connections.toggleDetails": "Details ein- oder ausblenden",
   "manage.connections.status.created": "Eingerichtet",
   "manage.connections.status.connected": "Verbunden",
   "manage.connections.status.reconnect_needed": "Neu verbinden nötig",

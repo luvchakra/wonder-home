@@ -14,6 +14,7 @@ export type ConnectionsLabels = {
   remove: string;
   keepSecret: string;
   linkHint: string;
+  toggleDetails: string;
   /** Status slug → words. */
   status: Record<string, string>;
   // Browser-automation fetch (Test connection + pages to read).
@@ -67,6 +68,7 @@ export function connectionsLabels(t: Translate): ConnectionsLabels {
     remove: t("manage.connections.remove"),
     keepSecret: t("manage.connections.keepSecret"),
     linkHint: t("manage.connections.linkHint"),
+    toggleDetails: t("manage.connections.toggleDetails"),
     status: {
       created: t("manage.connections.status.created"),
       connected: t("manage.connections.status.connected"),

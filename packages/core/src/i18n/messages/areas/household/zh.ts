@@ -44,6 +44,7 @@ export const householdZh: AreaCatalog<typeof householdEn> = {
   "manage.connections.remove": "移除",
   "manage.connections.keepSecret": "留空以保留当前值",
   "manage.connections.linkHint": "这种连接方式不同——请在它自己的页面上设置。",
+  "manage.connections.toggleDetails": "显示或隐藏详情",
   "manage.connections.status.created": "已设置",
   "manage.connections.status.connected": "已连接",
   "manage.connections.status.reconnect_needed": "需要重新连接",

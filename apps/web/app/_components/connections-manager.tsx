@@ -1,6 +1,6 @@
 "use client";
 
-import { AlertTriangle, ExternalLink, FileText, Pencil, Plug, PlugZap, RefreshCw, Send, Trash2 } from "lucide-react";
+import { AlertTriangle, ChevronDown, ExternalLink, FileText, Pencil, Plug, PlugZap, RefreshCw, Send, Trash2 } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useActionState, useCallback, useEffect, useRef, useState } from "react";
 
@@ -349,22 +349,29 @@ function RestTesterSection({ householdId, connection, labels }: { householdId: s
 /** One connection: its name, type and status, with inline edit and remove. */
 function ConnectionRow({ householdId, connection, connector, childOptions, labels }: { householdId: string; connection: ConnectionView; connector: ConnectorType | null; childOptions: ChildOption[]; labels: ConnectionsLabels }) {
   const [editing, setEditing] = useState(false);
+  const [expanded, setExpanded] = useState(false);
   const [editState, edit, saving] = useActionState(updateConnectionAction, EMPTY);
   const [removeState, remove, removing] = useActionState(deleteConnectionAction, EMPTY);
   const statusWord = labels.status[connection.status] ?? connection.status;
+  const foldable = Boolean(connector && (connector.capabilities.includes("portal-fetch") || connector.capabilities.includes("rest-call")));
 
   return (
     <li className="py-3">
       <div className="flex items-start gap-3">
         <IconTile icon={Plug} tone={connection.status === "connected" ? "handled" : connection.status === "reconnect_needed" || connection.status === "error" ? "neutral" : "care"} />
-        <div className="min-w-0 flex-1">
+        <button
+          type="button"
+          onClick={foldable ? () => setExpanded((v) => !v) : undefined}
+          aria-expanded={foldable ? expanded : undefined}
+          className={`min-w-0 flex-1 text-start ${foldable ? "cursor-pointer" : "cursor-default"}`}
+        >
           <p className="text-sm font-medium break-words">{connection.name}</p>
           <p className="text-xs text-[var(--wh-foreground-muted)]">
             {connector?.label ?? connection.connectorType}
             {connection.params.url ? ` · ${connection.params.url.replace(/^https?:\/\//, "")}` : ""}
           </p>
           <div className="mt-1"><Badge tone={connection.status === "connected" ? "handled" : connection.status === "reconnect_needed" || connection.status === "error" ? "attention" : "neutral"}>{statusWord}</Badge></div>
-        </div>
+        </button>
         <div className="flex shrink-0 gap-1">
           {connector && connector.creation.mode === "params" ? (
             <Button type="button" variant="quiet" onClick={() => setEditing((v) => !v)} className="px-2 text-xs"><Pencil aria-hidden className="size-4" /></Button>
@@ -374,6 +381,11 @@ function ConnectionRow({ householdId, connection, connector, childOptions, label
             <input type="hidden" name="id" value={connection.id} />
             <Button type="submit" variant="quiet" disabled={removing} className="px-2 text-xs"><Trash2 aria-hidden className="size-4" /></Button>
           </form>
+          {foldable ? (
+            <Button type="button" variant="quiet" onClick={() => setExpanded((v) => !v)} aria-label={labels.toggleDetails} aria-expanded={expanded} className="px-2 text-xs">
+              <ChevronDown aria-hidden className={`size-4 transition-transform ${expanded ? "rotate-180" : ""}`} />
+            </Button>
+          ) : null}
         </div>
       </div>
 
@@ -393,11 +405,11 @@ function ConnectionRow({ householdId, connection, connector, childOptions, label
       <Notice state={editState} />
       <Notice state={removeState} />
 
-      {connector && connector.capabilities.includes("portal-fetch") && !editing ? (
+      {expanded && connector && connector.capabilities.includes("portal-fetch") && !editing ? (
         <BrowserFetchSection householdId={householdId} connection={connection} childOptions={childOptions} labels={labels} />
       ) : null}
 
-      {connector && connector.capabilities.includes("rest-call") && !editing ? (
+      {expanded && connector && connector.capabilities.includes("rest-call") && !editing ? (
         <RestTesterSection householdId={householdId} connection={connection} labels={labels} />
       ) : null}
     </li>
