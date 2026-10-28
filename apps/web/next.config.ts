@@ -26,6 +26,10 @@ const nextConfig: NextConfig = {
       { source: "/privacy", destination: "/legal#your-information", permanent: true },
       { source: "/privacy-policy", destination: "/legal#your-information", permanent: true },
       { source: "/terms", destination: "/legal", permanent: true },
+      // Screens folded into one home (design/UI-SIMPLIFICATION-v1.md): old
+      // links in sent notifications, e-mails and bookmarks keep working.
+      { source: "/household/notifications", destination: "/settings/notifications#household", permanent: true },
+      { source: "/household/delivery", destination: "/settings/notifications#delivery", permanent: true },
     ];
   },
   async headers() {

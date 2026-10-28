@@ -1,6 +1,6 @@
 "use client";
 
-import { Download, Info, LifeBuoy, LogOut, Settings2, ShieldCheck } from "lucide-react";
+import { Download, Info, LifeBuoy, LogOut, Settings2 } from "lucide-react";
 import Link from "next/link";
 import { DropdownMenu } from "radix-ui";
 import { useState } from "react";
@@ -35,8 +35,9 @@ import type { ShellViewer } from "./mobile-header";
 const ITEMS = [
   { href: "/settings", label: "Settings & Profile", icon: Settings2 },
   { href: "/help", label: "Get Help", icon: LifeBuoy },
-  { href: "/certification", label: "What WonderHome believes", icon: ShieldCheck },
 ] as const;
+// HomeBrain ("What WonderHome believes") is reached from More, not from here
+// as well (design/UI-SIMPLIFICATION-v1.md M7: one door per page).
 
 const ITEM_CLASS =
   "flex min-h-10 w-full cursor-pointer items-center gap-2.5 rounded-[var(--wh-radius-sm)] px-2 text-left text-sm outline-none data-[highlighted]:bg-[var(--wh-surface-muted)]";

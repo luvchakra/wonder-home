@@ -12,7 +12,7 @@ import { IconTile, type IconTone } from "@wonderhome/core/ui/icon-tile";
 import { Select } from "@wonderhome/core/ui/select";
 import { Switch } from "@wonderhome/core/ui/switch";
 
-import { saveHouseholdNotificationsAction } from "./actions";
+import { saveHouseholdNotificationsAction } from "./household-actions";
 
 export type HouseholdNotificationsLabels = {
   kinds: { title: string; lede: string; on: string; timing: string };

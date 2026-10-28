@@ -16,6 +16,10 @@
 | 10 | P1 | 00-010 | Create feature configuration | Done | Flags + fail-fast startup validation |
 | 11 | P1 | 00-011 | Offer to install the app on phones and tablets | Done | Install banner: one tap on Chromium, two steps on iOS; never on desktop or when installed |
 | 12 | P1 | 00-012 | Bars step aside while reading on a phone | Done | `ScrollChrome` (`shell/scroll-chrome.tsx`): scrolling down hides the header first, then the tab bar with its raised button; any scroll up, the top and the end of the page bring both back. Phones only, reduced motion without the slide, HomeTalk's own scroller untouched. Browser-checked 2026-10-18 against the live project at 360px and 1280px with QA accounts (cleaned up afterwards): the header hides after about 40px, the tab bar only after 280px (raised from 120 so the two are visibly staged), and a 20px scroll up brings both back |
+| 13 | P1 | 00-013 | UI simplification: one door per page, a smaller More menu, one Notifications page (M1, M7, M8) | In Progress | design/UI-SIMPLIFICATION-v1.md; Settings → Notifications holds the household choices and delivery |
+| 14 | P1 | 00-014 | UI simplification: Family is the one people page; Today is the Calendar's Day view (M3, M4) | Not Started | design/UI-SIMPLIFICATION-v1.md |
+| 15 | P1 | 00-015 | UI simplification: one Connections page under Settings (M2) | Not Started | design/UI-SIMPLIFICATION-v1.md |
+| 16 | P1 | 00-016 | UI simplification: Settings with You and Household tabs; one setup wizard (M5, M6) | Not Started | design/UI-SIMPLIFICATION-v1.md |
 
 ## Purpose
 This is the mandatory greenfield bootstrap for the WonderHome repository. The project is a new repository and will use the WonderArk/founder-collab technical stack as its baseline.
@@ -205,3 +209,19 @@ This is the mandatory greenfield bootstrap for the WonderHome repository. The pr
 
 **Definition of Done**
 - Code integrated; lint/typecheck/test/build pass; security baseline preserved; story marked Done with evidence.
+
+### Stories 00-013 to 00-016 — UI simplification
+**Epic:** Application shell
+**Priority:** P1
+
+**Goal:** Every job has one home (design/UI-SIMPLIFICATION-v1.md, approved by the owner on 2026-10-28). Other screens show the value and link there; every retired URL redirects permanently.
+
+**Acceptance criteria**
+- 00-013: the More menu has three domain groups; Notifications is reached by the bell, Settings by the profile card and account menu, HomeBrain from More only. Settings → Notifications holds the household's choices and the delivery report for Admins; `/household/notifications` and `/household/delivery` redirect.
+- 00-014: invite, add, remove and relationships live on Family; `/household/members` redirects. Today's plan is the Calendar's Day view; `/today` and `/family/events/*` redirect.
+- 00-015: one Connections page under Settings for WhatsApp, voice assistants, school, Instamart and every integration; the five old pages redirect.
+- 00-016: Settings has You and Household tabs; Manage Household, the address and activity pages and `/settings/voice` redirect; `/onboarding` is the one setup wizard.
+- Help words in all eight languages say where each thing now lives; route gates are unchanged.
+
+**Definition of Done**
+- Code integrated; lint/typecheck/test/build pass; checked in a browser at 360 px and desktop; story marked Done with evidence.

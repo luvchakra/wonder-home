@@ -11,21 +11,21 @@ in `docs/progress/`; for the running log of what changed when, `tracking/PROGRES
 
 ## The whole picture
 
-**406 of 441 stories done — 92.1%**
+**406 of 445 stories done — 91.2%**
 
 | Status | Stories |
 |---|---:|
 | Done | 406 |
-| In Progress | 10 |
+| In Progress | 11 |
 | Blocked | 1 |
-| Not Started | 20 |
+| Not Started | 23 |
 | Deferred | 4 |
 
 ## By module
 
 | Module | Progress | Done | Total | Left |
 |---|---|---:|---:|---|
-| 00 Project Bootstrap & Architecture | `██████████` | 12 | 12 | — |
+| 00 Project Bootstrap & Architecture | `███████░░░` | 12 | 16 | 1 in progress, 3 not started |
 | 01 Identity & Family Accounts | `██████████` | 14 | 14 | — |
 | 02 Household Configuration & Playbook | `██████████` | 9 | 9 | — |
 | 03 Outcome & Routine Engine | `██████████` | 8 | 8 | — |
@@ -58,6 +58,10 @@ in `docs/progress/`; for the running log of what changed when, `tracking/PROGRES
 
 | Story | Module | Priority | Status |
 |---|---|---|---|
+| `00-013` UI simplification: one door per page, a smaller More menu, one Notifications page (M1, M7, M8) | 00 Project Bootstrap & Architecture | P1 | In Progress |
+| `00-014` UI simplification: Family is the one people page; Today is the Calendar's Day view (M3, M4) | 00 Project Bootstrap & Architecture | P1 | Not Started |
+| `00-015` UI simplification: one Connections page under Settings (M2) | 00 Project Bootstrap & Architecture | P1 | Not Started |
+| `00-016` UI simplification: Settings with You and Household tabs; one setup wizard (M5, M6) | 00 Project Bootstrap & Architecture | P1 | Not Started |
 | `04-017` Voice evaluation, metrics and release gates | 04 Conversation, Voice & Text | P0 | In Progress |
 | `04-025` Leaving the app floats Gemini's voice on a real phone | 04 Conversation, Voice & Text | P1 | Not Started |
 | `08-016` A child's timetable and exams in their details in Family, and the day's lessons in Calendar's day view | 08 Kids & School Intelligence | P2 | Not Started |
@@ -98,7 +102,7 @@ in `docs/progress/`; for the running log of what changed when, `tracking/PROGRES
 
 ### 00 — Project Bootstrap & Architecture
 
-12 of 12 done `██████████`
+12 of 16 done `███████░░░`
 
 | Story | Priority | Status | Notes |
 |---|---|---|---|
@@ -114,6 +118,10 @@ in `docs/progress/`; for the running log of what changed when, `tracking/PROGRES
 | `00-010` Create feature configuration | P1 | Done | Flags + fail-fast startup validation |
 | `00-011` Offer to install the app on phones and tablets | P1 | Done | Install banner: one tap on Chromium, two steps on iOS; never on desktop or when installed |
 | `00-012` Bars step aside while reading on a phone | P1 | Done | `ScrollChrome` (`shell/scroll-chrome.tsx`): scrolling down hides the header first, then the tab bar with its raised button; any scroll up, the top and the end of the page bring both back. Phones only, reduced motion without the slide, HomeTalk's own scroller untouched. Browser-checked 2026-10-18 against the live project at 360px and 1280px with QA accounts (cleaned up afterwards): the header hides after about 40px, the tab bar only after 280px (raised from 120 so the two are visibly staged), and a 20px scroll up brings both back |
+| `00-013` UI simplification: one door per page, a smaller More menu, one Notifications page (M1, M7, M8) | P1 | In Progress | design/UI-SIMPLIFICATION-v1.md; Settings → Notifications holds the household choices and delivery |
+| `00-014` UI simplification: Family is the one people page; Today is the Calendar's Day view (M3, M4) | P1 | Not Started | design/UI-SIMPLIFICATION-v1.md |
+| `00-015` UI simplification: one Connections page under Settings (M2) | P1 | Not Started | design/UI-SIMPLIFICATION-v1.md |
+| `00-016` UI simplification: Settings with You and Household tabs; one setup wizard (M5, M6) | P1 | Not Started | design/UI-SIMPLIFICATION-v1.md |
 
 ### 01 — Identity & Family Accounts
 

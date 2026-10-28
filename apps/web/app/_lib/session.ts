@@ -148,7 +148,6 @@ export async function buildSession(
       ...item,
       label: t(`nav.item.${item.key}`) || item.label,
       purpose: t(`nav.purpose.${item.key}`) || item.purpose,
-      ...(item.key === "notifications" && unread > 0 ? { badge: unread } : {}),
     })),
     locale: { preferences, t, format: requestFormat() },
   };

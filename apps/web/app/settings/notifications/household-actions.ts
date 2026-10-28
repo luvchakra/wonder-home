@@ -42,7 +42,6 @@ export async function saveHouseholdNotificationsAction(raw: z.input<typeof input
   } catch (thrown) {
     return { error: toErrorBody(thrown, "household").body.error.message };
   }
-  revalidatePath("/household/notifications");
   revalidatePath("/settings/notifications");
   return { ok: true };
 }

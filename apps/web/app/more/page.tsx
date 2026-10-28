@@ -31,7 +31,11 @@ export default async function MorePage() {
   const { viewer, secondary, locale } = await requireSession("/more");
   const { t } = locale;
 
-  const sections = groupSecondaryNavigation(secondary, viewer.labels?.groups);
+  // The profile card above is Settings' door here, so Settings is not listed twice (design/UI-SIMPLIFICATION-v1.md M7).
+  const sections = groupSecondaryNavigation(
+    secondary.filter((item) => item.key !== "settings"),
+    viewer.labels?.groups,
+  );
   const domainSections = sections.filter((section) => section.group !== "manage");
   const manageSection = sections.find((section) => section.group === "manage");
 
