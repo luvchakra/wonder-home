@@ -45,3 +45,24 @@ export async function latestPortalFetchJob(
     finishedAt: row.finished_at ? new Date(row.finished_at as string) : null,
   };
 }
+
+/** The most recent fetch job for one connection, or null if none has ever run. */
+export async function latestConnectionFetchJob(supabase: SupabaseClient, householdId: string, connectionId: string): Promise<PortalFetchJobView | null> {
+  const { data, error } = await supabase
+    .from("portal_fetch_jobs")
+    .select("status, reason, requested_at, finished_at")
+    .eq("household_id", householdId)
+    .eq("connection_id", connectionId)
+    .order("requested_at", { ascending: false })
+    .limit(1)
+    .maybeSingle();
+  if (error) throw new Error(`latestConnectionFetchJob failed: ${error.code ?? "unknown"}`);
+  if (!data) return null;
+  const row = data as Row;
+  return {
+    status: row.status as PortalFetchJobStatus,
+    reason: (row.reason as string | null) ?? null,
+    requestedAt: new Date(row.requested_at as string),
+    finishedAt: row.finished_at ? new Date(row.finished_at as string) : null,
+  };
+}

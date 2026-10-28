@@ -6,8 +6,10 @@ import { z } from "zod";
 import { toErrorBody } from "@wonderhome/core/api/errors";
 import { createClient } from "@wonderhome/core/db/server";
 import { requireMembership } from "@wonderhome/core/identity/households";
-import { createConnection, deleteConnection, updateConnection } from "@wonderhome/core/connections/repository";
+import { createConnection, deleteConnection, getConnection, updateConnection } from "@wonderhome/core/connections/repository";
 import { getConnectorType } from "@wonderhome/core/connectors/registry";
+import { addConnectionScrapeUrl, removePortalScrapeUrl, setPortalScrapeUrlEnabled, type PortalScrapeKind } from "@wonderhome/core/portals/scrape-url-repository";
+import { latestConnectionFetchJob, type PortalFetchJobStatus } from "@wonderhome/core/portals/job-repository";
 
 import type { ActionState } from "./actions";
 
@@ -110,6 +112,113 @@ export async function updateConnectionAction(_previous: ActionState, formData: F
     return { notice: "Connection updated." };
   } catch (thrown) {
     return { error: toErrorBody(thrown, "generic").body.error.message };
+  }
+}
+
+// --- Fetch / test / pages-to-read for a browser-automation connection ---
+
+const connFetchSchema = z.object({ householdId: z.uuid(), connectionId: z.uuid() });
+
+/** Test a connection's sign-in (and read its pages): enqueue a fetch for the worker. */
+export async function testConnectionAction(_previous: ActionState, formData: FormData): Promise<ActionState> {
+  const parsed = connFetchSchema.safeParse({ householdId: field(formData, "householdId"), connectionId: field(formData, "connectionId") });
+  if (!parsed.success) return { error: "Please try again." };
+  try {
+    const supabase = await createClient();
+    await requireMembership(supabase, parsed.data.householdId);
+    const { error } = await supabase.rpc("enqueue_connection_fetch_job", { p_connection_id: parsed.data.connectionId });
+    if (error) return { error: "Couldn’t start a check just now. Please try again." };
+    revalidatePath("/household/connections");
+    return { notice: "Checking the connection… the result shows here once the worker signs in." };
+  } catch (thrown) {
+    return { error: toErrorBody(thrown, "connections").body.error.message };
+  }
+}
+
+/** The outcome of the most recent fetch for a connection, so the page can poll after Test/Fetch. */
+export async function connectionFetchStatusAction(input: { householdId: string; connectionId: string }): Promise<{ status: PortalFetchJobStatus | "none"; reason: string | null }> {
+  const parsed = connFetchSchema.safeParse(input);
+  if (!parsed.success) return { status: "none", reason: null };
+  try {
+    const supabase = await createClient();
+    await requireMembership(supabase, parsed.data.householdId);
+    const job = await latestConnectionFetchJob(supabase, parsed.data.householdId, parsed.data.connectionId);
+    return { status: job?.status ?? "none", reason: job?.reason ?? null };
+  } catch {
+    return { status: "none", reason: null };
+  }
+}
+
+const PORTAL_SCRAPE_KINDS = ["homework", "calendar", "messages", "results", "generic"] as const;
+const scrapeSchema = z.object({
+  householdId: z.uuid(),
+  connectionId: z.uuid(),
+  url: z.string().trim().min(1, { error: "Enter the page's web address." }).max(2048),
+  kind: z.enum(PORTAL_SCRAPE_KINDS).optional(),
+  childMemberId: z.union([z.uuid(), z.literal("")]).optional(),
+});
+
+/** Add a post-auth page for the worker to read; validated same-site against the connection's URL (server-side). */
+export async function addConnectionScrapeUrlAction(_previous: ActionState, formData: FormData): Promise<ActionState> {
+  const parsed = scrapeSchema.safeParse({
+    householdId: field(formData, "householdId"),
+    connectionId: field(formData, "connectionId"),
+    url: field(formData, "url"),
+    kind: field(formData, "kind"),
+    childMemberId: field(formData, "childMemberId"),
+  });
+  if (!parsed.success) return { error: parsed.error.issues[0]?.message ?? "Please check the details above." };
+  try {
+    const supabase = await createClient();
+    const actor = await requireMembership(supabase, parsed.data.householdId);
+    const connection = await getConnection(supabase, parsed.data.householdId, parsed.data.connectionId);
+    const connectionUrl = connection?.params.url;
+    if (!connectionUrl) return { error: "That connection has no web address." };
+    await addConnectionScrapeUrl(supabase, {
+      householdId: parsed.data.householdId,
+      connectionId: parsed.data.connectionId,
+      connectionUrl,
+      url: parsed.data.url,
+      kind: (parsed.data.kind ?? "generic") as PortalScrapeKind,
+      childMemberId: parsed.data.childMemberId || null,
+      createdBy: actor.memberId,
+    });
+    revalidatePath("/household/connections");
+    return { notice: "Page added." };
+  } catch (thrown) {
+    return { error: toErrorBody(thrown, "connections").body.error.message };
+  }
+}
+
+const scrapeIdSchema = z.object({ householdId: z.uuid(), id: z.uuid() });
+
+export async function removeConnectionScrapeUrlAction(_previous: ActionState, formData: FormData): Promise<ActionState> {
+  const parsed = scrapeIdSchema.safeParse({ householdId: field(formData, "householdId"), id: field(formData, "id") });
+  if (!parsed.success) return { error: "Please try again." };
+  try {
+    const supabase = await createClient();
+    await requireMembership(supabase, parsed.data.householdId);
+    await removePortalScrapeUrl(supabase, { householdId: parsed.data.householdId, id: parsed.data.id });
+    revalidatePath("/household/connections");
+    return { notice: "Page removed." };
+  } catch (thrown) {
+    return { error: toErrorBody(thrown, "connections").body.error.message };
+  }
+}
+
+const scrapeEnabledSchema = z.object({ householdId: z.uuid(), id: z.uuid(), enabled: z.enum(["true", "false"]) });
+
+export async function setConnectionScrapeUrlEnabledAction(_previous: ActionState, formData: FormData): Promise<ActionState> {
+  const parsed = scrapeEnabledSchema.safeParse({ householdId: field(formData, "householdId"), id: field(formData, "id"), enabled: field(formData, "enabled") });
+  if (!parsed.success) return { error: "Please try again." };
+  try {
+    const supabase = await createClient();
+    await requireMembership(supabase, parsed.data.householdId);
+    await setPortalScrapeUrlEnabled(supabase, { householdId: parsed.data.householdId, id: parsed.data.id, enabled: parsed.data.enabled === "true" });
+    revalidatePath("/household/connections");
+    return { notice: "Saved." };
+  } catch (thrown) {
+    return { error: toErrorBody(thrown, "connections").body.error.message };
   }
 }
 

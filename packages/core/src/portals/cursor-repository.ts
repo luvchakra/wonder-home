@@ -55,3 +55,31 @@ export function portalCursorStore(adminClient: SupabaseClient, input: { househol
       recordSeen(adminClient, { householdId: input.householdId, integrationId: input.integrationId, scrapeUrl, hashes: [...hashes] }),
   };
 }
+
+// --- Connection-keyed cursor store (Connections framework). ---
+
+async function loadConnectionSeen(adminClient: SupabaseClient, input: { connectionId: string; scrapeUrl: string; limit?: number }): Promise<Set<string>> {
+  const { data, error } = await adminClient
+    .from("portal_fetch_cursors")
+    .select("item_hash")
+    .eq("connection_id", input.connectionId)
+    .eq("scrape_url", input.scrapeUrl)
+    .order("created_at", { ascending: false })
+    .limit(input.limit ?? DEFAULT_LIMIT);
+  if (error) throw new Error(`loadConnectionSeen failed: ${error.code ?? "unknown"}`);
+  return new Set(((data as { item_hash: string }[] | null) ?? []).map((row) => row.item_hash));
+}
+
+async function recordConnectionSeen(adminClient: SupabaseClient, input: { householdId: string; connectionId: string; scrapeUrl: string; hashes: readonly string[] }): Promise<void> {
+  if (input.hashes.length === 0) return;
+  const rows = input.hashes.map((item_hash) => ({ household_id: input.householdId, connection_id: input.connectionId, scrape_url: input.scrapeUrl, item_hash }));
+  const { error } = await adminClient.from("portal_fetch_cursors").upsert(rows, { onConflict: "connection_id,scrape_url,item_hash", ignoreDuplicates: true });
+  if (error) throw new Error(`recordConnectionSeen failed: ${error.code ?? "unknown"}`);
+}
+
+export function connectionCursorStore(adminClient: SupabaseClient, input: { householdId: string; connectionId: string }): PortalCursorStore {
+  return {
+    loadSeen: (scrapeUrl) => loadConnectionSeen(adminClient, { connectionId: input.connectionId, scrapeUrl }),
+    recordSeen: (scrapeUrl, hashes) => recordConnectionSeen(adminClient, { householdId: input.householdId, connectionId: input.connectionId, scrapeUrl, hashes: [...hashes] }),
+  };
+}

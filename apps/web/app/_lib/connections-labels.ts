@@ -16,6 +16,26 @@ export type ConnectionsLabels = {
   linkHint: string;
   /** Status slug → words. */
   status: Record<string, string>;
+  // Browser-automation fetch (Test connection + pages to read).
+  testConnection: string;
+  testChecking: string;
+  testOk: string;
+  testFailed: string;
+  testSlow: string;
+  reconnectNeeded: string;
+  pagesTitle: string;
+  pagesLede: string;
+  pagesNone: string;
+  pageUrlLabel: string;
+  pageKindLabel: string;
+  pageForChild: string;
+  pageAnyone: string;
+  pageAdd: string;
+  pageStop: string;
+  pageResume: string;
+  pageStopped: string;
+  /** Kind slug → words. */
+  pageKind: Record<string, string>;
 };
 
 export function connectionsLabels(t: Translate): ConnectionsLabels {
@@ -38,6 +58,30 @@ export function connectionsLabels(t: Translate): ConnectionsLabels {
       reconnect_needed: t("manage.connections.status.reconnect_needed"),
       error: t("manage.connections.status.error"),
       disconnected: t("manage.connections.status.disconnected"),
+    },
+    testConnection: t("manage.connections.testConnection"),
+    testChecking: t("manage.connections.test.checking"),
+    testOk: t("manage.connections.test.ok"),
+    testFailed: t("manage.connections.test.failed"),
+    testSlow: t("manage.connections.test.slow"),
+    reconnectNeeded: t("manage.connections.reconnect"),
+    pagesTitle: t("manage.connections.pages.title"),
+    pagesLede: t("manage.connections.pages.lede"),
+    pagesNone: t("manage.connections.pages.none"),
+    pageUrlLabel: t("manage.connections.pages.urlLabel"),
+    pageKindLabel: t("manage.connections.pages.kindLabel"),
+    pageForChild: t("manage.connections.pages.forChild"),
+    pageAnyone: t("manage.connections.pages.anyone"),
+    pageAdd: t("manage.connections.pages.add"),
+    pageStop: t("manage.connections.pages.stop"),
+    pageResume: t("manage.connections.pages.resume"),
+    pageStopped: t("manage.connections.pages.stopped"),
+    pageKind: {
+      homework: t("manage.connections.pages.kind.homework"),
+      calendar: t("manage.connections.pages.kind.calendar"),
+      messages: t("manage.connections.pages.kind.messages"),
+      results: t("manage.connections.pages.kind.results"),
+      generic: t("manage.connections.pages.kind.generic"),
     },
   };
 }

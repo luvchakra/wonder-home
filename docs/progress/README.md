@@ -11,6 +11,7 @@ decision that shapes later work each earns a note, written before moving on.
 
 | Date | Note |
 |---|---|
+| 2026-10-28 | [Connections framework: generic connection fetch + Test (slice 3)](2026-10-28-connections-fetch-slice-3.md) |
 | 2026-10-28 | [Connections framework: the Connections page (slice 2)](2026-10-28-connections-page-slice-2.md) |
 | 2026-10-28 | [Connections framework: foundation (slice 1)](2026-10-28-connections-framework-foundation.md) |
 | 2026-10-27 | [Portal fetch: Connect-school UI + twice-daily schedule (08-033 complete)](2026-10-27-portal-fetch-ui-schedule-08-033.md) |
