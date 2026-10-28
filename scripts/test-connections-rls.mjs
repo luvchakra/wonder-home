@@ -108,6 +108,20 @@ test("an adult adds a page to read for the connection; a child cannot", () => {
   assert.equal(asProfile(CHILD, `select count(*) from public.portal_scrape_urls where connection_id = '${connection}';`, options).trim(), "1");
 });
 
+test("the worker can upsert a connection's session and cursor (ON CONFLICT needs a non-partial unique index)", () => {
+  // portal_sessions: on conflict (connection_id). A partial unique index can't arbitrate this (42P10).
+  const hash = "a".repeat(64);
+  psql(`insert into public.portal_sessions (household_id, connection_id, state) values ('${household}', '${connection}', 'connected') on conflict (connection_id) do update set state = excluded.state;`, options);
+  psql(`insert into public.portal_sessions (household_id, connection_id, state) values ('${household}', '${connection}', 'reconnect_needed') on conflict (connection_id) do update set state = excluded.state;`, options);
+  assert.equal(psql(`select count(*) from public.portal_sessions where connection_id = '${connection}';`, options).trim(), "1");
+  assert.equal(psql(`select state from public.portal_sessions where connection_id = '${connection}';`, options).trim(), "reconnect_needed");
+
+  // portal_fetch_cursors: on conflict (connection_id, scrape_url, item_hash).
+  psql(`insert into public.portal_fetch_cursors (household_id, connection_id, scrape_url, item_hash) values ('${household}', '${connection}', 'https://x.test/p', '${hash}') on conflict (connection_id, scrape_url, item_hash) do nothing;`, options);
+  psql(`insert into public.portal_fetch_cursors (household_id, connection_id, scrape_url, item_hash) values ('${household}', '${connection}', 'https://x.test/p', '${hash}') on conflict (connection_id, scrape_url, item_hash) do nothing;`, options);
+  assert.equal(psql(`select count(*) from public.portal_fetch_cursors where connection_id = '${connection}';`, options).trim(), "1");
+});
+
 test("an adult can delete a connection, taking its secret with it", () => {
   asProfile(ADULT, `delete from public.connections where household_id = '${household}' and id = '${connection}';`, options);
   assert.equal(psql(`select count(*) from public.connections where id = '${connection}';`, options).trim(), "0");
