@@ -239,12 +239,13 @@ export type FinanceAgenda = {
 export async function financeAgenda(
   supabase: SupabaseClient,
   householdId: string,
-  options: { now?: Date } = {},
+  /** `obligations`: the whole `listObligations` read, when a screen already has it. */
+  options: { now?: Date; obligations?: Obligation[] } = {},
 ): Promise<FinanceAgenda> {
   const now = options.now ?? new Date();
 
   const [obligations, arranged, anomalyRows] = await Promise.all([
-    listObligations(supabase, householdId),
+    options.obligations ?? listObligations(supabase, householdId),
     arrangedObligationIds(supabase, householdId),
     supabase
       .from("spend_anomalies")

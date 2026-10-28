@@ -1,13 +1,18 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 
 import { may } from "@wonderhome/core/billing/repository";
+import type { Consumable } from "@wonderhome/core/commerce/consumables";
 import { shoppingAgenda } from "@wonderhome/core/commerce/repository";
+import type { FamilyEvent } from "@wonderhome/core/family/schedule";
 import { familyAgenda } from "@wonderhome/core/family/repository";
 import { financeAgenda } from "@wonderhome/core/finance/repository";
+import type { Obligation } from "@wonderhome/core/finance/payments";
 import type { HomeAssessment } from "@wonderhome/core/home/assessment";
 import { homeAgenda } from "@wonderhome/core/home/repository";
 import type { PersonalView } from "@wonderhome/core/identity/views";
+import type { Meal } from "@wonderhome/core/meals/meals";
 import { mealAgenda } from "@wonderhome/core/meals/repository";
+import type { SchoolItem } from "@wonderhome/core/school/items";
 import { schoolAgenda } from "@wonderhome/core/school/repository";
 
 /**
@@ -36,9 +41,39 @@ export type HouseholdAgenda = {
   checked: number;
 };
 
+/**
+ * Rows a screen reads anyway, handed to the agenda so one request reads each
+ * table once (performance audit B4). Each is the same promise the screen
+ * awaits; the agenda keeps the rows its own read would have returned, so
+ * every count, "N of M checked" included, is unchanged. `events` is a
+ * `listEvents` read from now or earlier and `meals` a `listMeals` read from
+ * today (UTC) or earlier, neither with an upper bound; the rest are whole
+ * reads. Only pass one the agenda reads for this person (`agendaReads`).
+ */
+export type AgendaRows = {
+  events?: Promise<FamilyEvent[]>;
+  meals?: Promise<Meal[]>;
+  obligations?: Promise<Obligation[]>;
+  schoolItems?: Promise<SchoolItem[]>;
+  consumables?: Promise<Consumable[]>;
+};
+
+/** Which of those tables `householdAgenda` reads for this person, so a screen shares only those. */
+export function agendaReads(view: PersonalView): Record<keyof AgendaRows, boolean> {
+  const permitted = (permission: string) => view.permissions.includes(permission as never);
+  const adult = view.tone !== "child";
+  return {
+    events: true,
+    meals: adult,
+    consumables: adult,
+    obligations: permitted("finance.view"),
+    schoolItems: permitted("school.manage") || permitted("school.view_own"),
+  };
+}
+
 const RISK_ORDER: Record<HomeAssessment["riskLevel"], number> = { high: 0, medium: 1, low: 2, none: 3 };
 
-export async function householdAgenda(supabase: SupabaseClient, householdId: string, view: PersonalView): Promise<HouseholdAgenda> {
+export async function householdAgenda(supabase: SupabaseClient, householdId: string, view: PersonalView, rows: AgendaRows = {}): Promise<HouseholdAgenda> {
   const permitted = (permission: string) => view.permissions.includes(permission as never);
   const readers: Array<() => Promise<DomainSummary | null>> = [];
 
@@ -51,31 +86,31 @@ export async function householdAgenda(supabase: SupabaseClient, householdId: str
 
   if (permitted("school.manage") || permitted("school.view_own")) {
     readers.push(() => gated(supabase, householdId, "school.connector", () => summarize("school", "School", "/school", async () => {
-      const agenda = await schoolAgenda(supabase, householdId);
+      const agenda = await schoolAgenda(supabase, householdId, { items: await rows.schoolItems });
       return { needs: [...agenda.deadlines, ...agenda.messages], checked: agenda.checked };
     })));
   }
 
   if (view.tone !== "child") {
     readers.push(() => gated(supabase, householdId, "groceries.core", () => summarize("shopping", "Groceries", "/groceries", async () => {
-      const agenda = await shoppingAgenda(supabase, householdId);
+      const agenda = await shoppingAgenda(supabase, householdId, { consumables: await rows.consumables });
       return { needs: [...agenda.needed, ...agenda.lateOrders], checked: agenda.checked };
     })));
     readers.push(() => gated(supabase, householdId, "meals.planning", () => summarize("meals", "Meals", "/meals", async () => {
-      const agenda = await mealAgenda(supabase, householdId);
+      const agenda = await mealAgenda(supabase, householdId, { meals: await rows.meals });
       return { needs: agenda.meals, checked: agenda.checked };
     })));
   }
 
   if (permitted("finance.view")) {
     readers.push(() => gated(supabase, householdId, "finance.bills", () => summarize("bills", "Bills", "/bills", async () => {
-      const agenda = await financeAgenda(supabase, householdId);
+      const agenda = await financeAgenda(supabase, householdId, { obligations: await rows.obligations });
       return { needs: [...agenda.bills, ...agenda.anomalies], checked: agenda.checked };
     })));
   }
 
   readers.push(() => gated(supabase, householdId, "family.events", () => summarize("family", "Family time", "/family", async () => {
-    const agenda = await familyAgenda(supabase, householdId);
+    const agenda = await familyAgenda(supabase, householdId, { events: await rows.events });
     return { needs: [...agenda.events, ...agenda.gifts, ...agenda.conflicts], checked: agenda.checked };
   })));
 

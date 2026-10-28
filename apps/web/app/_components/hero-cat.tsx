@@ -1,11 +1,10 @@
 import { catThoughts, createThoughtModel, settleThoughts } from "@wonderhome/core/home/cat-thoughts";
 import { CAT_VOICES, catFacts } from "@wonderhome/core/home/cat-facts";
 import { platformKey } from "@wonderhome/core/ai/model-key";
-import { listEvents } from "@wonderhome/core/family/repository";
 import type { LanguageCode } from "@wonderhome/core/i18n/locales";
-import { listMeals } from "@wonderhome/core/meals/repository";
 import { HeroCat } from "@wonderhome/core/ui/cozy-corner-illustration";
 
+import { homeRows, localDay } from "../_lib/home-reads";
 import type { Session } from "../_lib/session";
 import { formatTime } from "../_lib/session";
 import { CatThoughtBubble } from "./cat-thought-bubble";
@@ -15,11 +14,6 @@ const BUILT_IN = 8;
 
 /** The bubble waits this long at most, once per server, for a first batch of passing thoughts. */
 const FIRST_BATCH_MS = 1_200;
-
-/** A local day, YYYY-MM-DD, on the household's clock. */
-function localDay(timezone: string, at: Date): string {
-  return new Intl.DateTimeFormat("en-CA", { timeZone: timezone }).format(at);
-}
 
 /**
  * Home's cat and what it is thinking (the owner, 2026-10-21: "show a think
@@ -46,9 +40,11 @@ export async function HeroCatThought({ session, now }: { session: Session; now: 
   const key = platformKey();
   const model = key ? createThoughtModel(key.provider, key.key) : null;
 
+  // The same reads Home's agenda uses, once per request; the cat keeps tonight and the next two days.
+  const rows = homeRows(supabase, householdId, timezone, now.getTime());
   const [meals, events, toBuy] = await Promise.all([
-    listMeals(supabase, householdId, { from: today, to: today }).catch(() => []),
-    listEvents(supabase, householdId, { from: new Date(now.getTime() - 12 * 3600 * 1000), to: dayAfter }).catch(() => []),
+    rows.meals.then((all) => all.filter((meal) => meal.onDate === today)).catch(() => []),
+    rows.events.then((all) => all.filter((event) => event.startsAt.getTime() <= dayAfter.getTime())).catch(() => []),
     (async () => {
       const { count } = await supabase.from("shopping_list_entries").select("id", { count: "exact", head: true }).eq("household_id", householdId).eq("state", "to_buy");
       return count ?? 0;

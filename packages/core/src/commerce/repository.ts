@@ -398,12 +398,13 @@ export type ShoppingAgenda = {
 export async function shoppingAgenda(
   supabase: SupabaseClient,
   householdId: string,
-  options: { now?: Date } = {},
+  /** `consumables`: the whole `listConsumables` read, when a screen already has it. */
+  options: { now?: Date; consumables?: Consumable[] } = {},
 ): Promise<ShoppingAgenda> {
   const now = options.now ?? new Date();
 
   const [consumables, orders] = await Promise.all([
-    listConsumables(supabase, householdId),
+    options.consumables ?? listConsumables(supabase, householdId),
     listOrders(supabase, householdId),
   ]);
 

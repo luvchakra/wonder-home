@@ -916,12 +916,17 @@ export type MealAgenda = {
 export async function mealAgenda(
   supabase: SupabaseClient,
   householdId: string,
-  options: { now?: Date } = {},
+  /**
+   * `meals`: rows a screen already read with `listMeals` from this UTC day or
+   * earlier (no upper bound); the agenda keeps exactly the ones its own read
+   * would return.
+   */
+  options: { now?: Date; meals?: Meal[] } = {},
 ): Promise<MealAgenda> {
   const now = options.now ?? new Date();
   const today = now.toISOString().slice(0, 10);
 
-  const meals = await listMeals(supabase, householdId, { from: today });
+  const meals = options.meals ? options.meals.filter((meal) => meal.onDate >= today) : await listMeals(supabase, householdId, { from: today });
 
   return {
     meals: meals

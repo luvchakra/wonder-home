@@ -97,3 +97,51 @@ These ran in the browser against a production build pointed at the live project,
 - The E2E shell and landing specs: 38 of 38 pass.
 - `e2e/screens.spec.ts` would not parse in this container (`Unexpected token (425:0)`). It is unchanged since #382, so this is not from this change.
 - **Not checked:** a real microphone session, because the container has no audio devices. The engine start path itself is unchanged once the engines are mounted.
+
+## B4: one read per table on Home, Today and Meals
+
+**What changed**
+- **The agendas take rows a screen already read:** `familyAgenda`, `mealAgenda`, `financeAgenda`, `schoolAgenda` and `shoppingAgenda` each take an optional `events`, `meals`, `obligations`, `items` or `consumables`.
+  - Each agenda keeps exactly the rows its own read would return: events still to end, meals from today in UTC, and the whole list for the others.
+  - So every count stays the same, "N of M checked" included.
+- **`householdAgenda(…, rows)`** takes those reads as the same promises the screen awaits.
+  - `agendaReads(view)` says which tables the agenda reads for a person, so a screen shares only those.
+- **Home** (`_lib/home-reads.ts` `homeRows`):
+  - Events and meals are read once per request through React `cache()`.
+  - The rows are shared by the agenda, the fortnight list and the cat's thought, which streams in its own Suspense boundary.
+  - Each read starts at the earliest window any of them needs, with no upper bound. Each part keeps its own window.
+- **Today's household lens**, now in the Calendar's Day view (`calendar/_components/today-plan.tsx`, moved there by #425):
+  - When the agenda runs, events, meals, bills, school items and the cupboard are each read once, wide enough for both.
+  - The plan keeps its own window of the rows.
+  - The mine and family lenses keep their narrow windowed reads.
+- **Meals:**
+  - One `meals` read, from the earlier of the week's Monday and today (UTC).
+  - The agenda keeps today onwards. The week is its seven days.
+
+**The agenda windows**, settled together with the "checked" wording:
+- `familyAgenda` and `mealAgenda` keep reading from now with no upper bound. They grow only with future plans, not history.
+- Bounding them would change the "N of M checked" count that Home shows, for no measurable gain.
+- No visible number changes.
+
+**Numbers:** Supabase REST calls per page load, from a production build against the live project, in the QA household. They were counted by wrapping the server's `fetch`.
+
+| Page | `main` | B4 | Repeated table reads removed |
+|---|---|---|---|
+| `/` (Home) | 42 | 39 | `family_events` ×3 → 1, `meals` ×2 → 1 |
+| Today, household lens (old Today page, before #425) | 30 | 26 | `family_events`, `meals`, `obligations` and `school_items`, each ×2 → 1 |
+| Today, household lens (Calendar Day view, after #425) | 46 | 42 | `family_events` ×4 → 3, `school_items` ×3 → 2, `obligations` ×3 → 2, `meals` ×2 → 1 |
+| `/meals` | 17 | 16 | `meals` ×2 → 1 |
+
+- Every removed read was one of the unbounded ones: the agenda's whole history of school items and bills.
+- Load times from this container are dominated by its distance to ap-south-1, so they are not quoted.
+
+**Verified**
+- **Rendered text unchanged:** the text of Home, Today (household and mine lenses) and Meals was compared between `main` and this branch, in a QA household seeded with 5 events (earlier today, running now, tomorrow, in 10 days, next month), 4 meals (yesterday to next week) and 2 bills.
+  - The text was identical twice: once before and once after rebasing onto #425.
+  - The only difference was the cat's bubble, which appears at random. Its facts in the page payload were identical on both builds.
+- **Unit test:** `home/agenda-shared-rows.test.ts` uses an in-memory table with the real filter semantics. It proves that `familyAgenda` and `mealAgenda`, given wider rows, return exactly what their own read returns, and do not read the table again.
+- Typecheck is clean, and ESLint is clean on the changed files.
+
+**Follow-ups found**, added to the audit backlog:
+- **B4b:** the Calendar's Day view (#425) reads `family_events`, `school_items` and `obligations` once more for the calendar itself. It can share the plan's reads the same way. That code was being reshaped by another session today, so it was left alone.
+- **B4c:** Meals reads `recipes` twice and `consumables` twice. These are different column sets, in parallel: `listRecipesForEdit` and `recipesWithIngredients`, and `listGroceries` and `listConsumables`. They cost queries, not waiting.

@@ -113,11 +113,14 @@ export default async function MealsPage({
     wide: active === "plan",
   };
 
+  // Meals are read once (performance audit B4): from the earlier of the
+  // week's Monday and today (UTC, the agenda's day) onwards. The agenda keeps
+  // today on, exactly its own read; the week is its seven days of the rows.
+  const utcToday = now.toISOString().slice(0, 10);
+  const mealRows = listMeals(supabase, householdId, { from: active === "plan" && weekDates[0]! < utcToday ? weekDates[0] : utcToday });
   // The plan check runs alongside the reads it gates; a refused plan drops them.
   const reads = Promise.all([
-    // Every meal from today on, read once: the agenda assesses them and the
-    // week below is the same rows, not a second read.
-    mealAgenda(supabase, householdId).catch(() => null),
+    mealRows.then((meals) => mealAgenda(supabase, householdId, { now, meals })).catch(() => null),
     listMembers(
       supabase,
       householdId,
@@ -138,7 +141,9 @@ export default async function MealsPage({
       ? listCatalogRecipes(supabase, publicEnv().NEXT_PUBLIC_SUPABASE_URL).catch(() => [])
       : Promise.resolve([]),
     // The week being planned, past days included, bounded to its seven days.
-    active === "plan" ? listMeals(supabase, householdId, { from: weekDates[0], to: weekDates[6] }).catch(() => [] as Meal[]) : Promise.resolve([] as Meal[]),
+    active === "plan"
+      ? mealRows.then((meals) => meals.filter((meal) => meal.onDate >= weekDates[0]! && meal.onDate <= weekDates[6]!)).catch(() => [] as Meal[])
+      : Promise.resolve([] as Meal[]),
     // The week template (the owner, 2026-10-20): its options, and whether WonderHome has planned this week from it.
     active === "plan" || active === "template" ? listTemplateOptions(supabase, householdId).catch(() => [] as TemplateOption[]) : Promise.resolve([] as TemplateOption[]),
     active === "plan" ? weekPlanned(supabase, householdId, weekStart) : Promise.resolve(null),

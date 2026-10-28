@@ -15,7 +15,6 @@ import {
 import Link from "next/link";
 
 import { asAutonomyMode } from "@wonderhome/core/household/autonomy";
-import { listEvents } from "@wonderhome/core/family/repository";
 import { listPets } from "@wonderhome/core/home/repository";
 import type { Translate } from "@wonderhome/core/i18n/translate";
 import { describeAction, isFamilyMoment, type FamilyEvent } from "@wonderhome/core/family/schedule";
@@ -67,6 +66,7 @@ import { eventPlaceSearch } from "../_lib/places";
 import { cadenceLabel } from "../_lib/cadence";
 import { describeRoles } from "../_lib/member-role";
 import { householdAgenda, type DomainSummary } from "../_lib/agenda";
+import { homeRows } from "../_lib/home-reads";
 import { eventGoing, eventWhen } from "../_lib/event-when";
 import { formatDate, formatTime, formatToday, greetingFor, type Session } from "../_lib/session";
 import { localizeSetup, onboardingCardLabels, setupProgressLabels } from "../_lib/setup-labels";
@@ -379,10 +379,17 @@ async function DashboardBody({ session, now }: { session: Session; now: Date }) 
     })(),
   ]);
 
+  // Events and meals are read once per request, shared with the cat's
+  // thought (performance audit B4): the agenda keeps its own rows of them and
+  // the next two weeks below are the events still to end within them.
+  const shared = homeRows(supabase, householdId, membership.household.timezone, now.getTime());
+  const fortnight = now.getTime() + 14 * 86_400_000;
   const [agenda, members, upcoming, setupFacts, onboarding, responsibilityRows, pets] = await Promise.all([
-    householdAgenda(supabase, householdId, view),
+    householdAgenda(supabase, householdId, view, { events: shared.events, meals: shared.meals }),
     listMembers(supabase, householdId, membership.household.ownerMemberId).catch(() => []),
-    listEvents(supabase, householdId, { from: now, to: new Date(now.getTime() + 14 * 86_400_000) }).catch(() => []),
+    shared.events
+      .then((rows) => rows.filter((event) => event.endsAt.getTime() >= now.getTime() && event.startsAt.getTime() <= fortnight))
+      .catch(() => []),
     manages ? loadSetupFacts(supabase, membership.household).catch(() => null) : Promise.resolve(null),
     // Guided setup still under way (story 02-009): its own resume row.
     manages ? loadOnboardingProgress(supabase, membership.household).catch(() => null) : Promise.resolve(null),
