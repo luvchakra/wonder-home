@@ -251,3 +251,28 @@ With B4, Home went from 42 calls to 36.
   - `meal-forms` is a 10.8 KB gz chunk, used by Meals and Today's plan.
   - Both are smaller than the sheet above.
 - This is left as its own PR rather than rushed here.
+
+## B9: the middleware skips what never carries a session
+
+**What changed:** the matcher in `apps/web/middleware.ts` now also skips:
+- files by extension: `js`, `css`, `woff`/`woff2`, `json`, `txt`, `map` and `webmanifest`, on top of the images it already skipped. In practice that is `/sw.js`, `/manifest.webmanifest` and `/robots.txt`. Built JS, CSS and fonts were already skipped under `_next/static`.
+- the four webhooks other services call, which carry no cookie and authenticate the sender themselves:
+  - `whatsapp/webhook`
+  - `billing/webhook` (and its `[provider]` route)
+  - `homesend/email/webhook`
+  - `platform/webhook-delivery`
+
+Every member-facing API route still runs it, so the session cookie keeps being refreshed there. That includes the household's own `webhooks` settings routes.
+
+**Why it is safe**
+- Every path now skipped is already `public` in `security/route-policy.ts` (`/api/*`, `/sw.js`, `/manifest.webmanifest` and `/robots.txt`). So the middleware's only gate, the sign-in redirect, never applied to them.
+- No page or route in `app/` ends in one of these extensions.
+
+**Numbers:**
+- No middleware run for the service worker and manifest that every visit fetches, or for any webhook delivery.
+- This is a per-request saving of one middleware invocation, a local `getClaims()`. It is not a database round trip.
+
+**Verified**
+- `middleware-matcher.test.ts` is new. It checks that pages, `/platform-admin`, the conversation API and the household webhooks settings routes still run the middleware, and that built assets, public files, fonts and the four inbound webhooks (with a provider suffix too) do not.
+- A production build answered as expected. `/sw.js`, `/manifest.webmanifest` and `/robots.txt` return 200 with the full security headers (CSP, nosniff, HSTS). The WhatsApp and billing webhooks answer from their own handlers (401 and 405) with the same headers. A signed-out `/today` still redirects to `/sign-in?next=%2Ftoday`.
+- The E2E shell, session and install-banner specs: 38 passed. The 8 skipped are the signed-in specs, which need E2E credentials.
