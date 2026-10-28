@@ -30,14 +30,13 @@ const E2E_EMAIL_DOMAIN = "e2e.wonderhome-test.internal";
 
 /** The main signed-in screens, as shell.spec.ts gates them. */
 const SCREENS = [
-  "/today",
+  "/calendar?view=day",
   "/calendar",
   "/ai",
   "/family",
   "/more",
   "/household",
   "/household/home",
-  "/household/members",
   "/household/responsibilities",
   "/household/responsibilities?group=outcome",
   "/household/responsibilities?tab=mine",

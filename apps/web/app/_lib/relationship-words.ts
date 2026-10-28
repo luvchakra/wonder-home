@@ -10,7 +10,7 @@ import {
 } from "@wonderhome/core/identity/relationships";
 import type { Translate } from "@wonderhome/core/i18n/translate";
 
-import type { RelationshipRowView, RelationshipSuggestionView, RelationshipWords } from "../household/members/relationships";
+import type { RelationshipRowView, RelationshipSuggestionView, RelationshipWords } from "../family/relationships";
 
 /** A relation in the reader's words: one of the app's kinds translated, the household's own as typed. */
 export function relationLabel(t: Translate, relation: string): string {

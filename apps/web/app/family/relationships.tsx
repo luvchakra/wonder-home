@@ -13,7 +13,7 @@ import { Pill } from "@wonderhome/core/ui/pill";
 import { Select } from "@wonderhome/core/ui/select";
 import { Sheet } from "@wonderhome/core/ui/sheet";
 
-import { removeRelationshipAction, saveRelationshipAction, type RelationshipState } from "../../(auth)/relationship-actions";
+import { removeRelationshipAction, saveRelationshipAction, type RelationshipState } from "../(auth)/relationship-actions";
 
 /** Every word the Relationships card needs, in the reader's language (built on the server). */
 export type RelationshipWords = {

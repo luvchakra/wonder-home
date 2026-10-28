@@ -311,7 +311,7 @@ export default async function HousehelperPage({
                 a household with one househelper can still take on a
                 second, different person (a cook alongside a cleaner). */}
             {view.permissions.includes("members.manage") ? (
-              <PillLink href="/household/members" tone="quiet">
+              <PillLink href="/family#add" tone="quiet">
                 <UserPlus aria-hidden className="size-3.5" /> {t("helpers.addHelper")}
               </PillLink>
             ) : null}

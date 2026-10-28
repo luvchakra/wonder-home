@@ -82,9 +82,9 @@ const ALLOWED_CAPITALS = new Set([
   ...MONTHS, "sept",
   "adult", "child", "helper", "mr", "mrs", "ms", "dr",
   // The app's own screens, which an answer may point to — every word of every
-  // label a reply may link to ("[People](/household/members)" names a screen,
+  // label a reply may link to ("[People](/family)" names a screen,
   // not a person), so the screen list and this one never drift apart.
-  "home", "family", "more", "groceries", "meals", "bills", "finance", "school", "kids", "health", "househelper", "responsibilities",
+  "home", "family", "people", "today", "plan", "more", "groceries", "meals", "bills", "finance", "school", "kids", "health", "househelper", "responsibilities",
   "review", "upkeep", "notifications", "household", "settings", "privacy",
   ...APP_PLACES.flatMap((place) => place.label.toLowerCase().split(/[^a-z]+/).filter(Boolean)),
 ]);

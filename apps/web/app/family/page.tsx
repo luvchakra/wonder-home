@@ -1,4 +1,4 @@
-import { CalendarDays, CalendarHeart, GraduationCap, HandHeart, Heart, MapPin, MessageCircle, MessagesSquare, PawPrint, Settings2, Sun, UserPlus, Users } from "lucide-react";
+import { CalendarDays, CalendarHeart, GraduationCap, HandHeart, Heart, MapPin, MessageCircle, MessagesSquare, PawPrint, Sun, UserPlus, Users } from "lucide-react";
 import Link from "next/link";
 
 import { may } from "@wonderhome/core/billing/repository";
@@ -8,7 +8,8 @@ import { isFamilyMoment } from "@wonderhome/core/family/schedule";
 import { listPets } from "@wonderhome/core/home/repository";
 import { platformMailConfig } from "@wonderhome/core/email/mailer";
 import { isHouseholdAdmin, listMembers } from "@wonderhome/core/identity/households";
-import { listRelationships } from "@wonderhome/core/identity/relationships";
+import { listInvitations } from "@wonderhome/core/identity/invitations";
+import { listGuardianLinks, listRelationships, suggestRelationships } from "@wonderhome/core/identity/relationships";
 import { readMemberEmails } from "@wonderhome/core/identity/member-email";
 import { readMemberPhones } from "@wonderhome/core/identity/member-phone";
 import { listIntegrations } from "@wonderhome/core/integrations/repository";
@@ -33,13 +34,18 @@ import { presentationFor } from "../_components/agenda-row";
 import { FamilyNeedAction, SettleEventPill, type FamilyNeedLabels } from "../_components/family-need-action";
 import { listWorkPlaces } from "@wonderhome/core/household/work-place";
 import { MemberDetail } from "../_components/member-detail";
-import { NewEventForm } from "../_components/new-event-form";
 import { PetDetail } from "../_components/pet-detail";
 import { eventGoing, eventWhen } from "../_lib/event-when";
-import { eventFormLabels } from "../_lib/event-form-labels";
-import { eventPlaceSearch } from "../_lib/places";
 import { describeRoles } from "../_lib/member-role";
-import { relationsLine } from "../_lib/relationship-words";
+import { describeRelationships, describeSuggestions, relationsLine, relationshipWords } from "../_lib/relationship-words";
+import { memberFormLabels, pendingInvitationLabels } from "../_lib/member-form-labels";
+import { AddChildForm } from "../_components/add-child-form";
+import { AddHelperForm } from "../_components/add-helper-form";
+import { AddPetForm } from "../_components/add-pet-form";
+import { InviteMemberForm } from "../_components/invite-member-form";
+import { PendingInvitations } from "../_components/pending-invitations";
+import { RemoveMemberControl } from "../_components/remove-member-control";
+import { RelationshipsCard } from "./relationships";
 import { formatDate, formatTime, requireSession } from "../_lib/session";
 import { MemberRoleControl } from "../_components/member-role-control";
 import { ChildQuietControl } from "../_components/child-quiet-control";
@@ -59,6 +65,11 @@ export const dynamic = "force-dynamic";
 /**
  * Our Family (requirements §13): everyone, what each person is carrying, and
  * the time the family keeps for itself.
+ *
+ * It is also the one place a person is managed (design/UI-SIMPLIFICATION-v1.md
+ * M3): each person opens to their role and Remove, how the family is related
+ * sits below them, and an Admin adds someone at the foot of the page — what
+ * Members & roles held before it was folded in here.
  */
 export default async function FamilyPage() {
   const session = await requireSession("/family");
@@ -89,6 +100,11 @@ export default async function FamilyPage() {
     loadLocations(supabase, householdId).catch(() => ({ sharing: [], locations: [] })),
     loadKnownPlaces(supabase, householdId, t("location.home")).catch(() => []),
   ]);
+  const admin = isHouseholdAdmin(membership);
+  // What an Admin needs to add and relate people: pending invitations and the guardian links suggestions come from.
+  const [invitations, guardianLinks] = admin
+    ? await Promise.all([listInvitations(supabase, householdId).catch(() => []), listGuardianLinks(supabase, householdId).catch(() => [])])
+    : [[], []];
   // A child's quiet hours (story 27-015): an Admin, or the child's own guardian, sees and sets them.
   const childIds = members.filter((member) => member.memberType === "child").map((member) => member.id);
   const isAdminViewer = isHouseholdAdmin(membership);
@@ -150,7 +166,6 @@ export default async function FamilyPage() {
   const needs = agenda ? [...agenda.events, ...agenda.conflicts, ...agenda.gifts] : [];
   // A family moment is shared family time (`isFamilyMoment`), never just the next protected event.
   const moment = events.find((event) => event.protected && isFamilyMoment(event)) ?? events.find((event) => isFamilyMoment(event)) ?? null;
-  const admin = isHouseholdAdmin(membership);
   // Admins invite the people the household keeps without an account to sign in as themselves.
   const invite = admin ? { householdName: membership.household.name, inviterName: membership.displayName, canEmail: platformMailConfig() !== null } : null;
   const needLabels: FamilyNeedLabels = {
@@ -165,6 +180,12 @@ export default async function FamilyPage() {
     sorted: t("family.need.sorted"),
     fineAsIs: t("family.need.fineAsIs"),
   };
+  const formLabels = memberFormLabels(t);
+  // How the family is related: active family only, never a househelper.
+  const relatable = familyMembers.filter((member) => member.status !== "inactive");
+  const relationshipRows = describeRelationships(t, relationships, members);
+  const suggestions = admin ? describeSuggestions(t, suggestRelationships(members, relationships, guardianLinks), members) : [];
+  const removable = (member: (typeof members)[number]) => admin && !member.isOwner && member.id !== membership.memberId && member.status === "active";
   const statusLabel = (status: string) => (status === "invited" ? t("family.status.invitedLong") : status === "inactive" ? t("family.status.inactive") : null);
 
   return (
@@ -220,10 +241,7 @@ export default async function FamilyPage() {
                   ) : null}
                   {admin ? (
                     <>
-                      <Link href="/household/members" aria-label={t("family.manage")} title={t("family.manage")} className={ICON_LINK}>
-                        <Settings2 aria-hidden className="size-4" />
-                      </Link>
-                      <PillLink href="/household/members" tone="primary">
+                      <PillLink href="#add" tone="primary">
                         <UserPlus aria-hidden className="size-3.5" /> <span className="sm:hidden">{t("family.inviteShort")}</span><span className="hidden sm:inline">{t("family.inviteMember")}</span>
                       </PillLink>
                     </>
@@ -233,7 +251,7 @@ export default async function FamilyPage() {
             }
           />
           {familyMembers.length === 0 ? (
-            <EmptyState icon={Users} tone="people" title={t("family.empty.members")} description={t("family.empty.membersLede")} action={admin ? <ButtonLink href="/household/members">{t("family.inviteSomeone")}</ButtonLink> : null} />
+            <EmptyState icon={Users} tone="people" title={t("family.empty.members")} description={t("family.empty.membersLede")} action={admin ? <ButtonLink href="#add">{t("family.inviteSomeone")}</ButtonLink> : null} />
           ) : (
             // Full-width rows that open in place (rule 15, rule 19: primary
             // information is never squeezed into a half-width card) — the
@@ -297,6 +315,7 @@ export default async function FamilyPage() {
                           withLabel
                         />
                       ) : null}
+                      {removable(member) ? <RemoveMemberControl householdId={householdId} memberId={member.id} displayName={member.displayName} labels={formLabels} /> : null}
                       {member.memberType === "child" && (isAdminViewer || guarded.has(member.id)) && childQuiet(member) ? (
                         <ChildQuietControl
                           householdId={householdId}
@@ -359,15 +378,26 @@ export default async function FamilyPage() {
           )}
         </section>
 
+        {relatable.length >= 2 || relationshipRows.length > 0 ? (
+          <RelationshipsCard
+            householdId={householdId}
+            admin={admin}
+            people={relatable.map((member) => ({ id: member.id, name: member.displayName }))}
+            rows={relationshipRows}
+            suggestions={suggestions}
+            words={relationshipWords(t)}
+          />
+        ) : null}
+
         {pets.length > 0 || admin ? (
           <section id="pets" className="wh-rise scroll-mt-20" style={{ "--wh-rise-delay": "75ms" } as React.CSSProperties}>
             <SectionHeader
               title={t("family.pets")}
               count={pets.length}
-              action={admin ? <PillLink href="/household/members" tone="quiet"><PawPrint aria-hidden className="size-3.5" /> {t("family.addPet")}</PillLink> : null}
+              action={admin ? <PillLink href="#add" tone="quiet"><PawPrint aria-hidden className="size-3.5" /> {t("family.addPet")}</PillLink> : null}
             />
             {pets.length === 0 ? (
-              <EmptyState icon={PawPrint} tone="care" title={t("family.empty.pets")} description={t("family.empty.petsLede")} action={admin ? <ButtonLink href="/household/members">{t("family.addAPet")}</ButtonLink> : null} />
+              <EmptyState icon={PawPrint} tone="care" title={t("family.empty.pets")} description={t("family.empty.petsLede")} action={admin ? <ButtonLink href="#add">{t("family.addAPet")}</ButtonLink> : null} />
             ) : (
               <Card className="p-2">
                 <ul className="divide-y divide-[var(--wh-border)]">
@@ -401,7 +431,7 @@ export default async function FamilyPage() {
             <SectionHeader
               title={t("family.help")}
               count={helpers.length}
-              action={admin ? <PillLink href="/household/members" tone="quiet"><UserPlus aria-hidden className="size-3.5" /> {t("family.addHelper")}</PillLink> : null}
+              action={admin ? <PillLink href="#add" tone="quiet"><UserPlus aria-hidden className="size-3.5" /> {t("family.addHelper")}</PillLink> : null}
             />
             <p className="mb-2 text-sm text-[var(--wh-foreground-muted)]">
               {t("family.helpLede")}
@@ -442,6 +472,7 @@ export default async function FamilyPage() {
                         <PillLink href="/househelper" tone="quiet">
                           {t("family.fullHelperProfile")}
                         </PillLink>
+                        {removable(member) ? <RemoveMemberControl householdId={householdId} memberId={member.id} displayName={member.displayName} labels={formLabels} /> : null}
                       </div>
                     </ExpandableRow>
                   ))}
@@ -513,13 +544,14 @@ export default async function FamilyPage() {
             ) : null}
 
             <section className="wh-rise" style={{ "--wh-rise-delay": "180ms" } as React.CSSProperties}>
-              <SectionHeader title={t("family.upcoming")} count={events.length} action={<NewEventForm householdId={householdId} labels={eventFormLabels(t, { placeSearch: eventPlaceSearch(membership) })} />} />
+              {/* The next few only; planning and the rest are the Calendar's (design/UI-SIMPLIFICATION-v1.md M4). */}
+              <SectionHeader title={t("family.upcoming")} count={events.length} action={<PillLink href="/calendar" tone="quiet">{t("family.seeAllCalendar")}</PillLink>} />
               {events.length === 0 ? (
                 <EmptyState icon={CalendarHeart} tone="people" title={t("family.empty.events")} description={t("family.empty.eventsLede")} />
               ) : (
                 <Card className="p-2">
                   <ul className="divide-y divide-[var(--wh-border)]">
-                    {events.slice(0, 8).map((event) => (
+                    {events.slice(0, 3).map((event) => (
                       <CalendarItem
                         key={event.id}
                         title={event.title}
@@ -535,7 +567,7 @@ export default async function FamilyPage() {
                           const going = eventGoing(event, (id) => members.find((member) => member.id === id)?.displayName ?? null, t, session.locale.format.locale);
                           return going.names.length > 0 ? going.words : null;
                         })()}
-                        href={`/family/events/${event.id}`}
+                        href={`/calendar/events/${event.id}`}
                         action={event.actionState === "needs_gift" ? <SettleEventPill householdId={householdId} eventId={event.id} label={needLabels.giftSorted} /> : undefined}
                       />
                     ))}
@@ -545,6 +577,18 @@ export default async function FamilyPage() {
             </section>
           </>
         )}
+
+        {admin ? (
+          // Adding someone, at the foot of the page every "Invite" and "Add" above leads to.
+          <section id="add" className="scroll-mt-20 space-y-4">
+            <SectionHeader title={t("family.addSection")} />
+            <InviteMemberForm householdId={householdId} canInviteAdministrator={admin} labels={formLabels} />
+            <PendingInvitations invitations={invitations} timezone={timezone} labels={pendingInvitationLabels(t)} />
+            <AddChildForm householdId={householdId} labels={formLabels} />
+            <AddHelperForm householdId={householdId} labels={formLabels} />
+            <AddPetForm householdId={householdId} labels={formLabels} />
+          </section>
+        ) : null}
       </div>
     </AppShell>
   );

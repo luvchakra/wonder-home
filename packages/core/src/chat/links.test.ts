@@ -6,7 +6,7 @@ const ID = "8f14e45f-ceea-4e67-a5f4-37a7e4b2a2d1";
 
 describe("chat links", () => {
   it("opens each kind of record where it lives", () => {
-    expect(linkForRecord({ kind: "event", id: ID, label: "Anya's recital" })).toEqual({ kind: "event", path: `/family/events/${ID}`, label: "Anya's recital" });
+    expect(linkForRecord({ kind: "event", id: ID, label: "Anya's recital" })).toEqual({ kind: "event", path: `/calendar/events/${ID}`, label: "Anya's recital" });
     expect(linkForRecord({ kind: "grocery", id: ID, label: "Milk" })?.path).toBe(`/groceries/${ID}`);
     expect(linkForRecord({ kind: "bill", id: ID, label: "Electricity" })?.path).toBe("/bills");
     expect(linkForRecord({ kind: "meal", id: ID, label: "Kanda poha", onDate: "2026-10-22" })?.path).toBe("/meals?week=2026-10-22");

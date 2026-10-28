@@ -599,6 +599,8 @@ export const hi: Catalog = {
   "family.childQuiet.restored": "उम्र के हिसाब से आम समय पर लौट आए।",
   "family.pets": "पालतू",
   "family.addPet": "पालतू जोड़ें",
+  "family.addSection": "परिवार में जोड़ें",
+  "family.seeAllCalendar": "सब कैलेंडर में देखें",
   "family.empty.pets": "अभी कोई पालतू नहीं",
   "family.empty.petsLede": "पालतू जोड़ें, और WonderHome बाकी सबकी तरह उनकी देखभाल पर भी नज़र रखेगा।",
   "family.addAPet": "पालतू जोड़ें",

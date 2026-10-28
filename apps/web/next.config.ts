@@ -30,6 +30,8 @@ const nextConfig: NextConfig = {
       // links in sent notifications, e-mails and bookmarks keep working.
       { source: "/household/notifications", destination: "/settings/notifications#household", permanent: true },
       { source: "/household/delivery", destination: "/settings/notifications#delivery", permanent: true },
+      { source: "/household/members", destination: "/family", permanent: true },
+      { source: "/family/events/:eventId", destination: "/calendar/events/:eventId", permanent: true },
     ];
   },
   async headers() {

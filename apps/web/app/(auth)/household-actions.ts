@@ -73,7 +73,7 @@ export async function inviteMemberAction(
       role: parsed.data.role,
     });
 
-    revalidatePath("/household/members");
+    revalidatePath("/family");
 
     // There is no email provider configured, and claiming one would be a fake
     // integration, so the link is handed back for the inviter to pass on.
@@ -116,7 +116,7 @@ async function createMemberInvite(householdId: string, memberId: string): Promis
     memberType: member.memberType,
     role,
   });
-  revalidatePath("/household/members");
+  revalidatePath("/family");
   return { path: `/invite/${invitation.token}`, email, member, membership };
 }
 
@@ -200,7 +200,7 @@ export async function revokeInvitationAction(formData: FormData): Promise<void> 
 
   const supabase = await createClient();
   await revokeInvitation(supabase, invitationId.data);
-  revalidatePath("/household/members");
+  revalidatePath("/family");
 }
 
 export async function acceptInvitationAction(
@@ -260,7 +260,6 @@ export async function setMemberRoleAction(formData: FormData): Promise<void> {
     log.warn("role change refused", { reason: error instanceof Error ? error.name : "unknown" });
   }
 
-  revalidatePath("/household/members");
   revalidatePath("/family");
 }
 
@@ -326,12 +325,12 @@ export async function addChildAction(
       await updateMemberProfile(supabase, actor, { memberId: added.memberId, gender });
     } catch (error) {
       log.warn("recording a new child's gender failed", { reason: error instanceof Error ? error.name : "unknown" });
-      revalidatePath("/household/members");
+      revalidatePath("/family");
       return { notice: "Added. Their gender didn't save — add it from their details." };
     }
   }
 
-  revalidatePath("/household/members");
+  revalidatePath("/family");
   return {};
 }
 
@@ -383,7 +382,7 @@ export async function addHelperAction(
     if (parsed.data.phone) {
       const saved = await setMemberPhone(supabase, actor, { memberId, phone: parsed.data.phone });
       if (saved === "taken") {
-        revalidatePath("/household/members");
+        revalidatePath("/family");
         return { error: "The helper was added, but another member already has that phone number, so it wasn't saved." };
       }
     }
@@ -392,7 +391,7 @@ export async function addHelperAction(
     return { error: "We could not add that helper. Please try again." };
   }
 
-  revalidatePath("/household/members");
+  revalidatePath("/family");
   return {};
 }
 
@@ -425,7 +424,7 @@ export async function removeMemberAction(
     return { error: toErrorBody(error, "household").body.error.message };
   }
 
-  revalidatePath("/household/members");
+  revalidatePath("/family");
   return {};
 }
 
@@ -573,7 +572,6 @@ export async function updateMemberProfileAction(
     return { error: toErrorBody(error, "household").body.error.message };
   }
 
-  revalidatePath("/household/members");
   revalidatePath("/family");
   revalidatePath("/househelper");
   revalidatePath("/places");
@@ -639,7 +637,6 @@ export async function updateMemberAvatarAction(
     return { error: toErrorBody(error, "household").body.error.message };
   }
 
-  revalidatePath("/household/members");
   revalidatePath("/family");
   revalidatePath("/househelper");
   return { notice: "Photo updated." };
@@ -669,7 +666,6 @@ export async function removeMemberAvatarAction(
     return { error: toErrorBody(error, "household").body.error.message };
   }
 
-  revalidatePath("/household/members");
   revalidatePath("/family");
   revalidatePath("/househelper");
   return { notice: "Photo removed." };

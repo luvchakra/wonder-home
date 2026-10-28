@@ -1097,7 +1097,7 @@ describe("An answer composed from the facts is written for a person (the owner, 
     const answer = await turn("what do you know about the family", async (input) => {
       calls += 1;
       const member = input.facts.find((fact) => fact.text.startsWith("Child A is a child"))!;
-      return { text: "Two children and two adults.\n- **Child A** — a child → [People](/household/members)\n- More on the [Calendar](/calendar)", mode: "answer", grounded: true, usedFacts: [member.id] };
+      return { text: "Two children and two adults.\n- **Child A** — a child → [People](/family)\n- More on the [Calendar](/calendar)", mode: "answer", grounded: true, usedFacts: [member.id] };
     }, { items });
     expect(calls).toBe(1);
     expect(answer.source).toBe("model");

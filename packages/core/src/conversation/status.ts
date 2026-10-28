@@ -53,7 +53,7 @@ export function composeStatusAnswer(facts: StatusFacts): string {
   const needs = [...facts.needsYou];
   if (needs.length === 0) {
     parts.push(
-      `All quiet. I checked ${count(facts.checked, "thing")}${describeHandled(facts.handled)} and nothing needs you right now. ${linkTo("/today", "Today")} has the day's plan.`,
+      `All quiet. I checked ${count(facts.checked, "thing")}${describeHandled(facts.handled)} and nothing needs you right now. ${linkTo("/calendar?view=day", "Today's plan")} has the day's plan.`,
     );
   } else {
     const listed = needs.slice(0, MAX_LISTED).map((need) => `- **${need.title}** — ${trimReason(need.reason)}${need.place ? ` → ${linkTo(need.place.href, need.place.label)}` : ""}`);

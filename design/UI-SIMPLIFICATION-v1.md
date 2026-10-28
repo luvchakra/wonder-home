@@ -94,7 +94,7 @@ Redirect: `/household/members` → `/family`.
 | `/today` (timeline: My day / Family / Household, "Needs a person", "Looking ahead") | Becomes the **Day view of Calendar**: Calendar → Day shows the plan with the same three lenses. The Calendar tab already highlights for `/today`; now there is only one screen behind it. |
 | `NewEventForm` on Calendar, Family, Today and Home | **One "Plan something" sheet**, opened from Calendar's header and from Home. Family's and Today's copies go. Home keeps its own entry because it is the screen people start from. |
 | `/family/events/[id]` (back link already goes to Calendar) | Moves to `/calendar/events/[id]`, so the URL matches where people come from. |
-| School → Calendar tab | The tab becomes a link to "Open in Calendar", filtered to the child (`/calendar?who=<child>`). |
+| School → Calendar tab | **Stays** (decided while building, 2026-10-28): it is where school events are edited and school messages are read, which the Calendar does not do. The Calendar shows the same events read-only. |
 | Family → Upcoming events | A short list (next 3) with "See all in Calendar". |
 
 Redirects: `/today` → `/calendar?view=day`, `/family/events/:id` → `/calendar/events/:id`.

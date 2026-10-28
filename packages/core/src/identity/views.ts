@@ -54,7 +54,7 @@ const SECTIONS: readonly (ViewSection & { requires: Permission | null })[] = [
   {
     key: "members",
     label: "Members & roles",
-    href: "/household/members",
+    href: "/family",
     purpose: "Who is in the household",
     requires: "members.manage",
   },

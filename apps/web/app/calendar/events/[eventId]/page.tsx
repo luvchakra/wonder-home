@@ -50,7 +50,7 @@ const GAP_ICON: Record<PlanningGap, typeof MapPin> = { where: MapPin, who: Users
  */
 export default async function EventPage({ params, searchParams }: { params: Promise<{ eventId: string }>; searchParams: Promise<{ on?: string }> }) {
   const [{ eventId }, { on }] = await Promise.all([params, searchParams]);
-  const session = await requireSession(`/family/events/${eventId}`);
+  const session = await requireSession(`/calendar/events/${eventId}`);
   const { supabase, membership, viewer, secondary } = session;
   const { t } = session.locale;
   const householdId = membership.household.id;
@@ -125,7 +125,7 @@ export default async function EventPage({ params, searchParams }: { params: Prom
   const isOwner = event.ownerMemberId === membership.memberId;
   const occurrence = day && event.recurrence ? day : null;
   const occurrenceWords = occurrence ? formatDate(timezone, atLocal(occurrence, 12 * 60, timezone), "long") : null;
-  const back = day ? { href: `/calendar?view=day&date=${day}`, label: t("calendar.event.back") } : { href: "/family", label: t("events.back") };
+  const back = day ? { href: `/calendar?view=day&date=${day}`, label: t("calendar.event.back") } : { href: "/calendar", label: t("calendar.event.back") };
   const linkPath = event.inviteToken ? `/e/${event.inviteToken}` : null;
   const option = (key: (typeof INVITE_TEMPLATES)[number], name: string): InviteDesignOption => {
     const { palette, corner } = inviteDesign(key);
@@ -166,7 +166,7 @@ export default async function EventPage({ params, searchParams }: { params: Prom
   ];
 
   return (
-    <AppShell active="family" viewer={viewer} secondary={secondary} pathname="/family" back={back} title={event.title}>
+    <AppShell active="calendar" viewer={viewer} secondary={secondary} pathname="/calendar" back={back} title={event.title}>
       <div className="space-y-6">
         <header className="wh-rise space-y-1">
           <h1 className="text-[1.625rem] font-bold tracking-tight sm:text-3xl">{event.title}</h1>

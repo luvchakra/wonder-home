@@ -48,7 +48,7 @@ const OCTOBER = { from: "2026-10-01", to: "2026-10-31" };
 describe("event entries", () => {
   it("names its source, the screen that owns it, and whether this viewer may edit it", () => {
     const [entry] = eventEntries([event({})], viewer, OCTOBER);
-    expect(entry).toMatchObject({ id: "event:e1", source: "event", sourceId: "e1", kind: "block", category: "family", status: "confirmed", href: "/family/events/e1", detail: "Home" });
+    expect(entry).toMatchObject({ id: "event:e1", source: "event", sourceId: "e1", kind: "block", category: "family", status: "confirmed", href: "/calendar/events/e1", detail: "Home" });
     expect(entry!.can.edit).toBe(false);
     expect(eventEntries([event({ ownerMemberId: ME })], viewer, OCTOBER)[0]!.can.edit).toBe(true);
     expect(eventEntries([event({})], { ...viewer, isAdmin: true }, OCTOBER)[0]!.can.edit).toBe(true);

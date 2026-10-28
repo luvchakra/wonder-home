@@ -604,7 +604,7 @@ function EventList({ events, timezone, t }: { events: FamilyEvent[]; timezone: s
             month={formatDate(timezone, event.startsAt).split(" ")[1] ?? ""}
             when={eventWhen(event, timezone, t)}
             place={event.location}
-            href={`/family/events/${event.id}`}
+            href={`/calendar/events/${event.id}`}
           />
         ))}
       </ul>

@@ -615,6 +615,8 @@ export const ar: Catalog = {
   "family.childQuiet.restored": "عدنا إلى المعتاد لعمره.",
   "family.pets": "الحيوانات الأليفة",
   "family.addPet": "أضف حيوانًا أليفًا",
+  "family.addSection": "أضف إلى العائلة",
+  "family.seeAllCalendar": "عرض الكل في التقويم",
   "family.empty.pets": "لا حيوانات أليفة بعد",
   "family.empty.petsLede": "أضف حيوانًا أليفًا وسيتابع WonderHome رعايته مع رعاية الجميع.",
   "family.addAPet": "أضف حيوانًا أليفًا",

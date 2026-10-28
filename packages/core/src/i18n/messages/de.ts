@@ -599,6 +599,8 @@ export const de: Catalog = {
   "family.childQuiet.restored": "Zurück zum Üblichen für das Alter.",
   "family.pets": "Haustiere",
   "family.addPet": "Haustier hinzufügen",
+  "family.addSection": "Zur Familie hinzufügen",
+  "family.seeAllCalendar": "Alle im Kalender ansehen",
   "family.empty.pets": "Noch keine Haustiere",
   "family.empty.petsLede": "Füge ein Haustier hinzu, und WonderHome behält seine Pflege im Blick wie bei allen anderen.",
   "family.addAPet": "Ein Haustier hinzufügen",

@@ -16,7 +16,6 @@ const GATED_AREAS = [
   "/more",
   "/household",
   "/household/home",
-  "/household/members",
   "/household/responsibilities",
   "/household/setup",
   "/household/activity",
@@ -38,6 +37,19 @@ test("a personal area sends an anonymous visitor to sign in, remembering the des
   for (const path of GATED_AREAS) {
     await page.goto(path);
     await expect(page).toHaveURL(new RegExp(`/sign-in\\?next=${encodeURIComponent(path).replace(/\//g, "%2F")}$`));
+  }
+});
+
+test("folded screens send a visitor on to their one home (design/UI-SIMPLIFICATION-v1.md)", async ({ page }) => {
+  for (const [from, to] of [
+    ["/household/members", "/family"],
+    ["/household/notifications", "/settings/notifications"],
+    ["/household/delivery", "/settings/notifications"],
+    ["/family/events/00000000-0000-4000-8000-000000000000", "/calendar/events/00000000-0000-4000-8000-000000000000"],
+  ]) {
+    await page.goto(from);
+    // No end anchor: a redirect to a section keeps its #fragment through the sign-in hop.
+    await expect(page).toHaveURL(new RegExp(`/sign-in\\?next=${encodeURIComponent(to).replace(/\//g, "%2F")}(#|$)`));
   }
 });
 

@@ -1,5 +1,6 @@
 import { CalendarDays, ChevronLeft, ChevronRight, ListChecks } from "lucide-react";
 import Link from "next/link";
+import type { ReactNode } from "react";
 
 import {
   atLocal,
@@ -38,6 +39,7 @@ import { SegmentedControl } from "@wonderhome/core/ui/segmented-control";
 import { EmptyState } from "@wonderhome/core/ui/states";
 
 import { NewEventForm } from "../_components/new-event-form";
+import { TodayPlan, type TodayLens } from "./_components/today-plan";
 import { calendarHref, dateWords, entryRow, weekStartFor, whenOn, type DateWords, type EntryWords } from "../_lib/calendar-view";
 import { eventFormLabels } from "../_lib/event-form-labels";
 import { eventPlaceSearch } from "../_lib/places";
@@ -57,9 +59,10 @@ const VIEW_ORDER: CalendarView[] = ["month", "week", "day", "year"];
  * and occasions, public holidays — read through this member's own session, so
  * a private event never reaches anyone but its owner. Month opens by default;
  * Week, Day and Year are a tap, a pinch or a key away, and every one keeps the
- * focused date. Entries open the screen that owns them; nothing is edited here.
+ * focused date. Entries open the screen that owns them; nothing is edited here
+ * except a new plan. Today's Day view also carries Today's plan.
  */
-export default async function CalendarPage({ searchParams }: { searchParams: Promise<{ view?: string; date?: string }> }) {
+export default async function CalendarPage({ searchParams }: { searchParams: Promise<{ view?: string; date?: string; lens?: string }> }) {
   const [params, session] = await Promise.all([searchParams, requireSession("/calendar")]);
   const { supabase, membership, viewer, secondary, locale, view: personal } = session;
   const { t } = locale;
@@ -213,7 +216,19 @@ export default async function CalendarPage({ searchParams }: { searchParams: Pro
           ) : view === "week" ? (
             <WeekView days={eachDay(range.from, range.to)} byDay={byDay} today={today} timeZone={timeZone} words={words} entryWords={entryWords} t={t} now={now} />
           ) : view === "day" ? (
-            <DayView focus={focus} today={today} weekStartsOn={weekStartsOn} byDay={byDay} timeZone={timeZone} words={words} entryWords={entryWords} t={t} now={now} />
+            <DayView
+              focus={focus}
+              today={today}
+              weekStartsOn={weekStartsOn}
+              byDay={byDay}
+              timeZone={timeZone}
+              words={words}
+              entryWords={entryWords}
+              t={t}
+              now={now}
+              // Today's plan lives under today's day (design/UI-SIMPLIFICATION-v1.md M4).
+              todayPlan={<TodayPlan session={session} lens={(["family", "household"] as const).find((lens) => lens === params.lens) ?? ("mine" satisfies TodayLens)} now={now} />}
+            />
           ) : (
             <CalendarYear
               legend={t("calendar.year.legend")}
@@ -326,7 +341,7 @@ function DayAgenda({ day, entries, today, words, entryWords, t }: { day: string;
         <Card className="px-3 py-1">
           <p className="px-1 pt-3 text-sm text-[var(--wh-foreground-muted)]">{t("calendar.agenda.emptyToday")}</p>
           <ul>
-            <NavRow icon={ListChecks} tone="primary" title={t("calendar.agenda.todayPlan")} meta={t("calendar.agenda.todayPlanLede")} href="/today" />
+            <NavRow icon={ListChecks} tone="primary" title={t("calendar.agenda.todayPlan")} meta={t("calendar.agenda.todayPlanLede")} href={calendarHref("day", today)} />
           </ul>
         </Card>
       ) : entries.length === 0 ? (
@@ -344,7 +359,7 @@ function DayAgenda({ day, entries, today, words, entryWords, t }: { day: string;
       {day === today && entries.length > 0 ? (
         <Card className="px-3 py-1">
           <ul>
-            <NavRow icon={ListChecks} tone="primary" title={t("calendar.agenda.todayPlan")} meta={t("calendar.agenda.todayPlanLede")} href="/today" />
+            <NavRow icon={ListChecks} tone="primary" title={t("calendar.agenda.todayPlan")} meta={t("calendar.agenda.todayPlanLede")} href={calendarHref("day", today)} />
           </ul>
         </Card>
       ) : null}
@@ -398,6 +413,7 @@ function DayView({
   entryWords,
   t,
   now,
+  todayPlan,
 }: {
   focus: string;
   today: string;
@@ -408,6 +424,7 @@ function DayView({
   entryWords: EntryWords;
   t: Translate;
   now: Date;
+  todayPlan: ReactNode;
 }) {
   const weekFrom = startOfWeek(focus, weekStartsOn);
   const list = byDay.get(focus) ?? [];
@@ -448,13 +465,7 @@ function DayView({
           nowTop={nowOffset(focus, today, now, timeZone, options)}
         />
       </Card>
-      {focus === today ? (
-        <Card className="px-3 py-1">
-          <ul>
-            <NavRow icon={ListChecks} tone="primary" title={t("calendar.agenda.todayPlan")} meta={t("calendar.agenda.todayPlanLede")} href="/today" />
-          </ul>
-        </Card>
-      ) : null}
+      {focus === today ? todayPlan : null}
     </div>
   );
 }

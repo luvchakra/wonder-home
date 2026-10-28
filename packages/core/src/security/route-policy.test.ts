@@ -16,7 +16,7 @@ describe("route policy", () => {
 
   it("keeps an event's invite link public, for people outside the household", () => {
     expect(routeRequirement("/e/Abcdefghijklmnopqrstuvwxyz0123456789_-ABCDEF")).toBe("public");
-    expect(routeRequirement("/family/events/00000000-0000-4000-8000-000000000000")).toBe("authenticated");
+    expect(routeRequirement("/calendar/events/00000000-0000-4000-8000-000000000000")).toBe("authenticated");
   });
 
   it("sends an invitee to sign in and back to the invitation link", () => {

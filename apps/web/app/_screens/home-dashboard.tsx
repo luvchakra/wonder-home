@@ -229,7 +229,7 @@ function TodayEventRow({ event, timezone, t }: { event: FamilyEvent; timezone: s
           </div>
         </dl>
         {/* Everything else about it — who's asked, the invite link, what's left to plan — is on its own page. */}
-        <PillLink href={`/family/events/${event.id}`} tone="quiet">
+        <PillLink href={`/calendar/events/${event.id}`} tone="quiet">
           {t("events.open")}
         </PillLink>
       </div>
@@ -543,7 +543,7 @@ async function DashboardBody({ session, now }: { session: Session; now: Date }) 
                   icon={<IconTile icon={CalendarHeart} tone="people" size="sm" />}
                   title={event.title}
                   meta={`${formatDate(timezone, event.startsAt)} · ${formatTime(timezone, event.startsAt)}`}
-                  href={`/family/events/${event.id}`}
+                  href={`/calendar/events/${event.id}`}
                 />
               ))}
             </MetricDetailList>
@@ -783,7 +783,7 @@ async function DashboardBody({ session, now }: { session: Session; now: Date }) 
                 <p className="text-xs text-[var(--wh-foreground-muted)]">{t("home.handledLede")}</p>
               </div>
             </div>
-            <PillLink href="/today" tone="quiet">
+            <PillLink href="/calendar?view=day" tone="quiet">
               {t("homeScreen.viewAll")}
             </PillLink>
           </div>
@@ -802,7 +802,7 @@ async function DashboardBody({ session, now }: { session: Session; now: Date }) 
               <Sun aria-hidden className="size-5 shrink-0 text-[var(--wh-tone-money)]" />
               <h2 className="text-base font-semibold tracking-tight">{t("home.todaysFocus")}</h2>
             </div>
-            <PillLink href="/today" tone="quiet">
+            <PillLink href="/calendar?view=day" tone="quiet">
               {t("homeScreen.seeAll")}
             </PillLink>
           </div>
@@ -855,7 +855,7 @@ async function DashboardBody({ session, now }: { session: Session; now: Date }) 
                   month={formatDate(timezone, nextMoment.startsAt).split(" ")[1] ?? ""}
                   when={eventWhen(nextMoment, timezone, t)}
                   place={nextMoment.location}
-                  href={`/family/events/${nextMoment.id}`}
+                  href={`/calendar/events/${nextMoment.id}`}
                 />
               </ul>
               <div className="mt-2 flex flex-wrap items-center justify-between gap-3 border-t border-[var(--wh-border)] pt-3">
@@ -864,7 +864,7 @@ async function DashboardBody({ session, now }: { session: Session; now: Date }) 
                   {momentGoing.names.length > 0 ? <AvatarGroup names={momentGoing.names} /> : null}
                   <span className="min-w-0 text-xs text-[var(--wh-foreground-muted)]">{momentGoing.words}</span>
                   <Link
-                    href={`/family/events/${nextMoment.id}#family`}
+                    href={`/calendar/events/${nextMoment.id}#family`}
                     aria-label={t("events.going.ask")}
                     title={t("events.going.ask")}
                     className="grid size-8 shrink-0 place-items-center rounded-full border border-dashed border-[var(--wh-border-strong)] text-[var(--wh-foreground-subtle)] hover:bg-[var(--wh-surface-muted)]"
@@ -877,7 +877,7 @@ async function DashboardBody({ session, now }: { session: Session; now: Date }) 
                     {t("homeScreen.planTogether")}
                   </PillLink>
                 ) : (
-                  <PillLink href={`/family/events/${nextMoment.id}`} tone="soft">
+                  <PillLink href={`/calendar/events/${nextMoment.id}`} tone="soft">
                     {t("homeScreen.openEvent")}
                   </PillLink>
                 )}

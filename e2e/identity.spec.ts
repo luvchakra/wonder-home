@@ -72,9 +72,9 @@ test("an invitation link sends a signed-out visitor to sign in and back", async 
   await expect(page).toHaveURL(/\/sign-in\?next=%2Finvite%2Fsome-invitation-token-value/);
 });
 
-test("members and roles is gated", async ({ page }) => {
+test("members and roles, now on Family, is gated", async ({ page }) => {
   await page.goto("/household/members");
-  await expect(page).toHaveURL(/\/sign-in\?next=%2Fhousehold%2Fmembers/);
+  await expect(page).toHaveURL(/\/sign-in\?next=%2Ffamily/);
 });
 
 test("the invitations API refuses an anonymous caller", async ({ request }) => {

@@ -59,7 +59,7 @@ export const SCREENS: readonly Screen[] = [
   { key: "hometalk", label: primary("/ai").label, href: "/ai", words: ["hometalk", "home talk", "chat", "conversation", "our conversation", "this conversation", "assistant"] },
   { key: "family", label: primary("/family").label, href: "/family", words: ["family", "family members", "members", "people"] },
   { key: "more", label: primary("/more").label, href: "/more", words: ["more", "menu", "all screens"] },
-  { key: "today", label: "Today", href: "/today", words: ["today's plan", "todays plan", "today plan", "plan for today", "today screen", "today page"] },
+  { key: "today", label: "Today", href: "/calendar?view=day", words: ["today's plan", "todays plan", "today plan", "plan for today", "today screen", "today page"] },
   fromSecondary("groceries", "groceries", ["groceries", "grocery", "grocery list", "groceries list", "shopping list", "shopping", "pantry", "what's at home", "stock"]),
   fromSecondary("meals", "meals", ["meals", "meal plan", "meal planner", "recipes", "meals and recipes", "food plan"]),
   fromSecondary("bills", "bills", ["bills", "bill", "bills and finance", "finance", "finances", "money", "payments"]),

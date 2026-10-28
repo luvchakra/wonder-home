@@ -132,7 +132,6 @@ export async function createEventAction(_previous: EventActionState, formData: F
   }
 
   revalidatePath("/family");
-  revalidatePath("/today");
   revalidatePath("/calendar");
   revalidatePath("/");
   return {};
@@ -158,7 +157,7 @@ export async function settleEventAction(_previous: ActionState, formData: FormDa
   }
 
   revalidatePath("/family");
-  revalidatePath("/today");
+  revalidatePath("/calendar");
   revalidatePath("/");
   return { notice: "Noted — nothing more to do on this one." };
 }
@@ -197,7 +196,7 @@ export async function resolveConflictAction(_previous: ActionState, formData: Fo
   }
 
   revalidatePath("/family");
-  revalidatePath("/today");
+  revalidatePath("/calendar");
   revalidatePath("/");
   return { notice: parsed.data.outcome === "resolved" ? "Sorted." : "Left as it is." };
 }

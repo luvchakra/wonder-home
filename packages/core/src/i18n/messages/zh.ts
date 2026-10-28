@@ -599,6 +599,8 @@ export const zh: Catalog = {
   "family.childQuiet.restored": "已恢复为这个年龄的常规设置。",
   "family.pets": "宠物",
   "family.addPet": "添加宠物",
+  "family.addSection": "添加到家庭",
+  "family.seeAllCalendar": "在日历中查看全部",
   "family.empty.pets": "还没有宠物",
   "family.empty.petsLede": "添加宠物后，WonderHome 会像照顾家里其他人一样记着它的照护事项。",
   "family.addAPet": "添加一只宠物",
