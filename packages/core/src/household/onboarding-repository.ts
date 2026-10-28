@@ -151,6 +151,76 @@ export type OnboardingSnapshot = {
   schools: Map<string, { schoolName: string; grade: string | null; placeId: string | null; schoolAddress: string | null; hours: DayHours | null }>;
 };
 
+/** What setup's progress is worked out from, however the rows were read. */
+type FactRows = {
+  members: HouseholdMember[];
+  pets: { id: string; name: string; species: string }[];
+  schoolOf: (memberId: string) => string | null;
+  /** How many days of the week a helper has working hours on. */
+  workingDays: (memberId: string) => number;
+  responsibilityKeys: string[];
+};
+
+function factsFrom(state: OnboardingState, rows: FactRows): OnboardingFacts {
+  const active = rows.members.filter((member) => member.status === "active");
+  const profile: HouseholdProfile = {
+    adults: active
+      .filter((member) => member.memberType === "adult")
+      .map((member) => ({ id: member.id, name: member.displayName, relationship: member.relationship, workArrangement: member.workArrangement ?? null })),
+    children: active
+      .filter((member) => member.memberType === "child")
+      .map((member) => ({ id: member.id, name: member.displayName, age: member.ageYears ?? null, school: rows.schoolOf(member.id) })),
+    pets: rows.pets.map((pet) => ({ id: pet.id, name: pet.name, species: pet.species })),
+    helpers: active
+      .filter((member) => member.memberType === "helper")
+      .map((member) => ({ id: member.id, name: member.displayName, role: member.occupation, workingDays: rows.workingDays(member.id) })),
+  };
+  const pending = suggestResponsibilities(profile, { existingKeys: rows.responsibilityKeys, dismissed: state.dismissed });
+  return {
+    composition: state.composition,
+    profile,
+    responsibilityKeys: rows.responsibilityKeys,
+    pending,
+    helpersWithHours: profile.helpers.filter((helper) => helper.workingDays > 0).length,
+  };
+}
+
+/**
+ * Setup's facts from rows a screen already read (performance audit B7): Home
+ * reads the members, pets, responsibilities and helpers' working days for
+ * itself, so only the school enrolments are read here. The same facts
+ * `loadOnboardingSnapshot` gives.
+ */
+export async function loadOnboardingFacts(
+  supabase: SupabaseClient,
+  householdId: string,
+  state: OnboardingState,
+  rows: {
+    members: PromiseLike<HouseholdMember[]>;
+    pets: PromiseLike<FactRows["pets"]>;
+    responsibilityKeys: PromiseLike<string[]>;
+    availability: PromiseLike<{ memberId: string; dayOfWeek: number }[]>;
+  },
+): Promise<OnboardingFacts> {
+  const [enrolments, members, pets, responsibilityKeys, availability] = await Promise.all([
+    listEnrolments(supabase, householdId).catch(() => []),
+    rows.members,
+    rows.pets,
+    rows.responsibilityKeys,
+    rows.availability,
+  ]);
+  const schools = new Map(enrolments.map((enrolment) => [enrolment.childMemberId, enrolment.schoolName]));
+  const days = new Map<string, Set<number>>();
+  for (const window of availability) days.set(window.memberId, (days.get(window.memberId) ?? new Set()).add(window.dayOfWeek));
+  return factsFrom(state, {
+    members,
+    pets,
+    responsibilityKeys,
+    schoolOf: (memberId) => schools.get(memberId) ?? null,
+    workingDays: (memberId) => days.get(memberId)?.size ?? 0,
+  });
+}
+
 /** Everything setup needs about a household, read from where it really lives. */
 export async function loadOnboardingSnapshot(
   supabase: SupabaseClient,
@@ -183,33 +253,17 @@ export async function loadOnboardingSnapshot(
     schools.set(enrolment.childMemberId, { schoolName: enrolment.schoolName, grade: enrolment.grade, placeId: enrolment.placeId ?? null, schoolAddress: enrolment.schoolAddress ?? null, hours: enrolment.hours ?? null });
   }
 
-  const profile: HouseholdProfile = {
-    adults: active
-      .filter((member) => member.memberType === "adult")
-      .map((member) => ({ id: member.id, name: member.displayName, relationship: member.relationship, workArrangement: member.workArrangement ?? null })),
-    children: active
-      .filter((member) => member.memberType === "child")
-      .map((member) => ({ id: member.id, name: member.displayName, age: member.ageYears ?? null, school: schools.get(member.id)?.schoolName ?? null })),
-    pets: pets.map((pet) => ({ id: pet.id, name: pet.name, species: pet.species })),
-    helpers: active
-      .filter((member) => member.memberType === "helper")
-      .map((member) => ({ id: member.id, name: member.displayName, role: member.occupation, workingDays: new Set((availability.get(member.id) ?? []).map((window) => window.dayOfWeek)).size })),
-  };
-
-  const responsibilityKeys = responsibilities.map((row) => row.outcomeKey);
-  const pending = suggestResponsibilities(profile, { existingKeys: responsibilityKeys, dismissed: state.dismissed });
-
   return {
     state,
     members,
     configMembers: active.map((member) => ({ id: member.id, displayName: member.displayName, memberType: member.memberType })),
-    facts: {
-      composition: state.composition,
-      profile,
-      responsibilityKeys,
-      pending,
-      helpersWithHours: profile.helpers.filter((helper) => helper.workingDays > 0).length,
-    },
+    facts: factsFrom(state, {
+      members,
+      pets,
+      schoolOf: (memberId) => schools.get(memberId)?.schoolName ?? null,
+      workingDays: (memberId) => new Set((availability.get(memberId) ?? []).map((window) => window.dayOfWeek)).size,
+      responsibilityKeys: responsibilities.map((row) => row.outcomeKey),
+    }),
     availability,
     pets: pets.map((pet) => ({ id: pet.id, name: pet.name, species: pet.species, dateOfBirth: pet.dateOfBirth ?? null, photoUrl: pet.photoUrl ?? null })),
     address,
