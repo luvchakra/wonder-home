@@ -145,3 +145,30 @@ These ran in the browser against a production build pointed at the live project,
 **Follow-ups found**, added to the audit backlog:
 - **B4b:** the Calendar's Day view (#425) reads `family_events`, `school_items` and `obligations` once more for the calendar itself. It can share the plan's reads the same way. That code was being reshaped by another session today, so it was left alone.
 - **B4c:** Meals reads `recipes` twice and `consumables` twice. These are different column sets, in parallel: `listRecipesForEdit` and `recipesWithIngredients`, and `listGroceries` and `listConsumables`. They cost queries, not waiting.
+
+## B5: the HomeTalk turn
+
+All of this is in `apps/web/app/_lib/hometalk-turn.ts` and `packages/core/src/homebrain/context-store.ts`.
+
+- **Rate limit before the allowance.**
+  - `hitRateLimit("hometalk.turn")` now runs before `consume`. A turn refused for speed no longer spends the household's allowance.
+  - The number of round trips is unchanged (one each). This is a correctness fix the audit found alongside the timing work.
+- **One wave of session reads.**
+  - `pendingAmaf`, `pendingWelcome` and the ordinary turn's `pendingAction`, `recentTurns`, `pendingClarification` and `recentFocus` all start together once the session is open.
+  - Before, they ran in three steps: AMAF, then the welcome, then the four reads.
+  - All six only read. Each is awaited where it was awaited before, so a turn that AMAF or the welcome answers fails only as it did before.
+  - This saves **2 sequential database round trips on every ordinary turn**.
+- **A context behind only by age answers now and is rebuilt after the response.**
+  - `storeIsOnlyAged` is true only when no write has marked the row since it was built and it was built on the household's today, so the row is simply past the one-hour limit.
+  - Such a row holds what a rebuild would hold, short of a change no write announced. The hourly limit exists for exactly those changes, so they show one turn later than before.
+  - A row a write marked, or one built on an earlier day, is still rebuilt inline before it answers. A change the household has just made is never answered from old facts.
+  - The rebuild runs through the same `after()` the store already uses for write-triggered rebuilds (`enableContextStore`). Outside a request, it rebuilds inline as before.
+  - This takes the whole inline rebuild, about twenty domain reads, off the first turn after a quiet hour.
+- **`homebrain_misses`** is written in `after()` rather than as a floating `void` promise. A serverless instance that ends with the response still writes the row, and the turn never waits on it.
+
+**Verified**
+- `context-store.test.ts` has two new cases for `storeIsOnlyAged`. It is true when the row is behind by age alone, and false when the row is current, marked by a write, or built on an earlier day. All 17 pass.
+- vitest over `_lib`, the household API routes, `homebrain` and `conversation`: 53 files, 944 tests pass.
+- `npm run eval` (deterministic): 211 of 211 cases. Unsafe actions are 0 of 26. All gates pass except operations, which is "not yet" as before.
+- Typecheck is clean, and ESLint is clean on `hometalk-turn.ts`.
+- **Not measured end to end:** a live turn needs the service-role key, which this container does not have. The saving is counted in round trips from the code path.

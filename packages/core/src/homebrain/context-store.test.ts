@@ -3,7 +3,7 @@ import { describe, expect, it } from "vitest";
 import type { FamilyEvent } from "../family/schedule";
 import type { HouseholdMember } from "../identity/households";
 import { gatherHouseholdContext, loadHouseholdContext, setContextStoreReader, type ContextSnapshot } from "../context/repository";
-import { STORE_MAX_BYTES, buildStoreItems, fitToCap, keepStoresWarm, storeIsCurrent, storedItemsForViewer } from "./context-store";
+import { STORE_MAX_BYTES, buildStoreItems, fitToCap, keepStoresWarm, storeIsCurrent, storeIsOnlyAged, storedItemsForViewer } from "./context-store";
 import type { ContextScope, ContextViewer, HouseholdContextItem } from "../context/types";
 
 const HOUSEHOLD = "h0000000-0000-4000-8000-000000000001";
@@ -89,6 +89,19 @@ describe("when the stored context can be read as it is", () => {
     expect(storeIsCurrent({ builtAt: new Date("2026-10-18T05:00:00Z"), staleSince: null }, NOW, "Asia/Kolkata")).toBe(false);
     // 18:20 UTC on the 17th is 23:50 in Kolkata; 18:40 UTC is 00:10 on the 18th.
     expect(storeIsCurrent({ builtAt: new Date("2026-10-17T18:20:00Z"), staleSince: null }, new Date("2026-10-17T18:40:00Z"), "Asia/Kolkata")).toBe(false);
+  });
+
+  // Audit B5: only a row behind by age alone may answer while it is rebuilt after the response.
+  it("may answer while rebuilt only when behind by age alone", () => {
+    expect(storeIsOnlyAged({ builtAt: new Date("2026-10-18T05:00:00Z"), staleSince: null }, NOW, "Asia/Kolkata")).toBe(true);
+    expect(storeIsOnlyAged({ builtAt: new Date("2026-10-18T05:00:00Z"), staleSince: new Date("2026-10-18T04:59:00Z") }, NOW, "Asia/Kolkata")).toBe(true);
+  });
+
+  it("never answers when current, when a write marked it, or when built on an earlier day", () => {
+    expect(storeIsOnlyAged({ builtAt: built, staleSince: null }, NOW, "Asia/Kolkata")).toBe(false);
+    expect(storeIsOnlyAged({ builtAt: new Date("2026-10-18T05:00:00Z"), staleSince: new Date("2026-10-18T05:30:00Z") }, NOW, "Asia/Kolkata")).toBe(false);
+    expect(storeIsOnlyAged({ builtAt: built, staleSince: new Date("2026-10-18T06:00:01Z") }, NOW, "Asia/Kolkata")).toBe(false);
+    expect(storeIsOnlyAged({ builtAt: new Date("2026-10-17T18:20:00Z"), staleSince: null }, new Date("2026-10-17T18:40:00Z"), "Asia/Kolkata")).toBe(false);
   });
 });
 

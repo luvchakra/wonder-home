@@ -110,6 +110,19 @@ export function storeIsCurrent(stored: Pick<StoredContext, "staleSince" | "built
   return isoDateIn(stored.builtAt, timezone) === isoDateIn(now, timezone);
 }
 
+/**
+ * Behind only by age: nothing marked it since it was built and it was built
+ * today, so it holds what a rebuild would hold, short of a change no write
+ * announced (which the age limit exists to catch). Such a row may answer
+ * this turn while it is rebuilt after the response (performance audit B5).
+ * A row a write marked, or one built on an earlier day, never answers: it is
+ * rebuilt first.
+ */
+export function storeIsOnlyAged(stored: Pick<StoredContext, "staleSince" | "builtAt">, now: Date, timezone: string): boolean {
+  if (stored.staleSince && stored.staleSince.getTime() >= stored.builtAt.getTime()) return false;
+  return isoDateIn(stored.builtAt, timezone) === isoDateIn(now, timezone) && !storeIsCurrent(stored, now, timezone);
+}
+
 // --- building ------------------------------------------------------------------
 
 export type BuildScope = { householdId: string; householdName: string; timezone: string; now: Date };
@@ -386,11 +399,26 @@ function drainAfterWrite(householdId: string, schedule: Schedule | null): void {
 
 // --- the turn's read ------------------------------------------------------------------
 
-/** The stored context as it is, rebuilt first when it is missing or behind — once per household at a time on this instance. */
+/** How the app runs work after the response, as `enableContextStore` was given it; null rebuilds every stale row inline. */
+let afterResponse: Schedule | null = null;
+
+/**
+ * The stored context as it is, rebuilt first when it is missing or behind —
+ * once per household at a time on this instance. A row behind only by age
+ * answers now and is rebuilt after the response (`storeIsOnlyAged`).
+ */
 async function currentStoredContext(admin: SupabaseClient, scope: BuildScope): Promise<StoredContext | null> {
   const stored = await readStoredContext(admin, scope.householdId);
   if (stored === "unavailable") return null;
   if (stored && storeIsCurrent(stored, scope.now, scope.timezone)) return stored;
+  if (stored && afterResponse && storeIsOnlyAged(stored, scope.now, scope.timezone)) {
+    try {
+      afterResponse(() => runRebuild(scope.householdId, () => rebuildStoredContext(admin, scope)));
+      return stored;
+    } catch {
+      // Outside a request: rebuild it now, as before.
+    }
+  }
   return runRebuild(scope.householdId, () => rebuildStoredContext(admin, scope));
 }
 
@@ -460,6 +488,7 @@ export async function readContextThroughStore(supabase: SupabaseClient, scope: C
 export function enableContextStore(options: { schedule?: Schedule | null } = {}): boolean {
   if (process.env.WONDERHOME_CONTEXT_STORE === "off") return false;
   const schedule = options.schedule ?? null;
+  afterResponse = schedule;
   setContextStoreReader((supabase, scope, gather) =>
     householdMemory(scope.householdId, `store:${scope.viewer.memberId}${gather.domains ? `:${[...gather.domains].sort().join(",")}` : ""}`, () =>
       readContextThroughStore(supabase, scope, gather),

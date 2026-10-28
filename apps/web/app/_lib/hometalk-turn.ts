@@ -323,7 +323,11 @@ async function turnInEnglish(input: HomeTalkInput, speaking: Speaking) {
     return { reply: { id: messageId, text, action: null } };
   }
 
-  // Entitlement first, on the server, before anything is read or written.
+  // Faster than anyone talks, slower than a script (Wave 5 §15). Counted
+  // per member, before anything is read, written, spent or sent anywhere:
+  // a turn refused here never uses up the household's allowance (audit B5).
+  if (!(await hitRateLimit(admin, "hometalk.turn", membership.memberId))) throw ApiError.rateLimited(rateLimitMessage("hometalk.turn"), retryAfterSeconds("hometalk.turn"));
+  // Entitlement next, on the server, before anything is read or written.
   const feature = body.channel === "voice" ? "conversation.voice" : "conversation.text";
   // Spent here, atomically, rather than checked here and spent later: the
   // same call answers the allowance, the plan's burst policy and where the
@@ -336,9 +340,6 @@ async function turnInEnglish(input: HomeTalkInput, speaking: Speaking) {
     throw ApiError.forbidden(entitlement.reason);
   }
   const overFairUse = entitlement.fairUse === "over";
-  // Faster than anyone talks, slower than a script (Wave 5 §15). Counted
-  // per member, before anything is read, written or sent anywhere.
-  if (!(await hitRateLimit(admin, "hometalk.turn", membership.memberId))) throw ApiError.rateLimited(rateLimitMessage("hometalk.turn"), retryAfterSeconds("hometalk.turn"));
 
   const [entitled, sessionId, autonomyFor, people, confirmRequestedChanges] = await Promise.all([
     consequentialEntitlements(supabase, householdId),
@@ -356,6 +357,23 @@ async function turnInEnglish(input: HomeTalkInput, speaking: Speaking) {
     await beginEditMessage(admin, { householdId, sessionId, messageId: body.editMessageId });
   }
 
+  // Everything this turn reads about the session starts in one wave (audit
+  // B5): whether "ask me about family" or the welcome is waiting on an
+  // answer, and the question, history and focus the ordinary turn reads.
+  // All of it only reads, and each is awaited where it is needed, so a turn
+  // AMAF or the welcome answers leaves the rest, and fails only as it did.
+  const modes = !body.editMessageId && !limits;
+  const amafRead = modes && !isAmafStart(body.utterance) ? pendingAmaf(admin, sessionId) : Promise.resolve(null);
+  const welcomeRead = modes ? pendingWelcome(admin, sessionId) : Promise.resolve(null);
+  const turnReads = Promise.all([
+    pendingAction(admin, sessionId),
+    recentTurns(admin, sessionId, 6),
+    pendingClarification(admin, sessionId),
+    recentFocus(admin, sessionId, 2).catch(() => [] as FocusEntity[]),
+  ]);
+  welcomeRead.catch(() => undefined);
+  turnReads.catch(() => undefined);
+
   // The welcome's question, when it is what HomeTalk asked last: the answer
   // is the household's own words, kept as said, and the next question
   // follows — no model is asked. A question back ("what can you do?") is
@@ -369,8 +387,8 @@ async function turnInEnglish(input: HomeTalkInput, speaking: Speaking) {
   // through the ordinary turn, and the mode simply rests until it is asked
   // for again.
   // Only in the app: an external voice link has its own narrower door.
-  if (!body.editMessageId && !limits) {
-    const amafAnswer = isAmafStart(body.utterance) ? null : await pendingAmaf(admin, sessionId);
+  if (modes) {
+    const amafAnswer = await amafRead;
     if (isAmafStart(body.utterance) || (amafAnswer && !looksLikeQuestion(body.utterance) && !readsAsRequest(body.utterance))) {
       const step = amafAnswer
         ? await continueAmaf(supabase, { membership, sessionId, pending: amafAnswer, answer: said ?? body.utterance, channel: body.channel, transcriptConfidence: body.transcriptConfidence })
@@ -384,8 +402,8 @@ async function turnInEnglish(input: HomeTalkInput, speaking: Speaking) {
     }
   }
 
-  if (!body.editMessageId && !limits) {
-    const welcomeTopic = await pendingWelcome(admin, sessionId);
+  if (modes) {
+    const welcomeTopic = await welcomeRead;
     if (welcomeTopic && !looksLikeQuestion(body.utterance) && !readsAsRequest(body.utterance)) {
       const step = await continueWelcome(supabase, {
         membership,
@@ -404,15 +422,10 @@ async function turnInEnglish(input: HomeTalkInput, speaking: Speaking) {
     }
   }
 
-  // The question asked last turn, if there was one: this turn is read as
-  // its answer before anything else, which is what stops the same
-  // question coming back however clearly it is answered (story 04-011).
-  const [pending, history, clarifying, lastFocus] = await Promise.all([
-    pendingAction(admin, sessionId),
-    recentTurns(admin, sessionId, 6),
-    pendingClarification(admin, sessionId),
-    recentFocus(admin, sessionId, 2).catch(() => [] as FocusEntity[]),
-  ]);
+  // The question asked last turn, if there was one (read above): this turn
+  // is read as its answer before anything else, which is what stops the
+  // same question coming back however clearly it is answered (story 04-011).
+  const [pending, history, clarifying, lastFocus] = await turnReads;
   // What the model is told about this moment (Wave 4 §17): a role, the
   // local date and time, what is waiting, what the conversation was just
   // about — minimised with the utterance, never the household itself.
@@ -1523,11 +1536,19 @@ async function askHomeBrain(input: {
  */
 function recordDeepRead(householdId: string, record: DeepReadRecord): void {
   if (record.found) invalidateHouseholdContext(householdId);
-  void Promise.resolve(
-    createAdminClient()
-      .from("homebrain_misses")
-      .insert({ household_id: householdId, domains: record.domains, trigger: record.trigger, found: record.found, latency_ms: record.latencyMs }),
-  ).catch(() => undefined);
+  // After the response, so a serverless instance that ends with it still
+  // writes the row and the turn never waits on it (audit B5).
+  const write = () =>
+    Promise.resolve(
+      createAdminClient()
+        .from("homebrain_misses")
+        .insert({ household_id: householdId, domains: record.domains, trigger: record.trigger, found: record.found, latency_ms: record.latencyMs }),
+    ).catch(() => undefined);
+  try {
+    after(write);
+  } catch {
+    void write();
+  }
 }
 
 /** Whether an utterance is asking something, rather than telling or requesting. */
