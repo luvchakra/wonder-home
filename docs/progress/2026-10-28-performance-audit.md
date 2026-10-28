@@ -114,7 +114,7 @@ Not applied yet; for the owner to accept. Each was earned by a measured finding 
 - **B7** (done, [backlog note](2026-10-28-performance-backlog.md#b7-admin-homes-setup-progress-from-rows-home-already-read); the one-RPC count stays, the setup card stops re-reading): Admin Home: work out setup counts from the rows the dashboard already reads.
 - **B8** (HomeSend done, [backlog note](2026-10-28-performance-backlog.md#b8-homesends-sheet-loads-on-first-use), `/ai` −19.7 KB gz; forms open as B8b): `next/dynamic` for `HomeSendSheet` and the below-the-fold finance, meal and health forms.
 - **B8b** (open, from B8): split the health (15.2 KB gz, `/health` only), meal (10.8 KB gz) and bill form bodies out of their buttons, loaded on open; check each add and edit in the browser.
-- **B9**: narrow the middleware matcher (static `js`, `css`, `woff2`, `json`, `txt`, and webhook APIs).
+- **B9** (done, [backlog note](2026-10-28-performance-backlog.md#b9-the-middleware-skips-what-never-carries-a-session)): narrow the middleware matcher (static `js`, `css`, `woff2`, `json`, `txt`, and webhook APIs).
 - **B10** (done, same note): `loading.tsx` for `/ai`, `/family`, `/groceries` and `/meals`.
 - **Advisory**: leaked-password protection is off (Auth setting, owner). `pg_net` is in `public`. The 62 overlapping permissive policies are a dedicated RLS consolidation pass; `school_items`' pair was the costly one and is now cheap.
 
