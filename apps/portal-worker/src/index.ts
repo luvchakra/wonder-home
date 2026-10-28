@@ -71,6 +71,7 @@ async function main(): Promise<void> {
         await completeJob(admin, job.id, {
           status: outcome.state === "connected" ? "done" : "failed",
           reason: outcome.reason ?? null,
+          result: outcome.result ?? null,
         });
       } catch (thrown) {
         const reason = (thrown instanceof Error ? thrown.message : "error").slice(0, 400);

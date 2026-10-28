@@ -2,7 +2,7 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 
 import type { PortalBrowser } from "@wonderhome/core/portals/adapter";
 import { portalCursorStore } from "@wonderhome/core/portals/cursor-repository";
-import { fetchConnection, type ScrapeTarget } from "@wonderhome/core/portals/fetch-connection";
+import { fetchConnection, type ScrapeTarget, type TargetOutcome } from "@wonderhome/core/portals/fetch-connection";
 import { GenericAdapter } from "@wonderhome/core/portals/generic-adapter";
 import { resolveAdapter } from "@wonderhome/core/portals/registry";
 import { homeSendPortalFiler } from "@wonderhome/core/portals/homesend-filer";
@@ -18,7 +18,15 @@ import { readSchoolPortalCredentials } from "@wonderhome/core/school/portal-cred
  * generic one is wired, so any portal uses it.
  */
 
-export type JobOutcome = { state: "connected" | "reconnect_needed" | "no_credentials"; filed: number; reason?: string };
+/** Per-run diagnostics persisted on the job row — metadata only, never portal content. */
+export type JobResult = { filed: number; pages: TargetOutcome[] };
+
+export type JobOutcome = {
+  state: "connected" | "reconnect_needed" | "no_credentials";
+  filed: number;
+  reason?: string;
+  result?: JobResult;
+};
 
 type Row = Record<string, unknown>;
 
@@ -72,14 +80,15 @@ export async function runFetchJob(input: {
 
   if (!result.ok) {
     log(`[job] ${integrationId}: reconnect needed (${result.reason})`);
-    return { state: "reconnect_needed", filed: 0, reason: result.reason };
+    return { state: "reconnect_needed", filed: 0, reason: result.reason, result: { filed: 0, pages: [] } };
   }
   const failures = result.targets.filter((t) => t.error).length;
   log(
     `[job] ${integrationId}: ${result.reAuthenticated ? "re-logged in" : "reused session"}; ` +
-      `pages=${result.targets.length} (${failures} failed) filed=${result.filed}`,
+      `pages=${result.targets.length} (${failures} failed) filed=${result.filed}; ` +
+      result.targets.map((t) => `${t.chars}c→${t.read}i/${t.fresh}f${t.error ? " ERR" : ""}`).join(" "),
   );
-  return { state: "connected", filed: result.filed };
+  return { state: "connected", filed: result.filed, result: { filed: result.filed, pages: result.targets } };
 }
 
 /** The member a fetched item is filed as: whoever connected the portal, else any member of the household. */

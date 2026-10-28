@@ -116,8 +116,8 @@ describe("fetchConnection", () => {
     const result = await h.run();
     expect(result).toMatchObject({ ok: true, state: "connected", reAuthenticated: false, filed: 3 });
     expect(result.ok && result.targets).toEqual([
-      { url: HOMEWORK, read: 2, fresh: 2 },
-      { url: NOTICES, read: 1, fresh: 1 },
+      { url: HOMEWORK, finalUrl: HOMEWORK, chars: 1, read: 2, fresh: 2 },
+      { url: NOTICES, finalUrl: NOTICES, chars: 1, read: 1, fresh: 1 },
     ]);
     expect(h.filed.flat()).toHaveLength(3);
   });
@@ -133,7 +133,7 @@ describe("fetchConnection", () => {
     await harness(opts).run();
     const second = await harness({ ...opts, page: new FakePage({ [HOMEWORK]: "x" }) }).run();
     expect(second).toMatchObject({ filed: 0 });
-    expect(second.ok && second.targets[0]).toEqual({ url: HOMEWORK, read: 1, fresh: 0 });
+    expect(second.ok && second.targets[0]).toEqual({ url: HOMEWORK, finalUrl: HOMEWORK, chars: 1, read: 1, fresh: 0 });
   });
 
   it("collapses duplicates within one page", async () => {
@@ -162,7 +162,7 @@ describe("fetchConnection", () => {
     const result = await h.run();
     expect(result.ok).toBe(true);
     expect(result.ok && result.targets[0]).toMatchObject({ url: HOMEWORK, error: "navigation failed" });
-    expect(result.ok && result.targets[1]).toEqual({ url: NOTICES, read: 1, fresh: 1 });
+    expect(result.ok && result.targets[1]).toEqual({ url: NOTICES, finalUrl: NOTICES, chars: 1, read: 1, fresh: 1 });
     expect(result.ok && result.filed).toBe(1);
   });
 });
