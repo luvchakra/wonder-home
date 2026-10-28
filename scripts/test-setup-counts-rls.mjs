@@ -84,7 +84,7 @@ test("the set-based helpers answer for the caller only", () => {
 
 test("no policy still checks membership row by row", () => {
   const left = psql(
-    `select count(*) from pg_policies where schemaname = 'public' and coalesce(qual, '') || coalesce(with_check, '') ~ 'wh\\.(is_member|is_household_admin|member_id|may_see_child|may_change_child)\\(';`,
+    `select count(*) from pg_policies where coalesce(qual, '') || coalesce(with_check, '') ~ 'wh\\.(is_member|is_household_admin|member_id|may_see_child|may_change_child|may_see_health|may_see_event|is_event_participant|is_child_of|has_role|may_see_finance)\\(';`,
     options,
   );
   assert.equal(left, "0");
