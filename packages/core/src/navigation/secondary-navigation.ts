@@ -22,7 +22,6 @@ export type SecondaryNavKey =
   | "homesend"
   | "places"
   | "chat"
-  | "notifications"
   | "manage"
   | "settings";
 
@@ -44,7 +43,6 @@ export type SecondaryNavItem = {
     | "send"
     | "map-pin"
     | "message-circle"
-    | "bell"
     | "settings-2"
     | "user-round-cog";
   tone: "primary" | "school" | "money" | "meals" | "care" | "home" | "people" | "ai" | "health" | "neutral";
@@ -56,19 +54,22 @@ export type SecondaryNavItem = {
   adultOnly?: boolean;
   /** Which labelled section this item falls under in the nav drawer and the More page. */
   group: SecondaryNavGroup;
-  /** A count worth a glance beside the label — only Notifications' unread reminders carry one. */
+  /** A count worth a glance beside the label. */
   badge?: number;
 };
 
-/** The nav drawer / More page's section groupings, in display order. */
-export const SECONDARY_GROUP_ORDER = ["family", "food", "home", "ai", "manage"] as const;
+/**
+ * The nav drawer / More page's section groupings, in display order. Three
+ * domain groups and Manage (design/UI-SIMPLIFICATION-v1.md M8): food and the
+ * home are one group, and Notifications is not listed — the bell is its door.
+ */
+export const SECONDARY_GROUP_ORDER = ["family", "home", "ai", "manage"] as const;
 export type SecondaryNavGroup = (typeof SECONDARY_GROUP_ORDER)[number];
 
 export const SECONDARY_GROUP_LABELS: Record<SecondaryNavGroup, string> = {
   family: "Family & People",
-  food: "Food & Essentials",
-  home: "Home & Lifestyle",
-  ai: "AI & Smart Tools",
+  home: "Home & Food",
+  ai: "Smart tools",
   manage: "Manage",
 };
 
@@ -77,15 +78,14 @@ export const SECONDARY_NAVIGATION: readonly SecondaryNavItem[] = [
   { key: "school", label: "Kids & School", href: "/school", icon: "graduation-cap", tone: "school", purpose: "All school info in one place", requires: ["school.view_own", "school.manage"], group: "family" },
   { key: "chat", label: "FamilyChat", href: "/chat", icon: "message-circle", tone: "people", purpose: "Talk it over, with the thing itself attached", requires: null, group: "family" },
   { key: "househelper", label: "Househelper", href: "/househelper", icon: "hand-heart", tone: "people", purpose: "Support that works", requires: null, adultOnly: true, group: "family" },
-  { key: "groceries", label: "Groceries", href: "/groceries", icon: "shopping-basket", tone: "care", purpose: "Always be stocked", requires: null, adultOnly: true, group: "food" },
-  { key: "meals", label: "Meals & Recipes", href: "/meals", icon: "utensils", tone: "meals", purpose: "Plan, cook, enjoy", requires: null, group: "food" },
-  { key: "bills", label: "Bills & Finance", href: "/bills", icon: "wallet", tone: "money", purpose: "Stay on top", requires: ["finance.view"], group: "food" },
+  { key: "groceries", label: "Groceries", href: "/groceries", icon: "shopping-basket", tone: "care", purpose: "Always be stocked", requires: null, adultOnly: true, group: "home" },
+  { key: "meals", label: "Meals & Recipes", href: "/meals", icon: "utensils", tone: "meals", purpose: "Plan, cook, enjoy", requires: null, group: "home" },
+  { key: "bills", label: "Bills & Finance", href: "/bills", icon: "wallet", tone: "money", purpose: "Stay on top", requires: ["finance.view"], group: "home" },
   { key: "upkeep", label: "Home & Upkeep", href: "/household/home", icon: "wrench", tone: "home", purpose: "A well-kept home", requires: null, adultOnly: true, group: "home" },
   { key: "health", label: "Health & Fitness", href: "/health", icon: "heart-pulse", tone: "health", purpose: "Stay on top, without keeping track of it all", requires: null, adultOnly: true, group: "home" },
   { key: "certification", label: "HomeBrain", href: "/certification", icon: "badge-check", tone: "ai", purpose: "Your home, understood", requires: null, adultOnly: true, group: "ai" },
   { key: "homesend", label: "HomeSend", href: "/home-send", icon: "send", tone: "ai", purpose: "Send WonderHome anything", requires: null, adultOnly: true, group: "ai" },
   { key: "places", label: "HomePlaces", href: "/places", icon: "map-pin", tone: "ai", purpose: "Places your family likes", requires: null, group: "ai" },
-  { key: "notifications", label: "Notifications", href: "/notifications", icon: "bell", tone: "neutral", purpose: "Sparse and actionable", requires: null, group: "manage" },
   { key: "manage", label: "Manage Household", href: "/household", icon: "settings-2", tone: "neutral", purpose: "Playbook, policies, AI autonomy", requires: ["household.manage"], group: "manage" },
   { key: "settings", label: "Settings & Profile", href: "/settings", icon: "user-round-cog", tone: "neutral", purpose: "You, your preferences, your privacy", requires: null, group: "manage" },
 ] as const;

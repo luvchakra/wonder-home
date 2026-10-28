@@ -52,6 +52,7 @@ const SCREENS = [
   "/notifications",
   "/certification",
   "/settings",
+  "/settings/notifications",
   "/settings/privacy",
   "/settings/ai",
   "/settings/plan",

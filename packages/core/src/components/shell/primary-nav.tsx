@@ -1,6 +1,5 @@
 import {
   BadgeCheck,
-  Bell,
   Calendar,
   Check,
   GraduationCap,
@@ -90,7 +89,6 @@ export const SECONDARY_ICONS: Record<SecondaryNavItem["icon"], ComponentType<{ c
   "map-pin": MapPin,
   "message-circle": MessageCircle,
   send: Send,
-  bell: Bell,
   "settings-2": Settings2,
   "user-round-cog": UserRoundCog,
 };
@@ -109,7 +107,7 @@ export type PrimaryNavProps = {
 export function PrimaryNav({ active, variant, secondary = [], pathname, labels }: PrimaryNavProps) {
   const labelOf = (item: (typeof PRIMARY_NAVIGATION)[number]) => labels?.nav?.[item.key] ?? item.label;
   if (variant === "sidebar") {
-    const domains = secondary.filter((item) => item.key !== "settings" && item.key !== "notifications");
+    const domains = secondary.filter((item) => item.key !== "settings");
     const settings = secondary.find((item) => item.key === "settings");
 
     return (

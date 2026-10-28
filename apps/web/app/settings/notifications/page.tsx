@@ -27,6 +27,8 @@ import { STARTER_OUTCOMES } from "../../_lib/starter-outcomes";
 import { requireSession } from "../../_lib/session";
 import { reasonWords } from "../../_lib/channel-check-words";
 import { channelPreferenceLabels, reminderPresetLabel, reminderSettingsLabels } from "../../_lib/settings-labels";
+import { DeliverySection } from "./delivery-section";
+import { HouseholdNotificationsSection } from "./household-section";
 
 export const metadata = { title: "Notifications" };
 export const dynamic = "force-dynamic";
@@ -40,10 +42,15 @@ export const dynamic = "force-dynamic";
  * still wanting email waiting for them in the morning. In-app is the one
  * channel actually live today; the rest are honest about not being
  * connected yet rather than pretending a toggle already does something.
+ *
+ * Admins also find the household's choices and the delivery report here,
+ * below their own (design/UI-SIMPLIFICATION-v1.md M1): one page for how
+ * WonderHome notifies anyone, instead of three.
  */
 export default async function NotificationSettingsPage() {
   const session = await requireSession("/settings/notifications");
-  const { supabase, membership, viewer, secondary } = session;
+  const { supabase, membership, viewer, secondary, view } = session;
+  const isAdmin = view.permissions.includes("household.manage");
 
   // What the household's Admins decided for everyone comes first: it bounds everything below.
   const household = await loadHouseholdNotificationSettings(supabase, membership.household.id);
@@ -256,6 +263,13 @@ export default async function NotificationSettingsPage() {
             />
           ))}
         </div>
+
+        {isAdmin ? (
+          <>
+            <HouseholdNotificationsSection session={session} settings={household} />
+            <DeliverySection session={session} />
+          </>
+        ) : null}
 
         <QuoteCard>{t("settingsPage.notifications.quote")}</QuoteCard>
       </div>
