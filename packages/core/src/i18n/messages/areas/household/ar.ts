@@ -52,6 +52,7 @@ export const householdAr: AreaCatalog<typeof householdEn> = {
   "manage.connections.remove": "إزالة",
   "manage.connections.keepSecret": "اتركه فارغًا للإبقاء على القيمة الحالية",
   "manage.connections.linkHint": "هذا يتصل بطريقة مختلفة — اضبطه في صفحته الخاصة.",
+  "manage.connections.toggleDetails": "إظهار التفاصيل أو إخفاؤها",
   "manage.connections.status.created": "مُعدّ",
   "manage.connections.status.connected": "متصل",
   "manage.connections.status.reconnect_needed": "يلزم إعادة الاتصال",
