@@ -317,12 +317,13 @@ export type SchoolAgenda = {
 export async function schoolAgenda(
   supabase: SupabaseClient,
   householdId: string,
-  options: { now?: Date } = {},
+  /** `items`: the whole `listSchoolItems` read, when a screen already has it. */
+  options: { now?: Date; items?: SchoolItem[] } = {},
 ): Promise<SchoolAgenda> {
   const now = options.now ?? new Date();
 
   const [items, communications, children] = await Promise.all([
-    listSchoolItems(supabase, householdId),
+    options.items ?? listSchoolItems(supabase, householdId),
     listCommunications(supabase, householdId),
     supabase
       .from("household_members")

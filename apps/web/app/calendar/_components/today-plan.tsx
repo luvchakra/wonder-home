@@ -36,7 +36,7 @@ import { AgendaRow } from "../../_components/agenda-row";
 import { ChangeMealButton, PlanMealButton } from "../../_components/meal-forms";
 import { groceryWords } from "../../_lib/grocery-words";
 import { mealFormLabels, recipePickerLabels } from "../../_lib/meal-form-labels";
-import { householdAgenda } from "../../_lib/agenda";
+import { agendaReads, householdAgenda, type AgendaRows } from "../../_lib/agenda";
 import { formatTime, type Session } from "../../_lib/session";
 
 export type TodayLens = "mine" | "family" | "household";
@@ -105,16 +105,53 @@ async function TodayBody({ session, active, now }: { session: Session; active: "
 
   // Bills and school items only for today and the look-ahead, never the whole history.
   const ahead = lookAheadWindow(now);
+  // The household agenda (a 6-domain scan) feeds only the "household" tab's
+  // needsYou + predictions, so compute it only there — not on mine/family.
+  // There it reads events, meals, bills, school items and the cupboard too:
+  // each table is read once, wide enough for both, and this screen keeps
+  // its own window of the rows (performance audit B4).
+  const withAgenda = !isChild && active === "household";
+  const shares = withAgenda ? agendaReads(view) : null;
+  const shared: AgendaRows = {
+    events: shares?.events ? listEvents(supabase, householdId, { from: dayStart }) : undefined,
+    meals: shares?.meals ? listMeals(supabase, householdId, { from: today }) : undefined,
+    obligations: shares?.obligations && seesMoney ? listObligations(supabase, householdId) : undefined,
+    schoolItems: shares?.schoolItems && seesSchool ? listSchoolItems(supabase, householdId) : undefined,
+    consumables: shares?.consumables ? listConsumables(supabase, householdId) : undefined,
+  };
+  const schoolFrom = ahead.schoolFrom.getTime();
+  const schoolTo = ahead.schoolTo.getTime();
   const [eventsR, mealsR, obligationsR, schoolItemsR, members, agendaR, consumablesR, recipeChoices, catalog] = await Promise.all([
-    settle(listEvents(supabase, householdId, { from: dayStart, to: dayEnd }), []),
-    isChild ? ok([]) : settle(listMeals(supabase, householdId, { from: today, to: today }), []),
-    seesMoney ? settle(listObligations(supabase, householdId, { dueFrom: ahead.billsFrom, dueTo: ahead.billsTo }), []) : ok([]),
-    seesSchool ? settle(listSchoolItems(supabase, householdId, { dueFrom: ahead.schoolFrom, dueTo: ahead.schoolTo }), []) : ok([]),
+    settle(
+      shared.events
+        ? shared.events.then((rows) => rows.filter((event) => event.startsAt.getTime() <= dayEnd.getTime()))
+        : listEvents(supabase, householdId, { from: dayStart, to: dayEnd }),
+      [],
+    ),
+    isChild
+      ? ok([])
+      : settle(shared.meals ? shared.meals.then((rows) => rows.filter((meal) => meal.onDate <= today)) : listMeals(supabase, householdId, { from: today, to: today }), []),
+    seesMoney
+      ? settle(
+          shared.obligations
+            ? shared.obligations.then((rows) => rows.filter((bill) => bill.dueOn !== null && bill.dueOn >= ahead.billsFrom && bill.dueOn <= ahead.billsTo))
+            : listObligations(supabase, householdId, { dueFrom: ahead.billsFrom, dueTo: ahead.billsTo }),
+          [],
+        )
+      : ok([]),
+    seesSchool
+      ? settle(
+          shared.schoolItems
+            ? shared.schoolItems.then((rows) =>
+                rows.filter((item) => item.dueAt !== null && item.dueAt.getTime() >= schoolFrom && item.dueAt.getTime() <= schoolTo),
+              )
+            : listSchoolItems(supabase, householdId, { dueFrom: ahead.schoolFrom, dueTo: ahead.schoolTo }),
+          [],
+        )
+      : ok([]),
     listMembers(supabase, householdId, membership.household.ownerMemberId).catch(() => []),
-    // The household agenda (a 6-domain scan) feeds only the "household" tab's
-    // needsYou + predictions, so compute it only there — not on mine/family.
-    isChild || active !== "household" ? ok(null) : settle(householdAgenda(supabase, householdId, view), null),
-    isChild ? ok([]) : settle(listConsumables(supabase, householdId), []),
+    withAgenda ? settle(householdAgenda(supabase, householdId, view, shared), null) : ok(null),
+    isChild ? ok([]) : settle(shared.consumables ?? listConsumables(supabase, householdId), []),
     // What a meal here can change to, or a new one be planned from (the owner, 2026-10-20).
     isChild ? Promise.resolve([]) : listRecipeChoices(supabase, householdId).catch(() => []),
     isChild ? Promise.resolve([]) : listCatalogRecipes(supabase, publicEnv().NEXT_PUBLIC_SUPABASE_URL).catch(() => []),

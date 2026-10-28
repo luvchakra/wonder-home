@@ -255,12 +255,19 @@ export type FamilyAgenda = {
 export async function familyAgenda(
   supabase: SupabaseClient,
   householdId: string,
-  options: { now?: Date } = {},
+  /**
+   * `events`: rows a screen already read with `listEvents` from `now` or
+   * earlier (no upper bound), so the same table is not read twice in one
+   * request; the agenda keeps exactly the ones its own read would return.
+   */
+  options: { now?: Date; events?: FamilyEvent[] } = {},
 ): Promise<FamilyAgenda> {
   const now = options.now ?? new Date();
 
   const [events, giftRows, conflictRows] = await Promise.all([
-    listEvents(supabase, householdId, { from: now }),
+    options.events
+      ? options.events.filter((event) => event.endsAt.getTime() >= now.getTime())
+      : listEvents(supabase, householdId, { from: now }),
     supabase
       .from("gift_plans")
       .select("id, recipient, needed_by, status, responsible_member_id")
