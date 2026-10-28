@@ -1,6 +1,6 @@
 "use client";
 
-import { AlertTriangle, ExternalLink, FileText, Pencil, Plug, PlugZap, RefreshCw, Trash2 } from "lucide-react";
+import { AlertTriangle, ExternalLink, FileText, Pencil, Plug, PlugZap, RefreshCw, Send, Trash2 } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useActionState, useCallback, useEffect, useRef, useState } from "react";
 
@@ -21,6 +21,7 @@ import {
   removeConnectionScrapeUrlAction,
   setConnectionScrapeUrlEnabledAction,
   testConnectionAction,
+  testRestRequestAction,
   updateConnectionAction,
 } from "../(auth)/connection-actions";
 import type { ActionState } from "../(auth)/actions";
@@ -260,6 +261,91 @@ function BrowserFetchSection({ householdId, connection, childOptions, labels }: 
   );
 }
 
+const TEXTAREA_CLASS =
+  "block w-full rounded-[var(--wh-radius-sm)] border border-[var(--wh-border)] bg-[var(--wh-surface)] px-3 py-2 font-mono text-sm focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-[var(--wh-primary)]";
+
+const REST_METHODS = ["GET", "POST", "PUT", "PATCH", "DELETE"] as const;
+
+type RestResult = Awaited<ReturnType<typeof testRestRequestAction>>;
+
+/** The request/response tester for a REST connection: compose a request, send it, inspect the response. */
+function RestTesterSection({ householdId, connection, labels }: { householdId: string; connection: ConnectionView; labels: ConnectionsLabels }) {
+  const [method, setMethod] = useState<(typeof REST_METHODS)[number]>("GET");
+  const [path, setPath] = useState("");
+  const [headersText, setHeadersText] = useState("");
+  const [body, setBody] = useState("");
+  const [sending, setSending] = useState(false);
+  const [result, setResult] = useState<RestResult | null>(null);
+
+  const send = async () => {
+    setSending(true);
+    setResult(null);
+    try {
+      setResult(await testRestRequestAction({ householdId, connectionId: connection.id, method, path, headersText, body }));
+    } catch {
+      setResult({ ok: false, error: labels.testFailed });
+    } finally {
+      setSending(false);
+    }
+  };
+
+  const bodyDisabled = method === "GET";
+
+  return (
+    <div className="mt-2 space-y-3 ps-[3.25rem]">
+      <div className="rounded-[var(--wh-radius-sm)] border border-[var(--wh-border)] p-3">
+        <p className="text-sm font-medium">{labels.restTitle}</p>
+        <p className="text-xs text-[var(--wh-foreground-muted)]">{labels.restLede}</p>
+        <div className="mt-3 space-y-2">
+          <div className="flex gap-2">
+            <div className="w-32 shrink-0">
+              <Select label={labels.restMethod} name="restMethod" value={method} onChange={(e) => setMethod(e.target.value as (typeof REST_METHODS)[number])}>
+                {REST_METHODS.map((m) => <option key={m} value={m}>{m}</option>)}
+              </Select>
+            </div>
+            <div className="min-w-0 flex-1">
+              <Field label={labels.restPath} name="restPath" value={path} onChange={(e) => setPath(e.target.value)} placeholder={labels.restPathPlaceholder} inputMode="url" autoComplete="off" />
+            </div>
+          </div>
+          <div className="space-y-1.5">
+            <label htmlFor="restHeaders" className="block text-sm font-medium">{labels.restHeaders}</label>
+            <textarea id="restHeaders" name="restHeaders" rows={2} value={headersText} onChange={(e) => setHeadersText(e.target.value)} placeholder={labels.restHeadersPlaceholder} className={TEXTAREA_CLASS} />
+          </div>
+          <div className="space-y-1.5">
+            <label htmlFor="restBody" className="block text-sm font-medium">{labels.restBody}</label>
+            <textarea id="restBody" name="restBody" rows={3} value={body} onChange={(e) => setBody(e.target.value)} disabled={bodyDisabled} className={`${TEXTAREA_CLASS}${bodyDisabled ? " opacity-50" : ""}`} />
+          </div>
+          <Button type="button" variant="secondary" onClick={() => void send()} disabled={sending} className="gap-2">
+            <Send aria-hidden className="size-4" /> {sending ? labels.restSending : labels.restSend}
+          </Button>
+        </div>
+
+        {result ? (
+          result.ok ? (
+            <div className="mt-3 space-y-2">
+              <div className="flex flex-wrap items-center gap-2">
+                <span className="text-sm font-medium">{labels.restStatus}</span>
+                <Badge tone={result.status < 300 ? "handled" : "attention"}>{result.status} {result.statusText}</Badge>
+                <span className="text-xs text-[var(--wh-foreground-subtle)]">{labels.restTook} {result.durationMs} ms</span>
+              </div>
+              {Object.keys(result.headers).length > 0 ? (
+                <pre className="overflow-x-auto rounded-[var(--wh-radius-sm)] bg-[var(--wh-surface-muted)] p-2 text-xs">{Object.entries(result.headers).map(([k, v]) => `${k}: ${v}`).join("\n")}</pre>
+              ) : null}
+              <div>
+                <p className="text-xs font-medium text-[var(--wh-foreground-muted)]">{labels.restResponse}</p>
+                <pre className="mt-1 max-h-80 overflow-auto rounded-[var(--wh-radius-sm)] bg-[var(--wh-surface-muted)] p-2 text-xs whitespace-pre-wrap break-words">{result.body}</pre>
+                {result.truncated ? <p className="mt-1 text-xs text-[var(--wh-foreground-subtle)]">{labels.restTruncated}</p> : null}
+              </div>
+            </div>
+          ) : (
+            <Alert tone="attention" className="mt-3">{result.error}</Alert>
+          )
+        ) : null}
+      </div>
+    </div>
+  );
+}
+
 /** One connection: its name, type and status, with inline edit and remove. */
 function ConnectionRow({ householdId, connection, connector, childOptions, labels }: { householdId: string; connection: ConnectionView; connector: ConnectorType | null; childOptions: ChildOption[]; labels: ConnectionsLabels }) {
   const [editing, setEditing] = useState(false);
@@ -309,6 +395,10 @@ function ConnectionRow({ householdId, connection, connector, childOptions, label
 
       {connector && connector.capabilities.includes("portal-fetch") && !editing ? (
         <BrowserFetchSection householdId={householdId} connection={connection} childOptions={childOptions} labels={labels} />
+      ) : null}
+
+      {connector && connector.capabilities.includes("rest-call") && !editing ? (
+        <RestTesterSection householdId={householdId} connection={connection} labels={labels} />
       ) : null}
     </li>
   );

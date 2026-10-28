@@ -36,6 +36,21 @@ export type ConnectionsLabels = {
   pageStopped: string;
   /** Kind slug → words. */
   pageKind: Record<string, string>;
+  // REST request/response tester.
+  restTitle: string;
+  restLede: string;
+  restMethod: string;
+  restPath: string;
+  restPathPlaceholder: string;
+  restHeaders: string;
+  restHeadersPlaceholder: string;
+  restBody: string;
+  restSend: string;
+  restSending: string;
+  restResponse: string;
+  restStatus: string;
+  restTook: string;
+  restTruncated: string;
 };
 
 export function connectionsLabels(t: Translate): ConnectionsLabels {
@@ -83,5 +98,19 @@ export function connectionsLabels(t: Translate): ConnectionsLabels {
       results: t("manage.connections.pages.kind.results"),
       generic: t("manage.connections.pages.kind.generic"),
     },
+    restTitle: t("manage.connections.rest.title"),
+    restLede: t("manage.connections.rest.lede"),
+    restMethod: t("manage.connections.rest.method"),
+    restPath: t("manage.connections.rest.path"),
+    restPathPlaceholder: t("manage.connections.rest.pathPlaceholder"),
+    restHeaders: t("manage.connections.rest.headers"),
+    restHeadersPlaceholder: t("manage.connections.rest.headersPlaceholder"),
+    restBody: t("manage.connections.rest.body"),
+    restSend: t("manage.connections.rest.send"),
+    restSending: t("manage.connections.rest.sending"),
+    restResponse: t("manage.connections.rest.response"),
+    restStatus: t("manage.connections.rest.status"),
+    restTook: t("manage.connections.rest.took"),
+    restTruncated: t("manage.connections.rest.truncated"),
   };
 }

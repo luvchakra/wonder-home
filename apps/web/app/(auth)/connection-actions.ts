@@ -5,9 +5,11 @@ import { z } from "zod";
 
 import { toErrorBody } from "@wonderhome/core/api/errors";
 import { createClient } from "@wonderhome/core/db/server";
+import { createAdminClient } from "@wonderhome/core/db/admin";
 import { requireMembership } from "@wonderhome/core/identity/households";
-import { createConnection, deleteConnection, getConnection, updateConnection } from "@wonderhome/core/connections/repository";
+import { createConnection, deleteConnection, getConnection, readConnectionSecrets, updateConnection } from "@wonderhome/core/connections/repository";
 import { getConnectorType } from "@wonderhome/core/connectors/registry";
+import { REST_METHODS, testRestRequest, type RestMethod, type RestTestResult } from "@wonderhome/core/connectors/rest-tester";
 import { addConnectionScrapeUrl, removePortalScrapeUrl, setPortalScrapeUrlEnabled, type PortalScrapeKind } from "@wonderhome/core/portals/scrape-url-repository";
 import { latestConnectionFetchJob, type PortalFetchJobStatus } from "@wonderhome/core/portals/job-repository";
 
@@ -146,6 +148,71 @@ export async function connectionFetchStatusAction(input: { householdId: string; 
     return { status: job?.status ?? "none", reason: job?.reason ?? null };
   } catch {
     return { status: "none", reason: null };
+  }
+}
+
+// --- REST connection: the request/response tester ---
+
+const restTestSchema = z.object({
+  householdId: z.uuid(),
+  connectionId: z.uuid(),
+  method: z.enum(REST_METHODS),
+  path: z.string().trim().max(2048),
+  headersText: z.string().max(4096).optional(),
+  body: z.string().max(64 * 1024).optional(),
+});
+
+/** Parse a textarea of "Name: value" lines into headers (blank and malformed lines ignored). */
+function parseHeaderLines(text: string | undefined): Record<string, string> {
+  const headers: Record<string, string> = {};
+  if (!text) return headers;
+  for (const line of text.split("\n")) {
+    const at = line.indexOf(":");
+    if (at <= 0) continue;
+    const name = line.slice(0, at).trim();
+    const value = line.slice(at + 1).trim();
+    if (name) headers[name] = value;
+  }
+  return headers;
+}
+
+/**
+ * Send one test request for a REST connection and return the response to inspect.
+ * An adult only — the stored auth header is read with the service role and
+ * attached server-side (never to the browser); the target is gated same-site.
+ */
+export async function testRestRequestAction(input: {
+  householdId: string;
+  connectionId: string;
+  method: string;
+  path: string;
+  headersText?: string;
+  body?: string;
+}): Promise<RestTestResult> {
+  const parsed = restTestSchema.safeParse(input);
+  if (!parsed.success) return { ok: false, error: parsed.error.issues[0]?.message ?? "Please check the request above." };
+  try {
+    const supabase = await createClient();
+    const membership = await requireMembership(supabase, parsed.data.householdId);
+    if (membership.memberType !== "adult") return { ok: false, error: "Only an adult can test a connection." };
+
+    const connection = await getConnection(supabase, parsed.data.householdId, parsed.data.connectionId);
+    if (!connection || connection.connectorType !== "rest") return { ok: false, error: "That isn’t a REST connection." };
+    const baseUrl = connection.params.baseUrl;
+    if (!baseUrl) return { ok: false, error: "This connection has no base address. Edit it first." };
+
+    const secrets = await readConnectionSecrets(createAdminClient(), parsed.data.connectionId);
+    return await testRestRequest({
+      baseUrl,
+      authHeader: connection.params.authHeader ?? null,
+      authValue: secrets?.authValue ?? null,
+      method: parsed.data.method as RestMethod,
+      path: parsed.data.path,
+      headers: parseHeaderLines(parsed.data.headersText),
+      body: parsed.data.body ?? null,
+    });
+  } catch (thrown) {
+    return { ok: false, error: toErrorBody(thrown, "connections").body.error.message };
   }
 }
 
