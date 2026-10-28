@@ -1,6 +1,6 @@
 # UI simplification: one place for each job
 
-**Status:** Proposed on 2026-10-28. Waiting for the owner's decisions in §8. No code has changed yet.
+**Status:** Approved by the owner on 2026-10-28: D1–D6 as recommended. Built as stories 00-013 to 00-016 (`backlogs/00-Project-Bootstrap-and-Architecture.md`).
 **Asked for:** "Simplify the UI. Similar functional aspects in one place, merge wherever possible. Make it simple."
 **Rules applied:** `docs/design-principles.md` 6 (five areas), 13 (one door), 14 (no two buttons for the same job), 17 (group by decision), 21 (card opens to detail), 23 (every setting has one editor).
 
@@ -143,7 +143,7 @@ Redirects:
 | Destination | Doors today | After |
 |---|---|---|
 | Settings | More profile card, More Manage list, ViewerMenu, sidebar bottom, Manage Household | ViewerMenu + sidebar bottom (desktop) / More profile card (phone) |
-| HomeBrain | More, ViewerMenu, Help page | More only. The ViewerMenu keeps profile, help and log out. |
+| HomeBrain | More, ViewerMenu, Help page | More (the Help page keeps its inline "correct it" link in the text). The ViewerMenu keeps profile, help and log out. |
 | Notifications inbox | Bell, More Manage list | Bell only |
 
 ### M8. The More menu after the merges
