@@ -1,6 +1,6 @@
 "use client";
 
-import { AlertTriangle, GraduationCap, PlugZap, Send } from "lucide-react";
+import { AlertTriangle, CheckCircle2, DownloadCloud, GraduationCap, PlugZap, Send } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useActionState, useCallback, useEffect, useRef, useState } from "react";
 
@@ -18,11 +18,11 @@ import type { SchoolConnectLabels } from "../_lib/school-connect-labels";
 /**
  * Connect school (redesigned around the Connections framework, 2026-10-28).
  *
- * Two honest paths: forward a circular or photo into HomeSend (any school, no
- * setup), or connect the school's website as a browser-automation *connection*.
- * Here you pick one of the household's connections, test it (WonderHome signs in
- * and files anything new in HomeSend to confirm), and jump to the Connections
- * page to create or manage them. No demo portal, no inline sign-in.
+ * Forward a circular or photo into HomeSend (any school, no setup), or connect
+ * the school's website as a browser-automation connection: pick one, press
+ * Connect (WonderHome signs in; once in, it shows "Connected"), then Fetch now
+ * in the area below to read the pages set up for it and file anything new in
+ * HomeSend to confirm.
  */
 
 export type SchoolConnectionView = { id: string; name: string; url: string | null; connectionState?: string | null };
@@ -31,7 +31,7 @@ const EMPTY: ActionState = {};
 
 type PollPhase = { kind: "idle" } | { kind: "checking" } | { kind: "ok" } | { kind: "failed"; reason: string | null } | { kind: "slow" };
 
-/** Poll the fetch outcome after Test, so the result resolves instead of hanging on "checking". */
+/** Poll the fetch outcome after Connect/Fetch, so the result resolves instead of hanging. */
 function useFetchPoll(householdId: string, connectionId: string) {
   const router = useRouter();
   const [phase, setPhase] = useState<PollPhase>({ kind: "idle" });
@@ -73,63 +73,99 @@ function useFetchPoll(householdId: string, connectionId: string) {
   return { phase, start };
 }
 
-/** Pick a connection, test it, see the result — the website path, driven from the school screen. */
+/** Render a poll phase (or the raw action state before polling starts). */
+function PollResult({ phase, state, okLabel, labels }: { phase: PollPhase; state: ActionState; okLabel: string; labels: SchoolConnectLabels }) {
+  if (phase.kind === "idle") {
+    if (state.error) return <Alert tone="attention">{state.error}</Alert>;
+    if (state.notice) return <Alert tone="info">{state.notice}</Alert>;
+    return null;
+  }
+  if (phase.kind === "checking") return <Alert tone="info">{labels.pollChecking}</Alert>;
+  if (phase.kind === "slow") return <Alert tone="attention">{labels.pollSlow}</Alert>;
+  if (phase.kind === "ok") return <Alert tone="info">{okLabel}</Alert>;
+  return <Alert tone="attention">{labels.pollFailed}{phase.reason ? ` ${phase.reason}` : ""}</Alert>;
+}
+
+/** Pick a connection, connect it, then fetch — driven from the school screen. */
 function PortalConnect({ householdId, connections, connectionsHref, labels }: { householdId: string; connections: SchoolConnectionView[]; connectionsHref: string; labels: SchoolConnectLabels }) {
   const [selectedId, setSelectedId] = useState(connections[0]?.id ?? "");
-  const [testState, test, testing] = useActionState(testConnectionAction, EMPTY);
-  const poll = useFetchPoll(householdId, selectedId);
-  useEffect(() => {
-    if (testState.notice && !testState.error) poll.start();
-  }, [testState]); // eslint-disable-line react-hooks/exhaustive-deps
-
   const selected = connections.find((c) => c.id === selectedId) ?? null;
+  const connected = selected?.connectionState === "connected";
+  const reconnect = selected?.connectionState === "reconnect_needed";
+
+  const [connectState, connect, connecting] = useActionState(testConnectionAction, EMPTY);
+  const connectPoll = useFetchPoll(householdId, selectedId);
+  useEffect(() => {
+    if (connectState.notice && !connectState.error) connectPoll.start();
+  }, [connectState]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  const [fetchState, fetchNow, fetching] = useActionState(testConnectionAction, EMPTY);
+  const fetchPoll = useFetchPoll(householdId, selectedId);
+  useEffect(() => {
+    if (fetchState.notice && !fetchState.error) fetchPoll.start();
+  }, [fetchState]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  if (connections.length === 0) {
+    return (
+      <Card className="p-4">
+        <div className="flex items-start gap-3">
+          <IconTile icon={GraduationCap} tone="school" size="lg" />
+          <div className="min-w-0 flex-1 space-y-3">
+            <p className="text-sm text-[var(--wh-foreground-muted)]">{labels.portalNone}</p>
+            <PillLink href={connectionsHref} tone="primary">{labels.portalManage}</PillLink>
+          </div>
+        </div>
+      </Card>
+    );
+  }
 
   return (
     <Card className="p-4">
       <div className="flex items-start gap-3">
         <IconTile icon={GraduationCap} tone="school" size="lg" />
         <div className="min-w-0 flex-1 space-y-3">
-          {connections.length === 0 ? (
-            <p className="text-sm text-[var(--wh-foreground-muted)]">{labels.portalNone}</p>
+          <Select label={labels.choose} name="connectionPicker" value={selectedId} onChange={(e) => setSelectedId(e.target.value)}>
+            {connections.map((c) => (
+              <option key={c.id} value={c.id}>{c.name}{c.url ? ` · ${c.url.replace(/^https?:\/\//, "")}` : ""}</option>
+            ))}
+          </Select>
+
+          {/* Connect / Connected */}
+          {connected ? (
+            <Badge tone="handled" className="gap-1"><CheckCircle2 aria-hidden className="size-4" /> {labels.connectedBadge}</Badge>
           ) : (
             <>
-              <Select label={labels.choose} name="connectionPicker" value={selectedId} onChange={(e) => setSelectedId(e.target.value)}>
-                {connections.map((c) => (
-                  <option key={c.id} value={c.id}>{c.name}{c.url ? ` · ${c.url.replace(/^https?:\/\//, "")}` : ""}</option>
-                ))}
-              </Select>
-
-              {selected?.connectionState === "reconnect_needed" ? (
+              {reconnect ? (
                 <Alert tone="attention" className="flex items-start gap-2">
                   <AlertTriangle aria-hidden className="mt-0.5 size-4 shrink-0" />
                   <span>{labels.reconnectNeeded}</span>
                 </Alert>
               ) : null}
-
-              <form action={test}>
+              <form action={connect}>
                 <input type="hidden" name="householdId" value={householdId} />
                 <input type="hidden" name="connectionId" value={selectedId} />
-                <Button type="submit" variant="secondary" disabled={testing || !selectedId} className="gap-2">
-                  <PlugZap aria-hidden className="size-4" /> {labels.testConnection}
+                <Button type="submit" variant="primary" disabled={connecting || !selectedId} className="gap-2">
+                  <PlugZap aria-hidden className="size-4" /> {labels.connect}
                 </Button>
               </form>
-
-              {poll.phase.kind === "idle" ? (
-                testState.error ? <Alert tone="attention">{testState.error}</Alert> : testState.notice ? <Alert tone="info">{testState.notice}</Alert> : null
-              ) : poll.phase.kind === "checking" ? (
-                <Alert tone="info">{labels.pollChecking}</Alert>
-              ) : poll.phase.kind === "slow" ? (
-                <Alert tone="attention">{labels.pollSlow}</Alert>
-              ) : poll.phase.kind === "ok" ? (
-                <Alert tone="info">{labels.pollOk}</Alert>
-              ) : (
-                <Alert tone="attention">{labels.pollFailed}{poll.phase.reason ? ` ${poll.phase.reason}` : ""}</Alert>
-              )}
+              <PollResult phase={connectPoll.phase} state={connectState} okLabel={labels.connectOk} labels={labels} />
             </>
           )}
 
-          <div>
-            <PillLink href={connectionsHref} tone="primary">{labels.portalManage}</PillLink>
+          {/* Fetch area */}
+          <div className="rounded-[var(--wh-radius-sm)] border border-[var(--wh-border)] p-3">
+            <p className="text-sm font-medium">{labels.fetchTitle}</p>
+            <p className="text-xs text-[var(--wh-foreground-muted)]">{labels.fetchLede}</p>
+            <form action={fetchNow} className="mt-3">
+              <input type="hidden" name="householdId" value={householdId} />
+              <input type="hidden" name="connectionId" value={selectedId} />
+              <Button type="submit" variant="secondary" disabled={fetching || !selectedId} className="gap-2">
+                <DownloadCloud aria-hidden className="size-4" /> {labels.fetchNow}
+              </Button>
+            </form>
+            <div className="mt-2">
+              <PollResult phase={fetchPoll.phase} state={fetchState} okLabel={labels.fetchOk} labels={labels} />
+            </div>
           </div>
         </div>
       </div>
