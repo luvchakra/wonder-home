@@ -54,9 +54,22 @@ class PlaywrightPage implements PortalPage {
     await this.page.fill(selector, value, { timeout: NAV_TIMEOUT_MS });
   }
 
+  async type(selector: string, value: string): Promise<void> {
+    // Clear, then type key by key so a controlled (React/Vue) input actually
+    // captures the value — a plain fill can leave the component's state empty.
+    const field = this.page.locator(selector).first();
+    await field.click({ timeout: NAV_TIMEOUT_MS });
+    await field.fill("", { timeout: NAV_TIMEOUT_MS });
+    await field.pressSequentially(value, { delay: 15, timeout: NAV_TIMEOUT_MS });
+  }
+
   async click(selector: string): Promise<void> {
     await this.page.click(selector, { timeout: NAV_TIMEOUT_MS });
     await this.settle();
+  }
+
+  async waitForGone(selector: string, timeoutMs = 15_000): Promise<void> {
+    await this.page.locator(selector).first().waitFor({ state: "detached", timeout: timeoutMs }).catch(() => {});
   }
 
   private async settle(): Promise<void> {
