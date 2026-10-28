@@ -108,7 +108,7 @@ export async function TodayCard({ session, now, date }: { session: Session; now:
       ) : null}
       {weather?.state === "off" && weather.reason === "no_area" && view.permissions.includes("household.manage") ? (
         // Weather is on here but nobody has said where home is; only an Admin can, and only on Integrations.
-        <Link href="/household/integrations#weather" className="mt-2 flex items-center gap-1.5 text-xs font-medium text-[var(--wh-primary)] hover:underline">
+        <Link href="/settings/connections#weather" className="mt-2 flex items-center gap-1.5 text-xs font-medium text-[var(--wh-primary)] hover:underline">
           <CloudSun aria-hidden className="size-4 shrink-0" />
           <span className="break-words">{t("today.weatherArea")}</span>
         </Link>

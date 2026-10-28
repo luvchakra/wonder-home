@@ -1,9 +1,8 @@
-import { Bell, Bot, ChevronRight, CreditCard, Languages, Link2, LogOut, MapPin, MessageCircle, MicVocal, ShieldCheck, Speaker, Store, UserRound } from "lucide-react";
+import { Bell, Bot, ChevronRight, CreditCard, Languages, Link2, LogOut, MapPin, MicVocal, ShieldCheck, UserRound } from "lucide-react";
 import Link from "next/link";
 import type { ComponentType } from "react";
 
 import { credentialStatus } from "@wonderhome/core/ai/credentials";
-import { instamartMode } from "@wonderhome/core/commerce/instamart/config";
 import { describeKeySource, platformKey, resolveModelKey } from "@wonderhome/core/ai/model-key";
 import { listPlans, loadSubscription } from "@wonderhome/core/billing/repository";
 import { getVerifiedUser } from "@wonderhome/core/db/server";
@@ -67,8 +66,8 @@ function SettingsGroup({ title, rows }: { title: string; rows: Row[] }) {
  * Settings & Profile: one landing page, and one editor per setting (the
  * Settings consolidation). The profile is edited here; everything else is a
  * row that opens its own canonical page — Language & Region, Notifications,
- * Voice, Voice assistants, the AI assistant, Privacy, WhatsApp, Connected
- * accounts and the plan. Nothing is listed that is not built, and a row only
+ * Voice, the AI assistant, Privacy, Connections (WhatsApp, voice assistants,
+ * school and every other service) and the plan. Nothing is listed that is not built, and a row only
  * appears where this person can use what it opens.
  */
 export default async function SettingsPage() {
@@ -76,8 +75,7 @@ export default async function SettingsPage() {
   const { supabase, membership, view, viewer, secondary } = session;
   const householdId = membership.household.id;
   const whatsappReady = whatsappConfigFromEnv() !== null && whatsappBusinessNumber() !== null;
-  const instamartReady = instamartMode() !== "off" && membership.memberType === "adult";
-  const [user, { data: preferenceRows }, credential, voiceSettings, members, subscription, plans, whatsappLinks, myOffice, mySharing, myInstamart] = await Promise.all([
+  const [user, { data: preferenceRows }, credential, voiceSettings, members, subscription, plans, whatsappLinks, myOffice, mySharing] = await Promise.all([
     getVerifiedUser(),
     supabase.from("notification_preferences").select("channel, enabled, quiet_from, quiet_until").eq("member_id", membership.memberId),
     credentialStatus(supabase, householdId).catch(() => ({ configured: false, provider: null, updatedAt: null })),
@@ -90,10 +88,6 @@ export default async function SettingsPage() {
     loadWorkPlace(supabase, householdId, membership.memberId).catch(() => null),
     // Whether they share where they are (their own row; RLS lets every member read who shares).
     supabase.from("member_location_sharing").select("enabled").eq("member_id", membership.memberId).maybeSingle().then((result) => Boolean((result.data as { enabled?: boolean } | null)?.enabled), () => false),
-    // Their own Swiggy connection for Instamart orders (25-032); only where the deployment has it and for an adult.
-    instamartReady
-      ? supabase.from("instamart_connections").select("status").eq("member_id", membership.memberId).maybeSingle().then((result) => (result.data as { status?: string } | null)?.status === "connected", () => false)
-      : Promise.resolve(false),
   ]);
   const me = members.find((member) => member.id === membership.memberId) ?? null;
 
@@ -128,25 +122,22 @@ export default async function SettingsPage() {
       href: "/settings/notifications",
     },
     { icon: MicVocal, tone: "ai", title: t("settingsPage.voice.title"), meta: describeVoice(voiceSettings), href: "/settings/voice" },
-    { icon: Speaker, tone: "ai", title: t("settingsHome.voiceAssistants.title"), meta: t("settingsHome.voiceAssistants.meta"), href: "/settings/voice-assistants" },
   ];
   const aiAndPrivacy: Row[] = [
     { icon: Bot, tone: "ai", title: t("settingsPage.ai.title"), meta: t("settingsHome.ai.meta", { source: keyNote.title }), href: "/settings/ai" },
     { icon: ShieldCheck, tone: "primary", title: t("settingsHome.privacy.title"), meta: t("settingsHome.privacy.meta"), href: "/settings/privacy" },
     { icon: MapPin, tone: "people", title: t("location.title"), meta: mySharing ? t("location.meta.on") : t("location.meta.off"), href: "/settings/location" },
   ];
+  // Everything linked to the household is one page (design/UI-SIMPLIFICATION-v1.md M2): WhatsApp,
+  // voice assistants, school, Swiggy Instamart and every other service.
   const connected: Row[] = [
-    // WhatsApp only once the deployment has a number to connect to.
-    ...(whatsappReady
-      ? [{ icon: MessageCircle, tone: "handled" as IconTone, title: "WhatsApp", meta: myWhatsApp ? t("settingsHome.whatsapp.connected") : t("settingsHome.whatsapp.meta"), href: "/settings/whatsapp" }]
-      : []),
-    // Swiggy Instamart: its one editor is the order page, where it is connected and disconnected (rule 23).
-    ...(instamartReady
-      ? [{ icon: Store, tone: "home" as IconTone, title: "Swiggy Instamart", meta: myInstamart ? t("settingsHome.instamart.connected") : t("settingsHome.instamart.meta"), href: "/groceries/order" }]
-      : []),
-    ...(view.permissions.includes("integrations.manage")
-      ? [{ icon: Link2, tone: "care" as IconTone, title: t("settingsHome.connected.title"), meta: t("settingsHome.connected.meta"), href: "/household/integrations" }]
-      : []),
+    {
+      icon: Link2,
+      tone: "care",
+      title: t("connectionsPage.title"),
+      meta: myWhatsApp ? `WhatsApp · ${t("settingsHome.whatsapp.connected")}` : t("connectionsPage.meta"),
+      href: "/settings/connections",
+    },
   ];
   const plan: Row[] = [{ icon: CreditCard, tone: "money", title: t("settingsPage.plan.title"), meta: t("settingsHome.plan.meta", { plan: planName }), href: "/settings/plan" }];
 

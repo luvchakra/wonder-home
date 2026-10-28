@@ -229,7 +229,7 @@ export default async function SetupWizardPage({
           >
             <div className="space-y-3">
               <p className="text-sm text-[var(--wh-foreground-muted)]">{t("manage.setup.connections.none")}</p>
-              <PillLink href="/household/integrations" tone="quiet">{t("manage.setup.connections.see")}</PillLink>
+              <PillLink href="/settings/connections" tone="quiet">{t("manage.setup.connections.see")}</PillLink>
             </div>
           </Step>
         ) : null}

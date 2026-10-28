@@ -606,8 +606,7 @@ async function asSchoolAdmin<T>(
     const supabase = await createClient();
     const actor = await requireHouseholdAdmin(supabase, householdId);
     await work(supabase, actor);
-    revalidatePath("/household/integrations/school");
-    revalidatePath("/household/integrations");
+    revalidatePath("/settings/connections");
     return { notice: "Saved." };
   } catch (error) {
     return { error: toErrorBody(error, "school").body.error.message };
@@ -765,7 +764,7 @@ export async function fetchSchoolPortalNowAction(_previous: ActionState, formDat
     await requireMembership(supabase, parsed.data.householdId);
     const { error } = await supabase.rpc("enqueue_portal_fetch_job", { p_integration_id: parsed.data.integrationId });
     if (error) return { error: "Couldn’t start a fetch just now. Please try again." };
-    revalidatePath("/household/integrations/school");
+    revalidatePath("/settings/connections");
     return { notice: "Fetch started. Anything new will appear in HomeSend for you to confirm." };
   } catch (thrown) {
     return { error: toErrorBody(thrown, "school").body.error.message };
@@ -885,7 +884,7 @@ export async function testSchoolPortalConnectionAction(_previous: ActionState, f
     await requireMembership(supabase, parsed.data.householdId);
     const { error } = await supabase.rpc("enqueue_portal_fetch_job", { p_integration_id: parsed.data.integrationId });
     if (error) return { error: "Couldn’t start a check just now. Please try again." };
-    revalidatePath("/household/integrations/school");
+    revalidatePath("/settings/connections");
     return { notice: "Checking the sign-in… the connection state updates here once the worker signs in." };
   } catch (thrown) {
     return { error: toErrorBody(thrown, "school").body.error.message };

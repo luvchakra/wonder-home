@@ -1,9 +1,6 @@
-import { AppShell } from "@wonderhome/core/shell/app-shell";
 import { Card } from "@wonderhome/core/ui/card";
 import { IconTile } from "@wonderhome/core/ui/icon-tile";
 import { Badge } from "@wonderhome/core/ui/pill";
-import { SectionHeader } from "@wonderhome/core/ui/section-header";
-import { QuoteCard } from "@wonderhome/core/ui/quote-card";
 import { EmptyState } from "@wonderhome/core/ui/states";
 import type { Translate } from "@wonderhome/core/i18n/translate";
 import { channelSummary, type Capability, type CapabilityChannel } from "@wonderhome/core/voicelink/capabilities";
@@ -12,11 +9,8 @@ import { listVoiceLinks, type VoiceLink } from "@wonderhome/core/voicelink/repos
 import { AudioLines, Speaker, Unlink } from "lucide-react";
 
 import { revokeVoiceLinkAction } from "../../(auth)/voice-link-actions";
-import { formatDate, requireSession } from "../../_lib/session";
+import { formatDate, type Session } from "../../_lib/session";
 import { capabilityLabel, scopeLabel } from "../../_lib/settings-labels";
-
-export const metadata = { title: "Voice assistants" };
-export const dynamic = "force-dynamic";
 
 const PROVIDER_NAMES: Record<VoiceLink["provider"], string> = { amazon_alexa: "Alexa", gemini: "Gemini Voice" };
 
@@ -61,9 +55,8 @@ function CapabilityList({ title, items, channel, t }: { title: string; items: Ca
  * them. Linking itself starts in the assistant's own app, never here, so the
  * page says so rather than offering a button with nothing behind it.
  */
-export default async function VoiceAssistantsPage() {
-  const session = await requireSession("/settings/voice-assistants");
-  const { supabase, membership, viewer, secondary } = session;
+export async function VoiceAssistantsSection({ session }: { session: Session }) {
+  const { supabase, membership } = session;
   const household = membership.household;
   const [links, members] = await Promise.all([
     listVoiceLinks(supabase, household.id).catch(() => null),
@@ -83,10 +76,9 @@ export default async function VoiceAssistantsPage() {
   }
 
   return (
-    <AppShell active="more" viewer={viewer} secondary={secondary} pathname="/settings/voice-assistants" back={{ href: "/settings", label: t("settingsPage.backToSettings") }} title={t("settingsPage.voiceAssistants.title")}>
-      <div className="space-y-6">
-        <header className="wh-rise">
-          <h1 className="text-[1.625rem] font-bold tracking-tight sm:text-3xl">{t("settingsPage.voiceAssistants.title")}</h1>
+    <section id="voice" className="scroll-mt-20 space-y-4">
+        <header>
+          <h2 className="text-lg font-semibold tracking-tight">{t("settingsPage.voiceAssistants.title")}</h2>
           <p className="mt-0.5 text-sm text-[var(--wh-foreground-muted)]">{t("settingsPage.voiceAssistants.lede", { household: household.name })}</p>
         </header>
 
@@ -163,7 +155,7 @@ export default async function VoiceAssistantsPage() {
         ) : null}
 
         <section className="space-y-3">
-          <SectionHeader title={t("settingsPage.voiceAssistants.can")} />
+          <h3 className="text-sm font-semibold">{t("settingsPage.voiceAssistants.can")}</h3>
           <p className="text-sm text-[var(--wh-foreground-muted)]">{t("settingsPage.voiceAssistants.canBody")}</p>
           <ul className="space-y-3">
             {VOICE_CHANNELS.map(({ channel, name }) => {
@@ -188,8 +180,6 @@ export default async function VoiceAssistantsPage() {
           </ul>
         </section>
 
-        <QuoteCard>{t("settingsPage.voiceAssistants.quote")}</QuoteCard>
-      </div>
-    </AppShell>
+    </section>
   );
 }

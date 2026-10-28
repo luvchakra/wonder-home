@@ -11,6 +11,7 @@ decision that shapes later work each earns a note, written before moving on.
 
 | Date | Note |
 |---|---|
+| 2026-10-28 | [UI simplification, part 3: one Connections page (00-015)](2026-10-28-ui-simplification-m2-connections.md) |
 | 2026-10-28 | [UI simplification, part 2: people on Family, Today in the Calendar (00-014)](2026-10-28-ui-simplification-m3-m4.md) |
 | 2026-10-28 | [UI simplification, part 1: doors, the More menu, one Notifications page (00-013)](2026-10-28-ui-simplification-m1-nav.md) |
 | 2026-10-28 | [Performance backlog: B1 policy helpers in set form, B2–B3 lazy voice and shell menus, …](2026-10-28-performance-backlog.md) |

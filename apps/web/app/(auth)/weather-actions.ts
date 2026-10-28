@@ -73,7 +73,7 @@ export async function setWeatherAreaAction(_previous: ActionState, formData: For
       memberId: membership.memberId,
       place: { label: parsed.data.label, latitude: parsed.data.latitude, longitude: parsed.data.longitude, timezone: parsed.data.timezone },
     });
-    revalidatePath("/household/integrations");
+    revalidatePath("/settings/connections");
     revalidatePath("/household/home");
     return weather.state === "ready"
       ? { notice: `Weather is on for ${parsed.data.label}. Laundry and outdoor jobs now plan around it.` }
@@ -91,7 +91,7 @@ export async function removeWeatherAreaAction(_previous: ActionState, formData: 
     const supabase = await createClient();
     const membership = await requireHouseholdAdmin(supabase, householdId.data);
     await removeWeatherLocation(supabase, { householdId: householdId.data, memberId: membership.memberId });
-    revalidatePath("/household/integrations");
+    revalidatePath("/settings/connections");
     revalidatePath("/household/home");
     return { notice: "Weather is off. Your area was removed, and planning assumes ordinary weather." };
   } catch (thrown) {

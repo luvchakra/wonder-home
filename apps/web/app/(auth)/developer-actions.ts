@@ -45,7 +45,7 @@ export async function createDeveloperKeyAction(_previous: DeveloperKeyState, for
       scopes: parsed.data.scopes,
       expiresInDays: parsed.data.expiresInDays === "never" ? null : Number(parsed.data.expiresInDays),
     });
-    revalidatePath("/household/integrations");
+    revalidatePath("/settings/connections");
     return { key, notice: "Key created. Copy it now: it won't be shown again." };
   } catch (thrown) {
     return { error: toErrorBody(thrown, "developer").body.error.message };
@@ -60,7 +60,7 @@ export async function revokeDeveloperKeyAction(_previous: DeveloperKeyState, for
   try {
     const membership = await requireHouseholdAdmin(await createClient(), parsed.data.householdId);
     await revokeDeveloperKey(createAdminClient(), { householdId: parsed.data.householdId, memberId: membership.memberId, keyId: parsed.data.keyId });
-    revalidatePath("/household/integrations");
+    revalidatePath("/settings/connections");
     return { notice: "Revoked. Anything using it stops working now." };
   } catch (thrown) {
     return { error: toErrorBody(thrown, "developer").body.error.message };

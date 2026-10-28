@@ -70,7 +70,7 @@ export async function approveVoiceLinkAction(formData: FormData): Promise<void> 
 
 export async function denyVoiceLinkAction(formData: FormData): Promise<void> {
   const reading = readAuthorizeRequest(paramsFrom(formData));
-  if (!reading.ok) redirect("/settings/voice-assistants");
+  if (!reading.ok) redirect("/settings/connections#voice");
   redirect(redirectWith(reading.request.redirectUri, { error: "access_denied", state: reading.request.state }));
 }
 
@@ -90,5 +90,5 @@ export async function revokeVoiceLinkAction(formData: FormData): Promise<void> {
       });
     }
   }
-  revalidatePath("/settings/voice-assistants");
+  revalidatePath("/settings/connections");
 }

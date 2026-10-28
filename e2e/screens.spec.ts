@@ -42,7 +42,7 @@ const SCREENS = [
   "/household/responsibilities?tab=mine",
   "/household/setup",
   "/household/activity",
-  "/household/integrations",
+  "/settings/connections",
   "/school",
   "/groceries",
   "/meals",

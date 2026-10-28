@@ -41,7 +41,7 @@ const DOMAIN_PLACE: Partial<Record<ContextDomain | "conflict" | "profile", strin
   health: "/health",
   notifications: "/notifications",
   homesend: "/home-send",
-  integrations: "/household/integrations",
+  integrations: "/settings/connections",
   places: "/places",
   attention: "/",
   conflict: "/calendar",

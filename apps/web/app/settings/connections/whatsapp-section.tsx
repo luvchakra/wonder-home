@@ -1,24 +1,19 @@
 import { isHouseholdAdmin } from "@wonderhome/core/identity/households";
 import { whatsappConfigFromEnv } from "@wonderhome/core/notifications/whatsapp";
-import { AppShell } from "@wonderhome/core/shell/app-shell";
 import { Card } from "@wonderhome/core/ui/card";
 import { IconTile } from "@wonderhome/core/ui/icon-tile";
 import { Badge } from "@wonderhome/core/ui/pill";
-import { QuoteCard } from "@wonderhome/core/ui/quote-card";
 import { SectionHeader } from "@wonderhome/core/ui/section-header";
 import { formatWhatsAppNumber, whatsappBusinessNumber } from "@wonderhome/core/whatsapp/linking";
 import { listWhatsAppLinks } from "@wonderhome/core/whatsapp/repository";
 import { MessageCircle, ShieldCheck } from "lucide-react";
 
 import { WhatsAppConnect, WhatsAppDisconnect, WhatsAppLinkedNotice } from "../../_components/whatsapp-connect";
-import { formatDate, requireSession } from "../../_lib/session";
+import { formatDate, type Session } from "../../_lib/session";
 import { whatsappConnectLabels, whatsappDisconnectLabels, whatsappLinkedLabels } from "../../_lib/settings-labels";
 
-export const metadata = { title: "WhatsApp" };
-export const dynamic = "force-dynamic";
-
 /**
- * WhatsApp as a way into HomeSend (story 14-016): connect your own number,
+ * WhatsApp as a way into HomeSend (story 14-016), as a section of Connections: connect your own number,
  * see and end the link, and — for an admin — every adult's link in the
  * household. WhatsApp only ever carries things in; nothing sent there pays,
  * books or approves anything, and the page says so plainly.
@@ -26,10 +21,8 @@ export const dynamic = "force-dynamic";
  * Until the deployment has a WhatsApp Business number the page says it isn't
  * set up yet and offers no button, rather than one with nothing behind it.
  */
-export default async function WhatsAppSettingsPage({ searchParams }: { searchParams: Promise<{ connected?: string }> }) {
-  const { connected } = await searchParams;
-  const session = await requireSession("/settings/whatsapp");
-  const { supabase, membership, viewer, secondary } = session;
+export async function WhatsAppSection({ session, connected }: { session: Session; connected: boolean }) {
+  const { supabase, membership } = session;
   const household = membership.household;
   const admin = isHouseholdAdmin(membership);
   const businessNumber = whatsappConfigFromEnv() ? whatsappBusinessNumber() : null;
@@ -49,10 +42,9 @@ export default async function WhatsAppSettingsPage({ searchParams }: { searchPar
       : t("settingsPage.whatsapp.connectedNothing", { date: formatDate(household.timezone, connectedAt) });
 
   return (
-    <AppShell active="more" viewer={viewer} secondary={secondary} pathname="/settings/whatsapp" back={{ href: "/settings", label: t("settingsPage.backToSettings") }} title="WhatsApp">
-      <div className="space-y-6">
-        <header className="wh-rise">
-          <h1 className="text-[1.625rem] font-bold tracking-tight sm:text-3xl">WhatsApp</h1>
+    <section id="whatsapp" className="scroll-mt-20 space-y-4">
+        <header>
+          <h2 className="text-lg font-semibold tracking-tight">WhatsApp</h2>
           <p className="mt-0.5 text-sm text-[var(--wh-foreground-muted)]">{t("settingsPage.whatsapp.lede", { household: household.name })}</p>
         </header>
 
@@ -135,8 +127,6 @@ export default async function WhatsAppSettingsPage({ searchParams }: { searchPar
           </div>
         </Card>
 
-        <QuoteCard>{t("settingsPage.whatsapp.quote")}</QuoteCard>
-      </div>
-    </AppShell>
+    </section>
   );
 }
