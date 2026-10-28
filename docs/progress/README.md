@@ -15,7 +15,7 @@ decision that shapes later work each earns a note, written before moving on.
 | 2026-10-28 | [UI simplification, part 3: one Connections page (00-015)](2026-10-28-ui-simplification-m2-connections.md) |
 | 2026-10-28 | [UI simplification, part 2: people on Family, Today in the Calendar (00-014)](2026-10-28-ui-simplification-m3-m4.md) |
 | 2026-10-28 | [UI simplification, part 1: doors, the More menu, one Notifications page (00-013)](2026-10-28-ui-simplification-m1-nav.md) |
-| 2026-10-28 | [Performance backlog: B1 policy helpers in set form, B2–B3 lazy voice and shell menus, B4 one read per table, B5 HomeTalk turn, B6 + B10 /ai and loading shapes, B7 setup progress, …](2026-10-28-performance-backlog.md) |
+| 2026-10-28 | [Performance backlog: B1 policy helpers in set form, B2–B3 lazy voice and shell menus, B4 one read per table, B5 HomeTalk turn, B6 + B10 /ai and loading shapes, B7 setup progress, B8 HomeSend on first use, …](2026-10-28-performance-backlog.md) |
 | 2026-10-28 | [Data retention: periodic cleanup framework (phase 1)](2026-10-28-data-retention-cleanup.md) |
 | 2026-10-28 | [UI simplification design: one place for each job (proposed)](2026-10-28-ui-simplification-design.md) |
 | 2026-10-28 | [Performance audit: child-visibility RLS in set form, near-term windows, zod out of the browser](2026-10-28-performance-audit.md) |

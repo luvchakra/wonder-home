@@ -226,3 +226,28 @@ With B4, Home went from 42 calls to 36.
 - **Unit test:** `household/onboarding-facts.test.ts` checks the facts from given rows: inactive members left out, a child's school from the enrolments, a helper's working days counted once per weekday, an accepted responsibility not suggested again. It also checks that only `school_enrolments` is read.
 - vitest over `household`: 19 files, 289 tests pass.
 - Typecheck is clean, and ESLint is clean on the dashboard.
+
+## B8: HomeSend's sheet loads on first use
+
+**What changed**
+- On `/ai`, `HomeSendSheet` and its review steps (`home-send-intake`) now load after the page, through `useLoadedLater`, the same held-in-state loader as B3. They are warmed once the page is idle, and a tap on Attach that comes first fetches them and opens the sheet as soon as they arrive.
+- `useLoadedLater` is used instead of `next/dynamic` for the same reason as in B3: a Suspense reveal is held back about 300 ms on first show.
+- `shell/when-idle.ts` became `.tsx` so the app can import it through the `./shell/*` export.
+
+**Numbers:** first-load JS on `/ai`, gzipped, went from **280.4 KB to 260.7 KB (−19.7)**. The other routes are unchanged, since nothing else uses the sheet.
+
+**Verified** against a production build pointed at the live project, signed in as the QA household:
+- **360 px, tap before idle:** Attach opened "Send something to WonderHome" with Send a file and Paste text in 162 ms, and the sheet reopened after Escape.
+- **360 px, tap after idle:** the same, in 51 ms.
+- **1280 px, tap before idle:** the same, in 118 ms.
+- No console errors at either width.
+- vitest on `/ai` and `components/`: 50 tests pass.
+- `check:bundle` and `lint:boundaries` pass, and typecheck is clean.
+
+**Not done in this PR (B8b):** the finance, meal and health forms.
+- Each Add/Edit button holds its sheet's form inline, with its own `useActionState` and fields. Splitting them means moving about 25 form bodies into modules of their own, and each then needs an add-and-edit check in the browser.
+- Measured potential:
+  - The health forms are one 15.2 KB gz chunk, used only by `/health`.
+  - `meal-forms` is a 10.8 KB gz chunk, used by Meals and Today's plan.
+  - Both are smaller than the sheet above.
+- This is left as its own PR rather than rushed here.
