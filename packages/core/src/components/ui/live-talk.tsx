@@ -3,14 +3,13 @@
 import { LoaderCircle, Maximize2, Mic, Pause, PictureInPicture2, Play, X } from "lucide-react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
-import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
+import { createContext, lazy, Suspense, useCallback, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 
 import { plainText } from "../../conversation/reply-format";
 import { cn } from "../../lib/cn";
 import { setTalkActivity } from "../shell/talk-activity";
 import { FRAME_HEIGHT, FRAME_RATE, FRAME_WIDTH, drawLiveFrame, floatSupport, liveFrame, readFloatEnvironment, readPalette, shouldArmFloat, type FloatMode, type FloatPalette } from "./live-float";
-import { useGeminiLive } from "./use-gemini-live";
-import { useLiveVoice } from "./use-live-voice";
+import type { LiveEngines } from "./live-talk-engines";
 import { appPath } from "../../navigation/app-path";
 
 /**
@@ -110,6 +109,14 @@ export type LiveTalk = {
 };
 
 const LiveTalkContext = createContext<LiveTalk | null>(null);
+
+/** The engines' code, fetched the first time a screen that can talk configures the conversation (audit B2). */
+const LiveTalkEngines = lazy(() => import("./live-talk-engines"));
+
+type EngineViews = { own: LiveView; gemini: LiveView };
+const IDLE: LiveView = { state: "idle", active: false, paused: false };
+const engineKey = (name: LiveEngineName) => (name === "gemini_live" ? "gemini" : "own");
+const sameView = (a: LiveView, b: LiveView) => a.state === b.state && a.active === b.active && a.paused === b.paused;
 
 /** Only same-app paths are ever followed: a reply cannot send anyone off the app. */
 export function safeHref(href: unknown): string | null {
@@ -419,41 +426,65 @@ export function LiveTalkProvider({ children }: { children: ReactNode }) {
   );
   const onError = useCallback((message: string) => setNotice(message), []);
 
+  const onChanged = useCallback(() => router.refresh(), [router]);
   const server = useMemo(() => (config?.serverVoice ? { householdId: config.householdId } : null), [config?.serverVoice, config?.householdId]);
-  const own = useLiveVoice({ lang: config?.lang ?? "en-IN", server, onUtterance, onError });
-  const gemini = useGeminiLive({ householdId: config?.householdId ?? "", onTranscript, onTranscriptRevised, onError, onNavigate: navigate, onChanged: () => router.refresh() });
-  // The floating video takes Gemini's voice only while Gemini is the one talking.
-  const geminiVoice = gemini.voiceStream;
-  const geminiRelease = gemini.releaseVoice;
-  useEffect(() => {
-    voiceRef.current = { take: () => (running === "gemini_live" ? geminiVoice() : null), release: geminiRelease };
-  }, [geminiRelease, geminiVoice, running]);
 
-  const engineOf = useCallback((name: LiveEngineName) => (name === "gemini_live" ? gemini : own), [gemini, own]);
+  // The engines mount the first time a screen configures the conversation
+  // (only a screen with a talk button does), so by the time the person taps
+  // it they are ready and the start stays inside the tap. A start that comes
+  // before they are ready waits for them.
+  const [wanted, setWanted] = useState(false);
+  const enginesRef = useRef<LiveEngines | null>(null);
+  const pendingStart = useRef<LiveEngineName | null>(null);
+  const runningRef = useRef<LiveEngineName | null>(null);
+  useEffect(() => {
+    runningRef.current = running;
+  }, [running]);
+  const [views, setViews] = useState<EngineViews>({ own: IDLE, gemini: IDLE });
+  const viewsRef = useRef<EngineViews>(views);
+  const onEngines = useCallback((engines: LiveEngines) => {
+    enginesRef.current = engines;
+    // The floating video takes Gemini's voice only while Gemini is the one talking.
+    voiceRef.current = { take: () => (runningRef.current === "gemini_live" ? engines.gemini.voiceStream() : null), release: engines.gemini.releaseVoice };
+    const next: EngineViews = {
+      own: { state: engines.own.state, active: engines.own.active, paused: engines.own.paused },
+      gemini: { state: engines.gemini.state, active: engines.gemini.active, paused: engines.gemini.paused },
+    };
+    if (!sameView(next.own, viewsRef.current.own) || !sameView(next.gemini, viewsRef.current.gemini)) {
+      viewsRef.current = next;
+      setViews(next);
+    }
+    const waiting = pendingStart.current;
+    if (waiting) {
+      pendingStart.current = null;
+      engines[engineKey(waiting)].start();
+    }
+  }, []);
+
   const view = useCallback(
     (name: LiveEngineName): LiveView => {
-      const engine = engineOf(running ?? name);
       // "Connecting" stays its own state: until the session can hear, the
       // person is told to wait rather than shown "thinking" or "listening".
-      return { state: engine.state, active: engine.active, paused: engine.paused };
+      return views[engineKey(running ?? name)];
     },
-    [engineOf, running],
+    [running, views],
   );
 
   // A session that ended by itself (a closed connection, a refused microphone) is no longer running.
-  const runningActive = running ? engineOf(running).active : false;
-  const ownState = own.state;
+  const runningActive = running ? views[engineKey(running)].active : false;
+  const ownState = views.own.state;
   useEffect(() => {
     if (running && !runningActive && ownState !== "thinking") {
-      const timer = setTimeout(() => setRunning((current) => (current && !engineOf(current).active ? null : current)), 1500);
+      const timer = setTimeout(() => setRunning((current) => (current && !viewsRef.current[engineKey(current)].active && pendingStart.current !== current ? null : current)), 1500);
       return () => clearTimeout(timer);
     }
-  }, [engineOf, ownState, running, runningActive]);
+  }, [ownState, running, runningActive]);
 
   const value = useMemo<LiveTalk>(
     () => ({
       configure: (next) => {
         configRef.current = next;
+        setWanted(true);
         setConfig((current) =>
           current && current.householdId === next.householdId && current.lang === next.lang && current.serverVoice === next.serverVoice && current.labels === next.labels ? current : next,
         );
@@ -470,12 +501,18 @@ export function LiveTalkProvider({ children }: { children: ReactNode }) {
         setNotice(null);
         exchangeRef.current = { heard: null, said: null };
         setRunning(name);
-        engineOf(name).start();
+        const engines = enginesRef.current;
+        if (engines) engines[engineKey(name)].start();
+        else {
+          pendingStart.current = name;
+          setWanted(true);
+        }
       },
-      pause: () => (running ? engineOf(running).pause() : undefined),
-      resume: () => (running ? engineOf(running).resume() : undefined),
+      pause: () => (running ? enginesRef.current?.[engineKey(running)].pause() : undefined),
+      resume: () => (running ? enginesRef.current?.[engineKey(running)].resume() : undefined),
       stop: () => {
-        if (running) engineOf(running).stop();
+        pendingStart.current = null;
+        if (running) enginesRef.current?.[engineKey(running)].stop();
         setRunning(null);
         disarmFloat();
         // On HomeTalk's page the page posts the recap itself (its `onLiveEnd`).
@@ -500,7 +537,7 @@ export function LiveTalkProvider({ children }: { children: ReactNode }) {
       unfloat: closeFloat,
       notice,
     }),
-    [closeFloat, disarmFloat, engineOf, floatNow, floatable, floating, navigate, notice, running, view],
+    [closeFloat, disarmFloat, floatNow, floatable, floating, navigate, notice, running, view],
   );
 
   // The tab bar's raised HomeTalk button glows for as long as the conversation runs, on any screen.
@@ -592,6 +629,22 @@ export function LiveTalkProvider({ children }: { children: ReactNode }) {
   return (
     <LiveTalkContext.Provider value={value}>
       {children}
+      {wanted ? (
+        <Suspense fallback={null}>
+          <LiveTalkEngines
+            lang={config?.lang ?? "en-IN"}
+            server={server}
+            householdId={config?.householdId ?? ""}
+            onUtterance={onUtterance}
+            onTranscript={onTranscript}
+            onTranscriptRevised={onTranscriptRevised}
+            onError={onError}
+            onNavigate={navigate}
+            onChanged={onChanged}
+            onEngines={onEngines}
+          />
+        </Suspense>
+      ) : null}
       {barShown && live && config ? (
         <LiveTalkBar
           live={live}

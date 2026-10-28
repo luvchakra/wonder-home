@@ -104,8 +104,8 @@ Not applied yet; for the owner to accept. Each was earned by a measured finding 
 
 ## Backlog (prioritised; each its own PR)
 - **B1** (done, [backlog note](2026-10-28-performance-backlog.md#b1-the-last-per-row-policy-helpers-in-set-form); live once the owner runs `20261028190000`): put the remaining per-row policy helpers into set form (`may_see_health`, `may_see_event`, `is_child_of`, `has_role`, `may_see_finance`, and the 13 `is_member` / `is_household_admin` / `member_id` uses outside `public`). Use the same in-place rewrite, prove counts are equal, and extend the guard test.
-- **B2**: load the voice engine on first talk. Move `LiveTalkProvider` into the signed-in layout group (14 KB gz on every route).
-- **B3**: render the drawer and viewer-menu content on open, or load it with `next/dynamic` (about 20–30 KB gz on 51 routes).
+- **B2** (done, [backlog note](2026-10-28-performance-backlog.md#b2--b3-voice-engines-drawer-and-avatar-menu-load-after-the-page)): load the voice engine on first talk. Move `LiveTalkProvider` into the signed-in layout group (14 KB gz on every route).
+- **B3** (done, same note): render the drawer and viewer-menu content on open, or load it with `next/dynamic` (about 20–30 KB gz on 51 routes).
 - **B4**: one read per table per request. Pass rows into the agendas, or `cache()` the list readers per (household, range), for Home, Today's household tab and Meals. Settle `familyAgenda` and `mealAgenda` windows together with the "checked" wording.
 - **B5**: HomeTalk turn batching (`pendingAmaf`, `pendingWelcome` and the main reads in one wave). Check the rate limit before `consume`. Serve a stale `household_context` and rebuild it in `after()`. Move the `homebrain_misses` insert from `void` to `after()`.
 - **B6**: `/ai`: start `listMessages` alongside `offerToFillDetails`.
