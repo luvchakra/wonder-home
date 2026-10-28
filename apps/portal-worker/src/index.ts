@@ -2,7 +2,7 @@ import { createAdminClient } from "@wonderhome/core/db/admin";
 
 import { createPlaywrightBrowser } from "./playwright-browser";
 import { claimJob, completeJob } from "./queue";
-import { runFetchJob } from "./run-job";
+import { runConnectionFetchJob, runFetchJob } from "./run-job";
 import { startHealthServer } from "./server";
 
 /**
@@ -59,15 +59,13 @@ async function main(): Promise<void> {
         await sleep(POLL_MS);
         continue;
       }
-      log(`[worker] claimed job ${job.id} (connection ${job.integrationId}, attempt ${job.attempts})`);
+      log(`[worker] claimed job ${job.id} (${job.connectionId ? `connection ${job.connectionId}` : `integration ${job.integrationId}`}, attempt ${job.attempts})`);
       try {
-        const outcome = await runFetchJob({
-          adminClient: admin,
-          browser: activeBrowser,
-          integrationId: job.integrationId,
-          householdId: job.householdId,
-          log,
-        });
+        const outcome = job.connectionId
+          ? await runConnectionFetchJob({ adminClient: admin, browser: activeBrowser, connectionId: job.connectionId, householdId: job.householdId, log })
+          : job.integrationId
+            ? await runFetchJob({ adminClient: admin, browser: activeBrowser, integrationId: job.integrationId, householdId: job.householdId, log })
+            : { state: "no_credentials" as const, filed: 0, reason: "job has no connection or integration" };
         await completeJob(admin, job.id, {
           status: outcome.state === "connected" ? "done" : "failed",
           reason: outcome.reason ?? null,

@@ -8,7 +8,7 @@ import type { SupabaseClient } from "@supabase/supabase-js";
  * one worker is safe.
  */
 
-export type ClaimedJob = { id: string; householdId: string; integrationId: string; attempts: number };
+export type ClaimedJob = { id: string; householdId: string; integrationId: string | null; connectionId: string | null; attempts: number };
 
 type Row = Record<string, unknown>;
 
@@ -20,7 +20,8 @@ export async function claimJob(admin: SupabaseClient): Promise<ClaimedJob | null
   return {
     id: row.id as string,
     householdId: row.household_id as string,
-    integrationId: row.integration_id as string,
+    integrationId: (row.integration_id as string | null) ?? null,
+    connectionId: (row.connection_id as string | null) ?? null,
     attempts: Number(row.attempts ?? 0),
   };
 }

@@ -90,6 +90,24 @@ test("a child cannot write a secret; another household sees no secret rows", () 
   assert.equal(asProfile(OUTSIDER, `select count(*) from public.connection_secrets where household_id = '${household}';`, options).trim(), "0");
 });
 
+test("an adult adds a page to read for the connection; a child cannot", () => {
+  const id = asProfile(
+    ADULT,
+    `insert into public.portal_scrape_urls (household_id, connection_id, url, kind, created_by) values ('${household}', '${connection}', 'https://x.test/page', 'generic', '${adultMember}') returning id;`,
+    options,
+  ).trim();
+  assert.match(id, /[0-9a-f-]{36}/);
+  assert.throws(() =>
+    asProfile(
+      CHILD,
+      `insert into public.portal_scrape_urls (household_id, connection_id, url, kind, created_by) values ('${household}', '${connection}', 'https://x.test/p2', 'generic', '${childMember}') returning id;`,
+      options,
+    ),
+  );
+  // Every member (incl. the child) may see which pages are tracked.
+  assert.equal(asProfile(CHILD, `select count(*) from public.portal_scrape_urls where connection_id = '${connection}';`, options).trim(), "1");
+});
+
 test("an adult can delete a connection, taking its secret with it", () => {
   asProfile(ADULT, `delete from public.connections where household_id = '${household}' and id = '${connection}';`, options);
   assert.equal(psql(`select count(*) from public.connections where id = '${connection}';`, options).trim(), "0");

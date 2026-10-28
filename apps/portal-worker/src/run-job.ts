@@ -1,13 +1,14 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 
 import type { PortalBrowser } from "@wonderhome/core/portals/adapter";
-import { portalCursorStore } from "@wonderhome/core/portals/cursor-repository";
+import { connectionCursorStore, portalCursorStore } from "@wonderhome/core/portals/cursor-repository";
 import { fetchConnection, type ScrapeTarget, type TargetOutcome } from "@wonderhome/core/portals/fetch-connection";
 import { GenericAdapter } from "@wonderhome/core/portals/generic-adapter";
 import { resolveAdapter } from "@wonderhome/core/portals/registry";
 import { homeSendPortalFiler } from "@wonderhome/core/portals/homesend-filer";
 import { extractGenericItems } from "@wonderhome/core/portals/page-extract";
-import { portalSessionStore, setPortalSessionState } from "@wonderhome/core/portals/session-repository";
+import { connectionSessionStore, portalSessionStore, setConnectionSessionState, setPortalSessionState } from "@wonderhome/core/portals/session-repository";
+import { readConnectionSecrets } from "@wonderhome/core/connections/repository";
 import { readSchoolPortalCredentials } from "@wonderhome/core/school/portal-credentials";
 
 /**
@@ -95,6 +96,84 @@ export async function runFetchJob(input: {
       result.targets.map((t) => `${t.chars}c→${t.read}i/${t.fresh}f${t.error ? " ERR" : ""}`).join(" "),
   );
   return { state: "connected", filed: result.filed, result: { filed: result.filed, pages: result.targets } };
+}
+
+/**
+ * Run one fetch job for a generic connection (Connections framework): read the
+ * connection's sign-in from its params + secret, resolve the adapter from its
+ * URL, and run the same governed fetch. Works for any browser-automation
+ * connection in any module — not school-specific.
+ */
+export async function runConnectionFetchJob(input: {
+  adminClient: SupabaseClient;
+  browser: PortalBrowser;
+  connectionId: string;
+  householdId: string;
+  log: (message: string) => void;
+}): Promise<JobOutcome> {
+  const { adminClient, browser, connectionId, householdId, log } = input;
+
+  const { data: conn } = await adminClient
+    .from("connections")
+    .select("params, created_by_member_id, connector_type")
+    .eq("id", connectionId)
+    .maybeSingle();
+  const row = conn as Row | null;
+  const params = (row?.params as Record<string, string> | null) ?? {};
+  const secrets = await readConnectionSecrets(adminClient, connectionId);
+  const url = params.url;
+  const username = params.username;
+  const password = secrets?.password;
+  if (!url || !username || !password) {
+    await setConnectionSessionState(adminClient, { householdId, connectionId, state: "reconnect_needed", reason: "login_failed" });
+    return { state: "no_credentials", filed: 0, reason: "connection is missing its sign-in" };
+  }
+
+  const { data: targetRows, error: targetErr } = await adminClient
+    .from("portal_scrape_urls")
+    .select("url, kind, child_member_id")
+    .eq("connection_id", connectionId)
+    .eq("enabled", true)
+    .order("created_at", { ascending: true });
+  if (targetErr) throw new Error(`load connection targets failed: ${targetErr.code ?? "unknown"}`);
+  const targets: ScrapeTarget[] = ((targetRows as Row[] | null) ?? []).map((r) => ({
+    url: r.url as string,
+    kind: r.kind as string,
+    childMemberId: (r.child_member_id as string | null) ?? null,
+  }));
+
+  const adapter = resolveAdapter({ portalUrl: url, providerId: null, adapters: [GenericAdapter], fallback: GenericAdapter });
+  const memberId = (row?.created_by_member_id as string | null) ?? (await anyHouseholdMember(adminClient, householdId));
+
+  const result = await fetchConnection({
+    connectionId,
+    portalUrl: url,
+    browser,
+    adapter,
+    store: connectionSessionStore(adminClient, { householdId, connectionId }),
+    credentials: async () => ({ username, password }),
+    targets,
+    extractor: { extract: async ({ text, target }) => extractGenericItems(text, target) },
+    filer: homeSendPortalFiler(adminClient, { householdId, memberId }),
+    cursors: connectionCursorStore(adminClient, { householdId, connectionId }),
+    onState: (state, reason) => setConnectionSessionState(adminClient, { householdId, connectionId, state, reason: reason ?? null }),
+  });
+
+  if (!result.ok) {
+    if (result.diagnostic) log(`[job] conn ${connectionId}: login diag ${JSON.stringify(result.diagnostic)}`);
+    log(`[job] conn ${connectionId}: reconnect needed (${result.reason})`);
+    return { state: "reconnect_needed", filed: 0, reason: result.reason, result: { filed: 0, pages: result.targets ?? [], login: result.diagnostic ?? null } };
+  }
+  const failures = result.targets.filter((t) => t.error).length;
+  log(`[job] conn ${connectionId}: ${result.reAuthenticated ? "re-logged in" : "reused session"}; pages=${result.targets.length} (${failures} failed) filed=${result.filed}`);
+  return { state: "connected", filed: result.filed, result: { filed: result.filed, pages: result.targets } };
+}
+
+async function anyHouseholdMember(adminClient: SupabaseClient, householdId: string): Promise<string> {
+  const { data: member } = await adminClient.from("household_members").select("id").eq("household_id", householdId).limit(1).maybeSingle();
+  const id = (member as Row | null)?.id as string | undefined;
+  if (!id) throw new Error("no household member to file as");
+  return id;
 }
 
 /** The member a fetched item is filed as: whoever connected the portal, else any member of the household. */
