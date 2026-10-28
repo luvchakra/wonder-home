@@ -1,6 +1,8 @@
-import type { LoginHints, PortalAdapter, PortalBrowser, PortalCredentials } from "./adapter";
+import { looksLikeAuthWall, type LoginHints, type PortalAdapter, type PortalBrowser, type PortalCredentials } from "./adapter";
 import { itemHash } from "./dedupe";
 import { ensureSession, type ConnectionState, type ReconnectReason, type SessionStore } from "./ensure-session";
+
+const DEFAULT_MAX_LOGIN_ATTEMPTS = 3;
 
 /**
  * One fetch of a connected portal (story 08-033) — the brain the worker runs on
@@ -82,7 +84,7 @@ export type TargetOutcome = {
 };
 
 export type FetchConnectionResult =
-  | { ok: false; state: "reconnect_needed"; reason: ReconnectReason }
+  | { ok: false; state: "reconnect_needed"; reason: ReconnectReason; targets?: TargetOutcome[] }
   | { ok: true; state: "connected"; reAuthenticated: boolean; filed: number; targets: TargetOutcome[] };
 
 export async function fetchConnection(deps: FetchConnectionDeps): Promise<FetchConnectionResult> {
@@ -100,6 +102,12 @@ export async function fetchConnection(deps: FetchConnectionDeps): Promise<FetchC
   const { page } = session;
   const targets: TargetOutcome[] = [];
   let filed = 0;
+  // ensureSession may reuse a session that looks fine on the base page but has
+  // actually died (the app keeps its token in sessionStorage, which the persisted
+  // session doesn't carry) — a post-auth page then bounces to login/logout. We
+  // re-log-in in-context at most once per fetch, then retry.
+  let reAuthenticated = session.reAuthenticated;
+  let reAuthFailed: ReconnectReason | null = null;
 
   for (const target of deps.targets) {
     let finalUrl = target.url;
@@ -107,6 +115,28 @@ export async function fetchConnection(deps: FetchConnectionDeps): Promise<FetchC
     try {
       await page.goto(target.url);
       finalUrl = page.currentUrl();
+
+      // Bounced to an auth wall with a stale reused session → re-login once and retry.
+      if (looksLikeAuthWall(finalUrl) && !reAuthenticated && !reAuthFailed) {
+        const reauth = await reauthenticate(deps, page);
+        if (reauth.ok) {
+          reAuthenticated = true;
+          await deps.onState?.("connected");
+          await page.goto(target.url);
+          finalUrl = page.currentUrl();
+        } else {
+          reAuthFailed = reauth.reason;
+        }
+      }
+
+      // Still walled (re-login failed, or it genuinely needs the owner): never
+      // file the logged-out page; record it and leave the connection for reconnect.
+      if (looksLikeAuthWall(finalUrl)) {
+        const text = await page.textContent();
+        targets.push({ url: target.url, finalUrl, chars: text.trim().length, read: 0, fresh: 0, error: "auth_wall" });
+        continue;
+      }
+
       const text = await page.textContent();
       chars = text.trim().length;
       const items = await deps.extractor.extract({ text, target });
@@ -141,5 +171,36 @@ export async function fetchConnection(deps: FetchConnectionDeps): Promise<FetchC
     }
   }
 
-  return { ok: true, state: "connected", reAuthenticated: session.reAuthenticated, filed, targets };
+  // A connection that bounced to an auth wall and couldn't re-login needs the
+  // owner — surface it as reconnect_needed (not a silent "done" that filed junk),
+  // keeping the per-page diagnostics.
+  const walled = targets.some((t) => t.error === "auth_wall");
+  if (walled && filed === 0) {
+    const reason = reAuthFailed ?? "login_failed";
+    await deps.onState?.("reconnect_needed", reason);
+    return { ok: false, state: "reconnect_needed", reason, targets };
+  }
+
+  return { ok: true, state: "connected", reAuthenticated, filed, targets };
+}
+
+/** One in-context re-login against the portal's login form; bounded, never a false success. */
+async function reauthenticate(
+  deps: FetchConnectionDeps,
+  page: Awaited<ReturnType<PortalBrowser["open"]>>,
+): Promise<{ ok: true } | { ok: false; reason: ReconnectReason }> {
+  const creds = await deps.credentials();
+  // Go back to the portal entry, where a logged-out app shows its login form.
+  await page.goto(deps.portalUrl);
+  for (let attempt = 1; attempt <= DEFAULT_MAX_LOGIN_ATTEMPTS; attempt += 1) {
+    const result = await deps.adapter.login(page, creds, deps.hints);
+    if (result.status === "authenticated") {
+      await deps.store.save(await deps.browser.exportSession());
+      return { ok: true };
+    }
+    if (result.status === "invalid_credentials") return { ok: false, reason: "bad_password" };
+    if (result.status === "verification_required") return { ok: false, reason: "verification" };
+    // transient → retry on the next pass
+  }
+  return { ok: false, reason: "login_failed" };
 }

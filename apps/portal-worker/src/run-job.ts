@@ -80,7 +80,7 @@ export async function runFetchJob(input: {
 
   if (!result.ok) {
     log(`[job] ${integrationId}: reconnect needed (${result.reason})`);
-    return { state: "reconnect_needed", filed: 0, reason: result.reason, result: { filed: 0, pages: [] } };
+    return { state: "reconnect_needed", filed: 0, reason: result.reason, result: { filed: 0, pages: result.targets ?? [] } };
   }
   const failures = result.targets.filter((t) => t.error).length;
   log(

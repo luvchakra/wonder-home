@@ -1,4 +1,4 @@
-import type { LoginHints, LoginResult, PortalAdapter, PortalCredentials, PortalPage } from "./adapter";
+import { looksLikeAuthWall, type LoginHints, type LoginResult, type PortalAdapter, type PortalCredentials, type PortalPage } from "./adapter";
 
 /**
  * The default adapter: sign into an ordinary login form with no per-site code
@@ -25,7 +25,6 @@ const USERNAME_CANDIDATES = [
 const PASSWORD_SELECTOR = 'input[type="password"]';
 const SUBMIT_CANDIDATES = ['button[type="submit"]', 'input[type="submit"]', 'button'];
 
-const LOGIN_PATH = /\b(login|signin|sign-in|logon|auth)\b/i;
 const INVALID_TEXT = /\b(invalid|incorrect|wrong)\b[^.]{0,40}\b(password|credential|username|login|email)\b|\bauthentication failed\b/i;
 const VERIFY_TEXT = /\b(one[- ]?time|otp|verification code|verify your|captcha|are you (a )?human)\b/i;
 
@@ -44,9 +43,9 @@ export const GenericAdapter: PortalAdapter = {
   },
 
   async isAuthenticated(page: PortalPage): Promise<boolean> {
-    // Still showing a password field, or sitting on a login path → not in yet.
+    // Still showing a password field, or sitting on a login / logout path → not in yet.
     if (await page.has(PASSWORD_SELECTOR)) return false;
-    if (LOGIN_PATH.test(page.currentUrl())) return false;
+    if (looksLikeAuthWall(page.currentUrl())) return false;
     return true;
   },
 

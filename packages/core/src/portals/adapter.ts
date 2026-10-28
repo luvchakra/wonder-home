@@ -11,6 +11,20 @@
 
 export type PortalCredentials = { username: string; password: string };
 
+/**
+ * A URL that means "not signed in" — a login page, or a logout / session-expired
+ * page the app bounced us to when the session was stale. Landing on one of these
+ * after navigating to a post-auth page is the signal that a reused session has
+ * died (Playwright's persisted storage keeps cookies + localStorage but not
+ * sessionStorage, where some SPAs hold the token), so the engine re-logs-in
+ * rather than reading and filing the logged-out page.
+ */
+const AUTH_WALL_PATH = /\b(login|signin|sign-in|logon|logout|signout|sign-out|session[-_]?expired|auth)\b/i;
+
+export function looksLikeAuthWall(url: string): boolean {
+  return AUTH_WALL_PATH.test(url);
+}
+
 /** Optional per-connection selectors for portals the generic heuristics can't read. */
 export type LoginHints = {
   usernameSelector?: string;
