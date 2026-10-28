@@ -17,6 +17,7 @@ import type { PortalBrowser, PortalPage, SessionState } from "@wonderhome/core/p
 
 const NAV_TIMEOUT_MS = 45_000;
 const SETTLE_MS = 1_500;
+const CONTENT_MS = 10_000;
 
 export type PlaywrightBrowserOptions = {
   /** Route through the egress proxy for real portals (e.g. process.env.HTTPS_PROXY); omit for localhost. */
@@ -60,6 +61,13 @@ class PlaywrightPage implements PortalPage {
 
   private async settle(): Promise<void> {
     await this.page.waitForLoadState("networkidle", { timeout: NAV_TIMEOUT_MS }).catch(() => {});
+    // A single-page app (a chat/portal) often paints its real text only after
+    // the first data call resolves, which can be after networkidle. Give the
+    // body a bounded chance to fill before we read it, so a deep link doesn't
+    // read an empty shell. Bounded, so a genuinely sparse page still returns.
+    await this.page
+      .waitForFunction(() => (document.body?.innerText ?? "").trim().length > 40, undefined, { timeout: CONTENT_MS })
+      .catch(() => {});
     await this.page.waitForTimeout(SETTLE_MS);
   }
 }

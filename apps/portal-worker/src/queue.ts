@@ -28,11 +28,16 @@ export async function claimJob(admin: SupabaseClient): Promise<ClaimedJob | null
 export async function completeJob(
   admin: SupabaseClient,
   jobId: string,
-  outcome: { status: "done" | "failed"; reason?: string | null },
+  outcome: { status: "done" | "failed"; reason?: string | null; result?: unknown },
 ): Promise<void> {
   const { error } = await admin
     .from("portal_fetch_jobs")
-    .update({ status: outcome.status, reason: outcome.reason ?? null, finished_at: new Date().toISOString() })
+    .update({
+      status: outcome.status,
+      reason: outcome.reason ?? null,
+      result: outcome.result ?? null,
+      finished_at: new Date().toISOString(),
+    })
     .eq("id", jobId);
   if (error) throw new Error(`completeJob failed: ${error.code ?? "unknown"}`);
 }

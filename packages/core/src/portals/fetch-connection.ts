@@ -68,7 +68,18 @@ export type FetchConnectionDeps = {
   onState?: (state: ConnectionState, reason?: ReconnectReason) => void | Promise<void>;
 };
 
-export type TargetOutcome = { url: string; read: number; fresh: number; error?: string };
+export type TargetOutcome = {
+  url: string;
+  /** Where the navigation actually landed (a cold deep link into an SPA may redirect). */
+  finalUrl: string;
+  /** How many characters of rendered text were read (metadata only — never the text itself). */
+  chars: number;
+  /** Items the extractor returned. */
+  read: number;
+  /** Of those, how many were new and filed. */
+  fresh: number;
+  error?: string;
+};
 
 export type FetchConnectionResult =
   | { ok: false; state: "reconnect_needed"; reason: ReconnectReason }
@@ -91,9 +102,13 @@ export async function fetchConnection(deps: FetchConnectionDeps): Promise<FetchC
   let filed = 0;
 
   for (const target of deps.targets) {
+    let finalUrl = target.url;
+    let chars = 0;
     try {
       await page.goto(target.url);
+      finalUrl = page.currentUrl();
       const text = await page.textContent();
+      chars = text.trim().length;
       const items = await deps.extractor.extract({ text, target });
 
       const seen = await deps.cursors.loadSeen(target.url);
@@ -120,9 +135,9 @@ export async function fetchConnection(deps: FetchConnectionDeps): Promise<FetchC
         await deps.cursors.recordSeen(target.url, hashes);
         filed += fresh.length;
       }
-      targets.push({ url: target.url, read: items.length, fresh: fresh.length });
+      targets.push({ url: target.url, finalUrl, chars, read: items.length, fresh: fresh.length });
     } catch (thrown) {
-      targets.push({ url: target.url, read: 0, fresh: 0, error: thrown instanceof Error ? thrown.message : "failed" });
+      targets.push({ url: target.url, finalUrl, chars, read: 0, fresh: 0, error: thrown instanceof Error ? thrown.message : "failed" });
     }
   }
 
