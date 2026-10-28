@@ -11,9 +11,14 @@ export type SchoolConnectLabels = {
   portalNone: string;
   portalManage: string;
   choose: string;
-  testConnection: string;
+  connect: string;
+  connectedBadge: string;
+  connectOk: string;
+  fetchTitle: string;
+  fetchLede: string;
+  fetchNow: string;
+  fetchOk: string;
   pollChecking: string;
-  pollOk: string;
   pollFailed: string;
   pollSlow: string;
   reconnectNeeded: string;
@@ -30,9 +35,14 @@ export function schoolConnectLabels(t: Translate): SchoolConnectLabels {
     portalNone: t("school.connect.conns.none"),
     portalManage: t("school.connect.conns.manage"),
     choose: t("school.connect.conns.choose"),
-    testConnection: t("school.connect.signin.test"),
+    connect: t("school.connect.connect"),
+    connectedBadge: t("school.connect.connectedBadge"),
+    connectOk: t("school.connect.poll.okTest"),
+    fetchTitle: t("school.connect.fetch.title"),
+    fetchLede: t("school.connect.fetch.lede"),
+    fetchNow: t("school.connect.fetch.now"),
+    fetchOk: t("school.connect.poll.okFetch"),
     pollChecking: t("school.connect.poll.checking"),
-    pollOk: t("school.connect.poll.okFetch"),
     pollFailed: t("school.connect.poll.failed"),
     pollSlow: t("school.connect.poll.slow"),
     reconnectNeeded: t("school.connect.reconnect.needed"),
