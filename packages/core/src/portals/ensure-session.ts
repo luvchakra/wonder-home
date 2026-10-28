@@ -42,9 +42,33 @@ export type EnsureSessionDeps = {
   sleep?: (ms: number) => Promise<void>;
 };
 
+/**
+ * What the page looked like when a login attempt was judged a failure — for
+ * diagnostics only (no credentials; a page's visible text never includes input
+ * values). Says where we landed, whether the adapter thinks we're in, and a short
+ * text snippet (an error banner, a redirect to logout, …).
+ */
+export type LoginDiagnostic = { url: string; authed: boolean; snippet: string };
+
 export type EnsureSessionResult =
   | { ok: true; page: PortalPage; reAuthenticated: boolean }
-  | { ok: false; state: "reconnect_needed"; reason: ReconnectReason };
+  | { ok: false; state: "reconnect_needed"; reason: ReconnectReason; diagnostic?: LoginDiagnostic };
+
+async function captureLogin(page: PortalPage, adapter: PortalAdapter): Promise<LoginDiagnostic> {
+  let authed = false;
+  let snippet = "";
+  try {
+    authed = await adapter.isAuthenticated(page);
+  } catch {
+    /* ignore */
+  }
+  try {
+    snippet = (await page.textContent()).replace(/\s+/g, " ").trim().slice(0, 300);
+  } catch {
+    /* ignore */
+  }
+  return { url: page.currentUrl(), authed, snippet };
+}
 
 const DEFAULT_MAX_ATTEMPTS = 3;
 const defaultBackoff = (attempt: number) => Math.min(30_000, 1000 * 2 ** (attempt - 1));
@@ -85,16 +109,17 @@ export async function ensureSession(deps: EnsureSessionDeps): Promise<EnsureSess
       }
       case "invalid_credentials":
         await onState?.("reconnect_needed", "bad_password");
-        return { ok: false, state: "reconnect_needed", reason: "bad_password" };
+        return { ok: false, state: "reconnect_needed", reason: "bad_password", diagnostic: await captureLogin(page, adapter) };
       case "verification_required":
         await onState?.("reconnect_needed", "verification");
-        return { ok: false, state: "reconnect_needed", reason: "verification" };
+        return { ok: false, state: "reconnect_needed", reason: "verification", diagnostic: await captureLogin(page, adapter) };
       case "transient":
         if (attempt < maxAttempts) await sleep(backoffMs(attempt));
         break;
     }
   }
 
+  const diagnostic = await captureLogin(page, adapter);
   await onState?.("reconnect_needed", "login_failed");
-  return { ok: false, state: "reconnect_needed", reason: "login_failed" };
+  return { ok: false, state: "reconnect_needed", reason: "login_failed", diagnostic };
 }

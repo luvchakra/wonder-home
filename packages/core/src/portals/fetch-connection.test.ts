@@ -159,7 +159,7 @@ describe("fetchConnection", () => {
   it("ends as reconnect_needed when the session can't be established — nothing filed", async () => {
     const h = harness({ adapter: dead, page: new FakePage({ [HOMEWORK]: "x" }), targets, itemsByUrl: { [HOMEWORK]: [item({})] } });
     const result = await h.run();
-    expect(result).toEqual({ ok: false, state: "reconnect_needed", reason: "bad_password" });
+    expect(result).toMatchObject({ ok: false, state: "reconnect_needed", reason: "bad_password" });
     expect(h.filed).toHaveLength(0);
   });
 

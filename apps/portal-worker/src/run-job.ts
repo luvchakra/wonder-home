@@ -19,7 +19,7 @@ import { readSchoolPortalCredentials } from "@wonderhome/core/school/portal-cred
  */
 
 /** Per-run diagnostics persisted on the job row — metadata only, never portal content. */
-export type JobResult = { filed: number; pages: TargetOutcome[] };
+export type JobResult = { filed: number; pages: TargetOutcome[]; login?: unknown };
 
 export type JobOutcome = {
   state: "connected" | "reconnect_needed" | "no_credentials";
@@ -79,8 +79,14 @@ export async function runFetchJob(input: {
   });
 
   if (!result.ok) {
+    if (result.diagnostic) log(`[job] ${integrationId}: login diag ${JSON.stringify(result.diagnostic)}`);
     log(`[job] ${integrationId}: reconnect needed (${result.reason})`);
-    return { state: "reconnect_needed", filed: 0, reason: result.reason, result: { filed: 0, pages: result.targets ?? [] } };
+    return {
+      state: "reconnect_needed",
+      filed: 0,
+      reason: result.reason,
+      result: { filed: 0, pages: result.targets ?? [], login: result.diagnostic ?? null },
+    };
   }
   const failures = result.targets.filter((t) => t.error).length;
   log(
