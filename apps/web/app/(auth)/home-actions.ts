@@ -279,7 +279,6 @@ export async function createPetAction(_previous: ActionState, formData: FormData
 
     revalidatePath("/family");
     revalidatePath("/household/home");
-    revalidatePath("/household/members");
     return { notice: "Added to the family." };
   } catch (thrown) {
     return { error: toErrorBody(thrown, "home").body.error.message };

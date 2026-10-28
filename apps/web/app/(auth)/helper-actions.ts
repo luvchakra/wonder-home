@@ -180,7 +180,7 @@ export async function recordLeaveAction(_previous: ActionState, formData: FormDa
       reason: parsed.data.reason || null,
     });
     revalidatePath("/househelper");
-    revalidatePath("/today");
+    revalidatePath("/calendar");
     revalidatePath("/");
     return {
       notice:

@@ -33,9 +33,8 @@ import type { EventActionState } from "./family-actions";
 const ids = z.object({ householdId: z.uuid(), eventId: z.uuid() });
 
 function refresh(eventId: string) {
-  revalidatePath(`/family/events/${eventId}`);
+  revalidatePath(`/calendar/events/${eventId}`);
   revalidatePath("/family");
-  revalidatePath("/today");
   revalidatePath("/calendar");
   revalidatePath("/");
 }
@@ -251,7 +250,7 @@ export async function replyToEventAction(_previous: ReplyState, formData: FormDa
   try {
     const result = await replyThroughLink(admin, { token: parsed.data.token, name: parsed.data.name, response: parsed.data.response, partySize: parsed.data.partySize, note: parsed.data.note ?? null });
     if (!result.ok) return { error: result.reason === "closed" ? "This event is no longer taking replies." : "This invite link is no longer working. Ask whoever sent it for a new one." };
-    revalidatePath(`/family/events/${result.invited.eventId}`);
+    revalidatePath(`/calendar/events/${result.invited.eventId}`);
   } catch {
     return { error: "Your reply did not go through. Please try again in a moment." };
   }

@@ -745,7 +745,7 @@ export const AMAF_FACTS: readonly AmafFact[] = [
       const relation = readRelation(answer);
       return relation ? { kind: "value", value: { fact: "member.relationship", relation } } : { kind: "unclear" };
     },
-    section: () => ({ label: "family", href: "/household/members" }),
+    section: () => ({ label: "family", href: "/family" }),
   },
   {
     key: "member.phone",

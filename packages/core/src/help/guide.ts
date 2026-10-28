@@ -111,7 +111,7 @@ const SECTIONS: readonly SectionShape[] = [
   {
     id: "today-and-home",
     group: "Everyday use",
-    updated: "2026-10-21",
+    updated: "2026-10-28",
     keywords: ["dashboard", "home screen", "today", "agenda", "timeline", "needs you", "handled", "plan something", "swipe", "pets", "what's new", "new features", "release notes", "changelog", "version", "update", "weather", "temperature", "rain", "movies", "films", "cinema", "streaming", "ott", "what to watch"],
   },
   {
@@ -165,7 +165,7 @@ const SECTIONS: readonly SectionShape[] = [
   {
     id: "household-and-roles",
     group: "Your household",
-    updated: "2026-10-19",
+    updated: "2026-10-28",
     keywords: ["invite", "member", "role", "permission", "head of family", "administrator", "admin", "child", "helper", "guardian", "remove member", "activity", "audit", "history", "who changed", "relationships", "related", "father", "mother", "wife", "husband", "family tree"],
   },
   {

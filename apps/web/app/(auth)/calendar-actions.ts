@@ -103,7 +103,7 @@ export async function setOccurrenceCancelledAction(_previous: ActionState, formD
   } catch (thrown) {
     return { error: toErrorBody(thrown, "family").body.error.message };
   }
-  revalidatePath(`/family/events/${parsed.data.eventId}`);
+  revalidatePath(`/calendar/events/${parsed.data.eventId}`);
   revalidatePath("/calendar");
   return {};
 }

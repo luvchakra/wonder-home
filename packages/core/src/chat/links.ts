@@ -34,7 +34,7 @@ export function recordPath(record: ChatRecord): string | null {
     case "meal":
       return record.onDate && /^\d{4}-\d{2}-\d{2}$/.test(record.onDate) ? `/meals?week=${record.onDate}` : "/meals";
     case "event":
-      return `/family/events/${record.id}`;
+      return `/calendar/events/${record.id}`;
     case "grocery":
       return `/groceries/${record.id}`;
     case "school":

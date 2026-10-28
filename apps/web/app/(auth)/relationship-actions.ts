@@ -71,7 +71,6 @@ export async function saveRelationshipAction(_previous: RelationshipState, formD
   } catch (error) {
     return { error: toErrorBody(error, "household").body.error.message };
   }
-  revalidatePath("/household/members");
   revalidatePath("/family");
   return { notice: "Saved." };
 }
@@ -90,7 +89,6 @@ export async function removeRelationshipAction(input: { householdId: string; id:
   } catch (error) {
     return { error: toErrorBody(error, "household").body.error.message };
   }
-  revalidatePath("/household/members");
   revalidatePath("/family");
   return {};
 }

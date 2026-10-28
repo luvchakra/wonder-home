@@ -135,7 +135,7 @@ export function eventEntries(
         occurrenceDate: repeats ? occurrence.occurrenceDate : null,
         repeats,
         protected: event.protected,
-        href: `/family/events/${event.id}`,
+        href: `/calendar/events/${event.id}`,
         can: { edit: mayEditEvent(event, viewer) },
       });
     }

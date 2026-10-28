@@ -609,6 +609,8 @@ export const en = {
   "family.childQuiet.restored": "Back to the usual for their age.",
   "family.pets": "Pets",
   "family.addPet": "Add pet",
+  "family.addSection": "Add to the family",
+  "family.seeAllCalendar": "See all in Calendar",
   "family.empty.pets": "No pets yet",
   "family.empty.petsLede": "Add a pet and WonderHome tracks their care alongside everyone else's.",
   "family.addAPet": "Add a pet",

@@ -36,7 +36,7 @@ function entry(partial: Partial<CalendarEntry>): CalendarEntry {
     occurrenceDate: null,
     repeats: false,
     protected: false,
-    href: "/family/events/e1",
+    href: "/calendar/events/e1",
     can: { edit: true },
     ...partial,
   };
@@ -62,8 +62,8 @@ describe("calendar words", () => {
   });
 
   it("opens an event on the day it was tapped, and a repeating one on its occurrence", () => {
-    expect(hrefOf(entry({}), "2026-10-20")).toBe("/family/events/e1?on=2026-10-20");
-    expect(hrefOf(entry({ occurrenceDate: "2026-10-27", repeats: true }), "2026-10-27")).toBe("/family/events/e1?on=2026-10-27");
+    expect(hrefOf(entry({}), "2026-10-20")).toBe("/calendar/events/e1?on=2026-10-20");
+    expect(hrefOf(entry({ occurrenceDate: "2026-10-27", repeats: true }), "2026-10-27")).toBe("/calendar/events/e1?on=2026-10-27");
     expect(hrefOf(entry({ source: "occasion", href: "/family" }), "2026-10-20")).toBe("/family");
   });
 

@@ -163,7 +163,7 @@ export default async function SetupWizardPage({
                   <Badge key={member.id}>{member.displayName}</Badge>
                 ))}
               </div>
-              <PillLink href="/household/members" tone="primary">{t("family.inviteSomeone")}</PillLink>
+              <PillLink href="/family#add" tone="primary">{t("family.inviteSomeone")}</PillLink>
             </div>
           </Step>
         ) : null}
@@ -193,7 +193,7 @@ export default async function SetupWizardPage({
                 icon={Users}
                 title={t("manage.setup.inviteFirst")}
                 description={t("manage.setup.inviteFirstLede")}
-                action={<PillLink href="/household/members">{t("family.inviteSomeone")}</PillLink>}
+                action={<PillLink href="/family#add">{t("family.inviteSomeone")}</PillLink>}
               />
             ) : (
               <ResponsibilityForm

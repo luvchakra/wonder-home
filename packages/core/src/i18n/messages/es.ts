@@ -599,6 +599,8 @@ export const es: Catalog = {
   "family.childQuiet.restored": "De vuelta a lo habitual para su edad.",
   "family.pets": "Mascotas",
   "family.addPet": "Añadir mascota",
+  "family.addSection": "Añadir a la familia",
+  "family.seeAllCalendar": "Ver todo en el calendario",
   "family.empty.pets": "Aún no hay mascotas",
   "family.empty.petsLede": "Añade una mascota y WonderHome seguirá su cuidado junto al de los demás.",
   "family.addAPet": "Añadir una mascota",

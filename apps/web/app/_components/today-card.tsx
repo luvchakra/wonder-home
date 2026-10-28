@@ -120,7 +120,7 @@ export async function TodayCard({ session, now, date }: { session: Session; now:
           <p className="px-1 text-[0.625rem] leading-snug text-[var(--wh-foreground-subtle)]">{t("today.credit")}</p>
         </div>
       ) : null}
-      <Link href="/today" className="mt-1 flex items-center justify-end gap-0.5 text-xs font-semibold text-[var(--wh-primary)] hover:underline">
+      <Link href="/calendar?view=day" className="mt-1 flex items-center justify-end gap-0.5 text-xs font-semibold text-[var(--wh-primary)] hover:underline">
         {t("today.plan")} <ChevronRight aria-hidden className="size-3.5" />
       </Link>
     </div>

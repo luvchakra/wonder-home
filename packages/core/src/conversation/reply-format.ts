@@ -19,10 +19,8 @@ export type Block = { kind: "paragraph"; inlines: Inline[] } | { kind: "list"; i
 /** Every screen a reply may send somebody to, and what they will find there. */
 export const APP_PLACES: readonly { href: string; label: string; what: string }[] = [
   { href: "/", label: "Home", what: "what needs you and what WonderHome handled" },
-  { href: "/today", label: "Today", what: "the day's plan" },
-  { href: "/calendar", label: "Calendar", what: "the family calendar: events, plans, occasions and holidays" },
-  { href: "/family", label: "Family", what: "the family's members and availability" },
-  { href: "/household/members", label: "People", what: "who is in the household and their roles" },
+  { href: "/calendar", label: "Calendar", what: "the family calendar: events, plans, occasions and holidays, and today's plan in the Day view" },
+  { href: "/family", label: "Family", what: "the family's members, their roles and availability; Admins add and remove people here" },
   { href: "/household/responsibilities", label: "Responsibilities", what: "who is responsible for what and how much WonderHome may do" },
   { href: "/househelper", label: "Househelper", what: "the helper's days, arrangement and absences" },
   { href: "/groceries", label: "Groceries", what: "the grocery list, supplies and orders" },

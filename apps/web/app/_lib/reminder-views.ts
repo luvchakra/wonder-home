@@ -179,7 +179,7 @@ export async function loadReminderDetails(
         { label: t("notifications.detail.starts"), value: dateTime(event.starts_at) },
         ...(event.location ? [{ label: t("notifications.detail.where"), value: event.location }] : []),
       ],
-      link: { href: "/today", label: t("notifications.link.today") },
+      link: { href: "/calendar?view=day", label: t("notifications.link.today") },
       complete: null,
     });
   }
