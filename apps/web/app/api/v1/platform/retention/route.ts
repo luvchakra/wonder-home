@@ -11,7 +11,7 @@ import { whatsappConfigFromEnv } from "@wonderhome/core/notifications/whatsapp";
 import { WHATSAPP_PROCESS_KIND, whatsappJobHandler } from "@wonderhome/core/whatsapp/intake";
 import { pruneExpiredShareHandoffs } from "@wonderhome/core/homesend/share-handoff";
 import { log } from "@wonderhome/core/observability/logger";
-import { runRetentionCleanup, type CleanupSummary } from "@wonderhome/core/privacy/cleanup";
+import { purgeSoftDeleted, runRetentionCleanup, type CleanupSummary } from "@wonderhome/core/privacy/cleanup";
 import { fulfillMaturedDeletions } from "@wonderhome/core/privacy/fulfill-deletion";
 import { purgeExpired, summarise } from "@wonderhome/core/privacy/purge";
 
@@ -95,6 +95,19 @@ export async function POST(request: Request) {
     } catch (thrown) {
       cleanupError = thrown instanceof Error ? thrown.message : "unknown";
       log.error("retention cleanup failed", { reason: cleanupError, allow: ["reason"] });
+    }
+
+    // The purge runs DRY-RUN only (the owner, Q4 — "yes, dry-run first"): it
+    // reports how many soft-deleted rows are past the grace window and deletes
+    // nothing. Real deletion stays gated until the owner has seen a report.
+    let purgeDryRun: { dryRun: boolean; wouldDelete: number } | null = null;
+    let purgeError: string | undefined;
+    try {
+      const { outcomes } = await purgeSoftDeleted(admin, new Date(), { dryRun: true });
+      purgeDryRun = { dryRun: true, wouldDelete: outcomes.reduce((sum, o) => sum + o.marked, 0) };
+    } catch (thrown) {
+      purgeError = thrown instanceof Error ? thrown.message : "unknown";
+      log.error("retention purge dry-run failed", { reason: purgeError, allow: ["reason"] });
     }
 
     // Not a retention sweep at all — folded into this route rather than
@@ -187,8 +200,9 @@ export async function POST(request: Request) {
       smartReminderSummary,
       jobsSummary,
       cleanupSummary,
+      purgeDryRun,
       failed: failed.length,
-      allow: ["summary", "handoffsDeleted", "deletionsFulfilled", "deletionsFailed", "reminderSummary", "routineReminderSummary", "smartReminderSummary", "jobsSummary", "cleanupSummary", "failed"],
+      allow: ["summary", "handoffsDeleted", "deletionsFulfilled", "deletionsFailed", "reminderSummary", "routineReminderSummary", "smartReminderSummary", "jobsSummary", "cleanupSummary", "purgeDryRun", "failed"],
     });
 
     // Counts only. What was deleted is exactly what must not be reported back.
@@ -223,10 +237,11 @@ export async function POST(request: Request) {
         smartReminders: smartReminderSummary ?? { error: smartReminderError },
         jobs: jobsSummary ?? { error: jobsError },
         cleanup: cleanupSummary ?? { error: cleanupError },
+        purgeDryRun: purgeDryRun ?? { error: purgeError },
         reconciliation: reconciliation ?? { error: reconciliationError },
       },
       {
-        status: failed.length > 0 || deletionsFailed !== 0 || reminderError || routineReminderError || smartReminderError || jobsError || cleanupError || reconciliationError ? 207 : 200,
+        status: failed.length > 0 || deletionsFailed !== 0 || reminderError || routineReminderError || smartReminderError || jobsError || cleanupError || purgeError || reconciliationError ? 207 : 200,
         headers: { "cache-control": "no-store" },
       },
     );
