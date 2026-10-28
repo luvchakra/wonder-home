@@ -1,7 +1,8 @@
 "use client";
 
 import { AlertTriangle, CheckCircle2, ExternalLink, FileText, GraduationCap, Pencil, Plug, PlugZap, Radio, RefreshCw, Send } from "lucide-react";
-import { useActionState, useState } from "react";
+import { useRouter } from "next/navigation";
+import { useActionState, useCallback, useEffect, useRef, useState } from "react";
 
 import { Alert } from "@wonderhome/core/ui/alert";
 import { Badge, PillLink } from "@wonderhome/core/ui/pill";
@@ -17,6 +18,7 @@ import {
   connectSchoolPortalWithCredentialsAction,
   disconnectSchoolPortalAction,
   fetchSchoolPortalNowAction,
+  portalConnectionStatusAction,
   removePortalScrapeUrlAction,
   setPortalScrapeUrlEnabledAction,
   setSchoolChannelActiveAction,
@@ -289,6 +291,82 @@ function PagesToRead({
   );
 }
 
+type PollPhase =
+  | { kind: "idle" }
+  | { kind: "checking" }
+  | { kind: "ok"; action: "test" | "fetch" }
+  | { kind: "failed"; reason: string | null }
+  | { kind: "slow" };
+
+/**
+ * After "Test" or "Fetch now" enqueues a job, poll the job's outcome so the Admin
+ * learns whether the worker signed in or hit an error — rather than a message that
+ * never resolves. Stops on done/failed (and refreshes the card's server state) or
+ * after a minute (the worker may be busy; the result still lands on the card later).
+ */
+function useConnectionPoll(householdId: string, integrationId: string | null) {
+  const router = useRouter();
+  const [phase, setPhase] = useState<PollPhase>({ kind: "idle" });
+  const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  const stop = useCallback(() => {
+    if (timer.current) clearTimeout(timer.current);
+    timer.current = null;
+  }, []);
+  useEffect(() => stop, [stop]);
+
+  const start = useCallback(
+    (action: "test" | "fetch") => {
+      if (!integrationId) return;
+      stop();
+      setPhase({ kind: "checking" });
+      const startedAt = Date.now();
+      const tick = async () => {
+        let result: Awaited<ReturnType<typeof portalConnectionStatusAction>> | null = null;
+        try {
+          result = await portalConnectionStatusAction({ householdId, integrationId });
+        } catch {
+          result = null;
+        }
+        if (result?.status === "done") {
+          setPhase({ kind: "ok", action });
+          router.refresh();
+          return;
+        }
+        if (result?.status === "failed") {
+          setPhase({ kind: "failed", reason: result.reason });
+          router.refresh();
+          return;
+        }
+        if (Date.now() - startedAt > 60_000) {
+          setPhase({ kind: "slow" });
+          return;
+        }
+        timer.current = setTimeout(() => void tick(), 3_000);
+      };
+      timer.current = setTimeout(() => void tick(), 2_500);
+    },
+    [householdId, integrationId, router, stop],
+  );
+
+  return { phase, start };
+}
+
+/** Live outcome of the poll above; null while idle (the action's own Notice shows instead). */
+function PollNotice({ phase, labels }: { phase: PollPhase; labels: SchoolConnectLabels }) {
+  if (phase.kind === "idle") return null;
+  if (phase.kind === "checking") return <Alert tone="info" className="mt-2">{labels.pollChecking}</Alert>;
+  if (phase.kind === "slow") return <Alert tone="attention" className="mt-2">{labels.pollSlow}</Alert>;
+  if (phase.kind === "ok")
+    return <Alert tone="info" className="mt-2">{phase.action === "test" ? labels.pollOkTest : labels.pollOkFetch}</Alert>;
+  return (
+    <Alert tone="attention" className="mt-2">
+      {labels.pollFailed}
+      {phase.reason ? ` ${phase.reason}` : ""}
+    </Alert>
+  );
+}
+
 /** The connected state for a credentials portal: who and where it is signed in, edit, test, fetch, disconnect. */
 function PortalConnected({
   householdId,
@@ -305,6 +383,16 @@ function PortalConnected({
   const [fetchState, fetchNow, fetching] = useActionState(fetchSchoolPortalNowAction, EMPTY);
   const [testState, test, testing] = useActionState(testSchoolPortalConnectionAction, EMPTY);
   const [disconnectState, disconnect, disconnecting] = useActionState(disconnectSchoolPortalAction, EMPTY);
+  const testPoll = useConnectionPoll(householdId, portal.integrationId);
+  const fetchPoll = useConnectionPoll(householdId, portal.integrationId);
+  // When an enqueue succeeds, start polling that job's outcome. An enqueue error
+  // keeps its own Notice and starts no poll.
+  useEffect(() => {
+    if (testState.notice && !testState.error) testPoll.start("test");
+  }, [testState]); // eslint-disable-line react-hooks/exhaustive-deps
+  useEffect(() => {
+    if (fetchState.notice && !fetchState.error) fetchPoll.start("fetch");
+  }, [fetchState]); // eslint-disable-line react-hooks/exhaustive-deps
   return (
     <div className="mt-3 space-y-3">
       <div>
@@ -339,7 +427,7 @@ function PortalConnected({
           </form>
         </div>
       )}
-      <Notice state={testState} />
+      {testPoll.phase.kind === "idle" ? <Notice state={testState} /> : <PollNotice phase={testPoll.phase} labels={labels} />}
 
       <PagesToRead householdId={householdId} portal={portal} childOptions={childOptions} labels={labels} />
 
@@ -353,7 +441,7 @@ function PortalConnected({
             <RefreshCw aria-hidden className="size-4" /> {labels.fetchNow}
           </Button>
         </form>
-        <Notice state={fetchState} />
+        {fetchPoll.phase.kind === "idle" ? <Notice state={fetchState} /> : <PollNotice phase={fetchPoll.phase} labels={labels} />}
       </div>
       <form action={disconnect}>
         <input type="hidden" name="householdId" value={householdId} />

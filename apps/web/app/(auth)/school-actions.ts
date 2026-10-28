@@ -11,6 +11,7 @@ import { addSchoolChannel, setSchoolChannelActive } from "@wonderhome/core/schoo
 import { parseSchoolChannel } from "@wonderhome/core/school/channels";
 import { schoolPortalCredentialStatus, setSchoolPortalCredentials, updateSchoolPortalCredentials } from "@wonderhome/core/school/portal-credentials";
 import { addPortalScrapeUrl, removePortalScrapeUrl, setPortalScrapeUrlEnabled, type PortalScrapeKind } from "@wonderhome/core/portals/scrape-url-repository";
+import { latestPortalFetchJob, type PortalFetchJobStatus } from "@wonderhome/core/portals/job-repository";
 import { getSchoolProvider } from "@wonderhome/core/school/providers";
 import { addSchoolItem } from "@wonderhome/core/calendar/add-event";
 import { cancelSchoolItem, updateSchoolItem } from "@wonderhome/core/school/repository";
@@ -888,5 +889,28 @@ export async function testSchoolPortalConnectionAction(_previous: ActionState, f
     return { notice: "Checking the sign-in… the connection state updates here once the worker signs in." };
   } catch (thrown) {
     return { error: toErrorBody(thrown, "school").body.error.message };
+  }
+}
+
+/**
+ * The outcome of the most recent fetch for a connection (story 08-033), so the
+ * Connect-school screen can poll after "Test" / "Fetch now" and tell the Admin
+ * whether the worker signed in or hit an error — instead of a message that never
+ * resolves. Reads the household's own job row (member-readable); never the
+ * session or any portal content.
+ */
+export async function portalConnectionStatusAction(input: {
+  householdId: string;
+  integrationId: string;
+}): Promise<{ status: PortalFetchJobStatus | "none"; reason: string | null }> {
+  const parsed = fetchNowSchema.safeParse(input);
+  if (!parsed.success) return { status: "none", reason: null };
+  try {
+    const supabase = await createClient();
+    await requireMembership(supabase, parsed.data.householdId);
+    const job = await latestPortalFetchJob(supabase, parsed.data.householdId, parsed.data.integrationId);
+    return { status: job?.status ?? "none", reason: job?.reason ?? null };
+  } catch {
+    return { status: "none", reason: null };
   }
 }
