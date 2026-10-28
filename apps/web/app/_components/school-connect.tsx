@@ -1,564 +1,32 @@
-"use client";
+import { GraduationCap, Plug, Send } from "lucide-react";
 
-import { AlertTriangle, CheckCircle2, ExternalLink, FileText, GraduationCap, Pencil, Plug, PlugZap, Radio, RefreshCw, Send } from "lucide-react";
-import { useRouter } from "next/navigation";
-import { useActionState, useCallback, useEffect, useRef, useState } from "react";
-
-import { Alert } from "@wonderhome/core/ui/alert";
 import { Badge, PillLink } from "@wonderhome/core/ui/pill";
-import { Button } from "@wonderhome/core/ui/button";
 import { Card } from "@wonderhome/core/ui/card";
-import { Field } from "@wonderhome/core/ui/field";
 import { IconTile } from "@wonderhome/core/ui/icon-tile";
-import { Select } from "@wonderhome/core/ui/select";
 
-import {
-  addPortalScrapeUrlAction,
-  connectSchoolPortalAction,
-  connectSchoolPortalWithCredentialsAction,
-  disconnectSchoolPortalAction,
-  fetchSchoolPortalNowAction,
-  portalConnectionStatusAction,
-  removePortalScrapeUrlAction,
-  setPortalScrapeUrlEnabledAction,
-  setSchoolChannelActiveAction,
-  testSchoolPortalConnectionAction,
-  trackSchoolChannelAction,
-  updateSchoolPortalCredentialsAction,
-} from "../(auth)/school-actions";
-import type { ActionState } from "../(auth)/actions";
 import type { SchoolConnectLabels } from "../_lib/school-connect-labels";
 
-export type ChannelView = { id: string; url: string; childName: string | null; active: boolean };
-export type ScrapeUrlView = { id: string; url: string; kind: string; childName: string | null; enabled: boolean };
-
-export type PortalView = {
-  id: string;
-  label: string;
-  blurb: string;
-  /** How the portal is connected: a sign-in ("credentials") or just a registered integration. */
-  auth: "manual" | "credentials" | "oauth";
-  connected: boolean;
-  /** For a credentials portal: the username it is signed in as, or null when not. */
-  connectedAs: string | null;
-  /** For a credentials portal: the stored portal URL (never the password), to prefill the edit form. */
-  connectedUrl: string | null;
-  /** The worker's connection state: connected / reconnect_needed / never — or null if no session yet. */
-  connectionState: "connected" | "reconnect_needed" | "never" | null;
-  /** Whether a live data fetch exists for this provider yet. */
-  adapterReady: boolean;
-  integrationId: string | null;
-  statusLabel: string | null;
-  hasChannels: boolean;
-  channelExample: string | null;
-  portalUrl: string | null;
-  channels: ChannelView[];
-  /** Post-auth pages the worker reads for this connection. */
-  scrapeUrls: ScrapeUrlView[];
-};
-
-export type ChildOption = { id: string; name: string };
-
-const EMPTY: ActionState = {};
-
-function Notice({ state }: { state: ActionState }) {
-  if (state.error) return <Alert tone="attention" className="mt-2">{state.error}</Alert>;
-  if (state.notice) return <Alert tone="info" className="mt-2">{state.notice}</Alert>;
-  return null;
-}
-
-function ChannelRow({ householdId, channel, labels }: { householdId: string; channel: ChannelView; labels: SchoolConnectLabels }) {
-  const [state, action, pending] = useActionState(setSchoolChannelActiveAction, EMPTY);
-  return (
-    <li className="flex items-center gap-2 py-2">
-      <IconTile icon={Radio} tone={channel.active ? "school" : "neutral"} />
-      <div className="min-w-0 flex-1">
-        <p className="truncate text-sm font-medium">{channel.url.replace(/^https?:\/\//, "")}</p>
-        <p className="text-xs text-[var(--wh-foreground-muted)]">
-          {channel.childName ?? labels.channelAnyChild}
-          {channel.active ? "" : ` · ${labels.channelStoppedBadge}`}
-        </p>
-        <Notice state={state} />
-      </div>
-      <form action={action}>
-        <input type="hidden" name="householdId" value={householdId} />
-        <input type="hidden" name="id" value={channel.id} />
-        <input type="hidden" name="active" value={channel.active ? "false" : "true"} />
-        <Button type="submit" variant="quiet" disabled={pending} className="px-3">
-          {channel.active ? labels.channelStop : labels.channelResume}
-        </Button>
-      </form>
-    </li>
-  );
-}
-
-function TrackChannelForm({
-  householdId,
-  portal,
-  childOptions,
-  labels,
-}: {
-  householdId: string;
-  portal: PortalView;
-  childOptions: ChildOption[];
-  labels: SchoolConnectLabels;
-}) {
-  const [state, action, pending] = useActionState(trackSchoolChannelAction, EMPTY);
-  return (
-    <form action={action} className="mt-3 space-y-2">
-      <input type="hidden" name="householdId" value={householdId} />
-      <input type="hidden" name="integrationId" value={portal.integrationId ?? ""} />
-      <input type="hidden" name="provider" value={portal.id} />
-      <Field
-        label={labels.channelUrlLabel}
-        name="url"
-        inputMode="url"
-        placeholder={portal.channelExample ?? "https://…/channel/…"}
-      />
-      <Select label={labels.channelForChild} name="childMemberId" defaultValue="">
-        <option value="">{labels.channelAnyChild}</option>
-        {childOptions.map((child) => (
-          <option key={child.id} value={child.id}>
-            {child.name}
-          </option>
-        ))}
-      </Select>
-      <Button type="submit" variant="secondary" disabled={pending} className="gap-2">
-        <Plug aria-hidden className="size-4" /> {labels.channelAdd}
-      </Button>
-      <Notice state={state} />
-    </form>
-  );
-}
-
-/** The sign-in form for a portal you connect with a username and password. */
-function PortalSignInForm({ householdId, portal, labels }: { householdId: string; portal: PortalView; labels: SchoolConnectLabels }) {
-  const [state, action, pending] = useActionState(connectSchoolPortalWithCredentialsAction, EMPTY);
-  return (
-    <form action={action} className="mt-3 space-y-2">
-      <input type="hidden" name="householdId" value={householdId} />
-      <input type="hidden" name="provider" value={portal.id} />
-      <Field label={labels.urlLabel} name="url" inputMode="url" defaultValue={portal.portalUrl ?? ""} placeholder="https://www.looplearning.com" />
-      <Field label={labels.usernameLabel} name="username" autoComplete="off" />
-      <Field label={labels.passwordLabel} name="password" type="password" autoComplete="off" />
-      <p className="text-[0.6875rem] text-[var(--wh-foreground-subtle)]">{labels.credentialsNote}</p>
-      <Button type="submit" variant="secondary" disabled={pending} className="gap-2">
-        <Plug aria-hidden className="size-4" /> {labels.signIn}
-      </Button>
-      <Notice state={state} />
-    </form>
-  );
-}
-
-/** The edit form for a connected portal: change the URL, username, or password (blank keeps it). */
-function PortalEditForm({
-  householdId,
-  portal,
-  labels,
-  onDone,
-}: {
-  householdId: string;
-  portal: PortalView;
-  labels: SchoolConnectLabels;
-  onDone: () => void;
-}) {
-  const [state, action, pending] = useActionState(updateSchoolPortalCredentialsAction, EMPTY);
-  return (
-    <form action={action} className="mt-2 space-y-2">
-      <input type="hidden" name="householdId" value={householdId} />
-      <input type="hidden" name="integrationId" value={portal.integrationId ?? ""} />
-      <input type="hidden" name="provider" value={portal.id} />
-      <Field label={labels.urlLabel} name="url" inputMode="url" defaultValue={portal.connectedUrl ?? portal.portalUrl ?? ""} />
-      <Field label={labels.usernameLabel} name="username" autoComplete="off" defaultValue={portal.connectedAs ?? ""} />
-      <Field label={labels.passwordLabel} name="password" type="password" autoComplete="off" placeholder={labels.keepPassword} />
-      <div className="flex items-center gap-2">
-        <Button type="submit" variant="secondary" disabled={pending}>
-          {labels.editSave}
-        </Button>
-        <Button type="button" variant="quiet" onClick={onDone} className="px-3">
-          {labels.editCancel}
-        </Button>
-      </div>
-      <Notice state={state} />
-    </form>
-  );
-}
-
-/** One tracked page: its address, what it is, who it's for, and stop/remove. */
-function ScrapeRow({ householdId, page, labels }: { householdId: string; page: ScrapeUrlView; labels: SchoolConnectLabels }) {
-  const [toggleState, toggle, toggling] = useActionState(setPortalScrapeUrlEnabledAction, EMPTY);
-  const [removeState, remove, removing] = useActionState(removePortalScrapeUrlAction, EMPTY);
-  return (
-    <li className="flex items-center gap-2 py-2">
-      <IconTile icon={FileText} tone={page.enabled ? "school" : "neutral"} />
-      <div className="min-w-0 flex-1">
-        <p className="truncate text-sm font-medium">{page.url.replace(/^https?:\/\//, "")}</p>
-        <p className="text-xs text-[var(--wh-foreground-muted)]">
-          {labels.pageKind[page.kind] ?? page.kind}
-          {page.childName ? ` · ${page.childName}` : ""}
-          {page.enabled ? "" : ` · ${labels.pageStoppedBadge}`}
-        </p>
-        <Notice state={toggleState} />
-        <Notice state={removeState} />
-      </div>
-      <form action={toggle}>
-        <input type="hidden" name="householdId" value={householdId} />
-        <input type="hidden" name="id" value={page.id} />
-        <input type="hidden" name="enabled" value={page.enabled ? "false" : "true"} />
-        <Button type="submit" variant="quiet" disabled={toggling} className="px-2 text-xs">
-          {page.enabled ? labels.pageStop : labels.pageResume}
-        </Button>
-      </form>
-      <form action={remove}>
-        <input type="hidden" name="householdId" value={householdId} />
-        <input type="hidden" name="id" value={page.id} />
-        <Button type="submit" variant="quiet" disabled={removing} className="px-2 text-xs">
-          {labels.pageRemove}
-        </Button>
-      </form>
-    </li>
-  );
-}
-
-/** Add a post-auth page for the worker to read. */
-function AddScrapeForm({
-  householdId,
-  portal,
-  childOptions,
-  labels,
-}: {
-  householdId: string;
-  portal: PortalView;
-  childOptions: ChildOption[];
-  labels: SchoolConnectLabels;
-}) {
-  const [state, action, pending] = useActionState(addPortalScrapeUrlAction, EMPTY);
-  return (
-    <form action={action} className="mt-3 space-y-2">
-      <input type="hidden" name="householdId" value={householdId} />
-      <input type="hidden" name="integrationId" value={portal.integrationId ?? ""} />
-      <Field label={labels.pageUrlLabel} name="url" inputMode="url" placeholder={portal.connectedUrl ?? "https://…"} />
-      <Select label={labels.pageKindLabel} name="kind" defaultValue="generic">
-        {(["homework", "calendar", "messages", "results", "generic"] as const).map((k) => (
-          <option key={k} value={k}>
-            {labels.pageKind[k] ?? k}
-          </option>
-        ))}
-      </Select>
-      <Select label={labels.pageForChild} name="childMemberId" defaultValue="">
-        <option value="">{labels.pageAnyChild}</option>
-        {childOptions.map((child) => (
-          <option key={child.id} value={child.id}>
-            {child.name}
-          </option>
-        ))}
-      </Select>
-      <Button type="submit" variant="secondary" disabled={pending} className="gap-2">
-        <Plug aria-hidden className="size-4" /> {labels.pageAdd}
-      </Button>
-      <Notice state={state} />
-    </form>
-  );
-}
-
-/** The "pages to read" section of a connected portal. */
-function PagesToRead({
-  householdId,
-  portal,
-  childOptions,
-  labels,
-}: {
-  householdId: string;
-  portal: PortalView;
-  childOptions: ChildOption[];
-  labels: SchoolConnectLabels;
-}) {
-  return (
-    <div className="rounded-[var(--wh-radius-sm)] border border-[var(--wh-border)] p-3">
-      <p className="text-sm font-medium">{labels.pagesTitle}</p>
-      <p className="text-xs text-[var(--wh-foreground-muted)]">{labels.pagesLede}</p>
-      {portal.scrapeUrls.length > 0 ? (
-        <ul className="mt-1 divide-y divide-[var(--wh-border)]">
-          {portal.scrapeUrls.map((page) => (
-            <ScrapeRow key={page.id} householdId={householdId} page={page} labels={labels} />
-          ))}
-        </ul>
-      ) : (
-        <p className="mt-2 text-xs text-[var(--wh-foreground-subtle)]">{labels.pagesNone}</p>
-      )}
-      <AddScrapeForm householdId={householdId} portal={portal} childOptions={childOptions} labels={labels} />
-    </div>
-  );
-}
-
-type PollPhase =
-  | { kind: "idle" }
-  | { kind: "checking" }
-  | { kind: "ok"; action: "test" | "fetch" }
-  | { kind: "failed"; reason: string | null }
-  | { kind: "slow" };
-
 /**
- * After "Test" or "Fetch now" enqueues a job, poll the job's outcome so the Admin
- * learns whether the worker signed in or hit an error — rather than a message that
- * never resolves. Stops on done/failed (and refreshes the card's server state) or
- * after a minute (the worker may be busy; the result still lands on the card later).
+ * Connect school (redesigned around the Connections framework, 2026-10-28).
+ *
+ * Two honest paths, nothing more: forward a circular or photo into HomeSend
+ * (works for any school, no setup), or connect the school's website as a
+ * browser-automation *connection* — created, tested and managed on the
+ * Connections page, and reused anywhere. No demo portal, no inline sign-in.
  */
-function useConnectionPoll(householdId: string, integrationId: string | null) {
-  const router = useRouter();
-  const [phase, setPhase] = useState<PollPhase>({ kind: "idle" });
-  const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  const stop = useCallback(() => {
-    if (timer.current) clearTimeout(timer.current);
-    timer.current = null;
-  }, []);
-  useEffect(() => stop, [stop]);
-
-  const start = useCallback(
-    (action: "test" | "fetch") => {
-      if (!integrationId) return;
-      stop();
-      setPhase({ kind: "checking" });
-      const startedAt = Date.now();
-      const tick = async () => {
-        let result: Awaited<ReturnType<typeof portalConnectionStatusAction>> | null = null;
-        try {
-          result = await portalConnectionStatusAction({ householdId, integrationId });
-        } catch {
-          result = null;
-        }
-        if (result?.status === "done") {
-          setPhase({ kind: "ok", action });
-          router.refresh();
-          return;
-        }
-        if (result?.status === "failed") {
-          setPhase({ kind: "failed", reason: result.reason });
-          router.refresh();
-          return;
-        }
-        if (Date.now() - startedAt > 60_000) {
-          setPhase({ kind: "slow" });
-          return;
-        }
-        timer.current = setTimeout(() => void tick(), 3_000);
-      };
-      timer.current = setTimeout(() => void tick(), 2_500);
-    },
-    [householdId, integrationId, router, stop],
-  );
-
-  return { phase, start };
-}
-
-/** Live outcome of the poll above; null while idle (the action's own Notice shows instead). */
-function PollNotice({ phase, labels }: { phase: PollPhase; labels: SchoolConnectLabels }) {
-  if (phase.kind === "idle") return null;
-  if (phase.kind === "checking") return <Alert tone="info" className="mt-2">{labels.pollChecking}</Alert>;
-  if (phase.kind === "slow") return <Alert tone="attention" className="mt-2">{labels.pollSlow}</Alert>;
-  if (phase.kind === "ok")
-    return <Alert tone="info" className="mt-2">{phase.action === "test" ? labels.pollOkTest : labels.pollOkFetch}</Alert>;
-  return (
-    <Alert tone="attention" className="mt-2">
-      {labels.pollFailed}
-      {phase.reason ? ` ${phase.reason}` : ""}
-    </Alert>
-  );
-}
-
-/** The connected state for a credentials portal: who and where it is signed in, edit, test, fetch, disconnect. */
-function PortalConnected({
-  householdId,
-  portal,
-  childOptions,
-  labels,
-}: {
-  householdId: string;
-  portal: PortalView;
-  childOptions: ChildOption[];
-  labels: SchoolConnectLabels;
-}) {
-  const [editing, setEditing] = useState(false);
-  const [fetchState, fetchNow, fetching] = useActionState(fetchSchoolPortalNowAction, EMPTY);
-  const [testState, test, testing] = useActionState(testSchoolPortalConnectionAction, EMPTY);
-  const [disconnectState, disconnect, disconnecting] = useActionState(disconnectSchoolPortalAction, EMPTY);
-  const testPoll = useConnectionPoll(householdId, portal.integrationId);
-  const fetchPoll = useConnectionPoll(householdId, portal.integrationId);
-  // When an enqueue succeeds, start polling that job's outcome. An enqueue error
-  // keeps its own Notice and starts no poll.
-  useEffect(() => {
-    if (testState.notice && !testState.error) testPoll.start("test");
-  }, [testState]); // eslint-disable-line react-hooks/exhaustive-deps
-  useEffect(() => {
-    if (fetchState.notice && !fetchState.error) fetchPoll.start("fetch");
-  }, [fetchState]); // eslint-disable-line react-hooks/exhaustive-deps
-  return (
-    <div className="mt-3 space-y-3">
-      <div>
-        <p className="inline-flex items-center gap-1.5 text-sm font-medium text-[var(--wh-handled)]">
-          <CheckCircle2 aria-hidden className="size-4" /> {labels.connectedAs} {portal.connectedAs}
-        </p>
-        {portal.connectedUrl ? (
-          <p className="truncate text-xs text-[var(--wh-foreground-muted)]">{portal.connectedUrl.replace(/^https?:\/\//, "")}</p>
-        ) : null}
-      </div>
-
-      {portal.connectionState === "reconnect_needed" ? (
-        <Alert tone="attention" className="flex items-start gap-2">
-          <AlertTriangle aria-hidden className="mt-0.5 size-4 shrink-0" />
-          <span>{labels.reconnectNeeded}</span>
-        </Alert>
-      ) : null}
-
-      {editing ? (
-        <PortalEditForm householdId={householdId} portal={portal} labels={labels} onDone={() => setEditing(false)} />
-      ) : (
-        <div className="flex flex-wrap items-center gap-2">
-          <Button type="button" variant="secondary" onClick={() => setEditing(true)} className="gap-2">
-            <Pencil aria-hidden className="size-4" /> {labels.edit}
-          </Button>
-          <form action={test}>
-            <input type="hidden" name="householdId" value={householdId} />
-            <input type="hidden" name="integrationId" value={portal.integrationId ?? ""} />
-            <Button type="submit" variant="secondary" disabled={testing} className="gap-2">
-              <PlugZap aria-hidden className="size-4" /> {labels.test}
-            </Button>
-          </form>
-        </div>
-      )}
-      {testPoll.phase.kind === "idle" ? <Notice state={testState} /> : <PollNotice phase={testPoll.phase} labels={labels} />}
-
-      <PagesToRead householdId={householdId} portal={portal} childOptions={childOptions} labels={labels} />
-
-      <div className="rounded-[var(--wh-radius-sm)] border border-[var(--wh-border)] p-3">
-        <p className="text-sm font-medium">{labels.fetchTitle}</p>
-        <p className="text-xs text-[var(--wh-foreground-muted)]">{labels.fetchLede}</p>
-        <form action={fetchNow} className="mt-2">
-          <input type="hidden" name="householdId" value={householdId} />
-          <input type="hidden" name="integrationId" value={portal.integrationId ?? ""} />
-          <Button type="submit" variant="secondary" disabled={fetching} className="gap-2">
-            <RefreshCw aria-hidden className="size-4" /> {labels.fetchNow}
-          </Button>
-        </form>
-        {fetchPoll.phase.kind === "idle" ? <Notice state={fetchState} /> : <PollNotice phase={fetchPoll.phase} labels={labels} />}
-      </div>
-      <form action={disconnect}>
-        <input type="hidden" name="householdId" value={householdId} />
-        <input type="hidden" name="provider" value={portal.id} />
-        <Button type="submit" variant="quiet" disabled={disconnecting} className="px-3">
-          {labels.disconnect}
-        </Button>
-      </form>
-      <Notice state={disconnectState} />
-    </div>
-  );
-}
-
-function PortalCard({
-  householdId,
-  portal,
-  childOptions,
-  labels,
-}: {
-  householdId: string;
-  portal: PortalView;
-  childOptions: ChildOption[];
-  labels: SchoolConnectLabels;
-}) {
-  const [connectState, connect, connecting] = useActionState(connectSchoolPortalAction, EMPTY);
-  const [disconnectState, disconnect, disconnecting] = useActionState(disconnectSchoolPortalAction, EMPTY);
-  const isCredentials = portal.auth === "credentials";
-  const connected = isCredentials ? portal.connectedAs !== null : portal.connected;
-
-  return (
-    <Card className="p-4">
-      <div className="flex items-start gap-3">
-        <IconTile icon={GraduationCap} tone="school" size="lg" />
-        <div className="min-w-0 flex-1">
-          <div className="flex flex-wrap items-center gap-2">
-            <p className="text-sm font-semibold">{portal.label}</p>
-            {connected ? <Badge tone="handled">{labels.connectedBadge}</Badge> : <Badge>{labels.setupNeeded}</Badge>}
-          </div>
-          <p className="mt-0.5 text-xs text-[var(--wh-foreground-muted)]">{portal.blurb}</p>
-          {portal.portalUrl ? (
-            <a
-              href={portal.portalUrl}
-              target="_blank"
-              rel="noreferrer noopener"
-              className="mt-1 inline-flex items-center gap-1 text-xs text-[var(--wh-primary)]"
-            >
-              <ExternalLink aria-hidden className="size-3.5" /> {labels.visitPortal}
-            </a>
-          ) : null}
-
-          {isCredentials ? (
-            connected ? (
-              <PortalConnected householdId={householdId} portal={portal} childOptions={childOptions} labels={labels} />
-            ) : (
-              <PortalSignInForm householdId={householdId} portal={portal} labels={labels} />
-            )
-          ) : (
-            <>
-              <div className="mt-3">
-                {connected ? (
-                  <form action={disconnect}>
-                    <input type="hidden" name="householdId" value={householdId} />
-                    <input type="hidden" name="provider" value={portal.id} />
-                    <Button type="submit" variant="quiet" disabled={disconnecting} className="px-3">
-                      {labels.disconnect}
-                    </Button>
-                  </form>
-                ) : (
-                  <form action={connect}>
-                    <input type="hidden" name="householdId" value={householdId} />
-                    <input type="hidden" name="provider" value={portal.id} />
-                    <Button type="submit" variant="secondary" disabled={connecting} className="gap-2">
-                      <Plug aria-hidden className="size-4" /> {labels.connect}
-                    </Button>
-                  </form>
-                )}
-                <Notice state={connectState} />
-                <Notice state={disconnectState} />
-              </div>
-              {connected ? <p className="mt-3 text-xs text-[var(--wh-foreground-subtle)]">{labels.notLiveNote}</p> : null}
-            </>
-          )}
-
-          {connected && portal.hasChannels ? (
-            <div className="mt-3 border-t border-[var(--wh-border)] pt-3">
-              <p className="text-sm font-medium">{labels.channelsTitle}</p>
-              <p className="text-xs text-[var(--wh-foreground-muted)]">{labels.channelsLede}</p>
-              {portal.channels.length > 0 ? (
-                <ul className="mt-1 divide-y divide-[var(--wh-border)]">
-                  {portal.channels.map((channel) => (
-                    <ChannelRow key={channel.id} householdId={householdId} channel={channel} labels={labels} />
-                  ))}
-                </ul>
-              ) : (
-                <p className="mt-2 text-xs text-[var(--wh-foreground-subtle)]">{labels.channelNone}</p>
-              )}
-              <TrackChannelForm householdId={householdId} portal={portal} childOptions={childOptions} labels={labels} />
-            </div>
-          ) : null}
-        </div>
-      </div>
-    </Card>
-  );
-}
+export type SchoolConnectionView = { id: string; name: string; url: string | null };
 
 export function SchoolConnect({
-  householdId,
-  portals,
-  childOptions,
-  labels,
+  connections,
+  connectionsHref,
   forwardHref,
+  labels,
 }: {
-  householdId: string;
-  portals: PortalView[];
-  childOptions: ChildOption[];
-  labels: SchoolConnectLabels;
+  connections: SchoolConnectionView[];
+  connectionsHref: string;
   forwardHref: string;
+  labels: SchoolConnectLabels;
 }) {
   return (
     <div className="space-y-5">
@@ -572,22 +40,42 @@ export function SchoolConnect({
             </div>
             <p className="mt-0.5 text-xs text-[var(--wh-foreground-muted)]">{labels.forwardBody}</p>
             <div className="mt-3">
-              <PillLink href={forwardHref} tone="primary">
-                {labels.forwardCta}
-              </PillLink>
+              <PillLink href={forwardHref} tone="primary">{labels.forwardCta}</PillLink>
             </div>
           </div>
         </div>
       </Card>
 
       <section>
-        <p className="text-sm font-semibold">{labels.portals}</p>
-        <p className="mb-2 text-xs text-[var(--wh-foreground-muted)]">{labels.portalsLede}</p>
-        <div className="space-y-3">
-          {portals.map((portal) => (
-            <PortalCard key={portal.id} householdId={householdId} portal={portal} childOptions={childOptions} labels={labels} />
-          ))}
-        </div>
+        <p className="text-sm font-semibold">{labels.portalTitle}</p>
+        <p className="mb-2 text-xs text-[var(--wh-foreground-muted)]">{labels.portalLede}</p>
+        <Card className="p-4">
+          <div className="flex items-start gap-3">
+            <IconTile icon={GraduationCap} tone="school" size="lg" />
+            <div className="min-w-0 flex-1">
+              {connections.length > 0 ? (
+                <ul className="space-y-2">
+                  {connections.map((connection) => (
+                    <li key={connection.id} className="flex items-center gap-2">
+                      <Plug aria-hidden className="size-4 text-[var(--wh-foreground-subtle)]" />
+                      <div className="min-w-0 flex-1">
+                        <p className="truncate text-sm font-medium">{connection.name}</p>
+                        {connection.url ? (
+                          <p className="truncate text-xs text-[var(--wh-foreground-muted)]">{connection.url.replace(/^https?:\/\//, "")}</p>
+                        ) : null}
+                      </div>
+                    </li>
+                  ))}
+                </ul>
+              ) : (
+                <p className="text-sm text-[var(--wh-foreground-muted)]">{labels.portalNone}</p>
+              )}
+              <div className="mt-3">
+                <PillLink href={connectionsHref} tone="primary">{labels.portalManage}</PillLink>
+              </div>
+            </div>
+          </div>
+        </Card>
       </section>
     </div>
   );

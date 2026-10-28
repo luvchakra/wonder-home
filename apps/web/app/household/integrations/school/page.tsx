@@ -1,16 +1,10 @@
 import { ShieldCheck } from "lucide-react";
 
-import { listIntegrations } from "@wonderhome/core/integrations/repository";
-import { listMembers } from "@wonderhome/core/identity/households";
-import { listSchoolChannels } from "@wonderhome/core/school/channel-repository";
-import { schoolPortalCredentialStatus } from "@wonderhome/core/school/portal-credentials";
-import { listPortalScrapeUrls } from "@wonderhome/core/portals/scrape-url-repository";
-import { portalSessionStatus } from "@wonderhome/core/portals/session-repository";
-import { schoolProviderCatalog } from "@wonderhome/core/school/providers";
+import { listConnections } from "@wonderhome/core/connections/repository";
 import { AppShell } from "@wonderhome/core/shell/app-shell";
 import { EmptyState } from "@wonderhome/core/ui/states";
 
-import { SchoolConnect, type ChildOption, type PortalView } from "../../../_components/school-connect";
+import { SchoolConnect, type SchoolConnectionView } from "../../../_components/school-connect";
 import { schoolConnectLabels } from "../../../_lib/school-connect-labels";
 import { requireSession } from "../../../_lib/session";
 
@@ -18,14 +12,13 @@ export const metadata = { title: "Connect school" };
 export const dynamic = "force-dynamic";
 
 /**
- * Connect school (stories 08-029, 08-031).
+ * Connect school (stories 08-029, 08-031; redesigned around Connections, 2026-10-28).
  *
- * The screen the Integrations "School" card opens. It leads with the forward
- * path — which works for any school today — and lists the portals a deployment
- * can switch on, each honest about not being live yet. A connected portal that
- * has channels lets an Admin paste a class-group or notice-board link to track.
- *
- * Managing a connection is an Admin's, so a non-admin sees why they cannot.
+ * Two honest paths and nothing more. Forward a circular or photo into HomeSend —
+ * works for any school, no setup. Or connect the school's website as a
+ * browser-automation *connection*, created and tested on the Connections page and
+ * reusable anywhere; this screen only points there and lists the ones that exist.
+ * No demo portal, no inline sign-in — that lived here before the framework did.
  */
 export default async function ConnectSchoolPage() {
   const session = await requireSession("/household/integrations/school");
@@ -49,62 +42,12 @@ export default async function ConnectSchoolPage() {
     );
   }
 
-  const [integrations, channels, members, portalSignins, scrapeUrls, sessionStates] = await Promise.all([
-    listIntegrations(supabase, householdId).catch(() => []),
-    listSchoolChannels(supabase, householdId).catch(() => []),
-    listMembers(supabase, householdId, membership.household.ownerMemberId).catch(() => []),
-    schoolPortalCredentialStatus(supabase, householdId).catch(() => []),
-    listPortalScrapeUrls(supabase, householdId).catch(() => []),
-    portalSessionStatus(supabase, householdId).catch(() => []),
-  ]);
-
-  const schoolIntegrations = integrations.filter((integration) => integration.kind === "school");
-  // Which connection is signed in, and as whom and where (never the password).
-  const signedInAs = new Map(portalSignins.map((signin) => [signin.integrationId, signin]));
-  const sessionStateBy = new Map(sessionStates.map((s) => [s.integrationId, s]));
-  const children: ChildOption[] = members
-    .filter((member) => member.memberType === "child")
-    .map((member) => ({ id: member.id, name: member.displayName }));
-  const childName = new Map(children.map((child) => [child.id, child.name]));
-
-  const portals: PortalView[] = schoolProviderCatalog()
-    .filter((entry) => entry.auth !== "manual")
-    .map((entry) => {
-      const connection = schoolIntegrations.find((integration) => integration.provider === entry.id) ?? null;
-      const ours = connection ? channels.filter((channel) => channel.integrationId === connection.id) : [];
-      const signin = connection ? signedInAs.get(connection.id) ?? null : null;
-      const session = connection ? sessionStateBy.get(connection.id) ?? null : null;
-      const pages = connection ? scrapeUrls.filter((page) => page.integrationId === connection.id) : [];
-      return {
-        id: entry.id,
-        label: entry.label,
-        blurb: entry.blurb,
-        auth: entry.auth,
-        connected: Boolean(connection),
-        connectedAs: signin?.username ?? null,
-        connectedUrl: signin?.portalUrl ?? null,
-        connectionState: session?.state ?? null,
-        adapterReady: entry.adapterReady,
-        integrationId: connection?.id ?? null,
-        statusLabel: connection?.statusLabel ?? null,
-        hasChannels: Boolean(entry.channel),
-        channelExample: entry.channel?.example ?? null,
-        portalUrl: entry.portalUrl ?? null,
-        channels: ours.map((channel) => ({
-          id: channel.id,
-          url: channel.url,
-          childName: channel.childMemberId ? childName.get(channel.childMemberId) ?? null : null,
-          active: channel.active,
-        })),
-        scrapeUrls: pages.map((page) => ({
-          id: page.id,
-          url: page.url,
-          kind: page.kind,
-          childName: page.childMemberId ? childName.get(page.childMemberId) ?? null : null,
-          enabled: page.enabled,
-        })),
-      };
-    });
+  const connectionRows = await listConnections(supabase, householdId, { connectorType: "browser-automation" }).catch(() => []);
+  const connections: SchoolConnectionView[] = connectionRows.map((connection) => ({
+    id: connection.id,
+    name: connection.name,
+    url: typeof connection.params.url === "string" ? connection.params.url : null,
+  }));
 
   return (
     <AppShell {...shell}>
@@ -113,7 +56,7 @@ export default async function ConnectSchoolPage() {
           <h1 className="text-[1.625rem] font-bold tracking-tight sm:text-3xl">{t("school.connect.title")}</h1>
           <p className="text-sm text-[var(--wh-foreground-muted)]">{t("school.connect.lede")}</p>
         </header>
-        <SchoolConnect householdId={householdId} portals={portals} childOptions={children} labels={schoolConnectLabels(t)} forwardHref="/school" />
+        <SchoolConnect connections={connections} connectionsHref="/household/connections" forwardHref="/school" labels={schoolConnectLabels(t)} />
       </div>
     </AppShell>
   );
