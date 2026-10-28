@@ -11,6 +11,7 @@ decision that shapes later work each earns a note, written before moving on.
 
 | Date | Note |
 |---|---|
+| 2026-10-28 | [Connections framework: live bring-up and the partial-index fix](2026-10-28-connections-live-bringup.md) |
 | 2026-10-28 | [Connections framework: generic connection fetch + Test (slice 3)](2026-10-28-connections-fetch-slice-3.md) |
 | 2026-10-28 | [Connections framework: the Connections page (slice 2)](2026-10-28-connections-page-slice-2.md) |
 | 2026-10-28 | [Connections framework: foundation (slice 1)](2026-10-28-connections-framework-foundation.md) |
