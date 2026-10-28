@@ -14,7 +14,7 @@
  */
 
 /** What a feature can do with a connection — features filter the picker by these. */
-export type ConnectorCapability = "portal-fetch" | "homesend-intake";
+export type ConnectorCapability = "portal-fetch" | "homesend-intake" | "rest-call";
 
 export type ConnectorParamKind = "text" | "url" | "secret";
 
@@ -68,7 +68,27 @@ const whatsapp: ConnectorType = {
   capabilities: ["homesend-intake"],
 };
 
-export const CONNECTOR_TYPES: readonly ConnectorType[] = [browserAutomation, whatsapp];
+/**
+ * A REST/HTTP API: a base address and an optional auth header. A feature (or the
+ * built-in request tester) can then call it — the request is made server-side,
+ * same-site as the base address, with the stored auth header attached.
+ */
+const rest: ConnectorType = {
+  id: "rest",
+  label: "REST API",
+  description: "Call a web API at a base address, with an optional auth header WonderHome adds for you.",
+  creation: {
+    mode: "params",
+    params: [
+      { key: "baseUrl", label: "Base address", kind: "url", required: true, placeholder: "https://api.example.com", hint: "Requests are sent to this address and paths under it." },
+      { key: "authHeader", label: "Auth header name", kind: "text", required: false, placeholder: "Authorization", hint: "The header the API wants its key in, if any." },
+      { key: "authValue", label: "Auth header value", kind: "secret", required: false, hint: "e.g. “Bearer …” — stored for the server only; never shown again or sent anywhere else." },
+    ],
+  },
+  capabilities: ["rest-call"],
+};
+
+export const CONNECTOR_TYPES: readonly ConnectorType[] = [browserAutomation, rest, whatsapp];
 
 export function connectorCatalog(): readonly ConnectorType[] {
   return CONNECTOR_TYPES;
