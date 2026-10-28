@@ -107,6 +107,7 @@ Targets are in `TECH-STACK-AND-NFR.md`. P0 security and authorisation tests are 
 - Then run `npm run verify:live`. A green `test:db` run (fresh local database) does not prove the live project has it.
 - **A migration that changes stored values must be safe in either order** (the 2026-10-26 Responsibilities outage). Before the code ships, every reader of those values, screens included, accepts the old and the new ones; apply the migration right after the deploy is READY, then load the screens that show them.
 - Live project: `wonderhome` (`kqxndableyysxqhxiorz`, ap-south-1).
+- **If `apply_migration` (or `execute_sql`) keeps failing or the approval times out**, don't leave the migration unapplied: give the owner the SQL to run by hand — the migration file(s) in order as one copyable `sql` block (the "Files for the owner" rule), with the one-line path (dashboard → project `wonderhome` → SQL Editor → paste → Run). Then note in the reply that the change isn't live until they run it (owner, 2026-10-28).
 
 ## Row-level security checks membership as a set
 - Never call `wh.is_member(x)`, `wh.is_household_admin(x)` or `col = wh.member_id(x)` in a policy: each runs a lookup per row.
