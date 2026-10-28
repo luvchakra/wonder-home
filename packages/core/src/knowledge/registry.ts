@@ -251,6 +251,8 @@ export const KNOWLEDGE_REGISTRY = {
     example: { id: UUID_A, child_member_id: CHILD, title: "Practise piano 20 minutes", kind: "practice", period: "week", target: 5, stars: 3, reward: "Ice cream on Sunday", ends_on: "2026-11-30", active: true },
   },
   companion_sayings_heard: { covered: "excluded", reason: "Which of the cat's sayings a child has already heard, so none repeats." },
+  connection_secrets: { covered: "excluded", reason: "Secret parameters of a connection (password/token). Never readable; the server reads them with the service role to run the connector." },
+  connections: { covered: "excluded", reason: "A household's named connections and their non-secret params (connector type, url, username): connection config. What a connection brings in becomes HomeSend items, which are known." },
   consumable_purchases: {
     covered: "registry",
     domain: "groceries",
