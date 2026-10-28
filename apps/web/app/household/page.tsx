@@ -63,7 +63,7 @@ export default async function ManageHouseholdPage() {
     );
   }
 
-  const [{ count: memberCount }, playbook, policies, responsibilities, integrations, setupFacts, address] = await Promise.all([
+  const [{ count: memberCount }, playbook, policies, responsibilities, integrations, setupFacts, address, { count: connectionCount }] = await Promise.all([
     supabase.from("household_members").select("id", { count: "exact", head: true }).eq("household_id", householdId).eq("status", "active"),
     supabase.from("playbook_items").select("id, outcome_key, name, outcome_definition, operating_window, escalation, active").eq("household_id", householdId).order("name"),
     supabase.from("policies").select("id, category, name, active, rule").eq("household_id", householdId).eq("active", true).order("category"),
@@ -71,6 +71,7 @@ export default async function ManageHouseholdPage() {
     listIntegrations(supabase, householdId).catch(() => []),
     loadSetupFacts(supabase, membership.household).catch(() => null),
     loadHouseholdAddress(supabase, householdId).catch(() => null),
+    supabase.from("connections").select("id", { count: "exact", head: true }).eq("household_id", householdId),
   ]);
   const setup = setupFacts ? localizeSetup(assessSetup(setupFacts), t) : null;
   const controlLabels = playbookControlLabels(t);
@@ -95,6 +96,7 @@ export default async function ManageHouseholdPage() {
     notifications: { href: "/household/notifications", icon: Bell, tone: "attention", title: t("manage.section.notifications"), meta: t("manage.section.notificationsMeta") },
     delivery: { href: "/household/delivery", icon: BellRing, tone: "attention", title: t("manage.section.delivery"), meta: t("manage.section.deliveryMeta") },
     integrations: { href: "/household/integrations", icon: Plug, tone: "care", title: t("manage.section.integrations"), meta: t("manage.section.integrationsMeta", { count: integrations.length }), badge: attention > 0 ? { label: t("manage.section.needYou", { count: attention }), tone: "attention" } : undefined },
+    connections: { href: "/household/connections", icon: Plug, tone: "primary", title: t("manage.section.connections"), meta: t("manage.section.connectionsMeta", { count: connectionCount ?? 0 }) },
     activity: { href: "/household/activity", icon: FileClock, tone: "neutral", title: t("manage.section.activity"), meta: t("manage.section.activityMeta") },
   } satisfies Record<string, SectionLink>;
   // Grouped by what the reader is deciding (principle 17, the owner 2026-10-26). "How the home runs" lists
@@ -104,7 +106,7 @@ export default async function ManageHouseholdPage() {
     { id: "household", title: t("manage.group.household"), links: [...(setup ? [] : [link.setup]), link.members, link.address, link.settings] },
     { id: "running", title: t("manage.group.running"), links: [link.responsibilities, link.playbook, link.policies, link.autonomy] },
     { id: "notifications", title: t("manage.group.notifications"), links: [link.notifications, link.delivery] },
-    { id: "records", title: t("manage.group.records"), links: [link.integrations, link.activity] },
+    { id: "records", title: t("manage.group.records"), links: [link.connections, link.integrations, link.activity] },
   ];
 
   return (
