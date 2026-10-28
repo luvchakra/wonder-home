@@ -57,9 +57,20 @@ export const GenericAdapter: PortalAdapter = {
     const submitSelector = hints?.submitSelector ?? (await firstPresent(page, SUBMIT_CANDIDATES));
     if (!submitSelector) return { status: "transient" };
 
-    await page.fill(usernameSelector, credentials.username);
-    await page.fill(passwordSelector, credentials.password);
+    // Prefer real keystrokes (type) so a controlled input captures the value;
+    // fall back to fill on pages that don't support it.
+    const enter = async (selector: string, value: string) => {
+      if (page.type) await page.type(selector, value);
+      else await page.fill(selector, value);
+    };
+    await enter(usernameSelector, credentials.username);
+    await enter(passwordSelector, credentials.password);
     await page.click(submitSelector);
+
+    // Give the sign-in time to actually complete — wait for the password field to
+    // leave the page (navigated / signed in) before judging the outcome, so a slow
+    // SPA login isn't read as a failure a moment too early.
+    await page.waitForGone?.(passwordSelector, 15_000);
 
     return classifyOutcome(page, hints);
   },

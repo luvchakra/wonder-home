@@ -49,6 +49,18 @@ export interface PortalPage {
   has(selector: string): Promise<boolean>;
   fill(selector: string, value: string): Promise<void>;
   click(selector: string): Promise<void>;
+  /**
+   * Enter a value as real keystrokes (optional). Some SPAs only update their
+   * state on key events, so a plain `fill` leaves the submitted form empty; when
+   * a page supports this, the login uses it in preference to `fill`.
+   */
+  type?(selector: string, value: string): Promise<void>;
+  /**
+   * Wait (optional) up to `timeoutMs` for a selector to leave the DOM — e.g. the
+   * password field disappearing once a sign-in actually completes. Lets the login
+   * wait for the real outcome instead of reading the page a moment too early.
+   */
+  waitForGone?(selector: string, timeoutMs?: number): Promise<void>;
 }
 
 /** A browser context that can be seeded from, and exported to, a persisted session. */
