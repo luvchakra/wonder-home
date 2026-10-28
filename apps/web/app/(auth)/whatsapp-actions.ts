@@ -72,7 +72,7 @@ export async function checkWhatsAppLinkAction(previous: WhatsAppConnectState, fo
   revalidatePath("/family");
   revalidatePath("/home-send");
   // The page itself says so, from the server's record of the link.
-  redirect("/settings/whatsapp?connected=1");
+  redirect("/settings/connections?connected=1#whatsapp");
 }
 
 const disconnectSchema = z.object({ householdId: z.uuid(), identityId: z.uuid() });
@@ -90,7 +90,7 @@ export async function disconnectWhatsAppAction(_previous: { error?: string; done
 
   await recordWhatsAppEvents(createAdminClient(), [{ kind: "disconnected", householdId: membership.household.id }]);
   await auditChange({ householdId: membership.household.id, actorMemberId: membership.memberId, eventType: "whatsapp.disconnected", targetTable: "whatsapp_identities", targetId: parsed.data.identityId });
-  revalidatePath("/settings/whatsapp");
+  revalidatePath("/settings/connections");
   revalidatePath("/family");
   revalidatePath("/home-send");
   return { done: true };

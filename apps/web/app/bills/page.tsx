@@ -453,7 +453,7 @@ export default async function BillsPage({
               <p className="text-sm">{mailHealth.message}</p>
               {mailHealth.tone === "needs_action" && admin ? (
                 <div className="mt-2">
-                  <PillLink href="/household/integrations" tone="primary">
+                  <PillLink href="/settings/connections" tone="primary">
                     {t("bills.mail.fix")}
                   </PillLink>
                 </div>

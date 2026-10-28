@@ -68,7 +68,7 @@ const SECTIONS: readonly (ViewSection & { requires: Permission | null })[] = [
   {
     key: "integrations",
     label: "Integrations",
-    href: "/household/integrations",
+    href: "/settings/connections",
     purpose: "Connected accounts",
     requires: "integrations.manage",
   },

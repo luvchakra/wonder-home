@@ -94,8 +94,8 @@ export default async function ManageHouseholdPage() {
     policies: { href: "#policies", icon: ShieldCheck, tone: "money", title: t("manage.section.policies"), meta: t("manage.section.policiesMeta", { count: rules.length }) },
     autonomy: { href: "#autonomy", icon: Bot, tone: "ai", title: t("manage.section.autonomy"), meta: (["prepare", "execute"] as const).map((mode) => t(`manage.mode.${mode}`)).join(" · ") },
     notifications: { href: "/settings/notifications#household", icon: Bell, tone: "attention", title: t("manage.section.notifications"), meta: t("manage.section.notificationsMeta") },
-    integrations: { href: "/household/integrations", icon: Plug, tone: "care", title: t("manage.section.integrations"), meta: t("manage.section.integrationsMeta", { count: integrations.length }), badge: attention > 0 ? { label: t("manage.section.needYou", { count: attention }), tone: "attention" } : undefined },
-    connections: { href: "/household/connections", icon: Plug, tone: "primary", title: t("manage.section.connections"), meta: t("manage.section.connectionsMeta", { count: connectionCount ?? 0 }) },
+    integrations: { href: "/settings/connections", icon: Plug, tone: "care", title: t("connectionsPage.title"), meta: t("manage.section.integrationsMeta", { count: integrations.length }), badge: attention > 0 ? { label: t("manage.section.needYou", { count: attention }), tone: "attention" } : undefined },
+    connections: { href: "/settings/connections#accounts", icon: Plug, tone: "primary", title: t("manage.section.connections"), meta: t("manage.section.connectionsMeta", { count: connectionCount ?? 0 }) },
     activity: { href: "/household/activity", icon: FileClock, tone: "neutral", title: t("manage.section.activity"), meta: t("manage.section.activityMeta") },
   } satisfies Record<string, SectionLink>;
   // Grouped by what the reader is deciding (principle 17, the owner 2026-10-26). "How the home runs" lists
@@ -105,7 +105,7 @@ export default async function ManageHouseholdPage() {
     { id: "household", title: t("manage.group.household"), links: [...(setup ? [] : [link.setup]), link.members, link.address, link.settings] },
     { id: "running", title: t("manage.group.running"), links: [link.responsibilities, link.playbook, link.policies, link.autonomy] },
     { id: "notifications", title: t("manage.group.notifications"), links: [link.notifications] },
-    { id: "records", title: t("manage.group.records"), links: [link.connections, link.integrations, link.activity] },
+    { id: "records", title: t("manage.group.records"), links: [link.integrations, link.activity] },
   ];
 
   return (

@@ -75,7 +75,7 @@ function WhatsAppChannel({ number, connected, labels }: { number: string; connec
   // The number keeps its own figures, set apart from the words around it.
   const [before, after = ""] = labels.whatsappConnected.split("{number}");
   return (
-    <Link href="/settings/whatsapp" className="block rounded-[var(--wh-radius)] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--wh-primary)]">
+    <Link href="/settings/connections#whatsapp" className="block rounded-[var(--wh-radius)] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--wh-primary)]">
       <Card className="flex items-center gap-3 p-4 transition-colors hover:bg-[var(--wh-surface-muted)]">
         <IconTile icon={MessageCircle} tone="handled" />
         <div className="min-w-0 flex-1">

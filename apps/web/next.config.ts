@@ -32,6 +32,11 @@ const nextConfig: NextConfig = {
       { source: "/household/delivery", destination: "/settings/notifications#delivery", permanent: true },
       { source: "/household/members", destination: "/family", permanent: true },
       { source: "/family/events/:eventId", destination: "/calendar/events/:eventId", permanent: true },
+      { source: "/settings/whatsapp", destination: "/settings/connections#whatsapp", permanent: true },
+      { source: "/settings/voice-assistants", destination: "/settings/connections#voice", permanent: true },
+      { source: "/household/connections", destination: "/settings/connections#accounts", permanent: true },
+      { source: "/household/integrations/school", destination: "/settings/connections#school", permanent: true },
+      { source: "/household/integrations", destination: "/settings/connections", permanent: true },
     ];
   },
   async headers() {

@@ -219,7 +219,7 @@ export default async function FamilyPage() {
               <p className="text-sm">{calendarHealth.message}</p>
               {calendarHealth.tone === "needs_action" && admin ? (
                 <div className="mt-2">
-                  <PillLink href="/household/integrations" tone="primary">{t("family.fixConnection")}</PillLink>
+                  <PillLink href="/settings/connections" tone="primary">{t("family.fixConnection")}</PillLink>
                 </div>
               ) : null}
             </div>

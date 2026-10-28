@@ -1,4 +1,4 @@
-import { CalendarDays, CloudSun, Cpu, CreditCard, GraduationCap, Home, Mail, MessageCircle, Plug, ShieldCheck, ShoppingBasket } from "lucide-react";
+import { CalendarDays, CloudSun, Cpu, CreditCard, GraduationCap, Home, Mail, MessageCircle, Plug, ShoppingBasket } from "lucide-react";
 import type { ComponentType } from "react";
 
 import { may } from "@wonderhome/core/billing/repository";
@@ -7,13 +7,10 @@ import { weatherProviderFromEnv } from "@wonderhome/core/home/open-meteo";
 import { listAssets } from "@wonderhome/core/home/repository";
 import { describeHouseholdWeather, householdWeather } from "@wonderhome/core/home/weather-service";
 import { listIntegrations } from "@wonderhome/core/integrations/repository";
-import { AppShell } from "@wonderhome/core/shell/app-shell";
 import { Card } from "@wonderhome/core/ui/card";
 import { IconTile, type IconTone } from "@wonderhome/core/ui/icon-tile";
 import { Badge, PillLink } from "@wonderhome/core/ui/pill";
-import { QuoteCard } from "@wonderhome/core/ui/quote-card";
 import { SectionHeader } from "@wonderhome/core/ui/section-header";
-import { EmptyState } from "@wonderhome/core/ui/states";
 
 import { createAdminClient } from "@wonderhome/core/db/admin";
 import { developerApiEnabled, listDeveloperKeys, PARTNER_SCOPES } from "@wonderhome/core/developer/keys";
@@ -24,10 +21,7 @@ import { DeveloperKeys } from "../../_components/developer-keys";
 import { DeviceLinkControls } from "../../_components/device-link-controls";
 import { WeatherArea } from "../../_components/weather-area";
 import { developerKeyLabels, deviceLinkLabels, weatherAreaLabels } from "../../_lib/manage-labels";
-import { formatDate, formatTime, requireSession } from "../../_lib/session";
-
-export const metadata = { title: "Integrations" };
-export const dynamic = "force-dynamic";
+import { formatDate, formatTime, type Session } from "../../_lib/session";
 
 type KindKey = "school" | "calendar" | "email" | "commerce" | "messaging" | "weather" | "payments" | "smart_home";
 
@@ -53,27 +47,18 @@ function kindsFor(t: Translate) {
 
 /**
  * Integrations (requirements §21): what is connected, its health, and what
- * needs a person. No provider is live until credentials, consent and
+ * needs a person — the Admin's part of Connections; the page checks
+ * `integrations.manage` before rendering it. No provider is live until credentials, consent and
  * integration tests exist, and this screen says so rather than offering a
  * "Connect" button that goes nowhere.
  */
-export default async function IntegrationsPage() {
-  const session = await requireSession("/household/integrations");
-  const { supabase, membership, view, viewer, secondary, locale } = session;
+export async function IntegrationsSections({ session }: { session: Session }) {
+  const { supabase, membership, locale } = session;
   const { t } = locale;
   const timezone = membership.household.timezone;
-  const shell = { active: "more" as const, viewer, secondary, pathname: "/household/integrations", back: { href: "/household", label: t("manage.backToManage") }, title: t("manage.section.integrations") };
   const KINDS = kindsFor(t);
   // A connection's state in the reader's words (the domain's `statusLabel` is the English record).
   const statusWords = (status: ConnectorStatus) => t(`manage.integrations.status.${status}`);
-
-  if (!view.permissions.includes("integrations.manage")) {
-    return (
-      <AppShell {...shell}>
-        <EmptyState icon={ShieldCheck} title={t("manage.forAdmins")} description={t("manage.integrations.adminOnlyLede")} />
-      </AppShell>
-    );
-  }
 
   const householdId = membership.household.id;
   // Weather is the one provider a deployment can switch on without a
@@ -99,12 +84,7 @@ export default async function IntegrationsPage() {
   const attention = integrations.filter((integration) => integration.needsAttention);
 
   return (
-    <AppShell {...shell}>
-      <div className="space-y-5">
-        <header className="wh-rise hidden lg:block">
-          <h1 className="text-[1.625rem] font-bold tracking-tight sm:text-3xl">{t("manage.section.integrations")}</h1>
-          <p className="text-sm text-[var(--wh-foreground-muted)]">{t("manage.integrations.lede")}</p>
-        </header>
+    <>
 
         {attention.length > 0 ? (
           <section>
@@ -150,7 +130,7 @@ export default async function IntegrationsPage() {
                     ))}
                     {kind.kind === "school" ? (
                       <div className="mt-2">
-                        <PillLink href="/household/integrations/school" tone="primary">{t("school.connect")}</PillLink>
+                        <PillLink href="#school" tone="primary">{t("school.connect")}</PillLink>
                       </div>
                     ) : null}
                   </div>
@@ -256,8 +236,6 @@ export default async function IntegrationsPage() {
           <p className="text-sm text-[var(--wh-foreground-muted)]">{t("manage.integrations.footer")}</p>
         </Card>
 
-        <QuoteCard>{t("manage.integrations.quote")}</QuoteCard>
-      </div>
-    </AppShell>
+    </>
   );
 }

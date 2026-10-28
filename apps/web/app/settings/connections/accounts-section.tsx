@@ -3,18 +3,13 @@ import { connectorCatalog } from "@wonderhome/core/connectors/registry";
 import { listMembers } from "@wonderhome/core/identity/households";
 import { connectionSessionStatus } from "@wonderhome/core/portals/session-repository";
 import { listConnectionScrapeUrls } from "@wonderhome/core/portals/scrape-url-repository";
-import { AppShell } from "@wonderhome/core/shell/app-shell";
-import { QuoteCard } from "@wonderhome/core/ui/quote-card";
 
 import { ConnectionsManager, type ChildOption, type ConnectionView } from "../../_components/connections-manager";
 import { connectionsLabels } from "../../_lib/connections-labels";
-import { requireSession } from "../../_lib/session";
-
-export const metadata = { title: "Connections" };
-export const dynamic = "force-dynamic";
+import type { Session } from "../../_lib/session";
 
 /** Where a link-flow connector is connected (it owns its own connect UI). */
-const LINK_HREFS: Record<string, string> = { whatsapp: "/settings/whatsapp" };
+const LINK_HREFS: Record<string, string> = { whatsapp: "#whatsapp" };
 
 /**
  * Connections (Connections framework). A household's named connections, each of
@@ -22,9 +17,8 @@ const LINK_HREFS: Record<string, string> = { whatsapp: "/settings/whatsapp" };
  * features); any adult creates and changes them. A created connection is then
  * selectable wherever a feature needs one of its capabilities.
  */
-export default async function ConnectionsPage() {
-  const session = await requireSession("/household/connections");
-  const { supabase, membership, viewer, secondary, locale } = session;
+export async function AccountsSection({ session }: { session: Session }) {
+  const { supabase, membership, locale } = session;
   const { t } = locale;
   const householdId = membership.household.id;
   const canCreate = membership.memberType === "adult";
@@ -66,32 +60,20 @@ export default async function ConnectionsPage() {
   }));
 
   return (
-    <AppShell
-      active="more"
-      viewer={viewer}
-      secondary={secondary}
-      pathname="/household/connections"
-      back={{ href: "/household", label: t("manage.backToManage") }}
-      title={t("manage.connections.title")}
-    >
-      <div className="space-y-5">
-        <header className="wh-rise hidden lg:block">
-          <h1 className="text-[1.625rem] font-bold tracking-tight sm:text-3xl">{t("manage.connections.title")}</h1>
-          <p className="text-sm text-[var(--wh-foreground-muted)]">{t("manage.connections.lede")}</p>
-        </header>
-
-        <ConnectionsManager
-          householdId={householdId}
-          canCreate={canCreate}
-          connectors={connectors}
-          connections={view}
-          childOptions={children}
-          labels={connectionsLabels(t)}
-          linkHrefs={LINK_HREFS}
-        />
-
-        <QuoteCard>{t("manage.connections.lede")}</QuoteCard>
-      </div>
-    </AppShell>
+    <section id="accounts" className="scroll-mt-20 space-y-4">
+      <header>
+        <h2 className="text-lg font-semibold tracking-tight">{t("manage.connections.title")}</h2>
+        <p className="mt-0.5 text-sm text-[var(--wh-foreground-muted)]">{t("manage.connections.lede")}</p>
+      </header>
+      <ConnectionsManager
+        householdId={householdId}
+        canCreate={canCreate}
+        connectors={connectors}
+        connections={view}
+        childOptions={children}
+        labels={connectionsLabels(t)}
+        linkHrefs={LINK_HREFS}
+      />
+    </section>
   );
 }

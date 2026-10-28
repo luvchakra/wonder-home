@@ -30,7 +30,7 @@ const linkSchema = z.object({
 });
 
 function refresh() {
-  revalidatePath("/household/integrations");
+  revalidatePath("/settings/connections");
   revalidatePath("/household/home");
 }
 

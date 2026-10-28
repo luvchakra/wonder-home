@@ -137,7 +137,7 @@ export default async function VoiceSettingsPage({ searchParams }: { searchParams
                   <li>{t("settingsPage.voice.use.act")}</li>
                   <li>{t("settingsPage.voice.use.float")}</li>
                 </ul>
-                <Link href="/settings/voice-assistants" className="mt-2 flex min-h-11 items-center justify-between gap-2 rounded-[var(--wh-radius-sm)] text-sm font-semibold text-[var(--wh-primary)]">
+                <Link href="/settings/connections#voice" className="mt-2 flex min-h-11 items-center justify-between gap-2 rounded-[var(--wh-radius-sm)] text-sm font-semibold text-[var(--wh-primary)]">
                   {t("settingsPage.voice.use.alexa")}
                   <ChevronRight aria-hidden className="size-4" />
                 </Link>

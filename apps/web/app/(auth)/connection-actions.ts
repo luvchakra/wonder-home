@@ -74,7 +74,7 @@ export async function createConnectionAction(_previous: ActionState, formData: F
       params,
       actorMemberId: actor.memberId,
     });
-    revalidatePath("/household/connections");
+    revalidatePath("/settings/connections");
     return { notice: "Connection created." };
   } catch (thrown) {
     return { error: toErrorBody(thrown, "generic").body.error.message };
@@ -110,7 +110,7 @@ export async function updateConnectionAction(_previous: ActionState, formData: F
       name: parsed.data.name,
       params,
     });
-    revalidatePath("/household/connections");
+    revalidatePath("/settings/connections");
     return { notice: "Connection updated." };
   } catch (thrown) {
     return { error: toErrorBody(thrown, "generic").body.error.message };
@@ -130,7 +130,7 @@ export async function testConnectionAction(_previous: ActionState, formData: For
     await requireMembership(supabase, parsed.data.householdId);
     const { error } = await supabase.rpc("enqueue_connection_fetch_job", { p_connection_id: parsed.data.connectionId });
     if (error) return { error: "Couldn’t start a check just now. Please try again." };
-    revalidatePath("/household/connections");
+    revalidatePath("/settings/connections");
     return { notice: "Checking the connection… the result shows here once the worker signs in." };
   } catch (thrown) {
     return { error: toErrorBody(thrown, "connections").body.error.message };
@@ -250,7 +250,7 @@ export async function addConnectionScrapeUrlAction(_previous: ActionState, formD
       childMemberId: parsed.data.childMemberId || null,
       createdBy: actor.memberId,
     });
-    revalidatePath("/household/connections");
+    revalidatePath("/settings/connections");
     return { notice: "Page added." };
   } catch (thrown) {
     return { error: toErrorBody(thrown, "connections").body.error.message };
@@ -266,7 +266,7 @@ export async function removeConnectionScrapeUrlAction(_previous: ActionState, fo
     const supabase = await createClient();
     await requireMembership(supabase, parsed.data.householdId);
     await removePortalScrapeUrl(supabase, { householdId: parsed.data.householdId, id: parsed.data.id });
-    revalidatePath("/household/connections");
+    revalidatePath("/settings/connections");
     return { notice: "Page removed." };
   } catch (thrown) {
     return { error: toErrorBody(thrown, "connections").body.error.message };
@@ -282,7 +282,7 @@ export async function setConnectionScrapeUrlEnabledAction(_previous: ActionState
     const supabase = await createClient();
     await requireMembership(supabase, parsed.data.householdId);
     await setPortalScrapeUrlEnabled(supabase, { householdId: parsed.data.householdId, id: parsed.data.id, enabled: parsed.data.enabled === "true" });
-    revalidatePath("/household/connections");
+    revalidatePath("/settings/connections");
     return { notice: "Saved." };
   } catch (thrown) {
     return { error: toErrorBody(thrown, "connections").body.error.message };
@@ -298,7 +298,7 @@ export async function deleteConnectionAction(_previous: ActionState, formData: F
     const supabase = await createClient();
     await requireMembership(supabase, parsed.data.householdId);
     await deleteConnection(supabase, parsed.data.householdId, parsed.data.id);
-    revalidatePath("/household/connections");
+    revalidatePath("/settings/connections");
     return { notice: "Connection removed." };
   } catch (thrown) {
     return { error: toErrorBody(thrown, "generic").body.error.message };
