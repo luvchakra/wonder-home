@@ -6,8 +6,9 @@ import { useEffect, useMemo, useState } from "react";
 
 import { SwipeToDismiss } from "@wonderhome/core/ui/swipe-to-dismiss";
 
-import { adjustListAction } from "../../(auth)/grocery-actions";
+import { adjustListAction, retireGroceryItemAction } from "../../(auth)/grocery-actions";
 import { newKey } from "./amounts";
+import { removeBySwipe } from "./swipe-remove";
 
 const SWIPE_HINT_KEY = "wh.groceries.swipeHint";
 const SORT_KEY = "wh.groceries.sort";
@@ -168,13 +169,17 @@ export function GroceryList({
   // 2026-10-20): To buy goes to nothing, it leaves this view and stays under
   // All. The first row jiggles once per device so the swipe can be found.
   const takeOff = async (item: ListItem): Promise<boolean> => {
-    if ((onList[item.id] ?? 0) <= 0) return false;
-    const result = await adjustListAction({ householdId, itemId: item.id, kind: "remove", key: newKey("swipe") });
-    if (!result.ok) return false;
+    const gone = await removeBySwipe({
+      view,
+      itemId: item.id,
+      onList: onList[item.id] ?? 0,
+      takeOffList: () => adjustListAction({ householdId, itemId: item.id, kind: "remove", key: newKey("swipe") }),
+      stopTracking: () => retireGroceryItemAction({ householdId, itemId: item.id }),
+    });
+    if (gone === null) return false;
     setOnList((current) => ({ ...current, [item.id]: 0 }));
     router.refresh();
-    // Under To buy the row leaves; under All it stays, now off the list.
-    return view === "to-buy";
+    return gone;
   };
   const [hintShown] = useState(() => {
     try {

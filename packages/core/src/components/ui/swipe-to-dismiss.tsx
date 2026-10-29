@@ -40,6 +40,7 @@ export function SwipeToDismiss({
   const [jiggle, setJiggle] = useState(false);
   const start = useRef<{ x: number; y: number; id: number; width: number; decided: "swipe" | "scroll" | null } | null>(null);
   const moved = useRef(false);
+  const lastX = useRef(0);
   const reduced = useRef(false);
 
   useEffect(() => {
@@ -53,8 +54,8 @@ export function SwipeToDismiss({
     };
   }, [hint]);
 
-  const finish = async (direction: number) => {
-    setDx(direction * (start.current?.width ?? 400) * 1.1);
+  const finish = async (direction: number, width = 400) => {
+    setDx(direction * width * 1.1);
     setGone(true);
     const kept = await onDismiss();
     if (kept === false) {
@@ -99,6 +100,7 @@ export function SwipeToDismiss({
           }
           if (s.decided !== "swipe") return;
           moved.current = true;
+          lastX.current = x;
           setDx(x);
         }}
         onPointerUp={(event) => {
@@ -106,12 +108,16 @@ export function SwipeToDismiss({
           start.current = null;
           if (!s || s.decided !== "swipe") return;
           const x = event.clientX - s.x;
-          if (Math.abs(x) > s.width / 3) void finish(Math.sign(x));
+          if (Math.abs(x) > s.width / 3) void finish(Math.sign(x), s.width);
           else setDx(0);
         }}
         onPointerCancel={() => {
+          // A browser that cancels a captured touch at the end of a long drag
+          // still means the swipe: finish it from where the finger last was.
+          const s = start.current;
           start.current = null;
-          setDx(0);
+          if (s?.decided === "swipe" && Math.abs(lastX.current) > s.width / 3) void finish(Math.sign(lastX.current), s.width);
+          else setDx(0);
         }}
         // A swipe is not also a tap on whatever button it started on.
         onClickCapture={(event) => {
