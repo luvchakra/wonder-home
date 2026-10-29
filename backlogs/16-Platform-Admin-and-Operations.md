@@ -219,8 +219,9 @@ alerts .
 - Staff only (404 for anyone else); aggregate numbers only, never household, member, email, SQL parameters or row contents.
 - Every figure comes from a real source or the section says it is not measured and why.
 - Tips are a deterministic rule table ordered by severity and impact, each linking a plan story.
+- Action buttons on the tip cards (owner, 2026-10-29): a fixed allowlist of guarded database functions (refresh planner statistics; reset query statistics and end stuck connections, owner only with a password re-check), each audited and limited to one run per action and target per minute; schema fixes are copy-only SQL snippets, never run from the web.
 
-**Evidence:** `packages/core/src/platform/performance.test.ts`, `scripts/test-platform-performance-rls.mjs`, `docs/progress/2026-10-29-platform-admin-performance.md`.
+**Evidence:** `packages/core/src/platform/performance.test.ts`, `scripts/test-platform-performance-rls.mjs`, `scripts/test-platform-performance-actions-rls.mjs`, `packages/core/src/platform/performance-actions.test.ts`, `apps/web/app/platform-admin/performance/actions.test.ts`, `docs/progress/2026-10-29-platform-admin-performance.md`, `docs/progress/2026-10-29-performance-actions.md`.
 
 ## Module Completion Rule
 Complete dependency-ready P0 stories before P1/P2, but do not block unrelated work on unavailable external providers.
