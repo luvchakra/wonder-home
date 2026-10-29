@@ -11,7 +11,7 @@ const child = { permissions: [...permissionsFor({ roles: ["child"], memberType: 
 describe("the screens HomeTalk can open", () => {
   it("has one entry per key, each a real screen of the app", () => {
     expect(SCREENS.map((screen) => screen.key)).toEqual([...SCREEN_KEYS]);
-    const known = new Set([...PRIMARY_NAVIGATION.map((item) => item.href), ...SECONDARY_NAVIGATION.map((item) => item.href), "/calendar?view=day", "/notifications", "/settings?tab=household", "/help"]);
+    const known = new Set([...PRIMARY_NAVIGATION.map((item) => item.href), ...SECONDARY_NAVIGATION.map((item) => item.href), "/calendar?view=day", "/notifications", "/settings?tab=household", "/settings/profile", "/help"]);
     for (const screen of SCREENS) expect(known, screen.key).toContain(screen.href);
   });
 

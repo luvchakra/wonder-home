@@ -35,7 +35,8 @@ export const APP_PLACES: readonly { href: string; label: string; what: string }[
   { href: "/certification", label: "What WonderHome believes", what: "the facts WonderHome holds, to confirm or correct" },
   { href: "/settings?tab=household", label: "Household settings", what: "the address, playbook, policies, AI autonomy and the activity record" },
   { href: "/settings/connections", label: "Connected accounts", what: "school, calendar, shopping and email connections" },
-  { href: "/settings", label: "Settings", what: "profile, privacy and the assistant's key" },
+  { href: "/settings", label: "Settings", what: "the assistant's key and autonomy, voice, connections and your plan" },
+  { href: "/settings/profile", label: "Profile", what: "your details, language, notifications, privacy and location" },
   { href: "/help", label: "Help", what: "the user guide" },
 ];
 

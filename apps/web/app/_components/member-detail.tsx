@@ -225,7 +225,7 @@ export function MemberDetail({
         </PillLink>
       ) : null}
       {isMe ? (
-        <PillLink href="/settings" tone="quiet">
+        <PillLink href="/settings/profile" tone="quiet">
           <UserRoundPen aria-hidden className="size-3.5" />
           {t("family.editInSettings")}
         </PillLink>

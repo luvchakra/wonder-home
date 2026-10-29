@@ -33,11 +33,12 @@ export default function NavDrawer({
   groupLabels?: ShellLabels["groups"];
 }) {
   const close = () => onOpenChange(false);
-  // Settings' door is the account menu (design/UI-SIMPLIFICATION-v1.md M7).
-  const sections = groupSecondaryNavigation(
-    secondary.filter((item) => item.key !== "settings"),
-    groupLabels,
-  );
+  // Settings is the Manage group's item, last in the list (the owner's
+  // 2026-10-29 split): its doors are here and the desktop sidebar's foot, while
+  // the avatar menu now leads to Profile. It used to be dropped here because the
+  // account menu was Settings' only door (design/UI-SIMPLIFICATION-v1.md M7);
+  // that menu is Profile now, so the drawer carries Settings again.
+  const sections = groupSecondaryNavigation(secondary, groupLabels);
 
   const isCurrent = (href: string) => Boolean(pathname && (pathname === href || pathname.startsWith(`${href}/`)));
 
@@ -103,11 +104,15 @@ export default function NavDrawer({
             ))}
           </nav>
 
-          {/* Fills whatever the menu leaves free, so the lower drawer is warm
-              family-home imagery, not blank white (rule 5, rule 8). Behind
-              nothing tappable: it sits after the nav, takes the leftover
-              height and clips to nothing when the menu is long. */}
-          <div aria-hidden className="pointer-events-none relative min-h-0 flex-1 overflow-hidden bg-[image:var(--wh-gradient-hero)]">
+          {/* Warm family-home imagery below the complete list, never over it
+              (rule 5, rule 8; the owner's 2026-10-29 note). It still grows to
+              fill whatever a short menu leaves free (`flex-1`), but it no longer
+              competes with the list: `min-h-0` is gone, so when the menu is tall
+              the list keeps its full height and scrolls to the last item
+              (Settings), and the imagery holds a modest `min-h-24` band at the
+              foot instead of being squeezed out or pushing a menu item off
+              screen. */}
+          <div aria-hidden className="pointer-events-none relative min-h-24 flex-1 overflow-hidden bg-[image:var(--wh-gradient-hero)]">
             <LeafDecor corner="bottom-left" size={150} opacity={0.3} />
             <LeafDecor corner="bottom-right" size={110} opacity={0.2} />
             <HomeIllustration className="absolute inset-x-4 bottom-0 mx-auto w-[min(100%,17rem)] opacity-90" />

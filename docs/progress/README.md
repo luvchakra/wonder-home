@@ -11,6 +11,7 @@ decision that shapes later work each earns a note, written before moving on.
 
 | Date | Note |
 |---|---|
+| 2026-10-29 | [Settings split into Profile (personal) and Settings (app/household); drawer shows Settings again](2026-10-29-settings-profile-split.md) |
 | 2026-10-29 | [Email reading, gated by a per-household sender allowlist (story 17-016)](2026-10-29-email-sender-allowlist.md) |
 | 2026-10-29 | [Subscribe to any calendar by its share link (ICS/webcal), phase 1 (26-022)](2026-10-29-calendar-subscriptions.md) |
 | 2026-10-29 | [One source of truth for the live-conversation engine](2026-10-29-live-engine-single-source.md) |
