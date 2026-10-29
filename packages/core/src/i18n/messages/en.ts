@@ -133,7 +133,7 @@ export const en = {
   "about.version.title": "This version",
   "about.version.release": "Released {date}",
   "about.version.build": "Build {commit}",
-  "about.version.app": "App version {version}",
+  "about.version.app": "Version {version}",
   "about.version.notes": "What's in it",
   "about.story.title": "How it came about",
   "about.story.1": "WonderHome began with one idea: the family should manage the home, and WonderHome should manage the management.",
