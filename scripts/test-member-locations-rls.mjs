@@ -7,6 +7,11 @@
  * member reports only their own position, and only while sharing is on;
  * turning it off deletes the position. The household's adults read it, a
  * child reads only their own, and another household reads nothing.
+ *
+ * Each sharer also chooses their audience (the owner, 2026-10-29): adults only
+ * (the default) or the children too. A child reads a member's position only
+ * when that member opted the children in; the choice is the sharer's, or for a
+ * child their guardian's or an Admin's, never anyone else's.
  */
 import assert from "node:assert/strict";
 import { after, before, test } from "node:test";
@@ -92,4 +97,36 @@ test("adults read positions, a child only their own, another household nothing",
   assert.equal(asProfile(KID, `select count(*) from public.member_locations;`, options), "1");
   assert.equal(asProfile(OUTSIDER, `select count(*) from public.member_locations;`, options), "0");
   assert.equal(asProfile(OUTSIDER, `select count(*) from public.member_location_sharing;`, options), "0");
+});
+
+test("a child sees a member's position only when that member opted the children in", () => {
+  // Default: the adult shares but kept it to the adults, so the child sees only their own.
+  assert.equal(asProfile(KID, `select count(*) from public.member_locations;`, options), "1");
+  // The adult lets the children see theirs → the child now reads it too.
+  asProfile(ADULT, `update public.member_location_sharing set visible_to_children = true where member_id = '${adultMember}';`, options);
+  assert.equal(asProfile(KID, `select count(*) from public.member_locations;`, options), "2");
+  // Turning the choice back off hides it again.
+  asProfile(ADULT, `update public.member_location_sharing set visible_to_children = false where member_id = '${adultMember}';`, options);
+  assert.equal(asProfile(KID, `select count(*) from public.member_locations;`, options), "1");
+  // Adults and other households are unchanged by the choice.
+  assert.equal(asProfile(HEAD, `select count(*) from public.member_locations;`, options), "2");
+  assert.equal(asProfile(OUTSIDER, `select count(*) from public.member_locations;`, options), "0");
+});
+
+test("who may set the audience: the sharer and a child's guardian or Admin, nobody else", () => {
+  // An adult sets their own.
+  asProfile(ADULT, `update public.member_location_sharing set visible_to_children = true where member_id = '${adultMember}';`, options);
+  assert.equal(psql(`select visible_to_children from public.member_location_sharing where member_id = '${adultMember}';`, options), "t");
+  // A child cannot set their own audience (RLS filters the row out, nothing changes).
+  asProfile(KID, `update public.member_location_sharing set visible_to_children = true where member_id = '${child}';`, options);
+  assert.equal(psql(`select visible_to_children from public.member_location_sharing where member_id = '${child}';`, options), "f");
+  // The child's guardian (and Admin) may.
+  asProfile(HEAD, `update public.member_location_sharing set visible_to_children = true where member_id = '${child}';`, options);
+  assert.equal(psql(`select visible_to_children from public.member_location_sharing where member_id = '${child}';`, options), "t");
+  // Another adult who is neither the child's guardian nor an Admin cannot.
+  asProfile(ADULT, `update public.member_location_sharing set visible_to_children = false where member_id = '${child}';`, options);
+  assert.equal(psql(`select visible_to_children from public.member_location_sharing where member_id = '${child}';`, options), "t");
+  // An outsider cannot.
+  asProfile(OUTSIDER, `update public.member_location_sharing set visible_to_children = false where member_id = '${child}';`, options);
+  assert.equal(psql(`select visible_to_children from public.member_location_sharing where member_id = '${child}';`, options), "t");
 });

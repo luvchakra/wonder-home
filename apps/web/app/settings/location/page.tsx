@@ -7,6 +7,7 @@ import { IconTile } from "@wonderhome/core/ui/icon-tile";
 import { Badge } from "@wonderhome/core/ui/pill";
 import { QuoteCard } from "@wonderhome/core/ui/quote-card";
 
+import { LocationAudienceChoice } from "../../_components/location-audience-choice";
 import { LocationSharingToggle } from "../../_components/location-sharing-toggle";
 import { requireSession } from "../../_lib/session";
 
@@ -25,7 +26,9 @@ export default async function LocationSettingsPage() {
   const { t, preferences } = session.locale;
   const householdId = membership.household.id;
   const { sharing, locations } = await loadLocations(supabase, householdId).catch(() => ({ sharing: [], locations: [] }));
-  const on = sharing.find((row) => row.memberId === membership.memberId)?.enabled ?? false;
+  const myShare = sharing.find((row) => row.memberId === membership.memberId) ?? null;
+  const on = myShare?.enabled ?? false;
+  const visibleToChildren = myShare?.visibleToChildren ?? false;
   const mine = locations.find((row) => row.memberId === membership.memberId) ?? null;
   const child = membership.memberType === "child";
 
@@ -52,6 +55,14 @@ export default async function LocationSettingsPage() {
               />
             )}
             {on ? (
+              <LocationAudienceChoice
+                householdId={householdId}
+                memberId={membership.memberId}
+                visibleToChildren={visibleToChildren}
+                labels={{ legend: t("location.audience.legend"), adultsOnly: t("location.audience.adults"), alsoChildren: t("location.audience.children"), saved: t("location.audience.saved") }}
+              />
+            ) : null}
+            {on ? (
               <p className="text-xs text-[var(--wh-foreground-subtle)]">
                 {mine ? t("location.lastSent", { ago: agoText(preferences.language, mine.recordedAt) }) : t("location.notYet")}
               </p>
@@ -66,7 +77,7 @@ export default async function LocationSettingsPage() {
             <ul className="mt-1 list-disc space-y-1 ps-4 text-[var(--wh-foreground-muted)]">
               <li>{t("location.how1")}</li>
               <li>{t("location.how2")}</li>
-              <li>{t("location.how3")}</li>
+              <li>{on && visibleToChildren ? t("location.how3.children") : t("location.how3")}</li>
             </ul>
           </div>
         </Card>

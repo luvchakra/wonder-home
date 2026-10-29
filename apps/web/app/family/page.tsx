@@ -49,6 +49,7 @@ import { RelationshipsCard } from "./relationships";
 import { formatDate, formatTime, requireSession } from "../_lib/session";
 import { MemberRoleControl } from "../_components/member-role-control";
 import { ChildQuietControl } from "../_components/child-quiet-control";
+import { LocationAudienceChoice } from "../_components/location-audience-choice";
 import { LocationSharingToggle } from "../_components/location-sharing-toggle";
 import { createAdminClient } from "@wonderhome/core/db/admin";
 import { childQuietHours } from "@wonderhome/core/notifications/child-quiet";
@@ -135,6 +136,7 @@ export default async function FamilyPage() {
   };
   // Where each sharing member is, said as a saved place or "out" (consent-based, 2026-10-20).
   const sharingOn = new Set(whereabouts.sharing.filter((row) => row.enabled).map((row) => row.memberId));
+  const shownToChildren = new Set(whereabouts.sharing.filter((row) => row.visibleToChildren).map((row) => row.memberId));
   const whereIs = (memberId: string) => {
     const position = whereabouts.locations.find((row) => row.memberId === memberId);
     if (!position) return null;
@@ -359,6 +361,14 @@ export default async function FamilyPage() {
                                 enabled={sharingOn.has(member.id)}
                                 labels={{ turnOn: t("location.turnOn"), turnOff: t("location.turnOff"), turnedOn: t("location.turnedOn"), turnedOff: t("location.turnedOff") }}
                               />
+                              {sharingOn.has(member.id) ? (
+                                <LocationAudienceChoice
+                                  householdId={householdId}
+                                  memberId={member.id}
+                                  visibleToChildren={shownToChildren.has(member.id)}
+                                  labels={{ legend: t("location.audience.childLegend", { name: member.displayName }), adultsOnly: t("location.audience.adults"), alsoChildren: t("location.audience.children"), saved: t("location.audience.saved") }}
+                                />
+                              ) : null}
                             </>
                           ) : member.id === membership.memberId && member.memberType !== "child" ? (
                             <PillLink href="/settings/location" tone="quiet">{t("location.title")}</PillLink>
