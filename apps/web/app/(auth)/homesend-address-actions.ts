@@ -32,6 +32,7 @@ export async function createHomeSendAddressAction(_previous: HomeSendAddressStat
     const membership = await requireHouseholdAdmin(supabase, parsed.data.householdId);
     await createHomeSendAddress(supabase, { householdId: parsed.data.householdId, actorMemberId: membership.memberId, domain });
     revalidatePath("/home-send");
+    revalidatePath("/settings/connections");
     return { notice: "Email forwarding is on." };
   } catch (thrown) {
     return { error: toErrorBody(thrown, "homesend").body.error.message };
@@ -50,6 +51,7 @@ export async function rotateHomeSendAddressAction(_previous: HomeSendAddressStat
     const membership = await requireHouseholdAdmin(supabase, parsed.data.householdId);
     await rotateHomeSendAddress(supabase, { householdId: parsed.data.householdId, actorMemberId: membership.memberId, domain });
     revalidatePath("/home-send");
+    revalidatePath("/settings/connections");
     return { notice: "New address ready — the old one no longer works." };
   } catch (thrown) {
     return { error: toErrorBody(thrown, "homesend").body.error.message };
@@ -65,6 +67,7 @@ export async function revokeHomeSendAddressAction(_previous: HomeSendAddressStat
     const membership = await requireHouseholdAdmin(supabase, parsed.data.householdId);
     await revokeHomeSendAddress(supabase, parsed.data.householdId, membership.memberId);
     revalidatePath("/home-send");
+    revalidatePath("/settings/connections");
     return { notice: "Email forwarding is off." };
   } catch (thrown) {
     return { error: toErrorBody(thrown, "homesend").body.error.message };

@@ -8,6 +8,8 @@ import { log } from "../observability/logger";
  * Every inbound delivery leaves a trail of closed-word events:
  *   - delivered, or refused for a bad signature;
  *   - unrouted (no household address matched);
+ *   - dropped because the sender is not on the household's allowlist (a
+ *     non-personal counter only — nothing from the message is ever recorded);
  *   - a duplicate of one already kept;
  *   - the message or an attachment could not be fetched, or an attachment
  *     was too large;
@@ -28,6 +30,7 @@ export const EMAIL_EVENT_KINDS = [
   "delivered",
   "signature_failed",
   "unrouted",
+  "dropped_not_allowlisted",
   "duplicate",
   "fetch_failed",
   "attachment_failed",

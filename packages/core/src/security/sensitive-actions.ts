@@ -289,6 +289,16 @@ export const SENSITIVE_ACTIONS: readonly SensitiveAction[] = [
     recordedIn: "packages/core/src/homesend/addresses.ts",
   },
   {
+    event: "homesend.allowlist_added",
+    because: "Approving a new email sender widens what WonderHome will read and file — a change to the household's privacy gate, worth recording.",
+    recordedIn: "packages/core/src/homesend/email-allowlist.ts",
+  },
+  {
+    event: "homesend.allowlist_removed",
+    because: "Removing an approved sender narrows what WonderHome will read — as worth recording as approving one.",
+    recordedIn: "packages/core/src/homesend/email-allowlist.ts",
+  },
+  {
     event: "webhook.subscription_created",
     because: "A signing secret that can authenticate outbound household events to an external system now exists.",
     recordedIn: "packages/core/src/webhooks/repository.ts",
@@ -684,6 +694,10 @@ export function describeAuditEvent(
       return { title: "The HomeSend email address was rotated", detail: "The old address stopped working." };
     case "homesend.address_revoked":
       return { title: "The HomeSend email address was turned off", detail: null };
+    case "homesend.allowlist_added":
+      return { title: "An approved email sender was added", detail: "WonderHome will read mail from this sender." };
+    case "homesend.allowlist_removed":
+      return { title: "An approved email sender was removed", detail: "WonderHome will no longer read mail from this sender." };
     case "webhook.subscription_created":
       return { title: "A webhook was set up", detail: stringOr(metadata.url, null) };
     case "webhook.secret_rotated":

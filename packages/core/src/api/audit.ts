@@ -74,6 +74,8 @@ export const AUDIT_EVENTS = [
   "homesend.address_created",
   "homesend.address_rotated",
   "homesend.address_revoked",
+  "homesend.allowlist_added",
+  "homesend.allowlist_removed",
   "webhook.subscription_created",
   "webhook.secret_rotated",
   "voice_link.created",
