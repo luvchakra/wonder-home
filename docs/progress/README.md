@@ -12,6 +12,7 @@ decision that shapes later work each earns a note, written before moving on.
 | Date | Note |
 |---|---|
 <<<<<<< Updated upstream
+| 2026-10-29 | [Advisor gate: parse flat lints, fail on a vacuous pass](2026-10-29-advisor-gate-parser.md) |
 | 2026-10-29 | [SEC-13 pg_net out of public, and a migration-drift guard](2026-10-29-sec13-pg-net-and-migration-drift.md) |
 =======
 | 2026-10-29 | [SEC-04: service-role least privilege — typed `adminClientFor(grant)` wrapper, inventory and lint](2026-10-29-sec-service-role-least-privilege.md) |
