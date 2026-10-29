@@ -1,0 +1,15 @@
+title = "WonderHome gitleaks"
+
+[extend]
+useDefault = true
+
+[allowlist]
+description = "Placeholders and fixtures that are not secrets"
+regexes = [
+  '''sb_publishable_ci_placeholder_key''',
+  '''https://ci\.placeholder\.supabase\.co''',
+]
+paths = [
+  '''package-lock\.json$''',
+  '''supabase/seed/.*\.csv$''',
+]

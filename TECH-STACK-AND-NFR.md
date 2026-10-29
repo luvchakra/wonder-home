@@ -7,7 +7,7 @@ WonderHome is the project being built from this backlog. It is a greenfield appl
 
 | Layer | Decision | Baseline |
 |---|---|---|
-| Web framework | Next.js App Router | Next.js 16.3.4 |
+| Web framework | Next.js App Router | Next.js 16.4.3 |
 | UI runtime | React | React 19.2.8 |
 | Language | TypeScript | TypeScript 5.9.3 |
 | Styling | Tailwind CSS | Tailwind CSS 4 |
@@ -24,7 +24,7 @@ WonderHome is the project being built from this backlog. It is a greenfield appl
 | Package architecture | npm workspaces | `apps/*`, `packages/*` |
 | Deployment target | Next.js-compatible managed deployment | Keep deployment adapter-neutral; Vercel is the preferred target if already used by the repo |
 
-The versions above are based on the current WonderArk repository package manifests. WonderArk's web app currently uses Next.js 16.3.4, React 19.2.8, TypeScript 5.9.3, Tailwind 4, Vitest and Playwright; its shared core uses Supabase SSR/JS, the AI SDK with Anthropic/Google/OpenAI providers, Radix UI, Lucide, React Hook Form and Zod.
+The versions above are based on the current WonderArk repository package manifests. WonderArk's web app currently uses Next.js 16.4.3, React 19.2.8, TypeScript 5.9.3, Tailwind 4, Vitest and Playwright; its shared core uses Supabase SSR/JS, the AI SDK with Anthropic/Google/OpenAI providers, Radix UI, Lucide, React Hook Form and Zod.
 
 ## Architecture Decisions
 

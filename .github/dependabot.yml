@@ -1,0 +1,21 @@
+version: 2
+updates:
+  # Version updates are weekly and grouped so they arrive as one PR a week;
+  # security updates open on their own, per advisory.
+  - package-ecosystem: npm
+    directory: /
+    schedule:
+      interval: weekly
+      day: monday
+    open-pull-requests-limit: 3
+    groups:
+      minor-and-patch:
+        update-types: [minor, patch]
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: weekly
+      day: monday
+    groups:
+      actions:
+        patterns: ["*"]
