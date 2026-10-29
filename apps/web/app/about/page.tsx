@@ -31,11 +31,12 @@ export default async function AboutPage() {
 
   const latest = RELEASE_NOTES[0] ?? null;
   const commit = process.env.VERCEL_GIT_COMMIT_SHA?.slice(0, 7) ?? null;
-  // 0.0.0 is the workspace placeholder, not a version a household could quote.
-  const version = packageJson.version && packageJson.version !== "0.0.0" ? packageJson.version : null;
+  // The one release number: apps/web/package.json, shown as MAJOR.MINOR (1.0.0 -> "1.0"). 0.0.0 is the old placeholder.
+  const [major, minor] = packageJson.version.split(".");
+  const version = packageJson.version !== "0.0.0" ? `${major}.${minor}` : null;
   const versionLines = [
-    latest ? t("about.version.release", { date: format.date(latest.date, "long") }) : null,
     version ? t("about.version.app", { version }) : null,
+    latest ? t("about.version.release", { date: format.date(latest.date, "long") }) : null,
     commit ? t("about.version.build", { commit }) : null,
   ].filter((line): line is string => line !== null);
 

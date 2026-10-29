@@ -123,7 +123,7 @@ export const mr: Catalog = {
   "about.version.title": "ही आवृत्ती",
   "about.version.release": "{date} रोजी प्रसिद्ध",
   "about.version.build": "बिल्ड {commit}",
-  "about.version.app": "अ‍ॅप आवृत्ती {version}",
+  "about.version.app": "आवृत्ती {version}",
   "about.version.notes": "यात काय आहे",
   "about.story.title": "हे कसे घडले",
   "about.story.1": "WonderHome एका कल्पनेतून सुरू झाले: घर कुटुंबाने चालवावे, आणि घर चालवण्याची व्यवस्था WonderHome ने सांभाळावी.",

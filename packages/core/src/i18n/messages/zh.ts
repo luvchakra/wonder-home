@@ -123,7 +123,7 @@ export const zh: Catalog = {
   "about.version.title": "当前版本",
   "about.version.release": "发布于 {date}",
   "about.version.build": "构建 {commit}",
-  "about.version.app": "应用版本 {version}",
+  "about.version.app": "版本 {version}",
   "about.version.notes": "包含内容",
   "about.story.title": "它的由来",
   "about.story.1": "WonderHome 源于一个想法：家人管理家，WonderHome 负责打理这些管理。",

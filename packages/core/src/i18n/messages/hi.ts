@@ -123,7 +123,7 @@ export const hi: Catalog = {
   "about.version.title": "यह संस्करण",
   "about.version.release": "{date} को जारी",
   "about.version.build": "बिल्ड {commit}",
-  "about.version.app": "ऐप संस्करण {version}",
+  "about.version.app": "संस्करण {version}",
   "about.version.notes": "इसमें क्या है",
   "about.story.title": "यह कैसे बना",
   "about.story.1": "WonderHome एक विचार से शुरू हुआ: घर परिवार चलाए, और घर चलाने का झंझट WonderHome संभाले।",

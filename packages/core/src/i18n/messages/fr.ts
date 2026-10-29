@@ -123,7 +123,7 @@ export const fr: Catalog = {
   "about.version.title": "Cette version",
   "about.version.release": "Publiée le {date}",
   "about.version.build": "Build {commit}",
-  "about.version.app": "Version de l'appli {version}",
+  "about.version.app": "Version {version}",
   "about.version.notes": "Ce qu'elle contient",
   "about.story.title": "Comment c'est né",
   "about.story.1": "WonderHome est né d'une idée : la famille gère la maison, et WonderHome gère la gestion.",

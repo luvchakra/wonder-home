@@ -123,7 +123,7 @@ export const ar: Catalog = {
   "about.version.title": "هذا الإصدار",
   "about.version.release": "صدر في {date}",
   "about.version.build": "البناء {commit}",
-  "about.version.app": "إصدار التطبيق {version}",
+  "about.version.app": "الإصدار {version}",
   "about.version.notes": "ما الذي فيه",
   "about.story.title": "كيف بدأ",
   "about.story.1": "بدأ WonderHome بفكرة واحدة: العائلة تدير البيت، وWonderHome يدير شؤون الإدارة.",
