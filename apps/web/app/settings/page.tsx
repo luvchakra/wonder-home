@@ -114,6 +114,17 @@ export default async function SettingsPage() {
           <p className="mt-0.5 text-sm text-[var(--wh-foreground-muted)]">{t("settingsHome.lede", { household: membership.household.name })}</p>
         </header>
 
+        {isAdmin ? (
+          <>
+            <CollapsibleSection id="address" icon={MapPin} tone="home" title={t("manage.section.address")} intro={t("address.lede", { household: membership.household.name })}>
+              <AddressSection session={session} />
+            </CollapsibleSection>
+            <CollapsibleSection icon={House} tone="home" title={t("nav.item.manage")} intro={t("manage.lede", { household: membership.household.name })}>
+              <ManageSection session={session} />
+            </CollapsibleSection>
+          </>
+        ) : null}
+
         <CollapsibleSection icon={Bot} tone="ai" title={t("settingsHome.group.assistant")} defaultOpen>
           <SettingsRows rows={assistant} />
         </CollapsibleSection>
@@ -127,23 +138,15 @@ export default async function SettingsPage() {
           <SettingsRows rows={connected} />
         </CollapsibleSection>
 
+        {isAdmin ? (
+          <CollapsibleSection id="activity" icon={FileClock} tone="neutral" title={t("manage.section.activity")} intro={t("manage.section.activityMeta")}>
+            <ActivitySection session={session} />
+          </CollapsibleSection>
+        ) : null}
+
         <CollapsibleSection icon={CreditCard} tone="money" title={t("settingsPage.plan.title")} intro={t("settingsHome.plan.meta", { plan: planName })}>
           <SettingsRows rows={plan} />
         </CollapsibleSection>
-
-        {isAdmin ? (
-          <>
-            <CollapsibleSection icon={House} tone="home" title={t("nav.item.manage")} intro={t("manage.lede", { household: membership.household.name })}>
-              <ManageSection session={session} />
-            </CollapsibleSection>
-            <CollapsibleSection id="address" icon={MapPin} tone="home" title={t("manage.section.address")} intro={t("address.lede", { household: membership.household.name })}>
-              <AddressSection session={session} />
-            </CollapsibleSection>
-            <CollapsibleSection id="activity" icon={FileClock} tone="neutral" title={t("manage.section.activity")} intro={t("manage.section.activityMeta")}>
-              <ActivitySection session={session} />
-            </CollapsibleSection>
-          </>
-        ) : null}
 
         <QuoteCard>{t("settingsHome.quote")}</QuoteCard>
       </div>
