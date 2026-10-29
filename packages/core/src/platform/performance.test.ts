@@ -64,7 +64,7 @@ describe("computeTips", () => {
       budgets: { sharedCapGz: 138_500, routes: [{ route: "/ai", capGz: 241_400 }], queries: [] },
     });
     expect(tips.map((t) => t.id)).toEqual(["cache-table", "route-/ai", "seq-family_events"]);
-    expect(tips[0].severity).toBe("act");
+    expect(tips[0]?.severity).toBe("act");
     expect(tips.every((t) => /^(PERF|SEC)-/.test(t.story))).toBe(true);
   });
 
@@ -79,7 +79,7 @@ describe("computeTips", () => {
       advisors: null,
       budgets: null,
     });
-    expect(tips[0].finding).toContain("select * from t where id = ?");
+    expect(tips[0]?.finding).toContain("select * from t where id = ?");
   });
 });
 
@@ -93,7 +93,7 @@ describe("parsing", () => {
     expect(parsed?.cache.tableHit).toBe(0.99);
     expect(parsed?.cache.indexHit).toBeNull();
     expect(parsed?.connections.max).toBe(60);
-    expect(parsed?.deadTuples[0].dead_pct).toBe(66.7);
+    expect(parsed?.deadTuples[0]?.dead_pct).toBe(66.7);
   });
   it("counts advisor lints, flat or grouped", () => {
     expect(countAdvisorLints({ lints: [{ name: "a", level: "WARN" }, { name: "b", level: "INFO", findings: [{}, {}] }] })).toEqual({ gated: 1, info: 2, byLint: { a: 1 } });
