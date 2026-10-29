@@ -98,7 +98,7 @@ export function StockStepper({
   };
 
   const button =
-    "grid size-9 place-items-center rounded-full border border-[var(--wh-border)] bg-[var(--wh-surface)] transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--wh-primary)] disabled:opacity-40";
+    "relative grid size-8 place-items-center before:absolute before:-inset-1.5 before:content-[''] rounded-full border border-[var(--wh-border)] bg-[var(--wh-surface)] transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--wh-primary)] disabled:opacity-40";
 
   return (
     <div className="flex flex-col items-start">
@@ -116,7 +116,7 @@ export function StockStepper({
           type="button"
           onClick={() => setSheetOpen(true)}
           aria-label={fill(stockWords.amount, { name: item.name })}
-          className="min-h-9 min-w-[4rem] rounded-[var(--wh-radius-sm)] px-1 text-center text-sm font-semibold whitespace-nowrap tabular-nums hover:bg-[var(--wh-surface-muted)] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--wh-primary)]"
+          className="min-h-8 min-w-[3rem] rounded-[var(--wh-radius-sm)] px-1 text-center text-sm font-semibold whitespace-nowrap tabular-nums hover:bg-[var(--wh-surface-muted)] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--wh-primary)]"
         >
           {quantity === null ? "—" : sayAmount(words, { quantity, unit: base }, item.unit)}
         </button>

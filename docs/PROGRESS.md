@@ -11,11 +11,11 @@ in `docs/progress/`; for the running log of what changed when, `tracking/PROGRES
 
 ## The whole picture
 
-**412 of 448 stories done — 92%**
+**413 of 449 stories done — 92%**
 
 | Status | Stories |
 |---|---:|
-| Done | 412 |
+| Done | 413 |
 | In Progress | 11 |
 | Blocked | 1 |
 | Not Started | 20 |
@@ -50,7 +50,7 @@ in `docs/progress/`; for the running log of what changed when, `tracking/PROGRES
 | 22 Internationalization and Localization | `████████░░` | 7 | 8 | 1 deferred |
 | 23 Smart Notifications | `██████████` | 13 | 13 | — |
 | 24 HomePlaces | `██████████` | 15 | 15 | — |
-| 25 HomeFood | `████████░░` | 35 | 42 | 7 not started |
+| 25 HomeFood | `████████░░` | 36 | 43 | 7 not started |
 | 26 HomeEvents | `███████░░░` | 15 | 20 | 2 in progress, 3 not started |
 | 27 Notification Channels and Events | `█████████░` | 24 | 25 | 1 blocked |
 
@@ -635,7 +635,7 @@ in `docs/progress/`; for the running log of what changed when, `tracking/PROGRES
 
 ### 25 — HomeFood
 
-35 of 42 done `████████░░`
+36 of 43 done `████████░░`
 
 | Story | Priority | Status | Notes |
 |---|---|---|---|
@@ -681,6 +681,7 @@ in `docs/progress/`; for the running log of what changed when, `tracking/PROGRES
 | `25-041` A link is never a grocery; a swiped "Skip" on HomeTalk's question reaches HomeTalk | P0 | Done | The owner on WhatsApp, 2026-10-27, 14:54–14:55 IST: "…, add maps link" was split off and asked "How much maps link should I add?"; "Skip", swiped onto it, failed safely. A part only about the answer stays with its question (`decompose.ts`); "add maps link" is never `add_to_list` from the rules or a model (`rules.ts` `notAThingToBuy`, `engine.ts`); "add milk" still asks how much. HomeTalk's WhatsApp reply id is kept (`whatsapp_messages.hometalk_reply_id`, migration `20261027150000`) and a swipe-reply quoting it is routing rule 2; one quoting anything else is unchanged. Eval HT-171; WhatsApp and engine tests. Note: `docs/progress/2026-10-27-maps-link-and-quoted-skip.md`. |
 | `25-042` Sort the Groceries list by Recently updated; compact, realigned cards | P1 | Done | The owner, 2026-10-27: "give option to sort with date updated, make the cards compact, realign elements." **Sort** (rule 20, a choice is picked): a compact `Select` beside the search offers Name (the default, server order) and Recently updated; "updated" is the most recent of the item's, its stock's and its open to-buy entry's `updated_at` (`commerce/inventory.ts` `listGroceries` now reads those three and returns `updatedAt`, the max). The sort is client-side over the already-fetched list (stable, name tiebreak), so no index or extra query; the choice is kept per device in `localStorage`. **Compact cards** (`ui/grocery-row.tsx`): tighter padding and label spacing (`py-1.5`, `gap-y-1`, label `leading-none`, cell gap `0.5`), so off-list cards fell ~126→106 px and on-list ~166→144 px at 360 px (measured), labels and both steppers still line up row to row (the design note's "two equal cells" kept), names never truncated (rule 11), 36 px controls unchanged. All three tabs and counts unchanged. i18n `grocery.sort.*` in eight languages; help (meals-and-shopping §2) and its `updated` date in eight languages. Verified: types, lint, unit tests (`inventory.test.ts` `updatedAt`), a signed-in production run at 360 px/desktop (sort reorders and persists, no horizontal overflow). PR #392. Note: `docs/progress/2026-10-27-groceries-sort-compact.md`. |
 | `25-043` A recipe card in Meals → Recipes opens its own page | P1 | Done | The owner, 2026-10-29 (rule 21). The title on each of "Your recipes" is a stretched link to `/meals/recipes/mine/[id]` (picture, time, serves, nutrients per serving, what it needs, steps); the pencil, share and like/dislike stay separate controls above the link and do not navigate. Not browser-checked here (no `.env.local` in the cloud container): typecheck, ESLint and the production build pass. |
+| `25-044` Vertically compact grocery cards (second pass) | P1 | Done | The owner, 2026-10-29: cards still too tall. `ui/grocery-row.tsx`: In stock / To buy labels sit inline beside their stepper (wrapping under it only when the cell is too narrow), category and nutrition meta on one line with an ellipsis (the name still wraps, rule 11), 36→32 px stepper buttons with an invisible 44 px hit area (`before:-inset-1.5`), 36 px photo, tighter row padding. Layout only, no data or logic change. Verified: types, lint, unit tests, `npm run build -w apps/web`; not browser-measured (no signed-in session in the cloud container). PR #451. |
 
 ### 26 — HomeEvents
 
