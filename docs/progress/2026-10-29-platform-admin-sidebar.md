@@ -9,7 +9,7 @@ Owner request: replace the top tab strip of `/platform-admin` with a menu, and a
 
 ## Verified
 - `npx vitest run apps/web/app/platform-admin` (menu config, capability filtering, current highlight for each and nested route, Back target): 10 passed.
-- tsc and ESLint clean for the area; `npm run build -w apps/web` and `npm run check:bundle` green (the menu imports no server-only code).
+- tsc and ESLint clean for the area; `npm run build -w apps/web`, `npm run budget:bundle` and `npm run check:bundle` green. The phone drawer (Radix Dialog) loads on the first tap, because loading it with the page put /platform-admin/careers 9 KB over its first-load budget.
 
 ## Open
 - Not checked in a browser: this container has no `apps/web/.env.local` / Supabase credentials, so no signed-in staff session. The owner checks it on a phone (open Platform admin, open the menu, tap each item and Back to WonderHome).
