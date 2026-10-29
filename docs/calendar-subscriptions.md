@@ -232,9 +232,14 @@ time → the household's time zone. Each imported event keeps its own `timezone`
 
 ## Who may add (phase 1)
 
-Adults (the same bar the `connections` manager uses, `wh.adult_households()`).
-A child adding a calendar would go through a guardian/Admin; that is a phase-1.5
-follow-up, noted in the story, kept out of phase 1 for simplicity.
+**RLS** permits any **adult** of the household to add and manage subscriptions
+(`wh.adult_households()`), and only the owner to manage a personal feed. The
+**phase-1 UI entry point** is the Calendar connection card on Settings →
+Connections (the per-connection redesign, #444), which the page shows to members
+who manage integrations — so in practice an Admin adds and manages feeds on that
+screen, while the RLS still lets any adult do so through the API. Broadening the
+on-screen entry point to every adult, and a child's add via a guardian, are
+small follow-ups; phase 1 keeps the one screen the redesign gave Calendar.
 
 ---
 
