@@ -4,6 +4,8 @@ import { PawPrint } from "lucide-react";
 import { startTransition, useActionState, useEffect, useRef, useState } from "react";
 
 import { Pill } from "@wonderhome/core/ui/pill";
+
+import { ICON_ACTION } from "./icon-action";
 import { ConfirmationSheet } from "@wonderhome/core/ui/sheet";
 
 import type { ActionState } from "../(auth)/actions";
@@ -36,7 +38,7 @@ function RetireButton({ householdId, petId, name }: { householdId: string; petId
 
   return (
     <>
-      <Pill type="button" tone="quiet" onClick={() => setOpen(true)} aria-label={`Retire ${name}`} title={`Retire ${name}`}>
+      <Pill type="button" tone="quiet" className={ICON_ACTION} onClick={() => setOpen(true)} aria-label={`Retire ${name}`} title={`Retire ${name}`}>
         <PawPrint aria-hidden className="size-3.5" />
       </Pill>
 
@@ -69,7 +71,7 @@ function ReactivateButton({ householdId, petId, name }: { householdId: string; p
     <form action={formAction}>
       <input type="hidden" name="householdId" value={householdId} />
       <input type="hidden" name="petId" value={petId} />
-      <Pill type="submit" tone="quiet" disabled={pending} aria-label={`Bring ${name} back`} title={`Bring ${name} back`}>
+      <Pill type="submit" tone="quiet" className={ICON_ACTION} disabled={pending} aria-label={`Bring ${name} back`} title={`Bring ${name} back`}>
         <PawPrint aria-hidden className="size-3.5" /> {pending ? "…" : "Bring back"}
       </Pill>
       {state.error ? <p className="mt-1 text-xs text-[var(--wh-risk)]">{state.error}</p> : null}

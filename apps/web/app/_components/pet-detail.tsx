@@ -59,10 +59,10 @@ export function PetDetail({
               notes: pet.notes ?? null,
             }}
           />
+          <MemberAvatarControl variant="icons" kind="pet" householdId={householdId} memberId={pet.id} displayName={pet.name} avatarUrl={pet.photoUrl ?? null} labels={avatarLabels} />
           <RetirePetControl householdId={householdId} petId={pet.id} name={pet.name} active={pet.active !== false} />
         </div>
       ) : null}
-      {editable ? <MemberAvatarControl kind="pet" householdId={householdId} memberId={pet.id} displayName={pet.name} avatarUrl={pet.photoUrl ?? null} labels={avatarLabels} /> : null}
       <dl className="grid grid-cols-2 gap-x-4 gap-y-2.5">
         <Fact label={t("family.fact.species")} value={pet.species} />
         <Fact label={t("family.fact.age")} value={age} />

@@ -4,6 +4,8 @@ import { UserRoundX } from "lucide-react";
 import { startTransition, useActionState, useEffect, useRef, useState } from "react";
 
 import { Pill } from "@wonderhome/core/ui/pill";
+
+import { ICON_ACTION } from "./icon-action";
 import { ConfirmationSheet } from "@wonderhome/core/ui/sheet";
 
 import type { ActionState } from "../(auth)/actions";
@@ -52,7 +54,7 @@ export function RemoveMemberControl({
 
   return (
     <>
-      <Pill type="button" tone="quiet" onClick={() => setOpen(true)} aria-label={withName(labels.remove, displayName)} title={withName(labels.remove, displayName)}>
+      <Pill type="button" tone="quiet" className={ICON_ACTION} onClick={() => setOpen(true)} aria-label={withName(labels.remove, displayName)} title={withName(labels.remove, displayName)}>
         <UserRoundX aria-hidden className="size-3.5" />
       </Pill>
 
