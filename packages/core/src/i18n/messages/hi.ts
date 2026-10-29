@@ -640,6 +640,7 @@ export const hi: Catalog = {
   "family.empty.help": "अभी कोई घरेलू सहायक नहीं",
   "family.empty.helpLede": "घर में मदद करने वालों को जोड़ें, ताकि WonderHome उनके हिसाब से भी तालमेल बिठा सके।",
   "family.fullHelperProfile": "घरेलू सहायक की पूरी प्रोफ़ाइल",
+  "family.viewResponsibilities": "उनकी ज़िम्मेदारियाँ देखें ({count})",
   "family.notInPlan": "परिवार का समय इस प्लान में शामिल नहीं है",
   "family.moment": "परिवार का पल",
   "family.protectedLine": "सुरक्षित — इस समय पर कुछ और तय नहीं होगा।",

@@ -640,6 +640,7 @@ export const zh: Catalog = {
   "family.empty.help": "还没有家政帮手",
   "family.empty.helpLede": "添加在家里帮忙的人，让 WonderHome 也能围绕他们来协调安排。",
   "family.fullHelperProfile": "完整的家政帮手资料",
+  "family.viewResponsibilities": "查看他们的职责（{count}）",
   "family.notInPlan": "当前方案不包含家庭时光功能",
   "family.moment": "家庭时光",
   "family.protectedLine": "受保护——不会有任何安排占用这段时间。",

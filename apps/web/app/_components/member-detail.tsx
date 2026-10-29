@@ -56,8 +56,13 @@ export function MemberDetail({
   workPlace,
   relations,
   relationshipRows,
+  responsibilitiesHref,
+  responsibilitiesCount,
 }: {
   member: HouseholdMember;
+  /** Where this member's own responsibilities are listed, and how many they own. */
+  responsibilitiesHref?: string;
+  responsibilitiesCount?: number;
   allMembers: readonly HouseholdMember[];
   timezone: string;
   editable: boolean;
@@ -136,6 +141,11 @@ export function MemberDetail({
           <p className="text-xs font-medium tracking-wide text-[var(--wh-foreground-subtle)] uppercase">{t("family.fact.notes")}</p>
           <p className="text-sm whitespace-pre-line">{member.notes}</p>
         </div>
+      ) : null}
+      {responsibilitiesHref && responsibilitiesCount ? (
+        <PillLink href={responsibilitiesHref} tone="quiet">
+          {t("family.viewResponsibilities", { count: responsibilitiesCount })}
+        </PillLink>
       ) : null}
       {isMe ? (
         <PillLink href="/settings" tone="quiet">

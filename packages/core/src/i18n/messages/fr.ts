@@ -640,6 +640,7 @@ export const fr: Catalog = {
   "family.empty.help": "Pas encore d’aide à domicile",
   "family.empty.helpLede": "Ajoutez les personnes qui aident à la maison pour que WonderHome s’organise aussi autour d’elles.",
   "family.fullHelperProfile": "Profil complet de l’aide",
+  "family.viewResponsibilities": "Voir ses responsabilités ({count})",
   "family.notInPlan": "Le temps en famille ne fait pas partie de cette offre",
   "family.moment": "Moment en famille",
   "family.protectedLine": "Protégé — rien ne sera planifié par-dessus.",

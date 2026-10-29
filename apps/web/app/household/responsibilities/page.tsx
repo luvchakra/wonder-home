@@ -314,8 +314,8 @@ function renderResponsibilities({
         ) : (
           <div className="space-y-4">
             {(grouping === "outcome" ? groupByArea(shown, t) : groupByOwner(shown, members, nobodyYet)).map((group) => (
+              <div key={`${group.ownerId ?? "area"}:${group.ownerName}`} id={group.ownerId ? `person-${group.ownerId}` : undefined} className="scroll-mt-20">
               <ResponsibilityGroup
-                key={`${group.ownerId ?? "area"}:${group.ownerName}`}
                 title={group.ownerName}
                 count={group.rows.length}
                 outcomeKeys={group.rows.map((row) => row.outcome_key)}
@@ -364,6 +364,7 @@ function renderResponsibilities({
                   </ul>
                 </Card>
               </ResponsibilityGroup>
+              </div>
             ))}
           </div>
         )}

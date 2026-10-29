@@ -640,6 +640,7 @@ export const de: Catalog = {
   "family.empty.help": "Noch keine Haushaltshilfe",
   "family.empty.helpLede": "Füge die Menschen hinzu, die zu Hause helfen, damit WonderHome auch mit ihnen plant.",
   "family.fullHelperProfile": "Vollständiges Profil der Hilfe",
+  "family.viewResponsibilities": "Aufgaben ansehen ({count})",
   "family.notInPlan": "Familienzeit ist in diesem Tarif nicht enthalten",
   "family.moment": "Familienmoment",
   "family.protectedLine": "Geschützt — darüber wird nichts geplant.",
