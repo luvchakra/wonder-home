@@ -358,6 +358,39 @@ export async function schoolAgenda(
   return { deadlines, messages, checked: items.length + communications.length, items, communications };
 }
 
+/**
+ * The slice of a household-wide school agenda that belongs to one child.
+ *
+ * `schoolAgenda` assesses every child's work in a single read, so a view that
+ * shows one child at a time (the School overview, picked by name) must not let
+ * a sibling's deadline surface on another child's page — a privacy and scoping
+ * rule, not just tidiness (personalised views; a child's school work is theirs).
+ * Deadlines carry their item id in the subject key (`school.<id>`) and messages
+ * the communication id (`school_message.<id>`), so each assessment is mapped
+ * back to its source row and kept only when that row is the child's. A school
+ * message with no child is a household-wide notice and is kept for every child.
+ * `childMemberId` null (a household with no children selected) returns the
+ * agenda unchanged.
+ */
+export function scopeSchoolAgendaToChild(
+  agenda: Pick<SchoolAgenda, "deadlines" | "messages" | "items" | "communications">,
+  childMemberId: string | null,
+): Pick<SchoolAgenda, "deadlines" | "messages" | "items" | "communications" | "checked"> {
+  const items = agenda.items.filter((item) => !childMemberId || item.childMemberId === childMemberId);
+  const communications = agenda.communications.filter(
+    (comm) => !childMemberId || comm.childMemberId === childMemberId || comm.childMemberId === null,
+  );
+  const itemKeys = new Set(items.map((item) => `school.${item.id}`));
+  const messageKeys = new Set(communications.map((comm) => `school_message.${comm.id}`));
+  return {
+    items,
+    communications,
+    deadlines: agenda.deadlines.filter((deadline) => itemKeys.has(deadline.subjectKey)),
+    messages: agenda.messages.filter((message) => messageKeys.has(message.subjectKey)),
+    checked: items.length + communications.length,
+  };
+}
+
 /** A child's own plan: their work, their words, nothing of anybody else's. */
 export async function childSchoolView(
   supabase: SupabaseClient,
