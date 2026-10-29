@@ -168,11 +168,13 @@ export function GroceryList({
   // 2026-10-20): To buy goes to nothing, it leaves this view and stays under
   // All. The first row jiggles once per device so the swipe can be found.
   const takeOff = async (item: ListItem): Promise<boolean> => {
+    if ((onList[item.id] ?? 0) <= 0) return false;
     const result = await adjustListAction({ householdId, itemId: item.id, kind: "remove", key: newKey("swipe") });
     if (!result.ok) return false;
     setOnList((current) => ({ ...current, [item.id]: 0 }));
     router.refresh();
-    return true;
+    // Under To buy the row leaves; under All it stays, now off the list.
+    return view === "to-buy";
   };
   const [hintShown] = useState(() => {
     try {
@@ -185,12 +187,10 @@ export function GroceryList({
   });
 
   const row = (item: ListItem, index = 0) =>
-    view === "to-buy" ? (
-      <SwipeToDismiss key={`${item.id}:${item.unit}`} label={words.stepper.remove} hint={!hintShown && index === 0} onDismiss={() => takeOff(item)}>
+    (
+      <SwipeToDismiss key={`${item.id}:${item.unit}`} label={words.stepper.remove} hint={view === "to-buy" && !hintShown && index === 0} onDismiss={() => takeOff(item)}>
         {rowBody(item, "div")}
       </SwipeToDismiss>
-    ) : (
-      rowBody(item, "li")
     );
 
   const rowBody = (item: ListItem, as: "li" | "div") => (

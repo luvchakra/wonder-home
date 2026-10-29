@@ -218,7 +218,7 @@ export function ToBuyStepper({
           </button>
         </div>
       )}
-      {quantity > 0 ? (
+      {quantity > 0 && size === "lg" ? (
         <button
           type="button"
           disabled={removing}
