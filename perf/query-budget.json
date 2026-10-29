@@ -2,19 +2,23 @@
   "_note": "Measured on the PERF-15 fixture x1.5. Raise a number only in a PR that says why; `npm run budget:queries -- --update` rewrites it.",
   "queries": {
     "family.upcoming-events": {
-      "maxBuffers": 5759,
-      "maxRowsRead": 48363,
-      "noSeqScan": [],
+      "maxBuffers": 5775,
+      "maxRowsRead": 5604,
+      "noSeqScan": [
+        "family_events"
+      ],
       "maxMs": 2000
     },
     "calendar.day-events": {
-      "maxBuffers": 1292,
-      "maxRowsRead": 47250,
-      "noSeqScan": [],
+      "maxBuffers": 860,
+      "maxRowsRead": 2322,
+      "noSeqScan": [
+        "family_events"
+      ],
       "maxMs": 2000
     },
     "meals.upcoming": {
-      "maxBuffers": 1604,
+      "maxBuffers": 1602,
       "maxRowsRead": 1812,
       "noSeqScan": [
         "meals"
@@ -22,13 +26,15 @@
       "maxMs": 2000
     },
     "family.gift-plans": {
-      "maxBuffers": 410,
-      "maxRowsRead": 1260,
-      "noSeqScan": [],
+      "maxBuffers": 404,
+      "maxRowsRead": 120,
+      "noSeqScan": [
+        "gift_plans"
+      ],
       "maxMs": 2000
     },
     "home.setup-counts": {
-      "maxBuffers": 3989,
+      "maxBuffers": 4047,
       "maxRowsRead": 0,
       "noSeqScan": [],
       "maxMs": 2000

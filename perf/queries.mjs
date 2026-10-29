@@ -9,8 +9,7 @@
 export const QUERIES = [
   {
     id: "family.upcoming-events", // familyAgenda / listEvents({ from: now }) with participants
-    indexed: [],
-    known: "family_events is sequentially scanned: its only household index is partial (status in proposed/planned/confirmed) and listEvents does not filter on status. PERF follow-up.",
+    indexed: ["family_events"],
     sql: `select e.id, e.title, e.starts_at, e.ends_at,
             (select coalesce(json_agg(p), '[]') from (select member_id, response, required from public.event_participants p where p.event_id = e.id) p)
           from public.family_events e
@@ -19,8 +18,7 @@ export const QUERIES = [
   },
   {
     id: "calendar.day-events", // calendar day view: one day window
-    indexed: [],
-    known: "Same as family.upcoming-events: the window index is partial and the read has no status filter.",
+    indexed: ["family_events"],
     sql: `select e.id, e.title, e.starts_at, e.ends_at
           from public.family_events e
           where e.household_id = :household and e.ends_at >= date_trunc('day', now()) and e.starts_at <= date_trunc('day', now()) + interval '1 day'
@@ -37,8 +35,7 @@ export const QUERIES = [
   },
   {
     id: "family.gift-plans", // familyAgenda gift_plans read
-    indexed: [],
-    known: "gift_plans_open_idx is partial (open statuses) and the read has no status filter.",
+    indexed: ["gift_plans"],
     sql: `select id, recipient, needed_by, status from public.gift_plans where household_id = :household`,
   },
   {
