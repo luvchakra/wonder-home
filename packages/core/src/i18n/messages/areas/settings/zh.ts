@@ -699,6 +699,8 @@ export const settingsZh: AreaCatalog<typeof settingsEn> = {
   "settingsHome.group.privacy": "隐私与位置",
   "settingsHome.group.assistant": "助手与语音",
   "profileHome.lede": "你的信息，以及 WonderHome 如何对待属于你的内容。",
+  "profileHome.group.you": "你",
+  "profileHome.group.preferences": "偏好",
   "settingsHome.notifications.meta": "你的提醒和渠道",
   "settingsHome.notifications.quiet": "你的提醒和渠道 · 免打扰 {from}:00 – {until}:00",
   "settingsHome.voiceAssistants.title": "语音助手",

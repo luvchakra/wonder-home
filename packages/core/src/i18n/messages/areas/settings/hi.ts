@@ -727,6 +727,8 @@ export const settingsHi: AreaCatalog<typeof settingsEn> = {
   "settingsHome.group.privacy": "निजता और स्थान",
   "settingsHome.group.assistant": "सहायक और आवाज़",
   "profileHome.lede": "आपका विवरण, और WonderHome आपकी चीज़ों को कैसे संभालता है।",
+  "profileHome.group.you": "आप",
+  "profileHome.group.preferences": "प्राथमिकताएँ",
   "settingsHome.notifications.meta": "आपके रिमाइंडर और चैनल",
   "settingsHome.notifications.quiet": "आपके रिमाइंडर और चैनल · शांत समय {from}:00 – {until}:00",
   "settingsHome.voiceAssistants.title": "वॉइस असिस्टेंट",

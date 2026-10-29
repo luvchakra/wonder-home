@@ -734,6 +734,8 @@ export const settingsEs: AreaCatalog<typeof settingsEn> = {
   "settingsHome.group.privacy": "Privacidad y ubicación",
   "settingsHome.group.assistant": "Asistente y voz",
   "profileHome.lede": "Tus datos y cómo WonderHome trata lo que es tuyo.",
+  "profileHome.group.you": "Tú",
+  "profileHome.group.preferences": "Preferencias",
   "settingsHome.notifications.meta": "Tus recordatorios y canales",
   "settingsHome.notifications.quiet": "Tus recordatorios y canales · silencio {from}:00 – {until}:00",
   "settingsHome.voiceAssistants.title": "Asistentes de voz",

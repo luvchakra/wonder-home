@@ -10,7 +10,7 @@ import { loadWorkPlace } from "@wonderhome/core/household/work-place";
 import { AppShell } from "@wonderhome/core/shell/app-shell";
 import { Avatar } from "@wonderhome/core/ui/avatar";
 import { Button } from "@wonderhome/core/ui/button";
-import { Card } from "@wonderhome/core/ui/card";
+import { CollapsibleSection } from "@wonderhome/core/ui/collapsible-section";
 import { IconTile, type IconTone } from "@wonderhome/core/ui/icon-tile";
 import { PrivacyNote } from "@wonderhome/core/ui/privacy-note";
 import { QuoteCard } from "@wonderhome/core/ui/quote-card";
@@ -28,29 +28,24 @@ export const dynamic = "force-dynamic";
 type PreferenceRow = { channel: string; enabled: boolean; quiet_from: number | null; quiet_until: number | null };
 type Row = { icon: ComponentType<{ className?: string }>; tone: IconTone; title: string; meta: string; href: string };
 
-/** One group of rows: each opens the one place that setting is edited (rule 23). */
-function SettingsGroup({ title, rows }: { title: string; rows: Row[] }) {
+/** The rows inside a profile fold: each opens the one place that setting is edited (rule 23). */
+function SettingsRows({ rows }: { rows: Row[] }) {
   if (rows.length === 0) return null;
   return (
-    <section>
-      <SectionHeader title={title} />
-      <Card className="p-2">
-        <ul className="divide-y divide-[var(--wh-border)]">
-          {rows.map((row) => (
-            <li key={row.href}>
-              <Link href={row.href} className="flex min-h-14 items-center gap-3 rounded-[var(--wh-radius-sm)] px-2 py-2 hover:bg-[var(--wh-surface-muted)]">
-                <IconTile icon={row.icon} tone={row.tone} size="sm" />
-                <span className="min-w-0 flex-1">
-                  <span className="block text-sm font-medium">{row.title}</span>
-                  <span className="block text-xs text-[var(--wh-foreground-subtle)]">{row.meta}</span>
-                </span>
-                <ChevronRight aria-hidden className="size-4 shrink-0 text-[var(--wh-foreground-subtle)] rtl:rotate-180" />
-              </Link>
-            </li>
-          ))}
-        </ul>
-      </Card>
-    </section>
+    <ul className="divide-y divide-[var(--wh-border)]">
+      {rows.map((row) => (
+        <li key={row.href}>
+          <Link href={row.href} className="flex min-h-14 items-center gap-3 rounded-[var(--wh-radius-sm)] px-2 py-2 hover:bg-[var(--wh-surface-muted)]">
+            <IconTile icon={row.icon} tone={row.tone} size="sm" />
+            <span className="min-w-0 flex-1">
+              <span className="block text-sm font-medium">{row.title}</span>
+              <span className="block text-xs text-[var(--wh-foreground-subtle)]">{row.meta}</span>
+            </span>
+            <ChevronRight aria-hidden className="size-4 shrink-0 text-[var(--wh-foreground-subtle)] rtl:rotate-180" />
+          </Link>
+        </li>
+      ))}
+    </ul>
   );
 }
 
@@ -62,6 +57,11 @@ function SettingsGroup({ title, rows }: { title: string; rows: Row[] }) {
  * location. The app and the household are configured in Settings
  * (`/settings`) instead, so each setting still has exactly one editor
  * (design rule 23). Its door is the avatar menu; Settings' is the sidebar.
+ *
+ * Laid out as a short stack of collapsible chevron cards (the owner, 2026-10-29),
+ * ordered most-personal first: "You" (the identity card, open), then
+ * "Preferences" (Language & Region, Notifications) and "Privacy" (Privacy &
+ * security, Location sharing), each folded closed, then Sign out.
  */
 export default async function ProfilePage() {
   const session = await requireSession("/settings/profile");
@@ -109,13 +109,13 @@ export default async function ProfilePage() {
 
   return (
     <AppShell active="more" viewer={viewer} secondary={secondary} pathname="/settings/profile" back={{ href: "/more", label: t("common.back") }} title={t("nav.item.profile")}>
-      <div className="space-y-6">
+      <div className="space-y-4">
         <header className="wh-rise hidden lg:block">
           <h1 className="text-[1.625rem] font-bold tracking-tight sm:text-3xl">{t("nav.item.profile")}</h1>
           <p className="mt-0.5 text-sm text-[var(--wh-foreground-muted)]">{t("profileHome.lede")}</p>
         </header>
 
-        <Card id="profile" className="scroll-mt-20 space-y-4 p-5">
+        <CollapsibleSection id="profile" icon={UserRound} tone="people" title={t("profileHome.group.you")} intro={`${roleWords(view.roleLabel, t)} · ${view.householdName}`} defaultOpen>
           <div className="flex items-start justify-between gap-3">
             <div className="min-w-0 flex-1">
               <p className="text-lg font-semibold tracking-tight">{view.displayName}</p>
@@ -167,10 +167,15 @@ export default async function ProfilePage() {
             <Avatar name={view.displayName} size="xl" imageUrl={viewer.avatarUrl ?? undefined} />
           )}
           <PrivacyNote line={t("privacyNote.line")} more={t("privacyNote.more")} />
-        </Card>
+        </CollapsibleSection>
 
-        <SettingsGroup title={t("settingsHome.group.personal")} rows={personal} />
-        <SettingsGroup title={t("settingsHome.group.privacy")} rows={privacy} />
+        <CollapsibleSection icon={Languages} tone="primary" title={t("profileHome.group.preferences")} intro={personal[0]?.meta}>
+          <SettingsRows rows={personal} />
+        </CollapsibleSection>
+
+        <CollapsibleSection icon={ShieldCheck} tone="primary" title={t("settingsHome.group.privacy")} intro={t("settingsHome.privacy.meta")}>
+          <SettingsRows rows={privacy} />
+        </CollapsibleSection>
 
         <section>
           <SectionHeader title={t("settingsHome.group.account")} />

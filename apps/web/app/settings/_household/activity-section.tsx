@@ -61,12 +61,7 @@ export async function ActivitySection({ session }: { session: Session }) {
     id ? (members.find((member) => member.id === id)?.displayName ?? t("manage.activity.somebodyGone")) : "WonderHome";
 
   return (
-    <section id="activity" className="scroll-mt-20 space-y-3">
-        <header>
-          <h2 className="text-lg font-semibold tracking-tight">{t("manage.section.activity")}</h2>
-          <p className="mt-0.5 text-sm text-[var(--wh-foreground-muted)]">{t("manage.activity.lede")}</p>
-        </header>
-
+    <>
         {events.length === 0 ? (
           <EmptyState
             icon={FileClock}
@@ -107,7 +102,6 @@ export async function ActivitySection({ session }: { session: Session }) {
           <p className="font-semibold text-[var(--wh-foreground)]">{t("manage.activity.notHere")}</p>
           <p>{t("manage.activity.notHereBody")}</p>
         </Card>
-
-    </section>
+    </>
   );
 }
