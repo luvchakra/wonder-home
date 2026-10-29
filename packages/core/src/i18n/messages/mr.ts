@@ -17,6 +17,7 @@ import { todayMr } from "./areas/today/mr";
 import { chatMr } from "./areas/chat/mr";
 import { amafMr } from "./areas/amaf/mr";
 import { groceryMr } from "./areas/grocery/mr";
+import { loadingMr } from "./areas/loading/mr";
 import { welcomeMr } from "./areas/welcome/mr";
 import { whatsappMr } from "./areas/whatsapp/mr";
 import { choicesMr } from "./areas/choices/mr";
@@ -1069,6 +1070,7 @@ export const mr: Catalog = {
   ...amafMr,
   ...memberInviteMr,
   ...groceryMr,
+  ...loadingMr,
   ...welcomeMr,
   ...whatsappMr,
   ...choicesMr,

@@ -17,6 +17,7 @@ import { todayEs } from "./areas/today/es";
 import { chatEs } from "./areas/chat/es";
 import { amafEs } from "./areas/amaf/es";
 import { groceryEs } from "./areas/grocery/es";
+import { loadingEs } from "./areas/loading/es";
 import { welcomeEs } from "./areas/welcome/es";
 import { whatsappEs } from "./areas/whatsapp/es";
 import { choicesEs } from "./areas/choices/es";
@@ -1069,6 +1070,7 @@ export const es: Catalog = {
   ...amafEs,
   ...memberInviteEs,
   ...groceryEs,
+  ...loadingEs,
   ...welcomeEs,
   ...whatsappEs,
   ...choicesEs,

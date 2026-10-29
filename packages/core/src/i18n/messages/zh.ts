@@ -17,6 +17,7 @@ import { todayZh } from "./areas/today/zh";
 import { chatZh } from "./areas/chat/zh";
 import { amafZh } from "./areas/amaf/zh";
 import { groceryZh } from "./areas/grocery/zh";
+import { loadingZh } from "./areas/loading/zh";
 import { welcomeZh } from "./areas/welcome/zh";
 import { whatsappZh } from "./areas/whatsapp/zh";
 import { choicesZh } from "./areas/choices/zh";
@@ -1069,6 +1070,7 @@ export const zh: Catalog = {
   ...amafZh,
   ...memberInviteZh,
   ...groceryZh,
+  ...loadingZh,
   ...welcomeZh,
   ...whatsappZh,
   ...choicesZh,

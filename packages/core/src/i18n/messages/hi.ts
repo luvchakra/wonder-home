@@ -17,6 +17,7 @@ import { todayHi } from "./areas/today/hi";
 import { chatHi } from "./areas/chat/hi";
 import { amafHi } from "./areas/amaf/hi";
 import { groceryHi } from "./areas/grocery/hi";
+import { loadingHi } from "./areas/loading/hi";
 import { welcomeHi } from "./areas/welcome/hi";
 import { whatsappHi } from "./areas/whatsapp/hi";
 import { choicesHi } from "./areas/choices/hi";
@@ -1069,6 +1070,7 @@ export const hi: Catalog = {
   ...amafHi,
   ...memberInviteHi,
   ...groceryHi,
+  ...loadingHi,
   ...welcomeHi,
   ...whatsappHi,
   ...choicesHi,
