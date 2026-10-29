@@ -49,8 +49,17 @@ function delivery(body: object, options: { secret?: string; timestamp?: number; 
 
 const RECEIVED = { type: "email.received", data: { email_id: "email-1", to: [ADDRESS], received_for: [] } };
 
-function harness() {
-  const db = fakeSupabase({ homesend_addresses: [{ household_id: HOUSEHOLD, address: ADDRESS, status: "active" }] });
+function harness(options: { allowlist?: { kind: string; value: string }[] } = {}) {
+  // The household has approved the sender's domain, so a genuine delivery is
+  // read; tests that need a drop pass an empty or different allowlist.
+  const allowlist = (options.allowlist ?? [{ kind: "domain", value: "greenvalley.example.org" }]).map((entry) => ({
+    household_id: HOUSEHOLD,
+    ...entry,
+  }));
+  const db = fakeSupabase({
+    homesend_addresses: [{ household_id: HOUSEHOLD, address: ADDRESS, status: "active" }],
+    homesend_email_allowlist: allowlist,
+  });
   const calls = { fetchEmail: 0, fetchAttachment: 0, classify: 0, deferred: 0 };
   const ingest: IngestDeps = {
     classify: async () => {
@@ -141,6 +150,37 @@ describe("HS-006 — a genuine forwarded email, end to end through the webhook",
     expect(calls.fetchEmail).toBe(0);
     expect(items()).toHaveLength(0);
     expect(events()).toEqual(["delivered", "unrouted"]);
+  });
+});
+
+describe("HS-016 — only mail from an approved sender is read; everyone else is dropped and stored nowhere", () => {
+  it("a sender not on the allowlist: acked, no item, no attachment fetched, only a non-personal drop counter", async () => {
+    const { deps, calls, items, events } = harness({ allowlist: [{ kind: "domain", value: "someone-else.example" }] });
+    const response = await handleEmailWebhook(delivery(RECEIVED), deps);
+    expect(response.status).toBe(200);
+    // The message was fetched to learn its sender, but nothing was kept.
+    expect(items()).toHaveLength(0);
+    expect(calls.fetchAttachment).toBe(0);
+    expect(calls.classify).toBe(0);
+    expect(events()).toEqual(expect.arrayContaining(["delivered", "dropped_not_allowlisted"]));
+    expect(events()).not.toContain("processed");
+  });
+
+  it("an empty allowlist reads nothing — reading only begins once a sender is approved", async () => {
+    const { deps, items, events } = harness({ allowlist: [] });
+    const response = await handleEmailWebhook(delivery(RECEIVED), deps);
+    expect(response.status).toBe(200);
+    expect(items()).toHaveLength(0);
+    expect(events()).toContain("dropped_not_allowlisted");
+  });
+
+  it("an exact-address rule lets that sender through and keeps the email", async () => {
+    const { deps, items, events } = harness({ allowlist: [{ kind: "address", value: "office@greenvalley.example.org" }] });
+    const response = await handleEmailWebhook(delivery(RECEIVED), deps);
+    expect(response.status).toBe(200);
+    expect(items().find((row) => row.source === "email")).toBeTruthy();
+    expect(events()).toContain("processed");
+    expect(events()).not.toContain("dropped_not_allowlisted");
   });
 });
 

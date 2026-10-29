@@ -3,6 +3,7 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 import { log } from "../observability/logger";
 import { hitRateLimit } from "../security/rate-limit";
 import { resolveRecipientHouseholds } from "./addresses";
+import { allowedHouseholdsForSender } from "./email-allowlist";
 import { recordEmailEvents, type EmailEvent } from "./email-monitoring";
 import { fetchReceivedAttachment, fetchReceivedEmail, parseEmailReceivedEvent, toEmailSource, verifySvixSignature } from "./email-gateway";
 import { ingestEmailAttachment, understand, type IngestDeps } from "./ingest";
@@ -131,6 +132,28 @@ export async function handleEmailWebhook(request: Request, deps: EmailWebhookDep
   }
   const email = toEmailSource(received);
 
+  // The privacy gate (story 17-016): WonderHome reads mail only from senders
+  // a household has approved. The sender is known only now, from the fetched
+  // message — the `email.received` event carries none of it — so this is the
+  // first point a decision can be made. A message from a sender no recipient
+  // household has allowlisted is dropped here: it never becomes a HomeSend
+  // item, its text and attachments are never fetched or stored, and it leaves
+  // only a non-personal counter. An empty allowlist approves no one, so
+  // nothing is read until an Admin adds a sender. The `from` header can be
+  // forged, so this match is the gate, not proof — the kept item still waits
+  // for a person's confirmation downstream.
+  const allowed = await allowedHouseholdsForSender(supabase, households, email.from);
+  for (const householdId of households) {
+    if (!allowed.has(householdId)) events.push({ kind: "dropped_not_allowlisted", householdId });
+  }
+  const allowedHouseholds = households.filter((householdId) => allowed.has(householdId));
+  if (allowedHouseholds.length === 0) {
+    // No recipient household approved this sender — ack so the provider does
+    // not retry, keep nothing, and never reveal to the sender that the
+    // address or the household exists.
+    return finish(new Response(null, { status: 200 }));
+  }
+
   // The plain-text part when there is one; otherwise the HTML part, reduced
   // to text first — never handed to a model as markup (Wave 3 §6).
   const body = email.text?.trim() ? normalizeText(email.text) : email.html ? htmlToText(email.html).text : "";
@@ -159,7 +182,7 @@ export async function handleEmailWebhook(request: Request, deps: EmailWebhookDep
   }
 
   let queuedRetry = false;
-  for (const householdId of households) {
+  for (const householdId of allowedHouseholds) {
     // A household's forwarding address is not a firehose (Wave 5 §15). Past
     // its hourly limit the email is still kept, so nothing is lost, but it
     // is not read by a model and its attachments are not processed until a

@@ -11,14 +11,14 @@ in `docs/progress/`; for the running log of what changed when, `tracking/PROGRES
 
 ## The whole picture
 
-**413 of 449 stories done — 92%**
+**412 of 449 stories done — 91.8%**
 
 | Status | Stories |
 |---|---:|
-| Done | 413 |
+| Done | 412 |
 | In Progress | 11 |
 | Blocked | 1 |
-| Not Started | 20 |
+| Not Started | 21 |
 | Deferred | 4 |
 
 ## By module
@@ -42,7 +42,7 @@ in `docs/progress/`; for the running log of what changed when, `tracking/PROGRES
 | 14 AI Orchestration & Learning | `████████░░` | 48 | 56 | 1 in progress, 4 not started, 3 deferred |
 | 15 Privacy, Security & Governance | `████████░░` | 11 | 13 | 2 not started |
 | 16 Platform Admin & Operations | `██████████` | 8 | 8 | — |
-| 17 External Integrations | `██████████` | 9 | 9 | — |
+| 17 External Integrations | `█████████░` | 10 | 11 | 1 not started |
 | 18 API & Developer Platform | `██████████` | 8 | 8 | — |
 | 19 Testing, Observability & Production | `██████████` | 8 | 8 | — |
 | 20 Subscriptions, Entitlements & Usage | `██████████` | 11 | 11 | — |
@@ -50,7 +50,7 @@ in `docs/progress/`; for the running log of what changed when, `tracking/PROGRES
 | 22 Internationalization and Localization | `████████░░` | 7 | 8 | 1 deferred |
 | 23 Smart Notifications | `██████████` | 13 | 13 | — |
 | 24 HomePlaces | `██████████` | 15 | 15 | — |
-| 25 HomeFood | `████████░░` | 36 | 43 | 7 not started |
+| 25 HomeFood | `████████░░` | 34 | 41 | 7 not started |
 | 26 HomeEvents | `███████░░░` | 15 | 20 | 2 in progress, 3 not started |
 | 27 Notification Channels and Events | `█████████░` | 24 | 25 | 1 blocked |
 
@@ -79,6 +79,7 @@ in `docs/progress/`; for the running log of what changed when, `tracking/PROGRES
 | `14-057` HomeBrain 4.0 phase 3c — the reply streamed to the person | 14 AI Orchestration & Learning | P0 | Not Started |
 | `15-013` Data retention phase 2b: notifications (household window) + HomeSend + enable real purge | 15 Privacy, Security & Governance | P1 | Not Started |
 | `15-012` Data retention phase 3: school items (household window) + "recently cleaned" view | 15 Privacy, Security & Governance | P2 | Not Started |
+| `17-017` Read approved senders by signing in (Gmail / Outlook OAuth, read-only) | 17 External Integrations | P2 | Not Started |
 | `21-011` Edit an appointment | 21 Health and Fitness | P2 | Not Started |
 | `22-008` Right-to-left readiness | 22 Internationalization and Localization | P1 | Deferred |
 | `25-004` Send to Cook over WhatsApp | 25 HomeFood | P1 | Not Started |
@@ -495,7 +496,7 @@ in `docs/progress/`; for the running log of what changed when, `tracking/PROGRES
 
 ### 17 — External Integrations
 
-9 of 9 done `██████████`
+10 of 11 done `█████████░`
 
 | Story | Priority | Status | Notes |
 |---|---|---|---|
@@ -508,6 +509,8 @@ in `docs/progress/`; for the running log of what changed when, `tracking/PROGRES
 | `17-007` Weather | P1 | Done | Open-Meteo behind the 13-005 weather port; an Admin picks an area (coordinates rounded to ~1 km, `weather_locations`), the forecast is cached hourly on the household's row, entitlement `home.weather` decided on the server; laundry/drying plans around it; outages recorded on the connection only, last forecast serves ≤6 h; off unless the deployment sets `WONDERHOME_WEATHER_PROVIDER=open-meteo` |
 | `17-008` Smart home | P2 | Done | One canonical device payload behind the 17-001 contract; a device is linked to an appliance by an Admin (or ignored), never inferred; only fresh readings from linked devices become `home_device_signals`, once each, with provider confidence capped below certainty; outages change connection health only; `home_device_links` (sync-created, Admin decides asset/ignored), Devices section on Integrations; POST integrations/smart-home/sync (409 until a provider is live) |
 | `17-009` Home's date card: the day's weather, a film in cinemas and a family pick to stream | P2 | Done | The owner, 2026-10-21 ("make this card longer and show more weather info on this card, any new movies released, any good family stuff to watch on ott. align this nicely and show something new on every load"). The date pill became a card (`_components/today-card.tsx`, streamed behind the greeting): the day and household; where Weather is on, now, the day's high and low (°F where the household measures in imperial) and rain still ahead today with its time (`home/today-weather.ts`, tested), else that the day is dry; and where `TMDB_API_KEY` is set, one film now playing and one family film or show on subscription streaming in the household's region (`home/screen-picks.ts`: TMDB adapter, adult titles dropped, per-server six-hour cache, last good lists kept on failure, a different pair each load; tested), each opening its TMDB page with where to watch, with TMDB's attribution. Without a key nothing about films is shown. CSP allows TMDB's image host. Today's plan stays one tap away on the card. Words and help (Today and Home ¶7) in all eight languages. Waits on: a person creating a TMDB account and setting `TMDB_API_KEY` in Vercel. Follow-up the same day: where Weather is on but no area has been chosen, an Admin sees "Show the weather here: pick your area" on the card, linking to Integrations → Weather (the owner's own households had none, so the card showed only the date). The home address is not used without that choice, because choosing the area is the consent for it to leave. |
+| `17-016` Email forwarding with a per-household sender allowlist | P1 | Done | The owner, 2026-10-29: read mail, with the senders WonderHome may read limited to ones the household approved. Phase 1 (forwarding first). The privacy gate `homesend_email_allowlist` (per household; `address` or `domain` rows; member-readable, Admin-writable; set-form RLS; indexed by the unique `(household_id, kind, value)`; audited `homesend.allowlist_added`/`_removed`). `homesend/email-allowlist.ts`: `normalizeAllowlistEntry` (an exact address or a whole domain), `senderMatchesAllowlist` (pure; empty list matches no one; domain match is exact, never a subdomain or look-alike), `allowedHouseholdsForSender` (one query for the recipients, grouped and matched in memory). Enforced in the inbound webhook (`email-webhook.ts`): the sender is known only after the message is fetched, so the gate is there — a sender no recipient household approved is dropped, never stored as a HomeSend item, never fetched further, its text and attachments never kept, leaving only a non-personal `dropped_not_allowlisted` counter (`email-monitoring.ts`). Default empty = nothing read until an Admin adds a sender. Matched mail still runs the ordinary pipeline and waits for confirmation; bills/receipts/health always wait; all content untrusted (`injection.ts`). The `from` header can be forged, so the match is the gate, not verification — no SPF/DKIM claim (the provider schema does not expose it reliably); the confirmation step is the backstop. UI: an Admin-only **Email** section on Connections (`settings/connections/email-section.tsx` + `_components/email-connection.tsx`) — the household's private forwarding address (the existing `homesend_addresses`, reused) and the add/remove allowlist manager, with copy that WonderHome never signs in to the inbox and reads only approved senders. Off-screen copy when `WONDERHOME_HOMESEND_EMAIL_DOMAIN` is unset. Server actions `homesend-allowlist-actions.ts` (Admin-only). Words `connectionsPage.email.*` and help (HomeSend ¶7) in all eight languages. Tests: matching/normalization, the webhook drop (no item, no fetch, only the counter), exact vs domain, empty = nothing, allowlist unit + webhook HS-016; RLS at test:db. Decisions: Admins manage the list (privacy gate for the whole household, like the forwarding address); match the message `from`, which an auto-forward rule preserves. |
+| `17-017` Read approved senders by signing in (Gmail / Outlook OAuth, read-only) | P2 | Not Started | The owner, 2026-10-29 (queued behind 17-016): the second way in — the household connects a mailbox by OAuth (read-only scope) instead of forwarding, and WonderHome pulls mail. The SAME `homesend_email_allowlist` gate applies: only approved senders' mail is read, everything else dropped, empty = nothing. Build on the dormant connected-mailbox path (`finance/email-connector`, `finance/email-sync`, the `integrations/email/sync` route, which 409s until a connector is live); a provider goes live only with real OAuth credentials, consent flow and integration tests (external-providers rule). Reuse `allowedHouseholdsForSender` / `senderMatchesAllowlist` at the sync boundary so the gate is identical to forwarding. Not started. |
 
 ### 18 — API & Developer Platform
 
@@ -635,7 +638,7 @@ in `docs/progress/`; for the running log of what changed when, `tracking/PROGRES
 
 ### 25 — HomeFood
 
-36 of 43 done `████████░░`
+34 of 41 done `████████░░`
 
 | Story | Priority | Status | Notes |
 |---|---|---|---|
@@ -680,8 +683,6 @@ in `docs/progress/`; for the running log of what changed when, `tracking/PROGRES
 | `25-040` "Skip" to the how-much question leaves the list, never a HomeSend item | P0 | Done | The owner's Failed safely list, 2026-10-27, 14:55 IST: "How much maps link should I add?" offered one choice, Skip; the tapped Skip became HomeSend item 66b981e8 and failed safely as unreadable. Cause: WhatsApp sends a tapped button with `context.id` (the message it sat on), so it was stored as a swipe-reply and routing rule 2 (`homeTalkAwaitsAnswer`) never looked at it; `answerQuantity` already read "skip". Fix: a tap reads like typed words (`whatsapp/inbound.ts`); one "leave it" list (`conversation/leave-it.ts`: skip, leave it, never mind, no thanks, that's enough…) read by the amount (`keepAsIs`), HomeSend details (skip), the fill-in offer (decline) and every other question, which closes with "Okay, I've left it as it is. Nothing was added or changed." (`engine.ts`, `clarify.ts` `leavesQuestion`); a short reply to an open question HomeTalk can't take gets a polite second ask (`whatsapp.answerUnread`), and a lone "skip" goes to HomeTalk or, without it, gets `whatsapp.leftAlone` — never HomeSend. Tests: every choice set's `say` round-trips (`hometalk/choices.test.ts`), the WhatsApp cases, engine cases; eval HT-169. Note: `docs/progress/2026-10-27-skip-answers-clarify.md`. |
 | `25-041` A link is never a grocery; a swiped "Skip" on HomeTalk's question reaches HomeTalk | P0 | Done | The owner on WhatsApp, 2026-10-27, 14:54–14:55 IST: "…, add maps link" was split off and asked "How much maps link should I add?"; "Skip", swiped onto it, failed safely. A part only about the answer stays with its question (`decompose.ts`); "add maps link" is never `add_to_list` from the rules or a model (`rules.ts` `notAThingToBuy`, `engine.ts`); "add milk" still asks how much. HomeTalk's WhatsApp reply id is kept (`whatsapp_messages.hometalk_reply_id`, migration `20261027150000`) and a swipe-reply quoting it is routing rule 2; one quoting anything else is unchanged. Eval HT-171; WhatsApp and engine tests. Note: `docs/progress/2026-10-27-maps-link-and-quoted-skip.md`. |
 | `25-042` Sort the Groceries list by Recently updated; compact, realigned cards | P1 | Done | The owner, 2026-10-27: "give option to sort with date updated, make the cards compact, realign elements." **Sort** (rule 20, a choice is picked): a compact `Select` beside the search offers Name (the default, server order) and Recently updated; "updated" is the most recent of the item's, its stock's and its open to-buy entry's `updated_at` (`commerce/inventory.ts` `listGroceries` now reads those three and returns `updatedAt`, the max). The sort is client-side over the already-fetched list (stable, name tiebreak), so no index or extra query; the choice is kept per device in `localStorage`. **Compact cards** (`ui/grocery-row.tsx`): tighter padding and label spacing (`py-1.5`, `gap-y-1`, label `leading-none`, cell gap `0.5`), so off-list cards fell ~126→106 px and on-list ~166→144 px at 360 px (measured), labels and both steppers still line up row to row (the design note's "two equal cells" kept), names never truncated (rule 11), 36 px controls unchanged. All three tabs and counts unchanged. i18n `grocery.sort.*` in eight languages; help (meals-and-shopping §2) and its `updated` date in eight languages. Verified: types, lint, unit tests (`inventory.test.ts` `updatedAt`), a signed-in production run at 360 px/desktop (sort reorders and persists, no horizontal overflow). PR #392. Note: `docs/progress/2026-10-27-groceries-sort-compact.md`. |
-| `25-043` A recipe card in Meals → Recipes opens its own page | P1 | Done | The owner, 2026-10-29 (rule 21). The title on each of "Your recipes" is a stretched link to `/meals/recipes/mine/[id]` (picture, time, serves, nutrients per serving, what it needs, steps); the pencil, share and like/dislike stay separate controls above the link and do not navigate. Not browser-checked here (no `.env.local` in the cloud container): typecheck, ESLint and the production build pass. |
-| `25-044` Vertically compact grocery cards (second pass) | P1 | Done | The owner, 2026-10-29: cards still too tall. `ui/grocery-row.tsx`: In stock / To buy labels sit inline beside their stepper (wrapping under it only when the cell is too narrow), category and nutrition meta on one line with an ellipsis (the name still wraps, rule 11), 36→32 px stepper buttons with an invisible 44 px hit area (`before:-inset-1.5`), 36 px photo, tighter row padding. Layout only, no data or logic change. Verified: types, lint, unit tests, `npm run build -w apps/web`; not browser-measured (no signed-in session in the cloud container). PR #451. |
 
 ### 26 — HomeEvents
 
