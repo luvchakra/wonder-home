@@ -13,7 +13,7 @@ import { listActivities, listTeachers } from "@wonderhome/core/school/activities
 import { listExamTypes, listExams, listTimetable } from "@wonderhome/core/school/exams";
 import { listEnrolments } from "@wonderhome/core/school/enrolments";
 import { listCheckIns, listGoals } from "@wonderhome/core/school/goal-repository";
-import { schoolAgenda } from "@wonderhome/core/school/repository";
+import { schoolAgenda, scopeSchoolAgendaToChild } from "@wonderhome/core/school/repository";
 import { mapsLink } from "@wonderhome/core/places/provider";
 import { schoolDateValue, schoolDayZone } from "@wonderhome/core/school/times";
 import { isoDateIn } from "@wonderhome/core/context/format";
@@ -111,8 +111,16 @@ export default async function SchoolPage({ searchParams }: { searchParams: Promi
   const children = members.filter((member) => member.memberType === "child");
   // One child at a time (the owner, 2026-10-19: no "Everyone"): the one asked for, else the first.
   const selected = children.find((kid) => kid.id === child)?.id ?? children[0]?.id ?? null;
-  const items = (agenda?.items ?? []).filter((item) => !selected || item.childMemberId === selected);
-  const communications = agenda?.communications ?? [];
+  // One child at a time (line 112), so the whole overview is scoped to the
+  // selected child. `schoolAgenda` assesses the household's work in one read,
+  // so a deadline or message tied to one child must not surface on a sibling's
+  // view (personalised views — a child's school work is theirs). A school
+  // message with no child is a household-wide notice and stays visible to all.
+  const scoped = scopeSchoolAgendaToChild(
+    agenda ?? { deadlines: [], messages: [], items: [], communications: [] },
+    selected,
+  );
+  const { items, communications, deadlines, messages, checked } = scoped;
 
   // A stale portal and "no homework" must never look alike (17-004): if a
   // connected school portal is not working, the screen says so up front.
@@ -178,13 +186,13 @@ export default async function SchoolPage({ searchParams }: { searchParams: Promi
       : t("school.allDay");
   // Live work is what a child has to do: an event is something to know, kept under the Overview's Coming up, not homework (the owner, 2026-10-20).
   const live = items.filter((item) => (item.status === "pending" || item.status === "in_progress") && item.kind !== "event");
-  const needsYou = agenda ? agenda.deadlines.length + agenda.messages.length : 0;
+  const needsYou = agenda ? deadlines.length + messages.length : 0;
 
   // "Coming up" previews what's ahead (exams/projects/events a month out,
   // homework/worksheets a few days out) — distinct from "Deadlines at risk",
   // which only flags what won't fit in the time left. An item already
   // flagged there is left out here rather than shown twice.
-  const atRiskIds = new Set((agenda?.deadlines ?? []).map((deadline) => deadline.subjectKey));
+  const atRiskIds = new Set(deadlines.map((deadline) => deadline.subjectKey));
   const upcoming = upcomingSchoolItems(items).filter((item) => !atRiskIds.has(`school.${item.id}`));
 
   // What each Overview count opens onto: the real deadlines/messages behind
@@ -192,7 +200,7 @@ export default async function SchoolPage({ searchParams }: { searchParams: Promi
   // rows the sections below already render, reused rather than a second,
   // thinner list invented for the card — and the genuine split behind
   // "Checked" (rule 9: never more of a number's story than it can prove).
-  const needsYouEntries: HomeAssessment[] = agenda ? [...agenda.deadlines, ...agenda.messages] : [];
+  const needsYouEntries: HomeAssessment[] = agenda ? [...deadlines, ...messages] : [];
   const metrics: ExpandableMetric[] = [
     {
       label: t("school.metric.needYou"),
@@ -260,10 +268,10 @@ export default async function SchoolPage({ searchParams }: { searchParams: Promi
     },
     {
       label: t("school.metric.checked"),
-      value: agenda?.checked ?? 0,
+      value: checked,
       icon: <IconTile icon={MessageSquareText} tone="handled" size="sm" />,
       details:
-        !agenda || agenda.checked === 0 ? (
+        !agenda || checked === 0 ? (
           <MetricDetailEmpty>{t("school.checked.empty")}</MetricDetailEmpty>
         ) : (
           <MetricDetailList>
@@ -394,10 +402,10 @@ export default async function SchoolPage({ searchParams }: { searchParams: Promi
               />
             ) : (
               <>
-                {agenda.deadlines.length > 0 ? (
+                {deadlines.length > 0 ? (
                   <section className="space-y-3">
-                    <SectionHeader title={t("school.deadlines")} count={agenda.deadlines.length} />
-                    {groupByDueDate(agenda.deadlines, timezone, t).map((group) => (
+                    <SectionHeader title={t("school.deadlines")} count={deadlines.length} />
+                    {groupByDueDate(deadlines, timezone, t).map((group) => (
                       <div key={group.label}>
                         <h3 className="px-1 pb-1 text-[0.6875rem] font-semibold tracking-wide text-[var(--wh-foreground-subtle)] uppercase">{group.label}</h3>
                         <Card className="p-2"><ul className="divide-y divide-[var(--wh-border)]">{group.items.map((item) => <AgendaExpandableRow key={item.subjectKey} item={item} timezone={timezone} href="/school?tab=homework" />)}</ul></Card>
@@ -405,10 +413,10 @@ export default async function SchoolPage({ searchParams }: { searchParams: Promi
                     ))}
                   </section>
                 ) : null}
-                {agenda.messages.length > 0 ? (
+                {messages.length > 0 ? (
                   <section>
-                    <SectionHeader title={t("school.fromSchool")} count={agenda.messages.length} />
-                    <Card className="p-2"><ul className="divide-y divide-[var(--wh-border)]">{agenda.messages.map((item) => <AgendaExpandableRow key={item.subjectKey} item={item} timezone={timezone} href="/school?tab=calendar" />)}</ul></Card>
+                    <SectionHeader title={t("school.fromSchool")} count={messages.length} />
+                    <Card className="p-2"><ul className="divide-y divide-[var(--wh-border)]">{messages.map((item) => <AgendaExpandableRow key={item.subjectKey} item={item} timezone={timezone} href="/school?tab=calendar" />)}</ul></Card>
                   </section>
                 ) : null}
               </>
