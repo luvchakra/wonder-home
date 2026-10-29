@@ -135,7 +135,7 @@ export function GroceryRow({
       className={cn(
         // Phone: picture · name · chevron, then the amounts across the whole
         // card. Wider: one line, amounts before the chevron.
-        "relative grid grid-cols-[2.5rem_minmax(0,1fr)_auto] items-start gap-x-3 gap-y-1 py-1.5 pr-1 pl-3 sm:grid-cols-[2.5rem_minmax(0,1fr)_auto_auto] sm:items-center sm:gap-x-4",
+        "relative grid grid-cols-[2.5rem_minmax(0,1fr)_auto] items-start gap-x-3 gap-y-0.5 py-1 pr-1 pl-3 sm:grid-cols-[2.5rem_minmax(0,1fr)_auto_auto] sm:items-center sm:gap-x-4",
         className,
       )}
     >
@@ -160,7 +160,7 @@ export function GroceryRow({
             src={imageUrl}
             alt=""
             loading="lazy"
-            className="size-10 rounded-[var(--wh-radius-sm)] object-cover"
+            className="size-9 rounded-[var(--wh-radius-sm)] object-cover"
           />
         ) : (
           <IconTile icon={icon} tone="care" size="md" />
@@ -173,7 +173,7 @@ export function GroceryRow({
         <span className="block text-[0.9375rem] leading-snug font-semibold break-words">
           {name}
         </span>
-        <span className="block text-xs leading-snug text-[var(--wh-foreground-muted)]">
+        <span className="block truncate text-xs leading-snug text-[var(--wh-foreground-muted)]">
           <span className="first-letter:uppercase">{category}</span>
           {nutrition ? <span className="text-[var(--wh-foreground-subtle)]"> · {nutrition}</span> : null}
         </span>
@@ -181,12 +181,12 @@ export function GroceryRow({
       </Link>
       {/* In stock and To buy as two equal cells, each its label over its
           control, so the two steppers line up under each other row to row. */}
-      <div className="col-span-3 row-start-2 grid grid-cols-2 gap-x-3 gap-y-1 sm:col-span-1 sm:col-start-3 sm:row-start-1 sm:grid-cols-[9.5rem_9.5rem]">
-        <div className="flex min-w-0 flex-col items-start gap-0.5">
+      <div className="col-span-3 row-start-2 grid grid-cols-2 gap-x-2 gap-y-0.5 sm:col-span-1 sm:col-start-3 sm:row-start-1 sm:grid-cols-[9.5rem_9.5rem]">
+        <div className="flex min-w-0 flex-wrap items-center gap-x-1.5 gap-y-0">
           <span className={label}>{stockLabel}</span>
-          {stockControl ?? <span className="flex min-h-9 items-center text-sm font-semibold tabular-nums">{stockText}</span>}
+          {stockControl ?? <span className="flex min-h-8 items-center text-sm font-semibold tabular-nums">{stockText}</span>}
         </div>
-        <div className="flex min-w-0 flex-col items-start gap-0.5">
+        <div className="flex min-w-0 flex-wrap items-center gap-x-1.5 gap-y-0">
           <span className={label}>{toBuyLabel}</span>
           {stepper}
         </div>

@@ -145,7 +145,7 @@ export function ToBuyStepper({
     timer.current = setTimeout(() => void flush(), SETTLE_MS);
   };
 
-  const buttonSize = size === "lg" ? "size-11" : "size-9";
+  const buttonSize = size === "lg" ? "size-11" : "relative size-8 before:absolute before:-inset-1.5 before:content-['']";
   const router = useRouter();
   const [removing, setRemoving] = useState(false);
 
@@ -204,7 +204,7 @@ export function ToBuyStepper({
             type="button"
             onClick={() => setSheetOpen(true)}
             aria-label={fill(words.stepper.amount, { name: item.name })}
-            className="min-h-9 min-w-[3.5rem] max-w-[5.5rem] rounded-[var(--wh-radius-sm)] px-1 text-center text-sm leading-tight font-semibold break-words tabular-nums hover:bg-[var(--wh-surface-muted)] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--wh-primary)]"
+            className="min-h-8 min-w-[3rem] max-w-[5.5rem] rounded-[var(--wh-radius-sm)] px-1 text-center text-sm leading-tight font-semibold break-words tabular-nums hover:bg-[var(--wh-surface-muted)] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--wh-primary)]"
           >
             {amountText}
           </button>
