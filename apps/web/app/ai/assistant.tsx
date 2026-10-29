@@ -98,6 +98,7 @@ export function Assistant({
   serverVoice = false,
   voiceLanguage = "en-IN",
   liveEngine = "wonderhome",
+  liveEngineExplicit = false,
   geminiLive = { available: false },
   kids = [],
   needsAdult = false,
@@ -121,6 +122,8 @@ export function Assistant({
   voiceLanguage?: string;
   /** Who runs a live conversation: WonderHome's own loop, or Gemini Live calling HomeTalk's tools (voice phase 3). */
   liveEngine?: "wonderhome" | "gemini_live";
+  /** Whether `liveEngine` is this member's own saved choice, not just the household default. */
+  liveEngineExplicit?: boolean;
   /** Whether Gemini Live may run now, and why not — the composer's picker offers only what can. */
   geminiLive?: { available: boolean; reason?: string; fix?: { href: string; label: string } };
   /** For HomeSend's school-item confirm step ("who is this for"). */
@@ -169,6 +172,20 @@ export function Assistant({
   const composerRef = useRef<HTMLDivElement>(null);
   /** "Another day…": the answer is typed, so the cursor goes to the text box. */
   const focusComposer = useCallback(() => composerRef.current?.querySelector("textarea")?.focus(), []);
+
+  // Persist this member's engine choice so Settings -> Voice reads the same
+  // value and the two surfaces cannot drift. Fire-and-forget: the composer
+  // already shows the choice optimistically, and the next page read confirms it.
+  const persistEngine = useCallback(
+    (engine: "wonderhome" | "gemini_live") => {
+      void fetch(`/api/v1/households/${householdId}/voice/live-engine`, {
+        method: "PUT",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ engine }),
+      }).catch(() => undefined);
+    },
+    [householdId],
+  );
   /**
    * Whether the reader has scrolled back through the conversation.
    *
@@ -764,6 +781,8 @@ export function Assistant({
           serverVoice={serverVoice}
           voiceLanguage={voiceLanguage}
           liveEngine={liveEngine}
+          liveEngineExplicit={liveEngineExplicit}
+          onEngineChange={persistEngine}
           geminiLive={geminiLive}
           onLiveTranscript={handleLiveTranscript}
           onLiveTranscriptRevised={handleLiveTranscriptRevised}

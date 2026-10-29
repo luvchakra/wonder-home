@@ -189,6 +189,11 @@ export const SENSITIVE_ACTIONS: readonly SensitiveAction[] = [
     recordedIn: "packages/core/src/voice/repository.ts",
   },
   {
+    event: "voice.live_engine_changed",
+    because: "Chooses who answers a live conversation for this member — WonderHome's own voice or Gemini Live, which sends what is said to Google.",
+    recordedIn: "packages/core/src/voice/repository.ts",
+  },
+  {
     event: "privacy.export_requested",
     because: "A copy of household data left the household. Somebody will ask when, and who asked for it.",
     recordedIn: "packages/core/src/privacy/repository.ts",
@@ -616,6 +621,8 @@ export function describeAuditEvent(
       return { title: "The household's own speech key was removed", detail: "Back to WonderHome's speech service." };
     case "voice.settings_changed":
       return { title: "The household's voice was changed", detail: stringOr(metadata.language, null) };
+    case "voice.live_engine_changed":
+      return { title: "A member's live-conversation engine was changed", detail: metadata.engine === "gemini_live" ? "Gemini Live" : "WonderHome" };
     case "privacy.export_requested":
       return { title: "A copy of the data was requested", detail: null };
     case "privacy.deletion_requested":

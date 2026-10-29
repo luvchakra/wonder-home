@@ -54,6 +54,7 @@ export const AUDIT_EVENTS = [
   "voice.key_set",
   "voice.key_removed",
   "voice.settings_changed",
+  "voice.live_engine_changed",
   "privacy.export_requested",
   "privacy.deletion_requested",
   "privacy.deletion_cancelled",

@@ -5,6 +5,7 @@ import { DropdownMenu } from "radix-ui";
 import { useCallback, useEffect, useId, useMemo, useRef, useState, type FormEvent, type KeyboardEvent, createContext, useContext } from "react";
 
 import { cn } from "../../lib/cn";
+import { resolveInitialEngine } from "../../voice/live-engine";
 import { setTalkActivity } from "../shell/talk-activity";
 import { BrandMark } from "./brand";
 import { useLiveTalk } from "./live-talk";
@@ -185,6 +186,8 @@ export function TalkComposer({
   serverVoice = false,
   voiceLanguage = "en-IN",
   liveEngine = "wonderhome",
+  liveEngineExplicit = false,
+  onEngineChange,
   geminiLive: geminiLiveAvailability = { available: false },
   onLiveTranscript,
   onLiveTranscriptRevised,
@@ -225,6 +228,19 @@ export function TalkComposer({
    * from the household's setting and the server's own availability check.
    */
   liveEngine?: LiveEngineChoice;
+  /**
+   * Whether `liveEngine` is this member's own saved choice (true) or just the
+   * household default they have not overridden yet (false). When false, the
+   * composer migrates the browser's old localStorage choice up to the server
+   * once, so a member who picked an engine before it was server-side keeps it.
+   */
+  liveEngineExplicit?: boolean;
+  /**
+   * Persist this member's engine choice to the server — the one value Settings
+   * reads too, so the two surfaces cannot drift. Memoise it: the composer calls
+   * it from an effect. Omit to keep the choice on this device only.
+   */
+  onEngineChange?: (engine: LiveEngineChoice) => void;
   /**
    * Whether Gemini Live may run for this household now, and if not, why —
    * the server's own check. The picker offers it only when it may; the
@@ -272,7 +288,7 @@ export function TalkComposer({
   // so it carries on when the person goes to another screen. This composer
   // configures it, and takes its turns while HomeTalk's page is open.
   const talk = useLiveTalk();
-  const [engine, setEngine] = useLiveEnginePreference(householdId, liveEngine, geminiLiveAvailability.available);
+  const [engine, setEngine] = useLiveEnginePreference(householdId, liveEngine, liveEngineExplicit, geminiLiveAvailability.available, onEngineChange);
   const liveBarLabels = useMemo(
     () => ({
       connecting: labels.getReady,
@@ -558,23 +574,51 @@ export type LiveEngineChoice = "wonderhome" | "gemini_live";
 const LIVE_ENGINE_NAMES: Record<LiveEngineChoice, string> = { wonderhome: "WonderHome", gemini_live: "Gemini Live" };
 
 /**
- * Which engine this person talks to, starting from the household's own
- * setting. A change here is theirs alone and stays on this device: the
- * household default is still an Admin's decision in Settings. Gemini Live is
- * never kept as the choice once the server says it may not run.
+ * Which engine this person talks to. One per-member value, server-side (see
+ * `voice/live-engine.ts` and `household_members.live_engine`): the composer
+ * and Settings -> Voice read and write the same thing, so they cannot drift,
+ * and the choice follows the member across devices.
+ *
+ * `serverEngine` is the effective engine the page resolved (the member's own
+ * choice, else the household default); `explicit` says whether that is their
+ * own saved choice yet. localStorage is only a fast cache now: on load the
+ * server wins, except that a member who chose an engine in the browser before
+ * it was server-side (no explicit row) has that one cached choice adopted and
+ * migrated up to the server once. Gemini Live is never left as the running
+ * choice once the server says it may not run.
  */
-function useLiveEnginePreference(householdId: string, householdDefault: LiveEngineChoice, geminiAvailable: boolean) {
+function useLiveEnginePreference(
+  householdId: string,
+  serverEngine: LiveEngineChoice,
+  explicit: boolean,
+  geminiAvailable: boolean,
+  persist?: (engine: LiveEngineChoice) => void,
+) {
   const key = `wh:live-engine:${householdId}`;
-  const [choice, setChoice] = useState<LiveEngineChoice>(householdDefault);
+  const [choice, setChoice] = useState<LiveEngineChoice>(serverEngine);
 
   useEffect(() => {
+    let stored: string | null = null;
     try {
-      const saved = window.localStorage.getItem(key);
-      if (saved === "wonderhome" || saved === "gemini_live") setChoice(saved);
+      stored = window.localStorage.getItem(key);
     } catch {
-      // Storage can be unavailable (a private window); the default stands.
+      // Storage can be unavailable (a private window); the server value stands.
     }
-  }, [key]);
+    const { engine, migrate } = resolveInitialEngine({ server: serverEngine, explicit, stored, geminiAvailable });
+    setChoice(engine);
+    try {
+      // Keep the cache in step: the chosen (or migrated) value, so a reload
+      // before the next server read still shows it.
+      window.localStorage.setItem(key, migrate ?? serverEngine);
+    } catch {
+      // No cache; the server value is still authoritative next load.
+    }
+    if (migrate) persist?.(migrate);
+    // `persist` is intentionally omitted: it is a stable, memoised callback and
+    // re-running on its identity would re-migrate. The server value and flags
+    // are what should drive reconciliation.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [key, serverEngine, explicit, geminiAvailable]);
 
   const update = useCallback(
     (next: LiveEngineChoice) => {
@@ -584,8 +628,9 @@ function useLiveEnginePreference(householdId: string, householdDefault: LiveEngi
       } catch {
         // Still chosen for this visit.
       }
+      persist?.(next);
     },
-    [key],
+    [key, persist],
   );
 
   return [choice === "gemini_live" && !geminiAvailable ? "wonderhome" : choice, update] as const;

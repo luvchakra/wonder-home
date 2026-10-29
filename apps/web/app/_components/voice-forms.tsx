@@ -32,6 +32,7 @@ import {
   type VoiceTier,
 } from "@wonderhome/core/voice/settings-options";
 import type { VoiceSettings } from "@wonderhome/core/voice/settings";
+import { liveEngineHint } from "@wonderhome/core/voice/live-engine";
 
 import type { ActionState } from "../(auth)/actions";
 import { SavedKeyRow } from "./ai-key-form";
@@ -168,6 +169,7 @@ function Submit({ label, pendingLabel }: { label: string; pendingLabel: string }
 export function VoiceSettingsForm({
   householdId,
   settings,
+  liveEngine,
   save,
   saveKey,
   removeKey,
@@ -181,6 +183,13 @@ export function VoiceSettingsForm({
 }: {
   householdId: string;
   settings: VoiceSettings;
+  /**
+   * This member's effective engine (their own saved choice, else the
+   * household default) — the one value the composer writes too. The engine
+   * picker shows and saves this, not the raw household default, so Settings
+   * and HomeTalk always agree.
+   */
+  liveEngine: LiveEngine;
   save: (state: ActionState, formData: FormData) => Promise<ActionState>;
   saveKey: (state: ActionState, formData: FormData) => Promise<ActionState>;
   removeKey: (state: ActionState, formData: FormData) => Promise<ActionState>;
@@ -198,6 +207,7 @@ export function VoiceSettingsForm({
   const [state, action, saving] = useActionState(save, {});
   const formId = useId();
   const [provider, setProvider] = useState(settings.provider);
+  const [engineChoice, setEngineChoice] = useState<LiveEngine>(liveEngine);
   const [language, setLanguage] = useState(settings.language);
   const [voices, setVoices] = useState<VoiceOption[]>([]);
   const [previewError, setPreviewError] = useState<string | null>(null);
@@ -298,12 +308,15 @@ export function VoiceSettingsForm({
           <Select
             label={labels.liveEngine}
             name="liveEngine"
-            defaultValue={settings.liveEngine}
-            hint={
-              geminiLive.available
-                ? `${labels.engines.gemini_live.detail} ${labels.geminiHears}`
-                : `${labels.engines.wonderhome.detail}${geminiLive.reason ? ` ${labels.geminiUnavailable.replace("{reason}", geminiLive.reason)}` : ""}`
-            }
+            value={engineChoice}
+            onChange={(event) => setEngineChoice(event.target.value as LiveEngine)}
+            hint={liveEngineHint(engineChoice, {
+              engines: labels.engines,
+              geminiHears: labels.geminiHears,
+              geminiUnavailable: labels.geminiUnavailable,
+              geminiAvailable: geminiLive.available,
+              geminiReason: geminiLive.reason,
+            })}
           >
             <option value="wonderhome">{labels.engines.wonderhome.name}</option>
             <option value="gemini_live" disabled={!geminiLive.available}>

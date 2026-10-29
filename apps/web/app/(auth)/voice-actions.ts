@@ -5,7 +5,7 @@ import { revalidatePath } from "next/cache";
 import { toErrorBody } from "@wonderhome/core/api/errors";
 import { createClient } from "@wonderhome/core/db/server";
 import { requireHouseholdAdmin } from "@wonderhome/core/identity/households";
-import { clearVoiceKey, saveVoiceSettings, setVoiceKey } from "@wonderhome/core/voice/repository";
+import { clearVoiceKey, saveMemberLiveEngine, saveVoiceSettings, setVoiceKey } from "@wonderhome/core/voice/repository";
 import { voiceSettingsSchema } from "@wonderhome/core/voice/settings";
 
 import type { ActionState } from "./actions";
@@ -83,6 +83,15 @@ export async function saveVoice(_previous: ActionState, formData: FormData): Pro
       householdId,
       memberId: membership.memberId,
       settings: parsed.data,
+    });
+    // The engine is this member's own preference, not part of the household
+    // row (rule 23: one value, one write path). The composer writes the same
+    // value, so the two surfaces always agree.
+    await saveMemberLiveEngine(supabase, {
+      householdId,
+      memberId: membership.memberId,
+      actorMemberId: membership.memberId,
+      engine: parsed.data.liveEngine,
     });
   } catch (thrown) {
     return { error: toErrorBody(thrown, "voice").body.error.message };

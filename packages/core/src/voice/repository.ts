@@ -7,6 +7,7 @@ import { googleProvider } from "./google";
 import { platformSpeechKey, resolveSpeechKey, type SpeechKeySource } from "./platform-key";
 import { browserProvider, type SpeechProvider } from "./provider";
 import { DEFAULT_VOICE_SETTINGS, voiceSettingsSchema, type VoiceSettings } from "./settings";
+import type { LiveEngine } from "./settings";
 import { writeKeyRow } from "../ai/key-row";
 
 /**
@@ -67,6 +68,67 @@ export async function saveVoiceSettings(
     targetTable: "household_voice_settings",
     targetId: input.householdId,
     metadata: { provider: input.settings.provider, liveEngine: input.settings.liveEngine, language: input.settings.language, tier: input.settings.tier },
+  });
+}
+
+/**
+ * This member's own live-engine choice, or null to follow the household
+ * default (voice phase 3 follow-up, 2026-10-29).
+ *
+ * Never throws, and tolerant of the column not existing yet — the migration
+ * that adds it is safe in either order, so before it runs, or on any other
+ * failure, this reads as "no personal choice", which falls back to the
+ * household default on `household_voice_settings.live_engine`.
+ */
+export async function loadMemberLiveEngine(
+  supabase: SupabaseClient,
+  householdId: string,
+  memberId: string,
+): Promise<LiveEngine | null> {
+  const { data, error } = await supabase
+    .from("household_members")
+    .select("live_engine")
+    .eq("id", memberId)
+    .eq("household_id", householdId)
+    .maybeSingle();
+  if (error || !data) return null;
+  const value = (data as Row).live_engine;
+  return value === "wonderhome" || value === "gemini_live" ? value : null;
+}
+
+/**
+ * Set (or clear, with null) this member's own live-engine choice.
+ *
+ * Self-editable; an Admin may set another member's. RLS is the authority: the
+ * self and admin UPDATE policies on `household_members` decide, and RLS
+ * filters rather than errors, so no row back means it was not this caller's to
+ * change. Both the composer and the Voice settings page write through here, so
+ * the one value has one write path.
+ */
+export async function saveMemberLiveEngine(
+  supabase: SupabaseClient,
+  input: { householdId: string; memberId: string; actorMemberId: string; engine: LiveEngine | null },
+): Promise<void> {
+  const { data, error } = await supabase
+    .from("household_members")
+    .update({ live_engine: input.engine })
+    .eq("id", input.memberId)
+    .eq("household_id", input.householdId)
+    .select("id");
+
+  if (error) {
+    if (error.code === "42501") throw ApiError.forbidden("You can change your own voice engine, or an Admin can change anyone's.");
+    throw new Error(`saveMemberLiveEngine failed: ${error.code ?? "unknown"}`);
+  }
+  if (!data || data.length === 0) throw ApiError.forbidden("You can change your own voice engine, or an Admin can change anyone's.");
+
+  await auditChange({
+    householdId: input.householdId,
+    actorMemberId: input.actorMemberId,
+    eventType: "voice.live_engine_changed",
+    targetTable: "household_members",
+    targetId: input.memberId,
+    metadata: { engine: input.engine },
   });
 }
 
@@ -205,9 +267,13 @@ function fromRow(row: Row): Record<string, unknown> {
 }
 
 function toRow(settings: VoiceSettings): Row {
+  // live_engine is deliberately not written here: it is now a per-member
+  // preference (`household_members.live_engine`, see saveMemberLiveEngine),
+  // so saving the household's voice must never move it for everyone. The
+  // column on this row stays the household default/seed; `fromRow` still
+  // reads it as the fallback a member inherits before they choose.
   return {
     provider: settings.provider,
-    live_engine: settings.liveEngine,
     language: settings.language,
     voice_name: settings.voiceName,
     gender: settings.gender,

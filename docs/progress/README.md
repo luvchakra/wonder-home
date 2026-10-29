@@ -11,6 +11,7 @@ decision that shapes later work each earns a note, written before moving on.
 
 | Date | Note |
 |---|---|
+| 2026-10-29 | [One source of truth for the live-conversation engine](2026-10-29-live-engine-single-source.md) |
 | 2026-10-29 | [Connections page: one chevron card per connection, deployment-level cards have no Connect](2026-10-29-connections-chevron-cards.md) |
 | 2026-10-29 | [Home restructure: grid removed, handled card last, family/pets/househelp on Family](2026-10-29-home-restructure.md) |
 | 2026-10-29 | [Location sharing: each sharer picks whether the children can see it](2026-10-29-location-audience-children.md) |

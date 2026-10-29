@@ -7,7 +7,8 @@ import { requestT } from "@wonderhome/core/i18n/request";
 import { listMembers, isHouseholdAdmin } from "@wonderhome/core/identity/households";
 import { childrenWithClasses, listActivities } from "@wonderhome/core/school/activities";
 import { AppShell } from "@wonderhome/core/shell/app-shell";
-import { loadVoiceSettings, speechKeySource } from "@wonderhome/core/voice/repository";
+import { loadMemberLiveEngine, loadVoiceSettings, speechKeySource } from "@wonderhome/core/voice/repository";
+import { effectiveLiveEngine, gateLiveEngine } from "@wonderhome/core/voice/live-engine";
 import { EmptyState } from "@wonderhome/core/ui/states";
 import { Sparkles } from "lucide-react";
 
@@ -47,10 +48,11 @@ export default async function AiPage({ searchParams }: { searchParams: Promise<{
   // after it (below), never before.
   const householdId = membership.household.id;
   const welcoming = welcome === "1";
-  const [entitlement, voiceEntitlement, voiceSettings, members, speechKey, gate, openSessionId, knownPlaces, activities, keyAlerts] = await Promise.all([
+  const [entitlement, voiceEntitlement, voiceSettings, memberLiveEngine, members, speechKey, gate, openSessionId, knownPlaces, activities, keyAlerts] = await Promise.all([
     may(supabase, householdId, "conversation.text"),
     may(supabase, householdId, "conversation.voice"),
     loadVoiceSettings(supabase, householdId),
+    loadMemberLiveEngine(supabase, householdId, membership.memberId),
     listMembers(supabase, householdId, membership.household.ownerMemberId).catch(() => []),
     speechKeySource(householdId).catch(() => "none" as const),
     geminiLiveGate(supabase, householdId),
@@ -84,7 +86,12 @@ export default async function AiPage({ searchParams }: { searchParams: Promise<{
     : voiceKeyAlert
       ? { available: false, reason: locale.t(`reminder.aiKey.body.${voiceKeyAlert.kind}` as "reminder.aiKey.body.out_of_credits", { provider: "Google" }) }
       : { available: true };
-  const liveEngine = voiceSettings.liveEngine === "gemini_live" && geminiLive.available ? "gemini_live" : "wonderhome";
+  // The one effective engine for this member: their own saved choice, else
+  // the household default — the single value the composer and Settings both
+  // read (voice/live-engine.ts). Gated so the control never offers Gemini
+  // where it may not run; the composer re-gates and the token route rechecks.
+  const liveEngine = gateLiveEngine(effectiveLiveEngine(memberLiveEngine, voiceSettings.liveEngine), geminiLive.available);
+  const liveEngineExplicit = memberLiveEngine !== null;
 
   let initialMessages: AssistantMessage[] = [];
   let placeMarks: Record<string, PlaceMark> = {};
@@ -165,6 +172,7 @@ export default async function AiPage({ searchParams }: { searchParams: Promise<{
           serverVoice={serverVoice}
           voiceLanguage={voiceSettings.language}
           liveEngine={liveEngine}
+          liveEngineExplicit={liveEngineExplicit}
           geminiLive={geminiLive}
           kids={kids}
           needsAdult={membership.memberType !== "adult"}
