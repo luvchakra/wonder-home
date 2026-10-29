@@ -11,6 +11,7 @@ decision that shapes later work each earns a note, written before moving on.
 
 | Date | Note |
 |---|---|
+| 2026-10-29 | [Home restructure: grid removed, handled card last, family/pets/househelp on Family](2026-10-29-home-restructure.md) |
 | 2026-10-29 | [Location sharing: each sharer picks whether the children can see it](2026-10-29-location-audience-children.md) |
 | 2026-10-29 | [Connections page: each section is its own collapsible card](2026-10-29-connections-collapsible-sections.md) |
 | 2026-10-29 | [Compact navigation drawer — the whole menu on one phone screen](2026-10-29-compact-nav-drawer.md) |

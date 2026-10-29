@@ -187,7 +187,7 @@ export const helpEn = {
     "Plan something, on Home and the Calendar, adds a family event without leaving the screen.",
   "help.guide.today-and-home.body.4": "On a phone, swipe left or right to move between Home, Calendar, HomeTalk, Family and More.",
   "help.guide.today-and-home.body.5":
-    "Under Family status, Home shows your pets, if you have any. Each opens to the same details the Family screen shows; to change them, go to Family.",
+    "Your family, pets and househelpers are on the Family screen, not on Home. Each opens to its details; a family member shows how many responsibilities they have, and a househelper shows whether they are expected today.",
   "help.guide.today-and-home.body.6": "What's new, at the top of Home, lists what has been added to WonderHome since you last opened it here, each opening where it lives. Got it hides the list; it never shows the same thing twice, and an entry leaves on its own a month after it arrived. For everything that has changed, version by version, see Release notes at the end of Get help.",
   "help.guide.today-and-home.body.7": "The card at the top of Home shows today's date and your household. Where Weather is on for your area, it also shows the temperature now, today's high and low, and when rain is likely later today, or that the rest of the day is dry. Where the app has a film catalogue connected, it adds one film new in cinemas and one family pick to stream in your region, a different pair each time you open Home; each opens the title's page, which lists where to watch it. These come from TMDB, not from WonderHome, and nothing is shown when no catalogue is connected. Today's plan, at the bottom of the card, opens the day as a timeline.",
 

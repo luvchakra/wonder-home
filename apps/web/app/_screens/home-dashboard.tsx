@@ -2,19 +2,15 @@ import {
   AlertTriangle,
   CalendarClock,
   CalendarHeart,
-  CalendarOff,
-  ChevronRight,
   CircleCheck,
   GraduationCap,
   Heart,
-  PawPrint,
   Sparkles,
   Sun,
   UserRoundPlus,
 } from "lucide-react";
 import Link from "next/link";
 
-import { asAutonomyMode } from "@wonderhome/core/household/autonomy";
 import { listPets } from "@wonderhome/core/home/repository";
 import type { Translate } from "@wonderhome/core/i18n/translate";
 import { describeAction, isFamilyMoment, type FamilyEvent } from "@wonderhome/core/family/schedule";
@@ -24,13 +20,12 @@ import { assessSetup } from "@wonderhome/core/household/setup";
 import { shouldOfferLocaleSetup } from "@wonderhome/core/i18n/preferences";
 import { loadSetupFacts } from "@wonderhome/core/household/setup-repository";
 import { listMembers, type HouseholdMember } from "@wonderhome/core/identity/households";
-import { cn } from "@wonderhome/core/lib/cn";
+import { readHelperAvailability, readResponsibilities, type AvailabilityWindowRow, type ResponsibilityJoinRow } from "../_lib/family-reads";
 import { AppShell } from "@wonderhome/core/shell/app-shell";
-import { Avatar, AvatarGroup } from "@wonderhome/core/ui/avatar";
+import { AvatarGroup } from "@wonderhome/core/ui/avatar";
 import { CalendarItem, calendarKindLook } from "@wonderhome/core/ui/calendar-item";
 import { Card } from "@wonderhome/core/ui/card";
 import { CozyCornerIllustration } from "@wonderhome/core/ui/cozy-corner-illustration";
-import { DomainCard, DomainGrid } from "@wonderhome/core/ui/domain-card";
 import {
   ExpandableMetricGrid,
   MetricDetailEmpty,
@@ -43,7 +38,6 @@ import { IconTile } from "@wonderhome/core/ui/icon-tile";
 import { HandledList } from "@wonderhome/core/ui/outcome-card";
 import { Badge, PillLink, type BadgeTone } from "@wonderhome/core/ui/pill";
 import { QuoteCard } from "@wonderhome/core/ui/quote-card";
-import { SectionHeader } from "@wonderhome/core/ui/section-header";
 import { SetupProgressCard } from "@wonderhome/core/ui/setup-progress";
 
 import { OnboardingResumeCard } from "../_components/onboarding-resume-card";
@@ -59,18 +53,14 @@ import { Suspense } from "react";
 
 import { HomeIllustration } from "@wonderhome/core/ui/home-illustration";
 import { AgendaExpandableRow } from "../_components/agenda-expandable-row";
-import { PetDetail } from "../_components/pet-detail";
 import { NewEventForm } from "../_components/new-event-form";
 import { eventFormLabels } from "../_lib/event-form-labels";
 import { eventPlaceSearch } from "../_lib/places";
-import { cadenceLabel } from "../_lib/cadence";
-import { describeRoles } from "../_lib/member-role";
 import { householdAgenda, type DomainSummary } from "../_lib/agenda";
 import { homeRows } from "../_lib/home-reads";
 import { eventGoing, eventWhen } from "../_lib/event-when";
 import { formatDate, formatTime, formatToday, greetingFor, type Session } from "../_lib/session";
 import { localizeSetup, onboardingCardLabels, setupProgressLabels } from "../_lib/setup-labels";
-import { DOMAIN_ICONS } from "../_lib/domain-icons";
 import { iconForOutcome } from "../_lib/outcome-icons";
 
 /** Which domain a Today's-focus row belongs to, for its colour badge — the
@@ -92,102 +82,6 @@ function focusBadge(riskLevel: HomeAssessmentRisk, domainKey: DomainSummary["key
 }
 
 type HomeAssessmentRisk = "high" | "medium" | "low" | "none";
-
-/** Sunday to Saturday, short, in the reader's language (4 January 2026 was a Sunday). */
-function weekdayNames(locale: string, language: string): string[] {
-  const format = new Intl.DateTimeFormat(locale, { weekday: "short", timeZone: "UTC" });
-  return Array.from({ length: 7 }, (_, index) => {
-    const name = format.format(new Date(Date.UTC(2026, 0, 4 + index)));
-    // English keeps its familiar two letters; other languages keep the whole word.
-    return language === "en" ? name.slice(0, 2) : name;
-  });
-}
-
-type ResponsibilityJoinRow = {
-  outcome_key: string;
-  primary_member_id: string | null;
-  backup_member_id: string | null;
-  ai_mode: "prepare" | "execute";
-  playbook_items: { name: string; cadence: Record<string, unknown> | null } | { name: string; cadence: Record<string, unknown> | null }[] | null;
-};
-
-type HelperProfileRow = { member_id: string; engagement: "regular" | "occasional" | "service"; started_on: string | null };
-type AvailabilityWindowRow = { member_id: string; day_of_week: number };
-type AvailabilityExceptionRow = { member_id: string; on_date: string; available: boolean; reason: string | null };
-
-function outcomeTitle(row: ResponsibilityJoinRow): string {
-  const item = Array.isArray(row.playbook_items) ? row.playbook_items[0] : row.playbook_items;
-  return item?.name ?? row.outcome_key.replace(/[._]/g, " ");
-}
-
-function memberStatusLabel(status: HouseholdMember["status"], t: Translate): string {
-  return status === "invited" ? t("family.status.invitedLong") : t("family.status.inactive");
-}
-
-function responsibilitiesFor(memberId: string, rows: readonly ResponsibilityJoinRow[]) {
-  return {
-    owned: rows.filter((row) => row.primary_member_id === memberId),
-    backup: rows.filter((row) => row.backup_member_id === memberId),
-  };
-}
-
-/** What a family member's row opens onto: what they own, and what they back up. */
-function MemberActivities({ owned, backup, t }: { owned: readonly ResponsibilityJoinRow[]; backup: readonly ResponsibilityJoinRow[]; t: Translate }) {
-  if (owned.length === 0 && backup.length === 0) {
-    return <p className="text-xs text-[var(--wh-foreground-muted)]">{t("homeScreen.noResponsibilities")}</p>;
-  }
-
-  return (
-    <div className="space-y-2">
-      {owned.length > 0 ? (
-        <ul className="space-y-1.5">
-          {owned.map((row) => {
-            const presentation = iconForOutcome(row.outcome_key);
-            const item = Array.isArray(row.playbook_items) ? row.playbook_items[0] : row.playbook_items;
-            const frequency = cadenceLabel(item?.cadence);
-            return (
-              <li key={row.outcome_key}>
-                {/* Opens the same detail this outcome shows on its own
-                    screen (rule 13 keeps this from becoming a second, partial
-                    editor here) — never a dead end. */}
-                <Link
-                  href={`/household/responsibilities?outcome=${encodeURIComponent(row.outcome_key)}`}
-                  className="flex items-center gap-2.5 rounded-[var(--wh-radius-sm)] py-0.5 transition-colors hover:bg-[var(--wh-surface-muted)]"
-                >
-                  <IconTile icon={presentation.icon} tone={presentation.tone} size="sm" />
-                  <span className="min-w-0 flex-1">
-                    <span className="block text-xs font-medium">{outcomeTitle(row)}</span>
-                    <span className="block text-[0.6875rem] text-[var(--wh-foreground-subtle)]">
-                      {t(`manage.aiModeShort.${row.ai_mode}`)}
-                      {frequency ? ` · ${frequency}` : ""}
-                    </span>
-                  </span>
-                  <ChevronRight aria-hidden className="size-3.5 shrink-0 text-[var(--wh-foreground-subtle)]" />
-                </Link>
-              </li>
-            );
-          })}
-        </ul>
-      ) : null}
-      {backup.length > 0 ? (
-        <p className="text-[0.6875rem] text-[var(--wh-foreground-subtle)]">
-          {t("homeScreen.backsUp")}{" "}
-          {backup.map((row, index) => (
-            <span key={row.outcome_key}>
-              {index > 0 ? ", " : ""}
-              <Link
-                href={`/household/responsibilities?outcome=${encodeURIComponent(row.outcome_key)}`}
-                className="underline-offset-2 hover:underline"
-              >
-                {outcomeTitle(row)}
-              </Link>
-            </span>
-          ))}
-        </p>
-      ) : null}
-    </div>
-  );
-}
 
 /**
  * A calendar event in Today's focus, opening onto its full time range and
@@ -326,7 +220,7 @@ export function HomeDashboard({ session }: { session: Session }) {
 }
 
 async function DashboardBody({ session, now }: { session: Session; now: Date }) {
-  const { supabase, membership, view, secondary } = session;
+  const { supabase, membership, view } = session;
   const { t } = session.locale;
   const householdId = membership.household.id;
   const timezone = membership.household.timezone;
@@ -337,71 +231,23 @@ async function DashboardBody({ session, now }: { session: Session; now: Date }) 
 
   const todayIso = now.toISOString().slice(0, 10);
 
-  // The same three tables the Househelper screen reads, so "Expected today"
-  // here means the same thing it means there. Started with the first wave
-  // (three small reads) rather than after it, and only used once there is a
-  // helper to say anything about.
-  const helperReads = Promise.all([
-    (async (): Promise<HelperProfileRow[]> => {
-      try {
-        const { data } = await supabase
-          .from("helper_profiles")
-          .select("member_id, engagement, started_on")
-          .eq("household_id", householdId);
-        return (data as HelperProfileRow[] | null) ?? [];
-      } catch {
-        return [];
-      }
-    })(),
-    (async (): Promise<AvailabilityWindowRow[]> => {
-      try {
-        const { data } = await supabase
-          .from("member_availability")
-          .select("member_id, day_of_week")
-          .eq("household_id", householdId);
-        return (data as AvailabilityWindowRow[] | null) ?? [];
-      } catch {
-        return [];
-      }
-    })(),
-    (async (): Promise<AvailabilityExceptionRow[]> => {
-      try {
-        const { data } = await supabase
-          .from("availability_exceptions")
-          .select("member_id, on_date, available, reason")
-          .eq("household_id", householdId)
-          .gte("on_date", todayIso)
-          .order("on_date");
-        return (data as AvailabilityExceptionRow[] | null) ?? [];
-      } catch {
-        return [];
-      }
-    })(),
-  ]);
-
   // Events and meals are read once per request, shared with the cat's
   // thought (performance audit B4): the agenda keeps its own rows of them and
   // the next two weeks below are the events still to end within them.
   const shared = homeRows(supabase, householdId, membership.household.timezone, now.getTime());
   const fortnight = now.getTime() + 14 * 86_400_000;
-  // Members, pets and responsibilities are read once: this screen shows them
-  // and guided setup's progress is worked out from the same rows (audit B7).
+  // Members are read once: this screen shows them and guided setup's
+  // progress is worked out from the same rows (audit B7). Pets, responsibilities
+  // and helper availability are only guided setup's, so only an Admin reads them.
   // Setup gets the reads as they are, so a read that fails hides its card as
   // before rather than showing progress from an empty list.
   const membersRead = listMembers(supabase, householdId, membership.household.ownerMemberId);
-  const petsRead = listPets(supabase, householdId);
-  // The same join the Responsibilities and Househelper screens read, so
-  // "3 responsibilities" here means the same three rows those screens show.
-  const responsibilitiesRead: Promise<ResponsibilityJoinRow[]> = Promise.resolve(
-    supabase
-      .from("responsibilities")
-      .select("outcome_key, primary_member_id, backup_member_id, ai_mode, playbook_items(name, cadence)")
-      .eq("household_id", householdId),
-  ).then(({ data, error }) => {
-    if (error) throw new Error(`responsibilities failed: ${error.code ?? "unknown"}`);
-    return ((data as ResponsibilityJoinRow[] | null) ?? []).map((row) => ({ ...row, ai_mode: asAutonomyMode(row.ai_mode) }));
-  });
-  const [agenda, members, upcoming, setupFacts, onboarding, responsibilityRows, pets] = await Promise.all([
+  const petsRead = manages ? listPets(supabase, householdId) : null;
+  const responsibilitiesRead = manages ? readResponsibilities(supabase, householdId) : null;
+  const helperReads = manages ? readHelperAvailability(supabase, householdId, todayIso) : null;
+  // Setup may stop before it awaits these; a failed read is then not an unhandled rejection.
+  for (const read of [petsRead, responsibilitiesRead, helperReads]) read?.catch(() => undefined);
+  const [agenda, members, upcoming, setupFacts, onboarding] = await Promise.all([
     householdAgenda(supabase, householdId, view, { events: shared.events, meals: shared.meals }),
     membersRead.catch(() => []),
     shared.events
@@ -409,7 +255,7 @@ async function DashboardBody({ session, now }: { session: Session; now: Date }) 
       .catch(() => []),
     manages ? loadSetupFacts(supabase, membership.household).catch(() => null) : Promise.resolve(null),
     // Guided setup still under way (story 02-009): its own resume row.
-    manages
+    manages && petsRead && responsibilitiesRead && helperReads
       ? loadOnboardingProgress(supabase, householdId, {
           members: membersRead,
           pets: petsRead,
@@ -417,14 +263,9 @@ async function DashboardBody({ session, now }: { session: Session; now: Date }) 
           availability: helperReads.then(([, windows]) => windows),
         }).catch(() => null)
       : Promise.resolve(null),
-    responsibilitiesRead.catch(() => [] as ResponsibilityJoinRow[]),
-    // The household's pets, under the family on Home (the Family screen's own rows).
-    petsRead.catch(() => []),
   ]);
 
   const setup = setupFacts ? localizeSetup(assessSetup(setupFacts), t) : null;
-  const responsibilities = responsibilityRows;
-  const days = weekdayNames(session.locale.format.locale, session.locale.preferences.language);
   // The domains' own names and their quiet counts, in the reader's words
   // (the agenda's English `label`/`meta` stay the record).
   const domainName = (key: DomainSummary["key"]) => t(`homeScreen.domain.${key}`);
@@ -460,19 +301,6 @@ async function DashboardBody({ session, now }: { session: Session; now: Date }) 
   const memberName = (id: string) => members.find((member) => member.id === id)?.displayName ?? null;
   const momentGoing = nextMoment ? eventGoing(nextMoment, memberName, t, session.locale.format.locale) : { names: [], words: "" };
 
-  // The six everyday domains, in the order a household actually reaches for
-  // them — responsibilities/school/meals/groceries/bills/upkeep. Househelper,
-  // Health and HomeSend keep their own cards/pills elsewhere on Home rather
-  // than repeating here.
-  const DOMAIN_TILE_ORDER = ["responsibilities", "school", "meals", "groceries", "bills", "upkeep"] as const;
-  const domainTiles = DOMAIN_TILE_ORDER.map((key) => secondary.find((item) => item.key === key)).filter(
-    (item): item is (typeof secondary)[number] => item !== undefined,
-  );
-  // Helpers have their own screen and their own relationship to the home;
-  // "family status" means the family, and househelp is its own card below.
-  const family = members.filter((member) => member.memberType !== "helper");
-  const helpers = members.filter((member) => member.memberType === "helper");
-
   // Which domain each notable assessment came from, so a Today's-focus row
   // can carry that domain's own colour badge (rule 3: domain colour, never
   // invented). Built from the same per-domain reads `householdAgenda`
@@ -483,11 +311,6 @@ async function DashboardBody({ session, now }: { session: Session; now: Date }) 
   for (const domain of agenda.domains) {
     for (const need of domain.needs) domainBySubject.set(need.subjectKey, domain.key);
   }
-
-  const [helperProfiles, helperWindows, helperExceptions] =
-    helpers.length > 0
-      ? await helperReads
-      : ([[], [], []] as [HelperProfileRow[], AvailabilityWindowRow[], AvailabilityExceptionRow[]]);
 
   // What each of the four counts opens onto: the real entries behind the
   // number, never more of them invented for the panel than the count itself
@@ -618,198 +441,6 @@ async function DashboardBody({ session, now }: { session: Session; now: Date }) 
           place onto its real entries (rule 21) instead of only linking away. */}
       <ExpandableMetricGrid pairs metrics={metrics} />
 
-      {family.length > 0 ? (
-        <Card className="wh-rise p-2" style={{ "--wh-rise-delay": "30ms" } as React.CSSProperties}>
-          <div className="mb-1 flex items-center justify-between gap-3 px-2 pt-2">
-            <h2 className="text-base font-semibold tracking-tight">{t("home.familyStatus")}</h2>
-            <PillLink href="/family" tone="quiet">
-              {t("homeScreen.seeAll")}
-            </PillLink>
-          </div>
-          {/* A row each, opening in place onto what that person owns and
-              backs up — the same responsibilities the Responsibilities
-              screen lists, read from here instead of a link the Family
-              screen did not actually honour. */}
-          <ul className="divide-y divide-[var(--wh-border)]">
-            {family.map((member) => {
-              const { owned, backup } = responsibilitiesFor(member.id, responsibilities);
-              return (
-                <ExpandableRow
-                  key={member.id}
-                  summary={
-                    <>
-                      <Avatar name={member.displayName} size="md" imageUrl={member.avatarUrl} />
-                      <span className="min-w-0 flex-1">
-                        <span className="block text-sm font-medium">{member.displayName}</span>
-                        <span className="block text-xs text-[var(--wh-foreground-subtle)]">
-                          {describeRoles(member.roles, member.isOwner)}
-                          {member.status !== "active" ? ` · ${memberStatusLabel(member.status, t)}` : ""}
-                          {owned.length > 0 ? ` · ${t("homeScreen.responsibilities", { count: owned.length })}` : ""}
-                        </span>
-                      </span>
-                    </>
-                  }
-                >
-                  <MemberActivities owned={owned} backup={backup} t={t} />
-                </ExpandableRow>
-              );
-            })}
-          </ul>
-        </Card>
-      ) : null}
-
-      {/* The pets, after the people: the same row and panel the Family
-          screen shows, opening in place (rule 21); changes stay on Family. */}
-      {pets.length > 0 ? (
-        <Card className="wh-rise p-2" style={{ "--wh-rise-delay": "38ms" } as React.CSSProperties}>
-          <div className="mb-1 flex items-center justify-between gap-3 px-2 pt-2">
-            <h2 className="text-base font-semibold tracking-tight">{t("family.pets")}</h2>
-            <PillLink href="/family#pets" tone="quiet">
-              {t("homeScreen.seeAll")}
-            </PillLink>
-          </div>
-          <ul className="divide-y divide-[var(--wh-border)]">
-            {pets.map((pet) => (
-              <ExpandableRow
-                key={pet.id}
-                summary={
-                  <>
-                    {pet.photoUrl ? <Avatar name={pet.name} size="md" imageUrl={pet.photoUrl} /> : <IconTile icon={PawPrint} tone="care" />}
-                    <span className="min-w-0 flex-1">
-                      <span className="block text-sm font-medium">{pet.name}</span>
-                      <span className="block text-xs text-[var(--wh-foreground-subtle)] first-letter:uppercase">{pet.species}</span>
-                    </span>
-                  </>
-                }
-              >
-                <PetDetail pet={pet} timezone={timezone} editable={false} householdId={householdId} />
-              </ExpandableRow>
-            ))}
-          </ul>
-        </Card>
-      ) : null}
-
-      {/* Helpers below the family, and separate from it: they are part of
-          how the home runs without being part of the family (the same
-          separation the Family screen makes). */}
-      {helpers.length > 0 ? (
-        <Card className="wh-rise p-2" style={{ "--wh-rise-delay": "45ms" } as React.CSSProperties}>
-          <div className="mb-1 flex items-center justify-between gap-3 px-2 pt-2">
-            <h2 className="text-base font-semibold tracking-tight">{t("home.househelp")}</h2>
-            <PillLink href="/househelper" tone="quiet">
-              {t("family.manage")}
-            </PillLink>
-          </div>
-          <ul className="divide-y divide-[var(--wh-border)]">
-            {helpers.map((helper) => {
-              const profile = helperProfiles.find((row) => row.member_id === helper.id);
-              const windows = helperWindows.filter((row) => row.member_id === helper.id);
-              const todayException = helperExceptions.find(
-                (row) => row.member_id === helper.id && row.on_date === todayIso,
-              );
-              const expected = todayException ? todayException.available : windows.some((row) => row.day_of_week === now.getDay());
-              const nextAbsence = helperExceptions.find(
-                (row) => row.member_id === helper.id && !row.available && row.on_date > todayIso,
-              );
-              const { owned } = responsibilitiesFor(helper.id, responsibilities);
-              return (
-                <ExpandableRow
-                  key={helper.id}
-                  summary={
-                    <>
-                      <Avatar name={helper.displayName} size="md" imageUrl={helper.avatarUrl} badge="🤝" />
-                      <span className="min-w-0 flex-1">
-                        <span className="block text-sm font-medium">{helper.displayName}</span>
-                        <span className="block text-xs text-[var(--wh-foreground-subtle)]">
-                          {profile ? t(`homeScreen.engagement.${profile.engagement}`) : t("home.househelp")}
-                          {profile?.started_on ? ` · ${t("homeScreen.helperSince", { date: formatDate(timezone, new Date(profile.started_on)) })}` : ""}
-                        </span>
-                      </span>
-                      <Badge tone={expected ? "handled" : "neutral"}>
-                        {expected ? t("homeScreen.helper.expected") : todayException ? t("homeScreen.helper.away") : t("homeScreen.helper.notToday")}
-                      </Badge>
-                    </>
-                  }
-                >
-                  <div className="space-y-2.5">
-                    <div>
-                      <p className="mb-1 text-[0.6875rem] font-semibold tracking-wide text-[var(--wh-foreground-subtle)] uppercase">
-                        {t("homeScreen.helper.usualDays")}
-                      </p>
-                      <ul className="flex flex-wrap gap-1">
-                        {days.map((day, index) => {
-                          const on = windows.some((row) => row.day_of_week === index);
-                          return (
-                            <li
-                              key={index}
-                              className={cn(
-                                "grid h-7 min-w-7 place-items-center rounded-full px-1 text-[0.625rem] font-semibold",
-                                on
-                                  ? "bg-[var(--wh-primary)] text-[var(--wh-primary-foreground)]"
-                                  : "bg-[var(--wh-surface-muted)] text-[var(--wh-foreground-subtle)]",
-                              )}
-                            >
-                              {day}
-                            </li>
-                          );
-                        })}
-                      </ul>
-                    </div>
-                    <div>
-                      <p className="mb-1 text-[0.6875rem] font-semibold tracking-wide text-[var(--wh-foreground-subtle)] uppercase">
-                        {t("homeScreen.helper.looksAfter")}
-                      </p>
-                      {owned.length === 0 ? (
-                        <p className="text-xs text-[var(--wh-foreground-muted)]">{t("homeScreen.noResponsibilities")}</p>
-                      ) : (
-                        <ul className="flex flex-wrap gap-1.5">
-                          {owned.map((row) => (
-                            <li
-                              key={row.outcome_key}
-                              className="rounded-[var(--wh-radius-pill)] bg-[var(--wh-surface-muted)] px-2.5 py-1 text-xs font-medium"
-                            >
-                              {outcomeTitle(row)}
-                            </li>
-                          ))}
-                        </ul>
-                      )}
-                    </div>
-                    {nextAbsence ? (
-                      <p className="flex items-center gap-1.5 text-xs text-[var(--wh-foreground-muted)]">
-                        <CalendarOff aria-hidden className="size-3.5 shrink-0" />
-                        {t("homeScreen.helper.awayOn", { date: formatDate(timezone, new Date(nextAbsence.on_date), "long") })}
-                        {nextAbsence.reason ? ` — ${nextAbsence.reason}` : ""}
-                      </p>
-                    ) : null}
-                  </div>
-                </ExpandableRow>
-              );
-            })}
-          </ul>
-        </Card>
-      ) : null}
-
-      {handled.length > 0 ? (
-        <Card
-          className="wh-rise border-[var(--wh-handled)]/40 bg-[var(--wh-handled-soft)]/70 p-4"
-          style={{ "--wh-rise-delay": "60ms" } as React.CSSProperties}
-        >
-          <div className="mb-3 flex items-start justify-between gap-3">
-            <div className="flex min-w-0 items-start gap-2.5">
-              <Sparkles aria-hidden className="mt-0.5 size-5 shrink-0 text-[var(--wh-handled)]" />
-              <div className="min-w-0">
-                <h2 className="text-base font-semibold tracking-tight">{t("home.handled")}</h2>
-                <p className="text-xs text-[var(--wh-foreground-muted)]">{t("home.handledLede")}</p>
-              </div>
-            </div>
-            <PillLink href="/calendar?view=day" tone="quiet">
-              {t("homeScreen.viewAll")}
-            </PillLink>
-          </div>
-          <HandledList items={handled.slice(0, 4)} />
-        </Card>
-      ) : null}
-
       {/* Today's focus and the family moment: each full width. Both are
           primary reading rather than shortcuts, so neither is ever squeezed
           into half a row on a phone (rule 19: primary information is a
@@ -927,35 +558,24 @@ async function DashboardBody({ session, now }: { session: Session; now: Date }) 
         </Card>
       </div>
 
-      {domainTiles.length > 0 ? (
-        <section className="wh-rise" style={{ "--wh-rise-delay": "180ms" } as React.CSSProperties}>
-          <SectionHeader
-            title={t("homeScreen.yourHousehold")}
-            action={
-              <PillLink href="/more" tone="quiet">
-                {t("homeScreen.customise")}
-              </PillLink>
-            }
-          />
-          {/* DomainGrid is already two to a row on a phone — the shortcut
-              grid rule 19 describes. */}
-          <DomainGrid>
-            {domainTiles.slice(0, 6).map((item) => {
-              const domain = agenda.domains.find((entry) => entry.href === item.href);
-              return (
-                <DomainCard
-                  key={item.key}
-                  href={item.href}
-                  icon={DOMAIN_ICONS[item.icon]}
-                  tone={item.tone}
-                  title={item.label}
-                  description={item.purpose}
-                  meta={domain ? (domain.needs.length > 0 ? t("homeScreen.domainNeedYou", { count: domain.needs.length }) : domain.checked > 0 ? t("homeScreen.allOnTrack") : undefined) : undefined}
-                />
-              );
-            })}
-          </DomainGrid>
-        </section>
+      {handled.length > 0 ? (
+        <Card
+          className="wh-rise border-[var(--wh-handled)]/40 bg-[var(--wh-handled-soft)]/70 p-4"
+        >
+          <div className="mb-3 flex items-start justify-between gap-3">
+            <div className="flex min-w-0 items-start gap-2.5">
+              <Sparkles aria-hidden className="mt-0.5 size-5 shrink-0 text-[var(--wh-handled)]" />
+              <div className="min-w-0">
+                <h2 className="text-base font-semibold tracking-tight">{t("home.handled")}</h2>
+                <p className="text-xs text-[var(--wh-foreground-muted)]">{t("home.handledLede")}</p>
+              </div>
+            </div>
+            <PillLink href="/calendar?view=day" tone="quiet">
+              {t("homeScreen.viewAll")}
+            </PillLink>
+          </div>
+          <HandledList items={handled.slice(0, 4)} />
+        </Card>
       ) : null}
 
       <QuoteCard>{t("homeScreen.quote")}</QuoteCard>

@@ -24,7 +24,7 @@ import { CollapsibleSection } from "@wonderhome/core/ui/collapsible-section";
 import { ExpandableRow } from "@wonderhome/core/ui/expandable-row";
 import { HomeIllustration } from "@wonderhome/core/ui/home-illustration";
 import { IconTile } from "@wonderhome/core/ui/icon-tile";
-import { PillLink } from "@wonderhome/core/ui/pill";
+import { Badge, PillLink } from "@wonderhome/core/ui/pill";
 import { ScriptAccent } from "@wonderhome/core/ui/script-accent";
 import { SectionHeader } from "@wonderhome/core/ui/section-header";
 import { EmptyState } from "@wonderhome/core/ui/states";
@@ -36,6 +36,7 @@ import { FamilyNeedAction, SettleEventPill, type FamilyNeedLabels } from "../_co
 import { listWorkPlaces } from "@wonderhome/core/household/work-place";
 import { MemberDetail } from "../_components/member-detail";
 import { PetDetail } from "../_components/pet-detail";
+import { readHelperAvailability, readResponsibilities, responsibilitiesFor } from "../_lib/family-reads";
 import { eventGoing, eventWhen } from "../_lib/event-when";
 import { describeRoles } from "../_lib/member-role";
 import { describeRelationships, describeSuggestions, relationsLine, relationshipWords } from "../_lib/relationship-words";
@@ -82,7 +83,7 @@ export default async function FamilyPage() {
   const timezone = membership.household.timezone;
   const now = new Date();
 
-  const [members, entitlement, familyRead, integrations, pets, enrolments, emails, offices, phones, relationships, whereabouts, knownPlaces] = await Promise.all([
+  const [members, entitlement, familyRead, integrations, pets, enrolments, emails, offices, phones, relationships, whereabouts, knownPlaces, responsibilityRows, helperReads] = await Promise.all([
     listMembers(supabase, householdId, membership.household.ownerMemberId).catch(() => []),
     may(supabase, householdId, "family.events"),
     // Every upcoming event and what needs a person, read once and alongside
@@ -102,7 +103,13 @@ export default async function FamilyPage() {
     // Who shares where they are, and the positions this viewer may see (adults: everyone sharing; others: their own).
     loadLocations(supabase, householdId).catch(() => ({ sharing: [], locations: [] })),
     loadKnownPlaces(supabase, householdId, t("location.home")).catch(() => []),
+    // The same join the Responsibilities screen reads, so a member's count is the same rows it lists.
+    readResponsibilities(supabase, householdId).catch(() => []),
+    // The three tables the Househelper screen reads, so "Expected today" means the same thing there.
+    readHelperAvailability(supabase, householdId, now.toISOString().slice(0, 10)),
   ]);
+  const [, helperWindows, helperExceptions] = helperReads;
+  const todayIso = now.toISOString().slice(0, 10);
   const admin = isHouseholdAdmin(membership);
   // What an Admin needs to add and relate people: pending invitations and the guardian links suggestions come from.
   const [invitations, guardianLinks] = admin
@@ -167,6 +174,14 @@ export default async function FamilyPage() {
 
   const familyMembers = members.filter((member) => member.memberType !== "helper");
   const helpers = members.filter((member) => member.memberType === "helper");
+  // Whether a househelper is expected today: an exception for today wins, else their usual days.
+  const todayException = (id: string) => helperExceptions.find((row) => row.member_id === id && row.on_date === todayIso);
+  const expectedToday = (id: string) => {
+    const exception = todayException(id);
+    return exception ? exception.available : helperWindows.some((row) => row.member_id === id && row.day_of_week === now.getDay());
+  };
+  const expectedLabel = (id: string) =>
+    expectedToday(id) ? t("homeScreen.helper.expected") : todayException(id) ? t("homeScreen.helper.away") : t("homeScreen.helper.notToday");
   const needs = agenda ? [...agenda.events, ...agenda.conflicts, ...agenda.gifts] : [];
   // A family moment is shared family time (`isFamilyMoment`), never just the next protected event.
   const moment = events.find((event) => event.protected && isFamilyMoment(event)) ?? events.find((event) => isFamilyMoment(event)) ?? null;
@@ -282,6 +297,7 @@ export default async function FamilyPage() {
                           <span className="block text-xs text-[var(--wh-foreground-subtle)]">
                             {describeRoles(member.roles, member.isOwner)}
                             {member.status === "invited" ? ` · ${t("family.status.invited")}` : member.id === membership.memberId ? ` · ${t("family.you")}` : ""}
+                            {responsibilitiesFor(member.id, responsibilityRows).owned.length > 0 ? ` · ${t("homeScreen.responsibilities", { count: responsibilitiesFor(member.id, responsibilityRows).owned.length })}` : ""}
                           </span>
                           {whereIs(member.id) ? (
                             <span className={`mt-0.5 flex items-center gap-1 text-xs ${whereIs(member.id)!.fresh ? "text-[var(--wh-foreground-muted)]" : "text-[var(--wh-foreground-subtle)]"}`}>
@@ -466,6 +482,7 @@ export default async function FamilyPage() {
                               {member.status === "invited" ? `${t("family.status.invited")} · ${t("role.househelper")}` : t("role.househelper")}
                             </span>
                           </span>
+                          <Badge tone={expectedToday(member.id) ? "handled" : "neutral"}>{expectedLabel(member.id)}</Badge>
                         </>
                       }
                     >
