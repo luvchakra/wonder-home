@@ -20,7 +20,7 @@ Three gates keep the perf passes from eroding. All run on GitHub Actions, never 
 - **Gated:** a relation listed in `indexed` must not be sequentially scanned.
 - **Very loose:** execution time ≤ 2000 ms, 4× the 500 ms target, because a shared runner is noisy.
 
-Known gaps are recorded with `known` in `perf/queries.mjs`, not hidden. Today: `family_events` and `gift_plans` are sequentially scanned because their only household indexes are partial (`status in …`) and `listEvents` / the gift read do not filter on status. Fix by a plain `(household_id, starts_at)` index or a status filter, then move the relation to `indexed`.
+Known gaps are recorded with `known` in `perf/queries.mjs`, not hidden. Today there are none: `family_events (household_id, starts_at)` and `gift_plans (household_id, needed_by)` are plain indexes (migration `20261029220000`), and both reads are in `indexed`.
 
 **Add a query:** add `{ id, indexed, known?, sql }` to `perf/queries.mjs` (the SQL shape PostgREST builds for the repository read; `:household` is the measured household), run `npm run budget:queries -- --update`, and commit both files. **Raise a cap** only the same way, with the reason in the PR. Follow-ups not yet covered: finance, health, school and chat reads; member lists; writes (`mark_bought`, `adjust_shopping_entry`).
 
