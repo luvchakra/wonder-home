@@ -409,7 +409,7 @@ export const helpDe: AreaCatalog<typeof helpEn> = {
   "help.guide.connections.title": "Verbundene Konten, WhatsApp und Sprachassistenten",
   "help.guide.connections.summary": "Was dein Haushalt verbinden kann, und was nie über eine Verbindung läuft.",
   "help.guide.connections.body.1":
-    "Einstellungen → Verbindungen listet auf, was dein Haushalt verbinden kann – Schule, Kalender, E-Mail, Einkaufen, Wetter und Geräte im Haus –, und sagt klar, wenn etwas für dein WonderHome noch nicht verfügbar ist, statt eine Schaltfläche anzubieten, die nichts tut. Verbinden ist Sache eines Admins.",
+    "Einstellungen → Verbindungen zeigt alles, was dein Haushalt verbinden kann – Schule, WhatsApp, Kalender, E-Mail, Einkaufen, Wetter und Geräte im Haus –, jeweils als eigene Karte, die du öffnest, um die Details dieser Verbindung zu sehen. Es sagt klar, wenn etwas von demjenigen freigeschaltet wurde, der dein WonderHome betreibt, und wenn etwas noch nicht verfügbar ist, statt eine Schaltfläche anzubieten, die nichts tut. Das Verbinden derjenigen, die du selbst verbinden kannst, ist Sache eines Admins.",
   "help.guide.connections.body.2":
     "WonderHome speichert nie dein Passwort für einen anderen Dienst. Importierte Kalendereinträge werden nie als geschützte Familienzeit oder als bestätigt markiert – das entscheidest du –, und ein privater Eintrag kommt nur als belegte Zeit an, ohne Titel oder Ort.",
   "help.guide.connections.body.3":

@@ -409,7 +409,7 @@ export const helpEs: AreaCatalog<typeof helpEn> = {
   "help.guide.connections.title": "Cuentas conectadas, WhatsApp y asistentes de voz",
   "help.guide.connections.summary": "Qué puede conectar tu hogar y qué nunca pasa por una conexión.",
   "help.guide.connections.body.1":
-    "Ajustes → Conexiones enumera lo que tu hogar puede conectar —colegio, calendario, correo, compra, tiempo y dispositivos del hogar— y dice claramente cuándo uno todavía no está disponible para tu WonderHome, en lugar de ofrecer un botón que no hace nada. Conectar depende de un Admin.",
+    "Ajustes → Conexiones muestra cada cosa que tu hogar puede conectar —colegio, WhatsApp, calendario, correo, compra, tiempo y dispositivos del hogar— como su propia tarjeta que abres para ver los detalles de esa conexión. Dice claramente cuándo una la activa quien gestiona tu WonderHome, y cuándo una todavía no está disponible, en lugar de ofrecer un botón que no hace nada. Conectar las que te corresponde conectar depende de un Admin.",
   "help.guide.connections.body.2":
     "WonderHome nunca guarda tu contraseña de otro servicio. Las entradas de calendario importadas nunca se marcan como tiempo familiar protegido ni como confirmadas —eso lo decides tú—, y una entrada privada llega solo como tiempo ocupado, sin título ni lugar.",
   "help.guide.connections.body.3":
