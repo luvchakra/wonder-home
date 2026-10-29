@@ -11,11 +11,11 @@ in `docs/progress/`; for the running log of what changed when, `tracking/PROGRES
 
 ## The whole picture
 
-**415 of 452 stories done — 91.8%**
+**416 of 453 stories done — 91.8%**
 
 | Status | Stories |
 |---|---:|
-| Done | 415 |
+| Done | 416 |
 | In Progress | 11 |
 | Blocked | 1 |
 | Not Started | 21 |
@@ -41,7 +41,7 @@ in `docs/progress/`; for the running log of what changed when, `tracking/PROGRES
 | 13 Maintenance, Laundry & Pet Care | `█████████░` | 10 | 11 | 1 in progress |
 | 14 AI Orchestration & Learning | `████████░░` | 48 | 56 | 1 in progress, 4 not started, 3 deferred |
 | 15 Privacy, Security & Governance | `████████░░` | 11 | 13 | 2 not started |
-| 16 Platform Admin & Operations | `██████████` | 8 | 8 | — |
+| 16 Platform Admin & Operations | `██████████` | 9 | 9 | — |
 | 17 External Integrations | `█████████░` | 10 | 11 | 1 not started |
 | 18 API & Developer Platform | `██████████` | 8 | 8 | — |
 | 19 Testing, Observability & Production | `██████████` | 8 | 8 | — |
@@ -481,7 +481,7 @@ in `docs/progress/`; for the running log of what changed when, `tracking/PROGRES
 
 ### 16 — Platform Admin & Operations
 
-8 of 8 done `██████████`
+9 of 9 done `██████████`
 
 | Story | Priority | Status | Notes |
 |---|---|---|---|
@@ -493,6 +493,7 @@ in `docs/progress/`; for the running log of what changed when, `tracking/PROGRES
 | `16-006` AI operations | P0 | Done | Failed-run + tool-call monitoring; reuses module 14's prompt-free schema |
 | `16-007` Privacy requests | P1 | Done | `fulfillMaturedDeletions` (the real deletion job 15-007 never built — scrubs a member's PII, keeps the row and its references readable); `privacy-requests.ts` gives staff list/refuse (operator/owner only), wired into `/platform/retention`'s existing sweep |
 | `16-008` Feature flags/audit | P1 | Done | `feature-flags.ts`: a reason-coded, audited `setHouseholdFeatureFlag` (operator/owner only, following 16-005's exact shape) turns a staged capability on or off for one household; a household reads its own flags via RLS, matching support-access grants' "the family this concerns can see it" precedent. `audit-log.ts`: `listPlatformAuditEvents` widens who may read the already-redacted `audit_events` rows fleet-wide, never what is safe to show |
+| `16-009` Platform admin landing and Performance | P1 | Done | `/platform-admin` landing with section nav (Overview, Performance, Careers); `/platform-admin/performance` shows database, advisor, budget and tip panels, aggregate only, read-only. Staff-only RPC `platform_performance_snapshot` (service role + in-function staff check); tips in `packages/core/src/platform/performance.ts` |
 
 ### 17 — External Integrations
 

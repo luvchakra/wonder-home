@@ -12,6 +12,7 @@
 | 6 | P0 | 16-006 | AI operations | Done | Failed-run + tool-call monitoring; reuses module 14's prompt-free schema |
 | 7 | P1 | 16-007 | Privacy requests | Done | `fulfillMaturedDeletions` (the real deletion job 15-007 never built — scrubs a member's PII, keeps the row and its references readable); `privacy-requests.ts` gives staff list/refuse (operator/owner only), wired into `/platform/retention`'s existing sweep |
 | 8 | P1 | 16-008 | Feature flags/audit | Done | `feature-flags.ts`: a reason-coded, audited `setHouseholdFeatureFlag` (operator/owner only, following 16-005's exact shape) turns a staged capability on or off for one household; a household reads its own flags via RLS, matching support-access grants' "the family this concerns can see it" precedent. `audit-log.ts`: `listPlatformAuditEvents` widens who may read the already-redacted `audit_events` rows fleet-wide, never what is safe to show |
+| 9 | P1 | 16-009 | Platform admin landing and Performance | Done | `/platform-admin` landing with section nav (Overview, Performance, Careers); `/platform-admin/performance` shows database, advisor, budget and tip panels, aggregate only, read-only. Staff-only RPC `platform_performance_snapshot` (service role + in-function staff check); tips in `packages/core/src/platform/performance.ts` |
 
 **Status flow:** `Not Started` → `In Progress` → `Blocked` → `Done`
 
@@ -21,7 +22,7 @@ Implement Platform Admin & Operations as a first-class WonderHome domain. The mo
 ## Epic Map
 
 - **Epic 16-E01 — Privileged Platform Operations:** stories 16-001 through 16-004.
-- **Epic 16-E05 — Plans, AI Operations, Privacy & Feature Controls:** stories 16-005 through 16-008.
+- **Epic 16-E05 — Plans, AI Operations, Privacy & Feature Controls:** stories 16-005 through 16-009.
 
 ## Dependencies
 - `CLAUDE.md`
@@ -208,6 +209,18 @@ alerts .
 - Relevant unit/integration/E2E tests pass.
 - Security/privacy/audit requirements are verified.
 - Story is marked `Done` in this file and `tracking/PROGRESS.md` only after evidence exists.
+
+### Story 16-009 — Platform admin landing and Performance
+**Epic:** Plans, AI Operations, Privacy & Feature Controls
+**Priority:** P1
+**Goal:** Give platform staff one landing page with a nav to its sections, and a read-only Performance section with plain-language statuses and tips (owner, 2026-10-29).
+
+**Acceptance criteria**
+- Staff only (404 for anyone else); aggregate numbers only, never household, member, email, SQL parameters or row contents.
+- Every figure comes from a real source or the section says it is not measured and why.
+- Tips are a deterministic rule table ordered by severity and impact, each linking a plan story.
+
+**Evidence:** `packages/core/src/platform/performance.test.ts`, `scripts/test-platform-performance-rls.mjs`, `docs/progress/2026-10-29-platform-admin-performance.md`.
 
 ## Module Completion Rule
 Complete dependency-ready P0 stories before P1/P2, but do not block unrelated work on unavailable external providers.
