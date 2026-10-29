@@ -814,4 +814,7 @@ export const settingsFr: AreaCatalog<typeof settingsEn> = {
   "notificationCenter.off": "Désactivé pour vous",
   "notificationCenter.householdOff": "Désactivé pour tout le foyer par un administrateur",
   "notificationCenter.householdChannelsOff": "Un administrateur a désactivé certains moyens pour tout le foyer, ils ne sont donc pas proposés ici.",
+  "settingsSearch.placeholder": "Rechercher dans les réglages",
+  "settingsSearch.clear": "Effacer la recherche",
+  "settingsSearch.none": "Aucun réglage ne correspond à « {query} ».",
 };

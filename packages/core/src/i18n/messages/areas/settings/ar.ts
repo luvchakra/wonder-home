@@ -824,4 +824,7 @@ export const settingsAr: AreaCatalog<typeof settingsEn> = {
   "notificationCenter.off": "متوقف لك",
   "notificationCenter.householdOff": "أوقفه مسؤول للمنزل كله",
   "notificationCenter.householdChannelsOff": "أوقف مسؤول بعض طرق الوصول للمنزل كله، لذا لا تظهر هنا.",
+  "settingsSearch.placeholder": "البحث في الإعدادات",
+  "settingsSearch.clear": "مسح البحث",
+  "settingsSearch.none": "لا توجد إعدادات تطابق «{query}».",
 };

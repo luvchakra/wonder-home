@@ -826,4 +826,7 @@ export const settingsEn = {
   "notificationCenter.off": "Off for you",
   "notificationCenter.householdOff": "Turned off for the whole household by an Admin",
   "notificationCenter.householdChannelsOff": "Some ways of reaching people are turned off for the whole household by an Admin, so they are not offered here.",
+  "settingsSearch.placeholder": "Search settings",
+  "settingsSearch.clear": "Clear search",
+  "settingsSearch.none": "No settings match “{query}”.",
 } as const;
