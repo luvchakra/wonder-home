@@ -1,8 +1,8 @@
-import { Store } from "lucide-react";
+import { ShoppingBasket } from "lucide-react";
 
 import { instamartMode } from "@wonderhome/core/commerce/instamart/config";
 import { AppShell } from "@wonderhome/core/shell/app-shell";
-import { PillLink } from "@wonderhome/core/ui/pill";
+import { Badge, PillLink } from "@wonderhome/core/ui/pill";
 import { QuoteCard } from "@wonderhome/core/ui/quote-card";
 
 import { ProviderCard } from "../../_components/provider-card";
@@ -49,6 +49,25 @@ export default async function ConnectionsPage({ searchParams }: { searchParams: 
         .then((result) => (result.data as { status?: string } | null)?.status === "connected", () => false)
     : false;
 
+  const labels = providerCardLabels(t);
+  // Grocery stores WonderHome can order from. A new store is one more entry; the
+  // card's status rolls up from the list. Brand names are never translated.
+  const groceryProviders = instamartReady
+    ? [
+        {
+          id: "instamart",
+          name: "Swiggy Instamart",
+          connected: instamartConnected,
+          note: instamartConnected ? t("settingsHome.instamart.connected") : t("settingsHome.instamart.meta"),
+          action: (
+            <PillLink href="/groceries/order" tone={instamartConnected ? "soft" : "primary"}>
+              {t("nav.item.groceries")}
+            </PillLink>
+          ),
+        },
+      ]
+    : [];
+
   return (
     <AppShell
       active="more"
@@ -68,33 +87,39 @@ export default async function ConnectionsPage({ searchParams }: { searchParams: 
           <WhatsAppSection session={session} connected={connected === "1"} />
           <VoiceAssistantsSection session={session} />
           {managesIntegrations ? <SchoolSection session={session} /> : null}
-          <AccountsSection session={session} />
 
-          {instamartReady ? (
+          {groceryProviders.length > 0 ? (
             <ProviderCard
               id="shopping"
-              icon={Store}
-              tone="home"
-              name="Swiggy Instamart"
+              icon={ShoppingBasket}
+              tone="care"
+              name={t("nav.item.groceries")}
               purpose={t("manage.integrations.purpose.commerce")}
-              status={instamartConnected ? "connected" : "not_connected"}
-              connectable
-              labels={providerCardLabels(t)}
-              action={
-                <PillLink href="/groceries/order" tone={instamartConnected ? "soft" : "primary"}>
-                  {t("nav.item.groceries")}
-                </PillLink>
-              }
+              status={groceryProviders.some((provider) => provider.connected) ? "connected" : "not_connected"}
+              connectable={false}
+              labels={labels}
             >
-              <p className="text-sm text-[var(--wh-foreground-muted)]">
-                {instamartConnected ? t("settingsHome.instamart.connected") : t("settingsHome.instamart.meta")}
-              </p>
+              <ul className="space-y-3">
+                {groceryProviders.map((provider) => (
+                  <li key={provider.id} className="space-y-1.5">
+                    <p className="flex flex-wrap items-center gap-2 text-sm font-semibold">
+                      <span className="break-words">{provider.name}</span>
+                      <Badge tone={provider.connected ? "handled" : "neutral"}>
+                        {provider.connected ? labels.connected : labels.notConnected}
+                      </Badge>
+                    </p>
+                    <p className="text-sm text-[var(--wh-foreground-muted)]">{provider.note}</p>
+                    {provider.action}
+                  </li>
+                ))}
+              </ul>
             </ProviderCard>
           ) : null}
 
           {managesIntegrations ? <CalendarSection session={session} /> : null}
           {managesIntegrations ? <EmailSection session={session} /> : null}
           {managesIntegrations ? <IntegrationsSections session={session} /> : null}
+          <AccountsSection session={session} />
         </div>
 
         <QuoteCard>{t("manage.integrations.quote")}</QuoteCard>

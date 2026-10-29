@@ -1,6 +1,6 @@
 "use client";
 
-import { AlertTriangle, CheckCircle2, DownloadCloud, GraduationCap, PlugZap, Send } from "lucide-react";
+import { AlertTriangle, CheckCircle2, DownloadCloud, PlugZap, Send } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useActionState, useCallback, useEffect, useRef, useState } from "react";
 
@@ -108,65 +108,57 @@ function PortalConnect({ householdId, connections, connectionsHref, labels }: { 
   if (connections.length === 0) {
     return (
       <Card className="p-4">
-        <div className="flex items-start gap-3">
-          <IconTile icon={GraduationCap} tone="school" size="lg" />
-          <div className="min-w-0 flex-1 space-y-3">
-            <p className="text-sm text-[var(--wh-foreground-muted)]">{labels.portalNone}</p>
-            <PillLink href={connectionsHref} tone="primary">{labels.portalManage}</PillLink>
-          </div>
+        <div className="min-w-0 space-y-3">
+          <p className="text-sm text-[var(--wh-foreground-muted)]">{labels.portalNone}</p>
+          <PillLink href={connectionsHref} tone="primary">{labels.portalManage}</PillLink>
         </div>
       </Card>
     );
   }
 
   return (
-    <Card className="p-4">
-      <div className="flex items-start gap-3">
-        <IconTile icon={GraduationCap} tone="school" size="lg" />
-        <div className="min-w-0 flex-1 space-y-3">
-          <Select label={labels.choose} name="connectionPicker" value={selectedId} onChange={(e) => setSelectedId(e.target.value)}>
-            {connections.map((c) => (
-              <option key={c.id} value={c.id}>{c.name}{c.url ? ` · ${c.url.replace(/^https?:\/\//, "")}` : ""}</option>
-            ))}
-          </Select>
+    <Card className="space-y-3 p-4">
+      <Select label={labels.choose} name="connectionPicker" value={selectedId} onChange={(e) => setSelectedId(e.target.value)}>
+        {connections.map((c) => (
+          <option key={c.id} value={c.id}>{c.name}{c.url ? ` · ${c.url.replace(/^https?:\/\//, "")}` : ""}</option>
+        ))}
+      </Select>
 
-          {/* Connect / Connected */}
-          {connected ? (
-            <Badge tone="handled" className="gap-1"><CheckCircle2 aria-hidden className="size-4" /> {labels.connectedBadge}</Badge>
-          ) : (
-            <>
-              {reconnect ? (
-                <Alert tone="attention" className="flex items-start gap-2">
-                  <AlertTriangle aria-hidden className="mt-0.5 size-4 shrink-0" />
-                  <span>{labels.reconnectNeeded}</span>
-                </Alert>
-              ) : null}
-              <form action={connect}>
-                <input type="hidden" name="householdId" value={householdId} />
-                <input type="hidden" name="connectionId" value={selectedId} />
-                <Button type="submit" variant="primary" disabled={connecting || !selectedId} className="gap-2">
-                  <PlugZap aria-hidden className="size-4" /> {labels.connect}
-                </Button>
-              </form>
-              <PollResult phase={connectPoll.phase} state={connectState} okLabel={labels.connectOk} labels={labels} />
-            </>
-          )}
+      {/* Connect / Connected */}
+      {connected ? (
+        <Badge tone="handled" className="gap-1"><CheckCircle2 aria-hidden className="size-4" /> {labels.connectedBadge}</Badge>
+      ) : (
+        <>
+          {reconnect ? (
+            <Alert tone="attention" className="flex items-start gap-2">
+              <AlertTriangle aria-hidden className="mt-0.5 size-4 shrink-0" />
+              <span>{labels.reconnectNeeded}</span>
+            </Alert>
+          ) : null}
+          <form action={connect}>
+            <input type="hidden" name="householdId" value={householdId} />
+            <input type="hidden" name="connectionId" value={selectedId} />
+            <Button type="submit" variant="primary" disabled={connecting || !selectedId} className="gap-2">
+              <PlugZap aria-hidden className="size-4" /> {labels.connect}
+            </Button>
+          </form>
+          <PollResult phase={connectPoll.phase} state={connectState} okLabel={labels.connectOk} labels={labels} />
+        </>
+      )}
 
-          {/* Fetch area */}
-          <div className="rounded-[var(--wh-radius-sm)] border border-[var(--wh-border)] p-3">
-            <p className="text-sm font-medium">{labels.fetchTitle}</p>
-            <p className="text-xs text-[var(--wh-foreground-muted)]">{labels.fetchLede}</p>
-            <form action={fetchNow} className="mt-3">
-              <input type="hidden" name="householdId" value={householdId} />
-              <input type="hidden" name="connectionId" value={selectedId} />
-              <Button type="submit" variant="secondary" disabled={fetching || !selectedId} className="gap-2">
-                <DownloadCloud aria-hidden className="size-4" /> {labels.fetchNow}
-              </Button>
-            </form>
-            <div className="mt-2">
-              <PollResult phase={fetchPoll.phase} state={fetchState} okLabel={labels.fetchOk} labels={labels} />
-            </div>
-          </div>
+      {/* Fetch area */}
+      <div className="rounded-[var(--wh-radius-sm)] border border-[var(--wh-border)] p-3">
+        <p className="text-sm font-medium">{labels.fetchTitle}</p>
+        <p className="text-xs text-[var(--wh-foreground-muted)]">{labels.fetchLede}</p>
+        <form action={fetchNow} className="mt-3">
+          <input type="hidden" name="householdId" value={householdId} />
+          <input type="hidden" name="connectionId" value={selectedId} />
+          <Button type="submit" variant="secondary" disabled={fetching || !selectedId} className="gap-2">
+            <DownloadCloud aria-hidden className="size-4" /> {labels.fetchNow}
+          </Button>
+        </form>
+        <div className="mt-2">
+          <PollResult phase={fetchPoll.phase} state={fetchState} okLabel={labels.fetchOk} labels={labels} />
         </div>
       </div>
     </Card>

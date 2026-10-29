@@ -68,7 +68,7 @@ export const de: Catalog = {
   "connectionsPage.lede": "Alles, womit WonderHome verbunden ist, an einem Ort: für wen es ist, ob es funktioniert und was zu tun ist.",
   "connectionsPage.meta": "WhatsApp, Sprachassistenten, Schule und andere Dienste",
   "connectionsPage.shopping": "Einkaufen",
-  "connectionsPage.accounts": "Websites und Dienste",
+  "connectionsPage.accounts": "Konnektoren",
   "connectionsPage.cal.title": "Abonnierte Kalender",
   "connectionsPage.cal.lede": "Füge einen beliebigen Kalender über seinen Freigabelink hinzu — WonderHome importiert seine Termine schreibgeschützt.",
   "connectionsPage.cal.add": "Kalender hinzufügen",

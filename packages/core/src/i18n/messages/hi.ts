@@ -68,7 +68,7 @@ export const hi: Catalog = {
   "connectionsPage.lede": "WonderHome जिन चीज़ों से जुड़ा है, सब एक जगह: किसके लिए है, काम कर रहा है या नहीं, और करने वाली एक बात।",
   "connectionsPage.meta": "WhatsApp, वॉइस असिस्टेंट, स्कूल और दूसरी सेवाएँ",
   "connectionsPage.shopping": "ख़रीदारी",
-  "connectionsPage.accounts": "वेबसाइटें और सेवाएँ",
+  "connectionsPage.accounts": "कनेक्टर",
   "connectionsPage.cal.title": "सब्सक्राइब किए कैलेंडर",
   "connectionsPage.cal.lede": "किसी भी कैलेंडर को उसके शेयर लिंक से जोड़ें — WonderHome उसके इवेंट केवल-पढ़ने के लिए इम्पोर्ट करता है।",
   "connectionsPage.cal.add": "कैलेंडर जोड़ें",
