@@ -7,7 +7,7 @@ import {
   adminChangePlan,
   subscriptionSnapshot,
 } from "@wonderhome/core/platform/subscriptions";
-import { createAdminClient } from "@wonderhome/core/db/admin";
+import { adminClientFor, adminGrant } from "@wonderhome/core/db/admin-context";
 import { createClient } from "@wonderhome/core/db/server";
 import { requirePlatformAdmin } from "@wonderhome/core/platform/admin";
 
@@ -25,9 +25,9 @@ type Params = { params: Promise<{ householdId: string }> };
 export async function GET(request: Request, { params }: Params) {
   const { householdId } = await params;
 
-  return defineRoute({ authenticate: async () => requirePlatformAdmin(await createClient()) }, async () => {
+  return defineRoute({ authenticate: async () => requirePlatformAdmin(await createClient()) }, async ({ actor }) => {
     const to = new URL(request.url).searchParams.get("to") ?? undefined;
-    return subscriptionSnapshot(createAdminClient(), householdId, to);
+    return subscriptionSnapshot(adminClientFor(adminGrant.platformAdmin(actor, "read a household subscription")), householdId, to);
   })(request);
 }
 
@@ -43,7 +43,7 @@ export async function POST(request: Request, { params }: Params) {
   return defineRoute(
     { input: changeSchema, authenticate: async () => requirePlatformAdmin(await createClient()) },
     async ({ body, actor }) => {
-      const { planKey, assessment } = await adminChangePlan(createAdminClient(), actor, {
+      const { planKey, assessment } = await adminChangePlan(adminClientFor(adminGrant.platformAdmin(actor, "change a household plan")), actor, {
         householdId,
         toPlanKey: body.toPlanKey,
         reasonCode: body.reasonCode,

@@ -11,7 +11,11 @@ decision that shapes later work each earns a note, written before moving on.
 
 | Date | Note |
 |---|---|
+<<<<<<< Updated upstream
 | 2026-10-29 | [SEC-13 pg_net out of public, and a migration-drift guard](2026-10-29-sec13-pg-net-and-migration-drift.md) |
+=======
+| 2026-10-29 | [SEC-04: service-role least privilege — typed `adminClientFor(grant)` wrapper, inventory and lint](2026-10-29-sec-service-role-least-privilege.md) |
+>>>>>>> Stashed changes
 | 2026-10-29 | [Header back arrow goes Home from first-level screens](2026-10-29-back-arrow-goes-home.md) |
 | 2026-10-29 | [PERF-02: consolidate the 63 overlapping permissive RLS policies (advisor 63→0, zero access change)](2026-10-29-perf-consolidate-permissive-policies.md) |
 | 2026-10-29 | [SEC-05/09/06: strict CSP, CSRF origin check, rate-limit alerting and fairness](2026-10-29-sec-csp-csrf-ratelimit.md) |

@@ -1,0 +1,1071 @@
+{
+ "generatedBy": "scripts/lint-service-role.mjs --inventory",
+ "totals": {
+  "files": 97,
+  "rawSites": 108,
+  "wrappedSites": 35,
+  "byClass": {
+   "worker": 9,
+   "secret-read": 7,
+   "household-scoped": 58,
+   "signed-request": 19,
+   "capability-token": 5,
+   "rate-limit": 1,
+   "shared-repository": 8,
+   "audit-write": 1
+  }
+ },
+ "items": [
+  {
+   "file": "apps/portal-worker/src/index.ts",
+   "raw": 1,
+   "lines": [
+    45
+   ],
+   "wrapped": 0,
+   "writes": false,
+   "guess": "worker",
+   "class": "worker"
+  },
+  {
+   "file": "apps/web/app/_lib/careers.ts",
+   "raw": 1,
+   "lines": [
+    26
+   ],
+   "wrapped": 0,
+   "writes": false,
+   "guess": "secret-read",
+   "class": "secret-read"
+  },
+  {
+   "file": "apps/web/app/_lib/hometalk-amaf.ts",
+   "raw": 2,
+   "lines": [
+    638,
+    675
+   ],
+   "wrapped": 0,
+   "writes": true,
+   "guess": "household-scoped",
+   "class": "household-scoped"
+  },
+  {
+   "file": "apps/web/app/_lib/hometalk-gateway.ts",
+   "raw": 1,
+   "lines": [
+    30
+   ],
+   "wrapped": 0,
+   "writes": false,
+   "guess": "household-scoped",
+   "class": "household-scoped"
+  },
+  {
+   "file": "apps/web/app/_lib/hometalk-turn.ts",
+   "raw": 8,
+   "lines": [
+    254,
+    1519,
+    1521,
+    1543,
+    1847,
+    2036,
+    2080,
+    2118
+   ],
+   "wrapped": 0,
+   "writes": true,
+   "guess": "household-scoped",
+   "class": "household-scoped"
+  },
+  {
+   "file": "apps/web/app/_lib/hometalk-welcome.ts",
+   "raw": 2,
+   "lines": [
+    80,
+    120
+   ],
+   "wrapped": 0,
+   "writes": false,
+   "guess": "household-scoped",
+   "class": "household-scoped"
+  },
+  {
+   "file": "apps/web/app/_lib/reminders.ts",
+   "raw": 1,
+   "lines": [
+    30
+   ],
+   "wrapped": 0,
+   "writes": true,
+   "guess": "household-scoped",
+   "class": "household-scoped"
+  },
+  {
+   "file": "apps/web/app/_screens/landing.tsx",
+   "raw": 1,
+   "lines": [
+    103
+   ],
+   "wrapped": 0,
+   "writes": false,
+   "guess": "household-scoped",
+   "class": "household-scoped"
+  },
+  {
+   "file": "apps/web/app/(auth)/actions.ts",
+   "raw": 1,
+   "lines": [
+    52
+   ],
+   "wrapped": 0,
+   "writes": false,
+   "guess": "household-scoped",
+   "class": "household-scoped"
+  },
+  {
+   "file": "apps/web/app/(auth)/calendar-subscription-actions.ts",
+   "raw": 2,
+   "lines": [
+    42,
+    125
+   ],
+   "wrapped": 0,
+   "writes": false,
+   "guess": "household-scoped",
+   "class": "household-scoped"
+  },
+  {
+   "file": "apps/web/app/(auth)/certification-actions.ts",
+   "raw": 2,
+   "lines": [
+    72,
+    132
+   ],
+   "wrapped": 0,
+   "writes": true,
+   "guess": "household-scoped",
+   "class": "household-scoped"
+  },
+  {
+   "file": "apps/web/app/(auth)/child-quiet-actions.ts",
+   "raw": 1,
+   "lines": [
+    43
+   ],
+   "wrapped": 0,
+   "writes": true,
+   "guess": "household-scoped",
+   "class": "household-scoped"
+  },
+  {
+   "file": "apps/web/app/(auth)/connection-actions.ts",
+   "raw": 1,
+   "lines": [
+    204
+   ],
+   "wrapped": 0,
+   "writes": true,
+   "guess": "household-scoped",
+   "class": "household-scoped"
+  },
+  {
+   "file": "apps/web/app/(auth)/developer-actions.ts",
+   "raw": 2,
+   "lines": [
+    40,
+    62
+   ],
+   "wrapped": 0,
+   "writes": false,
+   "guess": "household-scoped",
+   "class": "household-scoped"
+  },
+  {
+   "file": "apps/web/app/(auth)/event-actions.ts",
+   "raw": 1,
+   "lines": [
+    246
+   ],
+   "wrapped": 0,
+   "writes": false,
+   "guess": "household-scoped",
+   "class": "household-scoped"
+  },
+  {
+   "file": "apps/web/app/(auth)/health-record-actions.ts",
+   "raw": 1,
+   "lines": [
+    52
+   ],
+   "wrapped": 0,
+   "writes": true,
+   "guess": "household-scoped",
+   "class": "household-scoped"
+  },
+  {
+   "file": "apps/web/app/(auth)/home-send-actions.ts",
+   "raw": 3,
+   "lines": [
+    141,
+    167,
+    522
+   ],
+   "wrapped": 0,
+   "writes": false,
+   "guess": "household-scoped",
+   "class": "household-scoped"
+  },
+  {
+   "file": "apps/web/app/(auth)/home-send-plan-actions.ts",
+   "raw": 1,
+   "lines": [
+    219
+   ],
+   "wrapped": 0,
+   "writes": false,
+   "guess": "household-scoped",
+   "class": "household-scoped"
+  },
+  {
+   "file": "apps/web/app/(auth)/homebrain-sleep-actions.ts",
+   "raw": 1,
+   "lines": [
+    27
+   ],
+   "wrapped": 0,
+   "writes": false,
+   "guess": "household-scoped",
+   "class": "household-scoped"
+  },
+  {
+   "file": "apps/web/app/(auth)/notification-preferences-actions.ts",
+   "raw": 2,
+   "lines": [
+    190,
+    243
+   ],
+   "wrapped": 0,
+   "writes": true,
+   "guess": "household-scoped",
+   "class": "household-scoped"
+  },
+  {
+   "file": "apps/web/app/(auth)/places-actions.ts",
+   "raw": 1,
+   "lines": [
+    50
+   ],
+   "wrapped": 0,
+   "writes": false,
+   "guess": "household-scoped",
+   "class": "household-scoped"
+  },
+  {
+   "file": "apps/web/app/(auth)/voice-link-actions.ts",
+   "raw": 1,
+   "lines": [
+    55
+   ],
+   "wrapped": 0,
+   "writes": false,
+   "guess": "household-scoped",
+   "class": "household-scoped"
+  },
+  {
+   "file": "apps/web/app/(auth)/weather-actions.ts",
+   "raw": 1,
+   "lines": [
+    39
+   ],
+   "wrapped": 0,
+   "writes": false,
+   "guess": "household-scoped",
+   "class": "household-scoped"
+  },
+  {
+   "file": "apps/web/app/(auth)/whatsapp-actions.ts",
+   "raw": 2,
+   "lines": [
+    51,
+    91
+   ],
+   "wrapped": 0,
+   "writes": false,
+   "guess": "household-scoped",
+   "class": "household-scoped"
+  },
+  {
+   "file": "apps/web/app/ai/page.tsx",
+   "raw": 1,
+   "lines": [
+    211
+   ],
+   "wrapped": 0,
+   "writes": false,
+   "guess": "household-scoped",
+   "class": "household-scoped"
+  },
+  {
+   "file": "apps/web/app/api/v1/billing/webhook/[provider]/route.ts",
+   "raw": 1,
+   "lines": [
+    19
+   ],
+   "wrapped": 0,
+   "writes": false,
+   "guess": "signed-request",
+   "class": "signed-request"
+  },
+  {
+   "file": "apps/web/app/api/v1/billing/webhook/route.ts",
+   "raw": 1,
+   "lines": [
+    17
+   ],
+   "wrapped": 0,
+   "writes": false,
+   "guess": "signed-request",
+   "class": "signed-request"
+  },
+  {
+   "file": "apps/web/app/api/v1/calendar/subscriptions/sync/route.ts",
+   "raw": 1,
+   "lines": [
+    25
+   ],
+   "wrapped": 0,
+   "writes": false,
+   "guess": "worker",
+   "class": "worker"
+  },
+  {
+   "file": "apps/web/app/api/v1/homesend/email/webhook/route.ts",
+   "raw": 1,
+   "lines": [
+    25
+   ],
+   "wrapped": 0,
+   "writes": false,
+   "guess": "signed-request",
+   "class": "signed-request"
+  },
+  {
+   "file": "apps/web/app/api/v1/households/[householdId]/conversation/route.ts",
+   "raw": 2,
+   "lines": [
+    67,
+    71
+   ],
+   "wrapped": 0,
+   "writes": false,
+   "guess": "household-scoped",
+   "class": "household-scoped"
+  },
+  {
+   "file": "apps/web/app/api/v1/households/[householdId]/integrations/smart-home/sync/route.ts",
+   "raw": 0,
+   "lines": [],
+   "wrapped": 1,
+   "writes": false,
+   "guess": "secret-read",
+   "class": "wrapped"
+  },
+  {
+   "file": "apps/web/app/api/v1/households/[householdId]/plan/cancel/route.ts",
+   "raw": 0,
+   "lines": [],
+   "wrapped": 1,
+   "writes": false,
+   "guess": "household-scoped",
+   "class": "wrapped"
+  },
+  {
+   "file": "apps/web/app/api/v1/households/[householdId]/plan/route.ts",
+   "raw": 0,
+   "lines": [],
+   "wrapped": 3,
+   "writes": false,
+   "guess": "household-scoped",
+   "class": "wrapped"
+  },
+  {
+   "file": "apps/web/app/api/v1/households/[householdId]/voice/gemini/session/route.ts",
+   "raw": 0,
+   "lines": [],
+   "wrapped": 1,
+   "writes": false,
+   "guess": "household-scoped",
+   "class": "wrapped"
+  },
+  {
+   "file": "apps/web/app/api/v1/households/[householdId]/voice/gemini/tool/route.ts",
+   "raw": 0,
+   "lines": [],
+   "wrapped": 1,
+   "writes": false,
+   "guess": "household-scoped",
+   "class": "wrapped"
+  },
+  {
+   "file": "apps/web/app/api/v1/households/[householdId]/voice/gemini/transcribe/route.ts",
+   "raw": 0,
+   "lines": [],
+   "wrapped": 1,
+   "writes": false,
+   "guess": "household-scoped",
+   "class": "wrapped"
+  },
+  {
+   "file": "apps/web/app/api/v1/households/[householdId]/webhooks/[webhookId]/route.ts",
+   "raw": 0,
+   "lines": [],
+   "wrapped": 1,
+   "writes": false,
+   "guess": "secret-read",
+   "class": "wrapped"
+  },
+  {
+   "file": "apps/web/app/api/v1/households/[householdId]/webhooks/route.ts",
+   "raw": 0,
+   "lines": [],
+   "wrapped": 1,
+   "writes": false,
+   "guess": "secret-read",
+   "class": "wrapped"
+  },
+  {
+   "file": "apps/web/app/api/v1/intake/share/route.ts",
+   "raw": 2,
+   "lines": [
+    69,
+    85
+   ],
+   "wrapped": 0,
+   "writes": false,
+   "guess": "signed-request",
+   "class": "signed-request"
+  },
+  {
+   "file": "apps/web/app/api/v1/notifications/dispatch/route.ts",
+   "raw": 3,
+   "lines": [
+    55,
+    135,
+    135
+   ],
+   "wrapped": 0,
+   "writes": false,
+   "guess": "worker",
+   "class": "worker"
+  },
+  {
+   "file": "apps/web/app/api/v1/notifications/email-off/route.ts",
+   "raw": 1,
+   "lines": [
+    22
+   ],
+   "wrapped": 0,
+   "writes": false,
+   "guess": "capability-token",
+   "class": "capability-token"
+  },
+  {
+   "file": "apps/web/app/api/v1/oauth/voice/token/route.ts",
+   "raw": 1,
+   "lines": [
+    65
+   ],
+   "wrapped": 0,
+   "writes": false,
+   "guess": "signed-request",
+   "class": "signed-request"
+  },
+  {
+   "file": "apps/web/app/api/v1/partner/groceries/route.ts",
+   "raw": 5,
+   "lines": [
+    17,
+    18,
+    28,
+    34,
+    36
+   ],
+   "wrapped": 0,
+   "writes": false,
+   "guess": "signed-request",
+   "class": "signed-request"
+  },
+  {
+   "file": "apps/web/app/api/v1/partner/household/route.ts",
+   "raw": 2,
+   "lines": [
+    12,
+    13
+   ],
+   "wrapped": 0,
+   "writes": false,
+   "guess": "signed-request",
+   "class": "signed-request"
+  },
+  {
+   "file": "apps/web/app/api/v1/platform-admin/ai-operations/route.ts",
+   "raw": 0,
+   "lines": [],
+   "wrapped": 1,
+   "writes": false,
+   "guess": "household-scoped",
+   "class": "wrapped"
+  },
+  {
+   "file": "apps/web/app/api/v1/platform-admin/ai-operations/runs/[runId]/route.ts",
+   "raw": 0,
+   "lines": [],
+   "wrapped": 1,
+   "writes": false,
+   "guess": "household-scoped",
+   "class": "wrapped"
+  },
+  {
+   "file": "apps/web/app/api/v1/platform-admin/ai-quality/route.ts",
+   "raw": 0,
+   "lines": [],
+   "wrapped": 1,
+   "writes": false,
+   "guess": "household-scoped",
+   "class": "wrapped"
+  },
+  {
+   "file": "apps/web/app/api/v1/platform-admin/experiments/[experimentKey]/route.ts",
+   "raw": 0,
+   "lines": [],
+   "wrapped": 2,
+   "writes": false,
+   "guess": "household-scoped",
+   "class": "wrapped"
+  },
+  {
+   "file": "apps/web/app/api/v1/platform-admin/experiments/route.ts",
+   "raw": 0,
+   "lines": [],
+   "wrapped": 2,
+   "writes": false,
+   "guess": "household-scoped",
+   "class": "wrapped"
+  },
+  {
+   "file": "apps/web/app/api/v1/platform-admin/homesend-metrics/route.ts",
+   "raw": 0,
+   "lines": [],
+   "wrapped": 1,
+   "writes": false,
+   "guess": "household-scoped",
+   "class": "wrapped"
+  },
+  {
+   "file": "apps/web/app/api/v1/platform-admin/operations/route.ts",
+   "raw": 0,
+   "lines": [],
+   "wrapped": 1,
+   "writes": false,
+   "guess": "household-scoped",
+   "class": "wrapped"
+  },
+  {
+   "file": "apps/web/app/api/v1/platform-admin/payments/[paymentId]/refund/route.ts",
+   "raw": 0,
+   "lines": [],
+   "wrapped": 1,
+   "writes": false,
+   "guess": "household-scoped",
+   "class": "wrapped"
+  },
+  {
+   "file": "apps/web/app/api/v1/platform-admin/payments/reconcile/route.ts",
+   "raw": 0,
+   "lines": [],
+   "wrapped": 1,
+   "writes": false,
+   "guess": "household-scoped",
+   "class": "wrapped"
+  },
+  {
+   "file": "apps/web/app/api/v1/platform-admin/payments/route.ts",
+   "raw": 0,
+   "lines": [],
+   "wrapped": 1,
+   "writes": false,
+   "guess": "household-scoped",
+   "class": "wrapped"
+  },
+  {
+   "file": "apps/web/app/api/v1/platform-admin/plans/[planKey]/policies/route.ts",
+   "raw": 0,
+   "lines": [],
+   "wrapped": 2,
+   "writes": false,
+   "guess": "household-scoped",
+   "class": "wrapped"
+  },
+  {
+   "file": "apps/web/app/api/v1/platform-admin/privacy-requests/[requestId]/route.ts",
+   "raw": 0,
+   "lines": [],
+   "wrapped": 1,
+   "writes": false,
+   "guess": "household-scoped",
+   "class": "wrapped"
+  },
+  {
+   "file": "apps/web/app/api/v1/platform-admin/privacy-requests/route.ts",
+   "raw": 0,
+   "lines": [],
+   "wrapped": 1,
+   "writes": false,
+   "guess": "household-scoped",
+   "class": "wrapped"
+  },
+  {
+   "file": "apps/web/app/api/v1/platform-admin/subscriptions/[householdId]/route.ts",
+   "raw": 0,
+   "lines": [],
+   "wrapped": 2,
+   "writes": false,
+   "guess": "household-scoped",
+   "class": "wrapped"
+  },
+  {
+   "file": "apps/web/app/api/v1/platform-admin/support-access/route.ts",
+   "raw": 0,
+   "lines": [],
+   "wrapped": 1,
+   "writes": false,
+   "guess": "household-scoped",
+   "class": "wrapped"
+  },
+  {
+   "file": "apps/web/app/api/v1/platform-admin/voice-metrics/route.ts",
+   "raw": 0,
+   "lines": [],
+   "wrapped": 1,
+   "writes": false,
+   "guess": "household-scoped",
+   "class": "wrapped"
+  },
+  {
+   "file": "apps/web/app/api/v1/platform/catalog/import/route.ts",
+   "raw": 1,
+   "lines": [
+    31
+   ],
+   "wrapped": 0,
+   "writes": false,
+   "guess": "worker",
+   "class": "worker"
+  },
+  {
+   "file": "apps/web/app/api/v1/platform/retention/route.ts",
+   "raw": 3,
+   "lines": [
+    55,
+    167,
+    167
+   ],
+   "wrapped": 0,
+   "writes": true,
+   "guess": "worker",
+   "class": "worker"
+  },
+  {
+   "file": "apps/web/app/api/v1/platform/webhook-delivery/route.ts",
+   "raw": 1,
+   "lines": [
+    30
+   ],
+   "wrapped": 0,
+   "writes": false,
+   "guess": "signed-request",
+   "class": "signed-request"
+  },
+  {
+   "file": "apps/web/app/api/v1/voice/alexa/route.ts",
+   "raw": 1,
+   "lines": [
+    106
+   ],
+   "wrapped": 0,
+   "writes": false,
+   "guess": "signed-request",
+   "class": "signed-request"
+  },
+  {
+   "file": "apps/web/app/api/v1/whatsapp/webhook/route.ts",
+   "raw": 3,
+   "lines": [
+    23,
+    24,
+    25
+   ],
+   "wrapped": 0,
+   "writes": false,
+   "guess": "signed-request",
+   "class": "signed-request"
+  },
+  {
+   "file": "apps/web/app/careers/actions.ts",
+   "raw": 1,
+   "lines": [
+    34
+   ],
+   "wrapped": 0,
+   "writes": false,
+   "guess": "rate-limit",
+   "class": "rate-limit"
+  },
+  {
+   "file": "apps/web/app/chat/[threadId]/page.tsx",
+   "raw": 1,
+   "lines": [
+    55
+   ],
+   "wrapped": 0,
+   "writes": false,
+   "guess": "household-scoped",
+   "class": "household-scoped"
+  },
+  {
+   "file": "apps/web/app/chat/actions.ts",
+   "raw": 1,
+   "lines": [
+    56
+   ],
+   "wrapped": 0,
+   "writes": false,
+   "guess": "household-scoped",
+   "class": "household-scoped"
+  },
+  {
+   "file": "apps/web/app/e/[token]/page.tsx",
+   "raw": 1,
+   "lines": [
+    26
+   ],
+   "wrapped": 0,
+   "writes": false,
+   "guess": "capability-token",
+   "class": "capability-token"
+  },
+  {
+   "file": "apps/web/app/e/[token]/render-invitation.tsx",
+   "raw": 1,
+   "lines": [
+    94
+   ],
+   "wrapped": 0,
+   "writes": false,
+   "guess": "capability-token",
+   "class": "capability-token"
+  },
+  {
+   "file": "apps/web/app/email-off/actions.ts",
+   "raw": 1,
+   "lines": [
+    19
+   ],
+   "wrapped": 0,
+   "writes": false,
+   "guess": "capability-token",
+   "class": "capability-token"
+  },
+  {
+   "file": "apps/web/app/email-off/page.tsx",
+   "raw": 1,
+   "lines": [
+    18
+   ],
+   "wrapped": 0,
+   "writes": false,
+   "guess": "capability-token",
+   "class": "capability-token"
+  },
+  {
+   "file": "apps/web/app/family/page.tsx",
+   "raw": 1,
+   "lines": [
+    120
+   ],
+   "wrapped": 0,
+   "writes": false,
+   "guess": "household-scoped",
+   "class": "household-scoped"
+  },
+  {
+   "file": "apps/web/app/groceries/order/actions.ts",
+   "raw": 6,
+   "lines": [
+    55,
+    87,
+    131,
+    169,
+    203,
+    245
+   ],
+   "wrapped": 0,
+   "writes": true,
+   "guess": "household-scoped",
+   "class": "household-scoped"
+  },
+  {
+   "file": "apps/web/app/groceries/order/callback/route.ts",
+   "raw": 1,
+   "lines": [
+    28
+   ],
+   "wrapped": 0,
+   "writes": false,
+   "guess": "signed-request",
+   "class": "signed-request"
+  },
+  {
+   "file": "apps/web/app/groceries/order/connect/route.ts",
+   "raw": 0,
+   "lines": [],
+   "wrapped": 1,
+   "writes": false,
+   "guess": "household-scoped",
+   "class": "wrapped"
+  },
+  {
+   "file": "apps/web/app/groceries/order/page.tsx",
+   "raw": 1,
+   "lines": [
+    58
+   ],
+   "wrapped": 0,
+   "writes": false,
+   "guess": "household-scoped",
+   "class": "household-scoped"
+  },
+  {
+   "file": "apps/web/app/home-send/page.tsx",
+   "raw": 1,
+   "lines": [
+    57
+   ],
+   "wrapped": 0,
+   "writes": false,
+   "guess": "household-scoped",
+   "class": "household-scoped"
+  },
+  {
+   "file": "apps/web/app/notifications/page.tsx",
+   "raw": 1,
+   "lines": [
+    87
+   ],
+   "wrapped": 0,
+   "writes": false,
+   "guess": "household-scoped",
+   "class": "household-scoped"
+  },
+  {
+   "file": "apps/web/app/places/actions.ts",
+   "raw": 1,
+   "lines": [
+    72
+   ],
+   "wrapped": 0,
+   "writes": false,
+   "guess": "household-scoped",
+   "class": "household-scoped"
+  },
+  {
+   "file": "apps/web/app/platform-admin/careers/actions.ts",
+   "raw": 0,
+   "lines": [],
+   "wrapped": 3,
+   "writes": false,
+   "guess": "rate-limit",
+   "class": "wrapped"
+  },
+  {
+   "file": "apps/web/app/platform-admin/careers/page.tsx",
+   "raw": 0,
+   "lines": [],
+   "wrapped": 1,
+   "writes": false,
+   "guess": "household-scoped",
+   "class": "wrapped"
+  },
+  {
+   "file": "apps/web/app/settings/connections/integrations-section.tsx",
+   "raw": 1,
+   "lines": [
+    47
+   ],
+   "wrapped": 0,
+   "writes": false,
+   "guess": "household-scoped",
+   "class": "household-scoped"
+  },
+  {
+   "file": "apps/web/app/settings/notifications/delivery-section.tsx",
+   "raw": 1,
+   "lines": [
+    25
+   ],
+   "wrapped": 0,
+   "writes": false,
+   "guess": "household-scoped",
+   "class": "household-scoped"
+  },
+  {
+   "file": "apps/web/app/settings/notifications/page.tsx",
+   "raw": 1,
+   "lines": [
+    99
+   ],
+   "wrapped": 0,
+   "writes": false,
+   "guess": "household-scoped",
+   "class": "household-scoped"
+  },
+  {
+   "file": "apps/web/app/settings/plan/checkout/page.tsx",
+   "raw": 1,
+   "lines": [
+    45
+   ],
+   "wrapped": 0,
+   "writes": false,
+   "guess": "household-scoped",
+   "class": "household-scoped"
+  },
+  {
+   "file": "packages/core/src/ai/credentials.ts",
+   "raw": 2,
+   "lines": [
+    123,
+    187
+   ],
+   "wrapped": 0,
+   "writes": true,
+   "guess": "secret-read",
+   "class": "secret-read"
+  },
+  {
+   "file": "packages/core/src/ai/key-alerts.ts",
+   "raw": 1,
+   "lines": [
+    62
+   ],
+   "wrapped": 0,
+   "writes": true,
+   "guess": "secret-read",
+   "class": "secret-read"
+  },
+  {
+   "file": "packages/core/src/ai/run.ts",
+   "raw": 1,
+   "lines": [
+    68
+   ],
+   "wrapped": 0,
+   "writes": true,
+   "guess": "shared-repository",
+   "class": "shared-repository"
+  },
+  {
+   "file": "packages/core/src/api/audit.ts",
+   "raw": 1,
+   "lines": [
+    236
+   ],
+   "wrapped": 0,
+   "writes": true,
+   "guess": "audit-write",
+   "class": "audit-write"
+  },
+  {
+   "file": "packages/core/src/billing/repository.ts",
+   "raw": 1,
+   "lines": [
+    259
+   ],
+   "wrapped": 0,
+   "writes": true,
+   "guess": "shared-repository",
+   "class": "shared-repository"
+  },
+  {
+   "file": "packages/core/src/home/weather-service.ts",
+   "raw": 1,
+   "lines": [
+    268
+   ],
+   "wrapped": 0,
+   "writes": true,
+   "guess": "shared-repository",
+   "class": "shared-repository"
+  },
+  {
+   "file": "packages/core/src/homebrain/context-store.ts",
+   "raw": 3,
+   "lines": [
+    360,
+    394,
+    452
+   ],
+   "wrapped": 0,
+   "writes": true,
+   "guess": "shared-repository",
+   "class": "shared-repository"
+  },
+  {
+   "file": "packages/core/src/household/configuration-repository.ts",
+   "raw": 1,
+   "lines": [
+    602
+   ],
+   "wrapped": 0,
+   "writes": true,
+   "guess": "shared-repository",
+   "class": "shared-repository"
+  },
+  {
+   "file": "packages/core/src/security/step-up-repository.ts",
+   "raw": 2,
+   "lines": [
+    128,
+    233
+   ],
+   "wrapped": 0,
+   "writes": true,
+   "guess": "secret-read",
+   "class": "secret-read"
+  },
+  {
+   "file": "packages/core/src/voice/repository.ts",
+   "raw": 1,
+   "lines": [
+    235
+   ],
+   "wrapped": 0,
+   "writes": true,
+   "guess": "shared-repository",
+   "class": "shared-repository"
+  },
+  {
+   "file": "packages/core/src/webhooks/dispatch.ts",
+   "raw": 1,
+   "lines": [
+    69
+   ],
+   "wrapped": 0,
+   "writes": true,
+   "guess": "secret-read",
+   "class": "secret-read"
+  }
+ ]
+}

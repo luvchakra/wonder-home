@@ -3,7 +3,7 @@ import { z } from "zod";
 import { requireUser } from "@wonderhome/core/api/auth";
 import { ApiError } from "@wonderhome/core/api/errors";
 import { defineRoute } from "@wonderhome/core/api/route";
-import { createAdminClient } from "@wonderhome/core/db/admin";
+import { adminClientFor, adminGrant } from "@wonderhome/core/db/admin-context";
 import { createClient } from "@wonderhome/core/db/server";
 import { listMembers, requireMembership } from "@wonderhome/core/identity/households";
 import { log } from "@wonderhome/core/observability/logger";
@@ -36,7 +36,7 @@ export async function POST(request: Request, { params }: Params) {
     const membership = await requireMembership(supabase, householdId);
     const { availability, key } = await geminiLiveGate(supabase, householdId);
     if (!availability.available) throw ApiError.forbidden(availability.reason);
-    if (!(await hitRateLimit(createAdminClient(), "voice.transcribe", membership.memberId))) throw new ApiError("rate_limited", rateLimitMessage("voice.transcribe"));
+    if (!(await hitRateLimit(adminClientFor(adminGrant.member(membership, "count voice transcriptions")), "voice.transcribe", membership.memberId))) throw new ApiError("rate_limited", rateLimitMessage("voice.transcribe"));
 
     const pcm = new Uint8Array(Buffer.from(body.audio, "base64"));
     const [settings, members] = await Promise.all([

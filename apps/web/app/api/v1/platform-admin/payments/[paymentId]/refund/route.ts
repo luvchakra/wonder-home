@@ -1,7 +1,7 @@
 import { z } from "zod";
 
 import { defineRoute } from "@wonderhome/core/api/route";
-import { createAdminClient } from "@wonderhome/core/db/admin";
+import { adminClientFor, adminGrant } from "@wonderhome/core/db/admin-context";
 import { createClient } from "@wonderhome/core/db/server";
 import { requirePlatformAdmin } from "@wonderhome/core/platform/admin";
 import { PAYMENT_REFUND_REASON_CODES, staffRefund } from "@wonderhome/core/platform/payments";
@@ -23,7 +23,7 @@ export async function POST(request: Request, { params }: Params) {
   const { paymentId } = await params;
   return defineRoute(
     { input: refundSchema, authenticate: async () => requirePlatformAdmin(await createClient()) },
-    async ({ body, actor }) => ({ refund: await staffRefund(createAdminClient(), actor, { paymentId, amount: body.amount, reasonCode: body.reasonCode }) }),
+    async ({ body, actor }) => ({ refund: await staffRefund(adminClientFor(adminGrant.platformAdmin(actor, "refund a payment")), actor, { paymentId, amount: body.amount, reasonCode: body.reasonCode }) }),
   )(request);
 }
 

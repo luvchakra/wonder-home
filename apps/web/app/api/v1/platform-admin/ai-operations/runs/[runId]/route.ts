@@ -1,6 +1,6 @@
 import { ApiError } from "@wonderhome/core/api/errors";
 import { defineRoute } from "@wonderhome/core/api/route";
-import { createAdminClient } from "@wonderhome/core/db/admin";
+import { adminClientFor, adminGrant } from "@wonderhome/core/db/admin-context";
 import { createClient } from "@wonderhome/core/db/server";
 import { agentRunDetail } from "@wonderhome/core/platform/ai-operations";
 import { requirePlatformAdmin } from "@wonderhome/core/platform/admin";
@@ -15,7 +15,7 @@ export async function GET(request: Request, { params }: Params) {
   const { runId } = await params;
 
   return defineRoute({ authenticate: async () => requirePlatformAdmin(await createClient()) }, async ({ actor }) => {
-    const run = await agentRunDetail(createAdminClient(), actor, runId);
+    const run = await agentRunDetail(adminClientFor(adminGrant.platformAdmin(actor, "read one agent run")), actor, runId);
     if (!run) throw ApiError.notFound("No such run.");
     return { run };
   })(request);

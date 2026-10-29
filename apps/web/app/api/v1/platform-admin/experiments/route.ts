@@ -2,7 +2,7 @@ import { z } from "zod";
 
 import { defineRoute } from "@wonderhome/core/api/route";
 import { EXPERIMENT_REASON_CODES, createExperiment, listExperiments } from "@wonderhome/core/billing/experiments";
-import { createAdminClient } from "@wonderhome/core/db/admin";
+import { adminClientFor, adminGrant } from "@wonderhome/core/db/admin-context";
 
 import { requireExperimentManager } from "@/app/_lib/experiment-guard";
 
@@ -15,7 +15,7 @@ import { requireExperimentManager } from "@/app/_lib/experiment-guard";
  * household until it is started. Both need `subscription.manage`.
  */
 export async function GET(request: Request) {
-  return defineRoute({ authenticate: requireExperimentManager }, async () => ({ experiments: await listExperiments(createAdminClient()) }))(request);
+  return defineRoute({ authenticate: requireExperimentManager }, async ({ actor }) => ({ experiments: await listExperiments(adminClientFor(adminGrant.platformAdmin(actor, "list entitlement experiments"))) }))(request);
 }
 
 const draftSchema = z.object({
@@ -33,7 +33,7 @@ const draftSchema = z.object({
 export async function POST(request: Request) {
   return defineRoute({ input: draftSchema, authenticate: requireExperimentManager }, async ({ body, actor }) => {
     const { reasonCode, ...draft } = body;
-    return { experiment: await createExperiment(createAdminClient(), { actorProfileId: actor.profileId, reasonCode, draft }) };
+    return { experiment: await createExperiment(adminClientFor(adminGrant.platformAdmin(actor, "create an entitlement experiment")), { actorProfileId: actor.profileId, reasonCode, draft }) };
   })(request);
 }
 

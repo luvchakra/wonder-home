@@ -1,5 +1,5 @@
 import { defineRoute } from "@wonderhome/core/api/route";
-import { createAdminClient } from "@wonderhome/core/db/admin";
+import { adminClientFor, adminGrant } from "@wonderhome/core/db/admin-context";
 import { createClient } from "@wonderhome/core/db/server";
 import { operationsSummary, requirePlatformAdmin } from "@wonderhome/core/platform/admin";
 
@@ -12,9 +12,9 @@ import { operationsSummary, requirePlatformAdmin } from "@wonderhome/core/platfo
  */
 export const GET = defineRoute({}, async () => {
   const supabase = await createClient();
-  await requirePlatformAdmin(supabase);
+  const actor = await requirePlatformAdmin(supabase);
 
-  return { summary: await operationsSummary(createAdminClient()) };
+  return { summary: await operationsSummary(adminClientFor(adminGrant.platformAdmin(actor, "read the operations summary"))) };
 });
 
 export const dynamic = "force-dynamic";

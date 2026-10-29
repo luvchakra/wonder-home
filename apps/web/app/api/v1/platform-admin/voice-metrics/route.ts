@@ -3,7 +3,7 @@ import { z } from "zod";
 import { ApiError } from "@wonderhome/core/api/errors";
 import { parseQuery } from "@wonderhome/core/api/query";
 import { defineRoute } from "@wonderhome/core/api/route";
-import { createAdminClient } from "@wonderhome/core/db/admin";
+import { adminClientFor, adminGrant } from "@wonderhome/core/db/admin-context";
 import { createClient } from "@wonderhome/core/db/server";
 import { loadChannelMetrics } from "@wonderhome/core/hometalk/channel-events";
 import { platformCan, requirePlatformAdmin } from "@wonderhome/core/platform/admin";
@@ -29,7 +29,7 @@ export const GET = defineRoute(
   async ({ actor, request }) => {
     if (!platformCan(actor, "ai_operations.read")) throw ApiError.forbidden("Your platform role cannot view voice metrics.");
     const { hours } = parseQuery(request, z.object({ hours: z.coerce.number().int().min(1).max(24 * 90).default(24) }).strict());
-    return loadChannelMetrics(createAdminClient(), { windowHours: hours });
+    return loadChannelMetrics(adminClientFor(adminGrant.platformAdmin(actor, "read voice channel metrics")), { windowHours: hours });
   },
 );
 

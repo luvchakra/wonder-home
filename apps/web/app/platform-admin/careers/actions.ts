@@ -4,7 +4,7 @@ import { revalidatePath } from "next/cache";
 
 import { clearCareersKey, readCareersKey, saveCareersKey } from "@wonderhome/core/careers/key-store";
 import { careersBase, clearCareersCache, testCareersConnection } from "@wonderhome/core/careers/wonderjobs";
-import { createAdminClient } from "@wonderhome/core/db/admin";
+import { adminClientFor, adminGrant } from "@wonderhome/core/db/admin-context";
 
 import { careersStaff } from "../../_lib/careers";
 import { formText } from "../../_lib/form-input";
@@ -24,7 +24,7 @@ export async function saveCareersKeyAction(_previous: KeyActionState, formData: 
   const staff = await careersStaff();
   if (!staff) return NOT_ALLOWED;
   const key = formText(formData, "key", 512) ?? "";
-  const result = await saveCareersKey(createAdminClient(), staff.profileId, key);
+  const result = await saveCareersKey(adminClientFor(adminGrant.platformAdmin(staff, "save the careers key")), staff.profileId, key);
   if (!result.ok) {
     return result.reason === "invalid"
       ? { tone: "risk", message: "That isn't a career site key. It starts with wjcs_ and is shown once in WonderJobs → Hiring → Jobs → Career sites." }
@@ -39,7 +39,7 @@ export async function saveCareersKeyAction(_previous: KeyActionState, formData: 
 export async function clearCareersKeyAction(): Promise<KeyActionState> {
   const staff = await careersStaff();
   if (!staff) return NOT_ALLOWED;
-  const ok = await clearCareersKey(createAdminClient(), staff.profileId);
+  const ok = await clearCareersKey(adminClientFor(adminGrant.platformAdmin(staff, "clear the careers key")), staff.profileId);
   if (!ok) return { tone: "risk", message: "The key couldn't be cleared. Try again." };
   clearCareersCache();
   revalidatePath("/platform-admin/careers");
@@ -52,7 +52,7 @@ export async function testCareersConnectionAction(): Promise<KeyActionState> {
   if (!staff) return NOT_ALLOWED;
   const base = careersBase(process.env.WONDERJOBS_CAREERS_URL);
   if (!base) return { tone: "risk", message: "Unavailable: WONDERJOBS_CAREERS_URL must be an https address on wonderapps.biz." };
-  const key = await readCareersKey(createAdminClient());
+  const key = await readCareersKey(adminClientFor(adminGrant.platformAdmin(staff, "test the careers connection")));
   if (!key) return { tone: "risk", message: "No key is saved yet." };
   const result = await testCareersConnection({ key: key.key, base });
   if (result.state === "connected") return { tone: "info", message: `Connected${result.site ? ` to ${result.site}` : ""}: ${result.jobs === 1 ? "1 open job" : `${result.jobs} open jobs`}.` };

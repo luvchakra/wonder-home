@@ -1,7 +1,7 @@
 import { notFound } from "next/navigation";
 
 import { careersKeyStatus, recentCareersKeyEvents } from "@wonderhome/core/careers/key-store";
-import { createAdminClient } from "@wonderhome/core/db/admin";
+import { adminClientFor, adminGrant } from "@wonderhome/core/db/admin-context";
 import { Card } from "@wonderhome/core/ui/card";
 
 import { careersStaff } from "../../_lib/careers";
@@ -19,7 +19,7 @@ const when = (iso: string | null) => (iso ? new Intl.DateTimeFormat("en-GB", { d
 export default async function CareersConnectionPage() {
   const staff = await careersStaff();
   if (!staff) notFound();
-  const admin = createAdminClient();
+  const admin = adminClientFor(adminGrant.platformAdmin(staff, "show the careers key status"));
   const [status, events] = await Promise.all([careersKeyStatus(admin), recentCareersKeyEvents(admin, 10)]);
 
   return (

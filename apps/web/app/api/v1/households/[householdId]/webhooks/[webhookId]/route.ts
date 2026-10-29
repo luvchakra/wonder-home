@@ -3,7 +3,7 @@ import { z } from "zod";
 import { requireUser } from "@wonderhome/core/api/auth";
 import { ApiError } from "@wonderhome/core/api/errors";
 import { defineRoute } from "@wonderhome/core/api/route";
-import { createAdminClient } from "@wonderhome/core/db/admin";
+import { adminClientFor, adminGrant } from "@wonderhome/core/db/admin-context";
 import { createClient } from "@wonderhome/core/db/server";
 import { isHouseholdAdmin, requireMembership } from "@wonderhome/core/identity/households";
 import { disableWebhookSubscription, enableWebhookSubscription, rotateWebhookSecret } from "@wonderhome/core/webhooks/repository";
@@ -24,7 +24,7 @@ export async function PATCH(request: Request, { params }: Params) {
     const supabase = await createClient();
     const membership = await requireMembership(supabase, householdId);
     const actor = { householdId, memberId: membership.memberId, isAdmin: isHouseholdAdmin(membership) };
-    const admin = createAdminClient();
+    const admin = adminClientFor(adminGrant.member(membership, "manage a household webhook secret"));
 
     switch (body.action) {
       case "rotate": {

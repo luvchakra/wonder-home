@@ -1,7 +1,7 @@
 import { requireUser } from "@wonderhome/core/api/auth";
 import { ApiError } from "@wonderhome/core/api/errors";
 import { defineRoute } from "@wonderhome/core/api/route";
-import { createAdminClient } from "@wonderhome/core/db/admin";
+import { adminClientFor, adminGrant } from "@wonderhome/core/db/admin-context";
 import { createClient } from "@wonderhome/core/db/server";
 import { recordChannelEvent } from "@wonderhome/core/hometalk/channel-events";
 import { requireMembership } from "@wonderhome/core/identity/households";
@@ -41,7 +41,7 @@ export async function POST(request: Request, { params }: Params) {
     const membership = await requireMembership(supabase, householdId);
     const { availability, key } = await geminiLiveGate(supabase, householdId);
     if (!availability.available) throw ApiError.forbidden(availability.reason);
-    const admin = createAdminClient();
+    const admin = adminClientFor(adminGrant.member(membership, "open a voice session"));
     const event = (outcome: "session_opened" | "provider_error" | "rate_limited", latencyMs?: number) =>
       recordChannelEvent(admin, { channel: "gemini_voice", householdId, outcome, ...(latencyMs !== undefined ? { latencyMs } : {}) });
     if (!(await hitRateLimitFair(admin, "voice.session", { memberId: membership.memberId, householdId }))) {

@@ -5,7 +5,7 @@ import { ApiError } from "@wonderhome/core/api/errors";
 import { parseQuery } from "@wonderhome/core/api/query";
 import { defineRoute } from "@wonderhome/core/api/route";
 import { may } from "@wonderhome/core/billing/repository";
-import { createAdminClient } from "@wonderhome/core/db/admin";
+import { adminClientFor, adminGrant } from "@wonderhome/core/db/admin-context";
 import { createClient } from "@wonderhome/core/db/server";
 import type { DeviceConnector } from "@wonderhome/core/home/device-connector";
 import { deviceSyncPorts } from "@wonderhome/core/home/device-repository";
@@ -33,7 +33,7 @@ export async function POST(request: Request, { params }: Params) {
 
   return defineRoute({ authenticate: requireUser }, async () => {
     const supabase = await createClient();
-    await requireHouseholdAdmin(supabase, householdId);
+    const membership = await requireHouseholdAdmin(supabase, householdId);
 
     const entitlement = await may(supabase, householdId, "integrations.deep");
     if (!entitlement.allowed) throw ApiError.forbidden(entitlement.reason);
@@ -50,7 +50,7 @@ export async function POST(request: Request, { params }: Params) {
       );
     }
 
-    return await syncDevices({ connector, connection, ports: deviceSyncPorts(supabase, createAdminClient(), connection) });
+    return await syncDevices({ connector, connection, ports: deviceSyncPorts(supabase, adminClientFor(adminGrant.householdAdmin(membership, "read the smart-home connection secret")), connection) });
   })(request);
 }
 
