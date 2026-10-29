@@ -1,0 +1,39 @@
+name: Supabase advisors
+
+# PERF-17: the security and performance advisors of the live project, against
+# perf/advisor-baseline.json. GitHub Actions only, never a deploy (CLAUDE.md,
+# build-slot budget). Without the SUPABASE_ACCESS_TOKEN repository secret the
+# job skips cleanly and says so. It reads the live project, so on a pull
+# request it catches drift; a migration's own findings show once it is applied
+# (CLAUDE.md, "Applying a migration to the live project"). Not part of the
+# required `ci` check.
+on:
+  schedule:
+    - cron: "43 22 * * *" # daily, 04:13 IST
+  pull_request:
+    paths:
+      - "supabase/migrations/**"
+      - "perf/advisor-baseline.json"
+      - "scripts/advisor-gate.mjs"
+      - ".github/workflows/advisors.yml"
+  workflow_dispatch:
+
+concurrency:
+  group: advisors-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  advisors:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
+        with:
+          node-version: 22
+      - name: Advisors have no new findings
+        env:
+          SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+        run: node scripts/advisor-gate.mjs

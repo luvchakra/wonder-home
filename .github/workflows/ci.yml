@@ -304,6 +304,33 @@ jobs:
           echo "$files"
           node --test --test-concurrency=4 $files
 
+  # PERF-15: the hot reads' plans and buffer counts against
+  # perf/query-budget.json, on the same local database the RLS tests use.
+  query-budget:
+    needs: changes
+    if: needs.changes.outputs.db == 'true'
+    runs-on: ubuntu-latest
+    env:
+      PGHOST: localhost
+      PGPORT: 5432
+      PGUSER: postgres
+      PGPASSWORD: postgres
+      PGDATABASE: postgres
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Start PostgreSQL
+        run: |
+          sudo systemctl start postgresql.service
+          sudo -u postgres psql -q -c "alter user postgres password 'postgres'"
+
+      - name: Hot reads within query budget
+        run: npm run budget:queries
+
   # The production build Vercel will run, so a change that cannot build never
   # merges and never spends a deployment slot failing. No browser tests.
   build:
@@ -346,6 +373,11 @@ jobs:
       - name: User guide stays out of client JavaScript
         run: npm run check:bundle
 
+      # PERF-16: first-load JS per route against perf/bundle-budget.json,
+      # read from this same build. docs/performance-budgets.md.
+      - name: First-load JS within budget
+        run: npm run budget:bundle
+
       - name: Save Next.js build cache
         if: github.event_name == 'push' && github.ref == 'refs/heads/main'
         uses: actions/cache/save@v4
@@ -357,7 +389,7 @@ jobs:
   # above are split into.
   ci:
     if: always()
-    needs: [changes, typecheck, lint, unit-tests, security, db-tests, build]
+    needs: [changes, typecheck, lint, unit-tests, security, db-tests, query-budget, build]
     runs-on: ubuntu-latest
     steps:
       # A job skipped because its area did not change is a pass; one skipped
@@ -371,6 +403,7 @@ jobs:
              ! ok "${{ needs.unit-tests.result }}" || \
              ! ok "${{ needs.security.result }}" || \
              ! ok "${{ needs.db-tests.result }}" || \
+             ! ok "${{ needs.query-budget.result }}" || \
              ! ok "${{ needs.build.result }}"; then
             echo "One or more required jobs did not succeed."
             exit 1
