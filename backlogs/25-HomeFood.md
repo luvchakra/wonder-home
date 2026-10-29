@@ -62,7 +62,7 @@ HomeFood is everything about the household's food: what is at home, what to buy,
 - Module 10 (Meals & Cooking), module 14-015/14-016 (WhatsApp intake) for 25-004
 
 ## Performance notes
-- PR #PRNUM (PERF-10): `/meals` reads `recipes` once (cards, pickers and the cookable check share `recipeSet`, bounded to 200 rows, cards to 80) and `consumables` once (the pickers' stock check takes the ids of `listGroceries`). 16 → 14 Supabase REST calls.
+- PR #474 (PERF-10): `/meals` reads `recipes` once (cards, pickers and the cookable check share `recipeSet`, bounded to 200 rows, cards to 80) and `consumables` once (the pickers' stock check takes the ids of `listGroceries`). 16 → 14 Supabase REST calls.
 
 ## Stories
 

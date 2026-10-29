@@ -1,6 +1,6 @@
 # Performance: bounded Home reads, shared Day-view reads, deduped Meals reads (2026-10-29)
 
-PERF-03, PERF-09 and PERF-10 of `docs/plans/2026-10-29-fast-and-secure-at-scale.md`. PR #PRNUM.
+PERF-03, PERF-09 and PERF-10 of `docs/plans/2026-10-29-fast-and-secure-at-scale.md`. PR #474.
 
 ## What changed
 - **PERF-03.** `listEvents` and `listMeals` take an optional `limit`. Home (`homeRows`) now reads events from 12 h ago to 30 days ahead (max 300 rows) and meals from today to 30 days ahead (max 200). The Calendar and Meals screens still read their full lists.
