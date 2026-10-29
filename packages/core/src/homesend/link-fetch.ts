@@ -260,15 +260,25 @@ function charsetOf(contentType: string): string {
   }
 }
 
+export type RawContent =
+  | { ok: true; finalUrl: string; contentType: string; bytes: Uint8Array }
+  | { ok: false; reason: LinkFailure };
+
 /**
- * Opens a link the way §3 asks: validate, resolve, check every address,
- * pin, fetch with a size and time limit, follow at most three redirects,
- * and hand back readable text (or a PDF's bytes) — never throwing.
+ * The one audited fetch the way §3 asks: validate, resolve, check every
+ * address, pin the checked address, fetch under a size and time limit, follow
+ * at most three redirects re-checking each hop. Never throws.
+ *
+ * `accept` decides which content types this call will take and the byte limit
+ * for each — it returns the limit for a type it accepts, or null to refuse it
+ * as `unsupported_content`. `fetchLinkSafely` (HTML/PDF) and `fetchCalendarFeed`
+ * (ICS) both go through here so there is a single SSRF-safe path, never a
+ * second redirect loop that forgets a check.
  */
-export async function fetchLinkSafely(
+export async function fetchRaw(
   raw: string,
-  options: { resolve?: Resolver; transport?: Transport; timeoutMs?: number } = {},
-): Promise<LinkContent> {
+  options: { accept: (contentType: string) => number | null; resolve?: Resolver; transport?: Transport; timeoutMs?: number },
+): Promise<RawContent> {
   const resolve = options.resolve ?? systemResolver;
   const transport = options.transport ?? nodeTransport;
   const controller = new AbortController();
@@ -322,13 +332,11 @@ export async function fetchLinkSafely(
 
       const contentType = (response.headers["content-type"] ?? "").toLowerCase();
       const declaredLength = Number(response.headers["content-length"] ?? "0");
-      const isPdfType = contentType.startsWith("application/pdf");
-      const isPage = contentType.startsWith("text/html") || contentType.startsWith("application/xhtml+xml") || contentType.startsWith("text/plain");
-      if (!isPdfType && !isPage) {
+      const limit = options.accept(contentType);
+      if (limit === null) {
         response.abort();
         return { ok: false, reason: "unsupported_content" };
       }
-      const limit = isPdfType ? MAX_PDF_BYTES : MAX_PAGE_BYTES;
       if (declaredLength > limit) {
         response.abort();
         return { ok: false, reason: "too_large" };
@@ -341,17 +349,46 @@ export async function fetchLinkSafely(
         return { ok: false, reason: controller.signal.aborted ? "timeout" : "unreachable" };
       }
       if (!bytes) return { ok: false, reason: "too_large" };
-
-      if (isPdfType) {
-        return isPdf(bytes) ? { ok: true, finalUrl: url.toString(), kind: "pdf", bytes } : { ok: false, reason: "unsupported_content" };
-      }
-      const decoded = new TextDecoder(charsetOf(contentType)).decode(bytes);
-      const page = contentType.startsWith("text/plain") ? { title: null, text: normalizeText(decoded) } : htmlToText(decoded);
-      if (!page.text) return { ok: false, reason: "unsupported_content" };
-      return { ok: true, finalUrl: url.toString(), kind: "page", title: page.title, text: page.text };
+      return { ok: true, finalUrl: url.toString(), contentType, bytes };
     }
     return { ok: false, reason: "too_many_redirects" };
   } finally {
     clearTimeout(timer);
   }
+}
+
+/** The charset a `fetchRaw` result declared, so another reader can decode its bytes the same way. */
+export function charsetOfContentType(contentType: string): string {
+  return charsetOf(contentType);
+}
+
+/**
+ * Opens a link the way §3 asks and hands back readable text (or a PDF's
+ * bytes) — never throwing. The HTML/PDF reader over the one audited fetch.
+ */
+export async function fetchLinkSafely(
+  raw: string,
+  options: { resolve?: Resolver; transport?: Transport; timeoutMs?: number } = {},
+): Promise<LinkContent> {
+  const result = await fetchRaw(raw, {
+    accept: (contentType) =>
+      contentType.startsWith("application/pdf")
+        ? MAX_PDF_BYTES
+        : contentType.startsWith("text/html") || contentType.startsWith("application/xhtml+xml") || contentType.startsWith("text/plain")
+          ? MAX_PAGE_BYTES
+          : null,
+    resolve: options.resolve,
+    transport: options.transport,
+    timeoutMs: options.timeoutMs,
+  });
+  if (!result.ok) return result;
+
+  const { contentType, bytes, finalUrl } = result;
+  if (contentType.startsWith("application/pdf")) {
+    return isPdf(bytes) ? { ok: true, finalUrl, kind: "pdf", bytes } : { ok: false, reason: "unsupported_content" };
+  }
+  const decoded = new TextDecoder(charsetOf(contentType)).decode(bytes);
+  const page = contentType.startsWith("text/plain") ? { title: null, text: normalizeText(decoded) } : htmlToText(decoded);
+  if (!page.text) return { ok: false, reason: "unsupported_content" };
+  return { ok: true, finalUrl, kind: "page", title: page.title, text: page.text };
 }

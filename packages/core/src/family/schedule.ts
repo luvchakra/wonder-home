@@ -50,6 +50,8 @@ export type FamilyEvent = {
   /** Runs local midnight to midnight; said as "All day", never as a time. Unset where a reader did not ask for it. */
   allDay?: boolean;
   location?: string | null;
+  /** Set when the event was imported from a calendar subscription (story 26-022); such events never lead as a family moment. */
+  sourceSubscriptionId?: string | null;
 };
 
 /** The kinds an event can be to count as time the family spends together. */
@@ -63,8 +65,10 @@ export const FAMILY_MOMENT_KINDS: ReadonlySet<EventKind> = new Set(["family_time
  * household's). Being protected says nothing gets scheduled over it, not who
  * it is for, so it never makes an event a family moment on its own.
  */
-export function isFamilyMoment(event: Pick<FamilyEvent, "kind" | "participants" | "status">): boolean {
+export function isFamilyMoment(event: Pick<FamilyEvent, "kind" | "participants" | "status" | "sourceSubscriptionId">): boolean {
   if (event.status === "cancelled") return false;
+  // An event imported from a subscribed calendar (a holiday feed, a sports fixture) is not the family's own moment.
+  if (event.sourceSubscriptionId) return false;
   if (!FAMILY_MOMENT_KINDS.has(event.kind)) return false;
   const going = event.participants.filter((participant) => participant.response !== "no").length;
   return event.participants.length === 0 || going >= 2;

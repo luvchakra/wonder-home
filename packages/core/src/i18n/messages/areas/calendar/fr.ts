@@ -120,6 +120,8 @@ export const calendarFr: AreaCatalog<typeof calendarEn> = {
   "calendar.event.repeats": "Répétition",
   "calendar.event.visibility": "Qui peut le voir",
   "calendar.event.category": "Catégorie",
+  "calendar.event.subscription": "De",
+  "calendar.event.subscriptionNote": "Cet agenda est abonné, ses événements sont en lecture seule ici.",
   "calendar.event.occurrence": "Cette fois-ci : {date}",
   "calendar.event.skip": "Sauter celle-ci",
   "calendar.event.restore": "Rétablir celle-ci",

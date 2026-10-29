@@ -120,6 +120,8 @@ export const calendarDe: AreaCatalog<typeof calendarEn> = {
   "calendar.event.repeats": "Wiederholung",
   "calendar.event.visibility": "Wer es sehen kann",
   "calendar.event.category": "Kategorie",
+  "calendar.event.subscription": "Aus",
+  "calendar.event.subscriptionNote": "Dieser Kalender ist abonniert, seine Termine sind hier schreibgeschützt.",
   "calendar.event.occurrence": "Dieses Mal: {date}",
   "calendar.event.skip": "Nur diesen auslassen",
   "calendar.event.restore": "Diesen zurückholen",

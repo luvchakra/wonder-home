@@ -37,7 +37,7 @@ export async function listEvents(
   let query = supabase
     .from("family_events")
     .select(
-      "id, title, kind, starts_at, ends_at, protected, owner_member_id, status, action_state, action_due_at, all_day, location, event_participants(member_id, response, required)",
+      "id, title, kind, starts_at, ends_at, protected, owner_member_id, status, action_state, action_due_at, all_day, location, source_subscription_id, event_participants(member_id, response, required)",
     )
     .eq("household_id", householdId)
     .is("soft_deleted_at", null)
@@ -67,6 +67,7 @@ export async function listEvents(
     })),
     allDay: row.all_day === true,
     location: (row.location as string | null) ?? null,
+    sourceSubscriptionId: (row.source_subscription_id as string | null) ?? null,
   }));
 }
 
@@ -406,8 +407,121 @@ function eventColumns(event: ImportedEvent) {
 
 // Every write forgets the household's cached context once it succeeds, so
 // the next HomeTalk answer sees the change (Wave 1 §14).
+/**
+ * Calendar-subscription import (story 26-022). Imported events live in
+ * family_events keyed by (source_subscription_id, external_id), written only by
+ * the sync's service-role client (members cannot write them — a restrictive
+ * policy makes them read-only). These writers keep every family_events write in
+ * this one repository, as HomeEvents' single door requires; the sync orchestrates
+ * the fetch, parse and diff and calls them.
+ */
+export type SubscriptionEventInput = {
+  externalId: string;
+  title: string;
+  startsAt: Date;
+  endsAt: Date;
+  allDay: boolean;
+  timeZone: string | null;
+  location: string | null;
+  notes: string | null;
+};
+
+export type ExistingSubscriptionEvent = SubscriptionEventInput & { id: string };
+
+export type SubscriptionImportPlan = {
+  insert: SubscriptionEventInput[];
+  update: { id: string; event: SubscriptionEventInput }[];
+  deleteIds: string[];
+};
+
+/** The events a feed has already imported, with the columns the sync diffs on. */
+export async function listSubscriptionEvents(supabase: SupabaseClient, subscriptionId: string): Promise<ExistingSubscriptionEvent[]> {
+  const { data, error } = await supabase
+    .from("family_events")
+    .select("id, external_id, title, starts_at, ends_at, all_day, timezone, location, notes")
+    .eq("source_subscription_id", subscriptionId);
+  if (error) throw new Error(`listSubscriptionEvents failed: ${error.code ?? "unknown"}`);
+  return ((data as Row[] | null) ?? []).map((row) => ({
+    id: row.id as string,
+    externalId: (row.external_id as string | null) ?? "",
+    title: (row.title as string | null) ?? "",
+    startsAt: new Date(row.starts_at as string),
+    endsAt: new Date(row.ends_at as string),
+    allDay: Boolean(row.all_day),
+    timeZone: (row.timezone as string | null) ?? null,
+    location: (row.location as string | null) ?? null,
+    notes: (row.notes as string | null) ?? null,
+  }));
+}
+
+function subscriptionEventColumns(event: SubscriptionEventInput, context: { householdId: string; subscriptionId: string; visibility: "household" | "private"; ownerMemberId: string | null }) {
+  return {
+    household_id: context.householdId,
+    source_subscription_id: context.subscriptionId,
+    external_id: event.externalId,
+    title: event.title,
+    kind: "family_time" as const,
+    starts_at: event.startsAt.toISOString(),
+    ends_at: event.endsAt.toISOString(),
+    all_day: event.allDay,
+    timezone: event.timeZone,
+    location: event.location,
+    notes: event.notes,
+    status: "confirmed" as const,
+    protected: false,
+    category: null,
+    visibility: context.visibility,
+    // A personal feed's events belong to the member who added it; a household feed's have no single owner.
+    owner_member_id: context.visibility === "private" ? context.ownerMemberId : null,
+  };
+}
+
+/**
+ * Applies a subscription's import diff (story 26-022): insert new occurrences,
+ * update changed ones in place, delete occurrences the feed dropped. Run with
+ * the service-role client, which bypasses the read-only policy on imported
+ * events. A removed feed's events go via the FK cascade, not here.
+ */
+async function applySubscriptionImportPlanImpl(
+  supabase: SupabaseClient,
+  input: { householdId: string; subscriptionId: string; visibility: "household" | "private"; ownerMemberId: string | null; plan: SubscriptionImportPlan },
+): Promise<{ inserted: number; updated: number; deleted: number }> {
+  const { householdId, subscriptionId, visibility, ownerMemberId, plan } = input;
+  const context = { householdId, subscriptionId, visibility, ownerMemberId };
+  const fail = (step: string, error: { code?: string }) => new Error(`applySubscriptionImportPlan ${step} failed: ${error.code ?? "unknown"}`);
+
+  if (plan.insert.length > 0) {
+    const { error } = await supabase.from("family_events").insert(plan.insert.map((event) => subscriptionEventColumns(event, context)));
+    if (error) throw fail("insert", error);
+  }
+  for (const { id, event } of plan.update) {
+    const { error } = await supabase.from("family_events").update(subscriptionEventColumns(event, context)).eq("id", id);
+    if (error) throw fail("update", error);
+  }
+  if (plan.deleteIds.length > 0) {
+    const { error } = await supabase.from("family_events").delete().in("id", plan.deleteIds);
+    if (error) throw fail("delete", error);
+  }
+  return { inserted: plan.insert.length, updated: plan.update.length, deleted: plan.deleteIds.length };
+}
+
+/** Re-scopes a feed's imported events when its visibility changes (service role; story 26-022). */
+export async function setSubscriptionEventsVisibility(
+  supabase: SupabaseClient,
+  subscriptionId: string,
+  visibility: "household" | "private",
+  ownerMemberId: string | null,
+): Promise<void> {
+  const { error } = await supabase
+    .from("family_events")
+    .update({ visibility, owner_member_id: visibility === "private" ? ownerMemberId : null })
+    .eq("source_subscription_id", subscriptionId);
+  if (error) throw new Error(`setSubscriptionEventsVisibility failed: ${error.code ?? "unknown"}`);
+}
+
 export const createEvent = invalidatesContext(createEventImpl, (_supabase, input) => input.householdId);
 export const settleEventAction = invalidatesContext(settleEventActionImpl, (_supabase, input) => input.householdId);
 export const applyCalendarPlan = invalidatesContext(applyCalendarPlanImpl, (_supabase, input) => input.householdId);
+export const applySubscriptionImportPlan = invalidatesContext(applySubscriptionImportPlanImpl, (_supabase, input) => input.householdId);
 export const advanceGift = invalidatesContext(advanceGiftImpl, (_supabase, input) => input.householdId);
 export const resolveConflict = invalidatesContext(resolveConflictImpl, (_supabase, input) => input.householdId);

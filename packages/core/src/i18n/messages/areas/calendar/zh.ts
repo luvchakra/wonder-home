@@ -120,6 +120,8 @@ export const calendarZh: AreaCatalog<typeof calendarEn> = {
   "calendar.event.repeats": "重复",
   "calendar.event.visibility": "谁能看到",
   "calendar.event.category": "类别",
+  "calendar.event.subscription": "来自",
+  "calendar.event.subscriptionNote": "此日历为订阅日历，其活动在此仅供查看。",
   "calendar.event.occurrence": "这一次：{date}",
   "calendar.event.skip": "只跳过这一次",
   "calendar.event.restore": "恢复这一次",
