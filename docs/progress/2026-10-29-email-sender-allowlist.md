@@ -8,7 +8,7 @@
 Built the privacy gate on top of the email intake pipeline that already existed (HomeSend Phase 2): the inbound Resend webhook, the per-household forwarding address, and `ingestEmailAttachment` were already there and already turned forwarded mail into HomeSend items. The new work is the allowlist and its enforcement, plus the Connections UI.
 
 ### The gate (core)
-- **Table** `homesend_email_allowlist` (migration `20261029090000_homesend_email_allowlist.sql`): one row per approved sender, per household — `kind` is `address` (an exact `bills@bescom.co.in`) or `domain` (a whole `school.edu`, stored without `@`). Member-readable, Admin-writable, **set-form RLS** (`household_id in (select wh.member_households())` / `admin_households()`), unique `(household_id, kind, value)` (its index serves the webhook lookup and the member read), a FK index on `created_by_member_id`. Audited via `homesend.allowlist_added` / `homesend.allowlist_removed` (added to `AuditEventType`). Entries are immutable — add/remove only.
+- **Table** `homesend_email_allowlist` (migration `20261029093000_homesend_email_allowlist.sql`): one row per approved sender, per household — `kind` is `address` (an exact `bills@bescom.co.in`) or `domain` (a whole `school.edu`, stored without `@`). Member-readable, Admin-writable, **set-form RLS** (`household_id in (select wh.member_households())` / `admin_households()`), unique `(household_id, kind, value)` (its index serves the webhook lookup and the member read), a FK index on `created_by_member_id`. Audited via `homesend.allowlist_added` / `homesend.allowlist_removed` (added to `AuditEventType`). Entries are immutable — add/remove only.
 - **`homesend/email-allowlist.ts`**: `normalizeAllowlistEntry` (accepts an address, `@domain`, or a bare `domain`; rejects malformed input), `describeAllowlistEntry`, `senderMatchesAllowlist` (pure — **empty list matches no one**; a domain matches its own addresses, never a subdomain or a look-alike like `school.edu.evil.com`), the repository (`loadEmailAllowlist`, `addEmailAllowlistEntry` with upsert-on-duplicate, `removeEmailAllowlistEntry`), and `allowedHouseholdsForSender` (one query for the recipient households, grouped and matched in memory — the "one wave" rule).
 
 ### Enforcement (webhook)
@@ -33,7 +33,7 @@ Built the privacy gate on top of the email intake pipeline that already existed 
 - Migration applied to the live project and `npm run verify:live`: see the PR.
 
 ## Where the code lives
-- Gate: `packages/core/src/homesend/email-allowlist.ts`, `email-webhook.ts`, `email-monitoring.ts`; migration `supabase/migrations/20261029090000_homesend_email_allowlist.sql`.
+- Gate: `packages/core/src/homesend/email-allowlist.ts`, `email-webhook.ts`, `email-monitoring.ts`; migration `supabase/migrations/20261029093000_homesend_email_allowlist.sql`.
 - UI: `apps/web/app/settings/connections/email-section.tsx`, `apps/web/app/_components/email-connection.tsx`, `apps/web/app/(auth)/homesend-allowlist-actions.ts`.
 - Words: `connectionsPage.email.*` (all eight top-level catalogs); help `help.guide.home-send.body.6` (all eight help catalogs), section `updated` 2026-10-29.
 - Design note: `docs/email-allowlist-and-phasing.md`.
