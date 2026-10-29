@@ -60,8 +60,9 @@ export type SecondaryNavItem = {
  * The nav drawer / More page's section groupings, in display order. Three
  * domain groups (design/UI-SIMPLIFICATION-v1.md M8): food and the home are one
  * group, Notifications is not listed (the bell is its door), and Manage holds
- * only Settings, whose doors are the profile card, the account menu and the
- * sidebar's foot — Manage Household is Settings' Household tab now.
+ * only Settings — the app and household level, reached from the sidebar's foot
+ * and the account menu. Anything personal lives on Profile (`/settings/profile`),
+ * whose door is the avatar menu (the owner's 2026-10-29 split).
  */
 export const SECONDARY_GROUP_ORDER = ["family", "home", "ai", "manage"] as const;
 export type SecondaryNavGroup = (typeof SECONDARY_GROUP_ORDER)[number];
@@ -86,7 +87,7 @@ export const SECONDARY_NAVIGATION: readonly SecondaryNavItem[] = [
   { key: "certification", label: "HomeBrain", href: "/certification", icon: "badge-check", tone: "ai", purpose: "Your home, understood", requires: null, adultOnly: true, group: "ai" },
   { key: "homesend", label: "HomeSend", href: "/home-send", icon: "send", tone: "ai", purpose: "Send WonderHome anything", requires: null, adultOnly: true, group: "ai" },
   { key: "places", label: "HomePlaces", href: "/places", icon: "map-pin", tone: "ai", purpose: "Places your family likes", requires: null, group: "ai" },
-  { key: "settings", label: "Settings", href: "/settings", icon: "user-round-cog", tone: "neutral", purpose: "You, your preferences, your privacy", requires: null, group: "manage" },
+  { key: "settings", label: "Settings", href: "/settings", icon: "user-round-cog", tone: "neutral", purpose: "The app, the assistant and your household", requires: null, group: "manage" },
 ] as const;
 
 /**

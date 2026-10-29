@@ -35,7 +35,7 @@ import { VIEWER_TRIGGER_CLASS, viewerMenuLabel } from "./viewer-menu-trigger";
  * browser's own steps are spelled out. Gone once the app is installed.
  */
 const ITEMS = [
-  { href: "/settings#profile", label: "Profile", icon: UserRound },
+  { href: "/settings/profile", label: "Profile", icon: UserRound },
   { href: "/help", label: "Get Help", icon: LifeBuoy },
 ] as const;
 // HomeBrain ("What WonderHome believes") is reached from More, not from here

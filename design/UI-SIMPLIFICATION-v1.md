@@ -116,6 +116,14 @@ Redirect: `/household/setup?step=x` → the step's editor, or `/onboarding?step=
 
 ### M6. Settings: "You" and "Household" in one place
 
+> **Superseded 2026-10-29** (owner): the "You / Household" tabs were replaced by
+> two pages. Personal settings (profile, Language & Region, Notifications,
+> Privacy, Location sharing) moved to **Profile** (`/settings/profile`, door =
+> avatar menu); the app/household settings (Assistant & voice, Connections, Your
+> plan, and the Admin household sections) stayed on **Settings** (`/settings`,
+> door = sidebar foot / drawer). One editor per setting still holds (rule 23).
+> See `docs/progress/2026-10-29-settings-profile-split.md`.
+
 Today Settings is personal and Manage Household (`/household`) is a second grouped menu, reached from More. After M1 to M5 have emptied Manage Household of notifications, members, connections and setup, what is left is small.
 
 **After: Settings has two tabs.**
@@ -140,6 +148,12 @@ Redirects:
 - (`/settings/voice` stays; see above.)
 
 ### M7. Fewer doors into the same page
+
+> **Revised 2026-10-29** (owner): the avatar menu (ViewerMenu) now leads to
+> **Profile** (`/settings/profile`), not Settings. **Settings** (`/settings`,
+> app/household level) is reached from the sidebar foot (desktop) and the
+> drawer's Manage group — where it is the last item, with the botanical imagery
+> beneath the complete list. See `docs/progress/2026-10-29-settings-profile-split.md`.
 
 | Destination | Doors today | After |
 |---|---|---|
