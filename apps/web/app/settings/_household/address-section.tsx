@@ -1,9 +1,7 @@
-import { MapPin } from "lucide-react";
 
 import { loadHouseholdAddress } from "@wonderhome/core/household/address";
 import { mapsLink } from "@wonderhome/core/places/provider";
 import { Card } from "@wonderhome/core/ui/card";
-import { IconTile } from "@wonderhome/core/ui/icon-tile";
 import { PrivacyNote } from "@wonderhome/core/ui/privacy-note";
 
 import { HomeAddressEditor } from "../../_components/home-address-editor";
@@ -29,10 +27,6 @@ export async function AddressSection({ session }: { session: Session }) {
 
   return (
         <Card className="space-y-4 p-4">
-          <div className="flex items-start gap-3">
-            <IconTile icon={MapPin} tone="home" />
-            <p className="min-w-0 text-sm text-[var(--wh-foreground-muted)]">{t("address.uses")}</p>
-          </div>
           {map && address ? (
             // eslint-disable-next-line @next/next/no-img-element -- an inline data URL the server fetched; nothing for the image optimizer to do
             <img src={map} alt={t("places.mapAlt", { address: address.formattedAddress })} className="h-auto w-full rounded-[var(--wh-radius-sm)] border border-[var(--wh-border)]" />
