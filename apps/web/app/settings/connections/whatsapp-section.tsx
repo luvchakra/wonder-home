@@ -1,6 +1,7 @@
 import { isHouseholdAdmin } from "@wonderhome/core/identity/households";
 import { whatsappConfigFromEnv } from "@wonderhome/core/notifications/whatsapp";
 import { Card } from "@wonderhome/core/ui/card";
+import { CollapsibleSection } from "@wonderhome/core/ui/collapsible-section";
 import { IconTile } from "@wonderhome/core/ui/icon-tile";
 import { Badge } from "@wonderhome/core/ui/pill";
 import { SectionHeader } from "@wonderhome/core/ui/section-header";
@@ -42,12 +43,17 @@ export async function WhatsAppSection({ session, connected }: { session: Session
       : t("settingsPage.whatsapp.connectedNothing", { date: formatDate(household.timezone, connectedAt) });
 
   return (
-    <section id="whatsapp" className="scroll-mt-20 space-y-4">
-        <header>
-          <h2 className="text-lg font-semibold tracking-tight">WhatsApp</h2>
-          <p className="mt-0.5 text-sm text-[var(--wh-foreground-muted)]">{t("settingsPage.whatsapp.lede", { household: household.name })}</p>
-        </header>
-
+    // A collapsible card like the playbook/notifications folds (the owner, 2026-10-29): the
+    // Connections page stacked several long sections. It opens on the connect callback so the
+    // success notice is in view.
+    <CollapsibleSection
+      id="whatsapp"
+      icon={MessageCircle}
+      tone="handled"
+      title="WhatsApp"
+      intro={t("settingsPage.whatsapp.lede", { household: household.name })}
+      defaultOpen={connected}
+    >
         {links === null ? (
           <Card><p className="text-sm text-[var(--wh-risk)]">{t("settingsPage.whatsapp.readError")}</p></Card>
         ) : mine ? (
@@ -126,7 +132,6 @@ export async function WhatsAppSection({ session, connected }: { session: Session
             </ul>
           </div>
         </Card>
-
-    </section>
+    </CollapsibleSection>
   );
 }

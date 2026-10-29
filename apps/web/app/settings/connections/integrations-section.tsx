@@ -1,4 +1,4 @@
-import { CalendarDays, CloudSun, Cpu, CreditCard, GraduationCap, Home, Mail, MessageCircle, Plug, ShoppingBasket } from "lucide-react";
+import { AlertTriangle, CalendarDays, CloudSun, Cpu, CreditCard, GraduationCap, Home, KeyRound, Mail, MessageCircle, Plug, ShoppingBasket } from "lucide-react";
 import type { ComponentType } from "react";
 
 import { may } from "@wonderhome/core/billing/repository";
@@ -8,9 +8,9 @@ import { listAssets } from "@wonderhome/core/home/repository";
 import { describeHouseholdWeather, householdWeather } from "@wonderhome/core/home/weather-service";
 import { listIntegrations } from "@wonderhome/core/integrations/repository";
 import { Card } from "@wonderhome/core/ui/card";
+import { CollapsibleSection } from "@wonderhome/core/ui/collapsible-section";
 import { IconTile, type IconTone } from "@wonderhome/core/ui/icon-tile";
 import { Badge, PillLink } from "@wonderhome/core/ui/pill";
-import { SectionHeader } from "@wonderhome/core/ui/section-header";
 
 import { createAdminClient } from "@wonderhome/core/db/admin";
 import { developerApiEnabled, listDeveloperKeys, PARTNER_SCOPES } from "@wonderhome/core/developer/keys";
@@ -87,8 +87,7 @@ export async function IntegrationsSections({ session }: { session: Session }) {
     <>
 
         {attention.length > 0 ? (
-          <section>
-            <SectionHeader title={t("manage.integrations.needsYou")} count={attention.length} />
+          <CollapsibleSection icon={AlertTriangle} tone="attention" title={t("manage.integrations.needsYou")} count={attention.length} defaultOpen>
             <Card className="p-2">
               <ul className="divide-y divide-[var(--wh-border)]">
                 {attention.map((integration) => {
@@ -106,11 +105,10 @@ export async function IntegrationsSections({ session }: { session: Session }) {
                 })}
               </ul>
             </Card>
-          </section>
+          </CollapsibleSection>
         ) : null}
 
-        <section id="providers">
-          <SectionHeader title={t("manage.integrations.providers")} />
+        <CollapsibleSection id="providers" icon={Plug} tone="care" title={t("manage.integrations.providers")}>
           <div className="grid gap-3 sm:grid-cols-2">
             {KINDS.map((kind) => {
               const connected = integrations.filter((integration) => integration.kind === kind.kind);
@@ -138,11 +136,10 @@ export async function IntegrationsSections({ session }: { session: Session }) {
               );
             })}
           </div>
-        </section>
+        </CollapsibleSection>
 
         {smartHome.length > 0 || (devices && devices.length > 0) ? (
-          <section id="devices">
-            <SectionHeader title={t("manage.integrations.devices")} count={devices?.length || undefined} />
+          <CollapsibleSection id="devices" icon={Cpu} tone="ai" title={t("manage.integrations.devices")} count={devices?.length || undefined}>
             <Card className="p-2">
               {devices === null ? (
                 <p className="px-2 py-3 text-sm text-[var(--wh-foreground-muted)]">{t("manage.integrations.devicesFailed")}</p>
@@ -171,12 +168,11 @@ export async function IntegrationsSections({ session }: { session: Session }) {
                 </ul>
               )}
             </Card>
-          </section>
+          </CollapsibleSection>
         ) : null}
 
         {weatherOn ? (
-          <section id="weather">
-            <SectionHeader title={t("manage.integrations.kind.weather")} />
+          <CollapsibleSection id="weather" icon={CloudSun} tone="money" title={t("manage.integrations.kind.weather")}>
             <Card className="flex gap-3 p-4">
               <IconTile icon={CloudSun} tone="money" size="lg" />
               <div className="min-w-0 flex-1 space-y-1">
@@ -203,12 +199,11 @@ export async function IntegrationsSections({ session }: { session: Session }) {
                 )}
               </div>
             </Card>
-          </section>
+          </CollapsibleSection>
         ) : null}
 
         {developerOn ? (
-          <section id="developer">
-            <SectionHeader title={t("manage.integrations.developer")} />
+          <CollapsibleSection id="developer" icon={KeyRound} tone="neutral" title={t("manage.integrations.developer")}>
             <Card className="p-4">
               <DeveloperKeys
                 householdId={householdId}
@@ -228,7 +223,7 @@ export async function IntegrationsSections({ session }: { session: Session }) {
                 }))}
               />
             </Card>
-          </section>
+          </CollapsibleSection>
         ) : null}
 
         <Card className="flex items-start gap-3 bg-[var(--wh-primary-soft)]/50 p-4">

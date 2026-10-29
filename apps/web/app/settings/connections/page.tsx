@@ -4,6 +4,7 @@ import { instamartMode } from "@wonderhome/core/commerce/instamart/config";
 import { AppShell } from "@wonderhome/core/shell/app-shell";
 import { ActionRow } from "@wonderhome/core/ui/action-row";
 import { Card } from "@wonderhome/core/ui/card";
+import { CollapsibleSection } from "@wonderhome/core/ui/collapsible-section";
 import { PillLink } from "@wonderhome/core/ui/pill";
 import { QuoteCard } from "@wonderhome/core/ui/quote-card";
 
@@ -65,8 +66,7 @@ export default async function ConnectionsPage({ searchParams }: { searchParams: 
         <AccountsSection session={session} />
 
         {instamartReady ? (
-          <section id="shopping" className="scroll-mt-20 space-y-4">
-            <h2 className="text-lg font-semibold tracking-tight">{t("connectionsPage.shopping")}</h2>
+          <CollapsibleSection id="shopping" icon={Store} tone="home" title={t("connectionsPage.shopping")}>
             <Card className="p-2">
               <ul>
                 <ActionRow
@@ -78,7 +78,7 @@ export default async function ConnectionsPage({ searchParams }: { searchParams: 
                 />
               </ul>
             </Card>
-          </section>
+          </CollapsibleSection>
         ) : null}
 
         {managesIntegrations ? <IntegrationsSections session={session} /> : null}
