@@ -16,3 +16,7 @@ core and web typecheck; ESLint on web; `npx vitest run packages/core/src/securit
 - Not verified here (no signed-in test project): signed-in screens, the service worker, Gemini Live voice, WhatsApp, payments, the share target. Hence report-only. After deploy, watch for `csp violation` log lines for a week, then set `CSP_MODE=enforce`.
 - Short-TTL fallback cap while the counter is down: not built (over-blocking risk); alert on `rate limit unavailable; allowing`.
 - `middleware.ts` is still the deprecated name for Next's `proxy.ts`.
+
+## Needed from you
+- **After about a week in production, switch the strict CSP on.** Vercel dashboard → project `wonderhome` → Settings → Environment Variables → add `CSP_MODE` = `enforce` (Production) → Deployments → redeploy `main`. Before that, check Vercel logs for lines saying `csp violation`; if there are none from real pages, go ahead. To undo, delete the variable and redeploy.
+- **Optional:** add a log alert in Vercel for the message `rate limit unavailable; allowing` (it means the limiter's database counter is down).
