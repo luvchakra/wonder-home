@@ -47,7 +47,6 @@ import { AddPetForm } from "../_components/add-pet-form";
 import { OpenOnHash } from "../_components/open-on-hash";
 import { InviteMemberForm } from "../_components/invite-member-form";
 import { PendingInvitations } from "../_components/pending-invitations";
-import { RemoveMemberControl } from "../_components/remove-member-control";
 import { RelationshipsCard } from "./relationships";
 import { formatDate, formatTime, requireSession } from "../_lib/session";
 import { MemberRoleControl } from "../_components/member-role-control";
@@ -204,7 +203,6 @@ export default async function FamilyPage() {
   const relatable = familyMembers.filter((member) => member.status !== "inactive");
   const relationshipRows = describeRelationships(t, relationships, members);
   const suggestions = admin ? describeSuggestions(t, suggestRelationships(members, relationships, guardianLinks), members) : [];
-  const removable = (member: (typeof members)[number]) => admin && !member.isOwner && member.id !== membership.memberId && member.status === "active";
   const statusLabel = (status: string) => (status === "invited" ? t("family.status.invitedLong") : status === "inactive" ? t("family.status.inactive") : null);
 
   return (
@@ -325,6 +323,7 @@ export default async function FamilyPage() {
                         workPlace={member.memberType === "adult" ? officeOf(member.id) : null}
                         relations={relationsLine(t, member.id, relationships, members)}
                         relationshipRows={relationships}
+                        removeLabels={formLabels}
                         responsibilitiesHref={`/household/responsibilities?group=person#person-${member.id}`}
                         responsibilitiesCount={responsibilitiesFor(member.id, responsibilityRows).owned.length}
                       />
@@ -338,7 +337,6 @@ export default async function FamilyPage() {
                           withLabel
                         />
                       ) : null}
-                      {removable(member) ? <RemoveMemberControl householdId={householdId} memberId={member.id} displayName={member.displayName} labels={formLabels} /> : null}
                       {member.memberType === "child" && (isAdminViewer || guarded.has(member.id)) && childQuiet(member) ? (
                         <ChildQuietControl
                           householdId={householdId}
@@ -500,11 +498,11 @@ export default async function FamilyPage() {
                           email={emails.get(member.id) ?? null}
                         phone={phones.get(member.id) ?? null}
                           invite={invite}
+                          removeLabels={formLabels}
                         />
                         <PillLink href="/househelper" tone="quiet">
                           {t("family.fullHelperProfile")}
                         </PillLink>
-                        {removable(member) ? <RemoveMemberControl householdId={householdId} memberId={member.id} displayName={member.displayName} labels={formLabels} /> : null}
                       </div>
                     </ExpandableRow>
                   ))}

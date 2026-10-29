@@ -10,6 +10,7 @@ import { requestFormatIn, requestT } from "@wonderhome/core/i18n/request";
 import { PillLink } from "@wonderhome/core/ui/pill";
 import { UserRoundPen } from "lucide-react";
 
+import type { MemberFormLabels } from "../_lib/member-form-labels";
 import { formatDate } from "../_lib/session";
 import { describeRoles } from "../_lib/member-role";
 import { HELPER_ROLES } from "../_lib/helper-roles";
@@ -58,11 +59,14 @@ export function MemberDetail({
   relationshipRows,
   responsibilitiesHref,
   responsibilitiesCount,
+  removeLabels,
 }: {
   member: HouseholdMember;
   /** Where this member's own responsibilities are listed, and how many they own. */
   responsibilitiesHref?: string;
   responsibilitiesCount?: number;
+  /** The remove dialog's words in the viewer's language; English otherwise. */
+  removeLabels?: MemberFormLabels;
   allMembers: readonly HouseholdMember[];
   timezone: string;
   editable: boolean;
@@ -110,51 +114,7 @@ export function MemberDetail({
   return (
     <div className="space-y-3">
       {editsHere ? (
-        <MemberAvatarControl householdId={householdId} memberId={member.id} displayName={member.displayName} avatarUrl={member.avatarUrl} />
-      ) : null}
-      <dl className="grid grid-cols-2 gap-x-4 gap-y-2.5">
-        {/* Who they are, in pairs. */}
-        <Fact label={t("family.fact.role")} value={describeRoles(member.roles, member.isOwner)} />
-        <Fact label={t("family.fact.status")} value={statusLabel ?? null} />
-        <Fact label={t("family.fact.nickname")} value={member.nickname} />
-        <Fact label={t("family.fact.familyCallsMe")} value={member.relationship} />
-        <Fact label={t("family.fact.age")} value={age} />
-        <Fact label={t("family.fact.dateOfBirth")} value={born} />
-        <Fact label={t("family.fact.gender")} value={member.gender} />
-        <Fact label={member.memberType === "helper" ? t("setupWizard.helpers.role") : t("family.fact.occupation")} value={member.occupation} />
-        {/* How to reach them: whole rows, since an email or a number is long. */}
-        <Fact wide label={t("memberInvite.factEmail")} value={email ?? null} />
-        <Fact wide label={t("memberInvite.factPhone")} value={phone ? formatPhone(phone) : null} />
-        {/* Their day. */}
-        <Fact label={t("family.fact.schoolOrWork")} value={member.memberType === "child" && school ? school.schoolName : member.memberType === "adult" && workPlace ? null : member.schoolOrWorkLocation} />
-        <Fact label={t("family.fact.schoolHours")} value={member.memberType === "child" && school?.hours ? hoursLabel(school.hours, clockTime) : null} />
-        <Fact label={t("family.fact.workArrangement")} value={member.memberType === "adult" && member.workArrangement ? t(`setupWizard.work.${member.workArrangement}`) : null} />
-        <Fact label={t("family.fact.office")} value={member.memberType === "adult" && workPlace ? workPlace.name : null} />
-        <Fact label={t("family.fact.officeHours")} value={member.memberType === "adult" && member.workHours ? hoursLabel(member.workHours, clockTime) : null} />
-        {/* Family. */}
-        <Fact wide label={t("relationships.fact")} value={relations ?? null} />
-        <Fact label={t("family.fact.siblings")} value={siblings} />
-        <Fact label={t("family.fact.specialOccasion")} value={occasion} />
-      </dl>
-      {member.notes ? (
-        <div>
-          <p className="text-xs font-medium tracking-wide text-[var(--wh-foreground-subtle)] uppercase">{t("family.fact.notes")}</p>
-          <p className="text-sm whitespace-pre-line">{member.notes}</p>
-        </div>
-      ) : null}
-      {responsibilitiesHref && responsibilitiesCount ? (
-        <PillLink href={responsibilitiesHref} tone="quiet">
-          {t("family.viewResponsibilities", { count: responsibilitiesCount })}
-        </PillLink>
-      ) : null}
-      {isMe ? (
-        <PillLink href="/settings" tone="quiet">
-          <UserRoundPen aria-hidden className="size-3.5" />
-          {t("family.editInSettings")}
-        </PillLink>
-      ) : null}
-      {editsHere ? (
-        <div className="flex flex-wrap items-center gap-2">
+        <div className="flex flex-wrap items-center justify-end gap-2">
           <MemberProfileForm
             householdId={householdId}
             memberId={member.id}
@@ -224,9 +184,53 @@ export function MemberDetail({
             />
           ) : null}
           {!member.isOwner && member.id !== currentMemberId && member.status === "active" ? (
-            <RemoveMemberControl householdId={householdId} memberId={member.id} displayName={member.displayName} />
+            <RemoveMemberControl householdId={householdId} memberId={member.id} displayName={member.displayName} labels={removeLabels} />
           ) : null}
         </div>
+      ) : null}
+      {editsHere ? (
+        <MemberAvatarControl householdId={householdId} memberId={member.id} displayName={member.displayName} avatarUrl={member.avatarUrl} />
+      ) : null}
+      <dl className="grid grid-cols-2 gap-x-4 gap-y-2.5">
+        {/* Who they are, in pairs. */}
+        <Fact label={t("family.fact.role")} value={describeRoles(member.roles, member.isOwner)} />
+        <Fact label={t("family.fact.status")} value={statusLabel ?? null} />
+        <Fact label={t("family.fact.nickname")} value={member.nickname} />
+        <Fact label={t("family.fact.familyCallsMe")} value={member.relationship} />
+        <Fact label={t("family.fact.age")} value={age} />
+        <Fact label={t("family.fact.dateOfBirth")} value={born} />
+        <Fact label={t("family.fact.gender")} value={member.gender} />
+        <Fact label={member.memberType === "helper" ? t("setupWizard.helpers.role") : t("family.fact.occupation")} value={member.occupation} />
+        {/* How to reach them: whole rows, since an email or a number is long. */}
+        <Fact wide label={t("memberInvite.factEmail")} value={email ?? null} />
+        <Fact wide label={t("memberInvite.factPhone")} value={phone ? formatPhone(phone) : null} />
+        {/* Their day. */}
+        <Fact label={t("family.fact.schoolOrWork")} value={member.memberType === "child" && school ? school.schoolName : member.memberType === "adult" && workPlace ? null : member.schoolOrWorkLocation} />
+        <Fact label={t("family.fact.schoolHours")} value={member.memberType === "child" && school?.hours ? hoursLabel(school.hours, clockTime) : null} />
+        <Fact label={t("family.fact.workArrangement")} value={member.memberType === "adult" && member.workArrangement ? t(`setupWizard.work.${member.workArrangement}`) : null} />
+        <Fact label={t("family.fact.office")} value={member.memberType === "adult" && workPlace ? workPlace.name : null} />
+        <Fact label={t("family.fact.officeHours")} value={member.memberType === "adult" && member.workHours ? hoursLabel(member.workHours, clockTime) : null} />
+        {/* Family. */}
+        <Fact wide label={t("relationships.fact")} value={relations ?? null} />
+        <Fact label={t("family.fact.siblings")} value={siblings} />
+        <Fact label={t("family.fact.specialOccasion")} value={occasion} />
+      </dl>
+      {member.notes ? (
+        <div>
+          <p className="text-xs font-medium tracking-wide text-[var(--wh-foreground-subtle)] uppercase">{t("family.fact.notes")}</p>
+          <p className="text-sm whitespace-pre-line">{member.notes}</p>
+        </div>
+      ) : null}
+      {responsibilitiesHref && responsibilitiesCount ? (
+        <PillLink href={responsibilitiesHref} tone="quiet">
+          {t("family.viewResponsibilities", { count: responsibilitiesCount })}
+        </PillLink>
+      ) : null}
+      {isMe ? (
+        <PillLink href="/settings" tone="quiet">
+          <UserRoundPen aria-hidden className="size-3.5" />
+          {t("family.editInSettings")}
+        </PillLink>
       ) : null}
     </div>
   );
