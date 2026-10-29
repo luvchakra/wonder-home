@@ -47,7 +47,7 @@ export default function NavDrawer({
         <Dialog.Overlay className="wh-rise fixed inset-0 z-50 bg-[oklch(0.27_0.05_255/0.35)] backdrop-blur-[2px]" />
         <Dialog.Content
           className={cn(
-            "wh-slide-in-left fixed inset-y-0 left-0 z-50 flex h-dvh w-[min(20rem,85vw)] flex-col overflow-y-auto",
+            "wh-slide-in-left fixed inset-y-0 left-0 z-50 flex h-dvh w-[min(20rem,85vw)] flex-col overflow-hidden",
             "bg-[var(--wh-surface)] pb-[env(safe-area-inset-bottom)] shadow-[var(--wh-shadow-float)] outline-none",
           )}
         >
@@ -66,11 +66,11 @@ export default function NavDrawer({
               the fight for space and the whole banner collapses to nothing
               taller than its own padding. */}
           <div
-            className="relative shrink-0 overflow-hidden px-4 pt-[calc(env(safe-area-inset-top)+1rem)] pb-5"
+            className="relative shrink-0 overflow-hidden px-4 pt-[calc(env(safe-area-inset-top)+0.5rem)] pb-2"
             style={{ background: "var(--wh-gradient-hero)" }}
           >
-            <LeafDecor corner="top-right" size={130} opacity={0.3} />
-            <HomeIllustration className="pointer-events-none absolute -top-2 -right-16 w-44 opacity-80" />
+            <LeafDecor corner="top-right" size={96} opacity={0.25} />
+            <HomeIllustration className="pointer-events-none absolute -top-1 -right-12 w-28 opacity-70" />
 
             <div className="relative flex items-start justify-between gap-2">
               <Link href="/" onClick={close} className="min-w-0">
@@ -80,19 +80,24 @@ export default function NavDrawer({
                 <button
                   type="button"
                   aria-label="Close menu"
-                  className="grid size-10 shrink-0 place-items-center rounded-full bg-[var(--wh-surface)]/75 text-[var(--wh-foreground-muted)] backdrop-blur-sm hover:bg-[var(--wh-surface)]"
+                  className="grid size-9 shrink-0 place-items-center rounded-full bg-[var(--wh-surface)]/75 text-[var(--wh-foreground-muted)] backdrop-blur-sm hover:bg-[var(--wh-surface)]"
                 >
                   <X className="size-5" />
                 </button>
               </Dialog.Close>
             </div>
 
-            <ScriptAccent tone="primary" size="sm" heart className="relative mt-4">
+            <ScriptAccent tone="primary" size="sm" heart className="relative mt-1">
               A happier home together
             </ScriptAccent>
           </div>
 
-          <nav aria-label="Household menu" className="mt-4 flex-1 space-y-5 px-2 pb-6">
+          {/* The list is the only thing that scrolls: the hero above stays put
+              (`shrink-0`) and this `nav` takes the rest of the column and
+              scrolls within it, so on the shortest phones the full set is
+              reachable without the brand header sliding away — and on a
+              standard phone it all fits at once with nothing clipped. */}
+          <nav aria-label="Household menu" className="mt-1 flex-1 space-y-1 overflow-y-auto px-2 pb-3">
             {sections.map((section) => (
               <DrawerSection key={section.group} title={section.label} items={section.items} isCurrent={isCurrent} onNavigate={close} />
             ))}
@@ -118,10 +123,10 @@ function DrawerSection({
 
   return (
     <div>
-      <p className="mb-1.5 px-3 text-[0.625rem] font-semibold tracking-[0.12em] text-[var(--wh-foreground-subtle)] uppercase">
+      <p className="mb-0.5 px-3 text-[0.625rem] font-semibold tracking-[0.12em] text-[var(--wh-foreground-subtle)] uppercase">
         {title}
       </p>
-      <ul className="space-y-0.5">
+      <ul className="space-y-px">
         {items.map((item) => (
           <li key={item.key}>
             <SidebarLink
