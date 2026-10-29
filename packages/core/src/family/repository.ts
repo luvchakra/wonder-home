@@ -40,6 +40,7 @@ export async function listEvents(
       "id, title, kind, starts_at, ends_at, protected, owner_member_id, status, action_state, action_due_at, all_day, location, event_participants(member_id, response, required)",
     )
     .eq("household_id", householdId)
+    .is("soft_deleted_at", null)
     .order("starts_at", { ascending: true });
 
   if (options.from) query = query.gte("ends_at", options.from.toISOString());

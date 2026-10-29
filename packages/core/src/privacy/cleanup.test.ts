@@ -28,6 +28,10 @@ function makeDb(tables: Tables) {
         if (op === "lt") return cell != null && (cell as never) < (val as never);
         if (op === "in") return (val as unknown[]).includes(cell);
         if (op === "not-is") return val === null ? cell !== null && cell !== undefined : true;
+        if (op === "not-in") {
+          const list = String(val).replace(/^\(|\)$/g, "").split(",").filter(Boolean);
+          return !list.includes(String(cell));
+        }
         return true;
       });
     const run = () => {
@@ -174,6 +178,31 @@ describe("runRetentionCleanup", () => {
     expect(tables.availability_exceptions![0]!.soft_deleted_at).toBe(NOW.toISOString());
   });
 
+  it("cleans a passed one-off event but keeps protected, birthday, appointment and recent ones", async () => {
+    const tables: Tables = {
+      policies: [],
+      availability_exceptions: [],
+      family_event_changes: [],
+      family_events: [
+        { id: "past-outing", household_id: "h1", ends_at: iso(200), kind: "outing", protected: false, recurrence: null, soft_deleted_at: null },
+        { id: "protected", household_id: "h1", ends_at: iso(200), kind: "outing", protected: true, recurrence: null, soft_deleted_at: null },
+        { id: "birthday", household_id: "h1", ends_at: iso(200), kind: "birthday", protected: false, recurrence: null, soft_deleted_at: null },
+        { id: "appointment", household_id: "h1", ends_at: iso(200), kind: "appointment", protected: false, recurrence: null, soft_deleted_at: null },
+        { id: "recurring", household_id: "h1", ends_at: iso(200), kind: "outing", protected: false, recurrence: "FREQ=WEEKLY", soft_deleted_at: null },
+        { id: "recent", household_id: "h1", ends_at: iso(10), kind: "outing", protected: false, recurrence: null, soft_deleted_at: null },
+      ],
+      retention_cleanup_runs: [],
+    };
+    await runRetentionCleanup(makeDb(tables), NOW);
+    const marked = (id: string) => tables.family_events!.find((r) => r.id === id)!.soft_deleted_at;
+    expect(marked("past-outing")).toBe(NOW.toISOString());
+    expect(marked("protected")).toBeNull();
+    expect(marked("birthday")).toBeNull();
+    expect(marked("appointment")).toBeNull();
+    expect(marked("recurring")).toBeNull();
+    expect(marked("recent")).toBeNull();
+  });
+
   it("skips the whole run when the windows cannot be read (fail-safe to keep)", async () => {
     const chain: Record<string, unknown> = {};
     Object.assign(chain, {
@@ -189,25 +218,34 @@ describe("runRetentionCleanup", () => {
 });
 
 describe("purgeSoftDeleted", () => {
-  it("no-ops while the purge is gated off", async () => {
-    const tables: Tables = {
-      availability_exceptions: [{ id: "a", household_id: "h1", on_date: dayKey(500), soft_deleted_at: iso(400) }],
-      family_event_changes: [],
-    };
-    expect(await purgeSoftDeleted(makeDb(tables), NOW)).toEqual([]);
-    expect(tables.availability_exceptions!).toHaveLength(1); // nothing deleted
+  const ripeTables = (): Tables => ({
+    availability_exceptions: [
+      { id: "ripe", household_id: "h1", on_date: dayKey(500), soft_deleted_at: iso(100) },
+      { id: "fresh", household_id: "h1", on_date: dayKey(500), soft_deleted_at: iso(10) },
+      { id: "live", household_id: "h1", on_date: dayKey(500), soft_deleted_at: null },
+    ],
+    family_event_changes: [],
+    family_events: [],
+  });
+
+  it("no-ops while the purge is gated off (not enabled, not a dry-run)", async () => {
+    const tables = ripeTables();
+    const result = await purgeSoftDeleted(makeDb(tables), NOW);
+    expect(result).toEqual({ dryRun: false, outcomes: [] });
+    expect(tables.availability_exceptions!).toHaveLength(3); // nothing deleted
+  });
+
+  it("dry-run reports what it would delete and deletes nothing", async () => {
+    const tables = ripeTables();
+    const { dryRun, outcomes } = await purgeSoftDeleted(makeDb(tables), NOW, { dryRun: true, graceDays: 30 });
+    expect(dryRun).toBe(true);
+    expect(outcomes.find((o) => o.category === "availability_exceptions")!.marked).toBe(1); // "ripe" would go
+    expect(tables.availability_exceptions!).toHaveLength(3); // but nothing is deleted
   });
 
   it("hard-deletes soft-deleted rows past the grace window only when explicitly enabled", async () => {
-    const tables: Tables = {
-      availability_exceptions: [
-        { id: "ripe", household_id: "h1", on_date: dayKey(500), soft_deleted_at: iso(100) },
-        { id: "fresh", household_id: "h1", on_date: dayKey(500), soft_deleted_at: iso(10) },
-        { id: "live", household_id: "h1", on_date: dayKey(500), soft_deleted_at: null },
-      ],
-      family_event_changes: [],
-    };
-    const outcomes = await purgeSoftDeleted(makeDb(tables), NOW, { enabled: true, graceDays: 30 });
+    const tables = ripeTables();
+    const { outcomes } = await purgeSoftDeleted(makeDb(tables), NOW, { enabled: true, graceDays: 30 });
     const ids = tables.availability_exceptions!.map((r) => r.id);
     expect(ids).toEqual(["fresh", "live"]); // only the ripe soft-deleted row is gone
     expect(outcomes.find((o) => o.category === "availability_exceptions")!.marked).toBe(1);

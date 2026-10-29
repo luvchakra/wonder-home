@@ -61,7 +61,34 @@ export type CleanupSpec = {
   ageColumn: string;
   /** True when the column is a `date` (compare to YYYY-MM-DD, not a timestamp). */
   dateOnly?: boolean;
+  /** Extra conditions a row must meet to be eligible (applied to every read). */
+  filters?: {
+    /** Column must equal the value. */
+    eq?: readonly [string, unknown][];
+    /** Column must be null (e.g. keep recurring events: `recurrence is null`). */
+    isNull?: readonly string[];
+    /** Column must NOT be one of these values (e.g. keep birthdays, appointments). */
+    notIn?: readonly [string, readonly string[]][];
+  };
 };
+
+/** The query-builder methods the cleanup scans chain; kept loose to avoid deep generic instantiation. */
+type FilterQuery = {
+  eq: (column: string, value: unknown) => FilterQuery;
+  is: (column: string, value: unknown) => FilterQuery;
+  not: (column: string, op: string, value: unknown) => FilterQuery;
+  lt: (column: string, value: unknown) => FilterQuery;
+  limit: (count: number) => PromiseLike<{ data: unknown; error: { code?: string } | null }>;
+};
+
+/** Applies a spec's extra filters to a query builder, in read and candidate scans alike. */
+function withFilters(query: FilterQuery, spec: CleanupSpec): FilterQuery {
+  let next = query;
+  for (const [col, val] of spec.filters?.eq ?? []) next = next.eq(col, val);
+  for (const col of spec.filters?.isNull ?? []) next = next.is(col, null);
+  for (const [col, vals] of spec.filters?.notIn ?? []) next = next.not(col, "in", `(${vals.join(",")})`);
+  return next;
+}
 
 /**
  * The tables cleaned, and why each is safe (design §4.2). Only the phase-1
@@ -76,6 +103,18 @@ export type CleanupSpec = {
 export const CLEANUP_SPECS: readonly CleanupSpec[] = [
   { category: "availability_exceptions", table: "availability_exceptions", ageColumn: "on_date", dateOnly: true },
   { category: "family_event_changes", table: "family_event_changes", ageColumn: "created_at" },
+  // Passed one-off calendar events (the owner, Q1): cleaned once they ended
+  // longer ago than the window. Kept whatever the window: `protected` events,
+  // `birthday` (annual, a keepsake), and `appointment` (health-adjacent — this
+  // also avoids ever touching an event a `health_appointment` points at).
+  {
+    category: "family_events",
+    table: "family_events",
+    ageColumn: "ends_at",
+    // Keep: recurring events (they never "pass"), protected ones, birthdays
+    // (annual keepsakes) and appointments (health-adjacent).
+    filters: { eq: [["protected", false]], isNull: ["recurrence"], notIn: [["kind", ["birthday", "appointment"]]] },
+  },
 ];
 
 export type CleanupOutcome = {
@@ -109,12 +148,14 @@ function cutoff(now: Date, days: number, dateOnly: boolean): string {
 async function candidateHouseholds(admin: SupabaseClient, now: Date): Promise<string[]> {
   const ids = new Set<string>();
   for (const spec of CLEANUP_SPECS) {
-    const { data } = await admin
-      .from(spec.table)
-      .select("household_id")
-      .is("soft_deleted_at", null)
-      .lt(spec.ageColumn, cutoff(now, MIN_RETENTION_WINDOW_DAYS, spec.dateOnly ?? false))
-      .limit(5000);
+    const { data } = await withFilters(
+      admin
+        .from(spec.table)
+        .select("household_id")
+        .is("soft_deleted_at", null)
+        .lt(spec.ageColumn, cutoff(now, MIN_RETENTION_WINDOW_DAYS, spec.dateOnly ?? false)) as unknown as FilterQuery,
+      spec,
+    ).limit(5000);
     for (const row of (data as { household_id: string }[] | null) ?? []) ids.add(row.household_id);
     if (ids.size >= MAX_HOUSEHOLDS * 4) break;
   }
@@ -172,13 +213,15 @@ export async function runRetentionCleanup(admin: SupabaseClient, now: Date = new
 
 /** One (household, spec) soft-delete, read-then-mark so the batch is bounded. */
 async function markOne(admin: SupabaseClient, spec: CleanupSpec, householdId: string, before: string, now: Date): Promise<number> {
-  const { data: candidates, error: readError } = await admin
-    .from(spec.table)
-    .select("id")
-    .eq("household_id", householdId)
-    .is("soft_deleted_at", null)
-    .lt(spec.ageColumn, before)
-    .limit(BATCH);
+  const { data: candidates, error: readError } = await withFilters(
+    admin
+      .from(spec.table)
+      .select("id")
+      .eq("household_id", householdId)
+      .is("soft_deleted_at", null)
+      .lt(spec.ageColumn, before) as unknown as FilterQuery,
+    spec,
+  ).limit(BATCH);
   if (readError) throw new Error(readError.code ?? "read_failed");
   const ids = ((candidates as { id: string }[] | null) ?? []).map((row) => row.id);
   if (ids.length === 0) return 0;
@@ -207,29 +250,38 @@ async function recordRun(admin: SupabaseClient, householdId: string, category: s
 }
 
 /**
- * The irreversible purge, GATED OFF (guardrail G7). It is written so the
- * lifecycle is complete and testable, but it no-ops unless `enabled` is passed
- * true, and nothing in phase 1 passes it. Enabling it is a separate decision
- * (design Q4): it hard-deletes rows soft-deleted longer ago than the grace
- * window. Because soft-delete left every foreign key in place, the existing
+ * The purge: hard-deleting rows soft-deleted longer ago than the grace window.
+ * Because soft-delete left every foreign key in place, the existing
  * `on delete cascade` / `set null` definitions keep the delete from orphaning.
+ *
+ * Three modes (the owner, Q4 — "yes, dry-run first"):
+ *  - `dryRun: true` → counts what it *would* delete and deletes nothing. Safe to
+ *    run on live, and what the nightly sweep does for now; the counts are the
+ *    report the owner reviews before real deletion is switched on.
+ *  - `enabled: true` → really deletes. Only after the owner has seen a dry-run.
+ *  - neither → no-op (the default; `RETENTION_PURGE_ENABLED` is false).
  */
 export async function purgeSoftDeleted(
   admin: SupabaseClient,
   now: Date = new Date(),
-  options: { enabled?: boolean; graceDays?: number } = {},
-): Promise<CleanupOutcome[]> {
-  if (!(options.enabled ?? RETENTION_PURGE_ENABLED)) return [];
+  options: { enabled?: boolean; dryRun?: boolean; graceDays?: number } = {},
+): Promise<{ dryRun: boolean; outcomes: CleanupOutcome[] }> {
+  const dryRun = options.dryRun ?? false;
+  const reallyPurge = options.enabled ?? RETENTION_PURGE_ENABLED;
+  if (!dryRun && !reallyPurge) return { dryRun: false, outcomes: [] };
+
   const graceDays = options.graceDays ?? DEFAULT_RETENTION_WINDOW_DAYS;
   const before = new Date(now.getTime() - graceDays * MS_PER_DAY).toISOString();
   const outcomes: CleanupOutcome[] = [];
   for (const spec of CLEANUP_SPECS) {
-    const { data, error } = await admin.from(spec.table).delete().lt("soft_deleted_at", before).not("soft_deleted_at", "is", null).select("id");
-    if (error) {
-      outcomes.push({ category: spec.category, marked: 0, error: error.code ?? "unknown" });
+    if (dryRun) {
+      const { data, error } = await admin.from(spec.table).select("id").lt("soft_deleted_at", before).not("soft_deleted_at", "is", null).limit(100_000);
+      outcomes.push(error ? { category: spec.category, marked: 0, error: error.code ?? "unknown" } : { category: spec.category, marked: ((data as { id: string }[] | null) ?? []).length });
       continue;
     }
-    outcomes.push({ category: spec.category, marked: ((data as { id: string }[] | null) ?? []).length });
+    const { data, error } = await admin.from(spec.table).delete().lt("soft_deleted_at", before).not("soft_deleted_at", "is", null).select("id");
+    outcomes.push(error ? { category: spec.category, marked: 0, error: error.code ?? "unknown" } : { category: spec.category, marked: ((data as { id: string }[] | null) ?? []).length });
   }
-  return outcomes;
+  if (dryRun) log.info("retention purge dry-run", { outcomes: outcomes.map((o) => ({ category: o.category, wouldDelete: o.marked, error: o.error })), allow: ["outcomes"] });
+  return { dryRun, outcomes };
 }

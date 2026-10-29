@@ -208,7 +208,7 @@ export async function resolveLink(supabase: SupabaseClient, householdId: string,
         return data ? { kind: "meal", id: data.id as string, label: data.name as string, onDate: data.on_date as string } : null;
       }
       case "event": {
-        const { data } = await supabase.from("family_events").select("id, title").eq("household_id", householdId).eq("id", choice.id).maybeSingle();
+        const { data } = await supabase.from("family_events").select("id, title").eq("household_id", householdId).eq("id", choice.id).is("soft_deleted_at", null).maybeSingle();
         return data ? { kind: "event", id: data.id as string, label: data.title as string } : null;
       }
       case "grocery": {

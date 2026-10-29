@@ -213,53 +213,70 @@ minimal, non-personal way:
 | | Guardrail | How it's honoured |
 | --- | --- | --- |
 | G1 | Never auto-expire health/allergy/safety | `health_*` exempt entirely; not in any spec |
-| G2 | Keep financial / purchase / "Why?" / stat-tile history | Financial tables exempt; called out, never purged without owner sign-off (Q2) |
-| G3 | Children's data: conservative, when unsure keep | School/child items are phase 2/3 with a longer window and Q3 |
+| G2 | Keep financial / purchase / "Why?" / stat-tile history | Financial tables exempt — confirmed by the owner (Q2); never in any spec |
+| G3 | Children's data: conservative, when unsure keep | `school_items` cleaned only when handled/terminal, on the household window (owner, Q3); never a pending item; phase 3 |
 | G4 | Reversible before purge | `soft_deleted_at` is reversible; restore path at the data layer |
 | G5 | Never purge something still referenced / no stray reminders | Column (not move) keeps FKs; cleanup targets rows already outside every reminder window; §6 |
 | G6 | Auditable without re-storing PII | `retention_cleanup_runs`: counts only |
-| G7 | No irreversible hard purge on LIVE this session | `RETENTION_PURGE_ENABLED` defaults off; purge not wired into the live sweep; soft-delete only |
+| G7 | No irreversible hard purge on LIVE this session | Phase 1 soft-delete only. Phase 2a adds the purge in **dry-run** (reports counts, deletes nothing); real deletion stays gated until the owner reviews a dry-run report (owner, Q4) |
 
 ---
 
-## 9. Open questions for the owner
+## 9. Owner decisions (2026-10-28)
 
-These gate phases 2+. Phase 1 does not depend on them.
+The owner answered the phase-1 questions. These now drive phases 2–3.
 
-- **Q1 — Passed calendar events: ephemera or keepsake?** Should passed one-off
-  `family_events` be cleaned (hidden, then purged after the window)? Families
-  often look back at "what we did last spring". Options: (a) clean all passed
-  one-offs; (b) clean only certain kinds (e.g. `appointment`, `outing`) and keep
-  `gathering`/`birthday`; (c) keep all events, clean only their derived
-  scheduling rows. **This decides phase 2's first story.**
-- **Q2 — Financial / purchase history.** Confirm it stays **exempt** (kept
-  until the household removes it). If you ever want a window on it, it needs its
-  own explicit decision — it feeds stat tiles and "Why?".
-- **Q3 — Children's school history.** How long should handled school items be
-  kept before cleanup — longer than 90 days? Keep `missed` items (a parent may
-  want to review them) even if `done` ones go?
-- **Q4 — When may the hard purge run on live data?** Phase 1 ships soft-delete
-  only. To enable purge: confirm the policy, then it runs for soft-deleted rows
-  past the grace window. Should the first live purge be a one-off dry-run report
-  to you first?
-- **Q5 — Notifications.** They're already purged at 180 days by the existing
-  schedule. Should the per-household window also apply to them (clean delivered
-  notifications sooner), or leave them on the platform schedule?
+- **Q1 — Passed calendar events → clean them, on the retention window.** Passed
+  one-off `family_events` are cleaned once older than the household window.
+  Conservative exclusions (not the owner's words, applied for safety): never
+  `protected` events, never `birthday` (annual, a keepsake), never `appointment`
+  (health-adjacent — avoids touching any `health_appointments` link). Everything
+  else passed is ephemera. Phase 2.
+- **Q2 — Financial / purchase history → stays exempt.** Confirmed. Bills,
+  payments, periods, purchases and budgets are never auto-cleaned. Unchanged.
+- **Q3 — Children's school history → clean on the retention window.** Handled
+  `school_items` (`done`, `submitted`, `missed`, `cancelled`) are cleaned on the
+  same household window (no separate longer window). Still child data, so it
+  stays conservative: only handled/terminal items, never a pending one. Phase 3.
+- **Q4 — Hard purge → yes, dry-run first.** The purge is enabled, but its first
+  pass on live is a **dry-run**: it reports what it *would* delete and deletes
+  nothing. Only after the owner has seen a real dry-run report (which needs
+  soft-deleted rows to have aged past the grace window first) does it switch to
+  deleting. No irreversible purge runs on live until then.
+- **Q5 — Notifications → apply the household window.** Terminal notifications
+  (`resolved`, `expired`, `acted`, `dismissed`) are cleaned on the household
+  window too. The existing platform 180-day schedule (`purge.ts`) stays as the
+  backstop for anything the household window does not reach. Phase 2.
 
 ---
 
 ## 10. Phased roadmap
 
-- **Phase 1 (this PR).** Framework: the `soft_deleted_at` column +
-  `retention_cleanup_runs` audit table + indexes (one additive migration); the
-  Admin window setting + Privacy Centre control (8 languages); the cleanup
-  engine wired into the nightly sweep; soft-delete enabled for
-  `availability_exceptions` and `family_event_changes`; the gated purge function
-  (present, off); tests; this doc; help wording.
-- **Phase 2.** After Q1/Q4: passed `family_events` (with reader filters + a
-  resurrection test) and `home_send_items` (with Storage-object cleanup); enable
-  the gated purge behind a confirmed policy, optionally dry-run first.
-- **Phase 3.** Child-conservative `school_items` (Q3); a member-facing "recently
-  cleaned / restore" view; per-category windows if wanted.
+- **Phase 1 (PR #422, merged).** Framework: the `soft_deleted_at` column +
+  `retention_cleanup_runs` audit table + indexes; the Admin window setting +
+  Privacy Centre control (8 languages); the cleanup engine on the nightly sweep;
+  soft-delete enabled for `availability_exceptions` and `family_event_changes`;
+  the gated purge function (present, off); tests; this doc; help wording.
+- **Phase 2a.** Passed `family_events` (Q1): soft-delete on the household window
+  with the exclusions above, `soft_deleted_at` reader filters across the
+  calendar/event readers, and a resurrection test. Plus the **purge dry-run**
+  (Q4): the purge runs in report-only mode (counts, deletes nothing) across all
+  soft-delete categories, surfaced for the owner; real deletion stays gated.
+- **Phase 2b.** `notifications` on the household window (Q5, with the 180-day
+  backstop kept) and `home_send_items` (with Storage-object cleanup). Deferred
+  behind PR #419, which is editing the HomeSend readers.
+- **Phase 3.** `school_items` on the household window, handled/terminal only
+  (Q3, child-conservative); flip the purge from dry-run to real once the owner
+  has seen a dry-run report; a member-facing "recently cleaned / restore" view.
+
+### Migration ordering for phase 2+ (important)
+
+Unlike phase 1, phase 2's reader filters (`.is("soft_deleted_at", null)`)
+**require the new column to exist when the code deploys** — a read against a
+missing column errors. Because the Supabase MCP `apply_migration` times out in
+cloud sessions (the owner runs migrations by hand), each phase-2+ migration is
+**applied to live first, confirmed, then the code is merged** — the one place
+the "turn on auto-merge immediately" rule yields to "don't deploy a reader that
+its column has not landed for yet".
 
 Backlog: module 15 (Privacy/Security/Governance) carries these as stories.

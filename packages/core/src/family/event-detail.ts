@@ -53,6 +53,7 @@ export async function loadEvent(supabase: SupabaseClient, householdId: string, e
       .select("id, title, kind, starts_at, ends_at, location, location_place_id, location_address, notes, protected, owner_member_id, status, action_state, action_due_at, all_day, category, visibility, recurrence, invite_template, invite_message, event_participants(member_id, response, required)")
       .eq("household_id", householdId)
       .eq("id", eventId)
+      .is("soft_deleted_at", null)
       .maybeSingle(),
     supabase.from("event_guests").select("id, name, response, party_size, note, updated_at").eq("household_id", householdId).eq("event_id", eventId).order("updated_at", { ascending: true }),
     supabase.from("event_invite_links").select("token").eq("household_id", householdId).eq("event_id", eventId).is("revoked_at", null).order("created_at", { ascending: false }).limit(1),

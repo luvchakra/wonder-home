@@ -14,8 +14,9 @@
 | 8 | P0 | 15-008 | Security testing | Done | Nine-area suite with a deterministic signal; SSRF guard, prompt-injection and session-abuse coverage |
 | 9 | P0 | 15-009 | Hardening against AI-assisted reverse engineering | Done | The owner, 2026-10-21 (a hardening prompt). Audit and fixes in `docs/progress/2026-10-21-reverse-engineering-hardening.md`. Fixed: an open redirect after sign-in (`/\evil.com` passed the `?next=` check; one `security/same-site-path.ts` check now backs all five places); the full API description (`/api/v1/openapi`) is for signed-in members in production; the sign-in gate is deny-by-default (`/health`, `/home-send` and `/onboarding` were reachable to their pages signed out); `robots.txt` refuses AI crawlers and lets search engines read only the landing and legal pages; signed-in pages carry noindex and every page `X-Robots-Tag: noai, noimageai`; sign-in, sign-up, password reset and phone codes are throttled per hashed address (`auth.attempt`); a 429 carries `Retry-After`; every rate-limit refusal is logged; HomeBrain's answer prompt treats facts as data and never reveals its instructions, and a fact can no longer start a line of its own; `check:bundle` fails if a prompt reaches client JavaScript; a proprietary `LICENSE`; a canary record in the partner sandbox; draft terms for legal review (`docs/legal/TERMS-DRAFT.md`). Owner actions listed in the note. |
 | 10 | P1 | 15-010 | Data retention: periodic cleanup framework (phase 1) | Done | The owner, 2026-10-28. Soft-delete→grace→purge framework; Admin retention window (default 90d, Privacy Centre, 8 languages); nightly cleanup engine on `/platform/retention`; counts-only audit (`retention_cleanup_runs`); soft-delete enabled for `availability_exceptions` and `family_event_changes`; hard purge gated off (G7). Design + open questions in `docs/data-retention.md`; `docs/progress/2026-10-28-data-retention-cleanup.md`. |
-| 11 | P1 | 15-011 | Data retention phase 2: passed calendar events + HomeSend, enable purge | Not Started | Awaiting owner Q1 (events: ephemera vs keepsake) and Q4 (when hard purge may run on live). Adds `soft_deleted_at` + reader filters (incl. a resurrection test) to `family_events` and `home_send_items` (+ Storage objects); enables the gated purge behind a confirmed policy, optionally dry-run first. `docs/data-retention.md` §10. |
-| 12 | P2 | 15-012 | Data retention phase 3: child-conservative school items + "recently cleaned" view | Not Started | Awaiting owner Q3. Handled `school_items` on a longer, child-conservative window; a member-facing "recently cleaned / restore" view; per-category windows if wanted. `docs/data-retention.md` §10. |
+| 11 | P1 | 15-011 | Data retention phase 2a: passed calendar events + purge dry-run | Done | The owner, 2026-10-28 (Q1, Q4). `family_events` soft-delete on the household window (kept: `protected`, `birthday`, `appointment`, recurring), with `soft_deleted_at` reader filters across calendar/event-detail/list/chat and a resurrection-safe design (reminder readers are future/recent-only); the purge runs **dry-run only** (reports counts, deletes nothing). Reader code reads the new column, so the migration applies live before merge. `docs/data-retention.md`; `docs/progress/2026-10-28-data-retention-phase-2a.md`. |
+| 13 | P1 | 15-013 | Data retention phase 2b: notifications (household window) + HomeSend + enable real purge | Not Started | Owner Q5 (notifications on the household window, 180d backstop kept) and Q4 (flip purge from dry-run to real once the owner has seen a report). HomeSend adds Storage-object cleanup. Deferred behind PR #419, which edits the HomeSend readers. `docs/data-retention.md` §10. |
+| 12 | P2 | 15-012 | Data retention phase 3: school items (household window) + "recently cleaned" view | Not Started | Owner Q3: handled/terminal `school_items` (`done`, `submitted`, `missed`, `cancelled`) on the household window, child-conservative (never a pending item); a member-facing "recently cleaned / restore" view; per-category windows if wanted. `docs/data-retention.md` §10. |
 
 **Status flow:** `Not Started` → `In Progress` → `Blocked` → `Done`
 
@@ -233,21 +234,38 @@ are in `docs/data-retention.md`.
 - Migration is additive and safe in either order; applied live after deploy is READY.
 - Marked `Done` here and in `tracking/PROGRESS.md` only after evidence exists (`docs/progress/2026-10-28-data-retention-cleanup.md`).
 
-### Story 15-011 — Data retention phase 2: passed calendar events + HomeSend, enable purge
+### Story 15-011 — Data retention phase 2a: passed calendar events + purge dry-run
 **Epic:** AI Privacy, Audit, Privacy Center & Security Testing
-**Priority:** P1 — blocked on owner Q1 and Q4 (`docs/data-retention.md` §9)
-**Goal:** Extend cleanup to passed one-off `family_events` and handled
-`home_send_items` (including their Storage objects), with `soft_deleted_at`
-reader filters and a test proving no reminder resurrects; and enable the gated
-hard purge for soft-deleted rows past their grace window once the owner
-confirms the policy, optionally with a dry-run report first.
+**Priority:** P1 — the owner, 2026-10-28 (Q1, Q4)
+**Goal:** Soft-delete passed one-off `family_events` on the household window —
+keeping `protected`, `birthday`, `appointment` and recurring events — with
+`soft_deleted_at` reader filters across the calendar, event detail, the family
+list and chat links, so a cleaned event disappears from view without
+orphaning or resurrecting anything (the reminder/notice readers only look at
+future/recent events, so a cleaned one is never re-derived). Enable the hard
+purge in **dry-run** mode: it reports what it would delete and deletes nothing,
+so the owner sees a real report before deletion is ever switched on.
+**Note:** the reader filters read the new column, so the migration is applied
+to live before the code merges (`docs/data-retention.md` §10).
 
-### Story 15-012 — Data retention phase 3: child-conservative school items + "recently cleaned" view
+### Story 15-013 — Data retention phase 2b: notifications + HomeSend + enable real purge
 **Epic:** AI Privacy, Audit, Privacy Center & Security Testing
-**Priority:** P2 — blocked on owner Q3 (`docs/data-retention.md` §9)
-**Goal:** Clean handled `school_items` on a longer, child-conservative window,
-and give members a "recently cleaned / restore" view over soft-deleted rows in
-the grace window; add per-category windows if the household wants them.
+**Priority:** P1 — the owner, 2026-10-28 (Q5, Q4)
+**Goal:** Clean terminal `notifications` on the household window (keeping the
+existing 180-day platform schedule as a backstop) and handled `home_send_items`
+(with their Storage objects), each with `soft_deleted_at` reader filters.
+Then, once the owner has reviewed a purge dry-run report, flip the purge from
+dry-run to real deletion. Deferred behind PR #419, which edits the HomeSend
+readers.
+
+### Story 15-012 — Data retention phase 3: school items + "recently cleaned" view
+**Epic:** AI Privacy, Audit, Privacy Center & Security Testing
+**Priority:** P2 — the owner, 2026-10-28 (Q3)
+**Goal:** Clean handled/terminal `school_items` (`done`, `submitted`, `missed`,
+`cancelled`) on the household window, child-conservative (never a pending
+item), with reader filters; and give members a "recently cleaned / restore"
+view over soft-deleted rows in the grace window; add per-category windows if
+the household wants them.
 
 ## Module Completion Rule
 Complete dependency-ready P0 stories before P1/P2, but do not block unrelated work on unavailable external providers.

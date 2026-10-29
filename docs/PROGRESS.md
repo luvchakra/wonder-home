@@ -11,11 +11,11 @@ in `docs/progress/`; for the running log of what changed when, `tracking/PROGRES
 
 ## The whole picture
 
-**410 of 445 stories done — 92.1%**
+**411 of 446 stories done — 92.2%**
 
 | Status | Stories |
 |---|---:|
-| Done | 410 |
+| Done | 411 |
 | In Progress | 10 |
 | Blocked | 1 |
 | Not Started | 20 |
@@ -40,7 +40,7 @@ in `docs/progress/`; for the running log of what changed when, `tracking/PROGRES
 | 12 Family Time & Social Activities | `██████████` | 9 | 9 | — |
 | 13 Maintenance, Laundry & Pet Care | `█████████░` | 10 | 11 | 1 in progress |
 | 14 AI Orchestration & Learning | `████████░░` | 48 | 56 | 1 in progress, 4 not started, 3 deferred |
-| 15 Privacy, Security & Governance | `████████░░` | 10 | 12 | 2 not started |
+| 15 Privacy, Security & Governance | `████████░░` | 11 | 13 | 2 not started |
 | 16 Platform Admin & Operations | `██████████` | 8 | 8 | — |
 | 17 External Integrations | `██████████` | 9 | 9 | — |
 | 18 API & Developer Platform | `██████████` | 8 | 8 | — |
@@ -77,8 +77,8 @@ in `docs/progress/`; for the running log of what changed when, `tracking/PROGRES
 | `14-039` Record index Phase 4: structure-first retrieval and coverage misses | 14 AI Orchestration & Learning | P1 | Not Started |
 | `14-056` HomeBrain 4.0 phase 3b — one structured call: answer or intent | 14 AI Orchestration & Learning | P0 | Not Started |
 | `14-057` HomeBrain 4.0 phase 3c — the reply streamed to the person | 14 AI Orchestration & Learning | P0 | Not Started |
-| `15-011` Data retention phase 2: passed calendar events + HomeSend, enable purge | 15 Privacy, Security & Governance | P1 | Not Started |
-| `15-012` Data retention phase 3: child-conservative school items + "recently cleaned" view | 15 Privacy, Security & Governance | P2 | Not Started |
+| `15-013` Data retention phase 2b: notifications (household window) + HomeSend + enable real purge | 15 Privacy, Security & Governance | P1 | Not Started |
+| `15-012` Data retention phase 3: school items (household window) + "recently cleaned" view | 15 Privacy, Security & Governance | P2 | Not Started |
 | `21-011` Edit an appointment | 21 Health and Fitness | P2 | Not Started |
 | `22-008` Right-to-left readiness | 22 Internationalization and Localization | P1 | Deferred |
 | `25-004` Send to Cook over WhatsApp | 25 HomeFood | P1 | Not Started |
@@ -459,7 +459,7 @@ in `docs/progress/`; for the running log of what changed when, `tracking/PROGRES
 
 ### 15 — Privacy, Security & Governance
 
-10 of 12 done `████████░░`
+11 of 13 done `████████░░`
 
 | Story | Priority | Status | Notes |
 |---|---|---|---|
@@ -473,8 +473,9 @@ in `docs/progress/`; for the running log of what changed when, `tracking/PROGRES
 | `15-008` Security testing | P0 | Done | Nine-area suite with a deterministic signal; SSRF guard, prompt-injection and session-abuse coverage |
 | `15-009` Hardening against AI-assisted reverse engineering | P0 | Done | The owner, 2026-10-21 (a hardening prompt). Audit and fixes in `docs/progress/2026-10-21-reverse-engineering-hardening.md`. Fixed: an open redirect after sign-in (`/\evil.com` passed the `?next=` check; one `security/same-site-path.ts` check now backs all five places); the full API description (`/api/v1/openapi`) is for signed-in members in production; the sign-in gate is deny-by-default (`/health`, `/home-send` and `/onboarding` were reachable to their pages signed out); `robots.txt` refuses AI crawlers and lets search engines read only the landing and legal pages; signed-in pages carry noindex and every page `X-Robots-Tag: noai, noimageai`; sign-in, sign-up, password reset and phone codes are throttled per hashed address (`auth.attempt`); a 429 carries `Retry-After`; every rate-limit refusal is logged; HomeBrain's answer prompt treats facts as data and never reveals its instructions, and a fact can no longer start a line of its own; `check:bundle` fails if a prompt reaches client JavaScript; a proprietary `LICENSE`; a canary record in the partner sandbox; draft terms for legal review (`docs/legal/TERMS-DRAFT.md`). Owner actions listed in the note. |
 | `15-010` Data retention: periodic cleanup framework (phase 1) | P1 | Done | The owner, 2026-10-28. Soft-delete→grace→purge framework; Admin retention window (default 90d, Privacy Centre, 8 languages); nightly cleanup engine on `/platform/retention`; counts-only audit (`retention_cleanup_runs`); soft-delete enabled for `availability_exceptions` and `family_event_changes`; hard purge gated off (G7). Design + open questions in `docs/data-retention.md`; `docs/progress/2026-10-28-data-retention-cleanup.md`. |
-| `15-011` Data retention phase 2: passed calendar events + HomeSend, enable purge | P1 | Not Started | Awaiting owner Q1 (events: ephemera vs keepsake) and Q4 (when hard purge may run on live). Adds `soft_deleted_at` + reader filters (incl. a resurrection test) to `family_events` and `home_send_items` (+ Storage objects); enables the gated purge behind a confirmed policy, optionally dry-run first. `docs/data-retention.md` §10. |
-| `15-012` Data retention phase 3: child-conservative school items + "recently cleaned" view | P2 | Not Started | Awaiting owner Q3. Handled `school_items` on a longer, child-conservative window; a member-facing "recently cleaned / restore" view; per-category windows if wanted. `docs/data-retention.md` §10. |
+| `15-011` Data retention phase 2a: passed calendar events + purge dry-run | P1 | Done | The owner, 2026-10-28 (Q1, Q4). `family_events` soft-delete on the household window (kept: `protected`, `birthday`, `appointment`, recurring), with `soft_deleted_at` reader filters across calendar/event-detail/list/chat and a resurrection-safe design (reminder readers are future/recent-only); the purge runs **dry-run only** (reports counts, deletes nothing). Reader code reads the new column, so the migration applies live before merge. `docs/data-retention.md`; `docs/progress/2026-10-28-data-retention-phase-2a.md`. |
+| `15-013` Data retention phase 2b: notifications (household window) + HomeSend + enable real purge | P1 | Not Started | Owner Q5 (notifications on the household window, 180d backstop kept) and Q4 (flip purge from dry-run to real once the owner has seen a report). HomeSend adds Storage-object cleanup. Deferred behind PR #419, which edits the HomeSend readers. `docs/data-retention.md` §10. |
+| `15-012` Data retention phase 3: school items (household window) + "recently cleaned" view | P2 | Not Started | Owner Q3: handled/terminal `school_items` (`done`, `submitted`, `missed`, `cancelled`) on the household window, child-conservative (never a pending item); a member-facing "recently cleaned / restore" view; per-category windows if wanted. `docs/data-retention.md` §10. |
 
 ### 16 — Platform Admin & Operations
 
@@ -737,4 +738,4 @@ in `docs/progress/`; for the running log of what changed when, `tracking/PROGRES
 | `27-024` The notification center | P0 | Done | The owner, 2026-10-22: "add notification center where adult can update their notification choices". Settings → Notifications opens with one row per kind (`_components/notification-center-card.tsx`, `ExpandableRow`): the collapsed row says in words whether it comes, when and where; opened, "Get these", "When" and "Where" change it, each saving at once and only that kind (`saveReminderKindAction`), so an untouched kind keeps following the household's starting timing. It replaces the separate timing and "What goes where" cards (both removed). A kind or channel an Admin turned off for the household says so and is not offered. Words in eight languages; help ¶8 and the reminder-timing FAQ |
 | `27-025` Household notifications for Admins | P0 | Done | The owner, 2026-10-22: "notification related admin settings that can control the notification experience of all users". Manage Household → Household notifications (`/household/notifications`, Admins only): each kind on or off for everyone and its starting timing; which channels beyond the app may reach anyone; whether an unanswered reminder takes the second-channel step and the backup step; the household's quiet hours. Kept as two versioned, audited `policies` rows (`notifications/household-settings.ts`; Quiet hours keeps HomeTalk's row), written only when something changed and only real choices. Enforced on the server: `reconcile.ts` (kinds off, starting timing, both steps, quiet hours) and `deliverNotification` (a channel off holds everything but a critical alert). A person narrows these and never widens them. Help ¶15 in eight languages |
 
-_Generated 2026-10-28 from 28 backlog files._
+_Generated 2026-10-29 from 28 backlog files._

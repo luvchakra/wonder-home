@@ -203,6 +203,7 @@ async function readEvents(supabase: SupabaseClient, householdId: string, range: 
       .select(EVENT_COLUMNS)
       .eq("household_id", householdId)
       .is("recurrence", null)
+      .is("soft_deleted_at", null)
       .neq("status", "cancelled")
       .lt("starts_at", to)
       .gt("ends_at", from)
@@ -213,6 +214,7 @@ async function readEvents(supabase: SupabaseClient, householdId: string, range: 
       .select(EVENT_COLUMNS)
       .eq("household_id", householdId)
       .not("recurrence", "is", null)
+      .is("soft_deleted_at", null)
       .neq("status", "cancelled")
       .lt("starts_at", to)
       .limit(500),
