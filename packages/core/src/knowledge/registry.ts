@@ -451,6 +451,7 @@ export const KNOWLEDGE_REGISTRY = {
   homebrain_recall: { covered: "excluded", reason: "Counts of which memories HomeBrain used." },
   homebrain_runs: { covered: "excluded", reason: "When HomeBrain's nightly tidy ran." },
   homesend_addresses: { covered: "excluded", reason: "The household's forwarding address: a credential." },
+  homesend_email_allowlist: { covered: "excluded", reason: "The approved email senders: a privacy gate deciding what forwarded mail WonderHome may read, not knowledge about the household." },
   homesend_changes: { covered: "builder", records: "homeSendItems" },
   homesend_email_events: { covered: "excluded", reason: "Content-free delivery telemetry for forwarded email." },
   hometalk_channel_events: { covered: "excluded", reason: "Content-free telemetry for each HomeTalk turn." },

@@ -316,7 +316,7 @@ describe("X-003 — HomeSend never writes a household record itself", () => {
   // domain services a person's confirmation calls — never a direct write
   // from the intake pipeline. Checked structurally, so a shortcut added
   // later fails here rather than in someone's household.
-  const OWN_TABLES = new Set(["home_send_items", "homesend_addresses", "homesend_changes", "homesend_email_events", "homesend_share_handoffs", "jobs", "households"]);
+  const OWN_TABLES = new Set(["home_send_items", "homesend_addresses", "homesend_email_allowlist", "homesend_changes", "homesend_email_events", "homesend_share_handoffs", "jobs", "households"]);
 
   it("the HomeSend pipeline and its web actions touch no table but HomeSend's own", async () => {
     const { readFileSync, readdirSync } = await import("node:fs");
