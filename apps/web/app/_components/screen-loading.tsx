@@ -1,4 +1,7 @@
 import { BrandMark } from "@wonderhome/core/ui/brand";
+import { LANGUAGE_CODES } from "@wonderhome/core/i18n/locales";
+import { translatorFor } from "@wonderhome/core/i18n/translate";
+import { ScriptAccent } from "@wonderhome/core/ui/script-accent";
 import { Skeleton } from "@wonderhome/core/ui/states";
 
 /**
@@ -9,10 +12,23 @@ import { Skeleton } from "@wonderhome/core/ui/states";
  * lands. Each screen with its own `loading.tsx` names its shape (audit B10):
  * `dashboard` for Home and anything without one, `list` for a screen of
  * tabs and rows (Family, Groceries, Meals), `chat` for HomeTalk.
+ *
+ * Over the skeleton sits a veil — the mark breathing, one handwritten line —
+ * that appears after 150 ms, so a fast load never flashes it. It is fixed
+ * and takes no room, so nothing moves when the screen arrives. The line is
+ * rendered in every language and CSS shows the one `<html lang>` names; no
+ * header is read, so the screen stays static and prefetchable.
  */
-export function ScreenLoading({ shape = "dashboard" }: { shape?: "dashboard" | "list" | "chat" }) {
+export async function ScreenLoading({ shape = "dashboard" }: { shape?: "dashboard" | "list" | "chat" }) {
+  const lines = await Promise.all(
+    LANGUAGE_CODES.map(async (code) => {
+      const t = await translatorFor(code);
+      return { code, label: t("loading.label"), line: t("loading.script") };
+    }),
+  );
+  const english = lines[0]!;
   return (
-    <div className="min-h-dvh" role="status" aria-live="polite" aria-label="Loading">
+    <div className="min-h-dvh" role="status" aria-live="polite" aria-label={english.label}>
       <div className="wh-glass sticky top-0 z-30 border-b border-[var(--wh-border)]/70">
         <div className="mx-auto flex h-[var(--wh-header-height)] max-w-[var(--wh-content-wide)] items-center gap-3 px-4 lg:px-8">
           <BrandMark size={30} className="lg:hidden" />
@@ -25,7 +41,19 @@ export function ScreenLoading({ shape = "dashboard" }: { shape?: "dashboard" | "
       <div className="mx-auto w-full max-w-[var(--wh-content-max)] space-y-5 px-4 pt-5 lg:px-8 lg:pt-6">
         {shape === "chat" ? <ChatShape /> : <ListShape tiles={shape === "dashboard"} tabs={shape === "list"} />}
       </div>
-      <span className="sr-only">Loading…</span>
+      <div className="wh-loading-veil" aria-hidden>
+        <span className="wh-loading-mark">
+          <BrandMark size={56} />
+        </span>
+        {lines.map(({ code, line }) => (
+          <span key={code} lang={code} className="wh-loading-line">
+            <ScriptAccent tone="primary" size="md" heart>
+              {line}
+            </ScriptAccent>
+          </span>
+        ))}
+      </div>
+      <span className="sr-only">{english.label}…</span>
     </div>
   );
 }

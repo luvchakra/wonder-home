@@ -26,6 +26,7 @@ import { todayEn } from "./areas/today/en";
 import { chatEn } from "./areas/chat/en";
 import { amafEn } from "./areas/amaf/en";
 import { groceryEn } from "./areas/grocery/en";
+import { loadingEn } from "./areas/loading/en";
 import { welcomeEn } from "./areas/welcome/en";
 import { whatsappEn } from "./areas/whatsapp/en";
 import { choicesEn } from "./areas/choices/en";
@@ -1079,6 +1080,7 @@ export const en = {
   ...amafEn,
   ...memberInviteEn,
   ...groceryEn,
+  ...loadingEn,
   ...welcomeEn,
   ...whatsappEn,
   ...choicesEn,

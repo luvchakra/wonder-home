@@ -17,6 +17,7 @@ import { todayDe } from "./areas/today/de";
 import { chatDe } from "./areas/chat/de";
 import { amafDe } from "./areas/amaf/de";
 import { groceryDe } from "./areas/grocery/de";
+import { loadingDe } from "./areas/loading/de";
 import { welcomeDe } from "./areas/welcome/de";
 import { whatsappDe } from "./areas/whatsapp/de";
 import { choicesDe } from "./areas/choices/de";
@@ -1069,6 +1070,7 @@ export const de: Catalog = {
   ...amafDe,
   ...memberInviteDe,
   ...groceryDe,
+  ...loadingDe,
   ...welcomeDe,
   ...whatsappDe,
   ...choicesDe,

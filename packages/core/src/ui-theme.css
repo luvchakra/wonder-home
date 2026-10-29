@@ -601,6 +601,99 @@
   border-radius: var(--wh-radius-xs);
 }
 
+/*
+ * The branded loading veil (ScreenLoading): the WonderHome mark breathing
+ * over the skeleton, with one handwritten line. Transform and opacity only.
+ * It waits 150 ms before it appears so a fast load never flashes it, takes
+ * no space (fixed, pointer-events none), and the reduced-motion block below
+ * leaves the mark still and the veil simply there.
+ */
+@keyframes wh-breathe {
+  0%,
+  100% {
+    transform: scale(1);
+  }
+  50% {
+    transform: scale(1.08);
+  }
+}
+
+@keyframes wh-halo {
+  0%,
+  100% {
+    transform: scale(0.9);
+    opacity: 0.35;
+  }
+  50% {
+    transform: scale(1.35);
+    opacity: 0;
+  }
+}
+
+@keyframes wh-veil-in {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+.wh-loading-veil {
+  position: fixed;
+  inset: 0;
+  z-index: 40;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 0.75rem;
+  padding: 0 1rem;
+  text-align: center;
+  pointer-events: none;
+  opacity: 0;
+  animation: wh-veil-in 0.5s ease-out 0.15s forwards;
+}
+
+.wh-loading-mark {
+  position: relative;
+  display: grid;
+  place-items: center;
+  padding: 0.75rem;
+  border-radius: var(--wh-radius);
+  background: color-mix(in oklch, var(--wh-surface) 85%, transparent);
+  box-shadow: 0 8px 28px color-mix(in oklch, var(--wh-primary) 18%, transparent);
+}
+
+.wh-loading-mark > svg {
+  animation: wh-breathe 2.4s ease-in-out infinite;
+}
+
+.wh-loading-mark::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  border: 2px solid var(--wh-primary);
+  animation: wh-halo 2.4s ease-in-out infinite;
+}
+
+.wh-loading-line {
+  display: none;
+}
+
+/* The signed-in shell sets <html lang>; before that, English. */
+html:lang(en) .wh-loading-line[lang="en"],
+html:lang(hi) .wh-loading-line[lang="hi"],
+html:lang(mr) .wh-loading-line[lang="mr"],
+html:lang(es) .wh-loading-line[lang="es"],
+html:lang(fr) .wh-loading-line[lang="fr"],
+html:lang(de) .wh-loading-line[lang="de"],
+html:lang(ar) .wh-loading-line[lang="ar"],
+html:lang(zh) .wh-loading-line[lang="zh"] {
+  display: block;
+}
+
 /* Translucent blurred surface for the sticky header and the tab bar. */
 .wh-glass {
   background: color-mix(in oklch, var(--wh-surface) 80%, transparent);
@@ -622,6 +715,13 @@
 }
 
 @media (prefers-reduced-motion: reduce) {
+  .wh-loading-veil {
+    animation: none;
+    opacity: 1;
+  }
+  .wh-loading-mark::after {
+    display: none;
+  }
   .wh-reveal {
     opacity: 1;
     transform: none;
@@ -633,6 +733,8 @@
   .wh-twinkle,
   .wh-reveal.is-visible .wh-arrive,
   .wh-skeleton,
+  .wh-loading-mark > svg,
+  .wh-loading-mark::after,
   .wh-slide-in-left,
   .wh-install-banner-enter,
   .wh-hand-wave,

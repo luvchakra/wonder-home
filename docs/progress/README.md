@@ -12,7 +12,11 @@ decision that shapes later work each earns a note, written before moving on.
 | Date | Note |
 |---|---|
 <<<<<<< Updated upstream
+<<<<<<< Updated upstream
 | 2026-10-29 | [School "Check in" closes the item](2026-10-29-school-check-in.md) |
+=======
+| 2026-10-29 | [Branded loading state: breathing mark and one handwritten line](2026-10-29-branded-loading-state.md) |
+>>>>>>> Stashed changes
 | 2026-10-29 | [Advisor gate: parse flat lints, fail on a vacuous pass](2026-10-29-advisor-gate-parser.md) |
 | 2026-10-29 | [SEC-13 pg_net out of public, and a migration-drift guard](2026-10-29-sec13-pg-net-and-migration-drift.md) |
 =======

@@ -17,6 +17,7 @@ import { todayAr } from "./areas/today/ar";
 import { chatAr } from "./areas/chat/ar";
 import { amafAr } from "./areas/amaf/ar";
 import { groceryAr } from "./areas/grocery/ar";
+import { loadingAr } from "./areas/loading/ar";
 import { welcomeAr } from "./areas/welcome/ar";
 import { whatsappAr } from "./areas/whatsapp/ar";
 import { choicesAr } from "./areas/choices/ar";
@@ -1091,6 +1092,7 @@ export const ar: Catalog = {
   ...amafAr,
   ...memberInviteAr,
   ...groceryAr,
+  ...loadingAr,
   ...welcomeAr,
   ...whatsappAr,
   ...choicesAr,
