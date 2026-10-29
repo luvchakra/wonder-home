@@ -78,7 +78,7 @@ export const en = {
   "connectionsPage.lede": "Everything WonderHome is linked to, in one place: who it is for, whether it works, and the one thing to do.",
   "connectionsPage.meta": "WhatsApp, voice assistants, school and other services",
   "connectionsPage.shopping": "Shopping",
-  "connectionsPage.accounts": "Websites and services",
+  "connectionsPage.accounts": "Connectors",
   "connectionsPage.cal.title": "Subscribed calendars",
   "connectionsPage.cal.lede": "Add any calendar by its share link — WonderHome imports its events, read-only.",
   "connectionsPage.cal.add": "Add a calendar",

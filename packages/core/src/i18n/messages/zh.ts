@@ -68,7 +68,7 @@ export const zh: Catalog = {
   "connectionsPage.lede": "WonderHome 连接的一切都在这里：给谁用、是否正常，以及要做的那一件事。",
   "connectionsPage.meta": "WhatsApp、语音助手、学校和其他服务",
   "connectionsPage.shopping": "购物",
-  "connectionsPage.accounts": "网站和服务",
+  "connectionsPage.accounts": "连接器",
   "connectionsPage.cal.title": "已订阅的日历",
   "connectionsPage.cal.lede": "用分享链接添加任何日历——WonderHome 会以只读方式导入它的活动。",
   "connectionsPage.cal.add": "添加日历",

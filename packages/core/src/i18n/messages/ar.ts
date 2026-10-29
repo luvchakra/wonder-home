@@ -68,7 +68,7 @@ export const ar: Catalog = {
   "connectionsPage.lede": "كل ما يرتبط به WonderHome في مكان واحد: لمن هو، وهل يعمل، والشيء الوحيد الذي يجب فعله.",
   "connectionsPage.meta": "واتساب والمساعدات الصوتية والمدرسة وخدمات أخرى",
   "connectionsPage.shopping": "التسوق",
-  "connectionsPage.accounts": "المواقع والخدمات",
+  "connectionsPage.accounts": "الموصّلات",
   "connectionsPage.cal.title": "التقويمات المشترَك بها",
   "connectionsPage.cal.lede": "أضِف أي تقويم عبر رابط مشاركته — يستورد WonderHome أحداثه للقراءة فقط.",
   "connectionsPage.cal.add": "إضافة تقويم",
