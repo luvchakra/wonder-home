@@ -1,0 +1,425 @@
+{
+ "_about": "Files that still call createAdminClient() directly. Classes other than household-scoped are the documented RLS-bypass set (docs/security/service-role.md); household-scoped entries are the next tranche to wrap with adminClientFor(adminGrant.\u2026). The list may only shrink: lint:service-role fails on a stale entry or a new raw call.",
+ "entries": {
+  "apps/portal-worker/src/index.ts": {
+   "class": "worker",
+   "sites": 1,
+   "reason": "Scheduled or queued job authenticated by the worker secret; spans households by design.",
+   "story": "SEC-04"
+  },
+  "apps/web/app/(auth)/actions.ts": {
+   "class": "household-scoped",
+   "sites": 1,
+   "reason": "Signed-in member path: wrap with adminGrant.member/householdAdmin.",
+   "story": "SEC-04b"
+  },
+  "apps/web/app/(auth)/calendar-subscription-actions.ts": {
+   "class": "household-scoped",
+   "sites": 2,
+   "reason": "Signed-in member path: wrap with adminGrant.member/householdAdmin.",
+   "story": "SEC-04b"
+  },
+  "apps/web/app/(auth)/certification-actions.ts": {
+   "class": "household-scoped",
+   "sites": 2,
+   "reason": "Signed-in member path: wrap with adminGrant.member/householdAdmin.",
+   "story": "SEC-04b"
+  },
+  "apps/web/app/(auth)/child-quiet-actions.ts": {
+   "class": "household-scoped",
+   "sites": 1,
+   "reason": "Signed-in member path: wrap with adminGrant.member/householdAdmin.",
+   "story": "SEC-04b"
+  },
+  "apps/web/app/(auth)/connection-actions.ts": {
+   "class": "household-scoped",
+   "sites": 1,
+   "reason": "Signed-in member path: wrap with adminGrant.member/householdAdmin.",
+   "story": "SEC-04b"
+  },
+  "apps/web/app/(auth)/developer-actions.ts": {
+   "class": "household-scoped",
+   "sites": 2,
+   "reason": "Signed-in member path: wrap with adminGrant.member/householdAdmin.",
+   "story": "SEC-04b"
+  },
+  "apps/web/app/(auth)/event-actions.ts": {
+   "class": "household-scoped",
+   "sites": 1,
+   "reason": "Signed-in member path: wrap with adminGrant.member/householdAdmin.",
+   "story": "SEC-04b"
+  },
+  "apps/web/app/(auth)/health-record-actions.ts": {
+   "class": "household-scoped",
+   "sites": 1,
+   "reason": "Signed-in member path: wrap with adminGrant.member/householdAdmin.",
+   "story": "SEC-04b"
+  },
+  "apps/web/app/(auth)/home-send-actions.ts": {
+   "class": "household-scoped",
+   "sites": 3,
+   "reason": "Signed-in member path: wrap with adminGrant.member/householdAdmin.",
+   "story": "SEC-04b"
+  },
+  "apps/web/app/(auth)/home-send-plan-actions.ts": {
+   "class": "household-scoped",
+   "sites": 1,
+   "reason": "Signed-in member path: wrap with adminGrant.member/householdAdmin.",
+   "story": "SEC-04b"
+  },
+  "apps/web/app/(auth)/homebrain-sleep-actions.ts": {
+   "class": "household-scoped",
+   "sites": 1,
+   "reason": "Signed-in member path: wrap with adminGrant.member/householdAdmin.",
+   "story": "SEC-04b"
+  },
+  "apps/web/app/(auth)/notification-preferences-actions.ts": {
+   "class": "household-scoped",
+   "sites": 2,
+   "reason": "Signed-in member path: wrap with adminGrant.member/householdAdmin.",
+   "story": "SEC-04b"
+  },
+  "apps/web/app/(auth)/places-actions.ts": {
+   "class": "household-scoped",
+   "sites": 1,
+   "reason": "Signed-in member path: wrap with adminGrant.member/householdAdmin.",
+   "story": "SEC-04b"
+  },
+  "apps/web/app/(auth)/voice-link-actions.ts": {
+   "class": "household-scoped",
+   "sites": 1,
+   "reason": "Signed-in member path: wrap with adminGrant.member/householdAdmin.",
+   "story": "SEC-04b"
+  },
+  "apps/web/app/(auth)/weather-actions.ts": {
+   "class": "household-scoped",
+   "sites": 1,
+   "reason": "Signed-in member path: wrap with adminGrant.member/householdAdmin.",
+   "story": "SEC-04b"
+  },
+  "apps/web/app/(auth)/whatsapp-actions.ts": {
+   "class": "household-scoped",
+   "sites": 2,
+   "reason": "Signed-in member path: wrap with adminGrant.member/householdAdmin.",
+   "story": "SEC-04b"
+  },
+  "apps/web/app/_lib/careers.ts": {
+   "class": "secret-read",
+   "sites": 1,
+   "reason": "Reads or rotates a household secret that RLS deliberately hides from every member.",
+   "story": "SEC-04"
+  },
+  "apps/web/app/_lib/hometalk-amaf.ts": {
+   "class": "household-scoped",
+   "sites": 2,
+   "reason": "Signed-in member path: wrap with adminGrant.member/householdAdmin.",
+   "story": "SEC-04b"
+  },
+  "apps/web/app/_lib/hometalk-gateway.ts": {
+   "class": "household-scoped",
+   "sites": 1,
+   "reason": "Signed-in member path: wrap with adminGrant.member/householdAdmin.",
+   "story": "SEC-04b"
+  },
+  "apps/web/app/_lib/hometalk-turn.ts": {
+   "class": "household-scoped",
+   "sites": 8,
+   "reason": "Signed-in member path: wrap with adminGrant.member/householdAdmin.",
+   "story": "SEC-04b"
+  },
+  "apps/web/app/_lib/hometalk-welcome.ts": {
+   "class": "household-scoped",
+   "sites": 2,
+   "reason": "Signed-in member path: wrap with adminGrant.member/householdAdmin.",
+   "story": "SEC-04b"
+  },
+  "apps/web/app/_lib/reminders.ts": {
+   "class": "household-scoped",
+   "sites": 1,
+   "reason": "Signed-in member path: wrap with adminGrant.member/householdAdmin.",
+   "story": "SEC-04b"
+  },
+  "apps/web/app/_screens/landing.tsx": {
+   "class": "household-scoped",
+   "sites": 1,
+   "reason": "Signed-in member path: wrap with adminGrant.member/householdAdmin.",
+   "story": "SEC-04b"
+  },
+  "apps/web/app/ai/page.tsx": {
+   "class": "household-scoped",
+   "sites": 1,
+   "reason": "Signed-in member path: wrap with adminGrant.member/householdAdmin.",
+   "story": "SEC-04b"
+  },
+  "apps/web/app/api/v1/billing/webhook/[provider]/route.ts": {
+   "class": "signed-request",
+   "sites": 1,
+   "reason": "Inbound webhook or token endpoint: no session exists; the sender's signature or shared secret is the authorization.",
+   "story": "SEC-04"
+  },
+  "apps/web/app/api/v1/billing/webhook/route.ts": {
+   "class": "signed-request",
+   "sites": 1,
+   "reason": "Inbound webhook or token endpoint: no session exists; the sender's signature or shared secret is the authorization.",
+   "story": "SEC-04"
+  },
+  "apps/web/app/api/v1/calendar/subscriptions/sync/route.ts": {
+   "class": "worker",
+   "sites": 1,
+   "reason": "Scheduled or queued job authenticated by the worker secret; spans households by design.",
+   "story": "SEC-04"
+  },
+  "apps/web/app/api/v1/homesend/email/webhook/route.ts": {
+   "class": "signed-request",
+   "sites": 1,
+   "reason": "Inbound webhook or token endpoint: no session exists; the sender's signature or shared secret is the authorization.",
+   "story": "SEC-04"
+  },
+  "apps/web/app/api/v1/households/[householdId]/conversation/route.ts": {
+   "class": "household-scoped",
+   "sites": 2,
+   "reason": "Signed-in member path: wrap with adminClientFor(adminGrant.member). The POST handler authorizes inside homeTalkTurn, so the membership has to be returned from it first.",
+   "story": "SEC-04b"
+  },
+  "apps/web/app/api/v1/intake/share/route.ts": {
+   "class": "signed-request",
+   "sites": 2,
+   "reason": "Inbound webhook or token endpoint: no session exists; the sender's signature or shared secret is the authorization.",
+   "story": "SEC-04"
+  },
+  "apps/web/app/api/v1/notifications/dispatch/route.ts": {
+   "class": "worker",
+   "sites": 3,
+   "reason": "Scheduled or queued job authenticated by the worker secret; spans households by design.",
+   "story": "SEC-04"
+  },
+  "apps/web/app/api/v1/notifications/email-off/route.ts": {
+   "class": "capability-token",
+   "sites": 1,
+   "reason": "Public link carrying a single-purpose token (email-off, invitation); the token is the authorization.",
+   "story": "SEC-04"
+  },
+  "apps/web/app/api/v1/oauth/voice/token/route.ts": {
+   "class": "signed-request",
+   "sites": 1,
+   "reason": "Inbound webhook or token endpoint: no session exists; the sender's signature or shared secret is the authorization.",
+   "story": "SEC-04"
+  },
+  "apps/web/app/api/v1/partner/groceries/route.ts": {
+   "class": "signed-request",
+   "sites": 5,
+   "reason": "Inbound webhook or token endpoint: no session exists; the sender's signature or shared secret is the authorization.",
+   "story": "SEC-04"
+  },
+  "apps/web/app/api/v1/partner/household/route.ts": {
+   "class": "signed-request",
+   "sites": 2,
+   "reason": "Inbound webhook or token endpoint: no session exists; the sender's signature or shared secret is the authorization.",
+   "story": "SEC-04"
+  },
+  "apps/web/app/api/v1/platform/catalog/import/route.ts": {
+   "class": "worker",
+   "sites": 1,
+   "reason": "Scheduled or queued job authenticated by the worker secret; spans households by design.",
+   "story": "SEC-04"
+  },
+  "apps/web/app/api/v1/platform/retention/route.ts": {
+   "class": "worker",
+   "sites": 3,
+   "reason": "Scheduled or queued job authenticated by the worker secret; spans households by design.",
+   "story": "SEC-04"
+  },
+  "apps/web/app/api/v1/platform/webhook-delivery/route.ts": {
+   "class": "signed-request",
+   "sites": 1,
+   "reason": "Inbound webhook or token endpoint: no session exists; the sender's signature or shared secret is the authorization.",
+   "story": "SEC-04"
+  },
+  "apps/web/app/api/v1/voice/alexa/route.ts": {
+   "class": "signed-request",
+   "sites": 1,
+   "reason": "Inbound webhook or token endpoint: no session exists; the sender's signature or shared secret is the authorization.",
+   "story": "SEC-04"
+  },
+  "apps/web/app/api/v1/whatsapp/webhook/route.ts": {
+   "class": "signed-request",
+   "sites": 3,
+   "reason": "Inbound webhook or token endpoint: no session exists; the sender's signature or shared secret is the authorization.",
+   "story": "SEC-04"
+  },
+  "apps/web/app/careers/actions.ts": {
+   "class": "rate-limit",
+   "sites": 1,
+   "reason": "Counts a request against a rate-limit bucket, a platform table no member can write.",
+   "story": "SEC-04"
+  },
+  "apps/web/app/chat/[threadId]/page.tsx": {
+   "class": "household-scoped",
+   "sites": 1,
+   "reason": "Signed-in member path: wrap with adminGrant.member/householdAdmin.",
+   "story": "SEC-04b"
+  },
+  "apps/web/app/chat/actions.ts": {
+   "class": "household-scoped",
+   "sites": 1,
+   "reason": "Signed-in member path: wrap with adminGrant.member/householdAdmin.",
+   "story": "SEC-04b"
+  },
+  "apps/web/app/e/[token]/page.tsx": {
+   "class": "capability-token",
+   "sites": 1,
+   "reason": "Public link carrying a single-purpose token (email-off, invitation); the token is the authorization.",
+   "story": "SEC-04"
+  },
+  "apps/web/app/e/[token]/render-invitation.tsx": {
+   "class": "capability-token",
+   "sites": 1,
+   "reason": "Public link carrying a single-purpose token (email-off, invitation); the token is the authorization.",
+   "story": "SEC-04"
+  },
+  "apps/web/app/email-off/actions.ts": {
+   "class": "capability-token",
+   "sites": 1,
+   "reason": "Public link carrying a single-purpose token (email-off, invitation); the token is the authorization.",
+   "story": "SEC-04"
+  },
+  "apps/web/app/email-off/page.tsx": {
+   "class": "capability-token",
+   "sites": 1,
+   "reason": "Public link carrying a single-purpose token (email-off, invitation); the token is the authorization.",
+   "story": "SEC-04"
+  },
+  "apps/web/app/family/page.tsx": {
+   "class": "household-scoped",
+   "sites": 1,
+   "reason": "Signed-in member path: wrap with adminGrant.member/householdAdmin.",
+   "story": "SEC-04b"
+  },
+  "apps/web/app/groceries/order/actions.ts": {
+   "class": "household-scoped",
+   "sites": 6,
+   "reason": "Signed-in member path: wrap with adminGrant.member/householdAdmin.",
+   "story": "SEC-04b"
+  },
+  "apps/web/app/groceries/order/callback/route.ts": {
+   "class": "signed-request",
+   "sites": 1,
+   "reason": "Inbound webhook or token endpoint: no session exists; the sender's signature or shared secret is the authorization.",
+   "story": "SEC-04"
+  },
+  "apps/web/app/groceries/order/page.tsx": {
+   "class": "household-scoped",
+   "sites": 1,
+   "reason": "Signed-in member path: wrap with adminGrant.member/householdAdmin.",
+   "story": "SEC-04b"
+  },
+  "apps/web/app/home-send/page.tsx": {
+   "class": "household-scoped",
+   "sites": 1,
+   "reason": "Signed-in member path: wrap with adminGrant.member/householdAdmin.",
+   "story": "SEC-04b"
+  },
+  "apps/web/app/notifications/page.tsx": {
+   "class": "household-scoped",
+   "sites": 1,
+   "reason": "Signed-in member path: wrap with adminGrant.member/householdAdmin.",
+   "story": "SEC-04b"
+  },
+  "apps/web/app/places/actions.ts": {
+   "class": "household-scoped",
+   "sites": 1,
+   "reason": "Signed-in member path: wrap with adminGrant.member/householdAdmin.",
+   "story": "SEC-04b"
+  },
+  "apps/web/app/settings/connections/integrations-section.tsx": {
+   "class": "household-scoped",
+   "sites": 1,
+   "reason": "Signed-in member path: wrap with adminGrant.member/householdAdmin.",
+   "story": "SEC-04b"
+  },
+  "apps/web/app/settings/notifications/delivery-section.tsx": {
+   "class": "household-scoped",
+   "sites": 1,
+   "reason": "Signed-in member path: wrap with adminGrant.member/householdAdmin.",
+   "story": "SEC-04b"
+  },
+  "apps/web/app/settings/notifications/page.tsx": {
+   "class": "household-scoped",
+   "sites": 1,
+   "reason": "Signed-in member path: wrap with adminGrant.member/householdAdmin.",
+   "story": "SEC-04b"
+  },
+  "apps/web/app/settings/plan/checkout/page.tsx": {
+   "class": "household-scoped",
+   "sites": 1,
+   "reason": "Signed-in member path: wrap with adminGrant.member/householdAdmin.",
+   "story": "SEC-04b"
+  },
+  "packages/core/src/ai/credentials.ts": {
+   "class": "secret-read",
+   "sites": 2,
+   "reason": "Reads or rotates a household secret that RLS deliberately hides from every member.",
+   "story": "SEC-04"
+  },
+  "packages/core/src/ai/key-alerts.ts": {
+   "class": "secret-read",
+   "sites": 1,
+   "reason": "Reads or rotates a household secret that RLS deliberately hides from every member.",
+   "story": "SEC-04"
+  },
+  "packages/core/src/ai/run.ts": {
+   "class": "shared-repository",
+   "sites": 1,
+   "reason": "Core repository whose callers authorize before calling; it never chooses the household itself.",
+   "story": "SEC-04"
+  },
+  "packages/core/src/api/audit.ts": {
+   "class": "audit-write",
+   "sites": 1,
+   "reason": "Appends to the audit log, which members may read but never write.",
+   "story": "SEC-04"
+  },
+  "packages/core/src/billing/repository.ts": {
+   "class": "shared-repository",
+   "sites": 1,
+   "reason": "Core repository whose callers authorize before calling; it never chooses the household itself.",
+   "story": "SEC-04"
+  },
+  "packages/core/src/home/weather-service.ts": {
+   "class": "shared-repository",
+   "sites": 1,
+   "reason": "Core repository whose callers authorize before calling; it never chooses the household itself.",
+   "story": "SEC-04"
+  },
+  "packages/core/src/homebrain/context-store.ts": {
+   "class": "shared-repository",
+   "sites": 3,
+   "reason": "Core repository whose callers authorize before calling; it never chooses the household itself.",
+   "story": "SEC-04"
+  },
+  "packages/core/src/household/configuration-repository.ts": {
+   "class": "shared-repository",
+   "sites": 1,
+   "reason": "Core repository whose callers authorize before calling; it never chooses the household itself.",
+   "story": "SEC-04"
+  },
+  "packages/core/src/security/step-up-repository.ts": {
+   "class": "secret-read",
+   "sites": 2,
+   "reason": "Reads or rotates a household secret that RLS deliberately hides from every member.",
+   "story": "SEC-04"
+  },
+  "packages/core/src/voice/repository.ts": {
+   "class": "shared-repository",
+   "sites": 1,
+   "reason": "Core repository whose callers authorize before calling; it never chooses the household itself.",
+   "story": "SEC-04"
+  },
+  "packages/core/src/webhooks/dispatch.ts": {
+   "class": "secret-read",
+   "sites": 1,
+   "reason": "Reads or rotates a household secret that RLS deliberately hides from every member.",
+   "story": "SEC-04"
+  }
+ }
+}

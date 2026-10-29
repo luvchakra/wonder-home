@@ -1,7 +1,7 @@
 import { z } from "zod";
 
 import { defineRoute } from "@wonderhome/core/api/route";
-import { createAdminClient } from "@wonderhome/core/db/admin";
+import { adminClientFor, adminGrant } from "@wonderhome/core/db/admin-context";
 import { createClient } from "@wonderhome/core/db/server";
 import { requirePlatformAdmin } from "@wonderhome/core/platform/admin";
 import { refusePrivacyRequest } from "@wonderhome/core/platform/privacy-requests";
@@ -23,7 +23,7 @@ export async function PATCH(request: Request, { params }: Params) {
   return defineRoute(
     { input: refuseSchema, authenticate: async () => requirePlatformAdmin(await createClient()) },
     async ({ body, actor }) => {
-      await refusePrivacyRequest(createAdminClient(), actor, { requestId, reason: body.reason });
+      await refusePrivacyRequest(adminClientFor(adminGrant.platformAdmin(actor, "refuse a privacy request")), actor, { requestId, reason: body.reason });
       return { refused: true };
     },
   )(request);

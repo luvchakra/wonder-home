@@ -1,6 +1,6 @@
 import { openPlatformKeyAlert } from "@wonderhome/core/ai/platform-key-alert";
 import { defineRoute } from "@wonderhome/core/api/route";
-import { createAdminClient } from "@wonderhome/core/db/admin";
+import { adminClientFor, adminGrant } from "@wonderhome/core/db/admin-context";
 import { createClient } from "@wonderhome/core/db/server";
 import { aiOperationsSummary, listFailedAgentRuns } from "@wonderhome/core/platform/ai-operations";
 import { requirePlatformAdmin } from "@wonderhome/core/platform/admin";
@@ -14,7 +14,7 @@ import { requirePlatformAdmin } from "@wonderhome/core/platform/admin";
 export const GET = defineRoute(
   { authenticate: async () => requirePlatformAdmin(await createClient()) },
   async ({ actor }) => {
-    const adminClient = createAdminClient();
+    const adminClient = adminClientFor(adminGrant.platformAdmin(actor, "read AI operations across households"));
     const [summary, failedRuns, platformKeyAlert] = await Promise.all([
       aiOperationsSummary(adminClient, actor),
       listFailedAgentRuns(adminClient, actor),

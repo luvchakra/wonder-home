@@ -167,6 +167,11 @@ jobs:
         if: env.CODE == 'true'
         run: npm run lint:boundaries:input
 
+      # The service role is reached through adminClientFor(grant), or from a file on the documented RLS-bypass list (SEC-04).
+      - name: Service-role lint
+        if: env.CODE == 'true'
+        run: npm run lint:service-role
+
       # The user guide never links to a page or a section that is gone.
       - name: Help links resolve
         if: env.CODE == 'true'

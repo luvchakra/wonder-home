@@ -12,6 +12,10 @@ import { publicEnv, serverEnv } from "../config/env";
  * platform admin, support access) AND the caller performs its own explicit
  * authorization check first. Everything else uses db/server.ts.
  *
+ * New call sites go through `adminClientFor(adminGrant.…)` in db/admin-context.ts,
+ * which takes the authorization as an argument (SEC-04); `npm run lint:service-role`
+ * fails a raw call outside the documented list in security/service-role-baseline.json.
+ *
  * Memoised into a process-wide singleton. The service-role client carries no
  * per-request state — no cookies, no user session (`persistSession: false`), no
  * realtime socket unless one is opened — so one instance is safe to share across

@@ -2,7 +2,7 @@ import { z } from "zod";
 
 import { requireUser } from "@wonderhome/core/api/auth";
 import { defineRoute } from "@wonderhome/core/api/route";
-import { createAdminClient } from "@wonderhome/core/db/admin";
+import { adminClientFor, adminGrant } from "@wonderhome/core/db/admin-context";
 import { createClient } from "@wonderhome/core/db/server";
 import { isHouseholdAdmin, requireMembership } from "@wonderhome/core/identity/households";
 import { WEBHOOK_EVENT_TYPES } from "@wonderhome/core/webhooks/event";
@@ -45,7 +45,7 @@ export async function POST(request: Request, { params }: Params) {
     const membership = await requireMembership(supabase, householdId);
 
     const subscription = await createWebhookSubscription(
-      createAdminClient(),
+      adminClientFor(adminGrant.member(membership, "store a webhook signing secret")),
       { householdId, memberId: membership.memberId, isAdmin: isHouseholdAdmin(membership) },
       body,
     );

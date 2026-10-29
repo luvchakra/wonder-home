@@ -3,7 +3,7 @@ import { z } from "zod";
 import { ApiError } from "@wonderhome/core/api/errors";
 import { parseQuery } from "@wonderhome/core/api/query";
 import { defineRoute } from "@wonderhome/core/api/route";
-import { createAdminClient } from "@wonderhome/core/db/admin";
+import { adminClientFor, adminGrant } from "@wonderhome/core/db/admin-context";
 import { createClient } from "@wonderhome/core/db/server";
 import { loadProductionMetrics } from "@wonderhome/core/evaluation/production";
 import { loadHomeBrainKeeping } from "@wonderhome/core/homebrain/misses";
@@ -28,7 +28,7 @@ export const GET = defineRoute(
   async ({ actor, request }) => {
     if (!platformCan(actor, "ai_operations.read")) throw ApiError.forbidden("Your platform role cannot view AI quality metrics.");
     const { days: windowDays } = parseQuery(request, z.object({ days: z.coerce.number().int().min(1).max(365).default(30) }).strict());
-    const admin = createAdminClient();
+    const admin = adminClientFor(adminGrant.platformAdmin(actor, "read AI quality metrics across households"));
     const [metrics, homeBrainKeeping] = await Promise.all([loadProductionMetrics(admin, { windowDays }), loadHomeBrainKeeping(admin, { windowDays })]);
     return { metrics, homeBrainKeeping };
   },

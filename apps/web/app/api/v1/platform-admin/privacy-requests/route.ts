@@ -2,7 +2,7 @@ import { z } from "zod";
 
 import { parseQuery } from "@wonderhome/core/api/query";
 import { defineRoute } from "@wonderhome/core/api/route";
-import { createAdminClient } from "@wonderhome/core/db/admin";
+import { adminClientFor, adminGrant } from "@wonderhome/core/db/admin-context";
 import { createClient } from "@wonderhome/core/db/server";
 import { requirePlatformAdmin } from "@wonderhome/core/platform/admin";
 import { listPlatformPrivacyRequests, type ListPrivacyRequestsFilter } from "@wonderhome/core/platform/privacy-requests";
@@ -30,7 +30,7 @@ export async function GET(request: Request) {
     if (kind) filter.kind = kind;
     if (householdId) filter.householdId = householdId;
 
-    const requests = await listPlatformPrivacyRequests(createAdminClient(), actor, filter);
+    const requests = await listPlatformPrivacyRequests(adminClientFor(adminGrant.platformAdmin(actor, "list privacy requests")), actor, filter);
     return { requests };
   })(request);
 }

@@ -3,7 +3,7 @@ import { z } from "zod";
 import { ApiError } from "@wonderhome/core/api/errors";
 import { defineRoute } from "@wonderhome/core/api/route";
 import { BURST_WINDOW_BOUNDS, POLICY_REASON_CODES, planPolicies, policyHistory, setFeaturePolicy } from "@wonderhome/core/billing/policies";
-import { createAdminClient } from "@wonderhome/core/db/admin";
+import { adminClientFor, adminGrant } from "@wonderhome/core/db/admin-context";
 import { createClient } from "@wonderhome/core/db/server";
 import { platformCan, requirePlatformAdmin, type PlatformAdmin } from "@wonderhome/core/platform/admin";
 
@@ -27,8 +27,8 @@ async function requireSubscriptionManager(): Promise<PlatformAdmin> {
 export async function GET(request: Request, { params }: Params) {
   const { planKey } = await params;
 
-  return defineRoute({ authenticate: requireSubscriptionManager }, async () => {
-    const admin = createAdminClient();
+  return defineRoute({ authenticate: requireSubscriptionManager }, async ({ actor }) => {
+    const admin = adminClientFor(adminGrant.platformAdmin(actor, "read plan feature policies"));
     const [features, history] = await Promise.all([planPolicies(admin, planKey), policyHistory(admin, planKey)]);
     return { planKey, features, history };
   })(request);
@@ -51,7 +51,7 @@ export async function PATCH(request: Request, { params }: Params) {
   const { planKey } = await params;
 
   return defineRoute({ input: policySchema, authenticate: requireSubscriptionManager }, async ({ body, actor }) => {
-    const result = await setFeaturePolicy(createAdminClient(), {
+    const result = await setFeaturePolicy(adminClientFor(adminGrant.platformAdmin(actor, "set a plan feature policy")), {
       planKey,
       featureKey: body.featureKey,
       actorProfileId: actor.profileId,

@@ -16,7 +16,7 @@ import {
   previewPlanChange,
 } from "@wonderhome/core/billing/repository";
 import { ApiError } from "@wonderhome/core/api/errors";
-import { createAdminClient } from "@wonderhome/core/db/admin";
+import { adminClientFor, adminGrant } from "@wonderhome/core/db/admin-context";
 import { createClient } from "@wonderhome/core/db/server";
 import { requireHouseholdAdmin, requireMembership } from "@wonderhome/core/identity/households";
 
@@ -40,7 +40,7 @@ export async function GET(request: Request, { params }: Params) {
   return defineRoute({}, async () => {
     await requireUser();
     const supabase = await createClient();
-    await requireMembership(supabase, householdId);
+    const membership = await requireMembership(supabase, householdId);
 
     const [current, plans] = await Promise.all([
       loadSubscription(supabase, householdId),
@@ -56,7 +56,7 @@ export async function GET(request: Request, { params }: Params) {
     // Sold through a checkout either by configuration (story 20-006) or by a
     // catalogue price some live provider has mapped (story 20-009).
     const catalogue = requiresPayment
-      ? await purchasablePriceIds(createAdminClient(), to, billingProvidersFromEnv().map((live) => live.name)).catch(() => new Set<string>())
+      ? await purchasablePriceIds(adminClientFor(adminGrant.member(membership, "read the price catalogue")), to, billingProvidersFromEnv().map((live) => live.name)).catch(() => new Set<string>())
       : new Set<string>();
     const sold = Boolean(provider?.live && provider.sells(to)) || catalogue.size > 0;
     return {
@@ -106,7 +106,7 @@ export async function POST(request: Request, { params }: Params) {
     if (await planRequiresPayment(supabase, body.toPlanKey)) {
       if (body.priceId) {
         const user = await requireUser();
-        const checkout = await startPricedCheckout(supabase, createAdminClient(), {
+        const checkout = await startPricedCheckout(supabase, adminClientFor(adminGrant.householdAdmin(membership, "start a priced checkout")), {
           householdId,
           memberId: membership.memberId,
           toPlanKey: body.toPlanKey,
@@ -123,7 +123,7 @@ export async function POST(request: Request, { params }: Params) {
       if (!provider?.live || !provider.sells(body.toPlanKey)) {
         throw ApiError.conflict("This plan can't be bought here yet. Nothing has changed.");
       }
-      const checkout = await startCheckout(supabase, createAdminClient(), {
+      const checkout = await startCheckout(supabase, adminClientFor(adminGrant.householdAdmin(membership, "start a checkout")), {
         householdId,
         memberId: membership.memberId,
         toPlanKey: body.toPlanKey,

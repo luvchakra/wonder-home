@@ -3,7 +3,7 @@ import { z } from "zod";
 import { ApiError } from "@wonderhome/core/api/errors";
 import { defineRoute } from "@wonderhome/core/api/route";
 import { EXPERIMENT_REASON_CODES, listExperiments, moveExperiment } from "@wonderhome/core/billing/experiments";
-import { createAdminClient } from "@wonderhome/core/db/admin";
+import { adminClientFor, adminGrant } from "@wonderhome/core/db/admin-context";
 
 import { requireExperimentManager } from "@/app/_lib/experiment-guard";
 
@@ -16,8 +16,8 @@ type Params = { params: Promise<{ experimentKey: string }> };
 
 export async function GET(request: Request, { params }: Params) {
   const { experimentKey } = await params;
-  return defineRoute({ authenticate: requireExperimentManager }, async () => {
-    const experiment = (await listExperiments(createAdminClient())).find((entry) => entry.key === experimentKey);
+  return defineRoute({ authenticate: requireExperimentManager }, async ({ actor }) => {
+    const experiment = (await listExperiments(adminClientFor(adminGrant.platformAdmin(actor, "read an entitlement experiment")))).find((entry) => entry.key === experimentKey);
     if (!experiment) throw ApiError.notFound("There is no such experiment.");
     return { experiment };
   })(request);
@@ -31,7 +31,7 @@ const moveSchema = z.object({
 export async function PATCH(request: Request, { params }: Params) {
   const { experimentKey } = await params;
   return defineRoute({ input: moveSchema, authenticate: requireExperimentManager }, async ({ body, actor }) => ({
-    experiment: await moveExperiment(createAdminClient(), { key: experimentKey, to: body.to, actorProfileId: actor.profileId, reasonCode: body.reasonCode }),
+    experiment: await moveExperiment(adminClientFor(adminGrant.platformAdmin(actor, "move an entitlement experiment")), { key: experimentKey, to: body.to, actorProfileId: actor.profileId, reasonCode: body.reasonCode }),
   }))(request);
 }
 

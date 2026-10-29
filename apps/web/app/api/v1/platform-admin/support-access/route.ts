@@ -1,7 +1,7 @@
 import { z } from "zod";
 
 import { defineRoute } from "@wonderhome/core/api/route";
-import { createAdminClient } from "@wonderhome/core/db/admin";
+import { adminClientFor, adminGrant } from "@wonderhome/core/db/admin-context";
 import { createClient } from "@wonderhome/core/db/server";
 import { grantSupportAccess, requirePlatformAdmin } from "@wonderhome/core/platform/admin";
 
@@ -30,7 +30,7 @@ export const POST = defineRoute(
   // anonymous caller should not learn what a support grant looks like.
   { input: grantSchema, authenticate: async () => requirePlatformAdmin(await createClient()) },
   async ({ body, requestId, actor }) => {
-    const granted = await grantSupportAccess(createAdminClient(), actor, body, requestId);
+    const granted = await grantSupportAccess(adminClientFor(adminGrant.platformAdmin(actor, "grant support access")), actor, body, requestId);
 
     return new Response(JSON.stringify(granted), {
       status: 201,

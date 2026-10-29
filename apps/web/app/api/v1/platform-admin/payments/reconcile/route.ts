@@ -1,7 +1,7 @@
 import { defineRoute } from "@wonderhome/core/api/route";
 import { ApiError } from "@wonderhome/core/api/errors";
 import { reconcileAllProviders } from "@wonderhome/core/billing/reconcile";
-import { createAdminClient } from "@wonderhome/core/db/admin";
+import { adminClientFor, adminGrant } from "@wonderhome/core/db/admin-context";
 import { createClient } from "@wonderhome/core/db/server";
 import { platformCan, requirePlatformAdmin } from "@wonderhome/core/platform/admin";
 
@@ -13,7 +13,7 @@ import { platformCan, requirePlatformAdmin } from "@wonderhome/core/platform/adm
 export async function POST(request: Request) {
   return defineRoute({ authenticate: async () => requirePlatformAdmin(await createClient()) }, async ({ actor }) => {
     if (!platformCan(actor, "payments.read")) throw ApiError.forbidden("Your platform role cannot see payments.");
-    return { runs: await reconcileAllProviders(createAdminClient()) };
+    return { runs: await reconcileAllProviders(adminClientFor(adminGrant.platformAdmin(actor, "reconcile payment providers"))) };
   })(request);
 }
 

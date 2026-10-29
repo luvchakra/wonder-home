@@ -3,7 +3,7 @@ import { z } from "zod";
 import { ApiError } from "@wonderhome/core/api/errors";
 import { parseQuery } from "@wonderhome/core/api/query";
 import { defineRoute } from "@wonderhome/core/api/route";
-import { createAdminClient } from "@wonderhome/core/db/admin";
+import { adminClientFor, adminGrant } from "@wonderhome/core/db/admin-context";
 import { createClient } from "@wonderhome/core/db/server";
 import { loadEmailMonitoring } from "@wonderhome/core/homesend/email-monitoring";
 import { loadHomeSendMetrics } from "@wonderhome/core/homesend/metrics";
@@ -30,7 +30,7 @@ export const GET = defineRoute(
   async ({ actor, request }) => {
     if (!platformCan(actor, "ai_operations.read")) throw ApiError.forbidden("Your platform role cannot view HomeSend metrics.");
     const { days } = parseQuery(request, z.object({ days: z.coerce.number().int().min(1).max(365).default(30) }).strict());
-    const admin = createAdminClient();
+    const admin = adminClientFor(adminGrant.platformAdmin(actor, "read HomeSend metrics across households"));
     const [metrics, email] = await Promise.all([loadHomeSendMetrics(admin, { windowDays: days }), loadEmailMonitoring(admin)]);
     return { metrics, email };
   },
