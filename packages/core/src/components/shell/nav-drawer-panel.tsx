@@ -97,11 +97,21 @@ export default function NavDrawer({
               scrolls within it, so on the shortest phones the full set is
               reachable without the brand header sliding away — and on a
               standard phone it all fits at once with nothing clipped. */}
-          <nav aria-label="Household menu" className="mt-1 flex-1 space-y-1 overflow-y-auto px-2 pb-3">
+          <nav aria-label="Household menu" className="mt-1 min-h-0 space-y-1 overflow-y-auto px-2 pb-3">
             {sections.map((section) => (
               <DrawerSection key={section.group} title={section.label} items={section.items} isCurrent={isCurrent} onNavigate={close} />
             ))}
           </nav>
+
+          {/* Fills whatever the menu leaves free, so the lower drawer is warm
+              family-home imagery, not blank white (rule 5, rule 8). Behind
+              nothing tappable: it sits after the nav, takes the leftover
+              height and clips to nothing when the menu is long. */}
+          <div aria-hidden className="pointer-events-none relative min-h-0 flex-1 overflow-hidden bg-[image:var(--wh-gradient-hero)]">
+            <LeafDecor corner="bottom-left" size={150} opacity={0.3} />
+            <LeafDecor corner="bottom-right" size={110} opacity={0.2} />
+            <HomeIllustration className="absolute inset-x-4 bottom-0 mx-auto w-[min(100%,17rem)] opacity-90" />
+          </div>
         </Dialog.Content>
       </Dialog.Portal>
     </Dialog.Root>
