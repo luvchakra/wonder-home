@@ -24,3 +24,6 @@ Date: 2026-10-29. Owner ask: an admin page for WonderHome with performance analy
 - A wonder-jobs read was not possible in this session (the repository was not attached), so the layout follows wonder-home's own careers admin page rather than a copy of WonderJobs'.
 - Setting `SUPABASE_ACCESS_TOKEN` on Vercel gives live advisor counts; without it the baseline is shown.
 - No user-guide entry: staff-only.
+
+## Update
+The page now has action buttons on the tip cards: see `2026-10-29-performance-actions.md`. "Read-only" above no longer applies to that page.

@@ -18,6 +18,10 @@ export type Snapshot = {
   largestIndexes: { name: string; table: string; bytes: number; scans: number }[];
   seqScanHeavy: { name: string; seq_scan: number; idx_scan: number; rows: number; seq_tup_read: number }[];
   unusedIndexes: { count: number; bytes: number };
+  /** The biggest never-used indexes that back no constraint, by name. */
+  unusedIndexList: { name: string; table: string; bytes: number }[];
+  /** Indexes that repeat another on the same table: `keep` stays, `drop` are the plain copies. */
+  duplicateIndexes: { table: string; keep: string; drop: string[] }[];
   deadTuples: { name: string; live: number; dead: number; dead_pct: number | null }[];
   connections: { max: number; reserved: number; total: number; active: number; idle: number; idleInTransaction: number };
   takenAt: string;
@@ -65,6 +69,8 @@ export function parseSnapshot(raw: unknown): Snapshot | null {
     largestIndexes: rows(r.largestIndexes).map((i) => ({ name: String(i.name), table: String(i.table), bytes: num(i.bytes), scans: num(i.scans) })),
     seqScanHeavy: rows(r.seqScanHeavy).map((t) => ({ name: String(t.name), seq_scan: num(t.seq_scan), idx_scan: num(t.idx_scan), rows: num(t.rows), seq_tup_read: num(t.seq_tup_read) })),
     unusedIndexes: { count: num(r.unusedIndexes?.count), bytes: num(r.unusedIndexes?.bytes) },
+    unusedIndexList: rows(r.unusedIndexList).map((i) => ({ name: String(i.name), table: String(i.table), bytes: num(i.bytes) })),
+    duplicateIndexes: rows(r.duplicateIndexes).map((d) => ({ table: String(d.table), keep: String(d.keep), drop: rows(d.drop).map(String) })),
     deadTuples: rows(r.deadTuples).map((t) => ({ name: String(t.name), live: num(t.live), dead: num(t.dead), dead_pct: nullableNum(t.dead_pct) })),
     connections: {
       max: num(r.connections.max),
@@ -191,6 +197,19 @@ export function computeTips(input: { snapshot: Snapshot | null; advisors: Adviso
         finding: `${snapshot.unusedIndexes.count} indexes have never been used (${kb(snapshot.unusedIndexes.bytes)} in total).`,
         tip: "Drop candidates, but only after real traffic: with few users most indexes look unused. Re-check after launch and drop one at a time.",
         where: "A migration that drops the index; confirm with the performance advisor first.",
+        story: "PERF-14",
+      });
+    }
+
+    if (snapshot.duplicateIndexes.length > 0) {
+      const extra = snapshot.duplicateIndexes.reduce((n, d) => n + d.drop.length, 0);
+      tips.push({
+        id: "duplicate-indexes",
+        severity: "watch",
+        impact: extra * 1_000_000,
+        finding: `${extra} indexes repeat another index on the same table (${snapshot.duplicateIndexes.map((d) => d.table).join(", ")}).`,
+        tip: "A duplicate does the same job as the index beside it and slows every write: keep one and drop the copy, one at a time.",
+        where: "A migration that drops the copy (DROP INDEX CONCURRENTLY); the performance advisor lists them as duplicate_index.",
         story: "PERF-14",
       });
     }

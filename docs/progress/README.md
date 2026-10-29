@@ -11,11 +11,9 @@ decision that shapes later work each earns a note, written before moving on.
 
 | Date | Note |
 |---|---|
-<<<<<<< Updated upstream
-| 2026-10-29 | [PERF-11 lazy-loading form bodies: investigated, nothing shipped](2026-10-29-lazy-load-client-code.md) |
-=======
 | 2026-10-29 | [Platform admin sidebar menu and Back to WonderHome](2026-10-29-platform-admin-sidebar.md) |
->>>>>>> Stashed changes
+| 2026-10-29 | [PERF-11 lazy-loading form bodies: investigated, nothing shipped](2026-10-29-lazy-load-client-code.md) |
+| 2026-10-29 | [Performance page: action buttons](2026-10-29-performance-actions.md) |
 | 2026-10-29 | [Platform admin in the avatar menu](2026-10-29-avatar-menu-platform-admin.md) |
 | 2026-10-29 | [Mark paid on bill rows](2026-10-29-mark-bill-paid.md) |
 | 2026-10-29 | [Caching strategy: fast where it is safe, never shared where it is personal](2026-10-29-caching-strategy.md) |

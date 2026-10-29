@@ -38,6 +38,7 @@ const PLATFORM_CAPABILITIES: Record<PlatformRole, readonly string[]> = {
     "payments.read",
     "payments.refund",
     "careers.manage",
+    "performance.maintain",
   ],
   owner: [
     "household.read_with_grant",
@@ -52,6 +53,8 @@ const PLATFORM_CAPABILITIES: Record<PlatformRole, readonly string[]> = {
     "payments.read",
     "payments.refund",
     "careers.manage",
+    "performance.maintain",
+    "performance.reset",
   ],
 };
 

@@ -31,6 +31,26 @@ export async function databaseSnapshot(staff: PlatformAdmin): Promise<Measured<S
   }
 }
 
+export type LastRun = { action: string; target: string | null; outcome: string; reason: string | null; at: string };
+
+/** The last run of every action and target, for the status line on each button. Empty when unavailable. */
+export async function lastRuns(staff: PlatformAdmin): Promise<LastRun[]> {
+  try {
+    const admin = adminClientFor(adminGrant.platformAdmin(staff, "read the last performance action runs"));
+    const { data, error } = await admin.rpc("platform_perf_last_runs", { p_staff_profile_id: staff.profileId });
+    if (error || !Array.isArray(data)) return [];
+    return data.map((r: Record<string, unknown>) => ({
+      action: String(r.action ?? ""),
+      target: r.target ? String(r.target) : null,
+      outcome: String(r.outcome ?? ""),
+      reason: r.reason ? String(r.reason) : null,
+      at: String(r.at ?? ""),
+    }));
+  } catch {
+    return [];
+  }
+}
+
 const baselineCounts = (): AdvisorCounts => {
   const byLint = Object.fromEntries(Object.entries(advisorBaseline.gated as Record<string, string[]>).map(([name, list]) => [name, list.length]));
   const gated = Object.values(byLint).reduce((sum, n) => sum + n, 0);

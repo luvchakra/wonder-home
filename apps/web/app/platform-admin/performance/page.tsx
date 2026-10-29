@@ -15,8 +15,12 @@ import {
   type Status,
 } from "@wonderhome/core/platform/performance";
 
-import { advisorCounts, committedBudgets, databaseSnapshot } from "../../_lib/platform-performance";
+import { platformCan } from "@wonderhome/core/platform/admin";
+import { actionsFor, RUN_ACTIONS, runKey, taskText } from "@wonderhome/core/platform/performance-actions";
+
+import { advisorCounts, committedBudgets, databaseSnapshot, lastRuns, type LastRun } from "../../_lib/platform-performance";
 import { platformStaff } from "../../_lib/platform-staff";
+import { RecheckButton, TipActions, type CopyButtonProps, type RunButtonProps } from "./tip-actions";
 
 export const dynamic = "force-dynamic";
 export const metadata = { title: "Performance", robots: { index: false, follow: false } };
@@ -32,6 +36,15 @@ const number = (n: number) => n.toLocaleString("en-GB");
 const size = (bytes: number) => (bytes >= 1_048_576 ? `${(bytes / 1_048_576).toFixed(1)} MB` : `${Math.round(bytes / 1024).toLocaleString("en-GB")} KB`);
 const percent = (ratio: number | null) => (ratio === null ? "not measured" : `${(ratio * 100).toFixed(2)}%`);
 const when = (iso: string) => (iso ? new Intl.DateTimeFormat("en-GB", { dateStyle: "medium", timeStyle: "short", timeZone: "Asia/Kolkata" }).format(new Date(iso)) : "");
+
+const REASON: Record<string, string> = { "55P03": "the table was busy", "57014": "it timed out", extension_off: "the statistics extension is off", "22023": "the table was not found" };
+
+/** "Never run", "Ran on …" or "Failed on …: reason", from the audit trail. */
+function statusLine(run: LastRun | undefined): string {
+  if (!run) return "Never run.";
+  if (run.outcome === "ok") return `Last ran ${when(run.at)}.`;
+  return `Failed ${when(run.at)}: ${REASON[run.reason ?? ""] ?? "database error"}.`;
+}
 
 function Pill({ status }: { status: Status }) {
   return <span className={`inline-flex shrink-0 items-center rounded-[var(--wh-radius-pill)] px-2.5 py-0.5 text-xs font-semibold ${TONE[status]}`}>{WORD[status]}</span>;
@@ -199,12 +212,39 @@ export default async function PerformancePage() {
   const staff = await platformStaff("operations.read");
   if (!staff) return null; // the layout has already answered 404
 
-  const [database, advisors] = await Promise.all([databaseSnapshot(staff), advisorCounts()]);
+  const [database, advisors, runs] = await Promise.all([databaseSnapshot(staff), advisorCounts(), lastRuns(staff)]);
+  const lastRun = new Map(runs.map((r) => [runKey(r.action, r.target), r]));
   const budgets = committedBudgets();
   const snapshot = database.state === "ok" ? database.value : null;
   const tips = computeTips({ snapshot, advisors, budgets });
   const heaviest = budgets.routes.slice(0, 5);
   const accepted = advisors.accepted;
+
+  /** What each tip's card can do, with this person's role and each action's last run. */
+  const buttonsFor = (tip: (typeof tips)[number]) => {
+    const all = actionsFor(tip, snapshot);
+    const runButtons: RunButtonProps[] = [];
+    const copies: CopyButtonProps[] = [];
+    for (const a of all) {
+      if (a.kind === "copy") {
+        copies.push({ label: a.label, sql: a.sql, note: a.note });
+        continue;
+      }
+      const info = RUN_ACTIONS[a.action];
+      runButtons.push({
+        action: a.action,
+        target: a.target,
+        label: a.label,
+        what: info.what,
+        reversible: info.reversible,
+        impact: info.impact,
+        stepUp: info.stepUp,
+        allowed: platformCan(staff, info.capability),
+        status: statusLine(lastRun.get(runKey(a.action, a.target))),
+      });
+    }
+    return { runs: runButtons, copies, task: { text: taskText(tip), story: tip.story } };
+  };
 
   return (
     <main className="min-h-dvh px-4 py-10 lg:px-8">
@@ -212,8 +252,9 @@ export default async function PerformancePage() {
         <header className="space-y-2">
           <h1 className="text-[length:var(--wh-text-title)] font-bold tracking-tight">Performance</h1>
           <p className="text-sm text-[var(--wh-foreground-muted)]">
-            How the database, the platform checks and the app&rsquo;s own budgets are doing. Read-only, and only totals: no household, member or email is shown here.
+            How the database, the platform checks and the app&rsquo;s own budgets are doing. Only totals: no household, member or email is shown here. Each tip has the safe action for it; changes to the database&rsquo;s shape are only ever offered as SQL to copy, never run from this page.
           </p>
+          <RecheckButton />
         </header>
 
         <Section title="Tips to improve" intro="Worked out from the figures below by fixed rules, most useful first. No AI is involved.">
@@ -231,6 +272,7 @@ export default async function PerformancePage() {
                   <p className="break-words text-xs text-[var(--wh-foreground-muted)]">
                     Where to fix: {tip.where} Plan: {tip.story} in docs/plans/2026-10-29-fast-and-secure-at-scale.md.
                   </p>
+                  <TipActions {...buttonsFor(tip)} />
                 </li>
               ))}
             </ol>

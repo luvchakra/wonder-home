@@ -18,6 +18,8 @@ const base: Snapshot = {
   largestIndexes: [],
   seqScanHeavy: [],
   unusedIndexes: { count: 0, bytes: 0 },
+  unusedIndexList: [],
+  duplicateIndexes: [],
   deadTuples: [],
   connections: { max: 60, reserved: 3, total: 10, active: 1, idle: 9, idleInTransaction: 0 },
   takenAt: "2026-10-29T00:00:00Z",
