@@ -26,22 +26,42 @@ export function keyOf(lint, finding) {
   return `${lint.name}|${detail.trim()}`;
 }
 
+/** The lints in a Management API body: {lints}, {result:{lints}} or a bare array. */
+export function lintsOf(body) {
+  if (Array.isArray(body)) return body;
+  if (Array.isArray(body?.lints)) return body.lints;
+  if (Array.isArray(body?.result?.lints)) return body.result.lints;
+  if (Array.isArray(body?.result)) return body.result;
+  return [];
+}
+
+/** A grouped lint carries findings[]; a flat lint is itself the one finding (detail on the lint). */
+const entriesOf = (lint) => (Array.isArray(lint.findings) ? lint.findings.map((f) => ({ ...f, detail: f.detail ?? lint.detail })) : [lint]);
+
 export function summarize(lints) {
   const gated = {};
   const info = {};
   for (const lint of lints) {
-    if (lint.level === "INFO") info[lint.name] = lint.findings?.length ?? lint.count ?? 0;
-    else (gated[lint.name] ??= []).push(...(lint.findings ?? []).map((f) => keyOf(lint, f)));
+    const entries = entriesOf(lint);
+    if (lint.level === "INFO") info[lint.name] = (info[lint.name] ?? 0) + (Array.isArray(lint.findings) ? lint.findings.length || lint.count || 0 : 1);
+    else (gated[lint.name] ??= []).push(...entries.map((f) => keyOf(lint, f)));
   }
   for (const name of Object.keys(gated)) gated[name] = [...new Set(gated[name])].sort();
   return { gated, info };
+}
+
+/** Why a 200 response parsed to nothing, without printing any of its content. */
+export function describeUnparsed(type, body) {
+  const keys = (v) => (v && typeof v === "object" ? Object.keys(v).join(", ") || "(none)" : typeof v);
+  const first = lintsOf(body)[0];
+  return `advisors/${type}: HTTP 200 but no lints parsed. Response top-level keys: ${Array.isArray(body) ? "(array)" : keys(body)}. First lint keys: ${first ? keys(first) : "(no lint)"}.`;
 }
 
 async function fetchLints(type, token) {
   const response = await fetch(`https://api.supabase.com/v1/projects/${REF}/advisors/${type}`, { headers: { Authorization: `Bearer ${token}` } });
   if (!response.ok) throw new Error(`advisors/${type}: HTTP ${response.status}`);
   const body = await response.json();
-  return (body.lints ?? body.result?.lints ?? []).map((l) => ({ ...l, type }));
+  return { type, body, lints: lintsOf(body).map((l) => ({ ...l, type })) };
 }
 
 if (import.meta.url === `file://${process.argv[1]}`) {
@@ -51,8 +71,16 @@ if (import.meta.url === `file://${process.argv[1]}`) {
     console.log("Add it as a repository secret (a personal access token from supabase.com/dashboard/account/tokens) to activate this gate.");
     process.exit(0);
   }
-  const lints = (await Promise.all(TYPES.map((t) => fetchLints(t, token)))).flat();
+  const fetched = await Promise.all(TYPES.map((t) => fetchLints(t, token)));
+  const lints = fetched.flatMap((f) => f.lints);
   const now = summarize(lints);
+  const baselineNow = JSON.parse(readFileSync(BASELINE_PATH, "utf8"));
+  // A 200 that parses to no lints at all, against a non-empty baseline, is a parser miss, not a clean project.
+  if (!lints.length && Object.values(baselineNow.gated).flat().length) {
+    for (const f of fetched) console.error(describeUnparsed(f.type, f.body));
+    console.error("Refusing to pass vacuously: the baseline lists findings but none were parsed.");
+    process.exit(1);
+  }
 
   if (process.argv.includes("--update")) {
     const baseline = { _note: "Known WARN/ERROR advisor findings and INFO counts. Remove a finding when it is fixed; add one only with the reason in the PR. `npm run advisors -- --update` rewrites it.", project: REF, info: now.info, gated: now.gated };
@@ -61,7 +89,7 @@ if (import.meta.url === `file://${process.argv[1]}`) {
     process.exit(0);
   }
 
-  const baseline = JSON.parse(readFileSync(BASELINE_PATH, "utf8"));
+  const baseline = baselineNow;
   const known = new Set(Object.values(baseline.gated).flat());
   const fresh = Object.values(now.gated).flat().filter((k) => !known.has(k));
   const gone = [...known].filter((k) => !Object.values(now.gated).flat().includes(k));
