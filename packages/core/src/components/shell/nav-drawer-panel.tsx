@@ -93,27 +93,23 @@ export default function NavDrawer({
             </ScriptAccent>
           </div>
 
-          {/* The list is the only thing that scrolls: the hero above stays put
-              (`shrink-0`) and this `nav` takes the rest of the column and
-              scrolls within it, so on the shortest phones the full set is
-              reachable without the brand header sliding away — and on a
-              standard phone it all fits at once with nothing clipped. */}
-          <nav aria-label="Household menu" className="mt-1 min-h-0 space-y-1 overflow-y-auto px-2 pb-3">
-            {sections.map((section) => (
-              <DrawerSection key={section.group} title={section.label} items={section.items} isCurrent={isCurrent} onNavigate={close} />
-            ))}
-          </nav>
-
-          {/* Warm family-home imagery below the complete list, never over it
-              (rule 5, rule 8; the owner's 2026-10-29 note). A fixed band
-              (`shrink-0 h-28`) pinned to the foot (`mt-auto`): the `nav` above
-              is the only part that gives way (`min-h-0`), scrolling within
-              whatever height is left, so the last item (Settings) can always
-              be scrolled fully clear of the band and nothing overlaps it. */}
-          <div aria-hidden className="pointer-events-none relative mt-auto h-28 shrink-0 overflow-hidden bg-[image:var(--wh-gradient-hero)]">
-            <LeafDecor corner="bottom-left" size={150} opacity={0.3} />
-            <LeafDecor corner="bottom-right" size={110} opacity={0.2} />
-            <HomeIllustration className="absolute inset-x-4 bottom-0 mx-auto w-[min(100%,17rem)] opacity-90" />
+          {/* One scroll region under the hero (`shrink-0`): the menu list and,
+              after it, the warm family-home imagery (rule 5, rule 8). The
+              imagery is the last thing in the scroll, never a layer over it, so
+              no menu row can be clipped or covered by it: scroll to the end and
+              Settings sits fully clear above the picture. On a short menu the
+              picture is pushed to the foot (`mt-auto`). */}
+          <div className="mt-1 flex min-h-0 flex-1 flex-col overflow-y-auto">
+            <nav aria-label="Household menu" className="shrink-0 space-y-1 px-2 pb-3">
+              {sections.map((section) => (
+                <DrawerSection key={section.group} title={section.label} items={section.items} isCurrent={isCurrent} onNavigate={close} />
+              ))}
+            </nav>
+            <div aria-hidden className="pointer-events-none relative mt-auto h-28 shrink-0 overflow-hidden bg-[image:var(--wh-gradient-hero)]">
+              <LeafDecor corner="bottom-left" size={150} opacity={0.3} />
+              <LeafDecor corner="bottom-right" size={110} opacity={0.2} />
+              <HomeIllustration className="absolute inset-x-4 bottom-0 mx-auto w-[min(100%,17rem)] opacity-90" />
+            </div>
           </div>
         </Dialog.Content>
       </Dialog.Portal>
