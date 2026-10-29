@@ -291,4 +291,11 @@ describe("the next due date of a recurring bill", () => {
     expect(nextDueDate("2026-09-26", "one_off")).toBeNull();
     expect(nextDueDate("2026-09-26", null)).toBeNull();
   });
+
+  it("carries the bill's amount so Mark paid can start from it, overdue or coming", () => {
+    const overdue = assessObligation(obligation({ dueOn: "2026-08-19" }), { now: NOW });
+    expect(overdue.payment).toEqual({ amountMinor: 284_000, currency: "INR" });
+    const unknown = assessObligation(obligation({ dueOn: "2026-09-18", amountMinor: null, currency: null }), { now: NOW });
+    expect(unknown.payment).toEqual({ amountMinor: null, currency: null });
+  });
 });
