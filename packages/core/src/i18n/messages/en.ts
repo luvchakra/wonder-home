@@ -73,7 +73,7 @@ export const en = {
   "nav.item.chat": "FamilyChat",
   "nav.item.notifications": "Notifications",
   "nav.item.manage": "Manage Household",
-  "nav.item.settings": "Settings & Profile",
+  "nav.item.settings": "Settings",
   "connectionsPage.title": "Connections",
   "connectionsPage.lede": "Everything WonderHome is linked to, in one place: who it is for, whether it works, and the one thing to do.",
   "connectionsPage.meta": "WhatsApp, voice assistants, school and other services",

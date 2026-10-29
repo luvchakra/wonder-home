@@ -86,7 +86,7 @@ export const SECONDARY_NAVIGATION: readonly SecondaryNavItem[] = [
   { key: "certification", label: "HomeBrain", href: "/certification", icon: "badge-check", tone: "ai", purpose: "Your home, understood", requires: null, adultOnly: true, group: "ai" },
   { key: "homesend", label: "HomeSend", href: "/home-send", icon: "send", tone: "ai", purpose: "Send WonderHome anything", requires: null, adultOnly: true, group: "ai" },
   { key: "places", label: "HomePlaces", href: "/places", icon: "map-pin", tone: "ai", purpose: "Places your family likes", requires: null, group: "ai" },
-  { key: "settings", label: "Settings & Profile", href: "/settings", icon: "user-round-cog", tone: "neutral", purpose: "You, your preferences, your privacy", requires: null, group: "manage" },
+  { key: "settings", label: "Settings", href: "/settings", icon: "user-round-cog", tone: "neutral", purpose: "You, your preferences, your privacy", requires: null, group: "manage" },
 ] as const;
 
 /**

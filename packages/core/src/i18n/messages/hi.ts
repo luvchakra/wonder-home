@@ -63,7 +63,7 @@ export const hi: Catalog = {
   "nav.item.chat": "FamilyChat",
   "nav.item.notifications": "सूचनाएँ",
   "nav.item.manage": "घर का प्रबंधन",
-  "nav.item.settings": "सेटिंग्स और प्रोफ़ाइल",
+  "nav.item.settings": "सेटिंग्स",
   "connectionsPage.title": "कनेक्शन",
   "connectionsPage.lede": "WonderHome जिन चीज़ों से जुड़ा है, सब एक जगह: किसके लिए है, काम कर रहा है या नहीं, और करने वाली एक बात।",
   "connectionsPage.meta": "WhatsApp, वॉइस असिस्टेंट, स्कूल और दूसरी सेवाएँ",
