@@ -9,12 +9,16 @@ import { billType } from "@wonderhome/core/finance/bill-catalog";
 import {
   cancelObligation,
   createObligation,
+  markObligationPaid,
+  undoBillPayment,
   payBillPeriod,
   recordAmount,
   removeTransaction,
   setBillPeriodAmount,
   updateObligation,
 } from "@wonderhome/core/finance/repository";
+import { toMinorUnits as toMinor } from "@wonderhome/core/billing/money";
+import type { PaidBill } from "@wonderhome/core/finance/repository";
 import { retireBudget, saveBudget } from "@wonderhome/core/finance/budget-repository";
 import { BUDGET_PERIODS, isBudgetCategory } from "@wonderhome/core/finance/budgets";
 import { OBLIGATION_KINDS } from "@wonderhome/core/finance/payments";
@@ -410,6 +414,68 @@ export async function fillBillPeriodAction(_previous: ActionState, formData: For
     });
     revalidatePath("/bills");
     return { notice: amountMinor === null ? "Cleared." : "Saved. Mark it paid here when you pay it." };
+  } catch (thrown) {
+    return { error: toErrorBody(thrown, "finance").body.error.message };
+  }
+}
+
+const markPaidSchema = z.object({
+  householdId: z.uuid(),
+  obligationId: z.uuid(),
+  paidOn: isoDate,
+  amount: z.number().min(0).max(1_000_000_000).nullable(),
+  currency: z.string().regex(/^[A-Z]{3}$/).nullable(),
+});
+
+/**
+ * "Mark paid" on a bill row: someone says they paid it. The same repository
+ * write HomeTalk's "paid" uses; WonderHome records it and never pays.
+ */
+export async function markBillPaidAction(input: z.input<typeof markPaidSchema>): Promise<{ error?: string; paid?: PaidBill }> {
+  const parsed = markPaidSchema.safeParse(input);
+  if (!parsed.success) return { error: parsed.error.issues[0]?.message ?? "Please check the details." };
+  if (parsed.data.amount !== null && !parsed.data.currency) return { error: "Add a currency along with the amount." };
+  try {
+    const supabase = await createClient();
+    await requireHouseholdAdmin(supabase, parsed.data.householdId);
+    const paid = await markObligationPaid(supabase, {
+      householdId: parsed.data.householdId,
+      obligationId: parsed.data.obligationId,
+      paidOn: parsed.data.paidOn,
+      amountMinor: parsed.data.amount === null ? null : toMinor(parsed.data.amount, parsed.data.currency!),
+      currency: parsed.data.currency,
+    });
+    revalidatePath("/bills");
+    revalidatePath("/household/home");
+    return { paid };
+  } catch (thrown) {
+    return { error: toErrorBody(thrown, "finance").body.error.message };
+  }
+}
+
+/** Takes back the "Mark paid" just made, from the record it returned. */
+export async function undoBillPaidAction(input: { householdId: string; obligationId: string; paid: PaidBill }): Promise<{ error?: string }> {
+  const parsed = z
+    .object({
+      householdId: z.uuid(),
+      obligationId: z.uuid(),
+      paid: z.object({
+        nextDueOn: isoDate.nullable(),
+        periodLabel: z.string().regex(MONTH),
+        recorded: z.boolean(),
+        tookAhead: z.object({ periodLabel: z.string().regex(MONTH), amountMinor: z.number().int(), currency: z.string().regex(/^[A-Z]{3}$/) }).nullish(),
+        previous: z.object({ dueOn: isoDate.nullable(), status: z.enum(["expected", "received", "scheduled", "overdue"]), amountMinor: z.number().int().nullable(), currency: z.string().regex(/^[A-Z]{3}$/).nullable() }),
+      }),
+    })
+    .safeParse(input);
+  if (!parsed.success) return { error: "Please try again." };
+  try {
+    const supabase = await createClient();
+    await requireHouseholdAdmin(supabase, parsed.data.householdId);
+    await undoBillPayment(supabase, parsed.data);
+    revalidatePath("/bills");
+    revalidatePath("/household/home");
+    return {};
   } catch (thrown) {
     return { error: toErrorBody(thrown, "finance").body.error.message };
   }

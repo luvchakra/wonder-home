@@ -19,7 +19,7 @@ import { loadOnboarding, loadOnboardingFacts } from "@wonderhome/core/household/
 import { assessSetup } from "@wonderhome/core/household/setup";
 import { shouldOfferLocaleSetup } from "@wonderhome/core/i18n/preferences";
 import { loadSetupFacts } from "@wonderhome/core/household/setup-repository";
-import { listMembers, type HouseholdMember } from "@wonderhome/core/identity/households";
+import { isHouseholdAdmin, listMembers, type HouseholdMember } from "@wonderhome/core/identity/households";
 import { readHelperAvailability, readResponsibilities, type AvailabilityWindowRow, type ResponsibilityJoinRow } from "../_lib/family-reads";
 import { AppShell } from "@wonderhome/core/shell/app-shell";
 import { AvatarGroup } from "@wonderhome/core/ui/avatar";
@@ -56,6 +56,7 @@ import { AgendaExpandableRow } from "../_components/agenda-expandable-row";
 import { NewEventForm } from "../_components/new-event-form";
 import { eventFormLabels } from "../_lib/event-form-labels";
 import { eventPlaceSearch } from "../_lib/places";
+import { markPaidProps } from "../_lib/mark-paid";
 import { householdAgenda, type DomainSummary } from "../_lib/agenda";
 import { homeRows } from "../_lib/home-reads";
 import { eventGoing, eventWhen } from "../_lib/event-when";
@@ -228,6 +229,10 @@ async function DashboardBody({ session, now }: { session: Session; now: Date }) 
   // Setup guidance is for the people who can act on it: Admins. Prominent
   // for their first week, one quiet row after, gone at 100%.
   const manages = view.permissions.includes("household.manage");
+  // Only a household administrator may record a payment (the server decides again).
+  const markPaid = isHouseholdAdmin(membership)
+    ? markPaidProps(t, { householdId: membership.household.id, timezone: membership.household.timezone, currency: session.locale.preferences.currency, now })
+    : undefined;
 
   const todayIso = now.toISOString().slice(0, 10);
 
@@ -473,7 +478,8 @@ async function DashboardBody({ session, now }: { session: Session; now: Date }) 
                     key={item.subjectKey}
                     item={item}
                     timezone={timezone}
-                    badge={<Badge tone={badge.tone}>{badge.label}</Badge>}
+                    badge={markPaid && item.action?.action === "pay_bill" ? undefined : <Badge tone={badge.tone}>{badge.label}</Badge>}
+                    markPaid={markPaid}
                   />
                 );
               })}

@@ -126,6 +126,7 @@ export function assessObligation(
       reason: `${obligation.name} was due ${Math.abs(daysUntil)} days ago.`,
       action: { action: "pay_bill", target: obligation.id },
       dueOn: isoDate(due),
+      payment: { amountMinor: obligation.amountMinor, currency: obligation.currency },
     };
   }
 
@@ -142,6 +143,7 @@ export function assessObligation(
           : `${obligation.name} — ${format(obligation.amountMinor, obligation.currency ?? "INR")} due ${daysUntil === 0 ? "today" : `in ${daysUntil} days`}.`,
       action: { action: "pay_bill", target: obligation.id },
       dueOn: isoDate(due),
+      payment: { amountMinor: obligation.amountMinor, currency: obligation.currency },
     };
   }
 

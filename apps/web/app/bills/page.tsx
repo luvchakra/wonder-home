@@ -52,6 +52,7 @@ import { SectionHeader } from "@wonderhome/core/ui/section-header";
 import { SegmentedControl } from "@wonderhome/core/ui/segmented-control";
 import { EmptyState } from "@wonderhome/core/ui/states";
 
+import { markPaidProps } from "../_lib/mark-paid";
 import { AgendaExpandableRow } from "../_components/agenda-expandable-row";
 import {
   AddBillButton,
@@ -335,7 +336,7 @@ export default async function BillsPage({
           <div className="space-y-2.5">
             <ul className="space-y-1">
               {needs.slice(0, 4).map((item) => (
-                <AgendaExpandableRow key={item.subjectKey} item={item} timezone={timezone} href="/bills?tab=transactions" />
+                <AgendaExpandableRow key={item.subjectKey} item={item} timezone={timezone} href="/bills?tab=transactions" markPaid={admin ? markPaidProps(t, { householdId, timezone, currency: householdCurrency }) : undefined} />
               ))}
             </ul>
             {needs.length > 4 ? (

@@ -7,6 +7,7 @@ import { Badge, PillLink } from "@wonderhome/core/ui/pill";
 
 import { formatDate } from "../_lib/session";
 import { actionLabelFor, presentationFor } from "./agenda-row";
+import { MarkBillPaidButton, type MarkPaidLabels } from "./mark-bill-paid-button";
 import { SchoolCheckInButton } from "./school-check-in-button";
 
 const STATUS_LABEL: Record<string, string> = {
@@ -45,6 +46,7 @@ export function AgendaExpandableRow({
   href,
   badge,
   householdId,
+  markPaid,
 }: {
   item: HomeAssessment;
   timezone: string;
@@ -56,10 +58,13 @@ export function AgendaExpandableRow({
   badge?: ReactNode;
   /** Lets a school "Check in" close the item in place instead of linking away. */
   householdId?: string;
+  /** Present only for a member who may record payments: a bill row then offers "Mark paid" in place of the link. */
+  markPaid?: { householdId: string; today: string; currency: string; exponent: number; labels: MarkPaidLabels };
 }) {
   const presentation = presentationFor(item.subjectKey);
   const label = item.action ? actionLabelFor(item.action.action) : null;
   const closeInPlace = householdId && item.action?.action === "check_with_child" && item.action.target ? { householdId, id: item.action.target } : null;
+  const payNow = markPaid && item.action?.action === "pay_bill" && item.action.target ? { ...markPaid, id: item.action.target } : null;
   const statusLabel = STATUS_LABEL[item.status] ?? item.status.replace(/_/g, " ");
 
   return (
@@ -74,6 +79,19 @@ export function AgendaExpandableRow({
           </span>
           {badge ? (
             <span className="shrink-0">{badge}</span>
+          ) : payNow ? (
+            <span className="shrink-0">
+              <MarkBillPaidButton
+                householdId={payNow.householdId}
+                obligationId={payNow.id}
+                billName={item.title}
+                today={payNow.today}
+                amountMinor={item.payment?.amountMinor ?? null}
+                currency={item.payment?.currency ?? payNow.currency}
+                exponent={payNow.exponent}
+                labels={payNow.labels}
+              />
+            </span>
           ) : closeInPlace ? (
             <span className="shrink-0">
               <SchoolCheckInButton householdId={closeInPlace.householdId} id={closeInPlace.id} label={label ?? "Check in"} />

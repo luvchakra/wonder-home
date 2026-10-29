@@ -33,6 +33,8 @@ export type HomeAssessment = {
   action: { action: string; target?: string } | null;
   /** ISO date this is due, when the subject has a date at all. */
   dueOn: string | null;
+  /** A bill's amount and currency when it is known, so "Mark paid" can start from it. */
+  payment?: { amountMinor: number | null; currency: string | null };
 };
 
 export function silent(subjectKey: string, title: string, reason: string): HomeAssessment {
