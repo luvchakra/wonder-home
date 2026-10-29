@@ -1,0 +1,71 @@
+name: Supply chain
+
+# Dependency audit, SBOM, secret scan of git history, CodeQL. GitHub Actions
+# only, never a deploy (CLAUDE.md, build-slot budget). docs/security/supply-chain.md
+# says what blocks and how to triage.
+on:
+  push:
+    branches: [main]
+  pull_request:
+  schedule:
+    - cron: "17 21 * * 1" # weekly, Tuesday 02:47 IST
+
+concurrency:
+  group: supply-chain-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  dependencies:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
+        with:
+          node-version: 22
+      # Blocking: a new high/critical production advisory not in the baseline.
+      # Report-only: dev-only and moderate-or-lower advisories.
+      - name: Dependency audit
+        run: node scripts/audit-gate.mjs
+      # The SBOM needs the installed tree.
+      - run: npm ci --ignore-scripts
+      - name: SBOM (CycloneDX)
+        run: npm sbom --sbom-format cyclonedx --omit dev > sbom.cdx.json
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        if: always()
+        with:
+          name: dependency-reports
+          path: |
+            sbom.cdx.json
+            audit.json
+
+  secrets:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+        with:
+          fetch-depth: 0 # the whole history
+      # Blocking. Reads .gitleaks.toml; the action needs no licence for a
+      # repository owned by a personal account.
+      - uses: gitleaks/gitleaks-action@ff98106e4c7b2bc287b24eaf42907196329070c7 # v2.3.9
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GITLEAKS_ENABLE_COMMENTS: "false"
+
+  codeql:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      security-events: write
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+      # Report-only: findings go to the Security tab, nothing here blocks.
+      - uses: github/codeql-action/init@e1c541575b54ca50e5f5dcc7da77615756cf9f51 # v3.39.1
+        with:
+          languages: javascript-typescript
+          build-mode: none
+      - uses: github/codeql-action/analyze@e1c541575b54ca50e5f5dcc7da77615756cf9f51 # v3.39.1
+        with:
+          category: /language:javascript-typescript

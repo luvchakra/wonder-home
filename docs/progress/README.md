@@ -11,8 +11,10 @@ decision that shapes later work each earns a note, written before moving on.
 
 | Date | Note |
 |---|---|
+| 2026-10-29 | [SEC-10: RLS-coverage standing test](2026-10-29-sec-rls-coverage-test.md) |
 | 2026-10-29 | [Database quick wins: PERF-13, PERF-01, SEC-08](2026-10-29-perf-sec-db-quick-wins.md) |
 | 2026-10-29 | [Performance: bounded Home reads, shared Day-view reads, deduped Meals reads (PERF-03, 09, 10)](2026-10-29-perf-bounded-and-deduped-reads.md) |
+| 2026-10-29 | [SEC-02: CI supply-chain scanning (audit gate, SBOM, gitleaks, CodeQL)](2026-10-29-sec-ci-supply-chain-scanning.md) |
 | 2026-10-29 | [Plan (for review): fast and secure at scale, 100k+ households — `docs/plans/2026-10-29-fast-and-secure-at-scale.md`](../plans/2026-10-29-fast-and-secure-at-scale.md) |
 | 2026-10-29 | [Settings split into Profile (personal) and Settings (app/household); drawer shows Settings again](2026-10-29-settings-profile-split.md) |
 | 2026-10-29 | [Email reading, gated by a per-household sender allowlist (story 17-016)](2026-10-29-email-sender-allowlist.md) |
