@@ -7,7 +7,7 @@ import { useActionState, useState, useTransition, type FormEvent } from "react";
 import { ActionRow } from "@wonderhome/core/ui/action-row";
 import { Alert } from "@wonderhome/core/ui/alert";
 import { Button } from "@wonderhome/core/ui/button";
-import { Card, CardHeader, CardTitle } from "@wonderhome/core/ui/card";
+import { CollapsibleSection } from "@wonderhome/core/ui/collapsible-section";
 import { ComboboxField } from "@wonderhome/core/ui/combobox-field";
 import { Pill } from "@wonderhome/core/ui/pill";
 import { Select } from "@wonderhome/core/ui/select";
@@ -85,14 +85,9 @@ export function RelationshipsCard({
 }) {
   const canRelate = people.length >= 2;
   return (
-    <Card>
-      <CardHeader className="flex flex-row items-start justify-between gap-3">
-        <div className="min-w-0 space-y-1">
-          <CardTitle>{words.title}</CardTitle>
-          <p className="text-xs text-[var(--wh-foreground-subtle)]">{admin ? words.lede : words.adminOnly}</p>
-        </div>
-        {admin && canRelate ? <RelationshipSheet householdId={householdId} people={people} words={words} /> : null}
-      </CardHeader>
+    // Folded closed like the other collapsible cards (the owner, 2026-10-29): the header carries the title and lede.
+    <CollapsibleSection id="relationships" icon={UsersRound} tone="people" title={words.title} intro={admin ? words.lede : words.adminOnly}>
+      {admin && canRelate ? <div className="flex justify-end"><RelationshipSheet householdId={householdId} people={people} words={words} /></div> : null}
       {rows.length === 0 ? (
         <p className="py-2 text-sm text-[var(--wh-foreground-muted)]">{words.empty}</p>
       ) : (
@@ -133,7 +128,7 @@ export function RelationshipsCard({
           </ul>
         </div>
       ) : null}
-    </Card>
+    </CollapsibleSection>
   );
 }
 
