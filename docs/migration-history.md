@@ -45,13 +45,15 @@ values
   ('20261028171000', 'child_visibility_set_form'),
   ('20261028180000', 'data_retention_cleanup'),
   ('20261028190000', 'data_retention_family_events'),
-  ('20261028190000', 'policy_helpers_set_form'),
+  ('20261028190001', 'policy_helpers_set_form'),
   ('20261029100000', 'member_location_visible_to_children'),
   ('20261029150000', 'perf02_consolidate_finance_commerce'),
   ('20261029160000', 'perf02_consolidate_home_assets_work'),
   ('20261029170000', 'perf02_consolidate_food_pets'),
   ('20261029180000', 'perf02_consolidate_calendar_events'),
   ('20261029190000', 'perf02_consolidate_members_identity')
+-- Versions are unique (schema_migrations.version is the primary key) and were
+-- checked against the live history: none exists there yet.
 on conflict (version) do nothing;
 ```
 
