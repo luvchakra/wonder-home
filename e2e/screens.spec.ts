@@ -224,6 +224,7 @@ test.describe("every signed-in screen loads", () => {
     await page.getByRole("switch", { name: "Add money entries directly" }).click();
     await stored("Add bills and receipts from HomeSend directly").toBe(false);
     expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(360);
+  });
   // Principle 20, the owner 2026-10-26: HomeTalk's question offers its answers to pick (story 14-053).
   test("HomeTalk: the latest question's answers are chips to pick, an answered one's are greyed", async ({ page }) => {
     const member = await admin.from("household_members").select("id").eq("household_id", householdId).eq("profile_id", userId).single();
