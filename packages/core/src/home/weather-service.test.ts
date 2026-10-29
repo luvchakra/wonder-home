@@ -1,6 +1,7 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
-import { describe, expect, it } from "vitest";
+import { beforeEach, describe, expect, it } from "vitest";
 
+import { forgetPlatformData } from "../lib/platform-cache";
 import { connectorError } from "./open-meteo";
 import {
   describeHouseholdWeather,
@@ -10,6 +11,9 @@ import {
   windowsAhead,
 } from "./weather-service";
 import type { WeatherProvider, WeatherWindow } from "./weather";
+
+// The plan catalogue is kept per server (lib/platform-cache.ts); each test brings its own.
+beforeEach(() => forgetPlatformData("plan_catalog"));
 
 /** Story 17-007: the gates, the cache and the outage path around one household's weather. */
 

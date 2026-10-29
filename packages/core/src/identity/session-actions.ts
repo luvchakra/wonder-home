@@ -1,5 +1,6 @@
 "use server";
 
+import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 
 import { createClient } from "../db/server";
@@ -16,5 +17,8 @@ import { createClient } from "../db/server";
 export async function signOut(): Promise<void> {
   const supabase = await createClient();
   await supabase.auth.signOut();
+  // Drop every screen this tab kept (next.config staleTimes) so the next person at this
+  // device never sees the last one's. Clearing the cookie does this too; this says it.
+  revalidatePath("/", "layout");
   redirect("/");
 }

@@ -15,6 +15,7 @@ import {
 } from "lucide-react";
 import Link from "next/link";
 import { useLoadedLater } from "@wonderhome/core/shell/when-idle";
+import { useRouter } from "next/navigation";
 import { Fragment, useCallback, useEffect, useRef, useState, type ReactNode } from "react";
 
 import type { ActionPreview as ActionPreviewShape } from "@wonderhome/core/conversation/proposal";
@@ -173,6 +174,10 @@ export function Assistant({
   /** "Another day…": the answer is typed, so the cursor goes to the text box. */
   const focusComposer = useCallback(() => composerRef.current?.querySelector("textarea")?.focus(), []);
 
+  // After a write, router.refresh() drops every screen this tab kept (next.config staleTimes),
+  // so the next area opened shows the change.
+  const router = useRouter();
+
   // Persist this member's engine choice so Settings -> Voice reads the same
   // value and the two surfaces cannot drift. Fire-and-forget: the composer
   // already shows the choice optimistically, and the next page read confirms it.
@@ -182,9 +187,11 @@ export function Assistant({
         method: "PUT",
         headers: { "content-type": "application/json" },
         body: JSON.stringify({ engine }),
-      }).catch(() => undefined);
+      })
+        .then((response) => (response.ok ? router.refresh() : undefined))
+        .catch(() => undefined);
     },
-    [householdId],
+    [householdId, router],
   );
   /**
    * Whether the reader has scrolled back through the conversation.
@@ -321,6 +328,7 @@ export function Assistant({
         // on from that screen; a typed one leaves its answer here to come back to.
         const href = replies.map((reply) => safeHref(reply.navigate)).find(Boolean);
         if (href) talk?.navigate(href);
+        else if (replies.some((reply) => reply.action?.status === "executed")) router.refresh();
         return replies.map((reply) => reply.text).join("\n\n");
       } catch (caught) {
         if (flight.why) {
@@ -343,7 +351,7 @@ export function Assistant({
         setBusy(false);
       }
     },
-    [busy, householdId, firstName, errorWords, talk, labels.stopped, labels.tooLong],
+    [busy, householdId, firstName, errorWords, talk, router, labels.stopped, labels.tooLong],
   );
 
   /** A live turn: send what was heard, and read back what to say (never throws — the hook's own contract). */
@@ -398,12 +406,13 @@ export function Assistant({
         });
         const payload = await response.json();
         if (!response.ok) throw new Error(payload?.error?.message ?? errorWords.document);
+        router.refresh();
         setMessages((current) => (current.some((message) => message.id === payload.reply.id) ? current : current.concat({ id: payload.reply.id, role: "assistant", text: payload.reply.text, at: new Date().toISOString() })));
       } catch (caught) {
         setError(caught instanceof Error ? caught.message : errorWords.document);
       }
     },
-    [householdId, errorWords],
+    [householdId, errorWords, router],
   );
 
   /** Ends a live session: fetches the recap for everything said since it began, and posts it as a message. */
@@ -472,6 +481,7 @@ export function Assistant({
         });
         const payload = await response.json();
         if (!response.ok) throw new Error(payload?.error?.message ?? errorWords.decision);
+        if (decision === "approved") router.refresh();
 
         setMessages((current) =>
           current
@@ -486,7 +496,7 @@ export function Assistant({
         setBusy(false);
       }
     },
-    [busy, householdId, errorWords],
+    [busy, householdId, errorWords, router],
   );
 
   useEffect(() => {

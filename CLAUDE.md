@@ -121,7 +121,7 @@ Production runs beside the database (Vercel `bom1`, Supabase ap-south-1). A page
 - **One call for many counts.** Reads that always go together become one security-invoker RPC (like `public.household_setup_counts`).
 - **Every list has a bound.** Growing tables get `.limit()` or a date range. Ask only for the columns shown.
 - **Index what a query filters or joins on.** Every new foreign key and every column a policy or hot query filters by gets an index in the same migration.
-- **Platform data is cached per server** with a TTL (`calendar/repository.ts` `holidayRegions`). Household data is never cached across requests.
+- **Platform data is cached per server** with a TTL (`lib/platform-cache.ts`, `calendar/repository.ts` `holidayRegions`). Household data is never cached across requests, and no shared cache stores any page or API answer (`security/cache-policy.ts`; gates `apps/web/cache-headers.test.ts`, `client-writes.test.ts`; `docs/progress/2026-10-29-caching-strategy.md`).
 - **Work that can wait runs after the response** (`after()` or the delivery clock), never on the request path.
 - **Nothing server-only reaches the browser.** Catalogs and help words stay on the server; clients get labels as props. `npm run check:bundle` guards this.
 - **Measure before and after** on a hot path: `pg_stat_statements` or the advisor first, `EXPLAIN ANALYZE` as `authenticated` with a real member's claims, warm timings on the production build (never a dev server). Put the numbers in the progress note. The 2026-10-19 pass is in `docs/progress/2026-10-19-performance-pass.md`.

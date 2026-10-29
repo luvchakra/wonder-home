@@ -15,7 +15,8 @@ import {
   type PlanFeature,
   type Subscription,
 } from "./entitlements";
-import { applyExperiments, runningExperiments } from "./experiments";
+import { keptPerServer } from "../lib/platform-cache";
+import { applyExperiments, readRunningExperiments, type ExperimentTerms } from "./experiments";
 import { BURST_MESSAGE, burstBucket, describePolicy, fairUseState, needsCounting } from "./policies";
 import {
   assessPlanChange,
@@ -59,20 +60,21 @@ export const DEFAULT_PLAN_KEY = "free";
  * One round trip, not three: the subscription row, every plan's features (a
  * few dozen platform rows) and the running experiments are read together,
  * and this household's plan is picked from them here. Reading them in turn
- * put three waits in front of every gated screen.
+ * put three waits in front of every gated screen. The features and
+ * experiments are platform data, the same for every household, so they are
+ * kept per server for a minute (`planCatalog`); the subscription row never is.
  */
 export const loadSubscription = cache(async (
   supabase: SupabaseClient,
   householdId: string,
 ): Promise<Subscription | null> => {
-  const [subscriptionResult, featureResult, experiments] = await Promise.all([
+  const [subscriptionResult, { featureRows, experiments }] = await Promise.all([
     supabase
       .from("household_subscriptions")
       .select("plan_key, status, current_period_start")
       .eq("household_id", householdId)
       .maybeSingle(),
-    supabase.from("plan_features").select(`plan_key, ${FEATURE_COLUMNS}`),
-    runningExperiments(supabase),
+    planCatalog(supabase),
   ]);
 
   const { data: subscriptionRow, error: subscriptionError } = subscriptionResult;
@@ -82,10 +84,7 @@ export const loadSubscription = cache(async (
 
   const planKey = (subscriptionRow?.plan_key as string | undefined) ?? DEFAULT_PLAN_KEY;
 
-  const { data: featureRows, error: featureError } = featureResult;
-  if (featureError) throw new Error(`loadSubscription failed: ${featureError.code ?? "unknown"}`);
-
-  const planFeatures: PlanFeature[] = ((featureRows ?? []) as unknown as Row[])
+  const planFeatures: PlanFeature[] = featureRows
     .filter((row) => row.plan_key === planKey)
     .map(featureFromRow);
 
@@ -113,6 +112,31 @@ export const loadSubscription = cache(async (
       : periodStart("month"),
   };
 });
+
+/**
+ * Every plan's features and the running experiments: platform rows that read
+ * the same for every signed-in caller (both policies are `to authenticated`
+ * and name no household), kept per server for a minute. Kept only when
+ * complete: no feature rows (a caller the policy refused, or an unseeded
+ * catalogue) or an unreadable experiments table is answered but never kept.
+ */
+function planCatalog(supabase: SupabaseClient): Promise<{ featureRows: Row[]; experiments: ExperimentTerms[] }> {
+  return keptPerServer("plan_catalog", async () => {
+    const [featureResult, experimentResult] = await Promise.all([
+      supabase.from("plan_features").select(`plan_key, ${FEATURE_COLUMNS}`),
+      readRunningExperiments(supabase).then(
+        (terms) => ({ terms, failed: false }),
+        (thrown: { code?: string } | null) => {
+          log.warn("experiments unavailable; using the plan as sold", { reason: thrown?.code ?? "unknown" });
+          return { terms: [] as ExperimentTerms[], failed: true };
+        },
+      ),
+    ]);
+    if (featureResult.error) throw new Error(`loadSubscription failed: ${featureResult.error.code ?? "unknown"}`);
+    const featureRows = (featureResult.data ?? []) as unknown as Row[];
+    return { value: { featureRows, experiments: experimentResult.terms }, keep: featureRows.length > 0 && !experimentResult.failed };
+  });
+}
 
 /** `usedThisPeriod` for the current moment, memoised per request. */
 const usedThisPeriodNow = cache((supabase: SupabaseClient, householdId: string, feature: string, period: PlanFeature["period"]) =>

@@ -1,6 +1,7 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 
 import { ApiError } from "../api/errors";
+import { forgetPlatformData } from "../lib/platform-cache";
 import { describe, type PlanFeature } from "./entitlements";
 
 /**
@@ -207,6 +208,7 @@ export async function setFeaturePolicy(
     if (writeError.code === "23514") throw new ApiError("unprocessable", "That policy is not coherent for this feature.");
     throw new Error(`setFeaturePolicy failed: ${writeError.code ?? "unknown"}`);
   }
+  forgetPlatformData("plan_catalog");
 
   const { error: eventError } = await admin.from("plan_policy_events").insert({
     plan_key: input.planKey,

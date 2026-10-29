@@ -137,6 +137,8 @@ export function PlanForm({
       }
 
       setDone(payload.changed.lines as string[]);
+      // Every screen's gating follows the plan: drop the ones this tab kept.
+      router.refresh();
       setPreview(null);
       setChosen(null);
     } catch (caught) {

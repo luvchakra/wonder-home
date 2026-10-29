@@ -1,5 +1,6 @@
 "use server";
 
+import { revalidatePath } from "next/cache";
 import { headers } from "next/headers";
 import { redirect } from "next/navigation";
 import { z } from "zod";
@@ -325,6 +326,8 @@ export async function createHouseholdAction(
     log.warn("onboarding not started", { reason: error instanceof Error ? error.name : "unknown" });
   }
 
+  // A new household changes every screen: none this tab kept may show the old state.
+  revalidatePath("/", "layout");
   redirect("/onboarding");
 }
 

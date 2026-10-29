@@ -11,6 +11,7 @@ decision that shapes later work each earns a note, written before moving on.
 
 | Date | Note |
 |---|---|
+| 2026-10-29 | [Caching strategy: fast where it is safe, never shared where it is personal](2026-10-29-caching-strategy.md) |
 | 2026-10-29 | [Nav current state is one helper](2026-10-29-nav-current-state.md) |
 | 2026-10-29 | [School "Check in" closes the item](2026-10-29-school-check-in.md) |
 | 2026-10-29 | [Branded loading state: breathing mark and one handwritten line](2026-10-29-branded-loading-state.md) |

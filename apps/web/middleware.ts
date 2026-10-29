@@ -2,6 +2,7 @@ import { NextResponse, type NextRequest } from "next/server";
 
 import { updateSession } from "@wonderhome/core/db/middleware";
 import { log } from "@wonderhome/core/observability/logger";
+import { responseCacheHeaders } from "@wonderhome/core/security/cache-policy";
 import { checkCsrf, configuredHosts } from "@wonderhome/core/security/csrf";
 import { contentSecurityPolicyHeaders, generateNonce } from "@wonderhome/core/security/headers";
 
@@ -18,6 +19,8 @@ export async function middleware(request: NextRequest) {
   const csp = contentSecurityPolicyHeaders(nonce);
   const response = await updateSession(request, { [csp.request.key]: csp.request.value });
   for (const { key, value } of csp.response) response.headers.set(key, value);
+  // No shared cache may keep a page or API answer (security/cache-policy.ts).
+  for (const { key, value } of responseCacheHeaders(request.nextUrl.pathname, response.headers.get("vary"))) response.headers.set(key, value);
   return response;
 }
 
