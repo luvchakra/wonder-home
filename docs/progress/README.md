@@ -11,6 +11,7 @@ decision that shapes later work each earns a note, written before moving on.
 
 | Date | Note |
 |---|---|
+| 2026-10-29 | [PERF-02: consolidate the 63 overlapping permissive RLS policies (advisor 63→0, zero access change)](2026-10-29-perf-consolidate-permissive-policies.md) |
 | 2026-10-29 | [Performance standing gates: bundle, query and advisor budgets](2026-10-29-perf-standing-gates.md) |
 | 2026-10-29 | [SEC-10: RLS-coverage standing test](2026-10-29-sec-rls-coverage-test.md) |
 | 2026-10-29 | [Database quick wins: PERF-13, PERF-01, SEC-08](2026-10-29-perf-sec-db-quick-wins.md) |
