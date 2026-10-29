@@ -162,6 +162,7 @@ export const en = {
   "more.signOut": "Sign out",
   "more.quote": "Less mental load. More family time!",
   "nav.about": "About WonderHome",
+  "nav.platformAdmin": "Platform admin",
   "about.title": "About WonderHome",
   "about.lede": "Which version you are using, and how WonderHome came about.",
   "about.version.title": "This version",

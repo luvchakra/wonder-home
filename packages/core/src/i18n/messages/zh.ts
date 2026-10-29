@@ -152,6 +152,7 @@ export const zh: Catalog = {
   "more.signOut": "退出登录",
   "more.quote": "少些操心，多些家庭时光！",
   "nav.about": "关于 WonderHome",
+  "nav.platformAdmin": "平台管理",
   "about.title": "关于 WonderHome",
   "about.lede": "你正在使用的版本，以及 WonderHome 的由来。",
   "about.version.title": "当前版本",
