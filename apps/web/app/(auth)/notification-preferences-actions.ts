@@ -21,6 +21,7 @@ import { hitRateLimit, rateLimitMessage } from "@wonderhome/core/security/rate-l
 import { requireMembership } from "@wonderhome/core/identity/households";
 
 import type { ActionState } from "./actions";
+import { formText, formUuid } from "../_lib/form-input";
 
 /**
  * How one member wants to be reached (story 06-008).
@@ -40,13 +41,15 @@ export async function saveChannelPreferenceAction(_previous: ActionState, formDa
   const channel = formData.get("channel");
   if (!isChannel(channel)) return { error: "Unknown channel." };
 
-  const householdId = String(formData.get("householdId") ?? "");
+  const householdId = formUuid(formData, "householdId");
+  if (!householdId) return { error: "Please try again." };
   const enabled = formData.get("enabled") === "on";
   const quietFrom = readHour(formData.get("quietFrom"));
   const quietUntil = readHour(formData.get("quietUntil"));
   const quietFromMinute = readMinute(formData.get("quietFromMinute"));
   const quietUntilMinute = readMinute(formData.get("quietUntilMinute"));
-  const targetRaw = String(formData.get("target") ?? "").trim();
+  const targetRaw = formText(formData, "target", 64);
+  if (targetRaw === null) return { error: "That address is too long." };
   const target = targetRaw === "" ? null : targetRaw;
   // The morning summary on this channel (story 27-008): a tick box and a time, only on the channels that go beyond the app.
   const digestAt = readClock(formData.get("digestAt"));
@@ -104,7 +107,8 @@ function readClock(raw: FormDataEntryValue | null): { hour: number; minute: numb
  * on the household's clock. Turning them off clears both ends.
  */
 export async function saveQuietHoursAction(_previous: ActionState, formData: FormData): Promise<ActionState> {
-  const householdId = String(formData.get("householdId") ?? "");
+  const householdId = formUuid(formData, "householdId");
+  if (!householdId) return { error: "Please try again." };
   const on = formData.get("quietOn") === "on";
   const from = readClock(formData.get("quietFrom"));
   const until = readClock(formData.get("quietUntil"));

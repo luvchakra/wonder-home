@@ -2,6 +2,7 @@ import { z } from "zod";
 
 import { requireUser } from "@wonderhome/core/api/auth";
 import { ApiError } from "@wonderhome/core/api/errors";
+import { parseQuery } from "@wonderhome/core/api/query";
 import { defineRoute } from "@wonderhome/core/api/route";
 import { may } from "@wonderhome/core/billing/repository";
 import { flags } from "@wonderhome/core/config/flags";
@@ -72,7 +73,7 @@ export async function GET(request: Request, { params }: Params) {
     // The settings screen asks for one language's voices at a time, because
     // the full catalogue is several hundred entries in languages nobody on
     // this screen is choosing between.
-    const asked = new URL(request.url).searchParams.get("language");
+    const { language: asked } = parseQuery(request, z.object({ language: z.string().trim().min(2).max(35).regex(/^[A-Za-z0-9_-]+$/).optional() }).strict());
     const voices =
       asked && configured
         ? await (await resolveProvider({ ...settings, provider: "google" }, householdId)).voices(asked).catch(() => [])

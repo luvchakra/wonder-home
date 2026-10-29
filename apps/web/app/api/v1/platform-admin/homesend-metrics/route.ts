@@ -1,4 +1,7 @@
+import { z } from "zod";
+
 import { ApiError } from "@wonderhome/core/api/errors";
+import { parseQuery } from "@wonderhome/core/api/query";
 import { defineRoute } from "@wonderhome/core/api/route";
 import { createAdminClient } from "@wonderhome/core/db/admin";
 import { createClient } from "@wonderhome/core/db/server";
@@ -26,9 +29,9 @@ export const GET = defineRoute(
   { authenticate: async () => requirePlatformAdmin(await createClient()) },
   async ({ actor, request }) => {
     if (!platformCan(actor, "ai_operations.read")) throw ApiError.forbidden("Your platform role cannot view HomeSend metrics.");
-    const days = Number(new URL(request.url).searchParams.get("days") ?? "30");
+    const { days } = parseQuery(request, z.object({ days: z.coerce.number().int().min(1).max(365).default(30) }).strict());
     const admin = createAdminClient();
-    const [metrics, email] = await Promise.all([loadHomeSendMetrics(admin, { windowDays: Number.isFinite(days) ? days : 30 }), loadEmailMonitoring(admin)]);
+    const [metrics, email] = await Promise.all([loadHomeSendMetrics(admin, { windowDays: days }), loadEmailMonitoring(admin)]);
     return { metrics, email };
   },
 );

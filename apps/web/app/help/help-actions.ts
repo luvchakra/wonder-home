@@ -4,6 +4,7 @@ import { getVerifiedUser } from "@wonderhome/core/db/server";
 import { answerQuestionIn, type Answer } from "@wonderhome/core/help/search";
 import { helpWords } from "@wonderhome/core/help/words";
 import { DEFAULT_LANGUAGE, isLanguage } from "@wonderhome/core/i18n/locales";
+import { z } from "zod";
 
 /**
  * Answering a question from the guide, on the server.
@@ -20,9 +21,15 @@ import { DEFAULT_LANGUAGE, isLanguage } from "@wonderhome/core/i18n/locales";
  * The page binds the reader's language (story 22-004), so a question is
  * searched in the guide they are reading and answered in its words.
  */
+const askSchema = z.object({ language: z.string().max(16), question: z.string().trim().max(1000) });
+
 export async function askTheGuide(language: string, question: string): Promise<Answer> {
   const user = await getVerifiedUser();
   if (!user) throw new Error("Sign in to search the guide.");
+
+  const asked = askSchema.safeParse({ language, question });
+  if (!asked.success) throw new Error("That question could not be read.");
+  question = asked.data.question;
 
   const code = isLanguage(language) ? language : DEFAULT_LANGUAGE;
   const words = helpWords(code);

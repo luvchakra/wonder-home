@@ -1,3 +1,5 @@
+import { z } from "zod";
+
 import { createAdminClient } from "@wonderhome/core/db/admin";
 import { log } from "@wonderhome/core/observability/logger";
 import { hitRateLimit } from "@wonderhome/core/security/rate-limit";
@@ -34,10 +36,23 @@ function basicCredentials(header: string | null): { id: string; secret: string }
   }
 }
 
+/** Every field of the token request, capped; unknown fields are ignored as RFC 6749 asks. */
+const tokenForm = z.object({
+  grant_type: z.string().max(64).optional(),
+  client_id: z.string().max(256).optional(),
+  client_secret: z.string().max(512).optional(),
+  code: z.string().max(2048).optional(),
+  redirect_uri: z.string().max(2048).optional(),
+  code_verifier: z.string().max(256).optional(),
+  refresh_token: z.string().max(2048).optional(),
+});
+
 export async function POST(request: Request): Promise<Response> {
   const type = request.headers.get("content-type") ?? "";
   if (!type.includes("application/x-www-form-urlencoded")) return json(400, { error: "invalid_request", error_description: "Use a form-encoded body." });
-  const body = new URLSearchParams((await request.text()).slice(0, 8192));
+  const form = tokenForm.safeParse(Object.fromEntries(new URLSearchParams((await request.text()).slice(0, 8192))));
+  if (!form.success) return json(400, { error: "invalid_request", error_description: "A field is missing, repeated or too long." });
+  const body = { get: (key: keyof z.infer<typeof tokenForm>) => form.data[key] ?? null };
 
   const basic = basicCredentials(request.headers.get("authorization"));
   const clientId = basic?.id ?? body.get("client_id");

@@ -162,6 +162,11 @@ jobs:
         if: env.CODE == 'true'
         run: npm run lint:boundaries
 
+      # Every route handler and Server Action that reads input parses it with a schema (SEC-03).
+      - name: Input boundary lint
+        if: env.CODE == 'true'
+        run: npm run lint:boundaries:input
+
       # The user guide never links to a page or a section that is gone.
       - name: Help links resolve
         if: env.CODE == 'true'

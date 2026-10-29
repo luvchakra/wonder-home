@@ -12,6 +12,7 @@ import { requireHouseholdAdmin } from "@wonderhome/core/identity/households";
 
 import { safeReturnTo } from "../_lib/return-to";
 import type { ActionState } from "./actions";
+import { formUuid } from "../_lib/form-input";
 
 /**
  * Setting and clearing a household's own model key.
@@ -105,7 +106,8 @@ export async function saveGeminiVoiceKey(_previous: ActionState, formData: FormD
 export async function removeGeminiVoiceKey(_previous: ActionState, formData: FormData): Promise<ActionState> {
   try {
     const supabase = await createClient();
-    const householdId = String(formData.get("householdId") ?? "");
+    const householdId = formUuid(formData, "householdId");
+    if (!householdId) return { error: "Please try again." };
     const membership = await requireHouseholdAdmin(supabase, householdId);
     await clearGeminiVoiceKey(supabase, householdId, membership.memberId);
   } catch (thrown) {

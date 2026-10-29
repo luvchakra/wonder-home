@@ -7,6 +7,7 @@ import { careersBase, clearCareersCache, testCareersConnection } from "@wonderho
 import { createAdminClient } from "@wonderhome/core/db/admin";
 
 import { careersStaff } from "../../_lib/careers";
+import { formText } from "../../_lib/form-input";
 
 /**
  * The WonderJobs key setting (the owner, 2026-10-21): a platform admin pastes
@@ -22,7 +23,7 @@ const NOT_ALLOWED: KeyActionState = { tone: "risk", message: "Only a platform ad
 export async function saveCareersKeyAction(_previous: KeyActionState, formData: FormData): Promise<KeyActionState> {
   const staff = await careersStaff();
   if (!staff) return NOT_ALLOWED;
-  const key = String(formData.get("key") ?? "");
+  const key = formText(formData, "key", 512) ?? "";
   const result = await saveCareersKey(createAdminClient(), staff.profileId, key);
   if (!result.ok) {
     return result.reason === "invalid"

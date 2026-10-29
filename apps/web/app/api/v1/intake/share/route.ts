@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { z } from "zod";
 import { hitRateLimitFair } from "@wonderhome/core/security/rate-limit";
 
 import { createAdminClient } from "@wonderhome/core/db/admin";
@@ -28,6 +29,8 @@ import { listMemberships } from "@wonderhome/core/identity/households";
 /** The hosting platform's request ceiling, less multipart overhead — what the type of file is, the pipeline decides from its bytes. */
 const UPLOAD_MAX_BYTES = 4 * 1024 * 1024;
 
+const shareFields = z.object({ title: z.string().max(20_000).optional(), text: z.string().max(20_000).optional(), url: z.string().max(20_000).optional() });
+
 function redirectTo(path: string, origin: string): NextResponse {
   return NextResponse.redirect(new URL(path, origin), 303);
 }
@@ -36,7 +39,11 @@ export async function POST(request: Request): Promise<Response> {
   const { origin } = new URL(request.url);
   const formData = await request.formData();
 
-  const combinedText = [formData.get("title"), formData.get("text"), formData.get("url")]
+  // Only plain strings, each capped far above what the share sheet sends; anything else is dropped, not guessed at.
+  const fields = shareFields.safeParse({ title: formData.get("title") ?? undefined, text: formData.get("text") ?? undefined, url: formData.get("url") ?? undefined });
+  if (!fields.success) return redirectTo("/home-send?shareError=upload", origin);
+
+  const combinedText = [fields.data.title, fields.data.text, fields.data.url]
     .filter((value): value is string => typeof value === "string" && value.trim().length > 0)
     .join("\n\n")
     .trim()

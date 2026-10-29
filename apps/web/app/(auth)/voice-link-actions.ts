@@ -1,5 +1,6 @@
 "use server";
 
+import { z } from "zod";
 import { redirect } from "next/navigation";
 
 import { auditChange } from "@wonderhome/core/api/audit";
@@ -10,6 +11,7 @@ import { readAuthorizeRequest, redirectWith } from "@wonderhome/core/voicelink/o
 import { createVoiceLink, revokeVoiceLink } from "@wonderhome/core/voicelink/repository";
 import { normaliseScopes } from "@wonderhome/core/voicelink/scopes";
 import { revalidatePath } from "next/cache";
+import { formUuid } from "../_lib/form-input";
 
 /**
  * Linking a voice assistant, and unlinking it (voice phase 2).
@@ -21,11 +23,14 @@ import { revalidatePath } from "next/cache";
  * to hand to a third-party assistant.
  */
 
+/** Each OAuth field is a short string; a longer one is dropped, and the request is read as if it were missing. */
+const authorizeField = z.string().max(2048);
+
 function paramsFrom(formData: FormData): URLSearchParams {
   const params = new URLSearchParams();
   for (const name of ["client_id", "redirect_uri", "response_type", "state", "scope", "code_challenge", "code_challenge_method"]) {
-    const value = formData.get(name);
-    if (typeof value === "string") params.set(name, value);
+    const value = authorizeField.safeParse(formData.get(name));
+    if (value.success) params.set(name, value.data);
   }
   return params;
 }
@@ -75,8 +80,8 @@ export async function denyVoiceLinkAction(formData: FormData): Promise<void> {
 }
 
 export async function revokeVoiceLinkAction(formData: FormData): Promise<void> {
-  const identityId = formData.get("identityId");
-  if (typeof identityId !== "string" || !/^[0-9a-f-]{36}$/.test(identityId)) return;
+  const identityId = formUuid(formData, "identityId");
+  if (!identityId) return;
   const supabase = await createClient();
   const membership = (await listMemberships(supabase))[0];
   if (await revokeVoiceLink(supabase, identityId)) {
