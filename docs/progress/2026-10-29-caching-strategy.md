@@ -26,7 +26,7 @@ No shared cache (Vercel's CDN, a proxy) ever stores a page or API answer. The br
 
 ## What changed
 
-1. **Every response the middleware sees is `private, no-store, max-age=0`** with `Vary: Cookie` added (`responseCacheHeaders`). Measured on the production build: the middleware's header wins over Next's page default, so a route that one day turns static, or a handler that forgets, still cannot be stored by a CDN. Three handlers keep their own header, each listed in `HANDLER_CACHE_EXCEPTIONS` with the reason it is safe (openapi, the invitation card, the private recipe card). On pages Next sets `Vary` after the middleware, so pages carry Next's `Vary` without `Cookie`; with `no-store` nothing is stored to vary, so this costs nothing. Redirects and API answers carry `Vary: Cookie`.
+1. **Every response the middleware sees is `private, no-store, max-age=0`** with `Vary: Cookie` added (`responseCacheHeaders`). On `next start` the middleware's header wins over Next's page default; on Vercel, Next's own `no-store` default stays on pages (see Before and after). Either way so a route that one day turns static, or a handler that forgets, still cannot be stored by a CDN. Three handlers keep their own header, each listed in `HANDLER_CACHE_EXCEPTIONS` with the reason it is safe (openapi, the invitation card, the private recipe card). On pages Next sets `Vary` after the middleware, so pages carry Next's `Vary` without `Cookie`; with `no-store` nothing is stored to vary, so this costs nothing. Redirects and API answers carry `Vary: Cookie`.
 2. **`public/` files are cached by name** (`publicFileCacheHeaders`): icons, `og.png`, `/brand/*`, `/email/*` for a day with a week of stale-while-revalidate (never `immutable`, since the names are not hashed); the manifest for an hour; `sw.js` `no-cache`, so a worker fix reaches everyone on their next visit.
 3. **The browser keeps a visited screen for 30 seconds** (`experimental.staleTimes.dynamic: 30`). Moving back to an area seen in the last 30 seconds is instant, with no server render. Safety:
    - Next 16.4's client cache is per tab, in memory. `router.refresh()` and any Server Action that revalidates **or sets a cookie** bump its version and drop every kept screen (read in `next/dist/client/components/segment-cache/bfcache.js` and `server-action-reducer.js`).
@@ -71,14 +71,23 @@ Measured from a Claude Code cloud container in the US (every request crosses the
 
 | Route | TTFB before | Load before | TTFB after | Load after |
 |---|---|---|---|---|
-| Home `/` | 571 ms | 1158 ms | _pending_ | _pending_ |
-| Today `/today` | 541 ms | 614 ms | _pending_ | _pending_ |
-| Meals `/meals` | 542 ms | 760 ms | _pending_ | _pending_ |
-| Groceries `/groceries` | 495 ms | 842 ms | _pending_ | _pending_ |
+| Home `/` | 571 ms | 1158 ms | 558 / 564 ms | 2084 / 1621 ms |
+| Today `/today` | 541 ms | 614 ms | 556 / 503 ms | 606 / 549 ms |
+| Meals `/meals` | 542 ms | 760 ms | 543 / 520 ms | 741 / 727 ms |
+| Groceries `/groceries` | 495 ms | 842 ms | 547 / 537 ms | 772 / 778 ms |
 
-In-app navigation (link tap → screen painted, loading skeleton gone), before: Calendar 4567 / 1277 / 2344 ms, Family 2657 / 2655 / 8707 ms, Home 1162 / 817 / 811 ms over three rounds. After: _pending_.
+In-app navigation (link tap → screen painted, loading skeleton gone), before: Calendar 4567 / 1277 / 2344 ms, Family 2657 / 2655 / 8707 ms, Home 1162 / 817 / 811 ms over three rounds. After (two runs on production, 2026-10-29 15:30 UTC, deploy `dpl_DiGLUtgvNGiKjTdWsshbKB8R7T2C`): the first visit to an area is a server render as before (Calendar 1116 / 7003 ms, Family 3267 / 2383 ms). **Every return visit within 30 s took 56–99 ms** (Calendar 96, 79, 73, 77; Family 62, 56, 56, 59; Home 99, 97, 80, 80, 76, 77), against 811–8707 ms before.
 
-Before, icons and the manifest answered `public, max-age=0, must-revalidate` (`x-vercel-cache: MISS`).
+"After" shows two runs (run 1 / run 2). Full loads always go to the server and are unchanged, as expected. Time to first byte is within ±30 ms of before on every route. Home's load event varied from 0.93 to 2.4 s both before and after (samples before: 1482, 2408, 1158, 996, 951; after: 5004 (a cold start), 2084, 2041, 2158, 964, 2441, 2007, 1621, 942, 929). The server part (TTFB) did not move, so the spread comes after the HTML arrives and is not caused by this change.
+
+Headers on production after the deploy:
+- Icons and `og.png`: `public, max-age=86400, stale-while-revalidate=604800`.
+- Manifest: `public, max-age=3600, stale-while-revalidate=86400`.
+- `sw.js`: `no-cache`.
+- Before this change all of them answered `public, max-age=0, must-revalidate`.
+- Pages on Vercel keep Next's own `private, no-cache, no-store, max-age=0, must-revalidate`; on `next start` the middleware's value won. Both are no-store, and the gate accepts either.
+- `/api/v1/me` keeps the handler's `no-store` and gains `Vary: Cookie`. Redirects carry `private, no-store, max-age=0` and `Vary: Cookie`.
+- Nothing personal is stored by Vercel's CDN: `x-vercel-cache: MISS` on every page.
 
 ## Not done, and why
 
