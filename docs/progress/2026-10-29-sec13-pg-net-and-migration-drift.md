@@ -12,3 +12,6 @@
 ## Open
 - Owner runs the history insert in `docs/migration-history.md`; until then the daily drift workflow fails (or set `MIGRATION_DRIFT_REPORT_ONLY=1`).
 - The next scheduled dispatch run should show a successful `net.http_post` in `cron.job_run_details`.
+
+## Correction
+The reconcile SQL had two rows on version `20261028190000` (primary key clash; `on conflict do nothing` would have skipped one). `policy_helpers_set_form` is now `20261028190001`, all 31 versions were checked absent from the live history, and a test asserts the versions are unique and the names are real repo migrations.
