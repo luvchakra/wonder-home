@@ -39,7 +39,7 @@ import { SegmentedControl } from "@wonderhome/core/ui/segmented-control";
 import { EmptyState } from "@wonderhome/core/ui/states";
 
 import { NewEventForm } from "../_components/new-event-form";
-import { TodayPlan, type TodayLens } from "./_components/today-plan";
+import { householdLensReads, TodayPlan, type TodayLens } from "./_components/today-plan";
 import { calendarHref, dateWords, entryRow, weekStartFor, whenOn, type DateWords, type EntryWords } from "../_lib/calendar-view";
 import { eventFormLabels } from "../_lib/event-form-labels";
 import { eventPlaceSearch } from "../_lib/places";
@@ -82,6 +82,11 @@ export default async function CalendarPage({ searchParams }: { searchParams: Pro
   const range = viewRange(view, focus, weekStartsOn);
   const words = dateWords(locale.format.locale);
 
+  // The Day view's household lens reads every bill and school item for its plan;
+  // the calendar's own entries come from the same rows (PERF-09).
+  const lens: TodayLens = (["family", "household"] as const).find((candidate) => candidate === params.lens) ?? "mine";
+  const planReads = view === "day" && focus === today ? householdLensReads(session, lens) : null;
+
   const [members, result, regions] = await Promise.all([
     membersRead,
     calendarRange(supabase, {
@@ -90,6 +95,7 @@ export default async function CalendarPage({ searchParams }: { searchParams: Pro
       viewer: { memberId: membership.memberId, isAdmin: isHouseholdAdmin(membership), timeZone },
       from: range.from,
       to: range.to,
+      shared: planReads ?? undefined,
       holidayRegion: preferences.holidayRegion,
       words: {
         birthday: (name) => t("calendar.entry.birthday", { name }),
@@ -227,7 +233,7 @@ export default async function CalendarPage({ searchParams }: { searchParams: Pro
               t={t}
               now={now}
               // Today's plan lives under today's day (design/UI-SIMPLIFICATION-v1.md M4).
-              todayPlan={<TodayPlan session={session} lens={(["family", "household"] as const).find((lens) => lens === params.lens) ?? ("mine" satisfies TodayLens)} now={now} />}
+              todayPlan={<TodayPlan session={session} lens={lens} now={now} reads={planReads} />}
             />
           ) : (
             <CalendarYear

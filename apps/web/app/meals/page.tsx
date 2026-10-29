@@ -18,7 +18,7 @@ import {
 import { startBy, type Meal } from "@wonderhome/core/meals/meals";
 import type { Translate } from "@wonderhome/core/i18n/translate";
 import { listGroceries, type GroceryItem } from "@wonderhome/core/commerce/inventory";
-import { listMeals, listRecipeChoices, listRecipesForEdit, mealAgenda } from "@wonderhome/core/meals/repository";
+import { listMeals, listRecipeChoices, mealAgenda, recipeSet } from "@wonderhome/core/meals/repository";
 import { shiftDay, WEEK_SLOTS, weekCount, weekDays, weekFrom, weekStartOf } from "@wonderhome/core/meals/week";
 import { DIETS, isDiet, type Diet } from "@wonderhome/core/meals/diet";
 import { pickerDishes } from "@wonderhome/core/meals/recipe-picker";
@@ -118,6 +118,12 @@ export default async function MealsPage({
   // today on, exactly its own read; the week is its seven days of the rows.
   const utcToday = now.toISOString().slice(0, 10);
   const mealRows = listMeals(supabase, householdId, { from: active === "plan" && weekDates[0]! < utcToday ? weekDates[0] : utcToday });
+  // Recipes and the cupboard are each read once (PERF-10): the cards, the pickers
+  // and the cookable check share the recipe rows, and the pickers' stock check
+  // takes the ids of the groceries already read.
+  const recipeReads = recipeSet(supabase, householdId);
+  const groceriesRead = listGroceries(supabase, householdId);
+  groceriesRead.catch(() => undefined);
   // The plan check runs alongside the reads it gates; a refused plan drops them.
   const reads = Promise.all([
     mealRows.then((meals) => mealAgenda(supabase, householdId, { now, meals })).catch(() => null),
@@ -127,15 +133,18 @@ export default async function MealsPage({
       membership.household.ownerMemberId,
     ).catch(() => []),
     // The household's own recipes, whole: their cards, their edit forms and the pickers.
-    listRecipesForEdit(supabase, householdId).catch(() => []),
+    recipeReads.forEdit.catch(() => []),
     supabase
       .from("food_preferences")
       .select("id, member_id, kind, subject")
       .eq("household_id", householdId)
       .order("kind"),
-    listRecipeChoices(supabase, householdId).catch(() => []),
+    listRecipeChoices(supabase, householdId, {
+      recipes: recipeReads.withIngredients,
+      consumableIds: groceriesRead.then((items) => new Set(items.map((item) => item.id))),
+    }).catch(() => []),
     // What is at home and on the list, for each meal's shortfall (25-003a).
-    listGroceries(supabase, householdId).catch(() => [] as GroceryItem[]),
+    groceriesRead.catch(() => [] as GroceryItem[]),
     // WonderHome's own dishes (25-022): the Recipes tab, and the recipe picker in Plan a meal.
     active !== "preferences"
       ? listCatalogRecipes(supabase, publicEnv().NEXT_PUBLIC_SUPABASE_URL).catch(() => [])

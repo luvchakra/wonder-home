@@ -38,6 +38,10 @@ HomeEvents is the owner's name for everything about the household's calendar: fa
 - `packages/core/src/calendar/`, `packages/core/src/family/`
 - Module 12 (Family Time & Social) for the events themselves
 
+## Performance notes
+- PR #PRNUM (PERF-03): Home's event read stops 30 days ahead and at 300 rows (`_lib/home-reads.ts`); the Calendar's lists are unchanged.
+- PR #PRNUM (PERF-09): the Day view's household lens shares the Today plan's bill and school-item reads with the calendar's entries (`calendarRange` `shared`). Events stay two reads: the plan's `FamilyEvent` rows carry no recurrence or exceptions, so the calendar cannot build its entries from them.
+
 ## Stories
 
 ### Story 26-001 — Family Calendar foundation
