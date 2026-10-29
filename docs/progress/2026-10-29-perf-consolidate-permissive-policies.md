@@ -158,3 +158,24 @@ access-matrix safety net and stays green against the consolidated schema.
 
 - Migrations: `supabase/migrations/20261029{15,16,17,18,19}0000_perf02_consolidate_*.sql`
 - Test: `scripts/test-policy-consolidation-rls.mjs`
+
+## Needed from you
+
+**Nothing required up front.** I apply the 5 migrations to the live `wonderhome`
+project myself with the pre-authorised `apply_migration` tool, in the scheduled
+merge check right after PR #483 merges, then confirm with `get_advisors`.
+
+Fallbacks, only if they come up:
+
+- **If `apply_migration` repeatedly fails or times out:** I'll hand you the 5
+  migrations as one copyable SQL block to run by hand — Supabase dashboard →
+  project `wonderhome` → SQL Editor → paste → Run. Confirm it ran: the editor
+  reports success, and re-running the **performance** advisor (dashboard →
+  Advisors → Performance) shows **0** `multiple_permissive_policies`.
+- **Optional, not required by this PR:** for the PERF-17 advisor workflow to
+  check the live project instead of skipping, the repo needs the
+  `SUPABASE_ACCESS_TOKEN` secret (GitHub → repo **Settings → Secrets and
+  variables → Actions → New repository secret**; value = a personal access
+  token from supabase.com/dashboard/account/tokens). This is a pre-existing
+  PERF-17 item, not introduced here.
+- **No decisions and no dashboard toggles are needed for this change.**

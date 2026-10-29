@@ -1,9 +1,24 @@
-import type { NextRequest } from "next/server";
+import { NextResponse, type NextRequest } from "next/server";
 
 import { updateSession } from "@wonderhome/core/db/middleware";
+import { log } from "@wonderhome/core/observability/logger";
+import { checkCsrf, configuredHosts } from "@wonderhome/core/security/csrf";
+import { contentSecurityPolicyHeaders, generateNonce } from "@wonderhome/core/security/headers";
 
 export async function middleware(request: NextRequest) {
-  return updateSession(request);
+  const csrf = checkCsrf({ method: request.method, pathname: request.nextUrl.pathname, headers: request.headers, extraHosts: configuredHosts() });
+  if (!csrf.allowed) {
+    // Which route and why; never the origin, which is the caller's to choose.
+    log.warn("cross-site request refused", { route: request.nextUrl.pathname.replace(/\/[0-9a-f-]{20,}(?=\/|$)/gi, "/:id"), reason: csrf.reason });
+    return NextResponse.json({ error: { code: "forbidden", message: "This request did not come from WonderHome." } }, { status: 403, headers: { "cache-control": "no-store" } });
+  }
+
+  // Next reads the nonce off the request's policy header and puts it on its own scripts.
+  const nonce = generateNonce();
+  const csp = contentSecurityPolicyHeaders(nonce);
+  const response = await updateSession(request, { [csp.request.key]: csp.request.value });
+  for (const { key, value } of csp.response) response.headers.set(key, value);
+  return response;
 }
 
 export const config = {

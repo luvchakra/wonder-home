@@ -13,8 +13,15 @@ import { verifyUser } from "./server";
  * than by a round trip to the auth server; a refresh, when the token is about
  * to expire, still flows through the cookie adapter onto the response.
  */
-export async function updateSession(request: NextRequest): Promise<NextResponse> {
-  let response = NextResponse.next({ request });
+export async function updateSession(request: NextRequest, forwardHeaders: Record<string, string> = {}): Promise<NextResponse> {
+  // Headers handed on to the page render (the CSP whose nonce Next stamps on its scripts), built
+  // fresh each time so a refreshed session cookie set on the request below is included.
+  const next = () => {
+    const headers = new Headers(request.headers);
+    for (const [key, value] of Object.entries(forwardHeaders)) headers.set(key, value);
+    return NextResponse.next({ request: { headers } });
+  };
+  let response = next();
   const env = publicEnv();
 
   const supabase = createServerClient(
@@ -27,7 +34,7 @@ export async function updateSession(request: NextRequest): Promise<NextResponse>
         },
         setAll(cookiesToSet) {
           cookiesToSet.forEach(({ name, value }) => request.cookies.set(name, value));
-          response = NextResponse.next({ request });
+          response = next();
           cookiesToSet.forEach(({ name, value, options }) =>
             response.cookies.set(name, value, { ...options, sameSite: "lax", httpOnly: true }),
           );
