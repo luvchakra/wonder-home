@@ -213,7 +213,7 @@ export default async function SchoolPage({ searchParams }: { searchParams: Promi
           <div className="space-y-2.5">
             <ul className="space-y-1">
               {needsYouEntries.slice(0, 4).map((item) => (
-                <AgendaExpandableRow key={item.subjectKey} item={item} timezone={timezone} />
+                <AgendaExpandableRow key={item.subjectKey} item={item} timezone={timezone} householdId={householdId} />
               ))}
             </ul>
             {needsYouEntries.length > 4 ? (
@@ -408,7 +408,7 @@ export default async function SchoolPage({ searchParams }: { searchParams: Promi
                     {groupByDueDate(deadlines, timezone, t).map((group) => (
                       <div key={group.label}>
                         <h3 className="px-1 pb-1 text-[0.6875rem] font-semibold tracking-wide text-[var(--wh-foreground-subtle)] uppercase">{group.label}</h3>
-                        <Card className="p-2"><ul className="divide-y divide-[var(--wh-border)]">{group.items.map((item) => <AgendaExpandableRow key={item.subjectKey} item={item} timezone={timezone} href="/school?tab=homework" />)}</ul></Card>
+                        <Card className="p-2"><ul className="divide-y divide-[var(--wh-border)]">{group.items.map((item) => <AgendaExpandableRow key={item.subjectKey} item={item} timezone={timezone} householdId={householdId} href="/school?tab=homework" />)}</ul></Card>
                       </div>
                     ))}
                   </section>

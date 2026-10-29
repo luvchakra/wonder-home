@@ -7,6 +7,7 @@ import { Badge, PillLink } from "@wonderhome/core/ui/pill";
 
 import { formatDate } from "../_lib/session";
 import { actionLabelFor, presentationFor } from "./agenda-row";
+import { SchoolCheckInButton } from "./school-check-in-button";
 
 const STATUS_LABEL: Record<string, string> = {
   pending: "Pending",
@@ -43,6 +44,7 @@ export function AgendaExpandableRow({
   timezone,
   href,
   badge,
+  householdId,
 }: {
   item: HomeAssessment;
   timezone: string;
@@ -52,9 +54,12 @@ export function AgendaExpandableRow({
    * rather than invite a tap before it is even expanded. The real action
    * stays reachable via the chevron's detail view either way. */
   badge?: ReactNode;
+  /** Lets a school "Check in" close the item in place instead of linking away. */
+  householdId?: string;
 }) {
   const presentation = presentationFor(item.subjectKey);
   const label = item.action ? actionLabelFor(item.action.action) : null;
+  const closeInPlace = householdId && item.action?.action === "check_with_child" && item.action.target ? { householdId, id: item.action.target } : null;
   const statusLabel = STATUS_LABEL[item.status] ?? item.status.replace(/_/g, " ");
 
   return (
@@ -69,6 +74,10 @@ export function AgendaExpandableRow({
           </span>
           {badge ? (
             <span className="shrink-0">{badge}</span>
+          ) : closeInPlace ? (
+            <span className="shrink-0">
+              <SchoolCheckInButton householdId={closeInPlace.householdId} id={closeInPlace.id} label={label ?? "Check in"} />
+            </span>
           ) : label ? (
             <span className="shrink-0">
               <PillLink href={href ?? presentation.href} tone={item.riskLevel === "high" ? "primary" : "soft"}>
@@ -80,7 +89,6 @@ export function AgendaExpandableRow({
       }
     >
       <div className="space-y-3">
-        <p className="text-sm text-[var(--wh-foreground-muted)]">{item.reason}</p>
         <dl className="grid grid-cols-2 gap-x-4 gap-y-2.5">
           <div>
             <dt className="text-xs font-medium tracking-wide text-[var(--wh-foreground-subtle)] uppercase">Status</dt>

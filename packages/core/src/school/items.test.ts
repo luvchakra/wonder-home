@@ -239,3 +239,13 @@ describe("what's coming up", () => {
     expect(upcomingSchoolItems(items, NOW).map((entry) => entry.id)).toEqual(["sooner", "later"]);
   });
 });
+
+describe("agoPhrase", () => {
+  it("says hours up to two days, then whole days", async () => {
+    const { agoPhrase } = await import("./items");
+    expect(agoPhrase(1)).toBe("1 hour ago");
+    expect(agoPhrase(30)).toBe("30 hours ago");
+    expect(agoPhrase(48)).toBe("48 hours ago");
+    expect(agoPhrase(131)).toBe("5 days ago");
+  });
+});
