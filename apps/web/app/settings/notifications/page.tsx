@@ -1,4 +1,4 @@
-import { ListChecks } from "lucide-react";
+import { ChevronDown, ListChecks } from "lucide-react";
 import Link from "next/link";
 
 import type { TranslationKey } from "@wonderhome/core/i18n/translate";
@@ -196,27 +196,42 @@ export default async function NotificationSettingsPage() {
         />
 
         <Card className="space-y-3">
-          <div className="flex items-start gap-3">
-            <IconTile icon={ListChecks} tone="primary" />
-            <div className="min-w-0 flex-1">
-              <h2 className="text-sm font-semibold">{t("settingsPage.notifications.routing.title")}</h2>
-              <p className="mt-0.5 text-sm text-[var(--wh-foreground-muted)]">
-                {routing.length > 0 ? t("settingsPage.notifications.routing.some") : t("settingsPage.notifications.routing.none")}
-              </p>
-            </div>
-          </div>
           {routing.length > 0 ? (
-            <ul className="divide-y divide-[var(--wh-border)]">
-              {routing.map((row) => (
-                <li key={row.key} className="py-2.5 text-sm">
-                  <span className="font-medium">{row.name}</span>
-                  <span className="block text-[var(--wh-foreground-muted)]">
-                    {row.primary ? t("settingsPage.notifications.routing.primary") : t("settingsPage.notifications.routing.backup")}
-                  </span>
-                </li>
-              ))}
-            </ul>
-          ) : null}
+            // Folded like the playbook cards (the owner, 2026-10-29): the owned-outcomes
+            // list was a wall that pushed the channels below off-screen. Native
+            // <details>/<summary> is the same fold the playbook uses (manage-section.tsx) —
+            // collapsed by default, keyboard-operable, chevron rotates on open — so it needs
+            // no client component here and no new aria wording. The header and the "change"
+            // link stay visible; only the list folds.
+            <details className="group">
+              <summary className="flex min-h-12 cursor-pointer list-none items-start gap-3 [&::-webkit-details-marker]:hidden">
+                <IconTile icon={ListChecks} tone="primary" />
+                <div className="min-w-0 flex-1">
+                  <h2 className="text-sm font-semibold">{t("settingsPage.notifications.routing.title")}</h2>
+                  <p className="mt-0.5 text-sm text-[var(--wh-foreground-muted)]">{t("settingsPage.notifications.routing.some")}</p>
+                </div>
+                <ChevronDown aria-hidden className="mt-1 size-4 shrink-0 text-[var(--wh-foreground-subtle)] transition-transform group-open:rotate-180" />
+              </summary>
+              <ul className="mt-3 divide-y divide-[var(--wh-border)] border-t border-[var(--wh-border)]">
+                {routing.map((row) => (
+                  <li key={row.key} className="py-2.5 text-sm">
+                    <span className="font-medium">{row.name}</span>
+                    <span className="block text-[var(--wh-foreground-muted)]">
+                      {row.primary ? t("settingsPage.notifications.routing.primary") : t("settingsPage.notifications.routing.backup")}
+                    </span>
+                  </li>
+                ))}
+              </ul>
+            </details>
+          ) : (
+            <div className="flex items-start gap-3">
+              <IconTile icon={ListChecks} tone="primary" />
+              <div className="min-w-0 flex-1">
+                <h2 className="text-sm font-semibold">{t("settingsPage.notifications.routing.title")}</h2>
+                <p className="mt-0.5 text-sm text-[var(--wh-foreground-muted)]">{t("settingsPage.notifications.routing.none")}</p>
+              </div>
+            </div>
+          )}
           <Link href="/household/responsibilities?tab=mine" className="inline-flex min-h-11 items-center text-sm font-medium text-[var(--wh-primary)] underline-offset-4 hover:underline">
             {t("settingsPage.notifications.routing.change")}
           </Link>
