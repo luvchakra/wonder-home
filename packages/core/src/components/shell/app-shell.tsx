@@ -6,6 +6,7 @@ import { PRIMARY_NAVIGATION, type PrimaryNavKey } from "../../navigation/primary
 import type { SecondaryNavItem } from "../../navigation/secondary-navigation";
 import { DocumentLocale } from "./document-locale";
 import { InstallBanner } from "./install-banner";
+import { backTarget } from "../../navigation/back-target";
 import { MobileHeader, type ShellViewer } from "./mobile-header";
 import { NavDrawerProvider } from "./nav-drawer";
 import { PrimaryNav } from "./primary-nav";
@@ -21,7 +22,7 @@ export type AppShellProps = {
   secondary?: readonly SecondaryNavItem[];
   /** The current path, so the sidebar can mark a domain link current. */
   pathname?: string;
-  /** Header for a subpage: a back chevron and a title. */
+  /** Header for a subpage: a back chevron and a title. `href` names a nested screen's parent; a first-level screen (or "/more") goes Home (navigation/back-target.ts). */
   back?: { href: string; label: string };
   title?: string;
   /**
@@ -82,7 +83,7 @@ export function AppShell({
           <PrimaryNav active={active} variant="sidebar" secondary={secondary} pathname={pathname} labels={viewer?.labels} />
 
           <div className="min-w-0 flex-1">
-            <MobileHeader viewer={viewer} back={back} title={title} search={headerSearch} />
+            <MobileHeader viewer={viewer} back={back ? { ...back, href: backTarget({ pathname, explicit: back.href }) } : undefined} title={title} search={headerSearch} />
 
             <div className="lg:flex lg:justify-center">
               <SwipeMain
