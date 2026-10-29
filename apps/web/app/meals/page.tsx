@@ -572,7 +572,7 @@ export default async function MealsPage({
                   {recipes.map((recipe) => {
                     const picture = recipe.catalogRecipeId ? (pictureOf.get(recipe.catalogRecipeId) ?? null) : null;
                     return (
-                      <Card key={recipe.id} className="wh-lift flex flex-col p-3">
+                      <Card key={recipe.id} className="wh-lift relative flex flex-col p-3 focus-within:ring-2 focus-within:ring-[var(--wh-primary)]">
                         {picture ? (
                           // eslint-disable-next-line @next/next/no-img-element -- a catalog picture from public storage, already sized
                           <img src={picture} alt="" loading="lazy" className="h-24 w-full rounded-[var(--wh-radius-sm)] object-cover" />
@@ -583,7 +583,9 @@ export default async function MealsPage({
                         )}
                         <div className="mt-2 flex items-start gap-1">
                           <div className="min-w-0 flex-1">
-                            <p className="text-sm font-semibold break-words">{recipe.name}</p>
+                            <Link href={`/meals/recipes/mine/${recipe.id}`} className="text-sm font-semibold break-words after:absolute after:inset-0 after:content-[''] focus-visible:outline-none">
+                              {recipe.name}
+                            </Link>
                             <p className="text-[0.6875rem] text-[var(--wh-foreground-subtle)]">
                               {t("meals.recipe.timeServes", { minutes: recipe.totalMinutes, serves: recipe.serves })}
                             </p>
@@ -598,7 +600,7 @@ export default async function MealsPage({
                               </p>
                             ) : null}
                           </div>
-                          <div className="flex shrink-0 flex-col items-center">
+                          <div className="relative z-10 flex shrink-0 flex-col items-center">
                             <EditRecipeButton householdId={householdId} labels={formLabels} recipe={recipe} />
                             <RecipeShareButton
                               name={recipe.name}
@@ -608,7 +610,9 @@ export default async function MealsPage({
                             />
                           </div>
                         </div>
-                        <TasteLine dish={recipe.name} householdId={householdId} taste={taste(recipe.name)} labels={tasteLabels} t={t} />
+                        <div className="relative z-10">
+                          <TasteLine dish={recipe.name} householdId={householdId} taste={taste(recipe.name)} labels={tasteLabels} t={t} />
+                        </div>
                       </Card>
                     );
                   })}
