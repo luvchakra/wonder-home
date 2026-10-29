@@ -517,6 +517,21 @@ export async function updateGroceryItemAction(
   }
 }
 
+/** Swipe-to-remove on the All list: stop tracking without leaving the page. History stays; "Track again" brings it back. */
+export async function retireGroceryItemAction(input: { householdId: string; itemId: string }): Promise<{ ok: boolean }> {
+  const parsed = z.object({ householdId: uuid, itemId: uuid }).safeParse(input);
+  if (!parsed.success) return { ok: false };
+  try {
+    const supabase = await createClient();
+    await requireMembership(supabase, parsed.data.householdId);
+    await retireConsumable(supabase, { id: parsed.data.itemId, householdId: parsed.data.householdId });
+    revalidatePath("/groceries");
+    return { ok: true };
+  } catch {
+    return { ok: false };
+  }
+}
+
 /** Stop tracking, from the item's page — back to the list afterwards. Its history stays. */
 export async function stopTrackingGroceryAction(
   formData: FormData,
