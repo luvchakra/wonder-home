@@ -18,7 +18,7 @@ import { PENDING_STATUSES } from "../homesend/repository";
 import { readDetailAnswer } from "../hometalk/detail-answers";
 import { sendWhatsAppChoices, sendWhatsAppText, showWhatsAppTyping, type WhatsAppChoice, type WhatsAppConfig } from "../notifications/whatsapp";
 import { log } from "../observability/logger";
-import { hitRateLimit } from "../security/rate-limit";
+import { hitRateLimit, hitRateLimitFair } from "../security/rate-limit";
 import { recordWhatsAppEvents, type WhatsAppEvent } from "./events";
 import { groceryListNames, isForHomeTalk, isQuestionForWonderHome, namesTheSameThing } from "./hometalk";
 import type { WhatsAppInboundMessage, WhatsAppMessageType } from "./inbound";
@@ -297,7 +297,7 @@ async function readMessage(admin: SupabaseClient, messageId: string, deps: Whats
   // Too many from one member in an hour: kept, and picked up again when the
   // job queue retries it — slower, never lost, and nothing is said until it
   // is actually in HomeSend.
-  if (row.attempts === 0 && !(await hitRateLimit(admin, "homesend.whatsapp", row.member_id))) {
+  if (row.attempts === 0 && !(await hitRateLimitFair(admin, "homesend.whatsapp", { memberId: row.member_id, householdId: row.household_id }))) {
     events.push({ kind: "rate_limited", householdId: row.household_id });
     await settle({ processing_status: "received" });
     await settleBurst({ processing_status: "received" });

@@ -6,7 +6,7 @@ import { createClient } from "@wonderhome/core/db/server";
 import { recordChannelEvent } from "@wonderhome/core/hometalk/channel-events";
 import { requireMembership } from "@wonderhome/core/identity/households";
 import { log } from "@wonderhome/core/observability/logger";
-import { hitRateLimit, rateLimitMessage } from "@wonderhome/core/security/rate-limit";
+import { hitRateLimitFair, rateLimitMessage } from "@wonderhome/core/security/rate-limit";
 import { mintGeminiLiveToken } from "@wonderhome/core/voicelink/gemini-live";
 
 import { geminiLiveGate } from "@/app/_lib/gemini-live";
@@ -44,7 +44,7 @@ export async function POST(request: Request, { params }: Params) {
     const admin = createAdminClient();
     const event = (outcome: "session_opened" | "provider_error" | "rate_limited", latencyMs?: number) =>
       recordChannelEvent(admin, { channel: "gemini_voice", householdId, outcome, ...(latencyMs !== undefined ? { latencyMs } : {}) });
-    if (!(await hitRateLimit(admin, "voice.session", membership.memberId))) {
+    if (!(await hitRateLimitFair(admin, "voice.session", { memberId: membership.memberId, householdId }))) {
       await event("rate_limited");
       throw new ApiError("rate_limited", rateLimitMessage("voice.session"));
     }
