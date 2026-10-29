@@ -54,8 +54,8 @@ export function scope(event, changed, exists = existsSync) {
     full,
     code,
     unit: full || any(/^(apps|packages|scripts)\//),
-    db: full || any(/^supabase\/|^scripts\/(test-.*-rls\.mjs|setup-test-db\.mjs|lib\/)/),
-    web: full || any(/^(apps|packages)\//, /\.test\.tsx?$|\.md$/),
+    db: full || any(/^supabase\/|^perf\/(queries\.mjs|query-budget\.json)$|^scripts\/(test-.*-rls\.mjs|setup-test-db\.mjs|perf-query-budget\.mjs|lib\/)/),
+    web: full || any(/^(apps|packages)\//, /^perf\/bundle-budget\.json$|^scripts\/bundle-budget\.mjs$/, /\.test\.tsx?$|\.md$/),
     lint_files: changed
       .filter((f) => f.startsWith("apps/web/") && LINTED.test(f) && exists(f))
       .map((f) => f.slice("apps/web/".length))

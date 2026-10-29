@@ -54,6 +54,13 @@ A separate workflow, parallel to `ci.yml`, so it never lengthens the critical pa
 
 Thresholds, triage and the baseline: `docs/security/supply-chain.md`.
 
+## Performance gates (PERF-15, 16, 17)
+
+Details, budgets and how to add to them: `docs/performance-budgets.md`.
+- **query-budget** (`ci.yml`, when `supabase/` or the budget files change): the hot reads' buffers, rows read and sequential scans against `perf/query-budget.json`, on the local database. Runs parallel to db-tests and is part of the `ci` check.
+- **Bundle budget** (`ci.yml` build job, a step after `check:bundle`): per-route first-load JS against `perf/bundle-budget.json`, from the same build.
+- **Advisors** (`advisors.yml`, daily and on migration PRs; not in `ci`): new Supabase advisor WARNs against `perf/advisor-baseline.json`. Skips without the `SUPABASE_ACCESS_TOKEN` secret.
+
 ## Nightly E2E (`e2e-nightly.yml`)
 
 1. **Clean up** (`scripts/e2e-cleanup.mjs`). The script:

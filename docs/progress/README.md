@@ -11,6 +11,7 @@ decision that shapes later work each earns a note, written before moving on.
 
 | Date | Note |
 |---|---|
+| 2026-10-29 | [Performance standing gates: bundle, query and advisor budgets](2026-10-29-perf-standing-gates.md) |
 | 2026-10-29 | [SEC-10: RLS-coverage standing test](2026-10-29-sec-rls-coverage-test.md) |
 | 2026-10-29 | [Database quick wins: PERF-13, PERF-01, SEC-08](2026-10-29-perf-sec-db-quick-wins.md) |
 | 2026-10-29 | [Performance: bounded Home reads, shared Day-view reads, deduped Meals reads (PERF-03, 09, 10)](2026-10-29-perf-bounded-and-deduped-reads.md) |
