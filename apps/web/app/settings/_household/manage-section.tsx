@@ -233,14 +233,16 @@ export async function ManageSection({ session }: { session: Session }) {
           <SectionHeader title={t("manage.section.autonomy")} />
           <div className="grid gap-2 sm:grid-cols-2">
             {modeCounts.map(({ mode, count }) => (
-              <Card key={mode} className="flex items-start gap-3 p-3.5">
-                <IconTile icon={Bot} tone={mode === "execute" ? "ai" : "primary"} size="sm" />
-                <div className="min-w-0 flex-1">
-                  <p className="text-sm font-semibold">{t(`manage.mode.${mode}`)}</p>
-                  <p className="text-xs text-[var(--wh-foreground-muted)]">{t(`manage.modeDescription.${mode}`)}</p>
-                </div>
-                <Badge tone={count > 0 ? "handled" : "neutral"}>{count}</Badge>
-              </Card>
+              <Link key={mode} href="/household/responsibilities" className="block rounded-[var(--wh-radius)] transition-colors hover:bg-[var(--wh-surface-muted)]">
+                <Card className="flex items-start gap-3 p-3.5">
+                  <IconTile icon={Bot} tone={mode === "execute" ? "ai" : "primary"} size="sm" />
+                  <div className="min-w-0 flex-1">
+                    <p className="text-sm font-semibold">{t(`manage.mode.${mode}`)}</p>
+                    <p className="text-xs text-[var(--wh-foreground-muted)]">{t(`manage.modeDescription.${mode}`)}</p>
+                  </div>
+                  <Badge tone={count > 0 ? "handled" : "neutral"}>{count}</Badge>
+                </Card>
+              </Link>
             ))}
           </div>
           <p className="mt-2 text-xs text-[var(--wh-foreground-subtle)]">{t("manage.autonomy.note")}</p>
