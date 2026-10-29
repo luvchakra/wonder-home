@@ -72,7 +72,7 @@ import { publicEnv } from "@wonderhome/core/config/env";
 import { createAdminClient } from "@wonderhome/core/db/admin";
 import { hometalkCorrectionEvidence, recordCorrectionEvidence } from "@wonderhome/core/evaluation/evidence";
 import { log } from "@wonderhome/core/observability/logger";
-import { hitRateLimit, rateLimitMessage, retryAfterSeconds } from "@wonderhome/core/security/rate-limit";
+import { hitRateLimit, hitRateLimitFair, rateLimitMessage, retryAfterSeconds } from "@wonderhome/core/security/rate-limit";
 import { createClient } from "@wonderhome/core/db/server";
 import { listEvents } from "@wonderhome/core/family/repository";
 import { listHomeSendChanges } from "@wonderhome/core/homesend/changes";
@@ -326,7 +326,7 @@ async function turnInEnglish(input: HomeTalkInput, speaking: Speaking) {
   // Faster than anyone talks, slower than a script (Wave 5 §15). Counted
   // per member, before anything is read, written, spent or sent anywhere:
   // a turn refused here never uses up the household's allowance (audit B5).
-  if (!(await hitRateLimit(admin, "hometalk.turn", membership.memberId))) throw ApiError.rateLimited(rateLimitMessage("hometalk.turn"), retryAfterSeconds("hometalk.turn"));
+  if (!(await hitRateLimitFair(admin, "hometalk.turn", { memberId: membership.memberId, householdId }))) throw ApiError.rateLimited(rateLimitMessage("hometalk.turn"), retryAfterSeconds("hometalk.turn"));
   // Entitlement next, on the server, before anything is read or written.
   const feature = body.channel === "voice" ? "conversation.voice" : "conversation.text";
   // Spent here, atomically, rather than checked here and spent later: the

@@ -24,7 +24,7 @@ import { dismissHomeSendItem, getHomeSendItem, listRecordedReceipts, markHomeSen
 import type { IntakeUnderstanding } from "@wonderhome/core/homesend/understanding";
 import { requireMembership } from "@wonderhome/core/identity/households";
 import { log } from "@wonderhome/core/observability/logger";
-import { hitRateLimit, rateLimitMessage } from "@wonderhome/core/security/rate-limit";
+import { hitRateLimitFair, rateLimitMessage } from "@wonderhome/core/security/rate-limit";
 import { cancelSchoolItem, restoreSchoolItem, updateSchoolItem } from "@wonderhome/core/school/repository";
 import { standDownActivity, standDownActivityNote } from "@wonderhome/core/school/activities";
 import { setEventCancelled } from "@wonderhome/core/family/event-detail";
@@ -137,7 +137,7 @@ export async function uploadHomeSendItemAction(_previous: SendHomeItemState, for
   try {
     const supabase = await createClient();
     const membership = await requireMembership(supabase, householdId);
-    if (!(await hitRateLimit(createAdminClient(), "homesend.intake", membership.memberId))) return { error: rateLimitMessage("homesend.intake") };
+    if (!(await hitRateLimitFair(createAdminClient(), "homesend.intake", { memberId: membership.memberId, householdId }))) return { error: rateLimitMessage("homesend.intake") };
     const outcome = await ingestFile(
       supabase,
       { householdId, memberId: membership.memberId },
@@ -164,12 +164,12 @@ export async function pasteHomeSendItemAction(_previous: SendHomeItemState, form
     const supabase = await createClient();
     const membership = await requireMembership(supabase, parsed.data.householdId);
     const admin = createAdminClient();
-    if (!(await hitRateLimit(admin, "homesend.intake", membership.memberId))) return { error: rateLimitMessage("homesend.intake") };
+    if (!(await hitRateLimitFair(admin, "homesend.intake", { memberId: membership.memberId, householdId: parsed.data.householdId }))) return { error: rateLimitMessage("homesend.intake") };
     const outcome = await ingestText(
       supabase,
       { householdId: parsed.data.householdId, memberId: membership.memberId },
       { text: parsed.data.text },
-      { limit: (bucket) => hitRateLimit(admin, bucket, membership.memberId) },
+      { limit: (bucket) => hitRateLimitFair(admin, bucket, { memberId: membership.memberId, householdId: parsed.data.householdId }) },
     );
     const state = await withReview(supabase, membership, toState(outcome));
     revalidateHomeSend();

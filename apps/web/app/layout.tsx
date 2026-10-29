@@ -1,5 +1,6 @@
 import type { Metadata, Viewport } from "next";
 import { Caveat, Sora } from "next/font/google";
+import { connection } from "next/server";
 
 import { TAGLINE } from "@wonderhome/core/brand/mark";
 import { InstallPromptCapture } from "@wonderhome/core/shell/install-prompt-capture";
@@ -128,7 +129,10 @@ export const viewport: Viewport = {
   interactiveWidget: "resizes-content",
 };
 
-export default function RootLayout({ children }: { children: React.ReactNode }) {
+export default async function RootLayout({ children }: { children: React.ReactNode }) {
+  // Every page renders per request: the Content-Security-Policy carries a fresh nonce for each one
+  // (middleware.ts, SEC-05), and a prerendered page would ship without it and have its scripts refused.
+  await connection();
   return (
     <html lang="en" className={`${sora.variable} ${caveat.variable}`}>
       <body>
