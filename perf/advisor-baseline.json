@@ -32,9 +32,6 @@
       "authenticated_security_definer_function_executable|Function public.set_inventory_use_by",
       "authenticated_security_definer_function_executable|Function public.voice_credential_status"
     ],
-    "extension_in_public": [
-      "extension_in_public|Extension pg_net is installed in the public schema. Move it to another schema."
-    ],
     "auth_leaked_password_protection": [
       "auth_leaked_password_protection|Supabase Auth prevents the use of compromised passwords by checking against HaveIBeenPwned.org. Enable this feature to enhance security."
     ]

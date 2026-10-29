@@ -32,6 +32,7 @@
     "budget:bundle": "node scripts/bundle-budget.mjs",
     "budget:queries": "node scripts/perf-query-budget.mjs",
     "advisors": "node scripts/advisor-gate.mjs",
+    "check:migrations": "node scripts/check-migrations-applied.mjs",
     "verify:live": "node scripts/verify-live-project.mjs",
     "qa:test-user": "node scripts/qa-test-user.mjs",
     "tracker": "node scripts/build-progress.mjs",

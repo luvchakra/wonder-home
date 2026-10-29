@@ -1,0 +1,33 @@
+name: Migration drift
+
+# Repo migration files with no row in the live migration history
+# (scripts/check-migrations-applied.mjs, docs/migration-history.md). GitHub
+# Actions only, never a deploy (CLAUDE.md, build-slot budget). Without the
+# SUPABASE_ACCESS_TOKEN repository secret the job skips cleanly and says so.
+# Until the history is reconciled, the known gap shows as a failure: run it
+# report-only by setting the repository variable MIGRATION_DRIFT_REPORT_ONLY=1.
+# Not part of the required `ci` check.
+on:
+  schedule:
+    - cron: "13 23 * * *" # daily, 04:43 IST
+  workflow_dispatch:
+
+concurrency:
+  group: migration-drift
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  drift:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
+        with:
+          node-version: 22
+      - name: Every repo migration is in the live history
+        env:
+          SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+        run: node scripts/check-migrations-applied.mjs ${{ vars.MIGRATION_DRIFT_REPORT_ONLY == '1' && '--report' || '' }}
