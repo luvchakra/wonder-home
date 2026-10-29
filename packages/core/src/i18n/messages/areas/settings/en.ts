@@ -747,6 +747,8 @@ export const settingsEn = {
   "settingsHome.group.privacy": "Privacy & location",
   "settingsHome.group.assistant": "Assistant & voice",
   "profileHome.lede": "Your details, and how WonderHome treats what’s yours.",
+  "profileHome.group.you": "You",
+  "profileHome.group.preferences": "Preferences",
   "settingsHome.notifications.meta": "Your reminders and channels",
   "settingsHome.notifications.quiet": "Your reminders and channels · quiet {from}:00 – {until}:00",
   "settingsHome.voiceAssistants.title": "Voice assistants",

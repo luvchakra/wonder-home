@@ -14,7 +14,9 @@ import type { Session } from "../../_lib/session";
 /**
  * The household's home address, for Admins (Settings → Household). The same
  * write path setup uses: picked from Google Maps when the deployment has a
- * key, typed when it does not. Who can see it is said on the page.
+ * key, typed when it does not. Who can see it is said on the page. Rendered as
+ * the body of the "Home address" fold on `/settings`; the heading and lede live
+ * on that fold's summary, so this returns the card only.
  */
 export async function AddressSection({ session }: { session: Session }) {
   const { supabase, membership, locale } = session;
@@ -26,12 +28,6 @@ export async function AddressSection({ session }: { session: Session }) {
   const available = placeSearchAvailable();
 
   return (
-    <section id="address" className="scroll-mt-20 space-y-3">
-        <header>
-          <h2 className="text-lg font-semibold tracking-tight">{t("manage.section.address")}</h2>
-          <p className="mt-0.5 text-sm text-[var(--wh-foreground-muted)]">{t("address.lede", { household: membership.household.name })}</p>
-        </header>
-
         <Card className="space-y-4 p-4">
           <div className="flex items-start gap-3">
             <IconTile icon={MapPin} tone="home" />
@@ -61,7 +57,5 @@ export async function AddressSection({ session }: { session: Session }) {
           />
           <PrivacyNote line={t("privacyNote.line")} more={t("privacyNote.more")} />
         </Card>
-
-    </section>
   );
 }

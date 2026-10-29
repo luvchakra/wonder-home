@@ -737,6 +737,8 @@ export const settingsDe: AreaCatalog<typeof settingsEn> = {
   "settingsHome.group.privacy": "Privatsphäre & Standort",
   "settingsHome.group.assistant": "Assistent & Sprache",
   "profileHome.lede": "Deine Angaben – und wie WonderHome mit dem umgeht, was dir gehört.",
+  "profileHome.group.you": "Du",
+  "profileHome.group.preferences": "Präferenzen",
   "settingsHome.notifications.meta": "Deine Erinnerungen und Kanäle",
   "settingsHome.notifications.quiet": "Deine Erinnerungen und Kanäle · Ruhezeit {from}:00 – {until}:00",
   "settingsHome.voiceAssistants.title": "Sprachassistenten",
