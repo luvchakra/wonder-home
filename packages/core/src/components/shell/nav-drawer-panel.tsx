@@ -5,6 +5,7 @@ import Link from "next/link";
 import { Dialog } from "radix-ui";
 
 import { cn } from "../../lib/cn";
+import { currentNavHref } from "../../navigation/current-nav";
 import { groupSecondaryNavigation, type SecondaryNavItem } from "../../navigation/secondary-navigation";
 import { Wordmark } from "../ui/brand";
 import { HomeIllustration } from "../ui/home-illustration";
@@ -40,7 +41,8 @@ export default function NavDrawer({
   // that menu is Profile now, so the drawer carries Settings again.
   const sections = groupSecondaryNavigation(secondary, groupLabels);
 
-  const isCurrent = (href: string) => Boolean(pathname && (pathname === href || pathname.startsWith(`${href}/`)));
+  const currentHref = currentNavHref(pathname, secondary);
+  const isCurrent = (href: string) => href === currentHref;
 
   return (
     <Dialog.Root open={open} onOpenChange={onOpenChange}>

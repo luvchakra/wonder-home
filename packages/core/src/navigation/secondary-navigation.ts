@@ -28,6 +28,8 @@ export type SecondaryNavItem = {
   key: SecondaryNavKey;
   label: string;
   href: string;
+  /** Sub-paths of `href` that are not this item's (see current-nav.ts). */
+  excludes?: readonly string[];
   /** Lucide icon name, resolved by the rendering component. */
   icon:
     | "list-checks"
@@ -87,7 +89,7 @@ export const SECONDARY_NAVIGATION: readonly SecondaryNavItem[] = [
   { key: "certification", label: "HomeBrain", href: "/certification", icon: "badge-check", tone: "ai", purpose: "Your home, understood", requires: null, adultOnly: true, group: "ai" },
   { key: "homesend", label: "HomeSend", href: "/home-send", icon: "send", tone: "ai", purpose: "Send WonderHome anything", requires: null, adultOnly: true, group: "ai" },
   { key: "places", label: "HomePlaces", href: "/places", icon: "map-pin", tone: "ai", purpose: "Places your family likes", requires: null, group: "ai" },
-  { key: "settings", label: "Settings", href: "/settings", icon: "user-round-cog", tone: "neutral", purpose: "The app, the assistant and your household", requires: null, group: "manage" },
+  { key: "settings", label: "Settings", href: "/settings", excludes: ["/settings/profile"], icon: "user-round-cog", tone: "neutral", purpose: "The app, the assistant and your household", requires: null, group: "manage" },
 ] as const;
 
 /**
