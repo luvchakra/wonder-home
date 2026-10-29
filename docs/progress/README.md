@@ -1,6 +1,7 @@
 # Progress notes
 
 One note per major activity, newest first. The trackers under `tracking/`
+| 2026-10-29 | [Home restructure: grid removed, handled card last, family/pets/househelp on Family](2026-10-29-home-restructure.md) |
 say *that* a story is done; these say *what was done, why, how it was
 verified, and what is still open*, so the next session — or the next person —
 can pick the work up without reading git history.
