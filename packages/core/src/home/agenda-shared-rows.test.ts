@@ -21,6 +21,7 @@ function fakeDatabase(tables: Record<string, Row[]>) {
       const query = {
         select: () => query,
         eq: (column: string, value: unknown) => ((rows = rows.filter((row) => row[column] === value)), query),
+        is: (column: string, value: unknown) => ((rows = rows.filter((row) => (value === null ? row[column] == null : row[column] === value))), query),
         in: (column: string, values: unknown[]) => ((rows = rows.filter((row) => values.includes(row[column]))), query),
         gte: (column: string, value: string) => ((rows = rows.filter((row) => String(row[column]) >= value)), query),
         lte: (column: string, value: string) => ((rows = rows.filter((row) => String(row[column]) <= value)), query),
