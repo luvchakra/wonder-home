@@ -813,4 +813,7 @@ export const settingsEs: AreaCatalog<typeof settingsEn> = {
   "notificationCenter.off": "Desactivado para ti",
   "notificationCenter.householdOff": "Un administrador lo desactivó para todo el hogar",
   "notificationCenter.householdChannelsOff": "Un administrador desactivó algunas vías para todo el hogar, así que no aparecen aquí.",
+  "settingsSearch.placeholder": "Buscar ajustes",
+  "settingsSearch.clear": "Borrar búsqueda",
+  "settingsSearch.none": "Ningún ajuste coincide con «{query}».",
 };

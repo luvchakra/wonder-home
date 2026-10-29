@@ -1,4 +1,4 @@
-import { Bot, ChevronRight, CreditCard, FileClock, House, Link2, MapPin, MicVocal } from "lucide-react";
+import { Bell, Bot, ChevronRight, CreditCard, FileClock, House, Languages, Link2, MapPin, MicVocal, ShieldCheck, User } from "lucide-react";
 import Link from "next/link";
 import type { ComponentType } from "react";
 
@@ -20,6 +20,7 @@ import { requireSession } from "../_lib/session";
 import { ActivitySection } from "./_household/activity-section";
 import { AddressSection } from "./_household/address-section";
 import { ManageSection } from "./_household/manage-section";
+import { SettingsSearch, type SettingsSearchEntry } from "./_components/settings-search";
 
 export const metadata = { title: "Settings" };
 export const dynamic = "force-dynamic";
@@ -105,6 +106,40 @@ export default async function SettingsPage() {
   ];
   const plan: Row[] = [{ icon: CreditCard, tone: "money", title: t("settingsPage.plan.title"), meta: t("settingsHome.plan.meta", { plan: planName }), href: "/settings/plan" }];
 
+  // What the search at the top can find: every row above, the household's own sections
+  // (Admins only) and the personal pages that live on Profile.
+  const fromRows = (rows: Row[], group: string): SettingsSearchEntry[] =>
+    rows.map((row) => ({ id: row.href, title: row.title, group, meta: row.meta, href: row.href, icon: <IconTile icon={row.icon} tone={row.tone} size="sm" /> }));
+  const section = (id: string, title: string, group: string, icon: Row["icon"], tone: IconTone, href = `/settings#${id}`): SettingsSearchEntry => ({
+    id,
+    title,
+    group,
+    href,
+    icon: <IconTile icon={icon} tone={tone} size="sm" />,
+  });
+  const manageName = t("nav.item.manage");
+  const profileName = t("nav.item.profile");
+  const searchEntries: SettingsSearchEntry[] = [
+    ...(isAdmin
+      ? [
+          section("address", t("manage.section.address"), manageName, MapPin, "home"),
+          section("manage", manageName, manageName, House, "home"),
+          section("playbook", t("manage.section.playbook"), manageName, House, "home"),
+          section("policies", t("manage.section.policies"), manageName, House, "home"),
+          section("autonomy", t("manage.section.autonomy"), manageName, Bot, "ai"),
+          section("activity", t("manage.section.activity"), manageName, FileClock, "neutral"),
+        ]
+      : []),
+    ...fromRows(assistant, t("settingsHome.group.assistant")),
+    ...fromRows(connected, t("connectionsPage.title")),
+    ...fromRows(plan, t("settingsPage.plan.title")),
+    { id: "profile", title: profileName, group: profileName, href: "/settings/profile", icon: <IconTile icon={User} tone="primary" size="sm" /> },
+    section("language", t("settings.languageRegion"), profileName, Languages, "primary", "/settings/language-region"),
+    section("notifications", t("settingsPage.notifications.title"), profileName, Bell, "attention", "/settings/notifications"),
+    section("privacy", t("settingsHome.privacy.title"), profileName, ShieldCheck, "primary", "/settings/privacy"),
+    section("location", t("location.title"), profileName, MapPin, "people", "/settings/location"),
+  ];
+
   return (
     <AppShell active="more" viewer={viewer} secondary={secondary} pathname="/settings" back={{ href: "/more", label: t("common.back") }} title={t("nav.item.settings")}>
       <div className="space-y-4">
@@ -114,39 +149,43 @@ export default async function SettingsPage() {
           <p className="mt-0.5 text-sm text-[var(--wh-foreground-muted)]">{t("settingsHome.lede", { household: membership.household.name })}</p>
         </header>
 
-        {isAdmin ? (
-          <>
-            <CollapsibleSection id="address" icon={MapPin} tone="home" title={t("manage.section.address")} intro={t("address.lede", { household: membership.household.name })}>
-              <AddressSection session={session} />
-            </CollapsibleSection>
-            <CollapsibleSection icon={House} tone="home" title={t("nav.item.manage")} intro={t("manage.lede", { household: membership.household.name })}>
-              <ManageSection session={session} />
-            </CollapsibleSection>
-          </>
-        ) : null}
+        <SettingsSearch entries={searchEntries} labels={{ placeholder: t("settingsSearch.placeholder"), clear: t("settingsSearch.clear"), none: t("settingsSearch.none", { query: "{query}" }) }}>
+          <div className="space-y-4">
+          {isAdmin ? (
+            <>
+              <CollapsibleSection id="address" icon={MapPin} tone="home" title={t("manage.section.address")} intro={t("address.lede", { household: membership.household.name })}>
+                <AddressSection session={session} />
+              </CollapsibleSection>
+              <CollapsibleSection id="manage" icon={House} tone="home" title={t("nav.item.manage")} intro={t("manage.lede", { household: membership.household.name })}>
+                <ManageSection session={session} />
+              </CollapsibleSection>
+            </>
+          ) : null}
 
-        <CollapsibleSection icon={Bot} tone="ai" title={t("settingsHome.group.assistant")} defaultOpen>
-          <SettingsRows rows={assistant} />
-        </CollapsibleSection>
-
-        <CollapsibleSection
-          icon={Link2}
-          tone="care"
-          title={t("connectionsPage.title")}
-          intro={myWhatsApp ? `WhatsApp · ${t("settingsHome.whatsapp.connected")}` : t("connectionsPage.meta")}
-        >
-          <SettingsRows rows={connected} />
-        </CollapsibleSection>
-
-        {isAdmin ? (
-          <CollapsibleSection id="activity" icon={FileClock} tone="neutral" title={t("manage.section.activity")} intro={t("manage.section.activityMeta")}>
-            <ActivitySection session={session} />
+          <CollapsibleSection icon={Bot} tone="ai" title={t("settingsHome.group.assistant")} defaultOpen>
+            <SettingsRows rows={assistant} />
           </CollapsibleSection>
-        ) : null}
 
-        <CollapsibleSection icon={CreditCard} tone="money" title={t("settingsPage.plan.title")} intro={t("settingsHome.plan.meta", { plan: planName })}>
-          <SettingsRows rows={plan} />
-        </CollapsibleSection>
+          <CollapsibleSection
+            icon={Link2}
+            tone="care"
+            title={t("connectionsPage.title")}
+            intro={myWhatsApp ? `WhatsApp · ${t("settingsHome.whatsapp.connected")}` : t("connectionsPage.meta")}
+          >
+            <SettingsRows rows={connected} />
+          </CollapsibleSection>
+
+          {isAdmin ? (
+            <CollapsibleSection id="activity" icon={FileClock} tone="neutral" title={t("manage.section.activity")} intro={t("manage.section.activityMeta")}>
+              <ActivitySection session={session} />
+            </CollapsibleSection>
+          ) : null}
+
+          <CollapsibleSection icon={CreditCard} tone="money" title={t("settingsPage.plan.title")} intro={t("settingsHome.plan.meta", { plan: planName })}>
+            <SettingsRows rows={plan} />
+          </CollapsibleSection>
+          </div>
+        </SettingsSearch>
 
         <QuoteCard>{t("settingsHome.quote")}</QuoteCard>
       </div>

@@ -806,4 +806,7 @@ export const settingsMr: AreaCatalog<typeof settingsEn> = {
   "notificationCenter.off": "तुमच्यासाठी बंद",
   "notificationCenter.householdOff": "एका अ‍ॅडमिनने संपूर्ण घरासाठी बंद केले आहे",
   "notificationCenter.householdChannelsOff": "लोकांपर्यंत पोहोचण्याचे काही मार्ग एका अ‍ॅडमिनने संपूर्ण घरासाठी बंद केले आहेत, म्हणून ते इथे दिसत नाहीत.",
+  "settingsSearch.placeholder": "सेटिंग्ज शोधा",
+  "settingsSearch.clear": "शोध साफ करा",
+  "settingsSearch.none": "“{query}” शी जुळणारी कोणतीही सेटिंग आढळली नाही.",
 };

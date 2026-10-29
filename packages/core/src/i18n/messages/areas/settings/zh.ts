@@ -778,4 +778,7 @@ export const settingsZh: AreaCatalog<typeof settingsEn> = {
   "notificationCenter.off": "已为你关闭",
   "notificationCenter.householdOff": "管理员已为全家关闭",
   "notificationCenter.householdChannelsOff": "管理员已为全家关闭部分联系方式，因此这里不显示它们。",
+  "settingsSearch.placeholder": "搜索设置",
+  "settingsSearch.clear": "清除搜索",
+  "settingsSearch.none": "没有与“{query}”匹配的设置。",
 };
