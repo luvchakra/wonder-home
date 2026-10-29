@@ -63,7 +63,7 @@ export const zh: Catalog = {
   "nav.item.chat": "FamilyChat",
   "nav.item.notifications": "通知",
   "nav.item.manage": "家庭管理",
-  "nav.item.settings": "设置与个人资料",
+  "nav.item.settings": "设置",
   "connectionsPage.title": "连接",
   "connectionsPage.lede": "WonderHome 连接的一切都在这里：给谁用、是否正常，以及要做的那一件事。",
   "connectionsPage.meta": "WhatsApp、语音助手、学校和其他服务",

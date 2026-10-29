@@ -63,7 +63,7 @@ export const ar: Catalog = {
   "nav.item.chat": "FamilyChat",
   "nav.item.notifications": "الإشعارات",
   "nav.item.manage": "إدارة المنزل",
-  "nav.item.settings": "الإعدادات والملف الشخصي",
+  "nav.item.settings": "الإعدادات",
   "connectionsPage.title": "الاتصالات",
   "connectionsPage.lede": "كل ما يرتبط به WonderHome في مكان واحد: لمن هو، وهل يعمل، والشيء الوحيد الذي يجب فعله.",
   "connectionsPage.meta": "واتساب والمساعدات الصوتية والمدرسة وخدمات أخرى",

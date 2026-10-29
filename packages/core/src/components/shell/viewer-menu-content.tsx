@@ -1,6 +1,6 @@
 "use client";
 
-import { Download, Info, LifeBuoy, LogOut, Settings2 } from "lucide-react";
+import { Download, Info, LifeBuoy, LogOut, UserRound } from "lucide-react";
 import Link from "next/link";
 import { DropdownMenu } from "radix-ui";
 import { useRef, useState } from "react";
@@ -35,7 +35,7 @@ import { VIEWER_TRIGGER_CLASS, viewerMenuLabel } from "./viewer-menu-trigger";
  * browser's own steps are spelled out. Gone once the app is installed.
  */
 const ITEMS = [
-  { href: "/settings", label: "Settings & Profile", icon: Settings2 },
+  { href: "/settings#profile", label: "Profile", icon: UserRound },
   { href: "/help", label: "Get Help", icon: LifeBuoy },
 ] as const;
 // HomeBrain ("What WonderHome believes") is reached from More, not from here

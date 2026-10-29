@@ -35,7 +35,7 @@ import { ActivitySection } from "./_household/activity-section";
 import { AddressSection } from "./_household/address-section";
 import { ManageSection } from "./_household/manage-section";
 
-export const metadata = { title: "Settings & Profile" };
+export const metadata = { title: "Settings" };
 export const dynamic = "force-dynamic";
 
 type PreferenceRow = { channel: string; enabled: boolean; quiet_from: number | null; quiet_until: number | null };
@@ -178,7 +178,7 @@ export default async function SettingsPage({ searchParams }: { searchParams: Pro
 
         {tabs}
 
-        <Card className="space-y-4 p-5">
+        <Card id="profile" className="scroll-mt-20 space-y-4 p-5">
           <div className="flex items-start justify-between gap-3">
             <div className="min-w-0 flex-1">
               <p className="text-lg font-semibold tracking-tight">{view.displayName}</p>

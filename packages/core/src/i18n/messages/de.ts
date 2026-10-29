@@ -63,7 +63,7 @@ export const de: Catalog = {
   "nav.item.chat": "FamilyChat",
   "nav.item.notifications": "Benachrichtigungen",
   "nav.item.manage": "Haushalt verwalten",
-  "nav.item.settings": "Einstellungen & Profil",
+  "nav.item.settings": "Einstellungen",
   "connectionsPage.title": "Verbindungen",
   "connectionsPage.lede": "Alles, womit WonderHome verbunden ist, an einem Ort: für wen es ist, ob es funktioniert und was zu tun ist.",
   "connectionsPage.meta": "WhatsApp, Sprachassistenten, Schule und andere Dienste",
