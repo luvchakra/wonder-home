@@ -1,6 +1,6 @@
 "use client";
 
-import { Download, Info, LifeBuoy, LogOut, UserRound } from "lucide-react";
+import { Download, Info, LifeBuoy, LogOut, ShieldCheck, UserRound } from "lucide-react";
 import Link from "next/link";
 import { DropdownMenu } from "radix-ui";
 import { useRef, useState } from "react";
@@ -91,6 +91,15 @@ export default function ViewerMenuContent({ viewer, defaultOpen }: { viewer: She
               </Link>
             </DropdownMenu.Item>
           ))}
+
+          {viewer.platformAdmin ? (
+            <DropdownMenu.Item asChild>
+              <Link href={viewer.platformAdmin.href} className={cn(ITEM_CLASS, "min-h-11")}>
+                <ShieldCheck aria-hidden className="size-4 text-[var(--wh-foreground-subtle)]" />
+                {viewer.platformAdmin.label}
+              </Link>
+            </DropdownMenu.Item>
+          ) : null}
 
           {install.installed ? null : (
             <DropdownMenu.Item

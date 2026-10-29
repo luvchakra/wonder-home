@@ -39,6 +39,8 @@ export type ShellViewer = {
   dir?: "ltr" | "rtl";
   /** The shell's own words in that language. Anything absent stays in English. */
   labels?: ShellLabels;
+  /** Set by the server for platform staff only; absent for everyone else, so nothing about it is sent. */
+  platformAdmin?: { href: string; label: string };
   /**
    * A child's view of the app (story 08-017): the brighter look, and the stars
    * they have counted from what they did, beside the bell on every screen.

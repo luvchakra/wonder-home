@@ -152,6 +152,7 @@ export const hi: Catalog = {
   "more.signOut": "साइन आउट करें",
   "more.quote": "कम मानसिक बोझ। परिवार के लिए ज़्यादा समय!",
   "nav.about": "WonderHome के बारे में",
+  "nav.platformAdmin": "प्लेटफ़ॉर्म एडमिन",
   "about.title": "WonderHome के बारे में",
   "about.lede": "आप कौन-सा संस्करण इस्तेमाल कर रहे हैं, और WonderHome कैसे बना।",
   "about.version.title": "यह संस्करण",

@@ -152,6 +152,7 @@ export const ar: Catalog = {
   "more.signOut": "تسجيل الخروج",
   "more.quote": "عبء ذهني أقل. وقت أكثر مع العائلة!",
   "nav.about": "حول WonderHome",
+  "nav.platformAdmin": "إدارة المنصة",
   "about.title": "حول WonderHome",
   "about.lede": "أي إصدار تستخدم، وكيف بدأ WonderHome.",
   "about.version.title": "هذا الإصدار",

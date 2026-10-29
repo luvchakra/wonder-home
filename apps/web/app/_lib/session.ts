@@ -18,6 +18,7 @@ import { installBannerLabels } from "@wonderhome/core/pwa/install-labels";
 import { childStarCount } from "@wonderhome/core/school/goal-repository";
 import type { ShellLabels, ShellViewer } from "@wonderhome/core/shell/mobile-header";
 
+import { isPlatformStaff } from "./platform-staff";
 import { reconcileRemindersSoon } from "./reminders";
 
 /**
@@ -95,7 +96,7 @@ export async function buildSession(
   // missing photo leaves the initials.
   const preferences = preferencesOf(membership.locale, membership.household.timezone);
   const isChild = membership.memberType === "child";
-  const [unread, , t, avatarUrl, stars, chatOn] = await Promise.all([
+  const [unread, , t, avatarUrl, stars, chatOn, staff] = await Promise.all([
     countUnread(supabase, membership.memberId).catch(() => 0),
     markFirstSeen(supabase, membership),
     translatorFor(preferences.language),
@@ -104,6 +105,8 @@ export async function buildSession(
     isChild ? childStarCount(supabase, membership.household.id, membership.memberId).catch(() => 0) : Promise.resolve(0),
     // Chat is offered only once its tables are on this database (story 12-015).
     chatReady(supabase).catch(() => false),
+    // Platform staff get one more row in the avatar menu; everyone else gets nothing about it.
+    isPlatformStaff().catch(() => false),
   ]);
 
   const view = buildPersonalView(membership, ageBandFor(parseDateOfBirth(membership.dateOfBirth)));
@@ -139,6 +142,7 @@ export async function buildSession(
       language: preferences.language,
       dir: preferences.dir,
       labels,
+      ...(staff ? { platformAdmin: { href: "/platform-admin", label: t("nav.platformAdmin") } } : {}),
       ...(isChild ? { audience: "child" as const, stars: { count: stars, label: t("kids.stars.header", { count: stars }) } } : {}),
     },
     chatOn,
