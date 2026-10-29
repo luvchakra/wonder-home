@@ -6,7 +6,7 @@ import { z } from "zod";
 import { toErrorBody } from "@wonderhome/core/api/errors";
 import { createClient } from "@wonderhome/core/db/server";
 import { requireMembership } from "@wonderhome/core/identity/households";
-import { reportLocation, setLocationSharing } from "@wonderhome/core/location/sharing";
+import { reportLocation, setLocationAudience, setLocationSharing } from "@wonderhome/core/location/sharing";
 
 import type { ActionState } from "./actions";
 
@@ -34,6 +34,32 @@ export async function setLocationSharingAction(_previous: ActionState, formData:
     revalidatePath("/settings/location");
     revalidatePath("/settings");
     return { notice: parsed.data.enabled };
+  } catch (error) {
+    return { error: toErrorBody(error, "location").body.error.message };
+  }
+}
+
+/**
+ * Who may see a sharer's location: the family's adults only (the default), or
+ * the children too (the owner, 2026-10-29). Runs under the person's own
+ * session; the table's policy decides who may change it — the sharer, or a
+ * child's guardian or an Admin. Saves the moment the choice is picked.
+ */
+export async function setLocationAudienceAction(input: { householdId: string; memberId: string; visibleToChildren: boolean }): Promise<ActionState> {
+  const parsed = z.object({ householdId: z.uuid(), memberId: z.uuid(), visibleToChildren: z.boolean() }).safeParse(input);
+  if (!parsed.success) return { error: "Please try again." };
+  try {
+    const supabase = await createClient();
+    const membership = await requireMembership(supabase, parsed.data.householdId);
+    await setLocationAudience(supabase, {
+      householdId: parsed.data.householdId,
+      memberId: parsed.data.memberId,
+      visibleToChildren: parsed.data.visibleToChildren,
+      setBy: membership.memberId,
+    });
+    revalidatePath("/family");
+    revalidatePath("/settings/location");
+    return { notice: "saved" };
   } catch (error) {
     return { error: toErrorBody(error, "location").body.error.message };
   }

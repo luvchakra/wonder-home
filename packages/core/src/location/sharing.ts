@@ -12,8 +12,10 @@ import { ApiError } from "../api/errors";
  * - **The latest position only**, from the member's own device while they
  *   have WonderHome open, rounded to about eleven metres; turning sharing off
  *   deletes it (a database trigger). No history is ever kept.
- * - **Adults see it.** The household's adults read positions; a child or a
- *   helper reads only their own. It is never given to a model.
+ * - **Adults see it; children if the sharer chose so.** The household's adults
+ *   always read positions; a helper reads only their own. A child reads a
+ *   person's position only when that person turned on "let the children see it"
+ *   (`visibleToChildren`), off by default. It is never given to a model.
  * - **Said as a place.** Near a place the household saved (home, a school, an
  *   office, the place book) it reads as that place; otherwise as out, with a
  *   map link, and how long ago it was.
@@ -21,7 +23,12 @@ import { ApiError } from "../api/errors";
 
 export type KnownPlace = { name: string; kind: "home" | "school" | "work" | "place"; latitude: number; longitude: number };
 export type MemberLocation = { memberId: string; latitude: number; longitude: number; accuracyM: number | null; recordedAt: Date };
-export type LocationSharing = { memberId: string; enabled: boolean };
+/**
+ * Whether a member shares, and with whom. `visibleToChildren` is the sharer's
+ * own audience choice (the owner, 2026-10-29): off means only the household's
+ * adults see it (the default), on means the children see it too.
+ */
+export type LocationSharing = { memberId: string; enabled: boolean; visibleToChildren: boolean };
 
 /** Within this many metres of a saved place, a member is said to be there. */
 export const AT_PLACE_METRES = 150;
@@ -57,14 +64,14 @@ const round4 = (value: number) => Math.round(value * 10_000) / 10_000;
 
 type Row = Record<string, unknown>;
 
-/** Who shares and where those the reader may see are. Empty, never an error, before the tables exist. */
+/** Who shares (and with whom), and the positions the reader may see. Empty, never an error, before the tables exist. */
 export async function loadLocations(supabase: SupabaseClient, householdId: string): Promise<{ sharing: LocationSharing[]; locations: MemberLocation[] }> {
   const [sharing, locations] = await Promise.all([
-    supabase.from("member_location_sharing").select("member_id, enabled").eq("household_id", householdId).limit(100),
+    loadSharing(supabase, householdId),
     supabase.from("member_locations").select("member_id, latitude, longitude, accuracy_m, recorded_at").eq("household_id", householdId).limit(100),
   ]);
   return {
-    sharing: ((sharing.data ?? []) as Row[]).map((row) => ({ memberId: row.member_id as string, enabled: Boolean(row.enabled) })),
+    sharing,
     locations: ((locations.data ?? []) as Row[]).map((row) => ({
       memberId: row.member_id as string,
       latitude: Number(row.latitude),
@@ -73,6 +80,19 @@ export async function loadLocations(supabase: SupabaseClient, householdId: strin
       recordedAt: new Date(row.recorded_at as string),
     })),
   };
+}
+
+/**
+ * Who shares, and with whom. Reads the audience choice (`visible_to_children`),
+ * falling back to adults-only when the column is not there yet — so a deploy
+ * is safe before its migration (the owner, 2026-10-29).
+ */
+async function loadSharing(supabase: SupabaseClient, householdId: string): Promise<LocationSharing[]> {
+  const withAudience = await supabase.from("member_location_sharing").select("member_id, enabled, visible_to_children").eq("household_id", householdId).limit(100);
+  const rows = withAudience.error
+    ? ((await supabase.from("member_location_sharing").select("member_id, enabled").eq("household_id", householdId).limit(100)).data ?? [])
+    : (withAudience.data ?? []);
+  return (rows as Row[]).map((row) => ({ memberId: row.member_id as string, enabled: Boolean(row.enabled), visibleToChildren: Boolean(row.visible_to_children) }));
 }
 
 /** The household's saved places a position can be matched to: home, each school, each office, the place book's saved ones. */
@@ -100,6 +120,25 @@ export async function setLocationSharing(supabase: SupabaseClient, input: { hous
   if (error) {
     if (error.code === "42501") throw new ApiError("forbidden", "Only the person themselves, or a child's guardian or an Admin, can change this.");
     throw new Error(`setLocationSharing failed: ${error.code ?? "unknown"}`);
+  }
+}
+
+/**
+ * Sets a sharer's audience: adults only (the default), or the family's
+ * children too (the owner, 2026-10-29). Only meaningful while sharing is on,
+ * and only the existing row is touched, so the on/off state is left as it is.
+ * RLS decides who may: the sharer themselves, or a child's guardian or Admin —
+ * the same rule as turning sharing on.
+ */
+export async function setLocationAudience(supabase: SupabaseClient, input: { householdId: string; memberId: string; visibleToChildren: boolean; setBy: string }): Promise<void> {
+  const { error } = await supabase
+    .from("member_location_sharing")
+    .update({ visible_to_children: input.visibleToChildren, set_by: input.setBy, updated_at: new Date().toISOString() })
+    .eq("household_id", input.householdId)
+    .eq("member_id", input.memberId);
+  if (error) {
+    if (error.code === "42501") throw new ApiError("forbidden", "Only the person themselves, or a child's guardian or an Admin, can change this.");
+    throw new Error(`setLocationAudience failed: ${error.code ?? "unknown"}`);
   }
 }
 
