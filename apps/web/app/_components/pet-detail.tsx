@@ -44,6 +44,24 @@ export function PetDetail({
 
   return (
     <div className="space-y-3">
+      {editable ? (
+        <div className="flex flex-wrap items-center justify-end gap-2">
+          <PetProfileForm
+            householdId={householdId}
+            petId={pet.id}
+            initial={{
+              name: pet.name,
+              species: pet.species,
+              dateOfBirth: pet.dateOfBirth ?? null,
+              gender: pet.gender ?? null,
+              vetName: pet.vetName ?? null,
+              vetContact: pet.vetContact ?? null,
+              notes: pet.notes ?? null,
+            }}
+          />
+          <RetirePetControl householdId={householdId} petId={pet.id} name={pet.name} active={pet.active !== false} />
+        </div>
+      ) : null}
       {editable ? <MemberAvatarControl kind="pet" householdId={householdId} memberId={pet.id} displayName={pet.name} avatarUrl={pet.photoUrl ?? null} labels={avatarLabels} /> : null}
       <dl className="grid grid-cols-2 gap-x-4 gap-y-2.5">
         <Fact label={t("family.fact.species")} value={pet.species} />
@@ -79,24 +97,6 @@ export function PetDetail({
           kinds: Object.fromEntries(PET_PREFERENCE_KINDS.map((kind) => [kind, t(`family.petPrefs.kind.${kind}` as TranslationKey)])),
         }}
       />
-      {editable ? (
-        <div className="flex flex-wrap gap-2">
-          <PetProfileForm
-            householdId={householdId}
-            petId={pet.id}
-            initial={{
-              name: pet.name,
-              species: pet.species,
-              dateOfBirth: pet.dateOfBirth ?? null,
-              gender: pet.gender ?? null,
-              vetName: pet.vetName ?? null,
-              vetContact: pet.vetContact ?? null,
-              notes: pet.notes ?? null,
-            }}
-          />
-          <RetirePetControl householdId={householdId} petId={pet.id} name={pet.name} active={pet.active !== false} />
-        </div>
-      ) : null}
     </div>
   );
 }
