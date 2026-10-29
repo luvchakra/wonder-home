@@ -264,7 +264,10 @@ export function SidebarLink({
       aria-current={active ? "page" : undefined}
       className={cn(
         "flex items-center gap-3 rounded-[var(--wh-radius-sm)] border-l-[3px] px-2.5 text-[0.8125rem] font-medium transition-colors",
-        size === "lg" ? "min-h-12 text-sm" : "min-h-10",
+        // "lg" keeps a full 44px touch target (the accessible minimum) while
+        // trimming the old 48px so the whole drawer list fits a phone without
+        // scrolling; "sm" is the compact desktop-sidebar row.
+        size === "lg" ? "min-h-11 text-sm" : "min-h-10",
         active
           ? "border-[var(--wh-primary)] bg-[var(--wh-primary-soft)] text-[var(--wh-primary)]"
           : "border-transparent text-[var(--wh-foreground-muted)] hover:bg-[var(--wh-surface-muted)] hover:text-[var(--wh-foreground)]",
