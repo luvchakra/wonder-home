@@ -135,7 +135,7 @@ export function GroceryRow({
       className={cn(
         // Phone: picture · name · chevron, then the amounts across the whole
         // card. Wider: one line, amounts before the chevron.
-        "relative grid grid-cols-[2.5rem_minmax(0,1fr)_auto] items-start gap-x-3 gap-y-0.5 py-1 pr-1 pl-3 sm:grid-cols-[2.5rem_minmax(0,1fr)_auto_auto] sm:items-center sm:gap-x-4",
+        "relative grid grid-cols-[2.5rem_minmax(0,1fr)_auto] items-start gap-x-3 gap-y-0.5 py-0.5 pr-1 pl-3 sm:grid-cols-[2.5rem_minmax(0,1fr)_auto_auto] sm:items-center sm:gap-x-4",
         className,
       )}
     >
