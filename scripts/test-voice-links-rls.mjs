@@ -132,6 +132,28 @@ test("Gemini Voice's live-engine choice is an admin's preference, and only a kno
   assert.equal(asProfile(OUTSIDER, `select count(*) from public.household_voice_settings where household_id = '${household}';`, options), "0");
 });
 
+test("a member's own live-engine preference is self-editable, an Admin may set anyone's, and only a known engine (2026-10-29)", () => {
+  // A member sets their own engine — this is the per-member value the
+  // composer and Settings now both read and write, so they cannot drift.
+  asProfile(PARTNER, `update public.household_members set live_engine = 'gemini_live' where id = '${partnerMember}' and household_id = '${household}';`, options);
+  assert.equal(asProfile(PARTNER, `select live_engine from public.household_members where id = '${partnerMember}';`, options), "gemini_live");
+
+  // A member cannot change another member's engine (RLS filters the row away).
+  assert.ok(
+    deniedForUpdate(PARTNER, `update public.household_members set live_engine = 'gemini_live' where id = '${headMember}' and household_id = '${household}';`, `select coalesce(live_engine, 'null') from public.household_members where id = '${headMember}';`, "null", options),
+    "a non-admin member changed another member's engine",
+  );
+
+  // An Admin may set anyone's.
+  asProfile(HEAD, `update public.household_members set live_engine = 'wonderhome' where id = '${partnerMember}' and household_id = '${household}';`, options);
+  assert.equal(asProfile(PARTNER, `select live_engine from public.household_members where id = '${partnerMember}';`, options), "wonderhome");
+
+  // Null clears it back to the household default, and only a known engine is allowed.
+  asProfile(PARTNER, `update public.household_members set live_engine = null where id = '${partnerMember}' and household_id = '${household}';`, options);
+  assert.equal(asProfile(PARTNER, `select coalesce(live_engine, 'null') from public.household_members where id = '${partnerMember}';`, options), "null");
+  assert.throws(() => asProfile(PARTNER, `update public.household_members set live_engine = 'some_other_engine' where id = '${partnerMember}' and household_id = '${household}';`, options), /check constraint/);
+});
+
 test("channel telemetry is unreadable and unwritable to every session (voice phase 6)", () => {
   psql(`insert into public.hometalk_channel_events (household_id, channel, outcome, latency_ms) values ('${household}', 'alexa', 'completed', 120);`, options);
   assert.equal(asProfile(HEAD, `select count(*) from public.hometalk_channel_events;`, options), "0");

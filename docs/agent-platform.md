@@ -437,7 +437,18 @@ surface (`conversation_sessions.surface`): what the app is waiting on is
 never answered by Alexa. Every turn leaves one content-free row in
 `hometalk_channel_events`, and `npm run eval`'s blocking `voice` gate checks
 that every Gemini tool sentence is read by the rules as the action it
-promised — extend `voicelink/readiness.ts` when a tool changes.
+promised — extend `voicelink/readiness.ts` when a tool changes. **Which
+engine runs a live conversation — WonderHome's own loop or Gemini Live — is
+one per-member value with one write path** (2026-10-29,
+`docs/progress/2026-10-29-live-engine-single-source.md`): the member's own
+choice on `household_members.live_engine`, falling back to the household
+default `household_voice_settings.live_engine`, resolved everywhere through
+`voice/live-engine.ts`. The HomeTalk composer picker and Settings → Voice
+both read the effective value and both write the member's own through
+`saveMemberLiveEngine`, so the two surfaces never disagree (rules 23 and 14);
+`localStorage` is only a cache that reconciles to the server on load. A
+member flipping it in the composer never changes anyone else's, and
+availability is still re-checked when the Live token is minted.
 
 **One evaluation across all three** (Wave 5, spec
 `design/AI-EVALUATION-WAVE-5.md`, `packages/core/src/evaluation/`):

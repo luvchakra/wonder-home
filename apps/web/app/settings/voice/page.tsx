@@ -8,7 +8,8 @@ import { QuoteCard } from "@wonderhome/core/ui/quote-card";
 import { EmptyState } from "@wonderhome/core/ui/states";
 import { ExpandableRow } from "@wonderhome/core/ui/expandable-row";
 import { platformSpeechKey, resolveSpeechKey } from "@wonderhome/core/voice/platform-key";
-import { loadVoiceSettings, voiceCredentialStatus } from "@wonderhome/core/voice/repository";
+import { loadMemberLiveEngine, loadVoiceSettings, voiceCredentialStatus } from "@wonderhome/core/voice/repository";
+import { effectiveLiveEngine } from "@wonderhome/core/voice/live-engine";
 import { AudioLines, ChevronRight, Lightbulb, MicVocal, Sparkles } from "lucide-react";
 import Link from "next/link";
 
@@ -45,12 +46,16 @@ export default async function VoiceSettingsPage({ searchParams }: { searchParams
   const { supabase, membership, viewer, secondary } = session;
   const householdId = membership.household.id;
 
-  const [settings, entitlement, credential, gemini] = await Promise.all([
+  const [settings, memberLiveEngine, entitlement, credential, gemini] = await Promise.all([
     loadVoiceSettings(supabase, householdId),
+    loadMemberLiveEngine(supabase, householdId, membership.memberId),
     may(supabase, householdId, "conversation.voice"),
     voiceCredentialStatus(supabase, householdId),
     geminiLiveGate(supabase, householdId),
   ]);
+  // This member's effective engine: their own saved choice, else the
+  // household default — the one value the composer reads and writes too.
+  const liveEngine = effectiveLiveEngine(memberLiveEngine, settings.liveEngine);
 
   // Whose key would answer, without reading either of them here: the
   // household's own if they set one, otherwise the deployment's.
@@ -63,7 +68,7 @@ export default async function VoiceSettingsPage({ searchParams }: { searchParams
   // Who is really talking: Gemini Live in a conversation where the household
   // chose it and it can run; Google reading replies aloud only where a key
   // exists; otherwise the phone's own voice.
-  const geminiTalks = settings.liveEngine === "gemini_live" && gemini.availability.available;
+  const geminiTalks = liveEngine === "gemini_live" && gemini.availability.available;
   const googleSpeaks = settings.provider === "google" && speechAvailable;
   const liveConversation = flags().voice_conversation;
 
@@ -149,6 +154,7 @@ export default async function VoiceSettingsPage({ searchParams }: { searchParams
               <VoiceSettingsForm
                 householdId={householdId}
                 settings={settings}
+                liveEngine={liveEngine}
                 save={saveVoice}
                 saveKey={saveVoiceKeyAction}
                 removeKey={removeVoiceKeyAction}
