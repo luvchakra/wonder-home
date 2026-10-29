@@ -20,6 +20,7 @@ import { Avatar } from "@wonderhome/core/ui/avatar";
 import { ButtonLink } from "@wonderhome/core/ui/button";
 import { CalendarItem } from "@wonderhome/core/ui/calendar-item";
 import { Card } from "@wonderhome/core/ui/card";
+import { CollapsibleSection } from "@wonderhome/core/ui/collapsible-section";
 import { ExpandableRow } from "@wonderhome/core/ui/expandable-row";
 import { HomeIllustration } from "@wonderhome/core/ui/home-illustration";
 import { IconTile } from "@wonderhome/core/ui/icon-tile";
@@ -42,6 +43,7 @@ import { memberFormLabels, pendingInvitationLabels } from "../_lib/member-form-l
 import { AddChildForm } from "../_components/add-child-form";
 import { AddHelperForm } from "../_components/add-helper-form";
 import { AddPetForm } from "../_components/add-pet-form";
+import { OpenOnHash } from "../_components/open-on-hash";
 import { InviteMemberForm } from "../_components/invite-member-form";
 import { PendingInvitations } from "../_components/pending-invitations";
 import { RemoveMemberControl } from "../_components/remove-member-control";
@@ -192,6 +194,7 @@ export default async function FamilyPage() {
 
   return (
     <AppShell active="family" viewer={viewer} secondary={secondary} pathname="/family">
+      <OpenOnHash />
       <div className="space-y-6">
         <header className="wh-rise relative flex items-start justify-between gap-3 overflow-hidden">
           <div className="min-w-0">
@@ -590,14 +593,13 @@ export default async function FamilyPage() {
 
         {admin ? (
           // Adding someone, at the foot of the page every "Invite" and "Add" above leads to.
-          <section id="add" className="scroll-mt-20 space-y-4">
-            <SectionHeader title={t("family.addSection")} />
+          <CollapsibleSection id="add" icon={UserPlus} tone="people" title={t("family.addSection")} intro={t("family.inviteSomeone")}>
             <InviteMemberForm householdId={householdId} canInviteAdministrator={admin} labels={formLabels} />
             <PendingInvitations invitations={invitations} timezone={timezone} labels={pendingInvitationLabels(t)} />
             <AddChildForm householdId={householdId} labels={formLabels} />
             <AddHelperForm householdId={householdId} labels={formLabels} />
             <AddPetForm householdId={householdId} labels={formLabels} />
-          </section>
+          </CollapsibleSection>
         ) : null}
       </div>
     </AppShell>
