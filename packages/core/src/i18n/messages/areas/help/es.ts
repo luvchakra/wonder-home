@@ -167,7 +167,7 @@ export const helpEs: AreaCatalog<typeof helpEn> = {
   "help.guide.today-and-home.body.3": "Planear algo, en Inicio y en el Calendario, añade un evento familiar sin salir de la pantalla.",
   "help.guide.today-and-home.body.4": "En el teléfono, desliza a izquierda o derecha para moverte entre Inicio, Calendario, HomeTalk, Familia y Más.",
   "help.guide.today-and-home.body.5":
-    "Debajo del estado de la familia, Inicio muestra tus mascotas, si tienes. Cada una abre los mismos datos que la pantalla Familia; para cambiarlos, ve a Familia.",
+    "Tu familia, mascotas y ayudantes del hogar están en la pantalla Familia, no en Inicio. Cada uno abre sus datos; un miembro de la familia muestra cuántas responsabilidades tiene y una ayudante del hogar muestra si se la espera hoy.",
   "help.guide.today-and-home.body.6": "Novedades, arriba en Inicio, enumera lo que se ha añadido a WonderHome desde la última vez que lo abriste aquí, y cada elemento abre su lugar. Entendido oculta la lista; nunca muestra lo mismo dos veces, y cada elemento desaparece solo un mes después de llegar. Para todo lo que ha cambiado, versión a versión, consulta Notas de la versión al final de Obtener ayuda.",
   "help.guide.today-and-home.body.7": "La tarjeta de arriba de Inicio muestra la fecha de hoy y tu hogar. Donde el tiempo está activado para tu zona, también muestra la temperatura ahora, la máxima y la mínima de hoy, y cuándo es probable que llueva más tarde, o que el resto del día será seco. Donde la aplicación tiene un catálogo de cine conectado, añade una película nueva en cines y una propuesta familiar para ver en streaming en tu región, una pareja distinta cada vez que abres Inicio; cada una abre la página del título, que dice dónde verla. Vienen de TMDB, no de WonderHome, y no se muestra nada si no hay un catálogo conectado. El plan de hoy, al final de la tarjeta, abre el día como una línea de tiempo.",
 
@@ -409,7 +409,7 @@ export const helpEs: AreaCatalog<typeof helpEn> = {
   "help.guide.connections.title": "Cuentas conectadas, WhatsApp y asistentes de voz",
   "help.guide.connections.summary": "Qué puede conectar tu hogar y qué nunca pasa por una conexión.",
   "help.guide.connections.body.1":
-    "Ajustes → Conexiones enumera lo que tu hogar puede conectar —colegio, calendario, correo, compra, tiempo y dispositivos del hogar— y dice claramente cuándo uno todavía no está disponible para tu WonderHome, en lugar de ofrecer un botón que no hace nada. Conectar depende de un Admin.",
+    "Ajustes → Conexiones muestra cada cosa que tu hogar puede conectar —colegio, WhatsApp, calendario, correo, compra, tiempo y dispositivos del hogar— como su propia tarjeta que abres para ver los detalles de esa conexión. Dice claramente cuándo una la activa quien gestiona tu WonderHome, y cuándo una todavía no está disponible, en lugar de ofrecer un botón que no hace nada. Conectar las que te corresponde conectar depende de un Admin.",
   "help.guide.connections.body.2":
     "WonderHome nunca guarda tu contraseña de otro servicio. Las entradas de calendario importadas nunca se marcan como tiempo familiar protegido ni como confirmadas —eso lo decides tú—, y una entrada privada llega solo como tiempo ocupado, sin título ni lugar.",
   "help.guide.connections.body.3":

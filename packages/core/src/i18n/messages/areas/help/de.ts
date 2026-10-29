@@ -167,7 +167,7 @@ export const helpDe: AreaCatalog<typeof helpEn> = {
   "help.guide.today-and-home.body.3": "„Etwas planen“ auf Start und im Kalender fügt ein Familienereignis hinzu, ohne den Bildschirm zu verlassen.",
   "help.guide.today-and-home.body.4": "Auf dem Handy wischst du nach links oder rechts, um zwischen Start, Kalender, HomeTalk, Familie und Mehr zu wechseln.",
   "help.guide.today-and-home.body.5":
-    "Unter dem Familienstatus zeigt Home eure Haustiere, falls ihr welche habt. Jedes öffnet dieselben Angaben wie auf der Familienseite; ändern kannst du sie unter Familie.",
+    "Familie, Haustiere und Haushaltshilfen findest du auf der Familienseite, nicht auf Home. Jede Karte öffnet ihre Angaben; bei Familienmitgliedern steht, wie viele Aufgaben sie haben, bei Haushaltshilfen, ob sie heute erwartet werden.",
   "help.guide.today-and-home.body.6": "„Neu“ oben auf Start listet, was seit deinem letzten Öffnen hier zu WonderHome hinzugekommen ist, und jeder Eintrag öffnet seine Stelle. Verstanden blendet die Liste aus; sie zeigt nie zweimal dasselbe, und jeder Eintrag verschwindet einen Monat nach seinem Erscheinen von selbst. Was sich von Version zu Version geändert hat, steht in den Versionshinweisen am Ende von „Hilfe erhalten“.",
   "help.guide.today-and-home.body.7": "Die Karte oben auf der Startseite zeigt das heutige Datum und euren Haushalt. Wo das Wetter für eure Gegend eingeschaltet ist, zeigt sie auch die Temperatur jetzt, die heutigen Höchst- und Tiefstwerte und wann später heute Regen wahrscheinlich ist – oder dass der Rest des Tages trocken bleibt. Wo die App einen Filmkatalog angebunden hat, kommt ein neuer Film im Kino und ein Familientipp zum Streamen in eurer Region hinzu, bei jedem Öffnen der Startseite ein anderes Paar; jeder öffnet die Seite des Titels, auf der steht, wo man ihn sehen kann. Sie stammen von TMDB, nicht von WonderHome, und ohne angebundenen Katalog wird nichts gezeigt. Der Plan für heute unten auf der Karte öffnet den Tag als Zeitleiste.",
 
@@ -409,7 +409,7 @@ export const helpDe: AreaCatalog<typeof helpEn> = {
   "help.guide.connections.title": "Verbundene Konten, WhatsApp und Sprachassistenten",
   "help.guide.connections.summary": "Was dein Haushalt verbinden kann, und was nie über eine Verbindung läuft.",
   "help.guide.connections.body.1":
-    "Einstellungen → Verbindungen listet auf, was dein Haushalt verbinden kann – Schule, Kalender, E-Mail, Einkaufen, Wetter und Geräte im Haus –, und sagt klar, wenn etwas für dein WonderHome noch nicht verfügbar ist, statt eine Schaltfläche anzubieten, die nichts tut. Verbinden ist Sache eines Admins.",
+    "Einstellungen → Verbindungen zeigt alles, was dein Haushalt verbinden kann – Schule, WhatsApp, Kalender, E-Mail, Einkaufen, Wetter und Geräte im Haus –, jeweils als eigene Karte, die du öffnest, um die Details dieser Verbindung zu sehen. Es sagt klar, wenn etwas von demjenigen freigeschaltet wurde, der dein WonderHome betreibt, und wenn etwas noch nicht verfügbar ist, statt eine Schaltfläche anzubieten, die nichts tut. Das Verbinden derjenigen, die du selbst verbinden kannst, ist Sache eines Admins.",
   "help.guide.connections.body.2":
     "WonderHome speichert nie dein Passwort für einen anderen Dienst. Importierte Kalendereinträge werden nie als geschützte Familienzeit oder als bestätigt markiert – das entscheidest du –, und ein privater Eintrag kommt nur als belegte Zeit an, ohne Titel oder Ort.",
   "help.guide.connections.body.3":

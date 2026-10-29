@@ -4,7 +4,6 @@ import { useActionState } from "react";
 
 import { Alert } from "@wonderhome/core/ui/alert";
 import { Button } from "@wonderhome/core/ui/button";
-import { Card, CardHeader, CardTitle } from "@wonderhome/core/ui/card";
 import { Field } from "@wonderhome/core/ui/field";
 
 import { inviteMemberAction, type InviteState } from "../(auth)/household-actions";
@@ -23,11 +22,8 @@ export function InviteMemberForm({ householdId, canInviteAdministrator, labels }
   );
 
   return (
-    <Card>
-      <CardHeader>
-        <CardTitle>{labels.inviteTitle}</CardTitle>
-      </CardHeader>
-
+    <section className="space-y-4">
+      <h3 className="text-base font-semibold tracking-tight">{labels.inviteTitle}</h3>
       <form action={formAction} className="space-y-4">
         {state.error ? <Alert>{state.error}</Alert> : null}
 
@@ -66,6 +62,6 @@ export function InviteMemberForm({ householdId, canInviteAdministrator, labels }
           {pending ? labels.creatingInvite : labels.createInvite}
         </Button>
       </form>
-    </Card>
+    </section>
   );
 }

@@ -167,7 +167,7 @@ export const helpFr: AreaCatalog<typeof helpEn> = {
   "help.guide.today-and-home.body.3": "« Prévoir quelque chose », sur l’Accueil et le Calendrier, ajoute un événement familial sans quitter l’écran.",
   "help.guide.today-and-home.body.4": "Sur un téléphone, balayez vers la gauche ou la droite pour passer d’Accueil à Calendrier, HomeTalk, Famille et Plus.",
   "help.guide.today-and-home.body.5":
-    "Sous l'état de la famille, l'accueil affiche vos animaux, si vous en avez. Chacun ouvre les mêmes informations que l'écran Famille ; pour les modifier, allez dans Famille.",
+    "Votre famille, vos animaux et vos aides à domicile sont sur l'écran Famille, pas sur l'accueil. Chacun ouvre ses informations ; un membre de la famille indique combien de responsabilités il a, et une aide à domicile indique si elle est attendue aujourd'hui.",
   "help.guide.today-and-home.body.6": "Nouveautés, en haut de l’Accueil, liste ce qui a été ajouté à WonderHome depuis votre dernière ouverture ici, et chaque élément ouvre l’endroit où il se trouve. Compris masque la liste ; elle ne montre jamais deux fois la même chose, et chaque élément s’en va de lui-même un mois après son arrivée. Pour tout ce qui a changé, version par version, consultez Notes de version à la fin d’Obtenir de l’aide.",
   "help.guide.today-and-home.body.7": "La carte en haut de l'Accueil affiche la date du jour et votre foyer. Là où la météo est activée pour votre zone, elle indique aussi la température actuelle, les maximales et minimales du jour, et l'heure à laquelle la pluie est probable plus tard, ou que le reste de la journée sera sec. Là où l'application a un catalogue de films connecté, elle ajoute un film nouveau au cinéma et une suggestion familiale à regarder en streaming dans votre région, une paire différente à chaque ouverture de l'Accueil ; chacune ouvre la page du titre, qui indique où le regarder. Ces titres viennent de TMDB, pas de WonderHome, et rien ne s'affiche si aucun catalogue n'est connecté. Le programme du jour, en bas de la carte, ouvre la journée sous forme de frise.",
 
@@ -409,7 +409,7 @@ export const helpFr: AreaCatalog<typeof helpEn> = {
   "help.guide.connections.title": "Comptes connectés, WhatsApp et assistants vocaux",
   "help.guide.connections.summary": "Ce que votre foyer peut connecter, et ce qui ne passe jamais par une connexion.",
   "help.guide.connections.body.1":
-    "Paramètres → Connexions liste ce que votre foyer peut connecter — école, agenda, e-mail, courses, météo et appareils de la maison — et dit clairement quand l’un d’eux n’est pas encore disponible pour votre WonderHome, plutôt que de proposer un bouton qui ne fait rien. Connecter revient à un Admin.",
+    "Paramètres → Connexions présente chaque chose que votre foyer peut connecter — école, WhatsApp, agenda, e-mail, courses, météo et appareils de la maison — sous forme de carte à part, que vous ouvrez pour voir les détails de cette connexion. Il dit clairement quand l’une est activée par la personne qui gère votre WonderHome, et quand l’une n’est pas encore disponible, plutôt que de proposer un bouton qui ne fait rien. Connecter celles qui vous reviennent est l’affaire d’un Admin.",
   "help.guide.connections.body.2":
     "WonderHome ne conserve jamais votre mot de passe d’un autre service. Les entrées d’agenda importées ne sont jamais marquées comme temps familial protégé ni comme confirmées — c’est à vous d’en décider — et une entrée privée n’arrive que comme un créneau occupé, sans titre ni lieu.",
   "help.guide.connections.body.3":

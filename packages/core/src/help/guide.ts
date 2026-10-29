@@ -111,7 +111,7 @@ const SECTIONS: readonly SectionShape[] = [
   {
     id: "today-and-home",
     group: "Everyday use",
-    updated: "2026-10-28",
+    updated: "2026-10-29",
     keywords: ["dashboard", "home screen", "today", "agenda", "timeline", "needs you", "handled", "plan something", "swipe", "pets", "what's new", "new features", "release notes", "changelog", "version", "update", "weather", "temperature", "rain", "movies", "films", "cinema", "streaming", "ott", "what to watch"],
   },
   {
@@ -219,7 +219,7 @@ const SECTIONS: readonly SectionShape[] = [
   {
     id: "connections",
     group: "Privacy and trust",
-    updated: "2026-10-28",
+    updated: "2026-10-29",
     keywords: ["integration", "connect", "calendar", "email", "provider", "sync", "google", "portal", "whatsapp", "alexa", "smart home", "devices", "weather", "app", "apps", "api", "partner", "developer", "developer access", "key", "voice note", "question", "buttons"],
   },
 ];
