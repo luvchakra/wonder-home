@@ -10,7 +10,7 @@
     "test:browser": "node --import tsx --test src/playwright-browser.browsertest.ts"
   },
   "dependencies": {
-    "@supabase/supabase-js": "^2.115.0",
+    "@supabase/supabase-js": "^2.118.0",
     "@wonderhome/core": "*",
     "playwright": "^1.56.1",
     "tsx": "^4.19.2"
