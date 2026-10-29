@@ -152,6 +152,26 @@ describe("setHealthProfile", () => {
     setError("42501");
     await expect(setHealthProfile(client, ACTOR, { memberId: "m-2" })).rejects.toThrowError(/own health settings/);
   });
+
+  // The 2026-10-29 bug: every privacy choice appeared to revert to "Only me".
+  // The write and read were sound (verified against the live project); the
+  // revert was a client-side form reset. These guard the data half: each of
+  // the three options survives a save and reads back as itself, so a UI that
+  // binds to the stored value shows the right option.
+  it.each(["private", "selected_family", "household_operational"] as const)(
+    "saves and reads back the %s scope unchanged",
+    async (scope) => {
+      const { client, setProfileRows } = fakeClient();
+
+      const saved = await setHealthProfile(client, ACTOR, { memberId: "m-1", privacyScope: scope });
+      expect(saved.privacyScope).toBe(scope);
+
+      // Persist what the upsert wrote, then read it back as the page does.
+      setProfileRows([{ ...PROFILE_ROW, privacy_scope: scope }]);
+      const read = await getHealthProfile(client, "h-1", "m-1");
+      expect(read?.privacyScope).toBe(scope);
+    },
+  );
 });
 
 describe("listHealthConsents", () => {

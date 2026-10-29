@@ -36,28 +36,49 @@ export function PrivacyScopeForm({
   labels: HealthFormLabels;
 }) {
   const [state, formAction] = useActionState<ActionState, FormData>(setHealthPrivacyScopeAction, {});
+  // Controlled, not `defaultValue`: React 19 resets a form once its action
+  // resolves, and an uncontrolled `<select>` snaps back to the value it had
+  // when it first mounted (here "private" = Only me) rather than to the value
+  // just saved. That reset is what made every pick appear to revert to "Only
+  // me" even though the write persisted (the owner, 2026-10-29). Holding the
+  // choice in state keeps the chosen option on screen; the effect below
+  // re-syncs it to whatever the server round-trip (revalidatePath) reports,
+  // so a refused save falls back to the real stored scope.
+  const [scope, setScope] = useState<(typeof SCOPES)[number]>(currentScope);
+  // Re-sync to the server's truth when the saved scope changes, adjusting
+  // state during render rather than in an effect (React's own pattern for a
+  // value derived from a prop): a refused save then falls back to the real
+  // stored scope instead of leaving the attempted one on screen.
+  const [lastScope, setLastScope] = useState(currentScope);
+  if (currentScope !== lastScope) {
+    setLastScope(currentScope);
+    setScope(currentScope);
+  }
   const formRef = useRef<HTMLFormElement>(null);
 
   return (
-    <form
-      ref={formRef}
-      action={formAction}
-      className="space-y-3"
-      onChange={() => formRef.current?.requestSubmit()}
-    >
+    <form ref={formRef} action={formAction} className="space-y-3">
       {state.error ? <Alert>{state.error}</Alert> : null}
       {state.notice ? <Alert tone="info">{state.notice}</Alert> : null}
       <input type="hidden" name="householdId" value={householdId} />
       <input type="hidden" name="memberId" value={memberId} />
-      <Select label={labels.privacy.label} name="privacyScope" defaultValue={currentScope}>
-        {SCOPES.map((scope) => (
-          <option key={scope} value={scope}>
-            {labels.scopes[scope]}
+      <Select
+        label={labels.privacy.label}
+        name="privacyScope"
+        value={scope}
+        onChange={(event) => {
+          setScope(event.target.value as (typeof SCOPES)[number]);
+          requestAnimationFrame(() => formRef.current?.requestSubmit());
+        }}
+      >
+        {SCOPES.map((option) => (
+          <option key={option} value={option}>
+            {labels.scopes[option]}
           </option>
         ))}
       </Select>
       <p className="text-xs text-[var(--wh-foreground-subtle)]">
-        {labels.privacy.hints[currentScope]}
+        {labels.privacy.hints[scope]}
       </p>
     </form>
   );
