@@ -32,7 +32,7 @@ type Row = Record<string, unknown>;
 export async function listEvents(
   supabase: SupabaseClient,
   householdId: string,
-  options: { from?: Date; to?: Date } = {},
+  options: { from?: Date; to?: Date; /** At most this many rows, soonest first (a hot-path bound). */ limit?: number } = {},
 ): Promise<FamilyEvent[]> {
   let query = supabase
     .from("family_events")
@@ -45,6 +45,7 @@ export async function listEvents(
 
   if (options.from) query = query.gte("ends_at", options.from.toISOString());
   if (options.to) query = query.lte("starts_at", options.to.toISOString());
+  if (options.limit) query = query.limit(options.limit);
 
   const { data, error } = await query;
   if (error) throw new Error(`listEvents failed: ${error.code ?? "unknown"}`);

@@ -37,7 +37,7 @@ type Row = Record<string, unknown>;
 export async function listMeals(
   supabase: SupabaseClient,
   householdId: string,
-  options: { from?: string; to?: string } = {},
+  options: { from?: string; to?: string; /** At most this many rows, soonest first (a hot-path bound). */ limit?: number } = {},
 ): Promise<Meal[]> {
   const columns =
     "id, name, slot, on_date, ready_by, cook_member_id, status, ready_at, servings, recipes(id, name, active_minutes, total_minutes, serves, calories_per_serving, protein_grams, carbs_grams, fat_grams), meal_ingredient_needs(name, consumable_id, quantity, unit, essential, status, substitute_name)";
@@ -45,6 +45,7 @@ export async function listMeals(
     let query = supabase.from("meals").select(select).eq("household_id", householdId).order("ready_by", { ascending: true });
     if (options.from) query = query.gte("on_date", options.from);
     if (options.to) query = query.lte("on_date", options.to);
+    if (options.limit) query = query.limit(options.limit);
     return query;
   };
 
@@ -599,7 +600,7 @@ function dietRefused(error: { code?: string }): Error {
 }
 
 /** One recipe with its ingredient list, for building `PlanCandidate`s. */
-type RecipeWithIngredients = {
+export type RecipeWithIngredients = {
   recipe: Recipe;
   /** The WonderHome catalog dish it was saved from, if any. */
   catalogRecipeId: string | null;
@@ -612,23 +613,28 @@ type RecipeWithIngredients = {
   }[];
 };
 
-async function recipesWithIngredients(
-  supabase: SupabaseClient,
-  householdId: string,
-): Promise<RecipeWithIngredients[]> {
+/**
+ * One read of a household's current recipes with every column any recipe
+ * screen shows (performance plan PERF-10): the edit cards, the pickers and the
+ * cookable check all come from these rows, so /meals reads `recipes` once.
+ */
+const RECIPE_SET_LIMIT = 200;
+
+async function readRecipeRows(supabase: SupabaseClient, householdId: string): Promise<Row[]> {
   const { data, error } = await supabase
     .from("recipes")
     .select(
-      "id, name, active_minutes, total_minutes, serves, calories_per_serving, protein_grams, catalog_recipe_id, recipe_ingredients(name, consumable_id, essential, quantity, unit)",
+      "id, name, cuisine, active_minutes, total_minutes, serves, method, calories_per_serving, protein_grams, carbs_grams, fat_grams, catalog_recipe_id, recipe_ingredients(name, consumable_id, essential, quantity, unit)",
     )
     .eq("household_id", householdId)
-    .eq("active", true);
+    .eq("active", true)
+    .order("name")
+    .limit(RECIPE_SET_LIMIT);
+  if (error) throw new Error(`recipes failed: ${error.code ?? "unknown"}`);
+  return (data ?? []) as Row[];
+}
 
-  if (error)
-    throw new Error(
-      `recipesWithIngredients failed: ${error.code ?? "unknown"}`,
-    );
-
+function withIngredients(data: Row[]): RecipeWithIngredients[] {
   return (data ?? []).map((row: Row) => ({
     recipe: {
       id: row.id as string,
@@ -681,13 +687,13 @@ export type RecipeChoice = {
 export async function listRecipeChoices(
   supabase: SupabaseClient,
   householdId: string,
+  /** Reads the screen already has (PERF-10): the household's recipes with ingredients (`recipeSet`) and its active consumable ids. */
+  shared?: { recipes?: Promise<RecipeWithIngredients[]>; consumableIds?: Promise<ReadonlySet<string>> },
 ): Promise<RecipeChoice[]> {
-  const [recipes, consumables] = await Promise.all([
-    recipesWithIngredients(supabase, householdId),
-    listConsumables(supabase, householdId),
+  const [recipes, consumableIds] = await Promise.all([
+    shared?.recipes ?? readRecipeRows(supabase, householdId).then(withIngredients),
+    shared?.consumableIds ?? listConsumables(supabase, householdId).then((consumables) => new Set(consumables.map((consumable) => consumable.id))),
   ]);
-
-  const consumableIds = new Set(consumables.map((consumable) => consumable.id));
 
   const choices: RecipeChoice[] = recipes.map(({ recipe, catalogRecipeId, ingredients }) => {
     const missingEssential = ingredients.some(
@@ -768,7 +774,7 @@ export async function suggestMeal(
   const today = now.toISOString().slice(0, 10);
 
   const [recipes, consumables, preferenceRows, memberRows] = await Promise.all([
-    recipesWithIngredients(supabase, householdId),
+    readRecipeRows(supabase, householdId).then(withIngredients),
     listConsumables(supabase, householdId),
     supabase
       .from("food_preferences")
@@ -990,16 +996,23 @@ export type RecipeForEdit = {
 
 /** A household's current recipes, whole, for their cards and their edit form (bounded). */
 export async function listRecipesForEdit(supabase: SupabaseClient, householdId: string): Promise<RecipeForEdit[]> {
-  const { data, error } = await supabase
-    .from("recipes")
-    .select("id, name, cuisine, active_minutes, total_minutes, serves, method, calories_per_serving, protein_grams, carbs_grams, fat_grams, catalog_recipe_id, recipe_ingredients(name, essential, quantity, unit)")
-    .eq("household_id", householdId)
-    .eq("active", true)
-    .order("name")
-    .limit(80);
-  if (error) throw new Error(`listRecipesForEdit failed: ${error.code ?? "unknown"}`);
+  return toRecipesForEdit(await readRecipeRows(supabase, householdId));
+}
+
+/** The recipes read once for /meals: the edit cards (bounded to 80) and the pickers' rows, from the same rows. */
+export function recipeSet(supabase: SupabaseClient, householdId: string): { forEdit: Promise<RecipeForEdit[]>; withIngredients: Promise<RecipeWithIngredients[]> } {
+  const rows = readRecipeRows(supabase, householdId);
+  const forEdit = rows.then(toRecipesForEdit);
+  const withIngr = rows.then(withIngredients);
+  // Each consumer attaches its own handling; a failed read is never unhandled.
+  forEdit.catch(() => undefined);
+  withIngr.catch(() => undefined);
+  return { forEdit, withIngredients: withIngr };
+}
+
+function toRecipesForEdit(data: Row[]): RecipeForEdit[] {
   const number = (value: unknown) => (value === null || value === undefined ? null : Number(value));
-  return ((data ?? []) as Row[]).map((row) => {
+  return data.slice(0, 80).map((row) => {
     const ingredients = (row.recipe_ingredients as Row[] | null) ?? [];
     return {
       id: row.id as string,
@@ -1019,6 +1032,7 @@ export async function listRecipesForEdit(supabase: SupabaseClient, householdId: 
     };
   });
 }
+
 
 export type UpdateRecipeInput = Omit<CreateRecipeInput, "catalogRecipeId"> & { recipeId: string };
 

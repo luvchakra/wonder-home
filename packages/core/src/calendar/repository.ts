@@ -5,6 +5,8 @@ import { may } from "../billing/repository";
 import { invalidatesContext } from "../context/invalidation";
 import { activityEntries, listActivities } from "../school/activities";
 import { examEntries, listExams } from "../school/exams";
+import type { Obligation } from "../finance/payments";
+import type { SchoolItem } from "../school/items";
 import { rangeInstants, isDateKey } from "./dates";
 import {
   appointmentEntries,
@@ -95,6 +97,12 @@ export type CalendarRangeInput = {
     adult: boolean;
     words: ModuleWords;
   };
+  /**
+   * Whole-list reads the screen has already started (the Day view shares the
+   * Today plan's, performance plan PERF-09). Each keeps exactly the rows the
+   * calendar's own windowed read would return, so nothing is read twice.
+   */
+  shared?: { schoolItems?: Promise<SchoolItem[]>; obligations?: Promise<Obligation[]> };
 };
 
 /** The longest range one read may ask for: a year, for the Year view's counts. */
@@ -149,9 +157,9 @@ export async function calendarRange(supabase: SupabaseClient, input: CalendarRan
     modules?.hidden.includes("activity") ? Promise.resolve([]) : settle("activity", () => listActivities(supabase, input.householdId)),
     // Each exam paper on its day (08-015); RLS keeps them to the child, guardians and Admins.
     modules?.hidden.includes("school") ? Promise.resolve([]) : settle("school", () => listExams(supabase, input.householdId)),
-    fromModule("school", () => readSchoolItems(supabase, input.householdId, range, viewer.timeZone)),
+    fromModule("school", () => (input.shared?.schoolItems ? sharedSchoolItems(input.shared.schoolItems, range, viewer.timeZone) : readSchoolItems(supabase, input.householdId, range, viewer.timeZone))),
     fromModule("meal", () => readMeals(supabase, input.householdId, range)),
-    fromModule("bill", () => readBills(supabase, input.householdId, range)),
+    fromModule("bill", () => (input.shared?.obligations ? sharedBills(input.shared.obligations, range) : readBills(supabase, input.householdId, range))),
     fromModule("health", () => readAppointments(supabase, input.householdId, range, viewer.timeZone)),
     wanted("health") ? readGuardianOf(supabase, input.householdId, viewer.memberId) : Promise.resolve([] as string[]),
     fromModule("helper", () => readHelperAbsences(supabase, input.householdId, range)),
@@ -378,6 +386,34 @@ async function readMeals(supabase: SupabaseClient, householdId: string, range: {
     cookMemberId: (row.cook_member_id as string | null) ?? null,
     status: row.status as string,
   }));
+}
+
+/** The school items `readSchoolItems` would return, taken from a whole-list read instead. */
+export async function sharedSchoolItems(rows: Promise<SchoolItem[]>, range: { from: string; to: string }, timeZone: string): Promise<SchoolItemRecord[]> {
+  const { from, to } = widened(range, timeZone);
+  const kinds: string[] = ["homework", "worksheet", "project", "exam", "event"];
+  return (await rows)
+    .filter((item) => item.dueAt !== null && kinds.includes(item.kind) && item.dueAt.toISOString() >= from && item.dueAt.toISOString() < to)
+    .slice(0, 500)
+    .map((item) => ({
+      id: item.id,
+      childMemberId: item.childMemberId,
+      kind: item.kind,
+      title: item.title,
+      subject: item.subject,
+      status: item.status,
+      dueAt: item.dueAt,
+      dueTimeKnown: item.dueTimeKnown,
+      endsAt: item.endsAt,
+    }));
+}
+
+/** The bills `readBills` would return, taken from a whole-list read instead. */
+export async function sharedBills(rows: Promise<Obligation[]>, range: { from: string; to: string }): Promise<BillRecord[]> {
+  return (await rows)
+    .filter((bill) => bill.dueOn !== null && bill.dueOn >= range.from && bill.dueOn <= range.to)
+    .slice(0, 500)
+    .map((bill) => ({ id: bill.id, name: bill.name, dueOn: bill.dueOn, status: bill.status, responsibleMemberId: bill.responsibleMemberId }));
 }
 
 async function readBills(supabase: SupabaseClient, householdId: string, range: { from: string; to: string }): Promise<BillRecord[]> {

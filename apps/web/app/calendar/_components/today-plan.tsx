@@ -47,6 +47,26 @@ export function todayLensHref(lens: TodayLens): string {
 }
 
 /**
+ * The whole-list bill and school reads the household lens needs, started once
+ * so the Calendar's Day view can use the same rows for its own entries
+ * (performance plan PERF-09). Null on the other lenses and for children.
+ */
+export function householdLensReads(session: Session, lens: TodayLens): Pick<AgendaRows, "obligations" | "schoolItems"> | null {
+  const { supabase, membership, view } = session;
+  if (view.tone === "child" || lens !== "household") return null;
+  const shares = agendaReads(view);
+  const householdId = membership.household.id;
+  const reads: Pick<AgendaRows, "obligations" | "schoolItems"> = {
+    obligations: shares.obligations ? listObligations(supabase, householdId) : undefined,
+    schoolItems: shares.schoolItems ? listSchoolItems(supabase, householdId) : undefined,
+  };
+  // The page and the plan each attach their own handling; a failed read is never unhandled.
+  reads.obligations?.catch(() => undefined);
+  reads.schoolItems?.catch(() => undefined);
+  return reads;
+}
+
+/**
  * Today's plan (requirements §12), as the Calendar's Day view shows it under
  * today's events (design/UI-SIMPLIFICATION-v1.md M4: Today was its own screen).
  *
@@ -55,7 +75,7 @@ export function todayLensHref(lens: TodayLens): string {
  * deadlines — a meal to be ready, a bill due, a class — never chores to tick.
  * Planning something new is the Calendar's own button, so none here.
  */
-export function TodayPlan({ session, lens, now }: { session: Session; lens: TodayLens; now: Date }) {
+export function TodayPlan({ session, lens, now, reads }: { session: Session; lens: TodayLens; now: Date; reads?: Pick<AgendaRows, "obligations" | "schoolItems"> | null }) {
   const { view, locale } = session;
   const { t } = locale;
   const isChild = view.tone === "child";
@@ -75,7 +95,7 @@ export function TodayPlan({ session, lens, now }: { session: Session; lens: Toda
       />
 
       <Suspense fallback={<LoadingState rows={4} label={t("today.loading")} />}>
-        <TodayBody session={session} active={active} now={now} />
+        <TodayBody session={session} active={active} now={now} reads={reads ?? null} />
       </Suspense>
 
       {active === "mine" && !isChild ? (
@@ -88,7 +108,7 @@ export function TodayPlan({ session, lens, now }: { session: Session; lens: Toda
   );
 }
 
-async function TodayBody({ session, active, now }: { session: Session; active: "mine" | "family" | "household"; now: Date }) {
+async function TodayBody({ session, active, now, reads }: { session: Session; active: "mine" | "family" | "household"; now: Date; reads: Pick<AgendaRows, "obligations" | "schoolItems"> | null }) {
   const { supabase, membership, view, locale } = session;
   const { t } = locale;
   const householdId = membership.household.id;
@@ -115,8 +135,8 @@ async function TodayBody({ session, active, now }: { session: Session; active: "
   const shared: AgendaRows = {
     events: shares?.events ? listEvents(supabase, householdId, { from: dayStart }) : undefined,
     meals: shares?.meals ? listMeals(supabase, householdId, { from: today }) : undefined,
-    obligations: shares?.obligations && seesMoney ? listObligations(supabase, householdId) : undefined,
-    schoolItems: shares?.schoolItems && seesSchool ? listSchoolItems(supabase, householdId) : undefined,
+    obligations: shares?.obligations && seesMoney ? (reads?.obligations ?? listObligations(supabase, householdId)) : undefined,
+    schoolItems: shares?.schoolItems && seesSchool ? (reads?.schoolItems ?? listSchoolItems(supabase, householdId)) : undefined,
     consumables: shares?.consumables ? listConsumables(supabase, householdId) : undefined,
   };
   const schoolFrom = ahead.schoolFrom.getTime();
