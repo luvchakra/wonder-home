@@ -193,7 +193,7 @@ export function GroceryList({
 
   const row = (item: ListItem, index = 0) =>
     (
-      <SwipeToDismiss key={`${item.id}:${item.unit}`} label={words.stepper.remove} hint={view === "to-buy" && !hintShown && index === 0} onDismiss={() => takeOff(item)}>
+      <SwipeToDismiss key={`${item.id}:${item.unit}`} label={words.stepper.remove} hint={view === "to-buy" && !hintShown && index === 0} onDismiss={() => takeOff(item)} className="rounded-[var(--wh-radius)] bg-[var(--wh-surface)] px-2 shadow-[var(--wh-shadow-card)]">
         {rowBody(item, "div")}
       </SwipeToDismiss>
     );
@@ -377,7 +377,7 @@ export function GroceryList({
           />
         )
       ) : (
-        <ul className="divide-y divide-[var(--wh-border)] rounded-[var(--wh-radius)] bg-[var(--wh-surface)] px-2 shadow-[var(--wh-shadow-card)]">
+        <ul className="flex flex-col gap-2">
           {shown.map((item, index) => row(item, index))}
         </ul>
       )}
