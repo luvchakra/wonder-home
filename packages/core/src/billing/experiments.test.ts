@@ -1,9 +1,13 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
-import { describe, expect, it, vi } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 
+import { forgetPlatformData } from "../lib/platform-cache";
 import type { PlanFeature } from "./entitlements";
 import { applyExperiments, experimentBucket, experimentProblem, moveExperiment, variantFor, type ExperimentTerms } from "./experiments";
 import { consume, may } from "./repository";
+
+// The plan catalogue is kept per server (lib/platform-cache.ts); each test brings its own.
+beforeEach(() => forgetPlatformData("plan_catalog"));
 
 vi.mock("../db/admin", () => ({ createAdminClient: () => { throw new Error("tests pass their own meter"); } }));
 

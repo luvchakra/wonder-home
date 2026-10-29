@@ -1,5 +1,6 @@
 import type { NextConfig } from "next";
 
+import { publicFileCacheHeaders } from "@wonderhome/core/security/cache-policy";
 import { MEMBERS_ROBOTS_META } from "@wonderhome/core/security/exposure";
 import { securityHeaders } from "@wonderhome/core/security/headers";
 
@@ -17,6 +18,14 @@ const nextConfig: NextConfig = {
     // matches the 4 MB the upload forms promise (the hosting platform's own
     // request-body ceiling is 4.5 MB, so larger files need a direct upload).
     serverActions: { bodySizeLimit: "4.5mb" },
+    // A screen visited in the last 30 seconds opens from the browser's own
+    // copy instead of a fresh server render, so moving between the five
+    // areas is instant. Only this tab keeps it, and any write purges all of
+    // it: a Server Action that revalidates or touches a cookie (sign-in,
+    // sign-out), and router.refresh() after a write made by fetch
+    // (client-writes.test.ts holds every such caller to that).
+    // docs/progress/2026-10-29-caching-strategy.md lists the windows.
+    staleTimes: { dynamic: 30 },
   },
   // The addresses Meta, app stores and people type for a privacy policy or
   // terms land on the one public page that says both. Redirects run before
@@ -53,6 +62,8 @@ const nextConfig: NextConfig = {
       // No page is material for AI training or AI answers; signed-in pages
       // also say noindex in their own robots meta (layout.tsx).
       { source: "/:path*", headers: [...securityHeaders(), { key: "X-Robots-Tag", value: "noai, noimageai" }] },
+      // Icons, the share card and the manifest: cached by name (security/cache-policy.ts).
+      ...publicFileCacheHeaders(),
       { source: "/help", headers: membersOnly },
       { source: "/help/:path*", headers: membersOnly },
       // An applicant's status page carries their token in its address:

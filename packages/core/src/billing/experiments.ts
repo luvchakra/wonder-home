@@ -1,6 +1,7 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 
 import { ApiError } from "../api/errors";
+import { forgetPlatformData } from "../lib/platform-cache";
 import { log } from "../observability/logger";
 import { describe, periodStart, type PlanFeature } from "./entitlements";
 
@@ -150,16 +151,21 @@ function termsFromRow(row: Row): ExperimentTerms {
  */
 export async function runningExperiments(supabase: SupabaseClient): Promise<ExperimentTerms[]> {
   try {
-    const { data, error } = await supabase
-      .from("entitlement_experiments")
-      .select(TERM_COLUMNS)
-      .eq("status", "running");
-    if (error) throw error;
-    return ((data ?? []) as Row[]).map(termsFromRow);
+    return await readRunningExperiments(supabase);
   } catch (thrown) {
     log.warn("experiments unavailable; using the plan as sold", { reason: (thrown as { code?: string } | null)?.code ?? "unknown" });
     return [];
   }
+}
+
+/** The running experiments, or a throw: the caller decides what an unreadable table means. */
+export async function readRunningExperiments(supabase: SupabaseClient): Promise<ExperimentTerms[]> {
+  const { data, error } = await supabase
+    .from("entitlement_experiments")
+    .select(TERM_COLUMNS)
+    .eq("status", "running");
+  if (error) throw error;
+  return ((data ?? []) as Row[]).map(termsFromRow);
 }
 
 // ---------------------------------------------------------------------------
@@ -259,6 +265,7 @@ export async function moveExperiment(
     .eq("key", input.key)
     .eq("status", from);
   if (error) throw new Error(`moveExperiment failed: ${error.code ?? "unknown"}`);
+  forgetPlatformData("plan_catalog");
   await recordEvent(admin, input.key, input.to === "running" ? "started" : "stopped", input.actorProfileId, input.reasonCode);
   return (await readExperiment(admin, input.key))!;
 }

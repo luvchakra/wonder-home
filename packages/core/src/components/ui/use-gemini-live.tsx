@@ -203,6 +203,7 @@ export function useGeminiLive(input: {
               const { navigate, ...rest } = payload as Record<string, unknown>;
               response = rest;
               const href = appPath(navigate);
+              // Navigating refreshes too (live-talk.tsx), so a change is never shown stale.
               if (href) callbacks.current.onNavigate?.(href);
               else if (rest.status === "completed") callbacks.current.onChanged?.();
             }

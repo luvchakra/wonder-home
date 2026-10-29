@@ -373,7 +373,12 @@ export function LiveTalkProvider({ children }: { children: ReactNode }) {
       if (!safe) return;
       // Already there ("add tomato" said on Groceries): show the change in place.
       if (`${window.location.pathname}${window.location.search}` === safe) router.refresh();
-      else router.push(safe);
+      else {
+        // A turn that sends someone somewhere has usually just changed something: drop
+        // every screen this tab kept (next.config staleTimes) before going.
+        router.refresh();
+        router.push(safe);
+      }
     },
     [router],
   );
