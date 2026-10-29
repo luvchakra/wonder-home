@@ -29,6 +29,7 @@ import {
   type PrimaryNavItem,
   type PrimaryNavKey,
 } from "../../navigation/primary-navigation";
+import { currentNavHref } from "../../navigation/current-nav";
 import type { SecondaryNavItem } from "../../navigation/secondary-navigation";
 import { Wordmark } from "../ui/brand";
 import { IconTile, type IconTone } from "../ui/icon-tile";
@@ -107,6 +108,7 @@ export function PrimaryNav({ active, variant, secondary = [], pathname, labels }
   if (variant === "sidebar") {
     const domains = secondary.filter((item) => item.key !== "settings");
     const settings = secondary.find((item) => item.key === "settings");
+    const currentHref = currentNavHref(pathname, secondary);
 
     return (
       <nav
@@ -144,7 +146,7 @@ export function PrimaryNav({ active, variant, secondary = [], pathname, labels }
                     label={item.label}
                     tone={item.tone}
                     badge={item.badge}
-                    active={Boolean(pathname && (pathname === item.href || pathname.startsWith(`${item.href}/`)))}
+                    active={item.href === currentHref}
                   />
                 </li>
               ))}
@@ -158,7 +160,7 @@ export function PrimaryNav({ active, variant, secondary = [], pathname, labels }
               href={settings.href}
               icon={SECONDARY_ICONS[settings.icon]}
               label={labels?.settings ?? "Settings"}
-              active={Boolean(pathname && pathname.startsWith(settings.href))}
+              active={settings.href === currentHref}
             />
           </div>
         ) : null}
