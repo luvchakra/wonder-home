@@ -650,6 +650,7 @@ export const en = {
   "family.empty.help": "No househelp yet",
   "family.empty.helpLede": "Add the people who help at home, so WonderHome can coordinate around them too.",
   "family.fullHelperProfile": "Full househelp profile",
+  "family.viewResponsibilities": "See their responsibilities ({count})",
   "family.notInPlan": "Family time is not part of this plan",
   "family.moment": "Family moment",
   "family.protectedLine": "Protected — nothing gets scheduled over this.",

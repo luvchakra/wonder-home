@@ -325,6 +325,8 @@ export default async function FamilyPage() {
                         workPlace={member.memberType === "adult" ? officeOf(member.id) : null}
                         relations={relationsLine(t, member.id, relationships, members)}
                         relationshipRows={relationships}
+                        responsibilitiesHref={`/household/responsibilities?group=person#person-${member.id}`}
+                        responsibilitiesCount={responsibilitiesFor(member.id, responsibilityRows).owned.length}
                       />
                       {/* Every Admin is equal: any Admin makes an adult an Admin, or steps one back. */}
                       {admin && !member.isOwner && member.memberType === "adult" && member.status === "active" ? (

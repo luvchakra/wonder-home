@@ -656,6 +656,7 @@ export const ar: Catalog = {
   "family.empty.help": "لا مساعدة منزلية بعد",
   "family.empty.helpLede": "أضف من يساعدون في المنزل، ليتمكن WonderHome من التنسيق معهم أيضًا.",
   "family.fullHelperProfile": "الملف الكامل للمساعد",
+  "family.viewResponsibilities": "عرض مسؤولياتهم ({count})",
   "family.notInPlan": "وقت العائلة ليس ضمن هذه الخطة",
   "family.moment": "لحظة عائلية",
   "family.protectedLine": "محمي — لن يُجدول شيء فوقه.",

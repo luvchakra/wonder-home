@@ -640,6 +640,7 @@ export const mr: Catalog = {
   "family.empty.help": "अजून घरकामातील मदतनीस नाहीत",
   "family.empty.helpLede": "घरात मदत करणाऱ्यांना जोडा, म्हणजे WonderHome त्यांच्यानुसारही नियोजन करू शकेल.",
   "family.fullHelperProfile": "मदतनीसाची पूर्ण प्रोफाइल",
+  "family.viewResponsibilities": "त्यांच्या जबाबदाऱ्या पहा ({count})",
   "family.notInPlan": "कुटुंबाचा वेळ या प्लॅनमध्ये नाही",
   "family.moment": "कुटुंबाचा क्षण",
   "family.protectedLine": "राखीव — या वेळेत दुसरे काहीही ठरणार नाही.",
