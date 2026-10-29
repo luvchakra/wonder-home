@@ -11,6 +11,7 @@ decision that shapes later work each earns a note, written before moving on.
 
 | Date | Note |
 |---|---|
+| 2026-10-29 | [Subscribe to any calendar by its share link (ICS/webcal), phase 1 (26-022)](2026-10-29-calendar-subscriptions.md) |
 | 2026-10-29 | [One source of truth for the live-conversation engine](2026-10-29-live-engine-single-source.md) |
 | 2026-10-29 | [Connections page: one chevron card per connection, deployment-level cards have no Connect](2026-10-29-connections-chevron-cards.md) |
 | 2026-10-29 | [Home restructure: grid removed, handled card last, family/pets/househelp on Family](2026-10-29-home-restructure.md) |

@@ -44,13 +44,15 @@ export type EventDetail = FamilyEvent & {
   inviteTemplate: InviteTemplate | null;
   /** The line guests see on the invitation; notes never are. */
   inviteMessage: string | null;
+  /** The calendar subscription this event was imported from (story 26-022); null for an ordinary event. Imported events are read-only. */
+  fromSubscription: { id: string; name: string; color: string | null } | null;
 };
 
 export async function loadEvent(supabase: SupabaseClient, householdId: string, eventId: string): Promise<EventDetail | null> {
   const [{ data, error }, { data: guests }, { data: links }] = await Promise.all([
     supabase
       .from("family_events")
-      .select("id, title, kind, starts_at, ends_at, location, location_place_id, location_address, notes, protected, owner_member_id, status, action_state, action_due_at, all_day, category, visibility, recurrence, invite_template, invite_message, event_participants(member_id, response, required)")
+      .select("id, title, kind, starts_at, ends_at, location, location_place_id, location_address, notes, protected, owner_member_id, status, action_state, action_due_at, all_day, category, visibility, recurrence, invite_template, invite_message, source_subscription_id, event_participants(member_id, response, required)")
       .eq("household_id", householdId)
       .eq("id", eventId)
       .is("soft_deleted_at", null)
@@ -61,6 +63,13 @@ export async function loadEvent(supabase: SupabaseClient, householdId: string, e
   if (error) throw new Error(`loadEvent failed: ${error.code ?? "unknown"}`);
   if (!data) return null;
   const row = data as Row;
+  // An imported event names its feed, read through the same session (story 26-022).
+  let fromSubscription: EventDetail["fromSubscription"] = null;
+  const subscriptionId = (row.source_subscription_id as string | null) ?? null;
+  if (subscriptionId) {
+    const { data: feed } = await supabase.from("calendar_subscriptions").select("id, name, color").eq("id", subscriptionId).maybeSingle();
+    if (feed) fromSubscription = { id: feed.id as string, name: feed.name as string, color: (feed.color as string | null) ?? null };
+  }
   return {
     id: row.id as string,
     title: row.title as string,
@@ -96,6 +105,7 @@ export async function loadEvent(supabase: SupabaseClient, householdId: string, e
     recurrence: parseRecurrence(row.recurrence),
     inviteTemplate: (row.invite_template as InviteTemplate | null) ?? null,
     inviteMessage: (row.invite_message as string | null) ?? null,
+    fromSubscription,
   };
 }
 

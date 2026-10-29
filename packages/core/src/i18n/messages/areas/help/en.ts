@@ -455,6 +455,8 @@ export const helpEn = {
   "help.guide.connections.body.4":
     "A voice assistant is linked to one person and speaks only as them. Payments and orders are never done by voice.",
   "help.guide.connections.body.5": "Where your WonderHome has it switched on, an Admin can let an app the household trusts see or add to the grocery list, or see the household's name, time zone and how many people are in it. The key is created under Settings → Connections → Developer access: tick only what it may do, and choose when it stops working (30 days, 90 days, a year or never). Each key is shown once and can be revoked at any time; a sandbox key uses sample data and changes nothing.",
+  "help.guide.connections.body.6":
+    "You can also subscribe to any calendar by its share link. Under Settings → Connections → Subscribed calendars, paste an ICS or webcal link — from Google, Outlook, Apple, a school, a sports team or a public-holidays calendar — give it a name, and choose whether the whole household or only you can see it. WonderHome imports that calendar's events into your calendar, read-only and marked as coming from that feed, and refreshes them for you. Remove the subscription any time and its imported events go with it. Any adult can add one; signing in to a Google or Outlook account comes later.",
 
   // Common questions.
   "help.faq.quiet-home.q": "Why is my Home screen so quiet?",

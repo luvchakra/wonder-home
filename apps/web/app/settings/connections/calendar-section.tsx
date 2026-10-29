@@ -2,6 +2,7 @@ import { CalendarDays } from "lucide-react";
 
 import { listIntegrations } from "@wonderhome/core/integrations/repository";
 
+import { CalendarSubscriptionsSlot } from "./calendar-subscriptions-section";
 import { ProviderCard } from "../../_components/provider-card";
 import { providerCardLabels } from "../../_lib/connection-card-labels";
 import { connectionCardShape } from "../../_lib/connection-cards";
@@ -47,8 +48,8 @@ export async function CalendarSection({ session }: { session: Session }) {
             : t("manage.integrations.neverSynced")}
         </p>
       ) : null}
-      {/* SLOT: calendar-subscriptions session renders its ICS-subscription manager here. */}
-      <p className="text-sm text-[var(--wh-foreground-muted)]">{t("manage.integrations.managerSoon")}</p>
+      {/* SLOT: calendar-subscriptions session (story 26-022) renders its ICS-subscription manager here. */}
+      <CalendarSubscriptionsSlot session={session} />
     </ProviderCard>
   );
 }

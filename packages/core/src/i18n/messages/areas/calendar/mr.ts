@@ -120,6 +120,8 @@ export const calendarMr: AreaCatalog<typeof calendarEn> = {
   "calendar.event.repeats": "पुनरावृत्ती",
   "calendar.event.visibility": "कोण पाहू शकते",
   "calendar.event.category": "प्रकारवर्ग",
+  "calendar.event.subscription": "स्रोत",
+  "calendar.event.subscriptionNote": "हे कॅलेंडर सबस्क्राइब केलेले आहे, त्यामुळे त्याचे इव्हेंट येथे फक्त-वाचनासाठी आहेत.",
   "calendar.event.occurrence": "हा वाला: {date}",
   "calendar.event.skip": "फक्त हा वगळा",
   "calendar.event.restore": "हा परत आणा",

@@ -124,6 +124,8 @@ export const calendarAr: AreaCatalog<typeof calendarEn> = {
   "calendar.event.repeats": "التكرار",
   "calendar.event.visibility": "من يمكنه رؤيته",
   "calendar.event.category": "الفئة",
+  "calendar.event.subscription": "من",
+  "calendar.event.subscriptionNote": "هذا التقويم مشترَك، لذا فإن أحداثه للقراءة فقط هنا.",
   "calendar.event.occurrence": "هذه المرة: {date}",
   "calendar.event.skip": "تخطَّ هذه المرة فقط",
   "calendar.event.restore": "أعد هذه المرة",

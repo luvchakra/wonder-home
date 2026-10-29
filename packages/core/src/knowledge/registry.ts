@@ -193,6 +193,7 @@ export const KNOWLEDGE_REGISTRY = {
     example: { id: UUID_A, category: "groceries", period: "monthly", limit_minor: 1500000, currency: "INR", active: true },
   },
   calendar_preferences: { covered: "excluded", reason: "How one person's Calendar screen looks (view, filters, holiday list)." },
+  calendar_subscriptions: { covered: "excluded", reason: "A subscribed calendar's feed config (name, link, visibility): connection config. The events it imports are family_events, which are known." },
   cart_suggestions: { covered: "excluded", reason: "Derived suggestions recomputed from the shopping list and stock, which are known." },
   certification_items: { covered: "builder", records: "beliefs" },
   certification_reviews: { covered: "excluded", reason: "The review history of what WonderHome believes; the beliefs themselves are known." },

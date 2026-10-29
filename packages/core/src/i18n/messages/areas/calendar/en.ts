@@ -132,6 +132,8 @@ export const calendarEn = {
   "calendar.event.repeats": "Repeats",
   "calendar.event.visibility": "Who can see it",
   "calendar.event.category": "Category",
+  "calendar.event.subscription": "From",
+  "calendar.event.subscriptionNote": "This calendar is subscribed, so its events are read-only here.",
   "calendar.event.occurrence": "This one: {date}",
   "calendar.event.skip": "Skip this one",
   "calendar.event.restore": "Bring this one back",

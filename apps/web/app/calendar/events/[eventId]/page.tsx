@@ -70,7 +70,8 @@ export default async function EventPage({ params, searchParams }: { params: Prom
   const active = members.filter((member) => member.status === "active");
   const nameOf = (id: string | null) => active.find((member) => member.id === id)?.displayName ?? null;
   const photoOf = (id: string | null) => active.find((member) => member.id === id)?.avatarUrl ?? undefined;
-  const canEdit = event.ownerMemberId === null || event.ownerMemberId === membership.memberId || isHouseholdAdmin(membership);
+  // An event imported from a calendar subscription is read-only: it lives in its feed (story 26-022).
+  const canEdit = !event.fromSubscription && (event.ownerMemberId === null || event.ownerMemberId === membership.memberId || isHouseholdAdmin(membership));
   const now = new Date();
   const over = event.endsAt.getTime() < now.getTime();
   const cancelled = event.status === "cancelled";
@@ -186,8 +187,10 @@ export default async function EventPage({ params, searchParams }: { params: Prom
               <Fact label={t("calendar.event.visibility")} value={event.visibility === "household" ? null : t(`calendar.form.visibility.${event.visibility}`)} />
               <Fact label={t("events.fact.owner")} value={nameOf(event.ownerMemberId)} />
               <Fact label={t("events.fact.notes")} value={event.notes} />
+              <Fact label={t("calendar.event.subscription")} value={event.fromSubscription?.name ?? null} />
             </dl>
           </div>
+          {event.fromSubscription ? <p className="text-sm text-muted-foreground">{t("calendar.event.subscriptionNote")}</p> : null}
           {canEdit ? (
             <div className="flex flex-wrap gap-2">
               {!cancelled ? <EventEditForm householdId={householdId} eventId={event.id} initial={initial} labels={editLabels} canNarrow={isOwner} /> : null}

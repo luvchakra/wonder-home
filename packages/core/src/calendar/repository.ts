@@ -189,7 +189,7 @@ export async function calendarRange(supabase: SupabaseClient, input: CalendarRan
 }
 
 const EVENT_COLUMNS =
-  "id, title, kind, category, starts_at, ends_at, all_day, timezone, visibility, recurrence, status, owner_member_id, protected, location, external_id, event_participants(member_id, response)";
+  "id, title, kind, category, starts_at, ends_at, all_day, timezone, visibility, recurrence, status, owner_member_id, protected, location, external_id, source_subscription_id, event_participants(member_id, response)";
 
 async function readEvents(supabase: SupabaseClient, householdId: string, range: { from: string; to: string }, timeZone: string): Promise<CalendarEventRecord[]> {
   // A day either side, so an event in another time zone is never cut off at the edge.
@@ -245,9 +245,20 @@ async function readEvents(supabase: SupabaseClient, householdId: string, range: 
     }
   }
 
-  return [...((oneOff.data as Row[] | null) ?? []), ...repeatingRows]
+  const records = [...((oneOff.data as Row[] | null) ?? []), ...repeatingRows]
     .filter((row) => !SYNCED_OCCASION.test((row.external_id as string | null) ?? ""))
     .map((row) => toEventRecord(row, exceptions.get(row.id as string) ?? []));
+
+  // Name the feed behind any imported event, so the calendar can mark it "From
+  // …" (story 26-022). The subscription row is read through the same session,
+  // so a private feed's name is seen only by the member who can see its events.
+  const subscriptionIds = [...new Set(records.map((record) => record.sourceSubscriptionId).filter((id): id is string => typeof id === "string"))];
+  if (subscriptionIds.length > 0) {
+    const { data } = await supabase.from("calendar_subscriptions").select("id, name, color").in("id", subscriptionIds);
+    const byId = new Map(((data as Row[] | null) ?? []).map((row) => [row.id as string, { id: row.id as string, name: row.name as string, color: (row.color as string | null) ?? null }]));
+    for (const record of records) if (record.sourceSubscriptionId) record.fromSubscription = byId.get(record.sourceSubscriptionId) ?? null;
+  }
+  return records;
 }
 
 export function toEventRecord(row: Row, exceptions: OccurrenceException[] = []): CalendarEventRecord {
@@ -270,6 +281,8 @@ export function toEventRecord(row: Row, exceptions: OccurrenceException[] = []):
       .filter((participant) => participant.response !== "no")
       .map((participant) => participant.member_id as string),
     exceptions,
+    sourceSubscriptionId: (row.source_subscription_id as string | null) ?? null,
+    fromSubscription: null,
   };
 }
 

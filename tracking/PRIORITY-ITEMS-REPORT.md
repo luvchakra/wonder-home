@@ -52,7 +52,8 @@ Last updated: 2026-10-20 (25-003c, 25-005, H-1, H-2, H-3 done; 25-004 waits, as 
 | 10 | HomeEvents | 26-003 (rest) | HomeTalk plans with the calendar (C3): `plan_event` with participants and clash checks, find free time, move and cancel events, answers read from the projection. The read half is done | In Progress | — |
 | 11 | HomeEvents | 26-004 | Calendar reminders to every participant, an optional daily digest, and a holiday region in Settings → Language & Region | Not Started | — |
 | 12 | HomeEvents | 26-005 | Calendar notices over WhatsApp, sharing the Send to Cook template | Not Started | The owner wants it, and the template is approved |
-| 13 | HomeEvents | 26-006 | Google and Outlook calendars | Not Started | A separate approval from the owner |
+| 12a | HomeEvents | 26-022 (P1) | Subscribe to any calendar by its ICS/`webcal://` share link: safe fetch, read-only import into the calendar marked as from the feed, per-feed visibility (household or personal), name/colour, idempotent re-sync on the delivery clock, remove-with-cleanup. Phase 1 of the owner's 2026-10-29 request (phase 2 = OAuth, 26-006) | In Progress | Design `docs/calendar-subscriptions.md` |
+| 13 | HomeEvents | 26-006 | Google and Outlook calendars — phase 2 of calendar subscriptions (account sign-in / OAuth), reusing phase-1's import | Not Started | A separate approval from the owner |
 | 14 | HomeTalk | 04-017 | Voice evaluation: the real Gemini Live and Alexa runs | In Progress | A person's Gemini and Alexa accounts |
 
 ## B. The owner's direct asks (2026-10-18)

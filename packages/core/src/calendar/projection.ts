@@ -52,6 +52,8 @@ export type CalendarEntry = {
   protected: boolean;
   href: string | null;
   can: { edit: boolean };
+  /** The calendar subscription this event was imported from (story 26-022); absent for an ordinary event. Imported events are read-only. */
+  fromSubscription?: { id: string; name: string; color: string | null } | null;
 };
 
 export type CalendarViewer = {
@@ -79,6 +81,10 @@ export type CalendarEventRecord = {
   location: string | null;
   participantMemberIds: string[];
   exceptions: OccurrenceException[];
+  /** The calendar subscription that imported this event (story 26-022); absent for an ordinary event. */
+  sourceSubscriptionId?: string | null;
+  /** The feed behind an imported event, resolved for display. */
+  fromSubscription?: { id: string; name: string; color: string | null } | null;
 };
 
 const KIND_CATEGORY: Record<string, EventCategory> = {
@@ -136,7 +142,9 @@ export function eventEntries(
         repeats,
         protected: event.protected,
         href: `/calendar/events/${event.id}`,
-        can: { edit: mayEditEvent(event, viewer) },
+        // An imported event is read-only in WonderHome — it lives in its feed.
+        can: { edit: event.fromSubscription ? false : mayEditEvent(event, viewer) },
+        fromSubscription: event.fromSubscription,
       });
     }
   }
