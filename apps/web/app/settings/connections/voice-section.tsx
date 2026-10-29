@@ -1,4 +1,5 @@
 import { Card } from "@wonderhome/core/ui/card";
+import { CollapsibleSection } from "@wonderhome/core/ui/collapsible-section";
 import { IconTile } from "@wonderhome/core/ui/icon-tile";
 import { Badge } from "@wonderhome/core/ui/pill";
 import { EmptyState } from "@wonderhome/core/ui/states";
@@ -76,12 +77,13 @@ export async function VoiceAssistantsSection({ session }: { session: Session }) 
   }
 
   return (
-    <section id="voice" className="scroll-mt-20 space-y-4">
-        <header>
-          <h2 className="text-lg font-semibold tracking-tight">{t("settingsPage.voiceAssistants.title")}</h2>
-          <p className="mt-0.5 text-sm text-[var(--wh-foreground-muted)]">{t("settingsPage.voiceAssistants.lede", { household: household.name })}</p>
-        </header>
-
+    <CollapsibleSection
+      id="voice"
+      icon={Speaker}
+      tone="ai"
+      title={t("settingsPage.voiceAssistants.title")}
+      intro={t("settingsPage.voiceAssistants.lede", { household: household.name })}
+    >
         <Card className="flex items-start gap-3">
           <IconTile icon={Speaker} tone="ai" />
           <div className="min-w-0 flex-1 text-sm">
@@ -157,29 +159,23 @@ export async function VoiceAssistantsSection({ session }: { session: Session }) 
         <section className="space-y-3">
           <h3 className="text-sm font-semibold">{t("settingsPage.voiceAssistants.can")}</h3>
           <p className="text-sm text-[var(--wh-foreground-muted)]">{t("settingsPage.voiceAssistants.canBody")}</p>
-          <ul className="space-y-3">
+          {/* Each assistant's CAN DO list is long (the owner, 2026-10-29); fold each one so the
+              names stay scannable and the capability lists open on demand. */}
+          <ul className="space-y-2">
             {VOICE_CHANNELS.map(({ channel, name }) => {
               const summary = channelSummary(channel);
               return (
                 <li key={channel}>
-                  <Card className="flex items-start gap-3">
-                    <IconTile icon={AudioLines} tone="ai" />
-                    <div className="min-w-0 flex-1 space-y-3">
-                      <div>
-                        <p className="text-sm font-semibold">{name}</p>
-                        <p className="text-xs text-[var(--wh-foreground-muted)]">{t(`settingsPage.voiceAssistants.where.${channel}`)}</p>
-                      </div>
-                      <CapabilityList title={t("settingsPage.voiceAssistants.list.available")} items={summary.available} channel={channel} t={t} />
-                      <CapabilityList title={t("settingsPage.voiceAssistants.list.conditional")} items={summary.conditional} channel={channel} t={t} />
-                      <CapabilityList title={t("settingsPage.voiceAssistants.list.appOnly")} items={summary.appOnly} channel={channel} t={t} />
-                    </div>
-                  </Card>
+                  <CollapsibleSection as="h4" icon={AudioLines} tone="ai" title={name} intro={t(`settingsPage.voiceAssistants.where.${channel}`)}>
+                    <CapabilityList title={t("settingsPage.voiceAssistants.list.available")} items={summary.available} channel={channel} t={t} />
+                    <CapabilityList title={t("settingsPage.voiceAssistants.list.conditional")} items={summary.conditional} channel={channel} t={t} />
+                    <CapabilityList title={t("settingsPage.voiceAssistants.list.appOnly")} items={summary.appOnly} channel={channel} t={t} />
+                  </CollapsibleSection>
                 </li>
               );
             })}
           </ul>
         </section>
-
-    </section>
+    </CollapsibleSection>
   );
 }

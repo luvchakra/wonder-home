@@ -1,5 +1,8 @@
+import { GraduationCap } from "lucide-react";
+
 import { listConnections } from "@wonderhome/core/connections/repository";
 import { connectionSessionStatus } from "@wonderhome/core/portals/session-repository";
+import { CollapsibleSection } from "@wonderhome/core/ui/collapsible-section";
 
 import { SchoolConnect, type SchoolConnectionView } from "../../_components/school-connect";
 import { schoolConnectLabels } from "../../_lib/school-connect-labels";
@@ -33,12 +36,8 @@ export async function SchoolSection({ session }: { session: Session }) {
   }));
 
   return (
-    <section id="school" className="scroll-mt-20 space-y-4">
-      <header>
-        <h2 className="text-lg font-semibold tracking-tight">{t("school.connect.title")}</h2>
-        <p className="mt-0.5 text-sm text-[var(--wh-foreground-muted)]">{t("school.connect.lede")}</p>
-      </header>
+    <CollapsibleSection id="school" icon={GraduationCap} tone="school" title={t("school.connect.title")} intro={t("school.connect.lede")}>
       <SchoolConnect householdId={householdId} connections={connections} connectionsHref="#accounts" forwardHref="/school" labels={schoolConnectLabels(t)} />
-    </section>
+    </CollapsibleSection>
   );
 }

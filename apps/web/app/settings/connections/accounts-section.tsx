@@ -1,8 +1,11 @@
+import { Link2 } from "lucide-react";
+
 import { listConnections } from "@wonderhome/core/connections/repository";
 import { connectorCatalog } from "@wonderhome/core/connectors/registry";
 import { listMembers } from "@wonderhome/core/identity/households";
 import { connectionSessionStatus } from "@wonderhome/core/portals/session-repository";
 import { listConnectionScrapeUrls } from "@wonderhome/core/portals/scrape-url-repository";
+import { CollapsibleSection } from "@wonderhome/core/ui/collapsible-section";
 
 import { ConnectionsManager, type ChildOption, type ConnectionView } from "../../_components/connections-manager";
 import { connectionsLabels } from "../../_lib/connections-labels";
@@ -60,11 +63,7 @@ export async function AccountsSection({ session }: { session: Session }) {
   }));
 
   return (
-    <section id="accounts" className="scroll-mt-20 space-y-4">
-      <header>
-        <h2 className="text-lg font-semibold tracking-tight">{t("connectionsPage.accounts")}</h2>
-        <p className="mt-0.5 text-sm text-[var(--wh-foreground-muted)]">{t("manage.connections.lede")}</p>
-      </header>
+    <CollapsibleSection id="accounts" icon={Link2} tone="care" title={t("connectionsPage.accounts")} intro={t("manage.connections.lede")}>
       <ConnectionsManager
         householdId={householdId}
         canCreate={canCreate}
@@ -74,6 +73,6 @@ export async function AccountsSection({ session }: { session: Session }) {
         labels={connectionsLabels(t)}
         linkHrefs={LINK_HREFS}
       />
-    </section>
+    </CollapsibleSection>
   );
 }
