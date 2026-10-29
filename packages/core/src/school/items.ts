@@ -174,6 +174,16 @@ export function planStudy(
   return { sessions, unplaced };
 }
 
+/** How long ago, as someone would say it: hours up to two days, then whole days (rule 9). */
+export function agoPhrase(hours: number): string {
+  if (hours <= 48) {
+    const h = Math.max(1, Math.round(hours));
+    return `${h} ${h === 1 ? "hour" : "hours"} ago`;
+  }
+  const days = Math.round(hours / 24);
+  return `${days} days ago`;
+}
+
 /**
  * Whether a deadline is in trouble (story 08-005).
  *
@@ -224,7 +234,7 @@ export function assessDeadline(
       status: "missed",
       riskLevel: "high",
       notable: true,
-      reason: `${item.title} was due ${Math.abs(Math.round(hoursLeft))} hours ago and is not marked done.`,
+      reason: `${item.title} was due ${agoPhrase(Math.abs(hoursLeft))} and is not marked done.`,
       action: { action: "check_with_child", target: item.id },
       dueOn: isoDate(item.dueAt),
     };
