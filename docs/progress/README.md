@@ -12,6 +12,7 @@ decision that shapes later work each earns a note, written before moving on.
 | Date | Note |
 |---|---|
 <<<<<<< Updated upstream
+| 2026-10-29 | [SEC-10: RLS-coverage standing test](2026-10-29-sec-rls-coverage-test.md) |
 | 2026-10-29 | [Database quick wins: PERF-13, PERF-01, SEC-08](2026-10-29-perf-sec-db-quick-wins.md) |
 =======
 | 2026-10-29 | [SEC-02: CI supply-chain scanning (audit gate, SBOM, gitleaks, CodeQL)](2026-10-29-sec-ci-supply-chain-scanning.md) |

@@ -31,6 +31,7 @@ The jobs run in parallel:
   - `npm run eval`, the deterministic golden-household gates. An Unsafe Action Rate above zero is a release blocker (CLAUDE.md).
 
 - **db-tests**: the schema and RLS authorization suite. It runs only when `supabase/` or its test scripts change. It stays on PRs because authorization tests are P0 release blockers.
+- **RLS coverage** (`scripts/test-coverage-rls.mjs`, `npm run test:rls-coverage`): part of db-tests (it matches `test-*-rls.mjs`). Fails on a new app-schema table without RLS or policy, a per-row helper or bare `auth.uid()` in a policy, an open or anon-facing policy, a SECURITY DEFINER function without `search_path` or callable by anon, and anon table grants. Known gaps are in `scripts/lib/rls-coverage-config.mjs`; see `docs/security/rls-coverage-baseline.md`. Fixing one means deleting its baseline entry (a stale entry fails too).
 - **build**: `npm run build` when app code changes. It catches a change that cannot build before it merges, so it never spends a Vercel deployment slot failing (CLAUDE.md, build-slot budget).
 - **ci**: the single required check. It passes when every job passed or was skipped on purpose.
 
