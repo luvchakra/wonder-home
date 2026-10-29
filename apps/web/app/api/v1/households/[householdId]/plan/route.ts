@@ -1,6 +1,7 @@
 import { z } from "zod";
 
 import { requireUser } from "@wonderhome/core/api/auth";
+import { parseQuery } from "@wonderhome/core/api/query";
 import { defineRoute } from "@wonderhome/core/api/route";
 import { featureSummary } from "@wonderhome/core/billing/entitlements";
 import { describePlanChange, needsConfirmation } from "@wonderhome/core/billing/plan-change";
@@ -46,7 +47,7 @@ export async function GET(request: Request, { params }: Params) {
       listPlans(supabase),
     ]);
 
-    const to = new URL(request.url).searchParams.get("to");
+    const { to } = parseQuery(request, z.object({ to: z.string().trim().min(1).max(40).regex(/^[a-z0-9_-]+$/i).optional() }).strict());
     if (!to) return { current: featureSummary(current), plans };
 
     const assessment = await previewPlanChange(supabase, householdId, to);

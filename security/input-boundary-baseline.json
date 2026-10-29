@@ -1,0 +1,85 @@
+{
+ "_about": "Handlers that read input without a recognisable schema parse. Each entry needs a reason and the story that burns it down; the list may only shrink (lint:boundaries:input fails on a stale entry).",
+ "entries": {
+  "apps/web/app/(auth)/actions.ts#signInWithGoogle": {
+   "reason": "Only reads `next`, which goes through safeSameSitePath (same-site allowlist) before use; no Zod schema.",
+   "story": "SEC-03b"
+  },
+  "apps/web/app/(auth)/actions.ts#signOut": {
+   "reason": "Takes the form state arguments only; reads no field. Scanner sees a parameter list.",
+   "story": "SEC-03b"
+  },
+  "apps/web/app/(auth)/locale-actions.ts#localeSetupAction": {
+   "reason": "Locale/timezone/language fields are checked against closed lists by hand-written readers, not Zod; convert to enum schemas.",
+   "story": "SEC-03b"
+  },
+  "apps/web/app/(auth)/locale-actions.ts#saveDateTimeAction": {
+   "reason": "Locale/timezone/language fields are checked against closed lists by hand-written readers, not Zod; convert to enum schemas.",
+   "story": "SEC-03b"
+  },
+  "apps/web/app/(auth)/locale-actions.ts#saveHouseholdLocaleAction": {
+   "reason": "Locale/timezone/language fields are checked against closed lists by hand-written readers, not Zod; convert to enum schemas.",
+   "story": "SEC-03b"
+  },
+  "apps/web/app/(auth)/locale-actions.ts#saveMemberLanguagesAction": {
+   "reason": "Locale/timezone/language fields are checked against closed lists by hand-written readers, not Zod; convert to enum schemas.",
+   "story": "SEC-03b"
+  },
+  "apps/web/app/(auth)/locale-actions.ts#savePersonalLocaleAction": {
+   "reason": "Locale/timezone/language fields are checked against closed lists by hand-written readers, not Zod; convert to enum schemas.",
+   "story": "SEC-03b"
+  },
+  "apps/web/app/(auth)/meal-actions.ts#catalogDishLinesAction": {
+   "reason": "Dish lines are parsed by catalogDishLines (hand-written, capped); convert to a Zod array schema.",
+   "story": "SEC-03b"
+  },
+  "apps/web/app/(auth)/onboarding-actions.ts#acceptCategoryAction": {
+   "reason": "Onboarding step: fields read with hand-written coercion behind requireHouseholdAdmin; children data, so convert to Zod schemas first in SEC-03b.",
+   "story": "SEC-03b"
+  },
+  "apps/web/app/(auth)/onboarding-actions.ts#addResponsibilityAction": {
+   "reason": "Onboarding step: fields read with hand-written coercion behind requireHouseholdAdmin; children data, so convert to Zod schemas first in SEC-03b.",
+   "story": "SEC-03b"
+  },
+  "apps/web/app/(auth)/onboarding-actions.ts#answerHelperHoursAction": {
+   "reason": "Onboarding step: fields read with hand-written coercion behind requireHouseholdAdmin; children data, so convert to Zod schemas first in SEC-03b.",
+   "story": "SEC-03b"
+  },
+  "apps/web/app/(auth)/onboarding-actions.ts#answerSchoolAction": {
+   "reason": "Onboarding step: fields read with hand-written coercion behind requireHouseholdAdmin; children data, so convert to Zod schemas first in SEC-03b.",
+   "story": "SEC-03b"
+  },
+  "apps/web/app/(auth)/onboarding-actions.ts#deferAction": {
+   "reason": "Onboarding step: fields read with hand-written coercion behind requireHouseholdAdmin; children data, so convert to Zod schemas first in SEC-03b.",
+   "story": "SEC-03b"
+  },
+  "apps/web/app/(auth)/onboarding-actions.ts#moveAction": {
+   "reason": "Onboarding step: fields read with hand-written coercion behind requireHouseholdAdmin; children data, so convert to Zod schemas first in SEC-03b.",
+   "story": "SEC-03b"
+  },
+  "apps/web/app/(auth)/onboarding-actions.ts#reviewCategoryAction": {
+   "reason": "Onboarding step: fields read with hand-written coercion behind requireHouseholdAdmin; children data, so convert to Zod schemas first in SEC-03b.",
+   "story": "SEC-03b"
+  },
+  "apps/web/app/(auth)/onboarding-actions.ts#saveAdultsAction": {
+   "reason": "Onboarding step: fields read with hand-written coercion behind requireHouseholdAdmin; children data, so convert to Zod schemas first in SEC-03b.",
+   "story": "SEC-03b"
+  },
+  "apps/web/app/(auth)/onboarding-actions.ts#saveBasicsAction": {
+   "reason": "Onboarding step: fields read with hand-written coercion behind requireHouseholdAdmin; children data, so convert to Zod schemas first in SEC-03b.",
+   "story": "SEC-03b"
+  },
+  "apps/web/app/(auth)/onboarding-actions.ts#saveChildrenAction": {
+   "reason": "Onboarding step: fields read with hand-written coercion behind requireHouseholdAdmin; children data, so convert to Zod schemas first in SEC-03b.",
+   "story": "SEC-03b"
+  },
+  "apps/web/app/(auth)/onboarding-actions.ts#savePetsAndHelpAction": {
+   "reason": "Onboarding step: fields read with hand-written coercion behind requireHouseholdAdmin; children data, so convert to Zod schemas first in SEC-03b.",
+   "story": "SEC-03b"
+  },
+  "apps/web/app/api/v1/notifications/email-off/route.ts#GET": {
+   "reason": "Redirect-only: forwards the query string to the same-origin /email-off page, whose action validates it (turnEmailOffAction, SEC-03).",
+   "story": "SEC-03b"
+  }
+ }
+}

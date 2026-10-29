@@ -212,9 +212,13 @@ const PHONE_UNAVAILABLE = "Signing in by phone isn't available here yet. Use you
  * number once the code is verified. Nothing is said about whether the number
  * belongs to anyone.
  */
+/** Form fields of the two phone steps: always a string, capped before anything reads it (an absent field is ""). */
+const phoneField = z.preprocess((value) => (typeof value === "string" ? value.slice(0, 64) : ""), z.string());
+const codeField = z.preprocess((value) => (typeof value === "string" ? value.slice(0, 32) : ""), z.string());
+
 export async function sendPhoneCode(_previous: PhoneSignInState, formData: FormData): Promise<PhoneSignInState> {
   if (!phoneAuthEnabled()) return { error: PHONE_UNAVAILABLE };
-  const phone = normalPhone(String(formData.get("phone") ?? ""));
+  const phone = normalPhone(phoneField.parse(formData.get("phone")));
   if (!phone) return { error: "Enter your phone number. An Indian number works as it is; add the country code for any other (+44…)." };
   if (!(await authAttemptAllowed())) return { error: AUTH_PAUSED };
   const supabase = await createClient();
@@ -231,8 +235,8 @@ export async function sendPhoneCode(_previous: PhoneSignInState, formData: FormD
 /** Step two: the code. A verified number becomes the member recorded with it. */
 export async function verifyPhoneCode(previous: PhoneSignInState, formData: FormData): Promise<PhoneSignInState> {
   if (!phoneAuthEnabled()) return { error: PHONE_UNAVAILABLE };
-  const phone = normalPhone(String(formData.get("phone") ?? ""));
-  const token = String(formData.get("code") ?? "").replace(/\s+/g, "");
+  const phone = normalPhone(phoneField.parse(formData.get("phone")));
+  const token = codeField.parse(formData.get("code")).replace(/\s+/g, "");
   if (!phone) return { error: "Start again with your phone number." };
   if (!/^[0-9]{4,10}$/.test(token)) return { ...previous, phone, error: "Enter the code from the text message." };
   const supabase = await createClient();

@@ -1,3 +1,6 @@
+import { z } from "zod";
+
+import { parseQuery } from "@wonderhome/core/api/query";
 import { defineRoute } from "@wonderhome/core/api/route";
 import { createAdminClient } from "@wonderhome/core/db/admin";
 import { createClient } from "@wonderhome/core/db/server";
@@ -10,8 +13,7 @@ import { paymentsOverview } from "@wonderhome/core/platform/payments";
  */
 export async function GET(request: Request) {
   return defineRoute({ authenticate: async () => requirePlatformAdmin(await createClient()) }, async ({ actor }) => {
-    const raw = Number(new URL(request.url).searchParams.get("days") ?? 30);
-    const days = Number.isFinite(raw) ? Math.min(365, Math.max(1, Math.round(raw))) : 30;
+    const { days } = parseQuery(request, z.object({ days: z.coerce.number().int().min(1).max(365).default(30) }).strict());
     return { overview: await paymentsOverview(createAdminClient(), actor, days) };
   })(request);
 }

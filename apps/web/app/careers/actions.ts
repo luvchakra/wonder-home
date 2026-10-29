@@ -9,6 +9,7 @@ import { clientIpFromHeaders, hashClientIp } from "@wonderhome/core/homesend/rat
 import { hitRateLimit, type RateLimitBucket } from "@wonderhome/core/security/rate-limit";
 
 import { careersConnection } from "../_lib/careers";
+import { formText } from "../_lib/form-input";
 
 /**
  * The careers pages' two actions (the owner, 2026-10-21). Signed-out
@@ -36,7 +37,8 @@ async function allowed(bucket: RateLimitBucket): Promise<boolean> {
 export async function applyAction(_previous: ApplyState, formData: FormData): Promise<ApplyState> {
   // A field people never see: anything in it is a bot, told it worked and sent nowhere.
   if (String(formData.get("website") ?? "").trim()) return { status: "sent" };
-  const jobId = String(formData.get("jobId") ?? "");
+  const jobId = formText(formData, "jobId", 100);
+  if (!jobId) return { status: "error", message: RETRY };
   const checked = checkApplication({
     name: formData.get("name"),
     email: formData.get("email"),
@@ -70,11 +72,13 @@ export async function applyAction(_previous: ApplyState, formData: FormData): Pr
 export type WithdrawState = { status: "idle" } | { status: "done"; application: ApplicationStatus } | { status: "error"; message: string };
 
 export async function withdrawAction(_previous: WithdrawState, formData: FormData): Promise<WithdrawState> {
+  const token = formText(formData, "token", 512);
+  if (!token) return { status: "error", message: "We couldn't find that application. Use the link in your email." };
   if (!(await allowed("careers.status"))) return { status: "error", message: "Too many requests from this network. Please try again later." };
   const connection = await careersConnection();
   if (connection.state !== "ready") return { status: "error", message: "Your application couldn't be withdrawn just now. Please try again later." };
   // The token arrives in the form body and leaves in WonderJobs' request body, never in a URL.
-  const result = await connection.client.status(String(formData.get("token") ?? ""), "withdraw");
+  const result = await connection.client.status(token, "withdraw");
   if (result.state === "ok") return { status: "done", application: result.data };
   if (result.state === "rejected") return { status: "error", message: result.message };
   if (result.state === "not_found") return { status: "error", message: "We couldn't find that application. Use the link in your email." };

@@ -1,4 +1,7 @@
+import { z } from "zod";
+
 import { ApiError } from "@wonderhome/core/api/errors";
+import { parseQuery } from "@wonderhome/core/api/query";
 import { defineRoute } from "@wonderhome/core/api/route";
 import { createAdminClient } from "@wonderhome/core/db/admin";
 import { createClient } from "@wonderhome/core/db/server";
@@ -25,8 +28,8 @@ export const GET = defineRoute(
   { authenticate: async () => requirePlatformAdmin(await createClient()) },
   async ({ actor, request }) => {
     if (!platformCan(actor, "ai_operations.read")) throw ApiError.forbidden("Your platform role cannot view voice metrics.");
-    const hours = Number(new URL(request.url).searchParams.get("hours") ?? "24");
-    return loadChannelMetrics(createAdminClient(), { windowHours: Number.isFinite(hours) ? hours : 24 });
+    const { hours } = parseQuery(request, z.object({ hours: z.coerce.number().int().min(1).max(24 * 90).default(24) }).strict());
+    return loadChannelMetrics(createAdminClient(), { windowHours: hours });
   },
 );
 

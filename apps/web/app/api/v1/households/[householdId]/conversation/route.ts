@@ -1,5 +1,8 @@
+import { z } from "zod";
+
 import { requireUser } from "@wonderhome/core/api/auth";
 import { supabaseIdempotencyStore } from "@wonderhome/core/api/idempotency";
+import { parseQuery } from "@wonderhome/core/api/query";
 import { defineRoute } from "@wonderhome/core/api/route";
 import { currentSessionId, listMessages, searchMessages } from "@wonderhome/core/conversation/repository";
 import { createAdminClient } from "@wonderhome/core/db/admin";
@@ -28,8 +31,8 @@ export async function GET(request: Request, { params }: Params) {
 
     // `?q=` searches the member's own conversations instead of listing the
     // open one: what the search box in HomeTalk's header reads.
-    const query = new URL(request.url).searchParams.get("q");
-    if (query !== null) {
+    const { q: query } = parseQuery(request, z.object({ q: z.string().trim().min(1).max(200).optional() }).strict());
+    if (query !== undefined) {
       const matches = await searchMessages(supabase, { householdId, memberId: membership.memberId, query });
       return { matches: matches.map((match) => ({ id: match.id, role: match.role, text: match.content, at: match.createdAt.toISOString() })) };
     }

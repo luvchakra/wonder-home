@@ -1,5 +1,8 @@
+import { z } from "zod";
+
 import { requireUser } from "@wonderhome/core/api/auth";
 import { ApiError } from "@wonderhome/core/api/errors";
+import { parseQuery } from "@wonderhome/core/api/query";
 import { defineRoute } from "@wonderhome/core/api/route";
 import { may } from "@wonderhome/core/billing/repository";
 import { createAdminClient } from "@wonderhome/core/db/admin";
@@ -35,7 +38,7 @@ export async function POST(request: Request, { params }: Params) {
     const entitlement = await may(supabase, householdId, "integrations.deep");
     if (!entitlement.allowed) throw ApiError.forbidden(entitlement.reason);
 
-    const provider = new URL(request.url).searchParams.get("provider") ?? undefined;
+    const { provider } = parseQuery(request, z.object({ provider: z.string().trim().min(1).max(40).regex(/^[a-z0-9_-]+$/i).optional() }).strict());
     const connection = await loadConnection(supabase, householdId, "smart_home", provider);
     if (!connection) throw ApiError.notFound("No smart-home provider is connected to this household.");
 

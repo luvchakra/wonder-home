@@ -32,6 +32,7 @@ import { setEventCancelled } from "@wonderhome/core/family/event-detail";
 import { prepareReview } from "./home-send-review";
 import { autoApplyHomeSendItem } from "./home-send-auto";
 import { addChildFromNotice, addGrocery, createNew, recordReceipt, reviseExisting, routeSchema, type RouteInput } from "./home-send-writes";
+import { formUuid } from "../_lib/form-input";
 
 /**
  * HomeSend's entry points (Wave 3): upload a photo, PDF, text file or voice
@@ -127,8 +128,8 @@ const UPLOAD_MAX_BYTES = 4 * 1024 * 1024;
 
 /** The upload half of sending something in: a photo, PDF, text file or voice note. */
 export async function uploadHomeSendItemAction(_previous: SendHomeItemState, formData: FormData): Promise<SendHomeItemState> {
-  const householdId = formData.get("householdId");
-  if (typeof householdId !== "string") return { error: "Please try again." };
+  const householdId = formUuid(formData, "householdId");
+  if (!householdId) return { error: "Please try again." };
 
   const file = formData.get("photo");
   if (!(file instanceof File) || file.size === 0) return { error: "Choose a photo or file first." };

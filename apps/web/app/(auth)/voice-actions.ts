@@ -9,6 +9,7 @@ import { clearVoiceKey, saveMemberLiveEngine, saveVoiceSettings, setVoiceKey } f
 import { voiceSettingsSchema } from "@wonderhome/core/voice/settings";
 
 import type { ActionState } from "./actions";
+import { formText, formUuid } from "../_lib/form-input";
 
 /**
  * Changing how WonderHome sounds (story 04-009).
@@ -103,12 +104,13 @@ export async function saveVoice(_previous: ActionState, formData: FormData): Pro
 
 
 export async function saveVoiceKeyAction(_previous: ActionState, formData: FormData): Promise<ActionState> {
-  const apiKey = String(formData.get("apiKey") ?? "").trim();
-  if (apiKey.length < 20) return { error: "That does not look like a Google API key." };
+  const apiKey = formText(formData, "apiKey", 512);
+  if (apiKey === null || apiKey.length < 20) return { error: "That does not look like a Google API key." };
 
   try {
     const supabase = await createClient();
-    const householdId = String(formData.get("householdId") ?? "");
+    const householdId = formUuid(formData, "householdId");
+    if (!householdId) return { error: "Please try again." };
     const membership = await requireHouseholdAdmin(supabase, householdId);
     await setVoiceKey(supabase, { householdId, memberId: membership.memberId, apiKey });
   } catch (thrown) {
@@ -122,7 +124,8 @@ export async function saveVoiceKeyAction(_previous: ActionState, formData: FormD
 export async function removeVoiceKeyAction(_previous: ActionState, formData: FormData): Promise<ActionState> {
   try {
     const supabase = await createClient();
-    const householdId = String(formData.get("householdId") ?? "");
+    const householdId = formUuid(formData, "householdId");
+    if (!householdId) return { error: "Please try again." };
     const membership = await requireHouseholdAdmin(supabase, householdId);
     await clearVoiceKey(supabase, householdId, membership.memberId);
   } catch (thrown) {

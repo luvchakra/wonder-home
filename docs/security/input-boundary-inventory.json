@@ -1,0 +1,4446 @@
+{
+ "generatedBy": "scripts/lint-input-boundaries.mjs --inventory",
+ "totals": {
+  "route": {
+   "total": 144,
+   "validated": 70,
+   "partial": 11,
+   "not-validated": 1,
+   "no-input": 55,
+   "delegated": 7
+  },
+  "action": {
+   "total": 311,
+   "validated": 287,
+   "partial": 0,
+   "not-validated": 19,
+   "no-input": 5,
+   "delegated": 0
+  }
+ },
+ "items": [
+  {
+   "kind": "action",
+   "file": "apps/web/app/(auth)/actions.ts",
+   "id": "apps/web/app/(auth)/actions.ts#createHouseholdAction",
+   "method": "createHouseholdAction",
+   "reads": [
+    "arguments"
+   ],
+   "status": "validated"
+  },
+  {
+   "kind": "action",
+   "file": "apps/web/app/(auth)/actions.ts",
+   "id": "apps/web/app/(auth)/actions.ts#requestPasswordReset",
+   "method": "requestPasswordReset",
+   "reads": [
+    "arguments"
+   ],
+   "status": "validated"
+  },
+  {
+   "kind": "action",
+   "file": "apps/web/app/(auth)/actions.ts",
+   "id": "apps/web/app/(auth)/actions.ts#resetPassword",
+   "method": "resetPassword",
+   "reads": [
+    "arguments"
+   ],
+   "status": "validated"
+  },
+  {
+   "kind": "action",
+   "file": "apps/web/app/(auth)/actions.ts",
+   "id": "apps/web/app/(auth)/actions.ts#sendPhoneCode",
+   "method": "sendPhoneCode",
+   "reads": [
+    "arguments"
+   ],
+   "status": "validated"
+  },
+  {
+   "kind": "action",
+   "file": "apps/web/app/(auth)/actions.ts",
+   "id": "apps/web/app/(auth)/actions.ts#signIn",
+   "method": "signIn",
+   "reads": [
+    "arguments"
+   ],
+   "status": "validated"
+  },
+  {
+   "kind": "action",
+   "file": "apps/web/app/(auth)/actions.ts",
+   "id": "apps/web/app/(auth)/actions.ts#signInWithGoogle",
+   "method": "signInWithGoogle",
+   "reads": [
+    "arguments"
+   ],
+   "status": "not-validated"
+  },
+  {
+   "kind": "action",
+   "file": "apps/web/app/(auth)/actions.ts",
+   "id": "apps/web/app/(auth)/actions.ts#signOut",
+   "method": "signOut",
+   "reads": [
+    "arguments"
+   ],
+   "status": "not-validated"
+  },
+  {
+   "kind": "action",
+   "file": "apps/web/app/(auth)/actions.ts",
+   "id": "apps/web/app/(auth)/actions.ts#signUp",
+   "method": "signUp",
+   "reads": [
+    "arguments"
+   ],
+   "status": "validated"
+  },
+  {
+   "kind": "action",
+   "file": "apps/web/app/(auth)/actions.ts",
+   "id": "apps/web/app/(auth)/actions.ts#verifyPhoneCode",
+   "method": "verifyPhoneCode",
+   "reads": [
+    "arguments"
+   ],
+   "status": "validated"
+  },
+  {
+   "kind": "action",
+   "file": "apps/web/app/(auth)/ai-key-actions.ts",
+   "id": "apps/web/app/(auth)/ai-key-actions.ts#removeAiKey",
+   "method": "removeAiKey",
+   "reads": [
+    "arguments"
+   ],
+   "status": "validated"
+  },
+  {
+   "kind": "action",
+   "file": "apps/web/app/(auth)/ai-key-actions.ts",
+   "id": "apps/web/app/(auth)/ai-key-actions.ts#removeGeminiVoiceKey",
+   "method": "removeGeminiVoiceKey",
+   "reads": [
+    "arguments"
+   ],
+   "status": "validated"
+  },
+  {
+   "kind": "action",
+   "file": "apps/web/app/(auth)/ai-key-actions.ts",
+   "id": "apps/web/app/(auth)/ai-key-actions.ts#saveAiKey",
+   "method": "saveAiKey",
+   "reads": [
+    "arguments"
+   ],
+   "status": "validated"
+  },
+  {
+   "kind": "action",
+   "file": "apps/web/app/(auth)/ai-key-actions.ts",
+   "id": "apps/web/app/(auth)/ai-key-actions.ts#saveGeminiVoiceKey",
+   "method": "saveGeminiVoiceKey",
+   "reads": [
+    "arguments"
+   ],
+   "status": "validated"
+  },
+  {
+   "kind": "action",
+   "file": "apps/web/app/(auth)/approval-actions.ts",
+   "id": "apps/web/app/(auth)/approval-actions.ts#answerRequestAction",
+   "method": "answerRequestAction",
+   "reads": [
+    "arguments"
+   ],
+   "status": "validated"
+  },
+  {
+   "kind": "action",
+   "file": "apps/web/app/(auth)/backup-service-actions.ts",
+   "id": "apps/web/app/(auth)/backup-service-actions.ts#arrangeCoverAction",
+   "method": "arrangeCoverAction",
+   "reads": [
+    "arguments"
+   ],
+   "status": "validated"
+  },
+  {
+   "kind": "action",
+   "file": "apps/web/app/(auth)/backup-service-actions.ts",
+   "id": "apps/web/app/(auth)/backup-service-actions.ts#createBackupServiceAction",
+   "method": "createBackupServiceAction",
+   "reads": [
+    "arguments"
+   ],
+   "status": "validated"
+  },
+  {
+   "kind": "action",
+   "file": "apps/web/app/(auth)/backup-service-actions.ts",
+   "id": "apps/web/app/(auth)/backup-service-actions.ts#setBackupServiceActiveAction",
+   "method": "setBackupServiceActiveAction",
+   "reads": [
+    "arguments"
+   ],
+   "status": "validated"
+  },
+  {
+   "kind": "action",
+   "file": "apps/web/app/(auth)/backup-service-actions.ts",
+   "id": "apps/web/app/(auth)/backup-service-actions.ts#updateBackupServiceAction",
+   "method": "updateBackupServiceAction",
+   "reads": [
+    "arguments"
+   ],
+   "status": "validated"
+  },
+  {
+   "kind": "action",
+   "file": "apps/web/app/(auth)/calendar-actions.ts",
+   "id": "apps/web/app/(auth)/calendar-actions.ts#saveCalendarPreferencesAction",
+   "method": "saveCalendarPreferencesAction",
+   "reads": [
+    "arguments"
+   ],
+   "status": "validated"
+  },
+  {
+   "kind": "action",
+   "file": "apps/web/app/(auth)/calendar-actions.ts",
+   "id": "apps/web/app/(auth)/calendar-actions.ts#setOccurrenceCancelledAction",
+   "method": "setOccurrenceCancelledAction",
+   "reads": [
+    "arguments"
+   ],
+   "status": "validated"
+  },
+  {
+   "kind": "action",
+   "file": "apps/web/app/(auth)/calendar-subscription-actions.ts",
+   "id": "apps/web/app/(auth)/calendar-subscription-actions.ts#addCalendarSubscriptionAction",
+   "method": "addCalendarSubscriptionAction",
+   "reads": [
+    "arguments"
+   ],
+   "status": "validated"
+  },
+  {
+   "kind": "action",
+   "file": "apps/web/app/(auth)/calendar-subscription-actions.ts",
+   "id": "apps/web/app/(auth)/calendar-subscription-actions.ts#removeCalendarSubscriptionAction",
+   "method": "removeCalendarSubscriptionAction",
+   "reads": [
+    "arguments"
+   ],
+   "status": "validated"
+  },
+  {
+   "kind": "action",
+   "file": "apps/web/app/(auth)/calendar-subscription-actions.ts",
+   "id": "apps/web/app/(auth)/calendar-subscription-actions.ts#syncCalendarSubscriptionNowAction",
+   "method": "syncCalendarSubscriptionNowAction",
+   "reads": [
+    "arguments"
+   ],
+   "status": "validated"
+  },
+  {
+   "kind": "action",
+   "file": "apps/web/app/(auth)/calendar-subscription-actions.ts",
+   "id": "apps/web/app/(auth)/calendar-subscription-actions.ts#updateCalendarSubscriptionAction",
+   "method": "updateCalendarSubscriptionAction",
+   "reads": [
+    "arguments"
+   ],
+   "status": "validated"
+  },
+  {
+   "kind": "action",
+   "file": "apps/web/app/(auth)/certification-actions.ts",
+   "id": "apps/web/app/(auth)/certification-actions.ts#addBeliefAction",
+   "method": "addBeliefAction",
+   "reads": [
+    "arguments"
+   ],
+   "status": "validated"
+  },
+  {
+   "kind": "action",
+   "file": "apps/web/app/(auth)/certification-actions.ts",
+   "id": "apps/web/app/(auth)/certification-actions.ts#reviewCertificationAction",
+   "method": "reviewCertificationAction",
+   "reads": [
+    "arguments"
+   ],
+   "status": "validated"
+  },
+  {
+   "kind": "action",
+   "file": "apps/web/app/(auth)/certification-actions.ts",
+   "id": "apps/web/app/(auth)/certification-actions.ts#reviewManyAction",
+   "method": "reviewManyAction",
+   "reads": [
+    "arguments"
+   ],
+   "status": "validated"
+  },
+  {
+   "kind": "action",
+   "file": "apps/web/app/(auth)/child-quiet-actions.ts",
+   "id": "apps/web/app/(auth)/child-quiet-actions.ts#saveChildQuietHoursAction",
+   "method": "saveChildQuietHoursAction",
+   "reads": [
+    "arguments"
+   ],
+   "status": "validated"
+  },
+  {
+   "kind": "action",
+   "file": "apps/web/app/(auth)/configuration-actions.ts",
+   "id": "apps/web/app/(auth)/configuration-actions.ts#acceptRebalanceAction",
+   "method": "acceptRebalanceAction",
+   "reads": [
+    "arguments"
+   ],
+   "status": "validated"
+  },
+  {
+   "kind": "action",
+   "file": "apps/web/app/(auth)/configuration-actions.ts",
+   "id": "apps/web/app/(auth)/configuration-actions.ts#applyConfigurationAction",
+   "method": "applyConfigurationAction",
+   "reads": [
+    "arguments"
+   ],
+   "status": "validated"
+  },
+  {
+   "kind": "action",
+   "file": "apps/web/app/(auth)/configuration-actions.ts",
+   "id": "apps/web/app/(auth)/configuration-actions.ts#previewConfigurationAction",
+   "method": "previewConfigurationAction",
+   "reads": [
+    "arguments"
+   ],
+   "status": "validated"
+  },
+  {
+   "kind": "action",
+   "file": "apps/web/app/(auth)/configuration-actions.ts",
+   "id": "apps/web/app/(auth)/configuration-actions.ts#removeResponsibilityAction",
+   "method": "removeResponsibilityAction",
+   "reads": [
+    "arguments"
+   ],
+   "status": "validated"
+  },
+  {
+   "kind": "action",
+   "file": "apps/web/app/(auth)/configuration-actions.ts",
+   "id": "apps/web/app/(auth)/configuration-actions.ts#retirePolicyAction",
+   "method": "retirePolicyAction",
+   "reads": [
+    "arguments"
+   ],
+   "status": "validated"
+  },
+  {
+   "kind": "action",
+   "file": "apps/web/app/(auth)/configuration-actions.ts",
+   "id": "apps/web/app/(auth)/configuration-actions.ts#savePlaybookAction",
+   "method": "savePlaybookAction",
+   "reads": [
+    "arguments"
+   ],
+   "status": "validated"
+  },
+  {
+   "kind": "action",
+   "file": "apps/web/app/(auth)/configuration-actions.ts",
+   "id": "apps/web/app/(auth)/configuration-actions.ts#savePolicyAction",
+   "method": "savePolicyAction",
+   "reads": [
+    "arguments"
+   ],
+   "status": "validated"
+  },
+  {
+   "kind": "action",
+   "file": "apps/web/app/(auth)/configuration-actions.ts",
+   "id": "apps/web/app/(auth)/configuration-actions.ts#saveResponsibilityAction",
+   "method": "saveResponsibilityAction",
+   "reads": [
+    "arguments"
+   ],
+   "status": "validated"
+  },
+  {
+   "kind": "action",
+   "file": "apps/web/app/(auth)/configuration-actions.ts",
+   "id": "apps/web/app/(auth)/configuration-actions.ts#setGroupAutonomyAction",
+   "method": "setGroupAutonomyAction",
+   "reads": [
+    "arguments"
+   ],
+   "status": "validated"
+  },
+  {
+   "kind": "action",
+   "file": "apps/web/app/(auth)/configuration-actions.ts",
+   "id": "apps/web/app/(auth)/configuration-actions.ts#setPlaybookActiveAction",
+   "method": "setPlaybookActiveAction",
+   "reads": [
+    "arguments"
+   ],
+   "status": "validated"
+  },
+  {
+   "kind": "action",
+   "file": "apps/web/app/(auth)/connection-actions.ts",
+   "id": "apps/web/app/(auth)/connection-actions.ts#addConnectionScrapeUrlAction",
+   "method": "addConnectionScrapeUrlAction",
+   "reads": [
+    "arguments"
+   ],
+   "status": "validated"
+  },
+  {
+   "kind": "action",
+   "file": "apps/web/app/(auth)/connection-actions.ts",
+   "id": "apps/web/app/(auth)/connection-actions.ts#connectionFetchStatusAction",
+   "method": "connectionFetchStatusAction",
+   "reads": [
+    "arguments"
+   ],
+   "status": "validated"
+  },
+  {
+   "kind": "action",
+   "file": "apps/web/app/(auth)/connection-actions.ts",
+   "id": "apps/web/app/(auth)/connection-actions.ts#createConnectionAction",
+   "method": "createConnectionAction",
+   "reads": [
+    "arguments"
+   ],
+   "status": "validated"
+  },
+  {
+   "kind": "action",
+   "file": "apps/web/app/(auth)/connection-actions.ts",
+   "id": "apps/web/app/(auth)/connection-actions.ts#deleteConnectionAction",
+   "method": "deleteConnectionAction",
+   "reads": [
+    "arguments"
+   ],
+   "status": "validated"
+  },
+  {
+   "kind": "action",
+   "file": "apps/web/app/(auth)/connection-actions.ts",
+   "id": "apps/web/app/(auth)/connection-actions.ts#removeConnectionScrapeUrlAction",
+   "method": "removeConnectionScrapeUrlAction",
+   "reads": [
+    "arguments"
+   ],
+   "status": "validated"
+  },
+  {
+   "kind": "action",
+   "file": "apps/web/app/(auth)/connection-actions.ts",
+   "id": "apps/web/app/(auth)/connection-actions.ts#setConnectionScrapeUrlEnabledAction",
+   "method": "setConnectionScrapeUrlEnabledAction",
+   "reads": [
+    "arguments"
+   ],
+   "status": "validated"
+  },
+  {
+   "kind": "action",
+   "file": "apps/web/app/(auth)/connection-actions.ts",
+   "id": "apps/web/app/(auth)/connection-actions.ts#testConnectionAction",
+   "method": "testConnectionAction",
+   "reads": [
+    "arguments"
+   ],
+   "status": "validated"
+  },
+  {
+   "kind": "action",
+   "file": "apps/web/app/(auth)/connection-actions.ts",
+   "id": "apps/web/app/(auth)/connection-actions.ts#testRestRequestAction",
+   "method": "testRestRequestAction",
+   "reads": [
+    "arguments"
+   ],
+   "status": "validated"
+  },
+  {
+   "kind": "action",
+   "file": "apps/web/app/(auth)/connection-actions.ts",
+   "id": "apps/web/app/(auth)/connection-actions.ts#updateConnectionAction",
+   "method": "updateConnectionAction",
+   "reads": [
+    "arguments"
+   ],
+   "status": "validated"
+  },
+  {
+   "kind": "action",
+   "file": "apps/web/app/(auth)/consent-actions.ts",
+   "id": "apps/web/app/(auth)/consent-actions.ts#saveAutoAddPercentAction",
+   "method": "saveAutoAddPercentAction",
+   "reads": [
+    "arguments"
+   ],
+   "status": "validated"
+  },
+  {
+   "kind": "action",
+   "file": "apps/web/app/(auth)/consent-actions.ts",
+   "id": "apps/web/app/(auth)/consent-actions.ts#saveConfirmRequestedAction",
+   "method": "saveConfirmRequestedAction",
+   "reads": [
+    "arguments"
+   ],
+   "status": "validated"
+  },
+  {
+   "kind": "action",
+   "file": "apps/web/app/(auth)/consent-actions.ts",
+   "id": "apps/web/app/(auth)/consent-actions.ts#saveDirectAddAction",
+   "method": "saveDirectAddAction",
+   "reads": [
+    "arguments"
+   ],
+   "status": "validated"
+  },
+  {
+   "kind": "action",
+   "file": "apps/web/app/(auth)/consent-actions.ts",
+   "id": "apps/web/app/(auth)/consent-actions.ts#saveRetentionWindowAction",
+   "method": "saveRetentionWindowAction",
+   "reads": [
+    "arguments"
+   ],
+   "status": "validated"
+  },
+  {
+   "kind": "action",
+   "file": "apps/web/app/(auth)/developer-actions.ts",
+   "id": "apps/web/app/(auth)/developer-actions.ts#createDeveloperKeyAction",
+   "method": "createDeveloperKeyAction",
+   "reads": [
+    "arguments"
+   ],
+   "status": "validated"
+  },
+  {
+   "kind": "action",
+   "file": "apps/web/app/(auth)/developer-actions.ts",
+   "id": "apps/web/app/(auth)/developer-actions.ts#revokeDeveloperKeyAction",
+   "method": "revokeDeveloperKeyAction",
+   "reads": [
+    "arguments"
+   ],
+   "status": "validated"
+  },
+  {
+   "kind": "action",
+   "file": "apps/web/app/(auth)/device-actions.ts",
+   "id": "apps/web/app/(auth)/device-actions.ts#ignoreDeviceAction",
+   "method": "ignoreDeviceAction",
+   "reads": [
+    "arguments"
+   ],
+   "status": "validated"
+  },
+  {
+   "kind": "action",
+   "file": "apps/web/app/(auth)/device-actions.ts",
+   "id": "apps/web/app/(auth)/device-actions.ts#linkDeviceAction",
+   "method": "linkDeviceAction",
+   "reads": [
+    "arguments"
+   ],
+   "status": "validated"
+  },
+  {
+   "kind": "action",
+   "file": "apps/web/app/(auth)/dish-idea-actions.ts",
+   "id": "apps/web/app/(auth)/dish-idea-actions.ts#applyDishIdeaAction",
+   "method": "applyDishIdeaAction",
+   "reads": [
+    "arguments"
+   ],
+   "status": "validated"
+  },
+  {
+   "kind": "action",
+   "file": "apps/web/app/(auth)/dish-idea-actions.ts",
+   "id": "apps/web/app/(auth)/dish-idea-actions.ts#suggestDishIdeasAction",
+   "method": "suggestDishIdeasAction",
+   "reads": [
+    "arguments"
+   ],
+   "status": "validated"
+  },
+  {
+   "kind": "action",
+   "file": "apps/web/app/(auth)/event-actions.ts",
+   "id": "apps/web/app/(auth)/event-actions.ts#answerEventAction",
+   "method": "answerEventAction",
+   "reads": [
+    "arguments"
+   ],
+   "status": "validated"
+  },
+  {
+   "kind": "action",
+   "file": "apps/web/app/(auth)/event-actions.ts",
+   "id": "apps/web/app/(auth)/event-actions.ts#createInviteLinkAction",
+   "method": "createInviteLinkAction",
+   "reads": [
+    "arguments"
+   ],
+   "status": "validated"
+  },
+  {
+   "kind": "action",
+   "file": "apps/web/app/(auth)/event-actions.ts",
+   "id": "apps/web/app/(auth)/event-actions.ts#removeGuestAction",
+   "method": "removeGuestAction",
+   "reads": [
+    "arguments"
+   ],
+   "status": "validated"
+  },
+  {
+   "kind": "action",
+   "file": "apps/web/app/(auth)/event-actions.ts",
+   "id": "apps/web/app/(auth)/event-actions.ts#replyToEventAction",
+   "method": "replyToEventAction",
+   "reads": [
+    "arguments"
+   ],
+   "status": "validated"
+  },
+  {
+   "kind": "action",
+   "file": "apps/web/app/(auth)/event-actions.ts",
+   "id": "apps/web/app/(auth)/event-actions.ts#revokeInviteLinkAction",
+   "method": "revokeInviteLinkAction",
+   "reads": [
+    "arguments"
+   ],
+   "status": "validated"
+  },
+  {
+   "kind": "action",
+   "file": "apps/web/app/(auth)/event-actions.ts",
+   "id": "apps/web/app/(auth)/event-actions.ts#setEventCancelledAction",
+   "method": "setEventCancelledAction",
+   "reads": [
+    "arguments"
+   ],
+   "status": "validated"
+  },
+  {
+   "kind": "action",
+   "file": "apps/web/app/(auth)/event-actions.ts",
+   "id": "apps/web/app/(auth)/event-actions.ts#setEventInviteesAction",
+   "method": "setEventInviteesAction",
+   "reads": [
+    "arguments"
+   ],
+   "status": "validated"
+  },
+  {
+   "kind": "action",
+   "file": "apps/web/app/(auth)/event-actions.ts",
+   "id": "apps/web/app/(auth)/event-actions.ts#setInviteDesignAction",
+   "method": "setInviteDesignAction",
+   "reads": [
+    "arguments"
+   ],
+   "status": "validated"
+  },
+  {
+   "kind": "action",
+   "file": "apps/web/app/(auth)/event-actions.ts",
+   "id": "apps/web/app/(auth)/event-actions.ts#updateEventAction",
+   "method": "updateEventAction",
+   "reads": [
+    "arguments"
+   ],
+   "status": "validated"
+  },
+  {
+   "kind": "action",
+   "file": "apps/web/app/(auth)/family-actions.ts",
+   "id": "apps/web/app/(auth)/family-actions.ts#advanceGiftAction",
+   "method": "advanceGiftAction",
+   "reads": [
+    "arguments"
+   ],
+   "status": "validated"
+  },
+  {
+   "kind": "action",
+   "file": "apps/web/app/(auth)/family-actions.ts",
+   "id": "apps/web/app/(auth)/family-actions.ts#createEventAction",
+   "method": "createEventAction",
+   "reads": [
+    "arguments"
+   ],
+   "status": "validated"
+  },
+  {
+   "kind": "action",
+   "file": "apps/web/app/(auth)/family-actions.ts",
+   "id": "apps/web/app/(auth)/family-actions.ts#resolveConflictAction",
+   "method": "resolveConflictAction",
+   "reads": [
+    "arguments"
+   ],
+   "status": "validated"
+  },
+  {
+   "kind": "action",
+   "file": "apps/web/app/(auth)/family-actions.ts",
+   "id": "apps/web/app/(auth)/family-actions.ts#settleEventAction",
+   "method": "settleEventAction",
+   "reads": [
+    "arguments"
+   ],
+   "status": "validated"
+  },
+  {
+   "kind": "action",
+   "file": "apps/web/app/(auth)/finance-actions.ts",
+   "id": "apps/web/app/(auth)/finance-actions.ts#cancelObligationAction",
+   "method": "cancelObligationAction",
+   "reads": [
+    "arguments"
+   ],
+   "status": "validated"
+  },
+  {
+   "kind": "action",
+   "file": "apps/web/app/(auth)/finance-actions.ts",
+   "id": "apps/web/app/(auth)/finance-actions.ts#createObligationAction",
+   "method": "createObligationAction",
+   "reads": [
+    "arguments"
+   ],
+   "status": "validated"
+  },
+  {
+   "kind": "action",
+   "file": "apps/web/app/(auth)/finance-actions.ts",
+   "id": "apps/web/app/(auth)/finance-actions.ts#fillBillPeriodAction",
+   "method": "fillBillPeriodAction",
+   "reads": [
+    "arguments"
+   ],
+   "status": "validated"
+  },
+  {
+   "kind": "action",
+   "file": "apps/web/app/(auth)/finance-actions.ts",
+   "id": "apps/web/app/(auth)/finance-actions.ts#recordAmountAction",
+   "method": "recordAmountAction",
+   "reads": [
+    "arguments"
+   ],
+   "status": "validated"
+  },
+  {
+   "kind": "action",
+   "file": "apps/web/app/(auth)/finance-actions.ts",
+   "id": "apps/web/app/(auth)/finance-actions.ts#removeTransactionAction",
+   "method": "removeTransactionAction",
+   "reads": [
+    "arguments"
+   ],
+   "status": "validated"
+  },
+  {
+   "kind": "action",
+   "file": "apps/web/app/(auth)/finance-actions.ts",
+   "id": "apps/web/app/(auth)/finance-actions.ts#retireBudgetAction",
+   "method": "retireBudgetAction",
+   "reads": [
+    "arguments"
+   ],
+   "status": "validated"
+  },
+  {
+   "kind": "action",
+   "file": "apps/web/app/(auth)/finance-actions.ts",
+   "id": "apps/web/app/(auth)/finance-actions.ts#saveBudgetAction",
+   "method": "saveBudgetAction",
+   "reads": [
+    "arguments"
+   ],
+   "status": "validated"
+  },
+  {
+   "kind": "action",
+   "file": "apps/web/app/(auth)/finance-actions.ts",
+   "id": "apps/web/app/(auth)/finance-actions.ts#updateObligationAction",
+   "method": "updateObligationAction",
+   "reads": [
+    "arguments"
+   ],
+   "status": "validated"
+  },
+  {
+   "kind": "action",
+   "file": "apps/web/app/(auth)/goal-actions.ts",
+   "id": "apps/web/app/(auth)/goal-actions.ts#answerCheckInAction",
+   "method": "answerCheckInAction",
+   "reads": [
+    "arguments"
+   ],
+   "status": "validated"
+  },
+  {
+   "kind": "action",
+   "file": "apps/web/app/(auth)/goal-actions.ts",
+   "id": "apps/web/app/(auth)/goal-actions.ts#checkInGoalAction",
+   "method": "checkInGoalAction",
+   "reads": [
+    "arguments"
+   ],
+   "status": "validated"
+  },
+  {
+   "kind": "action",
+   "file": "apps/web/app/(auth)/goal-actions.ts",
+   "id": "apps/web/app/(auth)/goal-actions.ts#heardSayingAction",
+   "method": "heardSayingAction",
+   "reads": [
+    "arguments"
+   ],
+   "status": "validated"
+  },
+  {
+   "kind": "action",
+   "file": "apps/web/app/(auth)/goal-actions.ts",
+   "id": "apps/web/app/(auth)/goal-actions.ts#markSchoolWorkAction",
+   "method": "markSchoolWorkAction",
+   "reads": [
+    "arguments"
+   ],
+   "status": "validated"
+  },
+  {
+   "kind": "action",
+   "file": "apps/web/app/(auth)/goal-actions.ts",
+   "id": "apps/web/app/(auth)/goal-actions.ts#nameCompanionAction",
+   "method": "nameCompanionAction",
+   "reads": [
+    "arguments"
+   ],
+   "status": "validated"
+  },
+  {
+   "kind": "action",
+   "file": "apps/web/app/(auth)/goal-actions.ts",
+   "id": "apps/web/app/(auth)/goal-actions.ts#retireGoalAction",
+   "method": "retireGoalAction",
+   "reads": [
+    "arguments"
+   ],
+   "status": "validated"
+  },
+  {
+   "kind": "action",
+   "file": "apps/web/app/(auth)/goal-actions.ts",
+   "id": "apps/web/app/(auth)/goal-actions.ts#saveGoalAction",
+   "method": "saveGoalAction",
+   "reads": [
+    "arguments"
+   ],
+   "status": "validated"
+  },
+  {
+   "kind": "action",
+   "file": "apps/web/app/(auth)/grocery-actions.ts",
+   "id": "apps/web/app/(auth)/grocery-actions.ts#addFromCatalogAction",
+   "method": "addFromCatalogAction",
+   "reads": [
+    "arguments"
+   ],
+   "status": "validated"
+  },
+  {
+   "kind": "action",
+   "file": "apps/web/app/(auth)/grocery-actions.ts",
+   "id": "apps/web/app/(auth)/grocery-actions.ts#addGroceryItemAction",
+   "method": "addGroceryItemAction",
+   "reads": [
+    "arguments"
+   ],
+   "status": "validated"
+  },
+  {
+   "kind": "action",
+   "file": "apps/web/app/(auth)/grocery-actions.ts",
+   "id": "apps/web/app/(auth)/grocery-actions.ts#adjustListAction",
+   "method": "adjustListAction",
+   "reads": [
+    "arguments"
+   ],
+   "status": "validated"
+  },
+  {
+   "kind": "action",
+   "file": "apps/web/app/(auth)/grocery-actions.ts",
+   "id": "apps/web/app/(auth)/grocery-actions.ts#changeStockAction",
+   "method": "changeStockAction",
+   "reads": [
+    "arguments"
+   ],
+   "status": "validated"
+  },
+  {
+   "kind": "action",
+   "file": "apps/web/app/(auth)/grocery-actions.ts",
+   "id": "apps/web/app/(auth)/grocery-actions.ts#changeUnitAction",
+   "method": "changeUnitAction",
+   "reads": [
+    "arguments"
+   ],
+   "status": "validated"
+  },
+  {
+   "kind": "action",
+   "file": "apps/web/app/(auth)/grocery-actions.ts",
+   "id": "apps/web/app/(auth)/grocery-actions.ts#groceryPhotoAction",
+   "method": "groceryPhotoAction",
+   "reads": [
+    "arguments"
+   ],
+   "status": "validated"
+  },
+  {
+   "kind": "action",
+   "file": "apps/web/app/(auth)/grocery-actions.ts",
+   "id": "apps/web/app/(auth)/grocery-actions.ts#markBoughtAction",
+   "method": "markBoughtAction",
+   "reads": [
+    "arguments"
+   ],
+   "status": "validated"
+  },
+  {
+   "kind": "action",
+   "file": "apps/web/app/(auth)/grocery-actions.ts",
+   "id": "apps/web/app/(auth)/grocery-actions.ts#restoreGroceryAction",
+   "method": "restoreGroceryAction",
+   "reads": [
+    "arguments"
+   ],
+   "status": "validated"
+  },
+  {
+   "kind": "action",
+   "file": "apps/web/app/(auth)/grocery-actions.ts",
+   "id": "apps/web/app/(auth)/grocery-actions.ts#retireGroceryItemAction",
+   "method": "retireGroceryItemAction",
+   "reads": [
+    "arguments"
+   ],
+   "status": "validated"
+  },
+  {
+   "kind": "action",
+   "file": "apps/web/app/(auth)/grocery-actions.ts",
+   "id": "apps/web/app/(auth)/grocery-actions.ts#searchCatalogAction",
+   "method": "searchCatalogAction",
+   "reads": [
+    "arguments"
+   ],
+   "status": "validated"
+  },
+  {
+   "kind": "action",
+   "file": "apps/web/app/(auth)/grocery-actions.ts",
+   "id": "apps/web/app/(auth)/grocery-actions.ts#setUseByAction",
+   "method": "setUseByAction",
+   "reads": [
+    "arguments"
+   ],
+   "status": "validated"
+  },
+  {
+   "kind": "action",
+   "file": "apps/web/app/(auth)/grocery-actions.ts",
+   "id": "apps/web/app/(auth)/grocery-actions.ts#stopTrackingGroceryAction",
+   "method": "stopTrackingGroceryAction",
+   "reads": [
+    "arguments"
+   ],
+   "status": "validated"
+  },
+  {
+   "kind": "action",
+   "file": "apps/web/app/(auth)/grocery-actions.ts",
+   "id": "apps/web/app/(auth)/grocery-actions.ts#updateGroceryItemAction",
+   "method": "updateGroceryItemAction",
+   "reads": [
+    "arguments"
+   ],
+   "status": "validated"
+  },
+  {
+   "kind": "action",
+   "file": "apps/web/app/(auth)/health-actions.ts",
+   "id": "apps/web/app/(auth)/health-actions.ts#grantHealthConsentAction",
+   "method": "grantHealthConsentAction",
+   "reads": [
+    "arguments"
+   ],
+   "status": "validated"
+  },
+  {
+   "kind": "action",
+   "file": "apps/web/app/(auth)/health-actions.ts",
+   "id": "apps/web/app/(auth)/health-actions.ts#revokeHealthConsentAction",
+   "method": "revokeHealthConsentAction",
+   "reads": [
+    "arguments"
+   ],
+   "status": "validated"
+  },
+  {
+   "kind": "action",
+   "file": "apps/web/app/(auth)/health-actions.ts",
+   "id": "apps/web/app/(auth)/health-actions.ts#setHealthAiAssistanceAction",
+   "method": "setHealthAiAssistanceAction",
+   "reads": [
+    "arguments"
+   ],
+   "status": "validated"
+  },
+  {
+   "kind": "action",
+   "file": "apps/web/app/(auth)/health-actions.ts",
+   "id": "apps/web/app/(auth)/health-actions.ts#setHealthPrivacyScopeAction",
+   "method": "setHealthPrivacyScopeAction",
+   "reads": [
+    "arguments"
+   ],
+   "status": "validated"
+  },
+  {
+   "kind": "action",
+   "file": "apps/web/app/(auth)/health-appointment-actions.ts",
+   "id": "apps/web/app/(auth)/health-appointment-actions.ts#createAppointmentAction",
+   "method": "createAppointmentAction",
+   "reads": [
+    "arguments"
+   ],
+   "status": "validated"
+  },
+  {
+   "kind": "action",
+   "file": "apps/web/app/(auth)/health-appointment-actions.ts",
+   "id": "apps/web/app/(auth)/health-appointment-actions.ts#rescheduleAppointmentAction",
+   "method": "rescheduleAppointmentAction",
+   "reads": [
+    "arguments"
+   ],
+   "status": "validated"
+  },
+  {
+   "kind": "action",
+   "file": "apps/web/app/(auth)/health-appointment-actions.ts",
+   "id": "apps/web/app/(auth)/health-appointment-actions.ts#setAppointmentStatusAction",
+   "method": "setAppointmentStatusAction",
+   "reads": [
+    "arguments"
+   ],
+   "status": "validated"
+  },
+  {
+   "kind": "action",
+   "file": "apps/web/app/(auth)/health-checkup-actions.ts",
+   "id": "apps/web/app/(auth)/health-checkup-actions.ts#completeCheckupAction",
+   "method": "completeCheckupAction",
+   "reads": [
+    "arguments"
+   ],
+   "status": "validated"
+  },
+  {
+   "kind": "action",
+   "file": "apps/web/app/(auth)/health-checkup-actions.ts",
+   "id": "apps/web/app/(auth)/health-checkup-actions.ts#createCheckupAction",
+   "method": "createCheckupAction",
+   "reads": [
+    "arguments"
+   ],
+   "status": "validated"
+  },
+  {
+   "kind": "action",
+   "file": "apps/web/app/(auth)/health-checkup-actions.ts",
+   "id": "apps/web/app/(auth)/health-checkup-actions.ts#dismissCheckupAction",
+   "method": "dismissCheckupAction",
+   "reads": [
+    "arguments"
+   ],
+   "status": "validated"
+  },
+  {
+   "kind": "action",
+   "file": "apps/web/app/(auth)/health-checkup-actions.ts",
+   "id": "apps/web/app/(auth)/health-checkup-actions.ts#reactivateCheckupAction",
+   "method": "reactivateCheckupAction",
+   "reads": [
+    "arguments"
+   ],
+   "status": "validated"
+  },
+  {
+   "kind": "action",
+   "file": "apps/web/app/(auth)/health-checkup-actions.ts",
+   "id": "apps/web/app/(auth)/health-checkup-actions.ts#updateCheckupAction",
+   "method": "updateCheckupAction",
+   "reads": [
+    "arguments"
+   ],
+   "status": "validated"
+  },
+  {
+   "kind": "action",
+   "file": "apps/web/app/(auth)/health-fitness-actions.ts",
+   "id": "apps/web/app/(auth)/health-fitness-actions.ts#archiveFitnessSessionAction",
+   "method": "archiveFitnessSessionAction",
+   "reads": [
+    "arguments"
+   ],
+   "status": "validated"
+  },
+  {
+   "kind": "action",
+   "file": "apps/web/app/(auth)/health-fitness-actions.ts",
+   "id": "apps/web/app/(auth)/health-fitness-actions.ts#createFitnessGoalAction",
+   "method": "createFitnessGoalAction",
+   "reads": [
+    "arguments"
+   ],
+   "status": "validated"
+  },
+  {
+   "kind": "action",
+   "file": "apps/web/app/(auth)/health-fitness-actions.ts",
+   "id": "apps/web/app/(auth)/health-fitness-actions.ts#createFitnessSessionAction",
+   "method": "createFitnessSessionAction",
+   "reads": [
+    "arguments"
+   ],
+   "status": "validated"
+  },
+  {
+   "kind": "action",
+   "file": "apps/web/app/(auth)/health-fitness-actions.ts",
+   "id": "apps/web/app/(auth)/health-fitness-actions.ts#dismissFitnessGoalAction",
+   "method": "dismissFitnessGoalAction",
+   "reads": [
+    "arguments"
+   ],
+   "status": "validated"
+  },
+  {
+   "kind": "action",
+   "file": "apps/web/app/(auth)/health-fitness-actions.ts",
+   "id": "apps/web/app/(auth)/health-fitness-actions.ts#reactivateFitnessGoalAction",
+   "method": "reactivateFitnessGoalAction",
+   "reads": [
+    "arguments"
+   ],
+   "status": "validated"
+  },
+  {
+   "kind": "action",
+   "file": "apps/web/app/(auth)/health-fitness-actions.ts",
+   "id": "apps/web/app/(auth)/health-fitness-actions.ts#reactivateFitnessSessionAction",
+   "method": "reactivateFitnessSessionAction",
+   "reads": [
+    "arguments"
+   ],
+   "status": "validated"
+  },
+  {
+   "kind": "action",
+   "file": "apps/web/app/(auth)/health-fitness-actions.ts",
+   "id": "apps/web/app/(auth)/health-fitness-actions.ts#updateFitnessGoalAction",
+   "method": "updateFitnessGoalAction",
+   "reads": [
+    "arguments"
+   ],
+   "status": "validated"
+  },
+  {
+   "kind": "action",
+   "file": "apps/web/app/(auth)/health-fitness-actions.ts",
+   "id": "apps/web/app/(auth)/health-fitness-actions.ts#updateFitnessSessionAction",
+   "method": "updateFitnessSessionAction",
+   "reads": [
+    "arguments"
+   ],
+   "status": "validated"
+  },
+  {
+   "kind": "action",
+   "file": "apps/web/app/(auth)/health-issue-actions.ts",
+   "id": "apps/web/app/(auth)/health-issue-actions.ts#createIssueAction",
+   "method": "createIssueAction",
+   "reads": [
+    "arguments"
+   ],
+   "status": "validated"
+  },
+  {
+   "kind": "action",
+   "file": "apps/web/app/(auth)/health-issue-actions.ts",
+   "id": "apps/web/app/(auth)/health-issue-actions.ts#setIssueStatusAction",
+   "method": "setIssueStatusAction",
+   "reads": [
+    "arguments"
+   ],
+   "status": "validated"
+  },
+  {
+   "kind": "action",
+   "file": "apps/web/app/(auth)/health-issue-actions.ts",
+   "id": "apps/web/app/(auth)/health-issue-actions.ts#updateIssueAction",
+   "method": "updateIssueAction",
+   "reads": [
+    "arguments"
+   ],
+   "status": "validated"
+  },
+  {
+   "kind": "action",
+   "file": "apps/web/app/(auth)/health-measurement-routine-actions.ts",
+   "id": "apps/web/app/(auth)/health-measurement-routine-actions.ts#completeRoutineAction",
+   "method": "completeRoutineAction",
+   "reads": [
+    "arguments"
+   ],
+   "status": "validated"
+  },
+  {
+   "kind": "action",
+   "file": "apps/web/app/(auth)/health-measurement-routine-actions.ts",
+   "id": "apps/web/app/(auth)/health-measurement-routine-actions.ts#createRoutineAction",
+   "method": "createRoutineAction",
+   "reads": [
+    "arguments"
+   ],
+   "status": "validated"
+  },
+  {
+   "kind": "action",
+   "file": "apps/web/app/(auth)/health-measurement-routine-actions.ts",
+   "id": "apps/web/app/(auth)/health-measurement-routine-actions.ts#dismissRoutineAction",
+   "method": "dismissRoutineAction",
+   "reads": [
+    "arguments"
+   ],
+   "status": "validated"
+  },
+  {
+   "kind": "action",
+   "file": "apps/web/app/(auth)/health-measurement-routine-actions.ts",
+   "id": "apps/web/app/(auth)/health-measurement-routine-actions.ts#reactivateRoutineAction",
+   "method": "reactivateRoutineAction",
+   "reads": [
+    "arguments"
+   ],
+   "status": "validated"
+  },
+  {
+   "kind": "action",
+   "file": "apps/web/app/(auth)/health-measurement-routine-actions.ts",
+   "id": "apps/web/app/(auth)/health-measurement-routine-actions.ts#updateRoutineAction",
+   "method": "updateRoutineAction",
+   "reads": [
+    "arguments"
+   ],
+   "status": "validated"
+  },
+  {
+   "kind": "action",
+   "file": "apps/web/app/(auth)/health-record-actions.ts",
+   "id": "apps/web/app/(auth)/health-record-actions.ts#archiveRecordAction",
+   "method": "archiveRecordAction",
+   "reads": [
+    "arguments"
+   ],
+   "status": "validated"
+  },
+  {
+   "kind": "action",
+   "file": "apps/web/app/(auth)/health-record-actions.ts",
+   "id": "apps/web/app/(auth)/health-record-actions.ts#createRecordAction",
+   "method": "createRecordAction",
+   "reads": [
+    "arguments"
+   ],
+   "status": "validated"
+  },
+  {
+   "kind": "action",
+   "file": "apps/web/app/(auth)/health-record-actions.ts",
+   "id": "apps/web/app/(auth)/health-record-actions.ts#reactivateRecordAction",
+   "method": "reactivateRecordAction",
+   "reads": [
+    "arguments"
+   ],
+   "status": "validated"
+  },
+  {
+   "kind": "action",
+   "file": "apps/web/app/(auth)/health-record-actions.ts",
+   "id": "apps/web/app/(auth)/health-record-actions.ts#updateRecordAction",
+   "method": "updateRecordAction",
+   "reads": [
+    "arguments"
+   ],
+   "status": "validated"
+  },
+  {
+   "kind": "action",
+   "file": "apps/web/app/(auth)/health-report-actions.ts",
+   "id": "apps/web/app/(auth)/health-report-actions.ts#readReportAction",
+   "method": "readReportAction",
+   "reads": [
+    "arguments"
+   ],
+   "status": "validated"
+  },
+  {
+   "kind": "action",
+   "file": "apps/web/app/(auth)/health-vital-actions.ts",
+   "id": "apps/web/app/(auth)/health-vital-actions.ts#archiveVitalAction",
+   "method": "archiveVitalAction",
+   "reads": [
+    "arguments"
+   ],
+   "status": "validated"
+  },
+  {
+   "kind": "action",
+   "file": "apps/web/app/(auth)/health-vital-actions.ts",
+   "id": "apps/web/app/(auth)/health-vital-actions.ts#createVitalAction",
+   "method": "createVitalAction",
+   "reads": [
+    "arguments"
+   ],
+   "status": "validated"
+  },
+  {
+   "kind": "action",
+   "file": "apps/web/app/(auth)/health-vital-actions.ts",
+   "id": "apps/web/app/(auth)/health-vital-actions.ts#reactivateVitalAction",
+   "method": "reactivateVitalAction",
+   "reads": [
+    "arguments"
+   ],
+   "status": "validated"
+  },
+  {
+   "kind": "action",
+   "file": "apps/web/app/(auth)/health-vital-actions.ts",
+   "id": "apps/web/app/(auth)/health-vital-actions.ts#updateVitalAction",
+   "method": "updateVitalAction",
+   "reads": [
+    "arguments"
+   ],
+   "status": "validated"
+  },
+  {
+   "kind": "action",
+   "file": "apps/web/app/(auth)/helper-actions.ts",
+   "id": "apps/web/app/(auth)/helper-actions.ts#createHelperEngagementAction",
+   "method": "createHelperEngagementAction",
+   "reads": [
+    "arguments"
+   ],
+   "status": "validated"
+  },
+  {
+   "kind": "action",
+   "file": "apps/web/app/(auth)/helper-actions.ts",
+   "id": "apps/web/app/(auth)/helper-actions.ts#recordLeaveAction",
+   "method": "recordLeaveAction",
+   "reads": [
+    "arguments"
+   ],
+   "status": "validated"
+  },
+  {
+   "kind": "action",
+   "file": "apps/web/app/(auth)/helper-actions.ts",
+   "id": "apps/web/app/(auth)/helper-actions.ts#removeHelperEngagementAction",
+   "method": "removeHelperEngagementAction",
+   "reads": [
+    "arguments"
+   ],
+   "status": "validated"
+  },
+  {
+   "kind": "action",
+   "file": "apps/web/app/(auth)/helper-actions.ts",
+   "id": "apps/web/app/(auth)/helper-actions.ts#setAvailabilityPatternAction",
+   "method": "setAvailabilityPatternAction",
+   "reads": [
+    "arguments"
+   ],
+   "status": "validated"
+  },
+  {
+   "kind": "action",
+   "file": "apps/web/app/(auth)/helper-actions.ts",
+   "id": "apps/web/app/(auth)/helper-actions.ts#updateHelperEngagementAction",
+   "method": "updateHelperEngagementAction",
+   "reads": [
+    "arguments"
+   ],
+   "status": "validated"
+  },
+  {
+   "kind": "action",
+   "file": "apps/web/app/(auth)/home-actions.ts",
+   "id": "apps/web/app/(auth)/home-actions.ts#createAssetAction",
+   "method": "createAssetAction",
+   "reads": [
+    "arguments"
+   ],
+   "status": "validated"
+  },
+  {
+   "kind": "action",
+   "file": "apps/web/app/(auth)/home-actions.ts",
+   "id": "apps/web/app/(auth)/home-actions.ts#createPetAction",
+   "method": "createPetAction",
+   "reads": [
+    "arguments"
+   ],
+   "status": "validated"
+  },
+  {
+   "kind": "action",
+   "file": "apps/web/app/(auth)/home-actions.ts",
+   "id": "apps/web/app/(auth)/home-actions.ts#createServiceRequestAction",
+   "method": "createServiceRequestAction",
+   "reads": [
+    "arguments"
+   ],
+   "status": "validated"
+  },
+  {
+   "kind": "action",
+   "file": "apps/web/app/(auth)/home-actions.ts",
+   "id": "apps/web/app/(auth)/home-actions.ts#markAssetServicedAction",
+   "method": "markAssetServicedAction",
+   "reads": [
+    "arguments"
+   ],
+   "status": "validated"
+  },
+  {
+   "kind": "action",
+   "file": "apps/web/app/(auth)/home-actions.ts",
+   "id": "apps/web/app/(auth)/home-actions.ts#reactivatePetAction",
+   "method": "reactivatePetAction",
+   "reads": [
+    "arguments"
+   ],
+   "status": "validated"
+  },
+  {
+   "kind": "action",
+   "file": "apps/web/app/(auth)/home-actions.ts",
+   "id": "apps/web/app/(auth)/home-actions.ts#removePetPhotoAction",
+   "method": "removePetPhotoAction",
+   "reads": [
+    "arguments"
+   ],
+   "status": "validated"
+  },
+  {
+   "kind": "action",
+   "file": "apps/web/app/(auth)/home-actions.ts",
+   "id": "apps/web/app/(auth)/home-actions.ts#removePetPreferenceAction",
+   "method": "removePetPreferenceAction",
+   "reads": [
+    "arguments"
+   ],
+   "status": "validated"
+  },
+  {
+   "kind": "action",
+   "file": "apps/web/app/(auth)/home-actions.ts",
+   "id": "apps/web/app/(auth)/home-actions.ts#retirePetAction",
+   "method": "retirePetAction",
+   "reads": [
+    "arguments"
+   ],
+   "status": "validated"
+  },
+  {
+   "kind": "action",
+   "file": "apps/web/app/(auth)/home-actions.ts",
+   "id": "apps/web/app/(auth)/home-actions.ts#savePetPreferenceAction",
+   "method": "savePetPreferenceAction",
+   "reads": [
+    "arguments"
+   ],
+   "status": "validated"
+  },
+  {
+   "kind": "action",
+   "file": "apps/web/app/(auth)/home-actions.ts",
+   "id": "apps/web/app/(auth)/home-actions.ts#setAssetStatusAction",
+   "method": "setAssetStatusAction",
+   "reads": [
+    "arguments"
+   ],
+   "status": "validated"
+  },
+  {
+   "kind": "action",
+   "file": "apps/web/app/(auth)/home-actions.ts",
+   "id": "apps/web/app/(auth)/home-actions.ts#updateAssetAction",
+   "method": "updateAssetAction",
+   "reads": [
+    "arguments"
+   ],
+   "status": "validated"
+  },
+  {
+   "kind": "action",
+   "file": "apps/web/app/(auth)/home-actions.ts",
+   "id": "apps/web/app/(auth)/home-actions.ts#updatePetAction",
+   "method": "updatePetAction",
+   "reads": [
+    "arguments"
+   ],
+   "status": "validated"
+  },
+  {
+   "kind": "action",
+   "file": "apps/web/app/(auth)/home-actions.ts",
+   "id": "apps/web/app/(auth)/home-actions.ts#updatePetPhotoAction",
+   "method": "updatePetPhotoAction",
+   "reads": [
+    "arguments"
+   ],
+   "status": "validated"
+  },
+  {
+   "kind": "action",
+   "file": "apps/web/app/(auth)/home-actions.ts",
+   "id": "apps/web/app/(auth)/home-actions.ts#updateServiceRequestAction",
+   "method": "updateServiceRequestAction",
+   "reads": [
+    "arguments"
+   ],
+   "status": "validated"
+  },
+  {
+   "kind": "action",
+   "file": "apps/web/app/(auth)/home-send-actions.ts",
+   "id": "apps/web/app/(auth)/home-send-actions.ts#confirmTranscriptAction",
+   "method": "confirmTranscriptAction",
+   "reads": [
+    "arguments"
+   ],
+   "status": "validated"
+  },
+  {
+   "kind": "action",
+   "file": "apps/web/app/(auth)/home-send-actions.ts",
+   "id": "apps/web/app/(auth)/home-send-actions.ts#dismissHomeSendItemAction",
+   "method": "dismissHomeSendItemAction",
+   "reads": [
+    "arguments"
+   ],
+   "status": "validated"
+  },
+  {
+   "kind": "action",
+   "file": "apps/web/app/(auth)/home-send-actions.ts",
+   "id": "apps/web/app/(auth)/home-send-actions.ts#pasteHomeSendItemAction",
+   "method": "pasteHomeSendItemAction",
+   "reads": [
+    "arguments"
+   ],
+   "status": "validated"
+  },
+  {
+   "kind": "action",
+   "file": "apps/web/app/(auth)/home-send-actions.ts",
+   "id": "apps/web/app/(auth)/home-send-actions.ts#receiptContextAction",
+   "method": "receiptContextAction",
+   "reads": [
+    "arguments"
+   ],
+   "status": "validated"
+  },
+  {
+   "kind": "action",
+   "file": "apps/web/app/(auth)/home-send-actions.ts",
+   "id": "apps/web/app/(auth)/home-send-actions.ts#routeHomeSendItemAction",
+   "method": "routeHomeSendItemAction",
+   "reads": [
+    "arguments"
+   ],
+   "status": "validated"
+  },
+  {
+   "kind": "action",
+   "file": "apps/web/app/(auth)/home-send-actions.ts",
+   "id": "apps/web/app/(auth)/home-send-actions.ts#undoHomeSendChangeAction",
+   "method": "undoHomeSendChangeAction",
+   "reads": [
+    "arguments"
+   ],
+   "status": "validated"
+  },
+  {
+   "kind": "action",
+   "file": "apps/web/app/(auth)/home-send-actions.ts",
+   "id": "apps/web/app/(auth)/home-send-actions.ts#undoHomeSendDocumentAction",
+   "method": "undoHomeSendDocumentAction",
+   "reads": [
+    "arguments"
+   ],
+   "status": "validated"
+  },
+  {
+   "kind": "action",
+   "file": "apps/web/app/(auth)/home-send-actions.ts",
+   "id": "apps/web/app/(auth)/home-send-actions.ts#uploadHomeSendItemAction",
+   "method": "uploadHomeSendItemAction",
+   "reads": [
+    "arguments"
+   ],
+   "status": "validated"
+  },
+  {
+   "kind": "action",
+   "file": "apps/web/app/(auth)/home-send-plan-actions.ts",
+   "id": "apps/web/app/(auth)/home-send-plan-actions.ts#applyDocumentPlanAction",
+   "method": "applyDocumentPlanAction",
+   "reads": [
+    "arguments"
+   ],
+   "status": "validated"
+  },
+  {
+   "kind": "action",
+   "file": "apps/web/app/(auth)/homebrain-sleep-actions.ts",
+   "id": "apps/web/app/(auth)/homebrain-sleep-actions.ts#undoSleepChangeAction",
+   "method": "undoSleepChangeAction",
+   "reads": [
+    "arguments"
+   ],
+   "status": "validated"
+  },
+  {
+   "kind": "action",
+   "file": "apps/web/app/(auth)/homesend-address-actions.ts",
+   "id": "apps/web/app/(auth)/homesend-address-actions.ts#createHomeSendAddressAction",
+   "method": "createHomeSendAddressAction",
+   "reads": [
+    "arguments"
+   ],
+   "status": "validated"
+  },
+  {
+   "kind": "action",
+   "file": "apps/web/app/(auth)/homesend-address-actions.ts",
+   "id": "apps/web/app/(auth)/homesend-address-actions.ts#revokeHomeSendAddressAction",
+   "method": "revokeHomeSendAddressAction",
+   "reads": [
+    "arguments"
+   ],
+   "status": "validated"
+  },
+  {
+   "kind": "action",
+   "file": "apps/web/app/(auth)/homesend-address-actions.ts",
+   "id": "apps/web/app/(auth)/homesend-address-actions.ts#rotateHomeSendAddressAction",
+   "method": "rotateHomeSendAddressAction",
+   "reads": [
+    "arguments"
+   ],
+   "status": "validated"
+  },
+  {
+   "kind": "action",
+   "file": "apps/web/app/(auth)/homesend-allowlist-actions.ts",
+   "id": "apps/web/app/(auth)/homesend-allowlist-actions.ts#addAllowlistSenderAction",
+   "method": "addAllowlistSenderAction",
+   "reads": [
+    "arguments"
+   ],
+   "status": "validated"
+  },
+  {
+   "kind": "action",
+   "file": "apps/web/app/(auth)/homesend-allowlist-actions.ts",
+   "id": "apps/web/app/(auth)/homesend-allowlist-actions.ts#removeAllowlistSenderAction",
+   "method": "removeAllowlistSenderAction",
+   "reads": [
+    "arguments"
+   ],
+   "status": "validated"
+  },
+  {
+   "kind": "action",
+   "file": "apps/web/app/(auth)/household-actions.ts",
+   "id": "apps/web/app/(auth)/household-actions.ts#acceptInvitationAction",
+   "method": "acceptInvitationAction",
+   "reads": [
+    "arguments"
+   ],
+   "status": "validated"
+  },
+  {
+   "kind": "action",
+   "file": "apps/web/app/(auth)/household-actions.ts",
+   "id": "apps/web/app/(auth)/household-actions.ts#addChildAction",
+   "method": "addChildAction",
+   "reads": [
+    "arguments"
+   ],
+   "status": "validated"
+  },
+  {
+   "kind": "action",
+   "file": "apps/web/app/(auth)/household-actions.ts",
+   "id": "apps/web/app/(auth)/household-actions.ts#addHelperAction",
+   "method": "addHelperAction",
+   "reads": [
+    "arguments"
+   ],
+   "status": "validated"
+  },
+  {
+   "kind": "action",
+   "file": "apps/web/app/(auth)/household-actions.ts",
+   "id": "apps/web/app/(auth)/household-actions.ts#emailMemberInviteAction",
+   "method": "emailMemberInviteAction",
+   "reads": [
+    "arguments"
+   ],
+   "status": "validated"
+  },
+  {
+   "kind": "action",
+   "file": "apps/web/app/(auth)/household-actions.ts",
+   "id": "apps/web/app/(auth)/household-actions.ts#inviteMemberAction",
+   "method": "inviteMemberAction",
+   "reads": [
+    "arguments"
+   ],
+   "status": "validated"
+  },
+  {
+   "kind": "action",
+   "file": "apps/web/app/(auth)/household-actions.ts",
+   "id": "apps/web/app/(auth)/household-actions.ts#inviteMemberToSignInAction",
+   "method": "inviteMemberToSignInAction",
+   "reads": [
+    "arguments"
+   ],
+   "status": "validated"
+  },
+  {
+   "kind": "action",
+   "file": "apps/web/app/(auth)/household-actions.ts",
+   "id": "apps/web/app/(auth)/household-actions.ts#removeMemberAction",
+   "method": "removeMemberAction",
+   "reads": [
+    "arguments"
+   ],
+   "status": "validated"
+  },
+  {
+   "kind": "action",
+   "file": "apps/web/app/(auth)/household-actions.ts",
+   "id": "apps/web/app/(auth)/household-actions.ts#removeMemberAvatarAction",
+   "method": "removeMemberAvatarAction",
+   "reads": [
+    "arguments"
+   ],
+   "status": "validated"
+  },
+  {
+   "kind": "action",
+   "file": "apps/web/app/(auth)/household-actions.ts",
+   "id": "apps/web/app/(auth)/household-actions.ts#revokeInvitationAction",
+   "method": "revokeInvitationAction",
+   "reads": [
+    "arguments"
+   ],
+   "status": "validated"
+  },
+  {
+   "kind": "action",
+   "file": "apps/web/app/(auth)/household-actions.ts",
+   "id": "apps/web/app/(auth)/household-actions.ts#setMemberRoleAction",
+   "method": "setMemberRoleAction",
+   "reads": [
+    "arguments"
+   ],
+   "status": "validated"
+  },
+  {
+   "kind": "action",
+   "file": "apps/web/app/(auth)/household-actions.ts",
+   "id": "apps/web/app/(auth)/household-actions.ts#updateMemberAvatarAction",
+   "method": "updateMemberAvatarAction",
+   "reads": [
+    "arguments"
+   ],
+   "status": "validated"
+  },
+  {
+   "kind": "action",
+   "file": "apps/web/app/(auth)/household-actions.ts",
+   "id": "apps/web/app/(auth)/household-actions.ts#updateMemberProfileAction",
+   "method": "updateMemberProfileAction",
+   "reads": [
+    "arguments"
+   ],
+   "status": "validated"
+  },
+  {
+   "kind": "action",
+   "file": "apps/web/app/(auth)/locale-actions.ts",
+   "id": "apps/web/app/(auth)/locale-actions.ts#dismissLocalePromptAction",
+   "method": "dismissLocalePromptAction",
+   "reads": [],
+   "status": "no-input"
+  },
+  {
+   "kind": "action",
+   "file": "apps/web/app/(auth)/locale-actions.ts",
+   "id": "apps/web/app/(auth)/locale-actions.ts#localeSetupAction",
+   "method": "localeSetupAction",
+   "reads": [
+    "arguments"
+   ],
+   "status": "not-validated"
+  },
+  {
+   "kind": "action",
+   "file": "apps/web/app/(auth)/locale-actions.ts",
+   "id": "apps/web/app/(auth)/locale-actions.ts#saveDateTimeAction",
+   "method": "saveDateTimeAction",
+   "reads": [
+    "arguments"
+   ],
+   "status": "not-validated"
+  },
+  {
+   "kind": "action",
+   "file": "apps/web/app/(auth)/locale-actions.ts",
+   "id": "apps/web/app/(auth)/locale-actions.ts#saveHouseholdLocaleAction",
+   "method": "saveHouseholdLocaleAction",
+   "reads": [
+    "arguments"
+   ],
+   "status": "not-validated"
+  },
+  {
+   "kind": "action",
+   "file": "apps/web/app/(auth)/locale-actions.ts",
+   "id": "apps/web/app/(auth)/locale-actions.ts#saveMemberLanguagesAction",
+   "method": "saveMemberLanguagesAction",
+   "reads": [
+    "arguments"
+   ],
+   "status": "not-validated"
+  },
+  {
+   "kind": "action",
+   "file": "apps/web/app/(auth)/locale-actions.ts",
+   "id": "apps/web/app/(auth)/locale-actions.ts#savePersonalLocaleAction",
+   "method": "savePersonalLocaleAction",
+   "reads": [
+    "arguments"
+   ],
+   "status": "not-validated"
+  },
+  {
+   "kind": "action",
+   "file": "apps/web/app/(auth)/location-actions.ts",
+   "id": "apps/web/app/(auth)/location-actions.ts#mySharingOnAction",
+   "method": "mySharingOnAction",
+   "reads": [],
+   "status": "no-input"
+  },
+  {
+   "kind": "action",
+   "file": "apps/web/app/(auth)/location-actions.ts",
+   "id": "apps/web/app/(auth)/location-actions.ts#reportMyLocationAction",
+   "method": "reportMyLocationAction",
+   "reads": [
+    "arguments"
+   ],
+   "status": "validated"
+  },
+  {
+   "kind": "action",
+   "file": "apps/web/app/(auth)/location-actions.ts",
+   "id": "apps/web/app/(auth)/location-actions.ts#setLocationAudienceAction",
+   "method": "setLocationAudienceAction",
+   "reads": [
+    "arguments"
+   ],
+   "status": "validated"
+  },
+  {
+   "kind": "action",
+   "file": "apps/web/app/(auth)/location-actions.ts",
+   "id": "apps/web/app/(auth)/location-actions.ts#setLocationSharingAction",
+   "method": "setLocationSharingAction",
+   "reads": [
+    "arguments"
+   ],
+   "status": "validated"
+  },
+  {
+   "kind": "action",
+   "file": "apps/web/app/(auth)/meal-actions.ts",
+   "id": "apps/web/app/(auth)/meal-actions.ts#addMealIngredientsAction",
+   "method": "addMealIngredientsAction",
+   "reads": [
+    "arguments"
+   ],
+   "status": "validated"
+  },
+  {
+   "kind": "action",
+   "file": "apps/web/app/(auth)/meal-actions.ts",
+   "id": "apps/web/app/(auth)/meal-actions.ts#addMealShortfallsAction",
+   "method": "addMealShortfallsAction",
+   "reads": [
+    "arguments"
+   ],
+   "status": "validated"
+  },
+  {
+   "kind": "action",
+   "file": "apps/web/app/(auth)/meal-actions.ts",
+   "id": "apps/web/app/(auth)/meal-actions.ts#addSuggestedMealAction",
+   "method": "addSuggestedMealAction",
+   "reads": [
+    "arguments"
+   ],
+   "status": "validated"
+  },
+  {
+   "kind": "action",
+   "file": "apps/web/app/(auth)/meal-actions.ts",
+   "id": "apps/web/app/(auth)/meal-actions.ts#attachRecipeToMealAction",
+   "method": "attachRecipeToMealAction",
+   "reads": [
+    "arguments"
+   ],
+   "status": "validated"
+  },
+  {
+   "kind": "action",
+   "file": "apps/web/app/(auth)/meal-actions.ts",
+   "id": "apps/web/app/(auth)/meal-actions.ts#catalogDishLinesAction",
+   "method": "catalogDishLinesAction",
+   "reads": [
+    "arguments"
+   ],
+   "status": "not-validated"
+  },
+  {
+   "kind": "action",
+   "file": "apps/web/app/(auth)/meal-actions.ts",
+   "id": "apps/web/app/(auth)/meal-actions.ts#copyLastWeekAction",
+   "method": "copyLastWeekAction",
+   "reads": [
+    "arguments"
+   ],
+   "status": "validated"
+  },
+  {
+   "kind": "action",
+   "file": "apps/web/app/(auth)/meal-actions.ts",
+   "id": "apps/web/app/(auth)/meal-actions.ts#createMealAction",
+   "method": "createMealAction",
+   "reads": [
+    "arguments"
+   ],
+   "status": "validated"
+  },
+  {
+   "kind": "action",
+   "file": "apps/web/app/(auth)/meal-actions.ts",
+   "id": "apps/web/app/(auth)/meal-actions.ts#createPreferenceAction",
+   "method": "createPreferenceAction",
+   "reads": [
+    "arguments"
+   ],
+   "status": "validated"
+  },
+  {
+   "kind": "action",
+   "file": "apps/web/app/(auth)/meal-actions.ts",
+   "id": "apps/web/app/(auth)/meal-actions.ts#createRecipeAction",
+   "method": "createRecipeAction",
+   "reads": [
+    "arguments"
+   ],
+   "status": "validated"
+  },
+  {
+   "kind": "action",
+   "file": "apps/web/app/(auth)/meal-actions.ts",
+   "id": "apps/web/app/(auth)/meal-actions.ts#removeMealAction",
+   "method": "removeMealAction",
+   "reads": [
+    "arguments"
+   ],
+   "status": "validated"
+  },
+  {
+   "kind": "action",
+   "file": "apps/web/app/(auth)/meal-actions.ts",
+   "id": "apps/web/app/(auth)/meal-actions.ts#retireRecipeAction",
+   "method": "retireRecipeAction",
+   "reads": [
+    "arguments"
+   ],
+   "status": "validated"
+  },
+  {
+   "kind": "action",
+   "file": "apps/web/app/(auth)/meal-actions.ts",
+   "id": "apps/web/app/(auth)/meal-actions.ts#searchIngredientChoicesAction",
+   "method": "searchIngredientChoicesAction",
+   "reads": [
+    "arguments"
+   ],
+   "status": "validated"
+  },
+  {
+   "kind": "action",
+   "file": "apps/web/app/(auth)/meal-actions.ts",
+   "id": "apps/web/app/(auth)/meal-actions.ts#setDietAction",
+   "method": "setDietAction",
+   "reads": [
+    "arguments"
+   ],
+   "status": "validated"
+  },
+  {
+   "kind": "action",
+   "file": "apps/web/app/(auth)/meal-actions.ts",
+   "id": "apps/web/app/(auth)/meal-actions.ts#suggestMealAction",
+   "method": "suggestMealAction",
+   "reads": [
+    "arguments"
+   ],
+   "status": "validated"
+  },
+  {
+   "kind": "action",
+   "file": "apps/web/app/(auth)/meal-actions.ts",
+   "id": "apps/web/app/(auth)/meal-actions.ts#updateMealAction",
+   "method": "updateMealAction",
+   "reads": [
+    "arguments"
+   ],
+   "status": "validated"
+  },
+  {
+   "kind": "action",
+   "file": "apps/web/app/(auth)/meal-actions.ts",
+   "id": "apps/web/app/(auth)/meal-actions.ts#updateRecipeAction",
+   "method": "updateRecipeAction",
+   "reads": [
+    "arguments"
+   ],
+   "status": "validated"
+  },
+  {
+   "kind": "action",
+   "file": "apps/web/app/(auth)/meal-template-actions.ts",
+   "id": "apps/web/app/(auth)/meal-template-actions.ts#addTemplateOptionAction",
+   "method": "addTemplateOptionAction",
+   "reads": [
+    "arguments"
+   ],
+   "status": "validated"
+  },
+  {
+   "kind": "action",
+   "file": "apps/web/app/(auth)/meal-template-actions.ts",
+   "id": "apps/web/app/(auth)/meal-template-actions.ts#chooseAgainAction",
+   "method": "chooseAgainAction",
+   "reads": [
+    "arguments"
+   ],
+   "status": "validated"
+  },
+  {
+   "kind": "action",
+   "file": "apps/web/app/(auth)/meal-template-actions.ts",
+   "id": "apps/web/app/(auth)/meal-template-actions.ts#planWeekFromTemplateAction",
+   "method": "planWeekFromTemplateAction",
+   "reads": [
+    "arguments"
+   ],
+   "status": "validated"
+  },
+  {
+   "kind": "action",
+   "file": "apps/web/app/(auth)/meal-template-actions.ts",
+   "id": "apps/web/app/(auth)/meal-template-actions.ts#removeTemplateOptionAction",
+   "method": "removeTemplateOptionAction",
+   "reads": [
+    "arguments"
+   ],
+   "status": "validated"
+  },
+  {
+   "kind": "action",
+   "file": "apps/web/app/(auth)/meal-template-actions.ts",
+   "id": "apps/web/app/(auth)/meal-template-actions.ts#updateTemplateOptionAction",
+   "method": "updateTemplateOptionAction",
+   "reads": [
+    "arguments"
+   ],
+   "status": "validated"
+  },
+  {
+   "kind": "action",
+   "file": "apps/web/app/(auth)/notification-actions.ts",
+   "id": "apps/web/app/(auth)/notification-actions.ts#completeReminderSourceAction",
+   "method": "completeReminderSourceAction",
+   "reads": [
+    "arguments"
+   ],
+   "status": "validated"
+  },
+  {
+   "kind": "action",
+   "file": "apps/web/app/(auth)/notification-actions.ts",
+   "id": "apps/web/app/(auth)/notification-actions.ts#dismissReminderAction",
+   "method": "dismissReminderAction",
+   "reads": [
+    "arguments"
+   ],
+   "status": "validated"
+  },
+  {
+   "kind": "action",
+   "file": "apps/web/app/(auth)/notification-actions.ts",
+   "id": "apps/web/app/(auth)/notification-actions.ts#snoozeReminderAction",
+   "method": "snoozeReminderAction",
+   "reads": [
+    "arguments"
+   ],
+   "status": "validated"
+  },
+  {
+   "kind": "action",
+   "file": "apps/web/app/(auth)/notification-preferences-actions.ts",
+   "id": "apps/web/app/(auth)/notification-preferences-actions.ts#removePushSubscriptionAction",
+   "method": "removePushSubscriptionAction",
+   "reads": [
+    "arguments"
+   ],
+   "status": "validated"
+  },
+  {
+   "kind": "action",
+   "file": "apps/web/app/(auth)/notification-preferences-actions.ts",
+   "id": "apps/web/app/(auth)/notification-preferences-actions.ts#saveChannelPreferenceAction",
+   "method": "saveChannelPreferenceAction",
+   "reads": [
+    "arguments"
+   ],
+   "status": "validated"
+  },
+  {
+   "kind": "action",
+   "file": "apps/web/app/(auth)/notification-preferences-actions.ts",
+   "id": "apps/web/app/(auth)/notification-preferences-actions.ts#savePushSubscriptionAction",
+   "method": "savePushSubscriptionAction",
+   "reads": [
+    "arguments"
+   ],
+   "status": "validated"
+  },
+  {
+   "kind": "action",
+   "file": "apps/web/app/(auth)/notification-preferences-actions.ts",
+   "id": "apps/web/app/(auth)/notification-preferences-actions.ts#saveQuietHoursAction",
+   "method": "saveQuietHoursAction",
+   "reads": [
+    "arguments"
+   ],
+   "status": "validated"
+  },
+  {
+   "kind": "action",
+   "file": "apps/web/app/(auth)/notification-preferences-actions.ts",
+   "id": "apps/web/app/(auth)/notification-preferences-actions.ts#saveReminderKindAction",
+   "method": "saveReminderKindAction",
+   "reads": [
+    "arguments"
+   ],
+   "status": "validated"
+  },
+  {
+   "kind": "action",
+   "file": "apps/web/app/(auth)/notification-preferences-actions.ts",
+   "id": "apps/web/app/(auth)/notification-preferences-actions.ts#saveSmartRemindersAction",
+   "method": "saveSmartRemindersAction",
+   "reads": [
+    "arguments"
+   ],
+   "status": "validated"
+  },
+  {
+   "kind": "action",
+   "file": "apps/web/app/(auth)/notification-preferences-actions.ts",
+   "id": "apps/web/app/(auth)/notification-preferences-actions.ts#sendTestNotificationAction",
+   "method": "sendTestNotificationAction",
+   "reads": [
+    "arguments"
+   ],
+   "status": "validated"
+  },
+  {
+   "kind": "action",
+   "file": "apps/web/app/(auth)/notification-preferences-actions.ts",
+   "id": "apps/web/app/(auth)/notification-preferences-actions.ts#sendTestPushAction",
+   "method": "sendTestPushAction",
+   "reads": [
+    "arguments"
+   ],
+   "status": "validated"
+  },
+  {
+   "kind": "action",
+   "file": "apps/web/app/(auth)/notification-preferences-actions.ts",
+   "id": "apps/web/app/(auth)/notification-preferences-actions.ts#setChannelRouteAction",
+   "method": "setChannelRouteAction",
+   "reads": [
+    "arguments"
+   ],
+   "status": "validated"
+  },
+  {
+   "kind": "action",
+   "file": "apps/web/app/(auth)/onboarding-actions.ts",
+   "id": "apps/web/app/(auth)/onboarding-actions.ts#acceptCategoryAction",
+   "method": "acceptCategoryAction",
+   "reads": [
+    "arguments"
+   ],
+   "status": "not-validated"
+  },
+  {
+   "kind": "action",
+   "file": "apps/web/app/(auth)/onboarding-actions.ts",
+   "id": "apps/web/app/(auth)/onboarding-actions.ts#addResponsibilityAction",
+   "method": "addResponsibilityAction",
+   "reads": [
+    "arguments"
+   ],
+   "status": "not-validated"
+  },
+  {
+   "kind": "action",
+   "file": "apps/web/app/(auth)/onboarding-actions.ts",
+   "id": "apps/web/app/(auth)/onboarding-actions.ts#answerHelperHoursAction",
+   "method": "answerHelperHoursAction",
+   "reads": [
+    "arguments"
+   ],
+   "status": "not-validated"
+  },
+  {
+   "kind": "action",
+   "file": "apps/web/app/(auth)/onboarding-actions.ts",
+   "id": "apps/web/app/(auth)/onboarding-actions.ts#answerSchoolAction",
+   "method": "answerSchoolAction",
+   "reads": [
+    "arguments"
+   ],
+   "status": "not-validated"
+  },
+  {
+   "kind": "action",
+   "file": "apps/web/app/(auth)/onboarding-actions.ts",
+   "id": "apps/web/app/(auth)/onboarding-actions.ts#completeAction",
+   "method": "completeAction",
+   "reads": [],
+   "status": "no-input"
+  },
+  {
+   "kind": "action",
+   "file": "apps/web/app/(auth)/onboarding-actions.ts",
+   "id": "apps/web/app/(auth)/onboarding-actions.ts#deferAction",
+   "method": "deferAction",
+   "reads": [
+    "arguments"
+   ],
+   "status": "not-validated"
+  },
+  {
+   "kind": "action",
+   "file": "apps/web/app/(auth)/onboarding-actions.ts",
+   "id": "apps/web/app/(auth)/onboarding-actions.ts#moveAction",
+   "method": "moveAction",
+   "reads": [
+    "arguments"
+   ],
+   "status": "not-validated"
+  },
+  {
+   "kind": "action",
+   "file": "apps/web/app/(auth)/onboarding-actions.ts",
+   "id": "apps/web/app/(auth)/onboarding-actions.ts#reviewCategoryAction",
+   "method": "reviewCategoryAction",
+   "reads": [
+    "arguments"
+   ],
+   "status": "not-validated"
+  },
+  {
+   "kind": "action",
+   "file": "apps/web/app/(auth)/onboarding-actions.ts",
+   "id": "apps/web/app/(auth)/onboarding-actions.ts#saveAdultsAction",
+   "method": "saveAdultsAction",
+   "reads": [
+    "arguments"
+   ],
+   "status": "not-validated"
+  },
+  {
+   "kind": "action",
+   "file": "apps/web/app/(auth)/onboarding-actions.ts",
+   "id": "apps/web/app/(auth)/onboarding-actions.ts#saveBasicsAction",
+   "method": "saveBasicsAction",
+   "reads": [
+    "arguments"
+   ],
+   "status": "not-validated"
+  },
+  {
+   "kind": "action",
+   "file": "apps/web/app/(auth)/onboarding-actions.ts",
+   "id": "apps/web/app/(auth)/onboarding-actions.ts#saveChildrenAction",
+   "method": "saveChildrenAction",
+   "reads": [
+    "arguments"
+   ],
+   "status": "not-validated"
+  },
+  {
+   "kind": "action",
+   "file": "apps/web/app/(auth)/onboarding-actions.ts",
+   "id": "apps/web/app/(auth)/onboarding-actions.ts#savePetsAndHelpAction",
+   "method": "savePetsAndHelpAction",
+   "reads": [
+    "arguments"
+   ],
+   "status": "not-validated"
+  },
+  {
+   "kind": "action",
+   "file": "apps/web/app/(auth)/places-actions.ts",
+   "id": "apps/web/app/(auth)/places-actions.ts#removeHomeAddressAction",
+   "method": "removeHomeAddressAction",
+   "reads": [
+    "arguments"
+   ],
+   "status": "validated"
+  },
+  {
+   "kind": "action",
+   "file": "apps/web/app/(auth)/places-actions.ts",
+   "id": "apps/web/app/(auth)/places-actions.ts#searchPlacesAction",
+   "method": "searchPlacesAction",
+   "reads": [
+    "arguments"
+   ],
+   "status": "validated"
+  },
+  {
+   "kind": "action",
+   "file": "apps/web/app/(auth)/places-actions.ts",
+   "id": "apps/web/app/(auth)/places-actions.ts#setHomeAddressAction",
+   "method": "setHomeAddressAction",
+   "reads": [
+    "arguments"
+   ],
+   "status": "validated"
+  },
+  {
+   "kind": "action",
+   "file": "apps/web/app/(auth)/privacy-actions.ts",
+   "id": "apps/web/app/(auth)/privacy-actions.ts#cancelDeletionAction",
+   "method": "cancelDeletionAction",
+   "reads": [
+    "arguments"
+   ],
+   "status": "validated"
+  },
+  {
+   "kind": "action",
+   "file": "apps/web/app/(auth)/privacy-actions.ts",
+   "id": "apps/web/app/(auth)/privacy-actions.ts#confirmItIsYouAction",
+   "method": "confirmItIsYouAction",
+   "reads": [
+    "arguments"
+   ],
+   "status": "validated"
+  },
+  {
+   "kind": "action",
+   "file": "apps/web/app/(auth)/privacy-actions.ts",
+   "id": "apps/web/app/(auth)/privacy-actions.ts#requestDeletionAction",
+   "method": "requestDeletionAction",
+   "reads": [
+    "arguments"
+   ],
+   "status": "validated"
+  },
+  {
+   "kind": "action",
+   "file": "apps/web/app/(auth)/privacy-actions.ts",
+   "id": "apps/web/app/(auth)/privacy-actions.ts#saveDataUseAction",
+   "method": "saveDataUseAction",
+   "reads": [
+    "arguments"
+   ],
+   "status": "validated"
+  },
+  {
+   "kind": "action",
+   "file": "apps/web/app/(auth)/recipe-actions.ts",
+   "id": "apps/web/app/(auth)/recipe-actions.ts#planCatalogRecipeAction",
+   "method": "planCatalogRecipeAction",
+   "reads": [
+    "arguments"
+   ],
+   "status": "validated"
+  },
+  {
+   "kind": "action",
+   "file": "apps/web/app/(auth)/recipe-actions.ts",
+   "id": "apps/web/app/(auth)/recipe-actions.ts#saveCatalogRecipeAction",
+   "method": "saveCatalogRecipeAction",
+   "reads": [
+    "arguments"
+   ],
+   "status": "validated"
+  },
+  {
+   "kind": "action",
+   "file": "apps/web/app/(auth)/relationship-actions.ts",
+   "id": "apps/web/app/(auth)/relationship-actions.ts#removeRelationshipAction",
+   "method": "removeRelationshipAction",
+   "reads": [
+    "arguments"
+   ],
+   "status": "validated"
+  },
+  {
+   "kind": "action",
+   "file": "apps/web/app/(auth)/relationship-actions.ts",
+   "id": "apps/web/app/(auth)/relationship-actions.ts#saveRelationshipAction",
+   "method": "saveRelationshipAction",
+   "reads": [
+    "arguments"
+   ],
+   "status": "validated"
+  },
+  {
+   "kind": "action",
+   "file": "apps/web/app/(auth)/school-actions.ts",
+   "id": "apps/web/app/(auth)/school-actions.ts#addPortalScrapeUrlAction",
+   "method": "addPortalScrapeUrlAction",
+   "reads": [
+    "arguments"
+   ],
+   "status": "validated"
+  },
+  {
+   "kind": "action",
+   "file": "apps/web/app/(auth)/school-actions.ts",
+   "id": "apps/web/app/(auth)/school-actions.ts#cancelSchoolItemAction",
+   "method": "cancelSchoolItemAction",
+   "reads": [
+    "arguments"
+   ],
+   "status": "validated"
+  },
+  {
+   "kind": "action",
+   "file": "apps/web/app/(auth)/school-actions.ts",
+   "id": "apps/web/app/(auth)/school-actions.ts#connectSchoolPortalAction",
+   "method": "connectSchoolPortalAction",
+   "reads": [
+    "arguments"
+   ],
+   "status": "validated"
+  },
+  {
+   "kind": "action",
+   "file": "apps/web/app/(auth)/school-actions.ts",
+   "id": "apps/web/app/(auth)/school-actions.ts#connectSchoolPortalWithCredentialsAction",
+   "method": "connectSchoolPortalWithCredentialsAction",
+   "reads": [
+    "arguments"
+   ],
+   "status": "validated"
+  },
+  {
+   "kind": "action",
+   "file": "apps/web/app/(auth)/school-actions.ts",
+   "id": "apps/web/app/(auth)/school-actions.ts#createSchoolItemAction",
+   "method": "createSchoolItemAction",
+   "reads": [
+    "arguments"
+   ],
+   "status": "validated"
+  },
+  {
+   "kind": "action",
+   "file": "apps/web/app/(auth)/school-actions.ts",
+   "id": "apps/web/app/(auth)/school-actions.ts#disconnectSchoolPortalAction",
+   "method": "disconnectSchoolPortalAction",
+   "reads": [
+    "arguments"
+   ],
+   "status": "validated"
+  },
+  {
+   "kind": "action",
+   "file": "apps/web/app/(auth)/school-actions.ts",
+   "id": "apps/web/app/(auth)/school-actions.ts#extractSchoolItemFromPhotoAction",
+   "method": "extractSchoolItemFromPhotoAction",
+   "reads": [
+    "arguments"
+   ],
+   "status": "validated"
+  },
+  {
+   "kind": "action",
+   "file": "apps/web/app/(auth)/school-actions.ts",
+   "id": "apps/web/app/(auth)/school-actions.ts#fetchSchoolPortalNowAction",
+   "method": "fetchSchoolPortalNowAction",
+   "reads": [
+    "arguments"
+   ],
+   "status": "validated"
+  },
+  {
+   "kind": "action",
+   "file": "apps/web/app/(auth)/school-actions.ts",
+   "id": "apps/web/app/(auth)/school-actions.ts#portalConnectionStatusAction",
+   "method": "portalConnectionStatusAction",
+   "reads": [
+    "arguments"
+   ],
+   "status": "validated"
+  },
+  {
+   "kind": "action",
+   "file": "apps/web/app/(auth)/school-actions.ts",
+   "id": "apps/web/app/(auth)/school-actions.ts#removeActivityAction",
+   "method": "removeActivityAction",
+   "reads": [
+    "arguments"
+   ],
+   "status": "validated"
+  },
+  {
+   "kind": "action",
+   "file": "apps/web/app/(auth)/school-actions.ts",
+   "id": "apps/web/app/(auth)/school-actions.ts#removeActivityNoteAction",
+   "method": "removeActivityNoteAction",
+   "reads": [
+    "arguments"
+   ],
+   "status": "validated"
+  },
+  {
+   "kind": "action",
+   "file": "apps/web/app/(auth)/school-actions.ts",
+   "id": "apps/web/app/(auth)/school-actions.ts#removePortalScrapeUrlAction",
+   "method": "removePortalScrapeUrlAction",
+   "reads": [
+    "arguments"
+   ],
+   "status": "validated"
+  },
+  {
+   "kind": "action",
+   "file": "apps/web/app/(auth)/school-actions.ts",
+   "id": "apps/web/app/(auth)/school-actions.ts#removeSchoolRecordAction",
+   "method": "removeSchoolRecordAction",
+   "reads": [
+    "arguments"
+   ],
+   "status": "validated"
+  },
+  {
+   "kind": "action",
+   "file": "apps/web/app/(auth)/school-actions.ts",
+   "id": "apps/web/app/(auth)/school-actions.ts#removeTeacherAction",
+   "method": "removeTeacherAction",
+   "reads": [
+    "arguments"
+   ],
+   "status": "validated"
+  },
+  {
+   "kind": "action",
+   "file": "apps/web/app/(auth)/school-actions.ts",
+   "id": "apps/web/app/(auth)/school-actions.ts#saveActivityAction",
+   "method": "saveActivityAction",
+   "reads": [
+    "arguments"
+   ],
+   "status": "validated"
+  },
+  {
+   "kind": "action",
+   "file": "apps/web/app/(auth)/school-actions.ts",
+   "id": "apps/web/app/(auth)/school-actions.ts#saveActivityNoteAction",
+   "method": "saveActivityNoteAction",
+   "reads": [
+    "arguments"
+   ],
+   "status": "validated"
+  },
+  {
+   "kind": "action",
+   "file": "apps/web/app/(auth)/school-actions.ts",
+   "id": "apps/web/app/(auth)/school-actions.ts#saveChildSchoolAction",
+   "method": "saveChildSchoolAction",
+   "reads": [
+    "arguments"
+   ],
+   "status": "validated"
+  },
+  {
+   "kind": "action",
+   "file": "apps/web/app/(auth)/school-actions.ts",
+   "id": "apps/web/app/(auth)/school-actions.ts#saveExamAction",
+   "method": "saveExamAction",
+   "reads": [
+    "arguments"
+   ],
+   "status": "validated"
+  },
+  {
+   "kind": "action",
+   "file": "apps/web/app/(auth)/school-actions.ts",
+   "id": "apps/web/app/(auth)/school-actions.ts#savePaperAction",
+   "method": "savePaperAction",
+   "reads": [
+    "arguments"
+   ],
+   "status": "validated"
+  },
+  {
+   "kind": "action",
+   "file": "apps/web/app/(auth)/school-actions.ts",
+   "id": "apps/web/app/(auth)/school-actions.ts#savePeriodAction",
+   "method": "savePeriodAction",
+   "reads": [
+    "arguments"
+   ],
+   "status": "validated"
+  },
+  {
+   "kind": "action",
+   "file": "apps/web/app/(auth)/school-actions.ts",
+   "id": "apps/web/app/(auth)/school-actions.ts#saveTeacherAction",
+   "method": "saveTeacherAction",
+   "reads": [
+    "arguments"
+   ],
+   "status": "validated"
+  },
+  {
+   "kind": "action",
+   "file": "apps/web/app/(auth)/school-actions.ts",
+   "id": "apps/web/app/(auth)/school-actions.ts#setPortalScrapeUrlEnabledAction",
+   "method": "setPortalScrapeUrlEnabledAction",
+   "reads": [
+    "arguments"
+   ],
+   "status": "validated"
+  },
+  {
+   "kind": "action",
+   "file": "apps/web/app/(auth)/school-actions.ts",
+   "id": "apps/web/app/(auth)/school-actions.ts#setSchoolChannelActiveAction",
+   "method": "setSchoolChannelActiveAction",
+   "reads": [
+    "arguments"
+   ],
+   "status": "validated"
+  },
+  {
+   "kind": "action",
+   "file": "apps/web/app/(auth)/school-actions.ts",
+   "id": "apps/web/app/(auth)/school-actions.ts#testSchoolPortalConnectionAction",
+   "method": "testSchoolPortalConnectionAction",
+   "reads": [
+    "arguments"
+   ],
+   "status": "validated"
+  },
+  {
+   "kind": "action",
+   "file": "apps/web/app/(auth)/school-actions.ts",
+   "id": "apps/web/app/(auth)/school-actions.ts#trackSchoolChannelAction",
+   "method": "trackSchoolChannelAction",
+   "reads": [
+    "arguments"
+   ],
+   "status": "validated"
+  },
+  {
+   "kind": "action",
+   "file": "apps/web/app/(auth)/school-actions.ts",
+   "id": "apps/web/app/(auth)/school-actions.ts#updateSchoolItemAction",
+   "method": "updateSchoolItemAction",
+   "reads": [
+    "arguments"
+   ],
+   "status": "validated"
+  },
+  {
+   "kind": "action",
+   "file": "apps/web/app/(auth)/school-actions.ts",
+   "id": "apps/web/app/(auth)/school-actions.ts#updateSchoolPortalCredentialsAction",
+   "method": "updateSchoolPortalCredentialsAction",
+   "reads": [
+    "arguments"
+   ],
+   "status": "validated"
+  },
+  {
+   "kind": "action",
+   "file": "apps/web/app/(auth)/voice-actions.ts",
+   "id": "apps/web/app/(auth)/voice-actions.ts#removeVoiceKeyAction",
+   "method": "removeVoiceKeyAction",
+   "reads": [
+    "arguments"
+   ],
+   "status": "validated"
+  },
+  {
+   "kind": "action",
+   "file": "apps/web/app/(auth)/voice-actions.ts",
+   "id": "apps/web/app/(auth)/voice-actions.ts#saveVoice",
+   "method": "saveVoice",
+   "reads": [
+    "arguments"
+   ],
+   "status": "validated"
+  },
+  {
+   "kind": "action",
+   "file": "apps/web/app/(auth)/voice-actions.ts",
+   "id": "apps/web/app/(auth)/voice-actions.ts#saveVoiceKeyAction",
+   "method": "saveVoiceKeyAction",
+   "reads": [
+    "arguments"
+   ],
+   "status": "validated"
+  },
+  {
+   "kind": "action",
+   "file": "apps/web/app/(auth)/voice-link-actions.ts",
+   "id": "apps/web/app/(auth)/voice-link-actions.ts#approveVoiceLinkAction",
+   "method": "approveVoiceLinkAction",
+   "reads": [
+    "arguments"
+   ],
+   "status": "validated"
+  },
+  {
+   "kind": "action",
+   "file": "apps/web/app/(auth)/voice-link-actions.ts",
+   "id": "apps/web/app/(auth)/voice-link-actions.ts#denyVoiceLinkAction",
+   "method": "denyVoiceLinkAction",
+   "reads": [
+    "arguments"
+   ],
+   "status": "validated"
+  },
+  {
+   "kind": "action",
+   "file": "apps/web/app/(auth)/voice-link-actions.ts",
+   "id": "apps/web/app/(auth)/voice-link-actions.ts#revokeVoiceLinkAction",
+   "method": "revokeVoiceLinkAction",
+   "reads": [
+    "arguments"
+   ],
+   "status": "validated"
+  },
+  {
+   "kind": "action",
+   "file": "apps/web/app/(auth)/weather-actions.ts",
+   "id": "apps/web/app/(auth)/weather-actions.ts#removeWeatherAreaAction",
+   "method": "removeWeatherAreaAction",
+   "reads": [
+    "arguments"
+   ],
+   "status": "validated"
+  },
+  {
+   "kind": "action",
+   "file": "apps/web/app/(auth)/weather-actions.ts",
+   "id": "apps/web/app/(auth)/weather-actions.ts#searchWeatherPlacesAction",
+   "method": "searchWeatherPlacesAction",
+   "reads": [
+    "arguments"
+   ],
+   "status": "validated"
+  },
+  {
+   "kind": "action",
+   "file": "apps/web/app/(auth)/weather-actions.ts",
+   "id": "apps/web/app/(auth)/weather-actions.ts#setWeatherAreaAction",
+   "method": "setWeatherAreaAction",
+   "reads": [
+    "arguments"
+   ],
+   "status": "validated"
+  },
+  {
+   "kind": "action",
+   "file": "apps/web/app/(auth)/whatsapp-actions.ts",
+   "id": "apps/web/app/(auth)/whatsapp-actions.ts#checkWhatsAppLinkAction",
+   "method": "checkWhatsAppLinkAction",
+   "reads": [
+    "arguments"
+   ],
+   "status": "validated"
+  },
+  {
+   "kind": "action",
+   "file": "apps/web/app/(auth)/whatsapp-actions.ts",
+   "id": "apps/web/app/(auth)/whatsapp-actions.ts#disconnectWhatsAppAction",
+   "method": "disconnectWhatsAppAction",
+   "reads": [
+    "arguments"
+   ],
+   "status": "validated"
+  },
+  {
+   "kind": "action",
+   "file": "apps/web/app/(auth)/whatsapp-actions.ts",
+   "id": "apps/web/app/(auth)/whatsapp-actions.ts#startWhatsAppLinkAction",
+   "method": "startWhatsAppLinkAction",
+   "reads": [
+    "arguments"
+   ],
+   "status": "validated"
+  },
+  {
+   "kind": "action",
+   "file": "apps/web/app/ai/place-actions.ts",
+   "id": "apps/web/app/ai/place-actions.ts#setPlaceAction",
+   "method": "setPlaceAction",
+   "reads": [
+    "arguments"
+   ],
+   "status": "validated"
+  },
+  {
+   "kind": "route",
+   "file": "apps/web/app/api/v1/billing/webhook/[provider]/route.ts",
+   "id": "apps/web/app/api/v1/billing/webhook/[provider]/route.ts#POST",
+   "method": "POST",
+   "reads": [],
+   "status": "delegated"
+  },
+  {
+   "kind": "route",
+   "file": "apps/web/app/api/v1/billing/webhook/route.ts",
+   "id": "apps/web/app/api/v1/billing/webhook/route.ts#POST",
+   "method": "POST",
+   "reads": [],
+   "status": "delegated"
+  },
+  {
+   "kind": "route",
+   "file": "apps/web/app/api/v1/calendar/subscriptions/sync/route.ts",
+   "id": "apps/web/app/api/v1/calendar/subscriptions/sync/route.ts#GET",
+   "method": "GET",
+   "reads": [],
+   "status": "no-input"
+  },
+  {
+   "kind": "route",
+   "file": "apps/web/app/api/v1/calendar/subscriptions/sync/route.ts",
+   "id": "apps/web/app/api/v1/calendar/subscriptions/sync/route.ts#POST",
+   "method": "POST",
+   "reads": [],
+   "status": "no-input"
+  },
+  {
+   "kind": "route",
+   "file": "apps/web/app/api/v1/health/ready/route.ts",
+   "id": "apps/web/app/api/v1/health/ready/route.ts#GET",
+   "method": "GET",
+   "reads": [],
+   "status": "no-input"
+  },
+  {
+   "kind": "route",
+   "file": "apps/web/app/api/v1/health/route.ts",
+   "id": "apps/web/app/api/v1/health/route.ts#GET",
+   "method": "GET",
+   "reads": [],
+   "status": "no-input"
+  },
+  {
+   "kind": "route",
+   "file": "apps/web/app/api/v1/homesend/email/webhook/route.ts",
+   "id": "apps/web/app/api/v1/homesend/email/webhook/route.ts#POST",
+   "method": "POST",
+   "reads": [],
+   "status": "delegated"
+  },
+  {
+   "kind": "route",
+   "file": "apps/web/app/api/v1/households/[householdId]/agents/run/route.ts",
+   "id": "apps/web/app/api/v1/households/[householdId]/agents/run/route.ts#POST",
+   "method": "POST",
+   "reads": [],
+   "status": "no-input"
+  },
+  {
+   "kind": "route",
+   "file": "apps/web/app/api/v1/households/[householdId]/backup-services/cover/route.ts",
+   "id": "apps/web/app/api/v1/households/[householdId]/backup-services/cover/route.ts#POST",
+   "method": "POST",
+   "reads": [
+    "body"
+   ],
+   "status": "validated"
+  },
+  {
+   "kind": "route",
+   "file": "apps/web/app/api/v1/households/[householdId]/backup-services/route.ts",
+   "id": "apps/web/app/api/v1/households/[householdId]/backup-services/route.ts#GET",
+   "method": "GET",
+   "reads": [],
+   "status": "no-input"
+  },
+  {
+   "kind": "route",
+   "file": "apps/web/app/api/v1/households/[householdId]/backup-services/route.ts",
+   "id": "apps/web/app/api/v1/households/[householdId]/backup-services/route.ts#POST",
+   "method": "POST",
+   "reads": [
+    "body"
+   ],
+   "status": "validated"
+  },
+  {
+   "kind": "route",
+   "file": "apps/web/app/api/v1/households/[householdId]/bills/route.ts",
+   "id": "apps/web/app/api/v1/households/[householdId]/bills/route.ts#GET",
+   "method": "GET",
+   "reads": [],
+   "status": "no-input"
+  },
+  {
+   "kind": "route",
+   "file": "apps/web/app/api/v1/households/[householdId]/bills/route.ts",
+   "id": "apps/web/app/api/v1/households/[householdId]/bills/route.ts#POST",
+   "method": "POST",
+   "reads": [
+    "body"
+   ],
+   "status": "validated"
+  },
+  {
+   "kind": "route",
+   "file": "apps/web/app/api/v1/households/[householdId]/children/route.ts",
+   "id": "apps/web/app/api/v1/households/[householdId]/children/route.ts#GET",
+   "method": "GET",
+   "reads": [],
+   "status": "no-input"
+  },
+  {
+   "kind": "route",
+   "file": "apps/web/app/api/v1/households/[householdId]/children/route.ts",
+   "id": "apps/web/app/api/v1/households/[householdId]/children/route.ts#POST",
+   "method": "POST",
+   "reads": [
+    "body"
+   ],
+   "status": "validated"
+  },
+  {
+   "kind": "route",
+   "file": "apps/web/app/api/v1/households/[householdId]/conversation/route.ts",
+   "id": "apps/web/app/api/v1/households/[householdId]/conversation/route.ts#GET",
+   "method": "GET",
+   "reads": [
+    "query"
+   ],
+   "status": "validated"
+  },
+  {
+   "kind": "route",
+   "file": "apps/web/app/api/v1/households/[householdId]/conversation/route.ts",
+   "id": "apps/web/app/api/v1/households/[householdId]/conversation/route.ts#POST",
+   "method": "POST",
+   "reads": [
+    "body"
+   ],
+   "status": "validated"
+  },
+  {
+   "kind": "route",
+   "file": "apps/web/app/api/v1/households/[householdId]/devices/[linkId]/route.ts",
+   "id": "apps/web/app/api/v1/households/[householdId]/devices/[linkId]/route.ts#PATCH",
+   "method": "PATCH",
+   "reads": [
+    "body"
+   ],
+   "status": "validated"
+  },
+  {
+   "kind": "route",
+   "file": "apps/web/app/api/v1/households/[householdId]/devices/route.ts",
+   "id": "apps/web/app/api/v1/households/[householdId]/devices/route.ts#GET",
+   "method": "GET",
+   "reads": [],
+   "status": "no-input"
+  },
+  {
+   "kind": "route",
+   "file": "apps/web/app/api/v1/households/[householdId]/entitlements/route.ts",
+   "id": "apps/web/app/api/v1/households/[householdId]/entitlements/route.ts#GET",
+   "method": "GET",
+   "reads": [],
+   "status": "no-input"
+  },
+  {
+   "kind": "route",
+   "file": "apps/web/app/api/v1/households/[householdId]/family/route.ts",
+   "id": "apps/web/app/api/v1/households/[householdId]/family/route.ts#GET",
+   "method": "GET",
+   "reads": [],
+   "status": "no-input"
+  },
+  {
+   "kind": "route",
+   "file": "apps/web/app/api/v1/households/[householdId]/family/route.ts",
+   "id": "apps/web/app/api/v1/households/[householdId]/family/route.ts#POST",
+   "method": "POST",
+   "reads": [
+    "body"
+   ],
+   "status": "validated"
+  },
+  {
+   "kind": "route",
+   "file": "apps/web/app/api/v1/households/[householdId]/health/appointments/[appointmentId]/route.ts",
+   "id": "apps/web/app/api/v1/households/[householdId]/health/appointments/[appointmentId]/route.ts#GET",
+   "method": "GET",
+   "reads": [],
+   "status": "no-input"
+  },
+  {
+   "kind": "route",
+   "file": "apps/web/app/api/v1/households/[householdId]/health/appointments/[appointmentId]/route.ts",
+   "id": "apps/web/app/api/v1/households/[householdId]/health/appointments/[appointmentId]/route.ts#PATCH",
+   "method": "PATCH",
+   "reads": [
+    "body"
+   ],
+   "status": "validated"
+  },
+  {
+   "kind": "route",
+   "file": "apps/web/app/api/v1/households/[householdId]/health/appointments/route.ts",
+   "id": "apps/web/app/api/v1/households/[householdId]/health/appointments/route.ts#GET",
+   "method": "GET",
+   "reads": [
+    "query"
+   ],
+   "status": "partial"
+  },
+  {
+   "kind": "route",
+   "file": "apps/web/app/api/v1/households/[householdId]/health/appointments/route.ts",
+   "id": "apps/web/app/api/v1/households/[householdId]/health/appointments/route.ts#POST",
+   "method": "POST",
+   "reads": [
+    "body"
+   ],
+   "status": "validated"
+  },
+  {
+   "kind": "route",
+   "file": "apps/web/app/api/v1/households/[householdId]/health/checkups/[checkupId]/route.ts",
+   "id": "apps/web/app/api/v1/households/[householdId]/health/checkups/[checkupId]/route.ts#GET",
+   "method": "GET",
+   "reads": [],
+   "status": "no-input"
+  },
+  {
+   "kind": "route",
+   "file": "apps/web/app/api/v1/households/[householdId]/health/checkups/[checkupId]/route.ts",
+   "id": "apps/web/app/api/v1/households/[householdId]/health/checkups/[checkupId]/route.ts#PATCH",
+   "method": "PATCH",
+   "reads": [
+    "body"
+   ],
+   "status": "validated"
+  },
+  {
+   "kind": "route",
+   "file": "apps/web/app/api/v1/households/[householdId]/health/checkups/route.ts",
+   "id": "apps/web/app/api/v1/households/[householdId]/health/checkups/route.ts#GET",
+   "method": "GET",
+   "reads": [
+    "query"
+   ],
+   "status": "partial"
+  },
+  {
+   "kind": "route",
+   "file": "apps/web/app/api/v1/households/[householdId]/health/checkups/route.ts",
+   "id": "apps/web/app/api/v1/households/[householdId]/health/checkups/route.ts#POST",
+   "method": "POST",
+   "reads": [
+    "body"
+   ],
+   "status": "validated"
+  },
+  {
+   "kind": "route",
+   "file": "apps/web/app/api/v1/households/[householdId]/health/fitness/goals/[goalId]/route.ts",
+   "id": "apps/web/app/api/v1/households/[householdId]/health/fitness/goals/[goalId]/route.ts#GET",
+   "method": "GET",
+   "reads": [],
+   "status": "no-input"
+  },
+  {
+   "kind": "route",
+   "file": "apps/web/app/api/v1/households/[householdId]/health/fitness/goals/[goalId]/route.ts",
+   "id": "apps/web/app/api/v1/households/[householdId]/health/fitness/goals/[goalId]/route.ts#PATCH",
+   "method": "PATCH",
+   "reads": [
+    "body"
+   ],
+   "status": "validated"
+  },
+  {
+   "kind": "route",
+   "file": "apps/web/app/api/v1/households/[householdId]/health/fitness/goals/route.ts",
+   "id": "apps/web/app/api/v1/households/[householdId]/health/fitness/goals/route.ts#GET",
+   "method": "GET",
+   "reads": [
+    "query"
+   ],
+   "status": "partial"
+  },
+  {
+   "kind": "route",
+   "file": "apps/web/app/api/v1/households/[householdId]/health/fitness/goals/route.ts",
+   "id": "apps/web/app/api/v1/households/[householdId]/health/fitness/goals/route.ts#POST",
+   "method": "POST",
+   "reads": [
+    "body"
+   ],
+   "status": "validated"
+  },
+  {
+   "kind": "route",
+   "file": "apps/web/app/api/v1/households/[householdId]/health/fitness/sessions/[sessionId]/route.ts",
+   "id": "apps/web/app/api/v1/households/[householdId]/health/fitness/sessions/[sessionId]/route.ts#GET",
+   "method": "GET",
+   "reads": [],
+   "status": "no-input"
+  },
+  {
+   "kind": "route",
+   "file": "apps/web/app/api/v1/households/[householdId]/health/fitness/sessions/[sessionId]/route.ts",
+   "id": "apps/web/app/api/v1/households/[householdId]/health/fitness/sessions/[sessionId]/route.ts#PATCH",
+   "method": "PATCH",
+   "reads": [
+    "body"
+   ],
+   "status": "validated"
+  },
+  {
+   "kind": "route",
+   "file": "apps/web/app/api/v1/households/[householdId]/health/fitness/sessions/route.ts",
+   "id": "apps/web/app/api/v1/households/[householdId]/health/fitness/sessions/route.ts#GET",
+   "method": "GET",
+   "reads": [
+    "query"
+   ],
+   "status": "partial"
+  },
+  {
+   "kind": "route",
+   "file": "apps/web/app/api/v1/households/[householdId]/health/fitness/sessions/route.ts",
+   "id": "apps/web/app/api/v1/households/[householdId]/health/fitness/sessions/route.ts#POST",
+   "method": "POST",
+   "reads": [
+    "body"
+   ],
+   "status": "validated"
+  },
+  {
+   "kind": "route",
+   "file": "apps/web/app/api/v1/households/[householdId]/health/issues/[issueId]/route.ts",
+   "id": "apps/web/app/api/v1/households/[householdId]/health/issues/[issueId]/route.ts#GET",
+   "method": "GET",
+   "reads": [],
+   "status": "no-input"
+  },
+  {
+   "kind": "route",
+   "file": "apps/web/app/api/v1/households/[householdId]/health/issues/[issueId]/route.ts",
+   "id": "apps/web/app/api/v1/households/[householdId]/health/issues/[issueId]/route.ts#PATCH",
+   "method": "PATCH",
+   "reads": [
+    "body"
+   ],
+   "status": "validated"
+  },
+  {
+   "kind": "route",
+   "file": "apps/web/app/api/v1/households/[householdId]/health/issues/route.ts",
+   "id": "apps/web/app/api/v1/households/[householdId]/health/issues/route.ts#GET",
+   "method": "GET",
+   "reads": [
+    "query"
+   ],
+   "status": "partial"
+  },
+  {
+   "kind": "route",
+   "file": "apps/web/app/api/v1/households/[householdId]/health/issues/route.ts",
+   "id": "apps/web/app/api/v1/households/[householdId]/health/issues/route.ts#POST",
+   "method": "POST",
+   "reads": [
+    "body"
+   ],
+   "status": "validated"
+  },
+  {
+   "kind": "route",
+   "file": "apps/web/app/api/v1/households/[householdId]/health/measurement-routines/[routineId]/route.ts",
+   "id": "apps/web/app/api/v1/households/[householdId]/health/measurement-routines/[routineId]/route.ts#GET",
+   "method": "GET",
+   "reads": [],
+   "status": "no-input"
+  },
+  {
+   "kind": "route",
+   "file": "apps/web/app/api/v1/households/[householdId]/health/measurement-routines/[routineId]/route.ts",
+   "id": "apps/web/app/api/v1/households/[householdId]/health/measurement-routines/[routineId]/route.ts#PATCH",
+   "method": "PATCH",
+   "reads": [
+    "body"
+   ],
+   "status": "validated"
+  },
+  {
+   "kind": "route",
+   "file": "apps/web/app/api/v1/households/[householdId]/health/measurement-routines/route.ts",
+   "id": "apps/web/app/api/v1/households/[householdId]/health/measurement-routines/route.ts#GET",
+   "method": "GET",
+   "reads": [
+    "query"
+   ],
+   "status": "partial"
+  },
+  {
+   "kind": "route",
+   "file": "apps/web/app/api/v1/households/[householdId]/health/measurement-routines/route.ts",
+   "id": "apps/web/app/api/v1/households/[householdId]/health/measurement-routines/route.ts#POST",
+   "method": "POST",
+   "reads": [
+    "body"
+   ],
+   "status": "validated"
+  },
+  {
+   "kind": "route",
+   "file": "apps/web/app/api/v1/households/[householdId]/health/privacy/[consentId]/route.ts",
+   "id": "apps/web/app/api/v1/households/[householdId]/health/privacy/[consentId]/route.ts#DELETE",
+   "method": "DELETE",
+   "reads": [],
+   "status": "no-input"
+  },
+  {
+   "kind": "route",
+   "file": "apps/web/app/api/v1/households/[householdId]/health/privacy/route.ts",
+   "id": "apps/web/app/api/v1/households/[householdId]/health/privacy/route.ts#GET",
+   "method": "GET",
+   "reads": [
+    "query"
+   ],
+   "status": "partial"
+  },
+  {
+   "kind": "route",
+   "file": "apps/web/app/api/v1/households/[householdId]/health/privacy/route.ts",
+   "id": "apps/web/app/api/v1/households/[householdId]/health/privacy/route.ts#POST",
+   "method": "POST",
+   "reads": [
+    "body"
+   ],
+   "status": "validated"
+  },
+  {
+   "kind": "route",
+   "file": "apps/web/app/api/v1/households/[householdId]/health/profile/route.ts",
+   "id": "apps/web/app/api/v1/households/[householdId]/health/profile/route.ts#GET",
+   "method": "GET",
+   "reads": [
+    "query"
+   ],
+   "status": "partial"
+  },
+  {
+   "kind": "route",
+   "file": "apps/web/app/api/v1/households/[householdId]/health/profile/route.ts",
+   "id": "apps/web/app/api/v1/households/[householdId]/health/profile/route.ts#PATCH",
+   "method": "PATCH",
+   "reads": [
+    "body"
+   ],
+   "status": "validated"
+  },
+  {
+   "kind": "route",
+   "file": "apps/web/app/api/v1/households/[householdId]/health/records/[recordId]/route.ts",
+   "id": "apps/web/app/api/v1/households/[householdId]/health/records/[recordId]/route.ts#GET",
+   "method": "GET",
+   "reads": [],
+   "status": "no-input"
+  },
+  {
+   "kind": "route",
+   "file": "apps/web/app/api/v1/households/[householdId]/health/records/[recordId]/route.ts",
+   "id": "apps/web/app/api/v1/households/[householdId]/health/records/[recordId]/route.ts#PATCH",
+   "method": "PATCH",
+   "reads": [
+    "body"
+   ],
+   "status": "validated"
+  },
+  {
+   "kind": "route",
+   "file": "apps/web/app/api/v1/households/[householdId]/health/records/route.ts",
+   "id": "apps/web/app/api/v1/households/[householdId]/health/records/route.ts#GET",
+   "method": "GET",
+   "reads": [
+    "query"
+   ],
+   "status": "partial"
+  },
+  {
+   "kind": "route",
+   "file": "apps/web/app/api/v1/households/[householdId]/health/records/route.ts",
+   "id": "apps/web/app/api/v1/households/[householdId]/health/records/route.ts#POST",
+   "method": "POST",
+   "reads": [
+    "body"
+   ],
+   "status": "validated"
+  },
+  {
+   "kind": "route",
+   "file": "apps/web/app/api/v1/households/[householdId]/health/vitals/[vitalId]/route.ts",
+   "id": "apps/web/app/api/v1/households/[householdId]/health/vitals/[vitalId]/route.ts#GET",
+   "method": "GET",
+   "reads": [],
+   "status": "no-input"
+  },
+  {
+   "kind": "route",
+   "file": "apps/web/app/api/v1/households/[householdId]/health/vitals/[vitalId]/route.ts",
+   "id": "apps/web/app/api/v1/households/[householdId]/health/vitals/[vitalId]/route.ts#PATCH",
+   "method": "PATCH",
+   "reads": [
+    "body"
+   ],
+   "status": "validated"
+  },
+  {
+   "kind": "route",
+   "file": "apps/web/app/api/v1/households/[householdId]/health/vitals/route.ts",
+   "id": "apps/web/app/api/v1/households/[householdId]/health/vitals/route.ts#GET",
+   "method": "GET",
+   "reads": [
+    "query"
+   ],
+   "status": "partial"
+  },
+  {
+   "kind": "route",
+   "file": "apps/web/app/api/v1/households/[householdId]/health/vitals/route.ts",
+   "id": "apps/web/app/api/v1/households/[householdId]/health/vitals/route.ts#POST",
+   "method": "POST",
+   "reads": [
+    "body"
+   ],
+   "status": "validated"
+  },
+  {
+   "kind": "route",
+   "file": "apps/web/app/api/v1/households/[householdId]/home/assets/route.ts",
+   "id": "apps/web/app/api/v1/households/[householdId]/home/assets/route.ts#GET",
+   "method": "GET",
+   "reads": [],
+   "status": "no-input"
+  },
+  {
+   "kind": "route",
+   "file": "apps/web/app/api/v1/households/[householdId]/home/assets/route.ts",
+   "id": "apps/web/app/api/v1/households/[householdId]/home/assets/route.ts#POST",
+   "method": "POST",
+   "reads": [
+    "body"
+   ],
+   "status": "validated"
+  },
+  {
+   "kind": "route",
+   "file": "apps/web/app/api/v1/households/[householdId]/home/route.ts",
+   "id": "apps/web/app/api/v1/households/[householdId]/home/route.ts#GET",
+   "method": "GET",
+   "reads": [],
+   "status": "no-input"
+  },
+  {
+   "kind": "route",
+   "file": "apps/web/app/api/v1/households/[householdId]/home/service-requests/route.ts",
+   "id": "apps/web/app/api/v1/households/[householdId]/home/service-requests/route.ts#GET",
+   "method": "GET",
+   "reads": [],
+   "status": "no-input"
+  },
+  {
+   "kind": "route",
+   "file": "apps/web/app/api/v1/households/[householdId]/home/service-requests/route.ts",
+   "id": "apps/web/app/api/v1/households/[householdId]/home/service-requests/route.ts#POST",
+   "method": "POST",
+   "reads": [
+    "body"
+   ],
+   "status": "validated"
+  },
+  {
+   "kind": "route",
+   "file": "apps/web/app/api/v1/households/[householdId]/integrations/calendar/sync/route.ts",
+   "id": "apps/web/app/api/v1/households/[householdId]/integrations/calendar/sync/route.ts#POST",
+   "method": "POST",
+   "reads": [
+    "query"
+   ],
+   "status": "validated"
+  },
+  {
+   "kind": "route",
+   "file": "apps/web/app/api/v1/households/[householdId]/integrations/commerce/sync/route.ts",
+   "id": "apps/web/app/api/v1/households/[householdId]/integrations/commerce/sync/route.ts#POST",
+   "method": "POST",
+   "reads": [
+    "query"
+   ],
+   "status": "validated"
+  },
+  {
+   "kind": "route",
+   "file": "apps/web/app/api/v1/households/[householdId]/integrations/email/sync/route.ts",
+   "id": "apps/web/app/api/v1/households/[householdId]/integrations/email/sync/route.ts#POST",
+   "method": "POST",
+   "reads": [
+    "query"
+   ],
+   "status": "validated"
+  },
+  {
+   "kind": "route",
+   "file": "apps/web/app/api/v1/households/[householdId]/integrations/route.ts",
+   "id": "apps/web/app/api/v1/households/[householdId]/integrations/route.ts#GET",
+   "method": "GET",
+   "reads": [],
+   "status": "no-input"
+  },
+  {
+   "kind": "route",
+   "file": "apps/web/app/api/v1/households/[householdId]/integrations/school/channels/sync/route.ts",
+   "id": "apps/web/app/api/v1/households/[householdId]/integrations/school/channels/sync/route.ts#POST",
+   "method": "POST",
+   "reads": [],
+   "status": "no-input"
+  },
+  {
+   "kind": "route",
+   "file": "apps/web/app/api/v1/households/[householdId]/integrations/school/sync/route.ts",
+   "id": "apps/web/app/api/v1/households/[householdId]/integrations/school/sync/route.ts#POST",
+   "method": "POST",
+   "reads": [
+    "query"
+   ],
+   "status": "validated"
+  },
+  {
+   "kind": "route",
+   "file": "apps/web/app/api/v1/households/[householdId]/integrations/smart-home/sync/route.ts",
+   "id": "apps/web/app/api/v1/households/[householdId]/integrations/smart-home/sync/route.ts#POST",
+   "method": "POST",
+   "reads": [
+    "query"
+   ],
+   "status": "validated"
+  },
+  {
+   "kind": "route",
+   "file": "apps/web/app/api/v1/households/[householdId]/invitations/route.ts",
+   "id": "apps/web/app/api/v1/households/[householdId]/invitations/route.ts#GET",
+   "method": "GET",
+   "reads": [],
+   "status": "no-input"
+  },
+  {
+   "kind": "route",
+   "file": "apps/web/app/api/v1/households/[householdId]/invitations/route.ts",
+   "id": "apps/web/app/api/v1/households/[householdId]/invitations/route.ts#POST",
+   "method": "POST",
+   "reads": [
+    "body"
+   ],
+   "status": "validated"
+  },
+  {
+   "kind": "route",
+   "file": "apps/web/app/api/v1/households/[householdId]/meals/route.ts",
+   "id": "apps/web/app/api/v1/households/[householdId]/meals/route.ts#GET",
+   "method": "GET",
+   "reads": [],
+   "status": "no-input"
+  },
+  {
+   "kind": "route",
+   "file": "apps/web/app/api/v1/households/[householdId]/meals/route.ts",
+   "id": "apps/web/app/api/v1/households/[householdId]/meals/route.ts#POST",
+   "method": "POST",
+   "reads": [
+    "body"
+   ],
+   "status": "validated"
+  },
+  {
+   "kind": "route",
+   "file": "apps/web/app/api/v1/households/[householdId]/members/[memberId]/roles/route.ts",
+   "id": "apps/web/app/api/v1/households/[householdId]/members/[memberId]/roles/route.ts#PATCH",
+   "method": "PATCH",
+   "reads": [
+    "body"
+   ],
+   "status": "validated"
+  },
+  {
+   "kind": "route",
+   "file": "apps/web/app/api/v1/households/[householdId]/plan/cancel/route.ts",
+   "id": "apps/web/app/api/v1/households/[householdId]/plan/cancel/route.ts#POST",
+   "method": "POST",
+   "reads": [],
+   "status": "no-input"
+  },
+  {
+   "kind": "route",
+   "file": "apps/web/app/api/v1/households/[householdId]/plan/route.ts",
+   "id": "apps/web/app/api/v1/households/[householdId]/plan/route.ts#GET",
+   "method": "GET",
+   "reads": [
+    "query"
+   ],
+   "status": "validated"
+  },
+  {
+   "kind": "route",
+   "file": "apps/web/app/api/v1/households/[householdId]/plan/route.ts",
+   "id": "apps/web/app/api/v1/households/[householdId]/plan/route.ts#POST",
+   "method": "POST",
+   "reads": [
+    "body"
+   ],
+   "status": "validated"
+  },
+  {
+   "kind": "route",
+   "file": "apps/web/app/api/v1/households/[householdId]/predictions/route.ts",
+   "id": "apps/web/app/api/v1/households/[householdId]/predictions/route.ts#GET",
+   "method": "GET",
+   "reads": [],
+   "status": "no-input"
+  },
+  {
+   "kind": "route",
+   "file": "apps/web/app/api/v1/households/[householdId]/privacy/export/route.ts",
+   "id": "apps/web/app/api/v1/households/[householdId]/privacy/export/route.ts#POST",
+   "method": "POST",
+   "reads": [],
+   "status": "no-input"
+  },
+  {
+   "kind": "route",
+   "file": "apps/web/app/api/v1/households/[householdId]/school/route.ts",
+   "id": "apps/web/app/api/v1/households/[householdId]/school/route.ts#GET",
+   "method": "GET",
+   "reads": [],
+   "status": "no-input"
+  },
+  {
+   "kind": "route",
+   "file": "apps/web/app/api/v1/households/[householdId]/school/route.ts",
+   "id": "apps/web/app/api/v1/households/[householdId]/school/route.ts#POST",
+   "method": "POST",
+   "reads": [
+    "body"
+   ],
+   "status": "validated"
+  },
+  {
+   "kind": "route",
+   "file": "apps/web/app/api/v1/households/[householdId]/shopping/route.ts",
+   "id": "apps/web/app/api/v1/households/[householdId]/shopping/route.ts#GET",
+   "method": "GET",
+   "reads": [],
+   "status": "no-input"
+  },
+  {
+   "kind": "route",
+   "file": "apps/web/app/api/v1/households/[householdId]/shopping/route.ts",
+   "id": "apps/web/app/api/v1/households/[householdId]/shopping/route.ts#POST",
+   "method": "POST",
+   "reads": [
+    "body"
+   ],
+   "status": "validated"
+  },
+  {
+   "kind": "route",
+   "file": "apps/web/app/api/v1/households/[householdId]/voice/gemini/closed/route.ts",
+   "id": "apps/web/app/api/v1/households/[householdId]/voice/gemini/closed/route.ts#POST",
+   "method": "POST",
+   "reads": [
+    "body"
+   ],
+   "status": "validated"
+  },
+  {
+   "kind": "route",
+   "file": "apps/web/app/api/v1/households/[householdId]/voice/gemini/session/route.ts",
+   "id": "apps/web/app/api/v1/households/[householdId]/voice/gemini/session/route.ts#GET",
+   "method": "GET",
+   "reads": [],
+   "status": "no-input"
+  },
+  {
+   "kind": "route",
+   "file": "apps/web/app/api/v1/households/[householdId]/voice/gemini/session/route.ts",
+   "id": "apps/web/app/api/v1/households/[householdId]/voice/gemini/session/route.ts#POST",
+   "method": "POST",
+   "reads": [],
+   "status": "no-input"
+  },
+  {
+   "kind": "route",
+   "file": "apps/web/app/api/v1/households/[householdId]/voice/gemini/tool/route.ts",
+   "id": "apps/web/app/api/v1/households/[householdId]/voice/gemini/tool/route.ts#POST",
+   "method": "POST",
+   "reads": [
+    "body"
+   ],
+   "status": "validated"
+  },
+  {
+   "kind": "route",
+   "file": "apps/web/app/api/v1/households/[householdId]/voice/gemini/transcribe/route.ts",
+   "id": "apps/web/app/api/v1/households/[householdId]/voice/gemini/transcribe/route.ts#POST",
+   "method": "POST",
+   "reads": [
+    "body"
+   ],
+   "status": "validated"
+  },
+  {
+   "kind": "route",
+   "file": "apps/web/app/api/v1/households/[householdId]/voice/live-engine/route.ts",
+   "id": "apps/web/app/api/v1/households/[householdId]/voice/live-engine/route.ts#PUT",
+   "method": "PUT",
+   "reads": [
+    "body"
+   ],
+   "status": "validated"
+  },
+  {
+   "kind": "route",
+   "file": "apps/web/app/api/v1/households/[householdId]/voice/route.ts",
+   "id": "apps/web/app/api/v1/households/[householdId]/voice/route.ts#GET",
+   "method": "GET",
+   "reads": [
+    "query"
+   ],
+   "status": "validated"
+  },
+  {
+   "kind": "route",
+   "file": "apps/web/app/api/v1/households/[householdId]/voice/route.ts",
+   "id": "apps/web/app/api/v1/households/[householdId]/voice/route.ts#POST",
+   "method": "POST",
+   "reads": [
+    "body"
+   ],
+   "status": "validated"
+  },
+  {
+   "kind": "route",
+   "file": "apps/web/app/api/v1/households/[householdId]/webhooks/[webhookId]/route.ts",
+   "id": "apps/web/app/api/v1/households/[householdId]/webhooks/[webhookId]/route.ts#PATCH",
+   "method": "PATCH",
+   "reads": [
+    "body"
+   ],
+   "status": "validated"
+  },
+  {
+   "kind": "route",
+   "file": "apps/web/app/api/v1/households/[householdId]/webhooks/route.ts",
+   "id": "apps/web/app/api/v1/households/[householdId]/webhooks/route.ts#GET",
+   "method": "GET",
+   "reads": [],
+   "status": "no-input"
+  },
+  {
+   "kind": "route",
+   "file": "apps/web/app/api/v1/households/[householdId]/webhooks/route.ts",
+   "id": "apps/web/app/api/v1/households/[householdId]/webhooks/route.ts#POST",
+   "method": "POST",
+   "reads": [
+    "body"
+   ],
+   "status": "validated"
+  },
+  {
+   "kind": "route",
+   "file": "apps/web/app/api/v1/households/[householdId]/workload/rebalance/route.ts",
+   "id": "apps/web/app/api/v1/households/[householdId]/workload/rebalance/route.ts#POST",
+   "method": "POST",
+   "reads": [
+    "body"
+   ],
+   "status": "validated"
+  },
+  {
+   "kind": "route",
+   "file": "apps/web/app/api/v1/households/[householdId]/workload/route.ts",
+   "id": "apps/web/app/api/v1/households/[householdId]/workload/route.ts#GET",
+   "method": "GET",
+   "reads": [],
+   "status": "no-input"
+  },
+  {
+   "kind": "route",
+   "file": "apps/web/app/api/v1/households/route.ts",
+   "id": "apps/web/app/api/v1/households/route.ts#GET",
+   "method": "GET",
+   "reads": [],
+   "status": "no-input"
+  },
+  {
+   "kind": "route",
+   "file": "apps/web/app/api/v1/households/route.ts",
+   "id": "apps/web/app/api/v1/households/route.ts#POST",
+   "method": "POST",
+   "reads": [
+    "body"
+   ],
+   "status": "validated"
+  },
+  {
+   "kind": "route",
+   "file": "apps/web/app/api/v1/intake/share/route.ts",
+   "id": "apps/web/app/api/v1/intake/share/route.ts#POST",
+   "method": "POST",
+   "reads": [
+    "body"
+   ],
+   "status": "validated"
+  },
+  {
+   "kind": "route",
+   "file": "apps/web/app/api/v1/invitations/[invitationId]/route.ts",
+   "id": "apps/web/app/api/v1/invitations/[invitationId]/route.ts#DELETE",
+   "method": "DELETE",
+   "reads": [],
+   "status": "no-input"
+  },
+  {
+   "kind": "route",
+   "file": "apps/web/app/api/v1/invitations/accept/route.ts",
+   "id": "apps/web/app/api/v1/invitations/accept/route.ts#POST",
+   "method": "POST",
+   "reads": [
+    "body"
+   ],
+   "status": "validated"
+  },
+  {
+   "kind": "route",
+   "file": "apps/web/app/api/v1/me/route.ts",
+   "id": "apps/web/app/api/v1/me/route.ts#GET",
+   "method": "GET",
+   "reads": [],
+   "status": "no-input"
+  },
+  {
+   "kind": "route",
+   "file": "apps/web/app/api/v1/me/view/route.ts",
+   "id": "apps/web/app/api/v1/me/view/route.ts#GET",
+   "method": "GET",
+   "reads": [
+    "query"
+   ],
+   "status": "validated"
+  },
+  {
+   "kind": "route",
+   "file": "apps/web/app/api/v1/notifications/dispatch/route.ts",
+   "id": "apps/web/app/api/v1/notifications/dispatch/route.ts#GET",
+   "method": "GET",
+   "reads": [],
+   "status": "no-input"
+  },
+  {
+   "kind": "route",
+   "file": "apps/web/app/api/v1/notifications/dispatch/route.ts",
+   "id": "apps/web/app/api/v1/notifications/dispatch/route.ts#POST",
+   "method": "POST",
+   "reads": [],
+   "status": "no-input"
+  },
+  {
+   "kind": "route",
+   "file": "apps/web/app/api/v1/notifications/email-off/route.ts",
+   "id": "apps/web/app/api/v1/notifications/email-off/route.ts#GET",
+   "method": "GET",
+   "reads": [
+    "query"
+   ],
+   "status": "not-validated"
+  },
+  {
+   "kind": "route",
+   "file": "apps/web/app/api/v1/notifications/email-off/route.ts",
+   "id": "apps/web/app/api/v1/notifications/email-off/route.ts#POST",
+   "method": "POST",
+   "reads": [
+    "query"
+   ],
+   "status": "validated"
+  },
+  {
+   "kind": "route",
+   "file": "apps/web/app/api/v1/oauth/voice/token/route.ts",
+   "id": "apps/web/app/api/v1/oauth/voice/token/route.ts#POST",
+   "method": "POST",
+   "reads": [
+    "body",
+    "header"
+   ],
+   "status": "validated"
+  },
+  {
+   "kind": "route",
+   "file": "apps/web/app/api/v1/openapi/route.ts",
+   "id": "apps/web/app/api/v1/openapi/route.ts#GET",
+   "method": "GET",
+   "reads": [],
+   "status": "no-input"
+  },
+  {
+   "kind": "route",
+   "file": "apps/web/app/api/v1/partner/groceries/route.ts",
+   "id": "apps/web/app/api/v1/partner/groceries/route.ts#GET",
+   "method": "GET",
+   "reads": [],
+   "status": "no-input"
+  },
+  {
+   "kind": "route",
+   "file": "apps/web/app/api/v1/partner/groceries/route.ts",
+   "id": "apps/web/app/api/v1/partner/groceries/route.ts#POST",
+   "method": "POST",
+   "reads": [
+    "body"
+   ],
+   "status": "validated"
+  },
+  {
+   "kind": "route",
+   "file": "apps/web/app/api/v1/partner/household/route.ts",
+   "id": "apps/web/app/api/v1/partner/household/route.ts#GET",
+   "method": "GET",
+   "reads": [],
+   "status": "no-input"
+  },
+  {
+   "kind": "route",
+   "file": "apps/web/app/api/v1/platform-admin/ai-operations/route.ts",
+   "id": "apps/web/app/api/v1/platform-admin/ai-operations/route.ts#GET",
+   "method": "GET",
+   "reads": [],
+   "status": "no-input"
+  },
+  {
+   "kind": "route",
+   "file": "apps/web/app/api/v1/platform-admin/ai-operations/runs/[runId]/route.ts",
+   "id": "apps/web/app/api/v1/platform-admin/ai-operations/runs/[runId]/route.ts#GET",
+   "method": "GET",
+   "reads": [],
+   "status": "no-input"
+  },
+  {
+   "kind": "route",
+   "file": "apps/web/app/api/v1/platform-admin/ai-quality/route.ts",
+   "id": "apps/web/app/api/v1/platform-admin/ai-quality/route.ts#GET",
+   "method": "GET",
+   "reads": [
+    "query"
+   ],
+   "status": "validated"
+  },
+  {
+   "kind": "route",
+   "file": "apps/web/app/api/v1/platform-admin/experiments/[experimentKey]/route.ts",
+   "id": "apps/web/app/api/v1/platform-admin/experiments/[experimentKey]/route.ts#GET",
+   "method": "GET",
+   "reads": [],
+   "status": "no-input"
+  },
+  {
+   "kind": "route",
+   "file": "apps/web/app/api/v1/platform-admin/experiments/[experimentKey]/route.ts",
+   "id": "apps/web/app/api/v1/platform-admin/experiments/[experimentKey]/route.ts#PATCH",
+   "method": "PATCH",
+   "reads": [
+    "body"
+   ],
+   "status": "validated"
+  },
+  {
+   "kind": "route",
+   "file": "apps/web/app/api/v1/platform-admin/experiments/route.ts",
+   "id": "apps/web/app/api/v1/platform-admin/experiments/route.ts#GET",
+   "method": "GET",
+   "reads": [],
+   "status": "no-input"
+  },
+  {
+   "kind": "route",
+   "file": "apps/web/app/api/v1/platform-admin/experiments/route.ts",
+   "id": "apps/web/app/api/v1/platform-admin/experiments/route.ts#POST",
+   "method": "POST",
+   "reads": [
+    "body"
+   ],
+   "status": "validated"
+  },
+  {
+   "kind": "route",
+   "file": "apps/web/app/api/v1/platform-admin/homesend-metrics/route.ts",
+   "id": "apps/web/app/api/v1/platform-admin/homesend-metrics/route.ts#GET",
+   "method": "GET",
+   "reads": [
+    "query"
+   ],
+   "status": "validated"
+  },
+  {
+   "kind": "route",
+   "file": "apps/web/app/api/v1/platform-admin/operations/route.ts",
+   "id": "apps/web/app/api/v1/platform-admin/operations/route.ts#GET",
+   "method": "GET",
+   "reads": [],
+   "status": "no-input"
+  },
+  {
+   "kind": "route",
+   "file": "apps/web/app/api/v1/platform-admin/payments/[paymentId]/refund/route.ts",
+   "id": "apps/web/app/api/v1/platform-admin/payments/[paymentId]/refund/route.ts#POST",
+   "method": "POST",
+   "reads": [
+    "body"
+   ],
+   "status": "validated"
+  },
+  {
+   "kind": "route",
+   "file": "apps/web/app/api/v1/platform-admin/payments/reconcile/route.ts",
+   "id": "apps/web/app/api/v1/platform-admin/payments/reconcile/route.ts#POST",
+   "method": "POST",
+   "reads": [],
+   "status": "no-input"
+  },
+  {
+   "kind": "route",
+   "file": "apps/web/app/api/v1/platform-admin/payments/route.ts",
+   "id": "apps/web/app/api/v1/platform-admin/payments/route.ts#GET",
+   "method": "GET",
+   "reads": [
+    "query"
+   ],
+   "status": "validated"
+  },
+  {
+   "kind": "route",
+   "file": "apps/web/app/api/v1/platform-admin/plans/[planKey]/policies/route.ts",
+   "id": "apps/web/app/api/v1/platform-admin/plans/[planKey]/policies/route.ts#GET",
+   "method": "GET",
+   "reads": [],
+   "status": "no-input"
+  },
+  {
+   "kind": "route",
+   "file": "apps/web/app/api/v1/platform-admin/plans/[planKey]/policies/route.ts",
+   "id": "apps/web/app/api/v1/platform-admin/plans/[planKey]/policies/route.ts#PATCH",
+   "method": "PATCH",
+   "reads": [
+    "body"
+   ],
+   "status": "validated"
+  },
+  {
+   "kind": "route",
+   "file": "apps/web/app/api/v1/platform-admin/privacy-requests/[requestId]/route.ts",
+   "id": "apps/web/app/api/v1/platform-admin/privacy-requests/[requestId]/route.ts#PATCH",
+   "method": "PATCH",
+   "reads": [
+    "body"
+   ],
+   "status": "validated"
+  },
+  {
+   "kind": "route",
+   "file": "apps/web/app/api/v1/platform-admin/privacy-requests/route.ts",
+   "id": "apps/web/app/api/v1/platform-admin/privacy-requests/route.ts#GET",
+   "method": "GET",
+   "reads": [
+    "query"
+   ],
+   "status": "validated"
+  },
+  {
+   "kind": "route",
+   "file": "apps/web/app/api/v1/platform-admin/subscriptions/[householdId]/route.ts",
+   "id": "apps/web/app/api/v1/platform-admin/subscriptions/[householdId]/route.ts#GET",
+   "method": "GET",
+   "reads": [
+    "query"
+   ],
+   "status": "partial"
+  },
+  {
+   "kind": "route",
+   "file": "apps/web/app/api/v1/platform-admin/subscriptions/[householdId]/route.ts",
+   "id": "apps/web/app/api/v1/platform-admin/subscriptions/[householdId]/route.ts#POST",
+   "method": "POST",
+   "reads": [
+    "body"
+   ],
+   "status": "validated"
+  },
+  {
+   "kind": "route",
+   "file": "apps/web/app/api/v1/platform-admin/support-access/route.ts",
+   "id": "apps/web/app/api/v1/platform-admin/support-access/route.ts#POST",
+   "method": "POST",
+   "reads": [
+    "body"
+   ],
+   "status": "validated"
+  },
+  {
+   "kind": "route",
+   "file": "apps/web/app/api/v1/platform-admin/voice-metrics/route.ts",
+   "id": "apps/web/app/api/v1/platform-admin/voice-metrics/route.ts#GET",
+   "method": "GET",
+   "reads": [
+    "query"
+   ],
+   "status": "validated"
+  },
+  {
+   "kind": "route",
+   "file": "apps/web/app/api/v1/platform/catalog/import/route.ts",
+   "id": "apps/web/app/api/v1/platform/catalog/import/route.ts#GET",
+   "method": "GET",
+   "reads": [],
+   "status": "no-input"
+  },
+  {
+   "kind": "route",
+   "file": "apps/web/app/api/v1/platform/catalog/import/route.ts",
+   "id": "apps/web/app/api/v1/platform/catalog/import/route.ts#POST",
+   "method": "POST",
+   "reads": [],
+   "status": "no-input"
+  },
+  {
+   "kind": "route",
+   "file": "apps/web/app/api/v1/platform/retention/route.ts",
+   "id": "apps/web/app/api/v1/platform/retention/route.ts#GET",
+   "method": "GET",
+   "reads": [],
+   "status": "no-input"
+  },
+  {
+   "kind": "route",
+   "file": "apps/web/app/api/v1/platform/retention/route.ts",
+   "id": "apps/web/app/api/v1/platform/retention/route.ts#POST",
+   "method": "POST",
+   "reads": [
+    "header"
+   ],
+   "status": "delegated"
+  },
+  {
+   "kind": "route",
+   "file": "apps/web/app/api/v1/platform/webhook-delivery/route.ts",
+   "id": "apps/web/app/api/v1/platform/webhook-delivery/route.ts#GET",
+   "method": "GET",
+   "reads": [],
+   "status": "no-input"
+  },
+  {
+   "kind": "route",
+   "file": "apps/web/app/api/v1/platform/webhook-delivery/route.ts",
+   "id": "apps/web/app/api/v1/platform/webhook-delivery/route.ts#POST",
+   "method": "POST",
+   "reads": [
+    "header"
+   ],
+   "status": "delegated"
+  },
+  {
+   "kind": "route",
+   "file": "apps/web/app/api/v1/security/csp-report/route.ts",
+   "id": "apps/web/app/api/v1/security/csp-report/route.ts#POST",
+   "method": "POST",
+   "reads": [
+    "body",
+    "header"
+   ],
+   "status": "validated"
+  },
+  {
+   "kind": "route",
+   "file": "apps/web/app/api/v1/voice/alexa/route.ts",
+   "id": "apps/web/app/api/v1/voice/alexa/route.ts#POST",
+   "method": "POST",
+   "reads": [
+    "body",
+    "header"
+   ],
+   "status": "validated"
+  },
+  {
+   "kind": "route",
+   "file": "apps/web/app/api/v1/whatsapp/webhook/route.ts",
+   "id": "apps/web/app/api/v1/whatsapp/webhook/route.ts#GET",
+   "method": "GET",
+   "reads": [],
+   "status": "delegated"
+  },
+  {
+   "kind": "route",
+   "file": "apps/web/app/api/v1/whatsapp/webhook/route.ts",
+   "id": "apps/web/app/api/v1/whatsapp/webhook/route.ts#POST",
+   "method": "POST",
+   "reads": [],
+   "status": "delegated"
+  },
+  {
+   "kind": "action",
+   "file": "apps/web/app/careers/actions.ts",
+   "id": "apps/web/app/careers/actions.ts#applyAction",
+   "method": "applyAction",
+   "reads": [
+    "arguments"
+   ],
+   "status": "validated"
+  },
+  {
+   "kind": "action",
+   "file": "apps/web/app/careers/actions.ts",
+   "id": "apps/web/app/careers/actions.ts#withdrawAction",
+   "method": "withdrawAction",
+   "reads": [
+    "arguments"
+   ],
+   "status": "validated"
+  },
+  {
+   "kind": "action",
+   "file": "apps/web/app/chat/actions.ts",
+   "id": "apps/web/app/chat/actions.ts#addChatPeopleAction",
+   "method": "addChatPeopleAction",
+   "reads": [
+    "arguments"
+   ],
+   "status": "validated"
+  },
+  {
+   "kind": "action",
+   "file": "apps/web/app/chat/actions.ts",
+   "id": "apps/web/app/chat/actions.ts#editChatMessageAction",
+   "method": "editChatMessageAction",
+   "reads": [
+    "arguments"
+   ],
+   "status": "validated"
+  },
+  {
+   "kind": "action",
+   "file": "apps/web/app/chat/actions.ts",
+   "id": "apps/web/app/chat/actions.ts#leaveChatAction",
+   "method": "leaveChatAction",
+   "reads": [
+    "arguments"
+   ],
+   "status": "validated"
+  },
+  {
+   "kind": "action",
+   "file": "apps/web/app/chat/actions.ts",
+   "id": "apps/web/app/chat/actions.ts#reactToChatMessageAction",
+   "method": "reactToChatMessageAction",
+   "reads": [
+    "arguments"
+   ],
+   "status": "validated"
+  },
+  {
+   "kind": "action",
+   "file": "apps/web/app/chat/actions.ts",
+   "id": "apps/web/app/chat/actions.ts#sendChatMessageAction",
+   "method": "sendChatMessageAction",
+   "reads": [
+    "arguments"
+   ],
+   "status": "validated"
+  },
+  {
+   "kind": "action",
+   "file": "apps/web/app/chat/actions.ts",
+   "id": "apps/web/app/chat/actions.ts#takeBackChatMessageAction",
+   "method": "takeBackChatMessageAction",
+   "reads": [
+    "arguments"
+   ],
+   "status": "validated"
+  },
+  {
+   "kind": "action",
+   "file": "apps/web/app/email-off/actions.ts",
+   "id": "apps/web/app/email-off/actions.ts#turnEmailOffAction",
+   "method": "turnEmailOffAction",
+   "reads": [
+    "arguments"
+   ],
+   "status": "validated"
+  },
+  {
+   "kind": "action",
+   "file": "apps/web/app/groceries/order/actions.ts",
+   "id": "apps/web/app/groceries/order/actions.ts#disconnectInstamartAction",
+   "method": "disconnectInstamartAction",
+   "reads": [
+    "arguments"
+   ],
+   "status": "validated"
+  },
+  {
+   "kind": "action",
+   "file": "apps/web/app/groceries/order/actions.ts",
+   "id": "apps/web/app/groceries/order/actions.ts#matchListAction",
+   "method": "matchListAction",
+   "reads": [
+    "arguments"
+   ],
+   "status": "validated"
+  },
+  {
+   "kind": "action",
+   "file": "apps/web/app/groceries/order/actions.ts",
+   "id": "apps/web/app/groceries/order/actions.ts#placeOrderAction",
+   "method": "placeOrderAction",
+   "reads": [
+    "arguments"
+   ],
+   "status": "validated"
+  },
+  {
+   "kind": "action",
+   "file": "apps/web/app/groceries/order/actions.ts",
+   "id": "apps/web/app/groceries/order/actions.ts#refreshOrdersAction",
+   "method": "refreshOrdersAction",
+   "reads": [
+    "arguments"
+   ],
+   "status": "validated"
+  },
+  {
+   "kind": "action",
+   "file": "apps/web/app/groceries/order/actions.ts",
+   "id": "apps/web/app/groceries/order/actions.ts#reviewCartAction",
+   "method": "reviewCartAction",
+   "reads": [
+    "arguments"
+   ],
+   "status": "validated"
+  },
+  {
+   "kind": "action",
+   "file": "apps/web/app/groceries/order/actions.ts",
+   "id": "apps/web/app/groceries/order/actions.ts#stockOrderAction",
+   "method": "stockOrderAction",
+   "reads": [
+    "arguments"
+   ],
+   "status": "validated"
+  },
+  {
+   "kind": "action",
+   "file": "apps/web/app/help/help-actions.ts",
+   "id": "apps/web/app/help/help-actions.ts#askTheGuide",
+   "method": "askTheGuide",
+   "reads": [
+    "arguments"
+   ],
+   "status": "validated"
+  },
+  {
+   "kind": "action",
+   "file": "apps/web/app/meals/taste-actions.ts",
+   "id": "apps/web/app/meals/taste-actions.ts#setDishTasteAction",
+   "method": "setDishTasteAction",
+   "reads": [
+    "arguments"
+   ],
+   "status": "validated"
+  },
+  {
+   "kind": "action",
+   "file": "apps/web/app/places/actions.ts",
+   "id": "apps/web/app/places/actions.ts#addPlaceAction",
+   "method": "addPlaceAction",
+   "reads": [
+    "arguments"
+   ],
+   "status": "validated"
+  },
+  {
+   "kind": "action",
+   "file": "apps/web/app/places/actions.ts",
+   "id": "apps/web/app/places/actions.ts#forgetPlaceAction",
+   "method": "forgetPlaceAction",
+   "reads": [
+    "arguments"
+   ],
+   "status": "validated"
+  },
+  {
+   "kind": "action",
+   "file": "apps/web/app/places/actions.ts",
+   "id": "apps/web/app/places/actions.ts#notePlaceAction",
+   "method": "notePlaceAction",
+   "reads": [
+    "arguments"
+   ],
+   "status": "validated"
+  },
+  {
+   "kind": "action",
+   "file": "apps/web/app/platform-admin/careers/actions.ts",
+   "id": "apps/web/app/platform-admin/careers/actions.ts#clearCareersKeyAction",
+   "method": "clearCareersKeyAction",
+   "reads": [],
+   "status": "no-input"
+  },
+  {
+   "kind": "action",
+   "file": "apps/web/app/platform-admin/careers/actions.ts",
+   "id": "apps/web/app/platform-admin/careers/actions.ts#saveCareersKeyAction",
+   "method": "saveCareersKeyAction",
+   "reads": [
+    "arguments"
+   ],
+   "status": "validated"
+  },
+  {
+   "kind": "action",
+   "file": "apps/web/app/platform-admin/careers/actions.ts",
+   "id": "apps/web/app/platform-admin/careers/actions.ts#testCareersConnectionAction",
+   "method": "testCareersConnectionAction",
+   "reads": [],
+   "status": "no-input"
+  },
+  {
+   "kind": "action",
+   "file": "apps/web/app/settings/notifications/household-actions.ts",
+   "id": "apps/web/app/settings/notifications/household-actions.ts#saveHouseholdNotificationsAction",
+   "method": "saveHouseholdNotificationsAction",
+   "reads": [
+    "arguments"
+   ],
+   "status": "validated"
+  }
+ ]
+}
