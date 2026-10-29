@@ -8,6 +8,8 @@ import { Button } from "@wonderhome/core/ui/button";
 import { Field } from "@wonderhome/core/ui/field";
 import { PET_GENDER_OPTIONS } from "@wonderhome/core/home/pets";
 import { Pill } from "@wonderhome/core/ui/pill";
+
+import { ICON_ACTION } from "./icon-action";
 import { Sheet } from "@wonderhome/core/ui/sheet";
 
 import type { ActionState } from "../(auth)/actions";
@@ -39,7 +41,7 @@ export function PetProfileForm({
 
   return (
     <>
-      <Pill type="button" tone="quiet" onClick={() => setOpen(true)} aria-label={`Edit ${initial.name}'s details`} title="Edit details">
+      <Pill type="button" tone="quiet" className={ICON_ACTION} onClick={() => setOpen(true)} aria-label={`Edit ${initial.name}'s details`} title="Edit details">
         <Pencil aria-hidden className="size-3.5" />
       </Pill>
 

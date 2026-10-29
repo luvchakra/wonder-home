@@ -183,13 +183,11 @@ export function MemberDetail({
               }}
             />
           ) : null}
+          <MemberAvatarControl variant="icons" householdId={householdId} memberId={member.id} displayName={member.displayName} avatarUrl={member.avatarUrl} />
           {!member.isOwner && member.id !== currentMemberId && member.status === "active" ? (
             <RemoveMemberControl householdId={householdId} memberId={member.id} displayName={member.displayName} labels={removeLabels} />
           ) : null}
         </div>
-      ) : null}
-      {editsHere ? (
-        <MemberAvatarControl householdId={householdId} memberId={member.id} displayName={member.displayName} avatarUrl={member.avatarUrl} />
       ) : null}
       <dl className="grid grid-cols-2 gap-x-4 gap-y-2.5">
         {/* Who they are, in pairs. */}

@@ -8,6 +8,8 @@ import { ChoiceChips } from "@wonderhome/core/ui/choice-chips";
 import { Button } from "@wonderhome/core/ui/button";
 import { Field } from "@wonderhome/core/ui/field";
 import { Pill } from "@wonderhome/core/ui/pill";
+
+import { ICON_ACTION } from "./icon-action";
 import { Select } from "@wonderhome/core/ui/select";
 import type { DayHours } from "@wonderhome/core/household/day-hours";
 import { Sheet } from "@wonderhome/core/ui/sheet";
@@ -95,7 +97,7 @@ export function MemberProfileForm({
 
   return (
     <>
-      <Pill type="button" tone="quiet" onClick={() => setOpen(true)} aria-label={`Edit ${initial.displayName}'s details`} title="Edit details">
+      <Pill type="button" tone="quiet" className={ICON_ACTION} onClick={() => setOpen(true)} aria-label={`Edit ${initial.displayName}'s details`} title="Edit details">
         <Pencil aria-hidden className="size-3.5" />
       </Pill>
 
