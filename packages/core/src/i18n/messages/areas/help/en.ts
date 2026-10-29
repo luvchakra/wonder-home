@@ -447,7 +447,7 @@ export const helpEn = {
   "help.guide.connections.title": "Connected accounts, WhatsApp and voice assistants",
   "help.guide.connections.summary": "What your household can connect, and what never travels through a connection.",
   "help.guide.connections.body.1":
-    "Settings → Connections lists what your household can connect — school, calendar, email, shopping, weather and home devices — and says plainly when one is not available yet for your WonderHome, rather than offering a button that does nothing. Connecting is up to an Admin.",
+    "Settings → Connections shows each thing your household can connect — school, WhatsApp, calendar, email, shopping, weather and home devices — as its own card you open to see that connection's details. It says plainly when one is switched on by whoever runs your WonderHome, and when one is not available yet, rather than offering a button that does nothing. Connecting the ones that are yours to connect is up to an Admin.",
   "help.guide.connections.body.2":
     "WonderHome never keeps your password for another service. Imported calendar entries are never marked as protected family time or as confirmed — those are yours to decide — and a private entry arrives as busy time only, with no title or place.",
   "help.guide.connections.body.3":

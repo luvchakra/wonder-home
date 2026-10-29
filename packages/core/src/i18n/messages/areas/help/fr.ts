@@ -409,7 +409,7 @@ export const helpFr: AreaCatalog<typeof helpEn> = {
   "help.guide.connections.title": "Comptes connectés, WhatsApp et assistants vocaux",
   "help.guide.connections.summary": "Ce que votre foyer peut connecter, et ce qui ne passe jamais par une connexion.",
   "help.guide.connections.body.1":
-    "Paramètres → Connexions liste ce que votre foyer peut connecter — école, agenda, e-mail, courses, météo et appareils de la maison — et dit clairement quand l’un d’eux n’est pas encore disponible pour votre WonderHome, plutôt que de proposer un bouton qui ne fait rien. Connecter revient à un Admin.",
+    "Paramètres → Connexions présente chaque chose que votre foyer peut connecter — école, WhatsApp, agenda, e-mail, courses, météo et appareils de la maison — sous forme de carte à part, que vous ouvrez pour voir les détails de cette connexion. Il dit clairement quand l’une est activée par la personne qui gère votre WonderHome, et quand l’une n’est pas encore disponible, plutôt que de proposer un bouton qui ne fait rien. Connecter celles qui vous reviennent est l’affaire d’un Admin.",
   "help.guide.connections.body.2":
     "WonderHome ne conserve jamais votre mot de passe d’un autre service. Les entrées d’agenda importées ne sont jamais marquées comme temps familial protégé ni comme confirmées — c’est à vous d’en décider — et une entrée privée n’arrive que comme un créneau occupé, sans titre ni lieu.",
   "help.guide.connections.body.3":
