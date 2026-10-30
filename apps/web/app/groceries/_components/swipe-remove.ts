@@ -11,13 +11,13 @@ export async function removeBySwipe({
   takeOffList,
   stopTracking,
 }: {
-  view: "to-buy" | "all" | string;
+  view: "to-buy" | "in-kitchen" | "all" | string;
   itemId: string;
   onList: number;
   takeOffList: () => Promise<{ ok: boolean }>;
   stopTracking: () => Promise<{ ok: boolean }>;
 }): Promise<boolean | null> {
-  if (view === "all") {
+  if (view !== "to-buy") {
     if (onList > 0) {
       const off = await takeOffList();
       if (!off.ok) return null;

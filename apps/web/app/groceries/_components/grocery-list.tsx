@@ -70,7 +70,7 @@ export function GroceryList({
 }: {
   householdId: string;
   items: ListItem[];
-  view: "all" | "to-buy";
+  view: "all" | "in-kitchen" | "to-buy";
   words: GroceryWords;
   /** An adult: marks things bought and changes what is at home. */
   canMarkBought: boolean;
@@ -141,7 +141,11 @@ export function GroceryList({
         ? item.stock !== null && item.stock > 0
         : stockFilter === "uncounted"
           ? item.stock === null
-          : view === "all" || (onList[item.id] ?? 0) > 0) &&
+          : view === "all"
+            ? true
+            : view === "in-kitchen"
+              ? item.stock !== null && item.stock > 0
+              : (onList[item.id] ?? 0) > 0) &&
       (!category || item.category === category) &&
       (!needle ||
         [item.name, item.category, ...item.aliases].some((text) =>
