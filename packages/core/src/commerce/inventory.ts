@@ -674,3 +674,19 @@ export const restoreGrocery = invalidatesContext(
   },
   (_supabase, input) => input.householdId,
 );
+
+/**
+ * The three Groceries tab counts. All is every tracked item, To Buy the items
+ * on the shopping list, In Kitchen the items with a counted amount above zero
+ * (the At home card's test). In Kitchen and To Buy overlap: an item at home
+ * can also be on the list.
+ */
+export function groceryTabCounts(
+  items: ReadonlyArray<{ stock: { quantity: number } | null; toBuy: unknown }>,
+): { all: number; inKitchen: number; toBuy: number } {
+  return {
+    all: items.length,
+    inKitchen: items.filter((item) => item.stock !== null && item.stock.quantity > 0).length,
+    toBuy: items.filter((item) => item.toBuy).length,
+  };
+}

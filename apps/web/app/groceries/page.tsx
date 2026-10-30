@@ -15,14 +15,10 @@ import {
   listGroceries,
   listRetiredGroceries,
   recentlyBought,
+  groceryTabCounts,
   stockStatus,
   type GroceryItem,
 } from "@wonderhome/core/commerce/inventory";
-import {
-  useSoon,
-  type RunningEntry,
-  type UseFirstEntry,
-} from "@wonderhome/core/commerce/use-soon";
 import type { Translate } from "@wonderhome/core/i18n/translate";
 import { AppShell } from "@wonderhome/core/shell/app-shell";
 import { IconTile } from "@wonderhome/core/ui/icon-tile";
@@ -40,12 +36,12 @@ import { GroceryList, type ListItem } from "./_components/grocery-list";
 export const metadata = { title: "Groceries" };
 export const dynamic = "force-dynamic";
 
-type View = "all" | "to-buy" | "use-soon";
+type View = "all" | "in-kitchen" | "to-buy";
 
 /**
  * Groceries (Groceries Phase 1, design/GROCERIES-PANTRY-HOMETALK-PHASE0.md §3):
  * one list of everything the household keeps, each row with what is at home
- * and what to buy side by side. "To buy" and "Use soon" are views of the same
+ * and what to buy side by side. "In Kitchen" and "To Buy" are views of the same
  * records, never a second list. Nothing here guesses how much is at home:
  * an amount nobody confirmed is "not counted yet".
  */
@@ -62,8 +58,13 @@ export default async function GroceriesPage({
   const { t } = locale;
   const householdId = membership.household.id;
   const timezone = membership.household.timezone;
+  // Old links: "use-soon" (a dropped tab) lands on In Kitchen.
   const view: View =
-    requested === "to-buy" || requested === "use-soon" ? requested : "all";
+    requested === "to-buy"
+      ? "to-buy"
+      : requested === "in-kitchen" || requested === "use-soon"
+        ? "in-kitchen"
+        : "all";
   const now = new Date();
   const today = new Intl.DateTimeFormat("en-CA", { timeZone: timezone }).format(
     now,
@@ -109,7 +110,7 @@ export default async function GroceriesPage({
 
   const canMarkBought = membership.memberType === "adult";
   const firstName = viewer.displayName.split(/\s+/)[0] ?? viewer.displayName;
-  const toBuyCount = (items ?? []).filter((item) => item.toBuy).length;
+  const counts = groceryTabCounts(items ?? []);
   // Energy and protein per 100 g under each name, from the source the item page credits (25-012).
   const number = new Intl.NumberFormat(viewer.language, { maximumFractionDigits: 1 });
   const nutritionOf = (item: GroceryItem): string | null => {
@@ -210,15 +211,16 @@ export default async function GroceriesPage({
               count: items?.length,
             },
             {
+              key: "in-kitchen",
+              label: t("grocery.view.inKitchen"),
+              href: "/groceries?view=in-kitchen",
+              count: counts.inKitchen,
+            },
+            {
               key: "to-buy",
               label: t("grocery.view.toBuy"),
               href: "/groceries?view=to-buy",
-              count: toBuyCount,
-            },
-            {
-              key: "use-soon",
-              label: t("grocery.view.useSoon"),
-              href: "/groceries?view=use-soon",
+              count: counts.toBuy,
             },
           ]}
         />
@@ -232,24 +234,14 @@ export default async function GroceriesPage({
           />
         ) : (
           <>
-            {view === "use-soon" ? (
-              <UseSoon
-                items={items}
-                words={words}
-                t={t}
-                timezone={timezone}
-                today={today}
-              />
-            ) : (
-              <GroceryList
-                householdId={householdId}
-                items={listItems}
-                view={view}
-                words={words}
-                canMarkBought={canMarkBought}
-                today={today}
-              />
-            )}
+            <GroceryList
+              householdId={householdId}
+              items={listItems}
+              view={view}
+              words={words}
+              canMarkBought={canMarkBought}
+              today={today}
+            />
 
             {view === "to-buy" ? (
               <section className="space-y-2">
@@ -298,162 +290,5 @@ export default async function GroceriesPage({
         <QuoteCard>{t("grocery.quote")}</QuoteCard>
       </div>
     </AppShell>
-  );
-}
-
-/**
- * Use soon (design §3.6, story 25-003c): dates someone knows, and what is at or
- * below its low level — never mixed. The rules are `commerce/use-soon.ts`: an
- * estimated date is never listed, a passed date says "check it before using",
- * and an amount says whether it was counted or worked out.
- */
-function UseSoon({
-  items,
-  words,
-  t,
-  timezone,
-  today,
-}: {
-  items: GroceryItem[];
-  words: ReturnType<typeof groceryWords>;
-  t: Translate;
-  timezone: string;
-  today: string;
-}) {
-  const { useFirst, running, estimatedHidden } = useSoon(items, today, timezone);
-  const dayOn = (day: string) => formatDate(timezone, new Date(`${day}T12:00:00Z`));
-  const amountOf = (item: GroceryItem) =>
-    sayAmount(words, { quantity: item.stock!.quantity, unit: item.stock!.unit }, item.unit);
-
-  if (useFirst.length === 0 && running.length === 0) {
-    return (
-      <div className="space-y-3">
-        <EmptyState
-          icon={CalendarClock}
-          tone="care"
-          title={t("grocery.useSoon.empty")}
-          description={t("grocery.useSoon.emptyLede")}
-        />
-        {estimatedHidden > 0 ? (
-          <p className="text-sm text-[var(--wh-foreground-muted)]">
-            {t("grocery.useSoon.estimatedNote")}
-          </p>
-        ) : null}
-      </div>
-    );
-  }
-
-  const row = (
-    item: GroceryItem,
-    lines: string[],
-    tone: "attention" | "risk" | "care",
-  ) => (
-    <li key={item.id}>
-      <Link
-        href={`/groceries/${item.id}`}
-        className="flex items-center gap-3 py-3 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--wh-primary)]"
-      >
-        <IconTile
-          icon={tone === "care" ? CalendarClock : TriangleAlert}
-          tone={tone}
-          size="sm"
-        />
-        <span className="min-w-0 flex-1">
-          <span className="block text-sm font-medium break-words">
-            {item.name}
-          </span>
-          {lines.map((line) => (
-            <span
-              key={line}
-              className="block text-xs text-[var(--wh-foreground-muted)]"
-            >
-              {line}
-            </span>
-          ))}
-        </span>
-        <ChevronRight
-          aria-hidden
-          className="size-4 shrink-0 text-[var(--wh-foreground-subtle)]"
-        />
-      </Link>
-    </li>
-  );
-
-  const dateLine = (entry: UseFirstEntry) => {
-    const date = dayOn(entry.useBy);
-    const basis = t(`grocery.useSoon.basis.${entry.basis}`);
-    if (entry.state === "passed")
-      return t("grocery.useSoon.datePassed", { date, basis });
-    if (entry.state === "today") return t("grocery.useSoon.dateToday", { basis });
-    if (entry.days === 1) return t("grocery.useSoon.dateTomorrow", { basis });
-    return t("grocery.useSoon.dateLater", { date, basis });
-  };
-
-  const amountLine = (entry: RunningEntry) => {
-    const asOf = dayOn(entry.asOf);
-    if (entry.status === "none") {
-      return entry.knowledge === "counted"
-        ? t("grocery.useSoon.noneCounted", { date: asOf })
-        : t("grocery.useSoon.noneWorked");
-    }
-    return entry.knowledge === "counted"
-      ? t("grocery.useSoon.amountCounted", { amount: amountOf(entry.item), date: asOf })
-      : t("grocery.useSoon.amountWorked", { amount: amountOf(entry.item) });
-  };
-
-  return (
-    <div className="space-y-5">
-      {useFirst.length > 0 ? (
-        <section className="space-y-2">
-          <SectionHeader title={t("grocery.useSoon.useFirst")} />
-          <p className="text-sm text-[var(--wh-foreground-muted)]">
-            {t("grocery.useSoon.useFirstLede")}
-          </p>
-          <ul className="divide-y divide-[var(--wh-border)] rounded-[var(--wh-radius)] bg-[var(--wh-surface)] px-4 shadow-[var(--wh-shadow-card)]">
-            {useFirst.map((entry) =>
-              row(
-                entry.item,
-                [
-                  dateLine(entry),
-                  ...(entry.knowledge === "counted"
-                    ? [t("grocery.useSoon.left", { amount: amountOf(entry.item) })]
-                    : []),
-                ],
-                entry.state === "passed"
-                  ? "risk"
-                  : entry.state === "today" || entry.state === "soon"
-                    ? "attention"
-                    : "care",
-              ),
-            )}
-          </ul>
-        </section>
-      ) : null}
-      {running.length > 0 ? (
-        <section className="space-y-2">
-          <SectionHeader title={t("grocery.useSoon.running")} />
-          <p className="text-sm text-[var(--wh-foreground-muted)]">
-            {t("grocery.useSoon.runningLede")}
-          </p>
-          <ul className="divide-y divide-[var(--wh-border)] rounded-[var(--wh-radius)] bg-[var(--wh-surface)] px-4 shadow-[var(--wh-shadow-card)]">
-            {running.map((entry) =>
-              row(
-                entry.item,
-                [
-                  amountLine(entry),
-                  ...(entry.old ? [t("grocery.useSoon.old")] : []),
-                ],
-                entry.status === "none" ? "risk" : "attention",
-              ),
-            )}
-          </ul>
-        </section>
-      ) : null}
-      {estimatedHidden > 0 ? (
-        <p className="text-sm text-[var(--wh-foreground-muted)]">
-          {t("grocery.useSoon.estimatedNote")}
-        </p>
-      ) : null}
-    </div>
   );
 }

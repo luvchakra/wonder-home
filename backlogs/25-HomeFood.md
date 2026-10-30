@@ -75,6 +75,7 @@ HomeFood is everything about the household's food: what is at home, what to buy,
 - In stock and to buy are separate amounts; the row's −/+ change only to buy, stock changes only on the item's page or by marking bought.
 - Amounts carry their unit, convert within mass, volume and count, and never go below zero; a retried change never counts twice and a stale one is refused.
 - An amount nobody gave is "not counted yet", never estimated.
+- **Tabs (2026-10-30, owner):** Groceries tabs are All | In Kitchen | To Buy. In Kitchen = items with a counted amount above zero (the At home card's test); To Buy = the shopping list; the Use soon tab is dropped (`?view=use-soon` falls back to In Kitchen; `commerce/use-soon.ts` removed). PR #502.
 - Search, category filter, add-item that finds existing and stopped items first, mark bought with the actual amount, use soon from entered dates and low levels.
 - Adults change stock; the family changes the list; helpers read.
 
