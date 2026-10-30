@@ -15,6 +15,7 @@ import {
   listGroceries,
   listRetiredGroceries,
   recentlyBought,
+  groceryTabCounts,
   stockStatus,
   type GroceryItem,
 } from "@wonderhome/core/commerce/inventory";
@@ -109,9 +110,7 @@ export default async function GroceriesPage({
 
   const canMarkBought = membership.memberType === "adult";
   const firstName = viewer.displayName.split(/\s+/)[0] ?? viewer.displayName;
-  // In Kitchen counts what is at home: a counted amount above zero (the same test as the At home card).
-  const inKitchenCount = (items ?? []).filter((item) => item.stock !== null && item.stock.quantity > 0).length;
-  const toBuyCount = (items ?? []).filter((item) => item.toBuy).length;
+  const counts = groceryTabCounts(items ?? []);
   // Energy and protein per 100 g under each name, from the source the item page credits (25-012).
   const number = new Intl.NumberFormat(viewer.language, { maximumFractionDigits: 1 });
   const nutritionOf = (item: GroceryItem): string | null => {
@@ -215,13 +214,13 @@ export default async function GroceriesPage({
               key: "in-kitchen",
               label: t("grocery.view.inKitchen"),
               href: "/groceries?view=in-kitchen",
-              count: inKitchenCount,
+              count: counts.inKitchen,
             },
             {
               key: "to-buy",
               label: t("grocery.view.toBuy"),
               href: "/groceries?view=to-buy",
-              count: toBuyCount,
+              count: counts.toBuy,
             },
           ]}
         />
