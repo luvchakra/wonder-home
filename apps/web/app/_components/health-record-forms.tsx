@@ -8,6 +8,7 @@ import { REPORT_ACCEPT, REPORT_MAX_BYTES } from "@wonderhome/core/health/report-
 import { Alert } from "@wonderhome/core/ui/alert";
 import { Button } from "@wonderhome/core/ui/button";
 import { Field } from "@wonderhome/core/ui/field";
+import { TextareaField } from "@wonderhome/core/ui/textarea-field";
 import { Pill } from "@wonderhome/core/ui/pill";
 import { Select } from "@wonderhome/core/ui/select";
 import { Sheet } from "@wonderhome/core/ui/sheet";
@@ -155,7 +156,7 @@ export function AddRecordButton({
             ))}
           </Select>
           <Field label={words.date} name="documentDate" type="date" />
-          <Field label={common.notes} name="notes" placeholder={common.notesPlaceholder} autoComplete="off" />
+          <TextareaField label={common.notes} name="notes" placeholder={common.notesPlaceholder} />
           <ReportFileField labels={labels} />
           <HealthPrivacyField labels={labels} defaultValue={defaultPrivacyScope} />
           <Button type="submit" disabled={pending} className="w-full">
@@ -231,7 +232,7 @@ export function EditRecordButton({
             ))}
           </Select>
           <Field label={words.date} name="documentDate" type="date" defaultValue={documentDate ?? ""} />
-          <Field label={common.notes} name="notes" defaultValue={notes ?? ""} autoComplete="off" />
+          <TextareaField label={common.notes} name="notes" defaultValue={notes ?? ""} />
           <ReportFileField labels={labels} hasReport={hasReport} />
           <HealthPrivacyField labels={labels} defaultValue={privacyScope} subjectMemberId={memberId} />
           <Button type="submit" disabled={pending} className="w-full">

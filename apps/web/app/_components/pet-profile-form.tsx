@@ -6,6 +6,7 @@ import { useActionState, useState } from "react";
 import { Alert } from "@wonderhome/core/ui/alert";
 import { Button } from "@wonderhome/core/ui/button";
 import { Field } from "@wonderhome/core/ui/field";
+import { TextareaField } from "@wonderhome/core/ui/textarea-field";
 import { PET_GENDER_OPTIONS } from "@wonderhome/core/home/pets";
 import { Pill } from "@wonderhome/core/ui/pill";
 
@@ -61,7 +62,7 @@ export function PetProfileForm({
             <Field label="Vet name" name="vetName" defaultValue={initial.vetName ?? ""} autoComplete="off" />
             <Field label="Vet contact" name="vetContact" defaultValue={initial.vetContact ?? ""} autoComplete="off" />
           </div>
-          <Field label="Notes" name="notes" defaultValue={initial.notes ?? ""} autoComplete="off" />
+          <TextareaField label="Notes" name="notes" defaultValue={initial.notes ?? ""} />
 
           <Button type="submit" disabled={pending} className="w-full">
             {pending ? "Saving…" : "Save details"}
