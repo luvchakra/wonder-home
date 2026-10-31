@@ -6,6 +6,7 @@ import { startTransition, useActionState, useState } from "react";
 import { Alert } from "@wonderhome/core/ui/alert";
 import { Button } from "@wonderhome/core/ui/button";
 import { Field } from "@wonderhome/core/ui/field";
+import { TextareaField } from "@wonderhome/core/ui/textarea-field";
 import { Pill } from "@wonderhome/core/ui/pill";
 import { ConfirmationSheet, Sheet } from "@wonderhome/core/ui/sheet";
 
@@ -83,7 +84,7 @@ function ServiceFields({ outcomes, current, labels }: { outcomes: Outcome[]; cur
           </ul>
         )}
       </fieldset>
-      <Field label={labels.notes} name="notes" maxLength={300} defaultValue={current?.notes ?? ""} placeholder={labels.notesPlaceholder} autoComplete="off" />
+      <TextareaField label={labels.notes} name="notes" maxLength={300} defaultValue={current?.notes ?? ""} placeholder={labels.notesPlaceholder} />
     </>
   );
 }

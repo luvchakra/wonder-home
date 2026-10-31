@@ -8,6 +8,7 @@ import { localTimeValue, schoolDateValue, schoolTimeWords } from "@wonderhome/co
 import { Alert } from "@wonderhome/core/ui/alert";
 import { Button } from "@wonderhome/core/ui/button";
 import { Field } from "@wonderhome/core/ui/field";
+import { TextareaField } from "@wonderhome/core/ui/textarea-field";
 import { Pill } from "@wonderhome/core/ui/pill";
 import { ConfirmationSheet } from "@wonderhome/core/ui/sheet";
 
@@ -106,7 +107,7 @@ export function SchoolItemDetail({
         </div>
         <Field label={labels.what} name="title" required defaultValue={item.title} autoComplete="off" />
         <Field label={labels.subject} name="subject" defaultValue={item.subject ?? ""} autoComplete="off" />
-        <Field label={labels.notes} name="detail" defaultValue={item.detail ?? ""} autoComplete="off" />
+        <TextareaField label={labels.notes} name="detail" defaultValue={item.detail ?? ""} />
         <div className="grid grid-cols-2 gap-3">
           <Field
             label={dueRequired ? labels.due : labels.dueOptional}

@@ -6,6 +6,7 @@ import { Alert } from "@wonderhome/core/ui/alert";
 import { Button } from "@wonderhome/core/ui/button";
 import { Card, CardHeader, CardTitle } from "@wonderhome/core/ui/card";
 import { Field } from "@wonderhome/core/ui/field";
+import { TextareaField } from "@wonderhome/core/ui/textarea-field";
 import { PET_GENDER_OPTIONS } from "@wonderhome/core/home/pets";
 
 import type { ActionState } from "../(auth)/actions";
@@ -46,7 +47,7 @@ export function AddPetForm({ householdId, labels }: { householdId: string; label
           <Field label={labels.vetName} name="vetName" autoComplete="off" />
           <Field label={labels.vetContact} name="vetContact" autoComplete="off" />
         </div>
-        <Field label={labels.notes} name="notes" autoComplete="off" />
+        <TextareaField label={labels.notes} name="notes" />
 
         <Button type="submit" disabled={pending}>
           {pending ? labels.adding : labels.addPetSubmit}

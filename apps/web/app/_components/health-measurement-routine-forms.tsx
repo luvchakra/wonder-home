@@ -8,6 +8,7 @@ import type { VitalType } from "@wonderhome/core/health/vitals";
 import { Alert } from "@wonderhome/core/ui/alert";
 import { Button } from "@wonderhome/core/ui/button";
 import { Field } from "@wonderhome/core/ui/field";
+import { TextareaField } from "@wonderhome/core/ui/textarea-field";
 import { Pill } from "@wonderhome/core/ui/pill";
 import { Select } from "@wonderhome/core/ui/select";
 import { Sheet } from "@wonderhome/core/ui/sheet";
@@ -129,7 +130,7 @@ export function AddRoutineButton({
             <span className="text-sm font-medium">{words.remind}</span>
             <Switch checked={reminderEnabled} onCheckedChange={setReminderEnabled} label={words.remind} />
           </div>
-          <Field label={common.notes} name="notes" placeholder={common.notesPlaceholder} defaultValue={defaultNotes} autoComplete="off" />
+          <TextareaField label={common.notes} name="notes" placeholder={common.notesPlaceholder} defaultValue={defaultNotes} />
           <HealthPrivacyField labels={labels} defaultValue={defaultPrivacyScope} />
           <Button type="submit" disabled={pending} className="w-full">
             {pending ? common.adding : words.submit}
@@ -200,7 +201,7 @@ export function EditRoutineButton({
             ))}
           </Select>
           <Field label={common.nextDue} name="nextDueOn" type="date" defaultValue={nextDueOn} required />
-          <Field label={common.notes} name="notes" defaultValue={notes ?? ""} autoComplete="off" />
+          <TextareaField label={common.notes} name="notes" defaultValue={notes ?? ""} />
           <HealthPrivacyField labels={labels} defaultValue={privacyScope} subjectMemberId={memberId} />
           <Button type="submit" disabled={pending} className="w-full">
             {pending ? common.saving : common.save}
@@ -265,7 +266,7 @@ function CompleteRoutineButton({
             <Field label={common.value} name="value" type="number" step="any" required autoComplete="off" />
           )}
           <VitalUnitField vitalType={vitalType} labels={labels} />
-          <Field label={common.notes} name="notes" autoComplete="off" />
+          <TextareaField label={common.notes} name="notes" />
           <Button type="submit" disabled={pending} className="w-full">
             {pending ? common.recording : common.record}
           </Button>

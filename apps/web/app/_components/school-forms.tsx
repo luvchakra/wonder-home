@@ -6,6 +6,7 @@ import { startTransition, useActionState, useRef, useState } from "react";
 import { Alert } from "@wonderhome/core/ui/alert";
 import { Button } from "@wonderhome/core/ui/button";
 import { Field } from "@wonderhome/core/ui/field";
+import { TextareaField } from "@wonderhome/core/ui/textarea-field";
 import { Pill } from "@wonderhome/core/ui/pill";
 import { Sheet } from "@wonderhome/core/ui/sheet";
 
@@ -209,7 +210,7 @@ function AddHomeworkForm({
       </div>
       <Field label={labels.what} name="title" required defaultValue={prefill?.title ?? ""} placeholder={labels.whatPlaceholder} autoComplete="off" />
       <Field label={labels.subject} name="subject" defaultValue={prefill?.subject ?? ""} placeholder={labels.subjectPlaceholder} autoComplete="off" />
-      <Field label={labels.notes} name="detail" defaultValue={prefill?.notes ?? ""} autoComplete="off" />
+      <TextareaField label={labels.notes} name="detail" defaultValue={prefill?.notes ?? ""} />
       <div className="grid grid-cols-2 gap-3">
         <Field
           label={dueRequired ? labels.due : labels.dueOptional}

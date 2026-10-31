@@ -9,6 +9,7 @@ import type { CheckupType } from "@wonderhome/core/health/checkups";
 import { Alert } from "@wonderhome/core/ui/alert";
 import { Button } from "@wonderhome/core/ui/button";
 import { Field } from "@wonderhome/core/ui/field";
+import { TextareaField } from "@wonderhome/core/ui/textarea-field";
 import { Pill } from "@wonderhome/core/ui/pill";
 import { Select } from "@wonderhome/core/ui/select";
 import { Sheet } from "@wonderhome/core/ui/sheet";
@@ -136,7 +137,7 @@ export function AddCheckupButton({
             ))}
           </Select>
           <Field label={common.nextDue} name="nextDueOn" type="date" defaultValue={defaultNextDueOn} required />
-          <Field label={common.notes} name="notes" placeholder={common.notesPlaceholder} defaultValue={defaultNotes} autoComplete="off" />
+          <TextareaField label={common.notes} name="notes" placeholder={common.notesPlaceholder} defaultValue={defaultNotes} />
           <HealthPrivacyField labels={labels} defaultValue={defaultPrivacyScope} />
           <Button type="submit" disabled={pending} className="w-full">
             {pending ? common.adding : words.submit}
@@ -200,7 +201,7 @@ export function EditCheckupButton({
           <input type="hidden" name="checkupId" value={checkupId} />
           <Field label={words.whatsDue} name="label" defaultValue={label} required autoComplete="off" />
           <Field label={common.nextDue} name="nextDueOn" type="date" defaultValue={nextDueOn} required />
-          <Field label={common.notes} name="notes" defaultValue={notes ?? ""} autoComplete="off" />
+          <TextareaField label={common.notes} name="notes" defaultValue={notes ?? ""} />
           <HealthPrivacyField labels={labels} defaultValue={privacyScope} subjectMemberId={memberId} />
           <Button type="submit" disabled={pending} className="w-full">
             {pending ? common.saving : common.save}

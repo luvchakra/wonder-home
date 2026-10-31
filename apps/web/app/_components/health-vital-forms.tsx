@@ -8,6 +8,7 @@ import { Alert } from "@wonderhome/core/ui/alert";
 import { Button } from "@wonderhome/core/ui/button";
 import { ComboboxField } from "@wonderhome/core/ui/combobox-field";
 import { Field } from "@wonderhome/core/ui/field";
+import { TextareaField } from "@wonderhome/core/ui/textarea-field";
 import { Pill } from "@wonderhome/core/ui/pill";
 import { Select } from "@wonderhome/core/ui/select";
 import { Sheet } from "@wonderhome/core/ui/sheet";
@@ -125,7 +126,7 @@ export function AddVitalButton({
           <VitalValueFields vitalType={vitalType} labels={labels} />
           <VitalUnitField vitalType={vitalType} labels={labels} />
           <Field label={common.whenDefaultNow} name="measuredAt" type="datetime-local" />
-          <Field label={common.notes} name="notes" placeholder={common.notesPlaceholder} autoComplete="off" />
+          <TextareaField label={common.notes} name="notes" placeholder={common.notesPlaceholder} />
           <HealthPrivacyField labels={labels} defaultValue={defaultPrivacyScope} />
           <Button type="submit" disabled={pending} className="w-full">
             {pending ? common.recording : common.record}
@@ -201,7 +202,7 @@ export function EditVitalButton({
             <Field label={common.value} name="value" type="number" step="any" defaultValue={value} required autoComplete="off" />
           )}
           <VitalUnitField vitalType={vitalType} defaultValue={unit} labels={labels} />
-          <Field label={common.notes} name="notes" defaultValue={notes ?? ""} autoComplete="off" />
+          <TextareaField label={common.notes} name="notes" defaultValue={notes ?? ""} />
           <HealthPrivacyField labels={labels} defaultValue={privacyScope} subjectMemberId={memberId} />
           <Button type="submit" disabled={pending} className="w-full">
             {pending ? common.saving : common.save}

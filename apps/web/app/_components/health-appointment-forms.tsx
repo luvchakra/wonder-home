@@ -8,6 +8,7 @@ import type { AppointmentType } from "@wonderhome/core/health/appointments";
 import { Alert } from "@wonderhome/core/ui/alert";
 import { Button } from "@wonderhome/core/ui/button";
 import { Field } from "@wonderhome/core/ui/field";
+import { TextareaField } from "@wonderhome/core/ui/textarea-field";
 import { Pill } from "@wonderhome/core/ui/pill";
 import { Select } from "@wonderhome/core/ui/select";
 import { Sheet } from "@wonderhome/core/ui/sheet";
@@ -139,7 +140,7 @@ export function BookAppointmentButton({
 
           <div className={step === 4 ? "space-y-3" : "hidden"}>
             <Field label={words.prepare} name="preparationNotes" placeholder={words.preparePlaceholder} autoComplete="off" />
-            <Field label={common.notes} name="notes" placeholder={common.notesPlaceholderElse} defaultValue={defaultNotes} autoComplete="off" />
+            <TextareaField label={common.notes} name="notes" placeholder={common.notesPlaceholderElse} defaultValue={defaultNotes} />
             <HealthPrivacyField labels={labels} defaultValue={defaultPrivacyScope} />
           </div>
 

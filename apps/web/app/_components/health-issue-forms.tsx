@@ -7,6 +7,7 @@ import type { IssueStatus } from "@wonderhome/core/health/issues";
 import { Alert } from "@wonderhome/core/ui/alert";
 import { Button } from "@wonderhome/core/ui/button";
 import { Field } from "@wonderhome/core/ui/field";
+import { TextareaField } from "@wonderhome/core/ui/textarea-field";
 import { Pill } from "@wonderhome/core/ui/pill";
 import { Select } from "@wonderhome/core/ui/select";
 import { Sheet } from "@wonderhome/core/ui/sheet";
@@ -77,7 +78,7 @@ export function AddIssueButton({
           </Select>
           <Field label={words.whatsGoingOn} name="label" placeholder={words.whatsGoingOnPlaceholder} required autoComplete="off" />
           <Field label={words.detail} name="description" placeholder={words.detailPlaceholder} autoComplete="off" />
-          <Field label={common.notes} name="notes" placeholder={common.notesPlaceholderElse} autoComplete="off" />
+          <TextareaField label={common.notes} name="notes" placeholder={common.notesPlaceholderElse} />
           <Field label={words.since} name="startedAt" type="date" />
           <HealthPrivacyField labels={labels} defaultValue={defaultPrivacyScope} />
           <Button type="submit" disabled={pending} className="w-full">
@@ -143,7 +144,7 @@ export function EditIssueButton({
           <input type="hidden" name="issueId" value={issueId} />
           <Field label={words.whatsGoingOn} name="label" defaultValue={label} required autoComplete="off" />
           <Field label={words.detail} name="description" defaultValue={description ?? ""} autoComplete="off" />
-          <Field label={common.notes} name="notes" defaultValue={notes ?? ""} autoComplete="off" />
+          <TextareaField label={common.notes} name="notes" defaultValue={notes ?? ""} />
           <HealthPrivacyField labels={labels} defaultValue={privacyScope} subjectMemberId={memberId} />
           <Button type="submit" disabled={pending} className="w-full">
             {pending ? common.saving : common.save}

@@ -11,6 +11,7 @@ decision that shapes later work each earns a note, written before moving on.
 
 | Date | Note |
 |---|---|
+| 2026-10-31 | [Notes fields grow with their text (shared TextareaField)](2026-10-31-notes-textarea.md) |
 | 2026-10-30 | [Groceries tabs: All, In Kitchen, To Buy](2026-10-30-groceries-tabs.md) |
 | 2026-10-29 | [Platform admin sidebar menu and Back to WonderHome](2026-10-29-platform-admin-sidebar.md) |
 | 2026-10-29 | [PERF-11 lazy-loading form bodies: investigated, nothing shipped](2026-10-29-lazy-load-client-code.md) |
