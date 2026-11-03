@@ -79,7 +79,8 @@ describe("why it waits, in a few words from evidence", () => {
     expect(whyItWaits(evidence({ kind: "bill", extracted: { title: "Electricity", payee: "BESCOM", dueDate: "2026-11-10", confidence: "high", needs: [] } }))).toEqual({ code: "amount" });
     const duplicate = evidence({ reconciliation: { message: "found", proposal: { type: "duplicate" }, existing: { title: "Science Exhibition" } } as unknown as ConfirmationInput["reconciliation"] });
     expect(whyItWaits(duplicate)).toEqual({ code: "duplicate", title: "Science Exhibition" });
-    expect(whyItWaits(evidence({ autonomy: "execute", autoAddPercent: 95 }))).toEqual({ code: "below_bar", percent: 95 });
+    // Below the bar it is added, marked Checking (the owner, 2026-11-03); one still waiting only needs a look.
+    expect(whyItWaits(evidence({ autonomy: "execute", autoAddPercent: 95 }))).toEqual({ code: "check" });
   });
 
   it("says money and health wait for a person, and who it's for when nobody is named", () => {

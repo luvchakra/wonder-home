@@ -37,19 +37,22 @@ describe("HomeSend confirmation strategy (Wave 3 §12)", () => {
     expect(decide({ ...worksheet, subject: null })).toMatchObject({ mode: "ask", question: "Who is this for?" });
   });
 
-  it("adds nothing on its own unless it is more than 95% sure, and says what it couldn't check (the owner, 2026-10-25)", () => {
+  it("adds directly, marked Checking, when it is not more than 95% sure (the owner, 2026-11-03)", () => {
     const unchecked = { readable: true, confidence: "high" as const, score: 0.9, check: { verified: false, unverified: ["the name"] }, safety: { instructionsIgnored: false, signals: [] } };
-    expect(decide({ understanding: unchecked })).toMatchObject({ mode: "prepare", reason: "WonderHome couldn't check the name against what was sent, so a person looks first." });
-    const twoThings = { ...unchecked, check: { verified: false, unverified: ["the amount", "the date"] } };
-    expect(decide({ understanding: twoThings }).reason).toBe("WonderHome couldn't check the amount and the date against what was sent, so a person looks first.");
-    const photo = { ...unchecked, check: { verified: false, unverified: ["the original, which can't be checked word by word"] } };
-    expect(decide({ understanding: photo }).reason).toBe("This was read from a photo or a file, which can't be checked word by word, so a person looks first.");
+    expect(decide({ understanding: unchecked })).toMatchObject({ mode: "auto_apply", unconfirmed: true });
+    expect(decide({ understanding: unchecked }).reason).toContain("marked Checking");
+    // A photo or file has no words of its own to check against: added, but always Checking.
+    const photo = { ...unchecked, score: 0.99, check: { verified: false, unverified: ["the original, which can't be checked word by word"] } };
+    expect(decide({ understanding: photo })).toMatchObject({ mode: "auto_apply", unconfirmed: true });
     // Exactly 95% is not more than 95%.
-    expect(decide({ understanding: { ...unchecked, score: 0.95, check: { verified: true, unverified: [] } } })).toMatchObject({ mode: "prepare", reason: "WonderHome adds things on its own only when it is more than 95% sure, so a person looks first." });
-    // An item read before the check existed has no score, and never applies on its own.
+    expect(decide({ understanding: { ...unchecked, score: 0.95, check: { verified: true, unverified: [] } } })).toMatchObject({ mode: "auto_apply", unconfirmed: true });
+    // An item read before the check existed has no score: added, and checked.
     const { score: _score, check: _check, ...old } = unchecked;
-    expect(decide({ understanding: old }).mode).toBe("prepare");
-    expect(decide({ understanding: { ...unchecked, score: 0.96, check: { verified: true, unverified: [] } } }).mode).toBe("auto_apply");
+    expect(decide({ understanding: old })).toMatchObject({ mode: "auto_apply", unconfirmed: true });
+    // Above the bar: simply added, nothing to check.
+    const above = decide({ understanding: { ...unchecked, score: 0.96, check: { verified: true, unverified: [] } } });
+    expect(above.mode).toBe("auto_apply");
+    expect(above.unconfirmed).toBeUndefined();
   });
 
   it("never applies a bill or a health document on its own, whatever the confidence or setting (consequential)", () => {
@@ -57,8 +60,8 @@ describe("HomeSend confirmation strategy (Wave 3 §12)", () => {
     expect(decide({ kind: "health_document" })).toMatchObject({ mode: "govern" });
   });
 
-  it("prepares and asks at medium confidence", () => {
-    expect(decide({ understanding: { readable: true, confidence: "medium", safety: { instructionsIgnored: false, signals: [] } } }).mode).toBe("prepare");
+  it("adds a medium reading marked Checking, never as if it were sure", () => {
+    expect(decide({ understanding: { readable: true, confidence: "medium", safety: { instructionsIgnored: false, signals: [] } } })).toMatchObject({ mode: "auto_apply", unconfirmed: true });
   });
 
   it("asks one targeted question at low confidence", () => {
@@ -101,26 +104,26 @@ describe("the household's bar for adding on its own (the owner, 2026-10-26)", ()
   const unsure = { readable: true, confidence: "medium" as const, score: 0.7, check: { verified: false, unverified: ["the name"] }, safety: { instructionsIgnored: false, signals: [] } };
 
   it("is 95% until an Admin picks another, and is strictly above", () => {
-    expect(decide({}).mode).toBe("auto_apply");
-    expect(decide({ understanding: unchecked }).mode).toBe("prepare");
-    expect(decide({ autoAddPercent: 97 }).mode).toBe("prepare");
+    expect(decide({}).unconfirmed).toBeUndefined();
+    expect(decide({ understanding: unchecked }).unconfirmed).toBe(true);
+    expect(decide({ autoAddPercent: 97 })).toMatchObject({ mode: "auto_apply", unconfirmed: true });
   });
 
   it("follows a lower bar the Admin picked, for a clear or even a medium reading", () => {
-    expect(decide({ understanding: unchecked, autoAddPercent: 85 }).mode).toBe("auto_apply");
-    expect(decide({ understanding: unsure, autoAddPercent: 60 }).mode).toBe("auto_apply");
-    expect(decide({ understanding: unsure, autoAddPercent: 70 }).mode).toBe("prepare");
+    expect(decide({ understanding: unchecked, autoAddPercent: 85 })).toMatchObject({ mode: "auto_apply" });
+    expect(decide({ understanding: unchecked, autoAddPercent: 85 }).unconfirmed).toBeUndefined();
+    expect(decide({ understanding: unsure, autoAddPercent: 60 }).unconfirmed).toBeUndefined();
+    expect(decide({ understanding: unsure, autoAddPercent: 70 })).toMatchObject({ mode: "auto_apply", unconfirmed: true });
   });
 
-  it("names the household's own bar when it waits", () => {
+  it("names the household's own bar when it is still checking", () => {
     const sureButUnnamed = { ...unchecked, check: { verified: false, unverified: [] } };
-    expect(decide({ understanding: sureButUnnamed, autoAddPercent: 90 }).reason).toBe("WonderHome adds things on its own only when it is more than 90% sure, so a person looks first.");
+    expect(decide({ understanding: sureButUnnamed, autoAddPercent: 90 }).reason).toContain("wasn't more than 90% sure");
   });
 
-  it("never lets a low bar add a photo or file, a bill, or anything under Wait for Approval", () => {
-    const photo = { ...unchecked, check: { verified: false, unverified: ["the original, which can't be checked word by word"] } };
-    expect(decide({ understanding: photo, autoAddPercent: 60 }).mode).toBe("prepare");
+  it("never lets any bar add a bill with the money switch off, or anything under Wait for Approval", () => {
     expect(decide({ kind: "bill", autoAddPercent: 60 }).mode).toBe("govern");
+    expect(decide({ kind: "health_document", autoAddPercent: 60 }).mode).toBe("govern");
     expect(decide({ understanding: unchecked, autoAddPercent: 60, autonomy: "prepare" }).mode).toBe("prepare");
   });
 });

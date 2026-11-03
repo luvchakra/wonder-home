@@ -21,7 +21,7 @@ export const settingsAr: AreaCatalog<typeof settingsEn> = {
   "settingsPage.ai.confirmRequested.on": "مفعّل: يسألك HomeTalk أولًا، في المحادثة، قبل أن يخطط أو يضيف أو يغيّر أي شيء طلبته.",
   "settingsPage.ai.confirmRequested.off": "غير مفعّل: عندما تطلب من HomeTalk أن يخطط لشيء أو يضيفه أو يغيّره، يفعل ذلك فورًا ويخبرك كيف تتراجع عنه. الدفع والطلبات وتغييرات الوصول تنتظر موافقتك دائمًا.",
   "settingsPage.ai.autoAdd.title": "مدى تأكد HomeSend قبل أن يضيف بنفسه",
-  "settingsPage.ai.autoAdd.detail": "للنتائج المضبوطة على Pre Approved، ما ترسله عبر WhatsApp أو تقوله لـ HomeTalk أو تشاركه بطريقة أخرى لا يُضاف دون سؤال إلا عندما يكون WonderHome متأكدًا أكثر من هذا. الفواتير والإيصالات والمستندات الصحية تنتظر ما لم تسمح بها أدناه؛ والصور والملفات تنتظرك دائمًا.",
+  "settingsPage.ai.autoAdd.detail": "للنتائج المضبوطة على Pre Approved، ما ترسله عبر WhatsApp أو تقوله لـ HomeTalk أو تشاركه بطريقة أخرى — بما في ذلك الصور والملفات — يُضاف مباشرة. إذا كان WonderHome متأكدًا أكثر من هذا فهذا كل شيء؛ وإن لم يكن، يُعلَّم الإدخال «قيد التحقق» وتنتظر تذكيراته حتى تؤكد أنه صحيح. الفواتير والإيصالات والمستندات الصحية تنتظرك ما لم تسمح بها أدناه.",
   "settingsPage.ai.autoAdd.option": "أكثر من {percent}%",
   "settingsPage.ai.autoAdd.optionDefault": "أكثر من {percent}% (موصى به)",
   "settingsPage.ai.directAdd.money.title": "إضافة إدخالات المال مباشرة",

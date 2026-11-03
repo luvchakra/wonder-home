@@ -13,7 +13,7 @@ import { createClient } from "@wonderhome/core/db/server";
 import { homesendCorrectionEvidence, recordCorrectionEvidence } from "@wonderhome/core/evaluation/evidence";
 import { archiveRecord } from "@wonderhome/core/health/records";
 import { scorePercent, sureClause, sureWhy } from "@wonderhome/core/homesend/auto-add";
-import { getHomeSendChange, hasActiveHomeSendChanges, listHomeSendChanges, recordHomeSendChange, undoHomeSendChange } from "@wonderhome/core/homesend/changes";
+import { confirmHomeSendEntry, getHomeSendChange, hasActiveHomeSendChanges, listHomeSendChanges, recordHomeSendChange, undoHomeSendChange } from "@wonderhome/core/homesend/changes";
 import type { ConfirmationDecision } from "@wonderhome/core/homesend/confirmation";
 import type { DocumentPlan } from "@wonderhome/core/homesend/plan";
 import { type HomeSendChange, type HomeSendExtraction, type HomeSendItem, type HomeSendKind, type HomeSendReviewOutcome } from "@wonderhome/core/homesend/items";
@@ -55,7 +55,7 @@ export type SendHomeItemState = {
    * without asking (§12) — shown as done, with its Undo, not as a review.
    */
   /** `whole`: Undo takes back every change it made (a receipt's lines), by the item. */
-  autoApplied?: { changeId: string; title: string; where: string; itemId?: string; whole?: boolean };
+  autoApplied?: { changeId: string; title: string; where: string; itemId?: string; whole?: boolean; unconfirmed?: boolean };
   item?: {
     id: string;
     classifiedKind: HomeSendKind;
@@ -81,6 +81,8 @@ async function withReview(
   supabase: Awaited<ReturnType<typeof createClient>>,
   membership: Awaited<ReturnType<typeof requireMembership>>,
   state: SendHomeItemState,
+  /** Where it came in, for the audit of anything added on its own. */
+  source: string,
 ): Promise<SendHomeItemState> {
   const item = state.item;
   if (!item) return state;
@@ -95,11 +97,19 @@ async function withReview(
   if (!review) return state;
   // Something already waiting is shown again, never applied a second time.
   if (review.confirmation.mode === "auto_apply" && !state.duplicate && !review.plan) {
-    const applied = await autoApplyHomeSendItem(supabase, membership, { id: item.id, kind: item.classifiedKind, extracted: item.extracted, subject: review.subject }).catch(() => null);
+    const unconfirmed = review.confirmation.unconfirmed === true;
+    const applied = await autoApplyHomeSendItem(
+      supabase,
+      membership,
+      { id: item.id, kind: item.classifiedKind, extracted: item.extracted, subject: review.subject },
+      { checking: { unconfirmed, confidence: review.understanding?.score ?? null, source } },
+    ).catch(() => null);
     // How sure it was, with the entry (the owner, 2026-10-26).
     // The score's own reason, not the decision's (design §7).
     const sure = sureClause({ percent: scorePercent(review.understanding?.score), why: sureWhy(review.understanding) });
-    if (applied) return { notice: `${applied.title} — added to ${applied.where} on its own${sure}.`, autoApplied: { ...applied, itemId: item.id } };
+    // Below the bar it is added, marked Checking (the owner, 2026-11-03).
+    const checking = unconfirmed ? " — marked Checking until it's confirmed, so its reminders wait" : "";
+    if (applied) return { notice: `${applied.title} — added to ${applied.where} on its own${sure}${checking}.`, autoApplied: { ...applied, itemId: item.id, ...(unconfirmed ? { unconfirmed: true } : {}) } };
   }
   // Allowed but not written (the plan, or the domain refused it): it waits, and never says it was added.
   const confirmation: ConfirmationDecision =
@@ -144,7 +154,7 @@ export async function uploadHomeSendItemAction(_previous: SendHomeItemState, for
       { householdId, memberId: membership.memberId },
       { bytes: new Uint8Array(await file.arrayBuffer()), claimedType: file.type, filename: file.name || null },
     );
-    const state = await withReview(supabase, membership, toState(outcome));
+    const state = await withReview(supabase, membership, toState(outcome), "file");
     revalidateHomeSend();
     return state;
   } catch (thrown) {
@@ -172,7 +182,7 @@ export async function pasteHomeSendItemAction(_previous: SendHomeItemState, form
       { text: parsed.data.text },
       { limit: (bucket) => hitRateLimitFair(admin, bucket, { memberId: membership.memberId, householdId: parsed.data.householdId }) },
     );
-    const state = await withReview(supabase, membership, toState(outcome));
+    const state = await withReview(supabase, membership, toState(outcome), "paste");
     revalidateHomeSend();
     return state;
   } catch (thrown) {
@@ -198,7 +208,7 @@ export async function confirmTranscriptAction(_previous: SendHomeItemState, form
     if (!item || item.source !== "audio_note") return { error: "That voice note is not part of this household." };
     if (item.status !== "received" && item.status !== "classified") return { error: "That voice note has already been handled." };
     const outcome = await confirmTranscript(supabase, { householdId: parsed.data.householdId, memberId: membership.memberId }, { itemId: item.id, text: parsed.data.text });
-    const state = await withReview(supabase, membership, toState(outcome));
+    const state = await withReview(supabase, membership, toState(outcome), "audio_note");
     revalidateHomeSend();
     return state;
   } catch (thrown) {
@@ -676,6 +686,28 @@ export async function undoHomeSendChangeAction(_previous: RouteHomeItemState, fo
 
     revalidateDomains();
     return { notice: change.changeType === "created" ? "Undone. WonderHome forgot it again." : "Undone. The record is back the way it was." };
+  } catch (thrown) {
+    return { error: toErrorBody(thrown, "homesend").body.error.message };
+  }
+}
+
+const confirmSchema = z.object({ householdId: z.uuid(), itemId: z.uuid() });
+
+/**
+ * "Looks right" on an entry HomeSend added while still checking (the owner,
+ * 2026-11-03): it becomes confirmed — the Checking badge goes and its own
+ * reminders start. Any member may say so, as any member may undo it; the
+ * write is the member's own (RLS decides) and audited `homesend.confirmed`.
+ */
+export async function confirmHomeSendEntryAction(_previous: RouteHomeItemState, formData: FormData): Promise<RouteHomeItemState> {
+  const parsed = confirmSchema.safeParse({ householdId: formData.get("householdId"), itemId: formData.get("itemId") });
+  if (!parsed.success) return { error: "Please try again." };
+  try {
+    const supabase = await createClient();
+    const membership = await requireMembership(supabase, parsed.data.householdId);
+    const moved = await confirmHomeSendEntry(supabase, parsed.data.householdId, parsed.data.itemId, { memberId: membership.memberId, how: "person" });
+    revalidateDomains();
+    return moved > 0 ? { notice: "Thanks — it's confirmed, and its reminders are on." } : { notice: "That one is already confirmed." };
   } catch (thrown) {
     return { error: toErrorBody(thrown, "homesend").body.error.message };
   }

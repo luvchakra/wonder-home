@@ -21,7 +21,7 @@ export const settingsHi: AreaCatalog<typeof settingsEn> = {
   "settingsPage.ai.confirmRequested.on": "चालू: आपके कहने पर कुछ भी तय करने, जोड़ने या बदलने से पहले HomeTalk बातचीत में ही पहले आपसे पूछता है।",
   "settingsPage.ai.confirmRequested.off": "बंद: जब आप HomeTalk से कुछ तय करने, जोड़ने या बदलने को कहते हैं, वह तुरंत कर देता है और बताता है कि उसे कैसे वापस लें। भुगतान, ऑर्डर और पहुँच में बदलाव हमेशा आपकी मंज़ूरी का इंतज़ार करते हैं।",
   "settingsPage.ai.autoAdd.title": "ख़ुद जोड़ने के लिए HomeSend को कितना पक्का होना चाहिए",
-  "settingsPage.ai.autoAdd.detail": "Pre Approved वाले परिणामों में, जो आप WhatsApp पर भेजते हैं, HomeTalk को बताते हैं या किसी और तरह साझा करते हैं, वह बिना पूछे तभी जुड़ता है जब WonderHome को इससे ज़्यादा भरोसा हो। बिल, रसीदें और स्वास्थ्य दस्तावेज़ तब तक रुकते हैं जब तक आप नीचे अनुमति न दें; फ़ोटो और फ़ाइलें हमेशा आपका इंतज़ार करती हैं।",
+  "settingsPage.ai.autoAdd.detail": "Pre Approved वाले परिणामों में, जो आप WhatsApp पर भेजते हैं, HomeTalk को बताते हैं या किसी और तरह साझा करते हैं — फ़ोटो और फ़ाइलें भी — वह सीधे जुड़ जाता है। जब WonderHome को इससे ज़्यादा भरोसा हो, बस इतना ही; जब न हो, तो एंट्री पर \"जाँच जारी\" लिखा रहता है और उसके रिमाइंडर तब तक रुकते हैं जब तक आप उसे सही न बताएँ। बिल, रसीदें और स्वास्थ्य दस्तावेज़ आपका इंतज़ार करते हैं, जब तक आप नीचे अनुमति न दें।",
   "settingsPage.ai.autoAdd.option": "{percent}% से ज़्यादा",
   "settingsPage.ai.autoAdd.optionDefault": "{percent}% से ज़्यादा (सुझाया गया)",
   "settingsPage.ai.directAdd.money.title": "पैसों से जुड़ी प्रविष्टियाँ सीधे जोड़ें",

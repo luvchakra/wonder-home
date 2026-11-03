@@ -1,5 +1,6 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 
+import { unconfirmedEntityIds } from "../homesend/changes";
 import { formatterFor } from "../i18n/format";
 import { parseCopy, sameCopy } from "./message";
 import { NO_MEMBER_CHOICES, parseHouseholdSettings, resolvePreferences } from "../i18n/preferences";
@@ -187,7 +188,7 @@ async function reconcile(
   const horizon = (days: number) => new Date(now.getTime() + days * 86_400_000).toISOString();
   const since = (days: number) => new Date(now.getTime() - days * 86_400_000).toISOString();
 
-  const [bills, school, meals, groceries, pets, events, members, roles, responsibilities, guardians, reminderPrefs, channelPrefs, householdPolicies, open, closed] =
+  const [bills, school, meals, groceries, pets, events, members, roles, responsibilities, guardians, reminderPrefs, channelPrefs, householdPolicies, open, closed, checking] =
     await Promise.all([
       admin
         .from("obligations")
@@ -257,6 +258,8 @@ async function reconcile(
         .in("status", ["acted", "dismissed"])
         .in("source_type", [...RECONCILED_SOURCE_TYPES])
         .gte("created_at", since(30)),
+      // Entries HomeSend added below the household's bar: their own reminders wait until confirmed (the owner, 2026-11-03).
+      unconfirmedEntityIds(admin, householdId),
     ]);
 
   // 1. What the records say deserves a reminder.
@@ -273,9 +276,10 @@ async function reconcile(
 
   const subjects: ReminderSubject[] = [];
   const schoolRows = new Map<ReminderSubject, SchoolItemRow>();
-  for (const row of (bills.data ?? []) as BillRow[]) push(subjects, billSubject(row, context));
+  for (const row of (bills.data ?? []) as BillRow[]) if (!checking.has(row.id)) push(subjects, billSubject(row, context));
   const eventRows = (events.data ?? []) as FamilyEventRow[];
   for (const row of (school.data ?? []) as SchoolItemRow[]) {
+    if (checking.has(row.id)) continue;
     // The same occasion as a family event that day is reminded once, by the event.
     if (sameOccasionAsEvent(row, eventRows, timeZone)) continue;
     const subject = schoolSubject(row, displayNames.get(row.child_member_id) ?? null, context);

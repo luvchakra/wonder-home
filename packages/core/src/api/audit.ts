@@ -69,6 +69,8 @@ export const AUDIT_EVENTS = [
   "homesend.intake_received",
   "homesend.security_rejected",
   "homesend.applied",
+  "homesend.auto_added",
+  "homesend.confirmed",
   "homesend.dismissed",
   "homesend.undone",
   "homesend.archived",

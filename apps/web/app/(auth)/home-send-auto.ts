@@ -2,7 +2,7 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 
 import { CONSUMABLE_CATEGORIES } from "@wonderhome/core/commerce/consumables";
 import { type AddedOnItsOwn, scorePercent, sureWhy, type WaitingInHomeSend } from "@wonderhome/core/homesend/auto-add";
-import { recordHomeSendChange } from "@wonderhome/core/homesend/changes";
+import { recordHomeSendChange, type RecordHomeSendChangeInput } from "@wonderhome/core/homesend/changes";
 import type { HomeSendExtraction, HomeSendKind } from "@wonderhome/core/homesend/items";
 import { getHomeSendItem, routeHomeSendItem } from "@wonderhome/core/homesend/repository";
 import type { SubjectResolution } from "@wonderhome/core/homesend/resolve";
@@ -45,15 +45,26 @@ export async function autoApplyHomeSendItem(
    * 2026-11-03): the same governed write and the same Undo, recorded as their
    * decision rather than as added on its own.
    */
-  options: { decision?: "auto_added" | "added" } = {},
+  options: {
+    decision?: "auto_added" | "added";
+    /**
+     * Added on its own (never with a person's "added"): how sure, from where,
+     * and whether it is still being checked — below the household's bar, or
+     * read from a photo or file (the owner, 2026-11-03). Audited as
+     * `homesend.auto_added`; an unconfirmed entry shows Checking and its
+     * reminders wait.
+     */
+    checking?: { unconfirmed: boolean; confidence: number | null; source: string | null };
+  } = {},
 ): Promise<{ changeId: string; title: string; where: string; more?: AddedOnItsOwn["more"]; whole?: boolean } | null> {
   const extracted = item.extracted;
   const title = extracted?.title?.trim();
   const where = WHERE[item.kind];
   if (!title || !where) return null;
   const householdId = membership.household.id;
+  const auto = options.decision === "added" ? undefined : autoState(options.checking);
   // A receipt's lines are a person's choices on its own form; only "add on its own" records them all as new.
-  if (item.kind === "receipt") return options.decision === "added" ? null : autoRecordReceipt(supabase, membership, { id: item.id, title, extracted });
+  if (item.kind === "receipt") return options.decision === "added" ? null : autoRecordReceipt(supabase, membership, { id: item.id, title, extracted }, auto);
   if (item.kind !== "grocery_item" && item.kind !== "school_item" && item.kind !== "bill" && item.kind !== "health_document") return null;
   const input: RouteInput = {
     householdId,
@@ -97,8 +108,14 @@ export async function autoApplyHomeSendItem(
     entityId: created.routedId,
     createdByMemberId: membership.memberId,
     ...(created.changeType === "updated" ? { changeType: "updated" as const, previous: created.previous ?? {} } : {}),
+    ...(auto ? { auto } : {}),
   });
   return { changeId: change.id, title, where, ...(created.more ? { more: created.more } : {}) };
+}
+
+/** What an entry added on its own records about itself; "confirmed" unless the decision said it is still being checked. */
+function autoState(checking: { unconfirmed: boolean; confidence: number | null; source: string | null } | undefined): RecordHomeSendChangeInput["auto"] {
+  return { state: checking?.unconfirmed ? "unconfirmed" : "confirmed", confidence: checking?.confidence ?? null, source: checking?.source ?? null };
 }
 
 /**
@@ -112,6 +129,7 @@ async function autoRecordReceipt(
   supabase: SupabaseClient,
   membership: HouseholdMembership,
   item: { id: string; title: string; extracted: HomeSendExtraction | null },
+  auto: RecordHomeSendChangeInput["auto"],
 ): Promise<{ changeId: string; title: string; where: string; whole: true } | null> {
   const read = item.extracted;
   const purchasedOn = read?.documentDate?.slice(0, 10);
@@ -131,6 +149,7 @@ async function autoRecordReceipt(
       stock: false,
       clear: false,
     })),
+    auto,
   );
   if ("error" in recorded) return null;
   await routeHomeSendItem(supabase, householdId, item.id, {
@@ -164,9 +183,16 @@ export async function addIfAllowed(
     const title = item.extracted?.title?.trim();
     return review.confirmation.wait && title ? { waiting: review.confirmation.wait, title } : null;
   }
-  const applied = await autoApplyHomeSendItem(supabase, membership, { id: item.id, kind: item.classifiedKind, extracted: item.extracted, subject: review.subject });
+  const unconfirmed = review.confirmation.unconfirmed === true;
+  const applied = await autoApplyHomeSendItem(
+    supabase,
+    membership,
+    { id: item.id, kind: item.classifiedKind, extracted: item.extracted, subject: review.subject },
+    { checking: { unconfirmed, confidence: review.understanding?.score ?? null, source: item.source } },
+  );
   // How sure, and why, goes with every "added on its own" message (design §7).
   if (!applied) return null;
   const more = review.confirmation.topUp && applied.more ? { more: applied.more } : {};
-  return { title: applied.title, where: applied.where, kind: item.classifiedKind, percent: scorePercent(review.understanding?.score), why: sureWhy(review.understanding), ...more };
+  const checking = unconfirmed ? { unconfirmed: true as const } : {};
+  return { title: applied.title, where: applied.where, kind: item.classifiedKind, percent: scorePercent(review.understanding?.score), why: sureWhy(review.understanding), ...more, ...checking };
 }

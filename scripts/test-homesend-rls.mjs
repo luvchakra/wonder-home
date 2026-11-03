@@ -347,6 +347,79 @@ test("a member cannot attribute an undo to someone else", () => {
 });
 
 // ---------------------------------------------------------------------------
+// Added directly, "Checking" below the bar (the owner, 2026-11-03; 14-060).
+// ---------------------------------------------------------------------------
+
+test("an entry added below the bar is unconfirmed, any member may confirm it in their own name, and only once", () => {
+  const checkItem = asProfile(
+    HEAD,
+    `insert into public.home_send_items (household_id, created_by_member_id, source, raw_text)
+     values ('${household}', '${headMember}', 'pasted_text', 'Electricity bill, maybe') returning id;`,
+    options,
+  );
+  const checkBill = psql(`insert into public.obligations (household_id, name, kind) values ('${household}', 'Electricity', 'utility') returning id;`, options);
+  const checkChange = asProfile(
+    HEAD,
+    `insert into public.homesend_changes (household_id, intake_id, domain, entity_id, created_by_member_id, confirmation_state, confidence)
+     values ('${household}', '${checkItem}', 'bill', '${checkBill}', '${headMember}', 'unconfirmed', 0.82) returning id;`,
+    options,
+  );
+  // Before anyone says so, it is unconfirmed; an existing row without the columns named is confirmed.
+  assert.equal(psql(`select confirmation_state from public.homesend_changes where id = '${checkChange}';`, options), "unconfirmed");
+  assert.equal(psql(`select confirmation_state from public.homesend_changes where id = '${changeId}';`, options), "confirmed");
+  // Another household sees nothing to confirm.
+  assert.equal(asProfile(OUTSIDER, `select count(*) from public.homesend_changes where confirmation_state = 'unconfirmed';`, options), "0");
+  // Never in someone else's name.
+  assert.ok(
+    deniedForProfile(
+      OTHER_ADULT,
+      `update public.homesend_changes set confirmation_state = 'confirmed', confirmed_at = now(), confirmed_by_member_id = '${headMember}' where id = '${checkChange}';`,
+      options,
+    ),
+    "a member confirmed an entry in another member's name",
+  );
+  // A member never edits how sure HomeSend was.
+  assert.ok(
+    deniedForProfile(OTHER_ADULT, `update public.homesend_changes set confidence = 0.99 where id = '${checkChange}';`, options),
+    "a member changed an unconfirmed entry's score by hand",
+  );
+  asProfile(
+    OTHER_ADULT,
+    `update public.homesend_changes set confirmation_state = 'confirmed', confirmed_at = now(), confirmed_by_member_id = '${otherAdultMember()}' where id = '${checkChange}';`,
+    options,
+  );
+  assert.equal(psql(`select confirmation_state || ':' || (confirmed_by_member_id = '${otherAdultMember()}') from public.homesend_changes where id = '${checkChange}';`, options), "confirmed:true");
+  // One way: never back to unconfirmed.
+  assert.ok(
+    deniedForProfile(HEAD, `update public.homesend_changes set confirmation_state = 'unconfirmed', confirmed_at = null, confirmed_by_member_id = null where id = '${checkChange}';`, options),
+    "a confirmed entry was marked unconfirmed again",
+  );
+  // Undoing an entry someone else confirmed is still allowed.
+  asProfile(HEAD, `update public.homesend_changes set undone_at = now(), undone_by_member_id = '${headMember}' where id = '${checkChange}';`, options);
+  assert.equal(psql(`select undone_by_member_id = '${headMember}' from public.homesend_changes where id = '${checkChange}';`, options), "t");
+});
+
+test("the checking state only takes its two values and a score between 0 and 1", () => {
+  const item = asProfile(
+    HEAD,
+    `insert into public.home_send_items (household_id, created_by_member_id, source, raw_text) values ('${household}', '${headMember}', 'pasted_text', 'Milk') returning id;`,
+    options,
+  );
+  const bill = psql(`insert into public.obligations (household_id, name, kind) values ('${household}', 'Gas', 'utility') returning id;`, options);
+  for (const bad of [`'maybe', 0.5`, `'unconfirmed', 1.5`]) {
+    assert.ok(
+      deniedForProfile(
+        HEAD,
+        `insert into public.homesend_changes (household_id, intake_id, domain, entity_id, created_by_member_id, confirmation_state, confidence)
+         values ('${household}', '${item}', 'bill', '${bill}', '${headMember}', ${bad});`,
+        options,
+      ),
+      `accepted ${bad}`,
+    );
+  }
+});
+
+// ---------------------------------------------------------------------------
 // Phase 2: email intake — homesend_addresses, and home_send_items widened
 // for a source with no acting household member.
 // ---------------------------------------------------------------------------
