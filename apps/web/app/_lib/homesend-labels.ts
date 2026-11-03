@@ -1,5 +1,6 @@
 import type { ReceiptAction } from "@wonderhome/core/homesend/apply";
 import { ARCHIVE_REASONS, type ArchiveReason } from "@wonderhome/core/homesend/archive-reasons";
+import { FAILED_TITLES, type FailedTitle } from "@wonderhome/core/homesend/inbox-view";
 import type { HomeSendFailureReason } from "@wonderhome/core/homesend/items";
 import type { PlanAction, PlanGroup } from "@wonderhome/core/homesend/plan";
 import type { IntakeUnderstanding } from "@wonderhome/core/homesend/understanding";
@@ -311,6 +312,52 @@ export type HomeSendReviewLabels = {
 export type HomeSendPageLabels = {
   review: HomeSendReviewLabels;
   inbox: {
+    /** The calm page (the owner, 2026-11-03): sections by what the reader decides, one action per row, two one-tap clears. */
+    calm: {
+      needsTitle: string;
+      failedTitle: string;
+      addedTitle: string;
+      addedIntro: string;
+      sendTitle: string;
+      sendHint: string;
+      sendClose: string;
+      answer: string;
+      answerAria: string;
+      add: string;
+      addAria: string;
+      check: string;
+      checkAria: string;
+      fillIn: string;
+      detailAria: string;
+      questions: CountedWords;
+      looksRightAsk: string;
+      wasNotSure: string;
+      received: string;
+      archiveGroup: CountedWords;
+      whatWasSent: string;
+      select: { start: string; done: string; archive: string; choose: string };
+      clear: {
+        more: string;
+        archiveAll: string;
+        addAll: string;
+        archiveTitle: CountedWords;
+        archiveBody: string;
+        addTitle: CountedWords;
+        addBody: string;
+        keptMoney: CountedWords;
+        keptHealth: CountedWords;
+        keptOutside: CountedWords;
+        keptUnclear: CountedWords;
+        keptFailed: CountedWords;
+        cancel: string;
+        archived: CountedWords;
+        restored: CountedWords;
+        added: CountedWords;
+        kept: CountedWords;
+      };
+      /** A failed item's short name ("A pasted web page"), never its raw text. */
+      failedName: Record<FailedTitle, string>;
+    };
     /** Bulk review (the owner, 2026-11-03). */
     bulk: { select: string; addSelected: string; addSure: CountedWords; adding: string; added: CountedWords; notAdded: string; hint: string; reviewInOrder: string; stop: string; showMore: string };
     retry: { tryAgain: string; tryAgainAria: string; queued: string };
@@ -744,6 +791,55 @@ export function homesendPageLabels(t: Translate, language: string): HomeSendPage
   return {
     review: homesendReviewLabels(t, language),
     inbox: {
+      calm: {
+        needsTitle: t("homesend.section.needs"),
+        failedTitle: t("homesend.section.failed"),
+        addedTitle: t("homesend.section.added"),
+        addedIntro: t("homesend.section.addedIntro"),
+        sendTitle: t("homesend.send.title"),
+        sendHint: t("homesend.send.hint"),
+        sendClose: t("homesend.send.close"),
+        answer: t("homesend.row.answer"),
+        answerAria: t("homesend.row.answerAria", keep("title")),
+        add: t("homesend.row.add"),
+        addAria: t("homesend.row.addAria", keep("title")),
+        check: t("homesend.row.check"),
+        checkAria: t("homesend.row.checkAria", keep("title")),
+        fillIn: t("homesend.row.fillIn"),
+        detailAria: t("homesend.row.detailAria", keep("title")),
+        questions: counted(t, "homesend.row.questions", {}, language),
+        looksRightAsk: t("homesend.row.looksRightAsk"),
+        wasNotSure: t("homesend.row.wasNotSure", keep("percent")),
+        received: t("homesend.row.received", keep("when")),
+        archiveGroup: counted(t, "homesend.row.archive", {}, language),
+        whatWasSent: t("homesend.row.whatWasSent"),
+        select: {
+          start: t("homesend.select.start"),
+          done: t("homesend.select.done"),
+          archive: t("homesend.select.archive", keep("count")),
+          choose: t("homesend.select.choose", keep("title")),
+        },
+        clear: {
+          more: t("homesend.clear.more"),
+          archiveAll: t("homesend.clear.archiveAll"),
+          addAll: t("homesend.clear.addAll"),
+          archiveTitle: counted(t, "homesend.clear.archiveTitle", {}, language),
+          archiveBody: t("homesend.clear.archiveBody"),
+          addTitle: counted(t, "homesend.clear.addTitle", {}, language),
+          addBody: t("homesend.clear.addBody"),
+          keptMoney: counted(t, "homesend.clear.keptMoney", { setting: t("settingsPage.ai.directAdd.money.title") }, language),
+          keptHealth: counted(t, "homesend.clear.keptHealth", { setting: t("settingsPage.ai.directAdd.health.title") }, language),
+          keptOutside: counted(t, "homesend.clear.keptOutside", {}, language),
+          keptUnclear: counted(t, "homesend.clear.keptUnclear", {}, language),
+          keptFailed: counted(t, "homesend.clear.keptFailed", {}, language),
+          cancel: t("homesend.clear.cancel"),
+          archived: counted(t, "homesend.clear.archived", {}, language),
+          restored: counted(t, "homesend.clear.restored", {}, language),
+          added: counted(t, "homesend.clear.added", {}, language),
+          kept: counted(t, "homesend.clear.kept", {}, language),
+        },
+        failedName: Object.fromEntries(FAILED_TITLES.map((key) => [key, t(`homesend.failedTitle.${key}`)])) as Record<FailedTitle, string>,
+      },
       bulk: {
         select: t("homesend.bulk.select", keep("title")),
         addSelected: t("homesend.bulk.addSelected", keep("count")),

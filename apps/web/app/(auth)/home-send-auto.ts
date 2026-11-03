@@ -54,7 +54,8 @@ export async function autoApplyHomeSendItem(
      * and whether it is still being checked — below the household's bar, or
      * read from a photo or file (the owner, 2026-11-03). Audited as
      * `homesend.auto_added`; an unconfirmed entry shows Checking and its
-     * reminders wait.
+     * reminders wait. With a person's "added" it is "Add all anyway" (the
+     * owner, 2026-11-03): their decision, still shown as Checking.
      */
     checking?: { unconfirmed: boolean; confidence: number | null; source: string | null };
   } = {},
@@ -64,9 +65,10 @@ export async function autoApplyHomeSendItem(
   const where = WHERE[item.kind];
   if (!title || !where) return null;
   const householdId = membership.household.id;
-  const auto = options.decision === "added" ? undefined : autoState(options.checking);
-  // A receipt's lines are a person's choices on its own form; only "add on its own" records them all as new.
-  if (item.kind === "receipt") return options.decision === "added" ? null : autoRecordReceipt(supabase, membership, { id: item.id, title, extracted }, auto);
+  // A person's yes is their own decision; "Add all anyway" is a person's yes that is still being checked, so it carries its state.
+  const auto = options.decision === "added" && !options.checking ? undefined : autoState(options.checking);
+  // A receipt's lines are a person's choices on its own form; only "add on its own" (or "add all anyway") records them all as new.
+  if (item.kind === "receipt") return options.decision === "added" && !options.checking ? null : autoRecordReceipt(supabase, membership, { id: item.id, title, extracted }, auto);
   if (item.kind !== "grocery_item" && item.kind !== "school_item" && item.kind !== "bill" && item.kind !== "health_document") return null;
   const input: RouteInput = {
     householdId,

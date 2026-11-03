@@ -549,6 +549,78 @@ export async function restoreHomeSendItem(supabase: SupabaseClient, householdId:
 }
 
 /**
+ * "Archive all" and "Archive these" (the owner, 2026-11-03): every waiting or
+ * failed item of this household — or just the ids given — set aside in one
+ * go, each remembering where it came from so Restore puts it back. No checks
+ * per item: archiving adds nothing and deletes nothing. One update per status
+ * the rows were in (the archived-from column must name it), bounded by
+ * `limit`. Returns the ids that moved, so the screen's Undo can put back
+ * exactly those.
+ */
+export async function archiveWaitingHomeSendItems(
+  supabase: SupabaseClient,
+  householdId: string,
+  input: { ids?: readonly string[]; limit: number; now?: Date },
+): Promise<string[]> {
+  let query = supabase.from("home_send_items").select("id, status").eq("household_id", householdId).in("status", ["received", "classified", "failed"]);
+  if (input.ids) query = query.in("id", input.ids.slice(0, input.limit));
+  const { data: rows, error: readError } = await query.order("created_at", { ascending: true }).limit(input.limit);
+  if (readError) throw new Error(`archiveWaitingHomeSendItems failed: ${readError.code ?? "unknown"}`);
+  const byStatus = new Map<string, string[]>();
+  for (const row of (rows ?? []) as Row[]) byStatus.set(row.status as string, [...(byStatus.get(row.status as string) ?? []), row.id as string]);
+  const at = (input.now ?? new Date()).toISOString();
+  const moved: string[] = [];
+  for (const [status, ids] of byStatus) {
+    const { data, error } = await supabase
+      .from("home_send_items")
+      .update({ status: "archived", archived_from: status, archived_at: at, retry_requested_at: null })
+      .eq("household_id", householdId)
+      .eq("status", status)
+      .in("id", ids)
+      .select("id");
+    if (error) throw new Error(`archiveWaitingHomeSendItems failed: ${error.code ?? "unknown"}`);
+    moved.push(...((data ?? []) as Row[]).map((row) => row.id as string));
+  }
+  return moved;
+}
+
+/**
+ * The Undo after "Archive all": exactly these archived items back to where
+ * each was, in one update per place. Anything no longer archived is left alone.
+ */
+export async function restoreHomeSendItems(supabase: SupabaseClient, householdId: string, ids: readonly string[]): Promise<string[]> {
+  if (ids.length === 0) return [];
+  const { data: rows, error: readError } = await supabase
+    .from("home_send_items")
+    .select("id, archived_from")
+    .eq("household_id", householdId)
+    .eq("status", "archived")
+    .in("id", ids.slice(0, 500));
+  if (readError) throw new Error(`restoreHomeSendItems failed: ${readError.code ?? "unknown"}`);
+  const byPlace = new Map<HomeSendStatus, string[]>();
+  for (const row of (rows ?? []) as Row[]) {
+    const back = row.archived_from;
+    // A routed source item is only ever archived by the daily tidy; this Undo never touches one.
+    if (back === "routed") continue;
+    const status: HomeSendStatus = back === "received" || back === "failed" ? back : "classified";
+    byPlace.set(status, [...(byPlace.get(status) ?? []), row.id as string]);
+  }
+  const restored: string[] = [];
+  for (const [status, list] of byPlace) {
+    const { data, error } = await supabase
+      .from("home_send_items")
+      .update({ status, archived_at: null, archived_from: null })
+      .eq("household_id", householdId)
+      .eq("status", "archived")
+      .in("id", list)
+      .select("id");
+    if (error) throw new Error(`restoreHomeSendItems failed: ${error.code ?? "unknown"}`);
+    restored.push(...((data ?? []) as Row[]).map((row) => row.id as string));
+  }
+  return restored;
+}
+
+/**
  * Marks a failed item as asked to be read again, and counts the try — only
  * while it is still failed, nothing is already queued, and it is under the
  * cap; otherwise nothing changes and false comes back. The read itself runs
