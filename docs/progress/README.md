@@ -10,6 +10,7 @@ infrastructure change, a design or performance pass, a security fix, or a
 decision that shapes later work each earns a note, written before moving on.
 
 | Date | Note |
+| 2026-11-03 | [Home address: flat / house / wing line](2026-11-03-home-address-unit-line.md) |
 |---|---|
 | 2026-11-03 | [Settings: Assistant & voice card starts collapsed](2026-11-03-settings-assistant-collapsed.md) |
 | 2026-10-31 | [Notes fields grow with their text (shared TextareaField)](2026-10-31-notes-textarea.md) |

@@ -1,5 +1,5 @@
 
-import { loadHouseholdAddress } from "@wonderhome/core/household/address";
+import { fullAddress, loadHouseholdAddress } from "@wonderhome/core/household/address";
 import { mapsLink } from "@wonderhome/core/places/provider";
 import { Card } from "@wonderhome/core/ui/card";
 import { PrivacyNote } from "@wonderhome/core/ui/privacy-note";
@@ -29,7 +29,7 @@ export async function AddressSection({ session }: { session: Session }) {
         <Card className="space-y-4 p-4">
           {map && address ? (
             // eslint-disable-next-line @next/next/no-img-element -- an inline data URL the server fetched; nothing for the image optimizer to do
-            <img src={map} alt={t("places.mapAlt", { address: address.formattedAddress })} className="h-auto w-full rounded-[var(--wh-radius-sm)] border border-[var(--wh-border)]" />
+            <img src={map} alt={t("places.mapAlt", { address: fullAddress(address) })} className="h-auto w-full rounded-[var(--wh-radius-sm)] border border-[var(--wh-border)]" />
           ) : null}
           {address && !address.placeId ? (
             <a href={mapsLink({ formattedAddress: address.formattedAddress })} target="_blank" rel="noopener noreferrer" className="inline-block text-sm font-medium text-[var(--wh-primary)] underline-offset-2 hover:underline">
@@ -38,9 +38,12 @@ export async function AddressSection({ session }: { session: Session }) {
           ) : null}
           <HomeAddressEditor
             householdId={householdId}
+            unitLine={address?.unitLine ?? ""}
             initial={address ? { text: address.formattedAddress, placeId: address.placeId, detail: null } : null}
             available={available}
             labels={{
+              unit: t("address.unit"),
+              unitHint: t("address.unitHint"),
               field: available ? t("setupWizard.basics.addressField") : t("manage.section.address"),
               save: t("address.save"),
               saving: t("common.saving"),

@@ -955,6 +955,8 @@ export const householdHi: AreaCatalog<typeof householdEn> = {
   "manage.section.addressMeta": "अभी तय नहीं",
   "address.lede": "{household} कहाँ रहता है। इसे केवल घर के वयस्क देख सकते हैं; सहायक और बच्चे कभी नहीं।",
   "address.uses": "जब आप बच्चे का स्कूल जोड़ते हैं, तो WonderHome इससे घर के पास के स्कूल पहले दिखाता है।",
+  "address.unit": "फ़्लैट, मकान नं., विंग (वैकल्पिक)",
+  "address.unitHint": "जैसे फ़्लैट 1203, विंग B",
   "address.save": "पता सहेजें",
   "address.remove": "पता हटाएँ",
   "address.removing": "हटा रहे हैं…",

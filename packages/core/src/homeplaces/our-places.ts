@@ -1,4 +1,4 @@
-import type { HouseholdAddress } from "../household/address";
+import { fullAddress, type HouseholdAddress } from "../household/address";
 import type { WorkPlace } from "../household/work-place";
 import { mapsLink } from "../places/provider";
 import type { Enrolment } from "../school/enrolments";
@@ -40,7 +40,7 @@ export function ourPlaces(input: {
     places.push({
       key: "home",
       kind: "home",
-      name: input.address.formattedAddress,
+      name: fullAddress(input.address),
       address: null,
       people: [],
       memberIds: [],

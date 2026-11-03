@@ -18,7 +18,7 @@ import { petPreferenceSentence } from "../home/pet-preferences";
 import type { ServiceRequest } from "../home/services";
 import type { HomeSendItem } from "../homesend/items";
 import type { HouseholdPlace } from "../homeplaces/repository";
-import type { HouseholdAddress } from "../household/address";
+import { fullAddress, type HouseholdAddress } from "../household/address";
 import type { ResponsibilityRow } from "../household/configuration-repository";
 import type { HouseholdMember } from "../identity/households";
 import { relationshipSentences, type Relationship } from "../identity/relationships";
@@ -1256,11 +1256,11 @@ export function buildContextItems(records: ContextRecords, options: BuildOptions
         domain: "places",
         entityType: "home_address",
         entityId: options.householdId,
-        summary: `Home is at ${records.address.formattedAddress}.`,
+        summary: `Home is at ${fullAddress(records.address)}.`,
         need: "where home is",
         privacyClass: "location",
         tier: 2,
-        attributes: { title: "Home", address: records.address.formattedAddress, placeId: records.address.placeId },
+        attributes: { title: "Home", address: fullAddress(records.address), placeId: records.address.placeId },
         source: { type: "household_addresses" },
         aliases: ["home", "house", "home address"],
       });

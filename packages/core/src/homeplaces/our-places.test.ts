@@ -18,7 +18,7 @@ const office = (memberId: string, placeId: string, name: string) => ({
 describe("ourPlaces", () => {
   it("lists the home, then schools, then offices, each with a Google Maps link", () => {
     const places = ourPlaces({
-      address: { formattedAddress: "12 MG Road, Bengaluru", placeId: "home-1", location: { latitude: 12.97, longitude: 77.6 } },
+      address: { unitLine: null, formattedAddress: "12 MG Road, Bengaluru", placeId: "home-1", location: { latitude: 12.97, longitude: 77.6 } },
       enrolments: [enrolment("anya", "Greenwood High", "school-1", "Sarjapur Road")],
       workPlaces: [office("kunal", "office-1", "Embassy Tech Village")],
       names,
@@ -47,7 +47,7 @@ describe("ourPlaces", () => {
 
   it("keeps a typed home or school, marked as not picked from Maps", () => {
     const places = ourPlaces({
-      address: { formattedAddress: "Flat 4, Lake View", placeId: null, location: null },
+      address: { unitLine: null, formattedAddress: "Flat 4, Lake View", placeId: null, location: null },
       enrolments: [enrolment("anya", "Little Feet", null)],
       workPlaces: [],
       names,

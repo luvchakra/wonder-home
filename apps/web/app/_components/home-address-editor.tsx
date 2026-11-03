@@ -17,13 +17,15 @@ import { PlaceSearchField, type PlaceSearchLabels, type PlaceSearchValue } from 
 export function HomeAddressEditor({
   householdId,
   initial,
+  unitLine,
   available,
   labels,
 }: {
   householdId: string;
   initial: PlaceSearchValue | null;
+  unitLine: string;
   available: boolean;
-  labels: { field: string; save: string; saving: string; remove: string; removing: string; search: PlaceSearchLabels };
+  labels: { unit: string; unitHint: string; field: string; save: string; saving: string; remove: string; removing: string; search: PlaceSearchLabels };
 }) {
   const [saved, save] = useActionState<ActionState, FormData>(setHomeAddressAction, {});
   const [removed, remove, removing] = useActionState<ActionState, FormData>(removeHomeAddressAction, {});
@@ -33,6 +35,18 @@ export function HomeAddressEditor({
       {state.error ? <Alert tone="risk">{state.error}</Alert> : state.notice ? <Alert tone="info">{state.notice}</Alert> : null}
       <form action={save} className="space-y-3">
         <input type="hidden" name="householdId" value={householdId} />
+        <label className="block space-y-1">
+          <span className="text-sm font-medium text-[var(--wh-ink)]">{labels.unit}</span>
+          <input
+            type="text"
+            name="home_unit_line"
+            defaultValue={unitLine}
+            maxLength={120}
+            autoComplete="off"
+            placeholder={labels.unitHint}
+            className="min-h-11 w-full rounded-[var(--wh-radius-sm)] border border-[var(--wh-border)] bg-[var(--wh-surface)] px-3 text-base"
+          />
+        </label>
         <PlaceSearchField
           key={initial?.text ?? "none"}
           householdId={householdId}

@@ -37,7 +37,7 @@ describe("the store is whole (HomeBrain 3.0 phase A)", () => {
       memories: Array.from({ length: 40 }, (_, index) => ({ id: `mem-${index}`, scope: "household" as const, memberId: null, category: "routine", key: `routine.thing${index}`, value: `thing ${index}`, status: "learned" })),
       foodPreferences: [{ id: "fp-1", memberId: "m-upasana", kind: "preference", subject: "Italian food" }],
       places: [{ id: "p-1", placeId: "gp-1", name: "Cafe Goodluck", address: "FC Road, Pune", kind: "cafe", location: null, mapsUri: null, status: "saved", note: "Kids love the bun maska" }],
-      address: { formattedAddress: "12 Lane 5, Koregaon Park, Pune", placeId: null, location: null },
+      address: { unitLine: null, formattedAddress: "12 Lane 5, Koregaon Park, Pune", placeId: null, location: null },
     },
     [],
     SCOPE,

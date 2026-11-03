@@ -954,6 +954,8 @@ export const householdEn = {
   "manage.section.addressMeta": "Not set yet",
   "address.lede": "Where {household} lives. Only the household's adults can see it; helpers and children never do.",
   "address.uses": "WonderHome uses it to put schools near home first when you add a child's school.",
+  "address.unit": "Flat, house no., wing (optional)",
+  "address.unitHint": "e.g. Flat 1203, Wing B",
   "address.save": "Save address",
   "address.remove": "Remove address",
   "address.removing": "Removing…",
