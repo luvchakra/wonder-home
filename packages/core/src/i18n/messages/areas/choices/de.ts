@@ -4,6 +4,8 @@ import type { choicesEn } from "./en";
 export const choicesDe: AreaCatalog<typeof choicesEn> = {
   "hometalk.choice.skip": "Überspringen",
   "hometalk.choice.yes": "Ja",
+  "hometalk.choice.right": "Ja, stimmt",
+  "hometalk.choice.notRight": "Nein, anders",
   "hometalk.choice.notNow": "Nicht jetzt",
   "hometalk.choice.enough": "Das reicht",
   "hometalk.choice.ofEach#one": "{count} von jedem",

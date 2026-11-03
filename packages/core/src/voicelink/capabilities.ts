@@ -278,6 +278,18 @@ export const VOICE_CAPABILITIES: readonly Capability[] = [
     policy: everywhere,
   },
   {
+    // HomeTalk's question about an entry HomeSend added as "Checking" (the
+    // owner, 2026-11-03): the answer corrects or confirms the sender's own
+    // entry, in the channel it was asked in, WhatsApp included. It never
+    // pays, orders or approves anything.
+    id: "homesend_checking",
+    label: "Answering a check on something HomeSend added",
+    category: "low_risk",
+    actions: ["check_homesend_entry"],
+    geminiTools: [],
+    policy: everywhere,
+  },
+  {
     id: "conversation",
     label: "A back-and-forth conversation",
     category: "conversation",

@@ -1,7 +1,9 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 
 import { CONSUMABLE_CATEGORIES } from "@wonderhome/core/commerce/consumables";
-import { type AddedOnItsOwn, scorePercent, sureWhy, type WaitingInHomeSend } from "@wonderhome/core/homesend/auto-add";
+import { type AddedOnItsOwn, DEFAULT_AUTO_ADD_PERCENT, scorePercent, sureWhy, type WaitingInHomeSend } from "@wonderhome/core/homesend/auto-add";
+import { beginChecking } from "@wonderhome/core/hometalk/checking-questions";
+import { loadAutoAddPercent } from "@wonderhome/core/household/auto-add-repository";
 import { recordHomeSendChange, type RecordHomeSendChangeInput } from "@wonderhome/core/homesend/changes";
 import type { HomeSendExtraction, HomeSendKind } from "@wonderhome/core/homesend/items";
 import { getHomeSendItem, routeHomeSendItem } from "@wonderhome/core/homesend/repository";
@@ -192,6 +194,12 @@ export async function addIfAllowed(
   );
   // How sure, and why, goes with every "added on its own" message (design §7).
   if (!applied) return null;
+  // Added as Checking: HomeTalk's questions about it are planned now, from
+  // what the reading holds, for the person who sent it in (14-061).
+  if (unconfirmed) {
+    const percent = await loadAutoAddPercent(supabase, membership.household.id).catch(() => DEFAULT_AUTO_ADD_PERCENT);
+    await beginChecking(supabase, { householdId: membership.household.id, itemId: item.id, recipientMemberId: options.createdByMemberId ?? item.createdByMemberId ?? membership.memberId, score: review.understanding?.score ?? null, percent });
+  }
   const more = review.confirmation.topUp && applied.more ? { more: applied.more } : {};
   const checking = unconfirmed ? { unconfirmed: true as const } : {};
   return { title: applied.title, where: applied.where, kind: item.classifiedKind, percent: scorePercent(review.understanding?.score), why: sureWhy(review.understanding), ...more, ...checking };

@@ -122,7 +122,7 @@ export function extractItems(utterance: string): string[] {
  */
 export function leavesQuestion(pending: PendingClarification, utterance: string): boolean {
   if (!isLeaveIt(utterance)) return false;
-  return pending.action !== "complete_homesend_item" && pending.action !== "fill_homesend_details" && pending.parameters.awaiting !== "quantity";
+  return pending.action !== "complete_homesend_item" && pending.action !== "check_homesend_entry" && pending.action !== "fill_homesend_details" && pending.parameters.awaiting !== "quantity";
 }
 
 /**
@@ -139,6 +139,8 @@ export function answerClarification(
 ): HouseholdIntent | null {
   // HomeTalk's question about a HomeSend item (`hometalk/intake-questions.ts`).
   if (pending.action === "complete_homesend_item") return answerIntakeDetail(pending, utterance, context);
+  // HomeTalk's question about an entry added as Checking (`hometalk/checking-questions.ts`, 14-061).
+  if (pending.action === "check_homesend_entry") return answerCheckDetail(pending, utterance, context);
   // HomeTalk's offer to fill in what waits in HomeSend (14-050): a yes or a no, nothing else.
   if (pending.action === "fill_homesend_details") return answerDetailsOffer(pending, utterance, context);
 
@@ -343,6 +345,26 @@ function answerIntakeDetail(pending: PendingClarification, utterance: string, co
   if ((field === "child" || field === "person") && said.split(/\s+/).length > 4) return null;
   return {
     action: "complete_homesend_item",
+    actorMemberId: context.actorMemberId,
+    channel: context.channel,
+    utterance,
+    target: { kind: "unspecified" },
+    parameters: { ...pending.parameters, answer: said },
+    confidence: 0.95,
+  };
+}
+
+/**
+ * The answer to "Did I get the amount right: ₹2,140?" or "What should the due
+ * date be?" about an entry added as Checking. A short reply that isn't a new
+ * request is taken as the answer; the executor reads it (yes, no, a value).
+ */
+function answerCheckDetail(pending: PendingClarification, utterance: string, context: { actorMemberId: string; channel: "text" | "voice" }): HouseholdIntent | null {
+  const said = utterance.trim().replace(/[.!]+$/, "").trim();
+  if (!said || typeof pending.parameters.itemId !== "string" || said.split(/\s+/).length > 12) return null;
+  if (!/^(?:no|nope|not|actually)\b/i.test(said) && NEW_REQUEST.test(stripFiller(said))) return null;
+  return {
+    action: "check_homesend_entry",
     actorMemberId: context.actorMemberId,
     channel: context.channel,
     utterance,

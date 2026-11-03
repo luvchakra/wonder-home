@@ -11,6 +11,7 @@ decision that shapes later work each earns a note, written before moving on.
 
 | Date | Note |
 |---|---|
+| 2026-11-03 | [HomeSend asks to raise a "Checking" entry over the bar](2026-11-03-homesend-clarifying-questions.md) |
 | 2026-11-03 | [HomeSend adds directly; below the bar it is "Checking"](2026-11-03-homesend-direct-add-checking.md) |
 | 2026-11-03 | [Home address: flat / house / wing line](2026-11-03-home-address-unit-line.md) |
 | 2026-11-03 | [Settings search goes deep](2026-11-03-settings-deep-search.md) |

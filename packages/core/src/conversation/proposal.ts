@@ -101,6 +101,10 @@ const ACTION_KIND: Record<HouseholdIntent["action"], ProposedAction["kind"]> = {
   file_with_homesend: "draft",
   // An answer put onto a HomeSend item that still waits there: no domain table is touched.
   complete_homesend_item: "draft",
+  // An answer about an entry HomeSend already added as Checking: it corrects
+  // that one record, the sender's own, undoable with the entry; never a
+  // payment, a permission or anything else.
+  check_homesend_entry: "draft",
   // Only asks about items that still wait in HomeSend.
   fill_homesend_details: "draft",
   set_preference: "draft",
@@ -300,6 +304,8 @@ function summarize(intent: HouseholdIntent): string {
       return "Put it in HomeSend for you to check";
     case "complete_homesend_item":
       return "Add your answer to what's waiting in HomeSend";
+    case "check_homesend_entry":
+      return "Use your answer to check what HomeSend added";
     case "fill_homesend_details":
       return "Fill in what's waiting in HomeSend";
     case "make_payment":
@@ -364,6 +370,8 @@ function describeChanges(intent: HouseholdIntent): string[] {
       return ["Read it the way HomeSend reads anything you send", "Keep it in HomeSend until you confirm it — nothing is added before that"];
     case "complete_homesend_item":
       return ["Add your answer to the item in HomeSend", "Ask the next thing it needs, or leave it for you to check"];
+    case "check_homesend_entry":
+      return ["Correct the entry with your answer, or keep it as read", "Confirm it once it is sure enough, or ask the next question"];
     case "fill_homesend_details":
       return ["Ask what each waiting item still needs, one question at a time", "Leave anything you skip waiting in HomeSend"];
     case "make_payment":

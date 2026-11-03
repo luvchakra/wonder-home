@@ -603,6 +603,7 @@ async function turnInEnglish(input: HomeTalkInput, speaking: Speaking) {
     admin,
     // Once HomeTalk has nothing left to ask about a HomeSend item, HomeSend decides (`hometalk/intake-questions.ts`).
     addFromHomeSend: (itemId) => addIfAllowed(supabase, membership, itemId),
+    surface: surfaceForChannel(source),
   };
 
   // "Undo" (HomeBrain 4.0 §3.9): what HomeTalk did because it was asked is
@@ -2201,5 +2202,5 @@ async function choicesOf(supabase: SupabaseClient, membership: HouseholdMembersh
 /** A question an executor left open: HomeTalk's next question about a HomeSend item. */
 function isIntakeQuestion(value: unknown): value is PendingClarification {
   const pending = value as Partial<PendingClarification> | null | undefined;
-  return Boolean(pending && pending.action === "complete_homesend_item" && typeof pending.question === "string");
+  return Boolean(pending && (pending.action === "complete_homesend_item" || pending.action === "check_homesend_entry") && typeof pending.question === "string");
 }

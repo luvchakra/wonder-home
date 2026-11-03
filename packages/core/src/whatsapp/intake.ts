@@ -6,6 +6,7 @@ import { searchWords } from "../commerce/catalog-curated";
 import { parseHouseholdSettings, parseMemberChoices, resolvePreferences } from "../i18n/preferences";
 import { en } from "../i18n/messages/en";
 import { translator, translatorFor, type Translate, type TranslationKey } from "../i18n/translate";
+import { openCheckQuestion } from "../hometalk/checking-questions";
 import { openIntakeQuestion } from "../hometalk/intake-questions";
 import { enqueueClassifyRetry, type ClaimedJob, type JobHandler } from "../homesend/retry-queue";
 import { gateTranscript, TRANSCRIPT_CONFIDENCE_FLOOR, type TranscriptGate } from "../homesend/audio";
@@ -552,7 +553,18 @@ async function readMessage(admin: SupabaseClient, messageId: string, deps: Whats
       : null;
   // Held for a reason the person can act on: the acknowledgement says which (I-27).
   if (decided && "waiting" in decided) await say(acknowledgementFor(outcome, { t, wait: decided }).text);
-  else await (decided ? say(addedReply(decided, undefined, t)) : ack.asks ? sayHomeTalk(ack.text) : say(ack.text));
+  else {
+    // Added as Checking (14-061): HomeTalk's first question about it follows, to this sender on their own
+    // verified link only, with the answers to pick; the reply answers it (decision C, the owner 2026-11-03).
+    const check =
+      decided && "unconfirmed" in decided && decided.unconfirmed
+        ? await openCheckQuestion(admin, { householdId: row.household_id, memberId: row.member_id, itemId: outcome.itemId, surface: "whatsapp", t }).catch(() => null)
+        : null;
+    if (check && decided) {
+      events.push({ kind: "clarification_requested", householdId: row.household_id });
+      await sayHomeTalk(`${addedReply(decided, undefined, t)}\n\n${check}`);
+    } else await (decided ? say(addedReply(decided, undefined, t)) : ack.asks ? sayHomeTalk(ack.text) : say(ack.text));
+  }
   await recordWhatsAppEvents(admin, events);
   return "read";
 }
@@ -828,6 +840,8 @@ export async function homeTalkAwaitsAnswer(admin: SupabaseClient, row: Pick<Mess
   // to HomeSend (a fresh forward is never an answer to an older question).
   const about = latest.metadata?.clarify?.action === "complete_homesend_item" ? latest.metadata.clarify.parameters?.itemId : null;
   if (about) return last.homesend_item_id === about;
+  // A check on an entry added as Checking (14-061): the reply answers it, whichever message came before.
+  if (latest.metadata?.clarify?.action === "check_homesend_entry") return true;
   // A voice note HomeTalk answered went to HomeTalk too ("ignored": nothing kept in HomeSend).
   return !last.homesend_item_id && (last.message_type === "text" || (last.message_type === "audio" && last.processing_status === "ignored"));
 }
