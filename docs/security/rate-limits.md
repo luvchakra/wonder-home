@@ -23,6 +23,7 @@ Per-household buckets marked ★ were added by SEC-06; they sit beside the membe
 | ★ `homesend.intake.household` | household | 100 / 10 min |
 | `homesend.link` (outbound fetch) | member | 15 / 10 min |
 | ★ `homesend.link.household` | household | 40 / 10 min |
+| `homesend.add_all` ("Add all anyway") | household | 1 / 1 min |
 | `homesend.email` | household | 60 / 1 h |
 | `homesend.whatsapp` | member | 60 / 1 h |
 | ★ `homesend.whatsapp.household` | household | 200 / 1 h |

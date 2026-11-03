@@ -308,6 +308,26 @@ export const SENSITIVE_ACTIONS: readonly SensitiveAction[] = [
     recordedIn: "packages/core/src/homesend/repository.ts",
   },
   {
+    event: "homesend.archived_all",
+    because: "An Admin set aside everything waiting or unreadable in HomeSend with one tap. Nothing was added or deleted and each can be restored, so the household should see when and how many moved.",
+    recordedIn: "apps/web/app/(auth)/home-send-clear-actions.ts",
+  },
+  {
+    event: "homesend.restored_all",
+    because: "An Admin undid \"Archive all\", putting those items back to wait for a person.",
+    recordedIn: "apps/web/app/(auth)/home-send-clear-actions.ts",
+  },
+  {
+    event: "homesend.added_all_anyway",
+    because: "An Admin added every waiting HomeSend item at once, below the household's bar. It records how many were added and how many kept waiting behind a guard no button passes.",
+    recordedIn: "apps/web/app/(auth)/home-send-clear-actions.ts",
+  },
+  {
+    event: "homesend.added_anyway",
+    because: "One entry was added by an Admin's \"Add all anyway\" without its usual checks. It is marked Checking, with how sure HomeSend was, and has its own Undo.",
+    recordedIn: "apps/web/app/(auth)/home-send-clear-actions.ts",
+  },
+  {
     event: "homesend.retry_requested",
     because: "A person asked WonderHome to read a failed item again, which reads outside content once more.",
     recordedIn: "packages/core/src/homesend/repository.ts",
@@ -740,6 +760,17 @@ export function describeAuditEvent(
       return { title: "A HomeSend item that no longer applies was tidied away", detail: `${TIDY_REASON_WORDS[stringOr(metadata.reason, "") ?? ""] ?? "No longer applies"}${metadata.by === "ai" ? " · checked AI verdict" : ""}. It is kept and can be restored.` };
     case "homesend.restored":
       return { title: "An archived HomeSend item was restored", detail: null };
+    case "homesend.archived_all":
+      return { title: "Everything waiting in HomeSend was archived", detail: typeof metadata.count === "number" ? `${metadata.count} items. They are kept and can be restored.` : "They are kept and can be restored." };
+    case "homesend.restored_all":
+      return { title: "Archived HomeSend items were put back", detail: typeof metadata.count === "number" ? `${metadata.count} items` : null };
+    case "homesend.added_all_anyway":
+      return {
+        title: "Everything waiting in HomeSend was added anyway",
+        detail: typeof metadata.added === "number" ? `${metadata.added} added as Checking, ${typeof metadata.kept === "number" ? metadata.kept : 0} kept waiting` : null,
+      };
+    case "homesend.added_anyway":
+      return { title: "HomeSend added something on an Admin's say-so and is still checking it", detail: typeof metadata.confidence === "number" ? `${Math.round(metadata.confidence * 100)}% sure` : null };
     case "homesend.retry_requested":
       return { title: "A failed HomeSend item is being read again", detail: null };
     case "homesend.address_created":

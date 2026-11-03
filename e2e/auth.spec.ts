@@ -16,10 +16,10 @@ import { open } from "./streaming";
  *
  * Next.js renders an empty `<div role="alert">` route announcer on every
  * page, so matching the role alone finds that first and waits forever. The
- * Alert component is a paragraph, which tells the two apart.
+ * Alert component carries `data-wh-alert`, which tells the two apart.
  */
 function alertOf(page: import("@playwright/test").Page) {
-  return page.locator('p[role="alert"]');
+  return page.locator('[role="alert"][data-wh-alert]');
 }
 
 /**

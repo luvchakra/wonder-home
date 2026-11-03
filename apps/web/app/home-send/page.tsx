@@ -7,19 +7,20 @@ import { createAdminClient } from "@wonderhome/core/db/admin";
 import { getHomeSendAddress, platformHomeSendEmailDomain } from "@wonderhome/core/homesend/addresses";
 import { waitRowWords } from "@wonderhome/core/homesend/auto-add";
 import { listHomeSendChanges } from "@wonderhome/core/homesend/changes";
-import { inboxSegments, inChannel, readInboxChannel } from "@wonderhome/core/homesend/channels";
+import { questionsLeft } from "@wonderhome/core/homesend/checking";
+import { addAnywayCounts, groupIdentical } from "@wonderhome/core/homesend/inbox-view";
 import { ingestFile, ingestText } from "@wonderhome/core/homesend/ingest";
 import { countArchivedHomeSendItems, listArchiveReasons, listArchivedHomeSendItems, listHomeSendItems, listHomeSendLifecycle, NO_LIFECYCLE } from "@wonderhome/core/homesend/repository";
 import { bulkReady, daysBetween, retryState, STALE_AFTER_DAYS, whyItWaits } from "@wonderhome/core/homesend/waiting";
 import { recoverWhen } from "@wonderhome/core/homesend/when";
 import { consumeShareHandoff } from "@wonderhome/core/homesend/share-handoff";
+import { loadDirectAdd } from "@wonderhome/core/household/direct-add-repository";
 import { isHouseholdAdmin, listMembers } from "@wonderhome/core/identity/households";
 import { childrenWithClasses, listActivities } from "@wonderhome/core/school/activities";
 import { whatsappConfigFromEnv } from "@wonderhome/core/notifications/whatsapp";
 import { AppShell } from "@wonderhome/core/shell/app-shell";
 import { Alert } from "@wonderhome/core/ui/alert";
 import { QuoteCard } from "@wonderhome/core/ui/quote-card";
-import { SegmentedControl } from "@wonderhome/core/ui/segmented-control";
 import { EmptyState } from "@wonderhome/core/ui/states";
 import { formatWhatsAppNumber, whatsappBusinessNumber } from "@wonderhome/core/whatsapp/linking";
 import { listWhatsAppLinks } from "@wonderhome/core/whatsapp/repository";
@@ -34,6 +35,8 @@ import { requireSession } from "../_lib/session";
 
 export const metadata = { title: "HomeSend" };
 
+/** "Added recently" looks back this many days (the owner, 2026-11-03). */
+const RECENT_DAYS = 7;
 /** Waiting items prepared for review per page; "Show more" adds this many (every list has a bound). */
 const PAGE = 20;
 const MOST_SHOWN = 200;
@@ -98,9 +101,9 @@ async function resumeShareHandoff(
 export default async function HomeSendPage({
   searchParams,
 }: {
-  searchParams: Promise<{ handoff?: string; shareError?: string; channel?: string; shown?: string; view?: string }>;
+  searchParams: Promise<{ handoff?: string; shareError?: string; shown?: string; view?: string }>;
 }) {
-  const [{ handoff, shareError, channel: channelParam, shown: shownParam, view: viewParam }, session] = await Promise.all([searchParams, requireSession("/home-send")]);
+  const [{ handoff, shareError, shown: shownParam, view: viewParam }, session] = await Promise.all([searchParams, requireSession("/home-send")]);
   const { supabase, membership, view, viewer, secondary, locale } = session;
   const { t } = locale;
   const householdId = membership.household.id;
@@ -146,7 +149,8 @@ export default async function HomeSendPage({
   // to show; before that no card, tab or link offers it (story 14-016).
   const whatsappNumber = whatsappConfigFromEnv() ? whatsappBusinessNumber() : null;
   const emailConfigured = platformHomeSendEmailDomain() !== null;
-  const [allItems, members, changes, address, whatsappLinks, activities, archivedCount] = await Promise.all([
+  const isAdmin = isHouseholdAdmin(membership);
+  const [allItems, members, changes, address, whatsappLinks, activities, archivedCount, directAdd] = await Promise.all([
     listHomeSendItems(supabase, householdId).catch(() => []),
     listMembers(supabase, householdId, membership.household.ownerMemberId).catch(() => []),
     listHomeSendChanges(supabase, householdId).catch(() => []),
@@ -155,24 +159,17 @@ export default async function HomeSendPage({
     // Each child's own classes, so a class outside school is picked, not typed (rule 20).
     listActivities(supabase, householdId).catch(() => []),
     countArchivedHomeSendItems(supabase, householdId),
+    // What "Add all anyway" keeps waiting, said in its confirm; only an Admin is offered it.
+    isAdmin ? loadDirectAdd(supabase, householdId).catch(() => ({ money: false, health: false })) : Promise.resolve({ money: false, health: false }),
   ]);
 
-  // "All | WhatsApp | Email | Uploads": the tabs filter what is listed, never
-  // what can be sent — the drop zone above them always takes anything.
-  const segments = inboxSegments(
-    allItems.map((item) => ({ source: item.source, waiting: item.status === "received" || item.status === "classified" })),
-    { whatsapp: whatsappNumber !== null, email: emailConfigured },
-  ).map((segment) => ({ ...segment, label: t(`homesend.channel.${segment.key}`) }));
-  // A tab that isn't offered (a hand-typed ?channel=email with no email) reads as All.
-  const requested = readInboxChannel(channelParam);
-  const channel = segments.some((segment) => segment.key === requested) ? requested : "all";
+  // One list, no channel tabs (the owner, 2026-11-03): where something came from is in its detail.
   // A waiting item's day and time, from its own words, whatever kind it was
   // read as: items read before dates were kept for every kind open with them too.
   const timezone = membership.household.timezone;
-  const items = inChannel(allItems, channel).map((item) =>
+  const items = allItems.map((item) =>
     item.extracted && (item.status === "received" || item.status === "classified") ? { ...item, extracted: recoverWhen(item.extracted, { timezone, now: new Date(item.createdAt) }) } : item,
   );
-  const senders = Object.fromEntries(members.map((member) => [member.id, member.displayName]));
   const myWhatsApp = whatsappLinks.find((link) => link.memberId === membership.memberId) ?? null;
 
   const kids = childrenWithClasses(members, activities);
@@ -199,7 +196,8 @@ export default async function HomeSendPage({
     const waiting = review.confirmation.wait;
     const evidence = waitEvidence(item, review);
     const days = waitingFor(item);
-    const why = whyWords(whyItWaits(evidence), t);
+    const reason = whyWords(whyItWaits(evidence), t);
+    const why = reason;
     reviews[item.id] = {
       subject: review.subject,
       reconciliation: review.reconciliation,
@@ -208,6 +206,7 @@ export default async function HomeSendPage({
       waitWords: waiting ? waitRowWords(waiting, t) : null,
       // Why it waits, from evidence already worked out — and how long, once it is two weeks.
       why: days >= STALE_AFTER_DAYS ? `${why} · ${t("homesend.why.waitingDays", { count: days })}` : why,
+      reason,
       ready: bulkReady(evidence),
     };
   });
@@ -226,7 +225,22 @@ export default async function HomeSendPage({
       return [item.id, { canRetry: state.allowed, line }];
     }),
   );
-  const history = items.filter((item) => item.status === "routed" || item.status === "dismissed" || item.status === "undone").slice(0, 15);
+  // "Added recently": what was added (and anything undone) in the last week, by its newest change.
+  const since = now.getTime() - RECENT_DAYS * 86_400_000;
+  const lastChange = new Map<string, number>();
+  for (const change of changes) lastChange.set(change.intakeId, Math.max(lastChange.get(change.intakeId) ?? 0, Date.parse(change.createdAt) || 0));
+  const history = items
+    .filter((item) => (item.status === "routed" || item.status === "undone") && (lastChange.get(item.id) ?? Date.parse(item.createdAt)) >= since)
+    .slice(0, 30);
+  // The opening sentence (rule 7): what needs a word, what couldn't be read — the counts live here, not in badges.
+  const checkingOpen = history.filter((item) => questionsLeft((item.understanding as { checking?: unknown } | null)?.checking) > 0 && changes.some((change) => change.intakeId === item.id && !change.undoneAt && change.confirmationState === "unconfirmed")).length;
+  const needs = groupIdentical(pending).length + checkingOpen;
+  const lead =
+    needs > 0
+      ? [t("homesend.lead.needs", { count: needs }), failed.length > 0 ? t("homesend.lead.failed", { count: failed.length }) : history.length > 0 ? t("homesend.lead.restAdded") : null].filter(Boolean).join(" ")
+      : failed.length > 0
+        ? t("homesend.lead.failed", { count: failed.length })
+        : t("homesend.lead.allClear");
   // "Also added to Groceries: White T-shirt" — each need by name, so two of
   // them from one notice can be told apart (and undone) separately.
   const groceryIds = changes.filter((change) => change.domain === "grocery_item").map((change) => change.entityId);
@@ -250,10 +264,13 @@ export default async function HomeSendPage({
         <HomeSendInbox
           householdId={householdId}
           kids={kids}
-          canAddChild={isHouseholdAdmin(membership)}
+          canAddChild={isAdmin}
+          lead={lead}
+          isAdmin={isAdmin}
+          clearCounts={isAdmin ? { archive: pending.length + failed.length, add: addAnywayCounts(pending, directAdd), failed: failed.length } : null}
           pending={pendingShown}
           pendingTotal={pending.length}
-          moreHref={pending.length > pendingShown.length ? `/home-send?${new URLSearchParams({ ...(channel === "all" ? {} : { channel }), shown: String(shown + PAGE) })}` : null}
+          moreHref={pending.length > pendingShown.length ? `/home-send?${new URLSearchParams({ shown: String(shown + PAGE) })}` : null}
           failed={failed}
           failedInfo={failedInfo}
           archived={archivedCount > 0 ? { href: "/home-send?view=archived", label: t("homesend.archived.link", { count: archivedCount }) } : null}
@@ -262,15 +279,12 @@ export default async function HomeSendPage({
           reviews={reviews}
           groceryNames={groceryNames}
           purchaseNames={purchaseNames}
-          senders={senders}
-          filterLabel={channel === "all" ? null : (segments.find((segment) => segment.key === channel)?.label ?? null)}
-          filter={segments.length > 0 ? <SegmentedControl segments={segments} active={channel} label={t("homesend.filter.label")} /> : null}
           labels={labels}
         />
 
         <HomeSendChannels
           householdId={householdId}
-          isAdmin={isHouseholdAdmin(membership)}
+          isAdmin={isAdmin}
           emailConfigured={emailConfigured}
           address={address}
           whatsapp={

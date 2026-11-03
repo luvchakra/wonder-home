@@ -33,6 +33,8 @@ export const RATE_LIMITS = {
   "homesend.link": { max: 15, windowSeconds: 600 },
   /** "Try again" on a failed HomeSend item, per member: each is one more read of outside content. */
   "homesend.retry": { max: 10, windowSeconds: 600 },
+  /** "Add all anyway" in HomeSend, per household (the owner, 2026-11-03): one run a minute, each reads and writes every waiting item. */
+  "homesend.add_all": { max: 1, windowSeconds: 60 },
   /** Forwarded emails processed, per household per hour. */
   "homesend.email": { max: 60, windowSeconds: 3600 },
   /** Messages a linked member sends to WonderHome on WhatsApp, per member per hour. */
@@ -104,6 +106,7 @@ export const RATE_LIMIT_SCOPES: Record<RateLimitBucket, Scope> = {
   "homesend.link": "member",
   "homesend.retry": "member",
   "homesend.retry.household": "household",
+  "homesend.add_all": "household",
   "homesend.email": "household",
   "homesend.whatsapp": "member",
   "hometalk.turn.household": "household",
