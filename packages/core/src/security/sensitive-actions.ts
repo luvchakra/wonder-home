@@ -318,6 +318,16 @@ export const SENSITIVE_ACTIONS: readonly SensitiveAction[] = [
     recordedIn: "apps/web/app/(auth)/home-send-clear-actions.ts",
   },
   {
+    event: "homesend.removed",
+    because: "A person removed a HomeSend item on its own (archived with a reason, and the entry it had added undone). It is kept and can be restored.",
+    recordedIn: "apps/web/app/(auth)/home-send-remove-actions.ts",
+  },
+  {
+    event: "homesend.deleted",
+    because: "An archived HomeSend item and its stored file were deleted for good. Only the id is kept; what it held is gone and cannot be restored.",
+    recordedIn: "apps/web/app/(auth)/home-send-remove-actions.ts",
+  },
+  {
     event: "homesend.added_all_anyway",
     because: "An Admin added every waiting HomeSend item at once, below the household's bar. It records how many were added and how many kept waiting behind a guard no button passes.",
     recordedIn: "apps/web/app/(auth)/home-send-clear-actions.ts",
@@ -764,6 +774,10 @@ export function describeAuditEvent(
       return { title: "Everything waiting in HomeSend was archived", detail: typeof metadata.count === "number" ? `${metadata.count} items. They are kept and can be restored.` : "They are kept and can be restored." };
     case "homesend.restored_all":
       return { title: "Archived HomeSend items were put back", detail: typeof metadata.count === "number" ? `${metadata.count} items` : null };
+    case "homesend.removed":
+      return { title: "A HomeSend item was removed", detail: typeof metadata.entries === "number" && metadata.entries > 0 ? "Its entry was undone with it. It is kept and can be restored." : "It is kept and can be restored." };
+    case "homesend.deleted":
+      return { title: "A HomeSend item was deleted for good", detail: null };
     case "homesend.added_all_anyway":
       return {
         title: "Everything waiting in HomeSend was added anyway",

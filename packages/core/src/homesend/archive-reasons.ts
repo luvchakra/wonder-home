@@ -6,5 +6,5 @@
  */
 export const TIDY_REASONS = ["past_date", "already_recorded", "superseded", "unreadable", "cancelled"] as const;
 export type TidyReason = (typeof TIDY_REASONS)[number];
-export const ARCHIVE_REASONS = ["untouched_30_days", ...TIDY_REASONS] as const;
+export const ARCHIVE_REASONS = ["untouched_30_days", ...TIDY_REASONS, "removed_by_person"] as const;
 export type ArchiveReason = (typeof ARCHIVE_REASONS)[number];
