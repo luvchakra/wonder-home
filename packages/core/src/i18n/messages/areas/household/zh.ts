@@ -955,6 +955,8 @@ export const householdZh: AreaCatalog<typeof householdEn> = {
   "manage.section.addressMeta": "尚未设置",
   "address.lede": "{household} 住在哪里。只有家中的成年人能看到，帮手和孩子都看不到。",
   "address.uses": "添加孩子的学校时，WonderHome 会据此把离家近的学校排在前面。",
+  "address.unit": "房号、门牌号、楼栋（可选）",
+  "address.unitHint": "例如：B栋1203室",
   "address.save": "保存地址",
   "address.remove": "移除地址",
   "address.removing": "正在移除…",

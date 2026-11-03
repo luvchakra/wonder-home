@@ -11,7 +11,7 @@ import { createAdminClient } from "@wonderhome/core/db/admin";
 import { BILL_TYPE_NAMES, billType, type BillTypeKey } from "@wonderhome/core/finance/bill-catalog";
 import { cancelObligation, createObligation } from "@wonderhome/core/finance/repository";
 import { createPet, listPets, setPetActive, updatePet } from "@wonderhome/core/home/repository";
-import { loadHouseholdAddress, saveHouseholdAddress } from "@wonderhome/core/household/address";
+import { fullAddress, loadHouseholdAddress, saveHouseholdAddress } from "@wonderhome/core/household/address";
 import { saveResponsibility } from "@wonderhome/core/household/configuration-repository";
 import { replaceAvailabilityPattern } from "@wonderhome/core/household/helpers-repository";
 import { calledName, isHouseholdAdmin, updateMemberProfile } from "@wonderhome/core/identity/households";
@@ -126,7 +126,7 @@ export async function loadAmafSnapshot(supabase: SupabaseClient, membership: Hou
       const item = Array.isArray(row.playbook_items) ? (row.playbook_items[0] as Row | undefined) : (row.playbook_items as Row | null);
       return { outcomeKey: row.outcome_key as string, title: (item?.name as string | undefined) ?? (row.outcome_key as string), primaryMemberId: (row.primary_member_id as string | null) ?? null, updatedAt: (row.updated_at as string | null) ?? null };
     }),
-    address: address ? { text: address.formattedAddress, updatedAt: null } : null,
+    address: address ? { text: fullAddress(address), updatedAt: null } : null,
     pets: pets.map((pet) => ({ id: pet.id, name: pet.name, species: pet.species, dateOfBirth: pet.dateOfBirth ?? null, vetName: pet.vetName ?? null, vetContact: pet.vetContact ?? null, updatedAt: null })),
     helperWindows,
     memoryKeys: (memories ?? []).map((row) => row.key as string),

@@ -1003,6 +1003,8 @@ export const householdAr: AreaCatalog<typeof householdEn> = {
   "manage.section.addressMeta": "لم يُحدَّد بعد",
   "address.lede": "مكان سكن {household}. لا يراه إلا البالغون في المنزل، ولا يراه المساعدون ولا الأطفال أبدًا.",
   "address.uses": "يستخدمه WonderHome ليعرض المدارس القريبة أولًا عند إضافة مدرسة طفل.",
+  "address.unit": "الشقة، رقم المنزل، المبنى (اختياري)",
+  "address.unitHint": "مثال: شقة 1203، مبنى ب",
   "address.save": "حفظ العنوان",
   "address.remove": "إزالة العنوان",
   "address.removing": "جارٍ الإزالة…",

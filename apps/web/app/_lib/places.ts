@@ -1,7 +1,7 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { z } from "zod";
 
-import { loadHouseholdAddress, saveHouseholdAddress } from "@wonderhome/core/household/address";
+import { cleanUnitLine, loadHouseholdAddress, saveHouseholdAddress, saveHouseholdUnitLine } from "@wonderhome/core/household/address";
 import { loadWorkPlace, removeWorkPlace, saveWorkPlace } from "@wonderhome/core/household/work-place";
 import { DEFAULT_PREFERENCES, resolvePreferences } from "@wonderhome/core/i18n/preferences";
 import type { HouseholdMembership } from "@wonderhome/core/identity/schemas";
@@ -73,17 +73,25 @@ export async function saveAddressFromForm(
   const placeId = String(formData.get("home_place_id") ?? "").trim();
   const typed = String(formData.get("home_address") ?? "").trim().slice(0, 300);
   const householdId = membership.household.id;
+  // Only when the form carried the field; absent leaves the stored line alone.
+  const unitLine = formData.has("home_unit_line") ? cleanUnitLine(formData.get("home_unit_line")) : undefined;
   const current = await loadHouseholdAddress(supabase, householdId).catch(() => null);
+  const unitSame = unitLine === undefined || (current?.unitLine ?? null) === unitLine;
+  const sameAddress = placeId ? current?.placeId === placeId : Boolean(current) && current?.formattedAddress === typed;
+  if (current && (placeId ? sameAddress : sameAddress || !typed)) {
+    // The picked address is already on record: only the unit line may have changed.
+    if (unitSame) return "unchanged";
+    await saveHouseholdUnitLine(supabase, { householdId, memberId: membership.memberId, unitLine: unitLine ?? null });
+    return "saved";
+  }
   if (placeId) {
-    if (current?.placeId === placeId) return "unchanged";
     const place = await pickedPlace(membership, placeId, formData.get("places_session"));
     if (!place) throw new PlacesUnavailableError("unavailable");
-    await saveHouseholdAddress(supabase, { householdId, memberId: membership.memberId, address: { place } });
+    await saveHouseholdAddress(supabase, { householdId, memberId: membership.memberId, address: { place }, unitLine });
     return "saved";
   }
   if (!typed) return "empty";
-  if (current && current.formattedAddress === typed) return "unchanged";
-  await saveHouseholdAddress(supabase, { householdId, memberId: membership.memberId, address: { typed } });
+  await saveHouseholdAddress(supabase, { householdId, memberId: membership.memberId, address: { typed }, unitLine });
   return "saved";
 }
 

@@ -1,6 +1,6 @@
 import { Baby, Bell, BookOpen, Bot, ChevronDown, ChevronRight, FileClock, GraduationCap, HandHelping, House, ListChecks, MapPin, MessageSquareText, PawPrint, Plug, ShieldCheck, Shirt, ShoppingBasket, Users, UtensilsCrossed, Wallet, Wand2, type LucideIcon } from "lucide-react";
 
-import { loadHouseholdAddress } from "@wonderhome/core/household/address";
+import { fullAddress, loadHouseholdAddress } from "@wonderhome/core/household/address";
 import { assessSetup } from "@wonderhome/core/household/setup";
 import { loadSetupFacts } from "@wonderhome/core/household/setup-repository";
 import { listIntegrations } from "@wonderhome/core/integrations/repository";
@@ -75,7 +75,7 @@ export async function ManageSection({ session }: { session: Session }) {
   type SectionLink = { href: string; icon: typeof Users; tone: IconTone; title: string; meta: string; badge?: { label: string; tone: "attention" | "handled" | "neutral" } };
   const link = {
     setup: { href: "/onboarding", icon: Wand2, tone: "primary", title: t("manage.section.setup"), meta: t("manage.section.setupMeta") },
-    address: { href: "#address", icon: MapPin, tone: "home", title: t("manage.section.address"), meta: address?.formattedAddress ?? t("manage.section.addressMeta") },
+    address: { href: "#address", icon: MapPin, tone: "home", title: t("manage.section.address"), meta: (address ? fullAddress(address) : null) ?? t("manage.section.addressMeta") },
     members: { href: "/family", icon: Users, tone: "people", title: t("manage.section.members"), meta: t("manage.section.membersMeta", { count: memberCount ?? 0 }) },
     responsibilities: { href: "/household/responsibilities", icon: ListChecks, tone: "primary", title: t("nav.item.responsibilities"), meta: t("manage.section.responsibilitiesMeta", { count: modes.length }) },
     playbook: { href: "#playbook", icon: BookOpen, tone: "home", title: t("manage.section.playbook"), meta: t("manage.section.playbookMeta", { count: items.filter((i) => i.active).length }) },
