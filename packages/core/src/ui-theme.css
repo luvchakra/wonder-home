@@ -1033,3 +1033,16 @@ html:lang(zh) .wh-loading-line[lang="zh"] {
     animation: none;
   }
 }
+
+/* A setting reached from search or a deep link (OpenOnHash): a brief highlight so the eye finds it. */
+@keyframes wh-hash-flash {
+  0% { box-shadow: 0 0 0 3px var(--wh-primary); }
+  100% { box-shadow: 0 0 0 3px transparent; }
+}
+[data-hash-flash] {
+  animation: wh-hash-flash 2.2s ease-out;
+  border-radius: var(--wh-radius-sm);
+}
+@media (prefers-reduced-motion: reduce) {
+  [data-hash-flash] { animation: none; outline: 2px solid var(--wh-primary); }
+}

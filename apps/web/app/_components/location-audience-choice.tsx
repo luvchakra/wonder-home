@@ -30,7 +30,7 @@ export function LocationAudienceChoice({
   const [pending, startTransition] = useTransition();
 
   return (
-    <div className="space-y-1.5">
+    <div id="audience" className="scroll-mt-20 space-y-1.5">
       <ChoiceChips
         legend={labels.legend}
         name="locationAudience"

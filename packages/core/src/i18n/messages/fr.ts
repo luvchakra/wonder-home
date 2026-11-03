@@ -13,6 +13,7 @@ import { eventsFr } from "./areas/events/fr";
 import { calendarFr } from "./areas/calendar/fr";
 import { memberInviteFr } from "./areas/memberinvite/fr";
 import { whatsNewFr } from "./areas/whatsnew/fr";
+import { settingsSearchFr } from "./areas/settings-search/fr";
 import { todayFr } from "./areas/today/fr";
 import { chatFr } from "./areas/chat/fr";
 import { amafFr } from "./areas/amaf/fr";
@@ -1081,6 +1082,7 @@ export const fr: Catalog = {
   ...eventsFr,
   ...calendarFr,
   ...whatsNewFr,
+  ...settingsSearchFr,
   ...todayFr,
   ...chatFr,
   ...amafFr,

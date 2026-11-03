@@ -20,6 +20,7 @@ import { SpokenLanguagesField } from "../../../_components/spoken-languages-fiel
 import { CurrencyPicker, DateTimeUnitsFields, LanguagePicker, RegionPicker } from "../../../_components/locale-pickers";
 import { SubmitButton } from "../../../_components/submit-pill";
 import { requireSession } from "../../../_lib/session";
+import { OpenOnHash } from "../../../_components/open-on-hash";
 
 export const dynamic = "force-dynamic";
 
@@ -199,6 +200,7 @@ export default async function LanguageRegionFieldPage({
               </span>
               <input type="hidden" name={`was_${member.id}`} value={value} />
               <div className="w-full sm:w-auto">
+                <OpenOnHash />
                 {languageSelect(
                   editable ? `language_${member.id}` : `view_${member.id}`,
                   value,

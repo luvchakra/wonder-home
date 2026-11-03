@@ -15,6 +15,7 @@ import { IntegrationsSections } from "./integrations-section";
 import { SchoolSection } from "./school-section";
 import { VoiceAssistantsSection } from "./voice-section";
 import { WhatsAppSection } from "./whatsapp-section";
+import { OpenOnHash } from "../../_components/open-on-hash";
 
 export const metadata = { title: "Connections" };
 export const dynamic = "force-dynamic";
@@ -78,6 +79,7 @@ export default async function ConnectionsPage({ searchParams }: { searchParams: 
       title={t("connectionsPage.title")}
     >
       <div className="space-y-6">
+        <OpenOnHash />
         <header className="wh-rise">
           <h1 className="text-[1.625rem] font-bold tracking-tight sm:text-3xl">{t("connectionsPage.title")}</h1>
           <p className="mt-0.5 text-sm text-[var(--wh-foreground-muted)]">{t("connectionsPage.lede")}</p>

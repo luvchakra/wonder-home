@@ -10,6 +10,7 @@ import { QuoteCard } from "@wonderhome/core/ui/quote-card";
 import { LocationAudienceChoice } from "../../_components/location-audience-choice";
 import { LocationSharingToggle } from "../../_components/location-sharing-toggle";
 import { requireSession } from "../../_lib/session";
+import { OpenOnHash } from "../../_components/open-on-hash";
 
 export const metadata = { title: "Location sharing" };
 export const dynamic = "force-dynamic";
@@ -35,12 +36,13 @@ export default async function LocationSettingsPage() {
   return (
     <AppShell active="more" viewer={viewer} secondary={secondary} pathname="/settings/location" back={{ href: "/settings", label: t("settingsPage.backToSettings") }} title={t("location.title")}>
       <div className="space-y-6">
+        <OpenOnHash />
         <header className="wh-rise">
           <h1 className="text-[1.625rem] font-bold tracking-tight sm:text-3xl">{t("location.title")}</h1>
           <p className="mt-0.5 text-sm text-[var(--wh-foreground-muted)]">{t("location.lede")}</p>
         </header>
 
-        <Card className="flex items-start gap-3">
+        <Card id="sharing" className="flex scroll-mt-20 items-start gap-3">
           <IconTile icon={MapPin} tone={on ? "handled" : "neutral"} />
           <div className="min-w-0 flex-1 space-y-2 text-sm">
             <Badge tone={on ? "handled" : "neutral"}>{on ? t("location.meta.on") : t("location.meta.off")}</Badge>

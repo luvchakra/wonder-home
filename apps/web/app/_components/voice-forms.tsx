@@ -337,6 +337,7 @@ export function VoiceSettingsForm({
           <label className="flex min-h-11 items-center gap-3 text-sm">
             <input
               type="checkbox"
+              id="speakReplies"
               name="speakReplies"
               defaultChecked={settings.speakReplies}
               className="size-5 rounded border-[var(--wh-border-strong)] accent-[var(--wh-primary)]"
@@ -537,7 +538,7 @@ export function VoiceSettingsForm({
         </section>
       </form>
 
-      <details className="group rounded-[var(--wh-radius)] border border-[var(--wh-border)] bg-[var(--wh-surface)] shadow-[var(--wh-shadow-card)]">
+      <details id="voice-advanced" className="group scroll-mt-20 rounded-[var(--wh-radius)] border border-[var(--wh-border)] bg-[var(--wh-surface)] shadow-[var(--wh-shadow-card)]">
         <summary className="flex min-h-14 cursor-pointer list-none items-center gap-3 px-4 py-3 [&::-webkit-details-marker]:hidden">
           <span className="min-w-0 flex-1">
             <span className="block text-sm font-semibold">{labels.simple.advanced}</span>

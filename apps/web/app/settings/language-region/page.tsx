@@ -14,6 +14,7 @@ import { QuoteCard } from "@wonderhome/core/ui/quote-card";
 import { SectionHeader } from "@wonderhome/core/ui/section-header";
 
 import { requireSession } from "../../_lib/session";
+import { OpenOnHash } from "../../_components/open-on-hash";
 
 export const metadata = { title: "Language & Region" };
 export const dynamic = "force-dynamic";
@@ -71,6 +72,7 @@ export default async function LanguageRegionPage({ searchParams }: { searchParam
   return (
     <AppShell active="more" viewer={viewer} secondary={secondary} pathname="/settings" back={{ href: "/settings", label: t("common.back") }} title={t("settings.languageRegion")}>
       <div className="space-y-6">
+        <OpenOnHash />
         <p className="text-[0.9375rem] text-[var(--wh-foreground-muted)]">{t("settings.languageRegion.lede")}</p>
         {query.saved ? <Alert tone="info">{t("common.saved")}</Alert> : null}
 

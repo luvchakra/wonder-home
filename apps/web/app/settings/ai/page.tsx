@@ -27,6 +27,7 @@ import { ConfirmRequestedSwitch } from "../../_components/confirm-requested-swit
 import { DataUseForm } from "../../_components/data-use-form";
 import { formatDate, requireSession } from "../../_lib/session";
 import { aiKeyFormLabels, dataUseFormLabels, dataUseLines, keySourceWords } from "../../_lib/settings-labels";
+import { OpenOnHash } from "../../_components/open-on-hash";
 
 export const metadata = { title: "AI Assistant" };
 export const dynamic = "force-dynamic";
@@ -72,6 +73,7 @@ export default async function AiAssistantSettingsPage({ searchParams }: { search
   return (
     <AppShell active="more" viewer={viewer} secondary={secondary} pathname="/settings/ai" back={{ href: "/settings", label: t("settingsPage.backToSettings") }} title={t("settingsPage.ai.title")}>
       <div className="space-y-6">
+        <OpenOnHash />
         <header className="wh-rise">
           <h1 className="text-[1.625rem] font-bold tracking-tight sm:text-3xl">{t("settingsPage.ai.title")}</h1>
           <p className="mt-0.5 text-sm text-[var(--wh-foreground-muted)]">{t("settingsPage.ai.lede", { household: membership.household.name })}</p>
@@ -132,7 +134,7 @@ export default async function AiAssistantSettingsPage({ searchParams }: { search
         </section>
 
 
-        <section>
+        <section id="provider-key" className="scroll-mt-20">
           <SectionHeader title={t("settingsPage.ai.section.key")} />
           <Card className="space-y-4 p-4">
             <div className="flex items-start gap-3">

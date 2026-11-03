@@ -39,7 +39,7 @@ export function AutoAddPercentPicker({
   };
 
   return (
-    <div className="space-y-3">
+    <div id="auto-add" className="scroll-mt-20 space-y-3">
       <div className="flex items-start gap-3">
         <IconTile icon={Gauge} tone="primary" />
         <div className="min-w-0 flex-1">

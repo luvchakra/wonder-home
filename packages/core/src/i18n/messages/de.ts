@@ -13,6 +13,7 @@ import { eventsDe } from "./areas/events/de";
 import { calendarDe } from "./areas/calendar/de";
 import { memberInviteDe } from "./areas/memberinvite/de";
 import { whatsNewDe } from "./areas/whatsnew/de";
+import { settingsSearchDe } from "./areas/settings-search/de";
 import { todayDe } from "./areas/today/de";
 import { chatDe } from "./areas/chat/de";
 import { amafDe } from "./areas/amaf/de";
@@ -1081,6 +1082,7 @@ export const de: Catalog = {
   ...eventsDe,
   ...calendarDe,
   ...whatsNewDe,
+  ...settingsSearchDe,
   ...todayDe,
   ...chatDe,
   ...amafDe,
