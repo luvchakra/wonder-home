@@ -140,7 +140,7 @@ export default async function HomeSendPage({
     const labels = homesendPageLabels(t, locale.preferences.language);
     return (
       <AppShell {...shell} back={{ href: "/home-send", label: labels.inbox.archived.back }} title={labels.inbox.archived.title}>
-        <HomeSendArchived householdId={householdId} items={archived} reasons={Object.fromEntries(reasons)} labels={labels} />
+        <HomeSendArchived householdId={householdId} isAdmin={isHouseholdAdmin(membership)} viewerMemberId={membership.memberId} viewerType={membership.memberType} items={archived} reasons={Object.fromEntries(reasons)} labels={labels} />
       </AppShell>
     );
   }
@@ -267,6 +267,8 @@ export default async function HomeSendPage({
           canAddChild={isAdmin}
           lead={lead}
           isAdmin={isAdmin}
+          viewerMemberId={membership.memberId}
+          viewerType={membership.memberType}
           clearCounts={isAdmin ? { archive: pending.length + failed.length, add: addAnywayCounts(pending, directAdd), failed: failed.length } : null}
           pending={pendingShown}
           pendingTotal={pending.length}
