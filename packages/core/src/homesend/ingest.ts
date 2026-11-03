@@ -857,3 +857,80 @@ export async function ingestSchoolChannelMessage(
 }
 
 export type { IntakeFileType };
+
+/**
+ * "Try again" on an item that failed safely (the owner, 2026-11-03): the same
+ * read it had on arrival, run once more on what was kept — the link's address,
+ * the file in storage, or the words — through `understand`, never a second
+ * pipeline. Called by the job queue (`retry-queue.ts`), never on a request.
+ * Success leaves it waiting for a person like any fresh read; nothing is ever
+ * added on its own from here. Another failure keeps it in "Failed safely".
+ */
+export async function rereadFailedItem(
+  supabase: SupabaseClient,
+  item: { id: string; householdId: string; createdByMemberId: string | null; source: HomeSendSource; filePath: string | null; sourceUrl: string | null; rawText: string | null; contentType: string | null; subject: string | null; senderAddress: string | null },
+  deps: IngestDeps = {},
+): Promise<IngestOutcome> {
+  const { error: resetError } = await supabase
+    .from("home_send_items")
+    .update({ status: "received", failure_reason: null })
+    .eq("household_id", item.householdId)
+    .eq("id", item.id)
+    .eq("status", "failed");
+  if (resetError) throw new Error(`rereadFailedItem reset failed: ${resetError.code ?? "unknown"}`);
+
+  if (item.source === "link" && item.sourceUrl) {
+    const fetched = await (deps.fetchLink ?? ((address: string) => fetchLinkSafely(address)))(item.sourceUrl).catch((): LinkContent => ({ ok: false, reason: "unreachable" }));
+    if (!fetched.ok) {
+      const reason: HomeSendFailureReason = fetched.reason === "invalid_url" || fetched.reason === "blocked_address" ? "link_blocked" : fetched.reason === "too_large" ? "too_large" : "link_unreachable";
+      await markHomeSendFailed(supabase, item.householdId, item.id, reason);
+      return failedOutcome(item.id, reason, LINK_FAILURE_COPY[fetched.reason]);
+    }
+    if (fetched.kind === "pdf") {
+      return understand(supabase, item.householdId, item.id, { source: { document: { mediaType: "application/pdf", base64: Buffer.from(fetched.bytes).toString("base64") } }, channel: "link", context: { channel: "a shared link to a PDF", url: fetched.finalUrl } }, deps);
+    }
+    const text = [fetched.title, fetched.text].filter(Boolean).join("\n\n");
+    return understand(supabase, item.householdId, item.id, { source: { text }, channel: "link", context: { channel: "a shared web page", url: fetched.finalUrl }, text }, deps);
+  }
+
+  if (item.filePath) {
+    const { data: blob, error } = await supabase.storage.from("home-send").download(item.filePath);
+    if (error || !blob) {
+      await markHomeSendFailed(supabase, item.householdId, item.id, "unreadable");
+      return failedOutcome(item.id, "unreadable");
+    }
+    const bytes = new Uint8Array(await blob.arrayBuffer());
+    const detected = detectIntakeFile(bytes, item.contentType ?? "application/octet-stream", null);
+    if (!detected.ok) {
+      await markHomeSendFailed(supabase, item.householdId, item.id, "unsupported_type");
+      return failedOutcome(item.id, "unsupported_type");
+    }
+    const base64 = Buffer.from(bytes).toString("base64");
+    const channel: HomeSendSource = item.source === "audio_note" ? "manual_upload" : item.source;
+    const context: IntakeContext = { channel: "a file sent to HomeSend, read again", subject: item.subject, from: item.senderAddress };
+    switch (detected.family) {
+      case "image":
+        return understand(supabase, item.householdId, item.id, { source: { image: { mediaType: detected.type as "image/jpeg" | "image/png" | "image/webp", base64 } }, channel, context, contentType: detected.type, pageCount: 1 }, deps);
+      case "document":
+        return understand(supabase, item.householdId, item.id, { source: { document: { mediaType: "application/pdf", base64 } }, channel, context, contentType: detected.type, pageCount: pdfPageCount(bytes) || null }, deps);
+      case "text": {
+        const text = normalizeText(decodeTextFile(bytes) ?? "");
+        if (!text) {
+          await markHomeSendFailed(supabase, item.householdId, item.id, "unreadable");
+          return failedOutcome(item.id, "unreadable");
+        }
+        return understand(supabase, item.householdId, item.id, { source: { text }, channel, context, text, contentType: detected.type }, deps);
+      }
+      case "audio":
+        return hearVoiceNote(supabase, { householdId: item.householdId, memberId: item.createdByMemberId ?? "" }, item.id, { base64, mimeType: detected.type }, deps);
+    }
+  }
+
+  if (item.rawText) {
+    const channel: HomeSendSource = item.source === "email" || item.source === "whatsapp" ? item.source : "pasted_text";
+    return understand(supabase, item.householdId, item.id, { source: { text: item.rawText }, channel, context: { channel: "text sent to HomeSend, read again", subject: item.subject, from: item.senderAddress }, text: item.rawText }, deps);
+  }
+
+  await markHomeSendFailed(supabase, item.householdId, item.id, "unreadable");
+  return failedOutcome(item.id, "unreadable");
+}

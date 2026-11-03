@@ -6,6 +6,7 @@ import { runMeasurementRoutineSweep } from "@wonderhome/core/health/routine-remi
 import { keepStoresWarm } from "@wonderhome/core/homebrain/context-store";
 import { CLOCK_DRAIN_LIMIT, drainKnowledge } from "@wonderhome/core/knowledge/facts";
 import { sleepDueHouseholds } from "@wonderhome/core/homebrain/sleep/run";
+import { archiveStaleHomeSendItems } from "@wonderhome/core/homesend/repository";
 import { drainJobs } from "@wonderhome/core/homesend/retry-queue";
 import { notificationJobHandlers } from "@wonderhome/core/notifications/retry-handler";
 import { sendDueDigests } from "@wonderhome/core/notifications/digest";
@@ -136,6 +137,14 @@ async function dispatch(request: Request): Promise<Response> {
       });
     } catch (thrown) {
       log.warn("notification retry drain failed", { reason: thrown instanceof Error ? thrown.name : "unknown" });
+    }
+    // HomeSend's 30-day archive (the owner, 2026-11-03): untouched waiting or failed items are set
+    // aside — kept, restorable — on each household's own calendar. Bounded and idempotent; the next
+    // notice sweep then drops them from the grouped reminder.
+    try {
+      await archiveStaleHomeSendItems(admin, { now, limit: 200 });
+    } catch (thrown) {
+      log.warn("homesend archive tick failed", { reason: thrown instanceof Error ? thrown.name : "unknown" });
     }
     try {
       await sleepDueHouseholds(admin, now);

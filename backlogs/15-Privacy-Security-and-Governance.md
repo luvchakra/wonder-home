@@ -257,6 +257,10 @@ existing 180-day platform schedule as a backstop) and handled `home_send_items`
 Then, once the owner has reviewed a purge dry-run report, flip the purge from
 dry-run to real deletion. Deferred behind PR #419, which edits the HomeSend
 readers.
+**Note (2026-11-03, story 14-059):** HomeSend now archives a waiting or failed item untouched
+for 30 days (`status = 'archived'`, `archived_at`, `archived_from`; restorable). Nothing is
+deleted. This story's purge should treat `archived` like the other handled statuses and remove
+its Storage object with the row.
 
 ### Story 15-012 — Data retention phase 3: school items + "recently cleaned" view
 **Epic:** AI Privacy, Audit, Privacy Center & Security Testing

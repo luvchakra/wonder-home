@@ -62,6 +62,7 @@
 | 56 | P0 | 14-056 | HomeBrain 4.0 phase 3b — one structured call: answer or intent | Not Started | Split from 14-027. `homebrain/one-pass.ts`: for a turn the rules cannot settle, one model call returns `mode` (answer, clarify, not_on_record, action), `text`, `usedFacts`, `goal` and an optional `intent` in `IntentOutputSchema`, so a question no longer waits on the understanding call first (production 2026-10-13 to 27: understanding p50 2.8 s before the answer's 3.6 s) and an action goes straight into ground → gate → propose. Every gate runs on its output; HT eval cases for questions and actions; Unsafe Action Rate stays 0. Spec §3.6 |
 | 57 | P0 | 14-057 | HomeBrain 4.0 phase 3c — the reply streamed to the person | Not Started | Split from 14-027. A streamed endpoint and the HomeTalk client showing words as they arrive; the draft carries `usedFacts` before its text, and each sentence is shown only after `validate.ts` passes it against those facts (never an unvalidated word); a sentence that fails stops the stream and the deterministic answer replaces it. Voice speaks sentence chunks through `speakable`. Goal: typed p95 2.5 s to the first token, read from `timings.firstToken`. Needs 14-056 |
 | 58 | P0 | 14-058 | Record index Phase 2, the rest: every record a fact, the snapshot retired | Not Started | After 14-037. Builder tables as facts (one per occurrence for repeating things); whole-snapshot rebuilds of `household_context` retired; "look deeper" and the evaluation read facts behind the evaluation gate; a fact re-described when a member's name or an embedded parent's name changes. Spec §4
+| 59 | P1 | 14-059 | HomeSend: bulk review, one grouped reminder, 30-day archive, Try again | Done | The owner, 2026-11-03 ("go, 30-day auto-archive is okay"). Tick several waiting items and "Add selected", or "Add all I'm sure of" — only items that need nothing but a yes (`homesend/waiting.ts` `bulkReady`: never a photo or file, a possible duplicate, a missing detail, a plan, or a bill/receipt/health document the Admin hasn't let in directly), each through the same governed write, Undo and audit as one confirm; "Review one by one"; reviews prepared for every waiting item, 20 a page. "Why it waits" on each row from evidence (`whyItWaits`). One HomeSend notice per person ("4 things sent to HomeSend are waiting: 2 school notices, 1 bill, 1 photo or file"), rewritten in place, resolved when nothing waits, in the morning digest with the rest; "still want these?" at 14 days. After 30 days untouched on the household's calendar a waiting or failed item is archived (kept, restorable under "Archived"; `public.archive_stale_home_send_items` on the delivery clock); real purge stays 15-013. "Try again" on a failed link, voice note or unread file, re-read through the job queue (`homesend.reread`), five tries. Migration `20261103120000_homesend_lifecycle.sql`. |
 
 **Status flow:** `Not Started` → `In Progress` → `Blocked` → `Done`
 
@@ -715,3 +716,12 @@ Complete dependency-ready P0 stories before P1/P2, but do not block unrelated wo
 - The stored context is no longer rebuilt whole; the nightly sleep, "look deeper" and the evaluation read facts, behind the full evaluation gate.
 - A change to a member's name or to a parent row a description quotes re-describes the facts that quote it.
 - A turn still never answers from data older than the last save, and never waits beyond its own household's short queue.
+
+### Story 14-059 — HomeSend: bulk review, one grouped reminder, 30-day archive, Try again
+
+**Status:** Done (2026-11-03). See the table row. Progress note: `docs/progress/2026-11-03-homesend-bulk-review-and-lifecycle.md`.
+
+- Bulk add never weakens a guard: the server reads each id again, prepares its review afresh and writes only a `bulkReady` item, through `autoApplyHomeSendItem` with the person's own decision (`added`), so each has its change row, Undo and `homesend.applied` audit.
+- Readers accept the lifecycle columns missing (`listHomeSendLifecycle` falls back), so the code is safe before or after the migration.
+- Left for 15-013: real deletion of archived items and their Storage objects.
+

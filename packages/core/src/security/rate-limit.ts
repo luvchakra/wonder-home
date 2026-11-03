@@ -31,6 +31,8 @@ export const RATE_LIMITS = {
   "homesend.intake": { max: 30, windowSeconds: 600 },
   /** HomeSend links, per member: each is an outbound fetch. */
   "homesend.link": { max: 15, windowSeconds: 600 },
+  /** "Try again" on a failed HomeSend item, per member: each is one more read of outside content. */
+  "homesend.retry": { max: 10, windowSeconds: 600 },
   /** Forwarded emails processed, per household per hour. */
   "homesend.email": { max: 60, windowSeconds: 3600 },
   /** Messages a linked member sends to WonderHome on WhatsApp, per member per hour. */
@@ -44,6 +46,7 @@ export const RATE_LIMITS = {
   "hometalk.turn.household": { max: 120, windowSeconds: 60 },
   "homesend.intake.household": { max: 100, windowSeconds: 600 },
   "homesend.link.household": { max: 40, windowSeconds: 600 },
+  "homesend.retry.household": { max: 30, windowSeconds: 600 },
   "homesend.whatsapp.household": { max: 200, windowSeconds: 3600 },
   "voice.session.household": { max: 60, windowSeconds: 600 },
   /** WhatsApp connect codes issued, per member: a few tries, not a guessing machine. */
@@ -99,6 +102,8 @@ export const RATE_LIMIT_SCOPES: Record<RateLimitBucket, Scope> = {
   "ai.model": "household",
   "homesend.intake": "member",
   "homesend.link": "member",
+  "homesend.retry": "member",
+  "homesend.retry.household": "household",
   "homesend.email": "household",
   "homesend.whatsapp": "member",
   "hometalk.turn.household": "household",
@@ -130,6 +135,7 @@ const HOUSEHOLD_COMPANION = {
   "hometalk.turn": "hometalk.turn.household",
   "homesend.intake": "homesend.intake.household",
   "homesend.link": "homesend.link.household",
+  "homesend.retry": "homesend.retry.household",
   "homesend.whatsapp": "homesend.whatsapp.household",
   "voice.session": "voice.session.household",
 } as const satisfies Partial<Record<RateLimitBucket, RateLimitBucket>>;

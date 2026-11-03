@@ -11,11 +11,11 @@ in `docs/progress/`; for the running log of what changed when, `tracking/PROGRES
 
 ## The whole picture
 
-**416 of 453 stories done — 91.8%**
+**417 of 454 stories done — 91.9%**
 
 | Status | Stories |
 |---|---:|
-| Done | 416 |
+| Done | 417 |
 | In Progress | 11 |
 | Blocked | 1 |
 | Not Started | 21 |
@@ -39,7 +39,7 @@ in `docs/progress/`; for the running log of what changed when, `tracking/PROGRES
 | 11 Bills, Fees & Finance | `█████████░` | 14 | 15 | 1 not started |
 | 12 Family Time & Social Activities | `██████████` | 9 | 9 | — |
 | 13 Maintenance, Laundry & Pet Care | `█████████░` | 10 | 11 | 1 in progress |
-| 14 AI Orchestration & Learning | `████████░░` | 48 | 56 | 1 in progress, 4 not started, 3 deferred |
+| 14 AI Orchestration & Learning | `████████░░` | 49 | 57 | 1 in progress, 4 not started, 3 deferred |
 | 15 Privacy, Security & Governance | `████████░░` | 11 | 13 | 2 not started |
 | 16 Platform Admin & Operations | `██████████` | 9 | 9 | — |
 | 17 External Integrations | `█████████░` | 10 | 11 | 1 not started |
@@ -398,7 +398,7 @@ in `docs/progress/`; for the running log of what changed when, `tracking/PROGRES
 
 ### 14 — AI Orchestration & Learning
 
-48 of 56 done `████████░░`
+49 of 57 done `████████░░`
 
 | Story | Priority | Status | Notes |
 |---|---|---|---|
@@ -458,6 +458,7 @@ in `docs/progress/`; for the running log of what changed when, `tracking/PROGRES
 | `14-055` Admins may let bills, receipts and health documents be added directly | P1 | Done | PR pending. The owner, 2026-10-26: "along with the % setting add setting feature to ask user if they want to add entries related to health, entries related to money directly in WonderHome if allowed in responsibilities". Two Admin switches on Settings → AI Assistant, off by default; on, the entry takes the grocery path (Pre Approved + above the bar + every other rule). Photos and files still wait. Starter outcomes `finance.budget_reviewed` and `health.records_kept` added. |
 | `14-056` HomeBrain 4.0 phase 3b — one structured call: answer or intent | P0 | Not Started | Split from 14-027. `homebrain/one-pass.ts`: for a turn the rules cannot settle, one model call returns `mode` (answer, clarify, not_on_record, action), `text`, `usedFacts`, `goal` and an optional `intent` in `IntentOutputSchema`, so a question no longer waits on the understanding call first (production 2026-10-13 to 27: understanding p50 2.8 s before the answer's 3.6 s) and an action goes straight into ground → gate → propose. Every gate runs on its output; HT eval cases for questions and actions; Unsafe Action Rate stays 0. Spec §3.6 |
 | `14-057` HomeBrain 4.0 phase 3c — the reply streamed to the person | P0 | Not Started | Split from 14-027. A streamed endpoint and the HomeTalk client showing words as they arrive; the draft carries `usedFacts` before its text, and each sentence is shown only after `validate.ts` passes it against those facts (never an unvalidated word); a sentence that fails stops the stream and the deterministic answer replaces it. Voice speaks sentence chunks through `speakable`. Goal: typed p95 2.5 s to the first token, read from `timings.firstToken`. Needs 14-056 |
+| `14-059` HomeSend: bulk review, one grouped reminder, 30-day archive, Try again | P1 | Done | The owner, 2026-11-03 ("go, 30-day auto-archive is okay"). Tick several waiting items and "Add selected", or "Add all I'm sure of" — only items that need nothing but a yes (`homesend/waiting.ts` `bulkReady`: never a photo or file, a possible duplicate, a missing detail, a plan, or a bill/receipt/health document the Admin hasn't let in directly), each through the same governed write, Undo and audit as one confirm; "Review one by one"; reviews prepared for every waiting item, 20 a page. "Why it waits" on each row from evidence (`whyItWaits`). One HomeSend notice per person ("4 things sent to HomeSend are waiting: 2 school notices, 1 bill, 1 photo or file"), rewritten in place, resolved when nothing waits, in the morning digest with the rest; "still want these?" at 14 days. After 30 days untouched on the household's calendar a waiting or failed item is archived (kept, restorable under "Archived"; `public.archive_stale_home_send_items` on the delivery clock); real purge stays 15-013. "Try again" on a failed link, voice note or unread file, re-read through the job queue (`homesend.reread`), five tries. Migration `20261103120000_homesend_lifecycle.sql`. |
 
 ### 15 — Privacy, Security & Governance
 
@@ -747,4 +748,4 @@ in `docs/progress/`; for the running log of what changed when, `tracking/PROGRES
 | `27-024` The notification center | P0 | Done | The owner, 2026-10-22: "add notification center where adult can update their notification choices". Settings → Notifications opens with one row per kind (`_components/notification-center-card.tsx`, `ExpandableRow`): the collapsed row says in words whether it comes, when and where; opened, "Get these", "When" and "Where" change it, each saving at once and only that kind (`saveReminderKindAction`), so an untouched kind keeps following the household's starting timing. It replaces the separate timing and "What goes where" cards (both removed). A kind or channel an Admin turned off for the household says so and is not offered. Words in eight languages; help ¶8 and the reminder-timing FAQ |
 | `27-025` Household notifications for Admins | P0 | Done | The owner, 2026-10-22: "notification related admin settings that can control the notification experience of all users". Manage Household → Household notifications (`/household/notifications`, Admins only): each kind on or off for everyone and its starting timing; which channels beyond the app may reach anyone; whether an unanswered reminder takes the second-channel step and the backup step; the household's quiet hours. Kept as two versioned, audited `policies` rows (`notifications/household-settings.ts`; Quiet hours keeps HomeTalk's row), written only when something changed and only real choices. Enforced on the server: `reconcile.ts` (kinds off, starting timing, both steps, quiet hours) and `deliverNotification` (a channel off holds everything but a critical alert). A person narrows these and never widens them. Help ¶15 in eight languages |
 
-_Generated 2026-10-29 from 28 backlog files._
+_Generated 2026-11-03 from 28 backlog files._

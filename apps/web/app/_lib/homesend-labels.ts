@@ -310,6 +310,10 @@ export type HomeSendReviewLabels = {
 export type HomeSendPageLabels = {
   review: HomeSendReviewLabels;
   inbox: {
+    /** Bulk review (the owner, 2026-11-03). */
+    bulk: { select: string; addSelected: string; addSure: CountedWords; adding: string; added: CountedWords; notAdded: string; hint: string; reviewInOrder: string; stop: string; showMore: string };
+    retry: { tryAgain: string; tryAgainAria: string; queued: string };
+    archived: { title: string; lede: string; restore: string; restoreAria: string; restored: string; back: string; empty: string };
     dropTitle: string;
     dropHint: string;
     chooseFile: string;
@@ -732,6 +736,28 @@ export function homesendPageLabels(t: Translate, language: string): HomeSendPage
   return {
     review: homesendReviewLabels(t, language),
     inbox: {
+      bulk: {
+        select: t("homesend.bulk.select", keep("title")),
+        addSelected: t("homesend.bulk.addSelected", keep("count")),
+        addSure: counted(t, "homesend.bulk.addSure", {}, language),
+        adding: t("homesend.bulk.adding"),
+        added: counted(t, "homesend.bulk.added", {}, language),
+        notAdded: t("homesend.bulk.notAdded", keep("title")),
+        hint: t("homesend.bulk.hint"),
+        reviewInOrder: t("homesend.bulk.reviewInOrder"),
+        stop: t("homesend.bulk.stop"),
+        showMore: t("homesend.bulk.showMore"),
+      },
+      retry: { tryAgain: t("homesend.retry.tryAgain"), tryAgainAria: t("homesend.retry.tryAgainAria", keep("title")), queued: t("homesend.retry.queued") },
+      archived: {
+        title: t("homesend.archived.title"),
+        lede: t("homesend.archived.lede"),
+        restore: t("homesend.archived.restore"),
+        restoreAria: t("homesend.archived.restoreAria", keep("title")),
+        restored: t("homesend.archived.restored"),
+        back: t("homesend.archived.back"),
+        empty: t("homesend.archived.empty"),
+      },
       dropTitle: t("homesend.drop.title"),
       dropHint: t("homesend.drop.hint"),
       chooseFile: t("homesend.drop.chooseFile"),

@@ -40,13 +40,20 @@ export async function autoApplyHomeSendItem(
   supabase: SupabaseClient,
   membership: HouseholdMembership,
   item: { id: string; kind: HomeSendKind; extracted: HomeSendExtraction | null; subject: SubjectResolution | null },
+  /**
+   * `added` when a person said yes to it among several (bulk review, the owner
+   * 2026-11-03): the same governed write and the same Undo, recorded as their
+   * decision rather than as added on its own.
+   */
+  options: { decision?: "auto_added" | "added" } = {},
 ): Promise<{ changeId: string; title: string; where: string; more?: AddedOnItsOwn["more"]; whole?: boolean } | null> {
   const extracted = item.extracted;
   const title = extracted?.title?.trim();
   const where = WHERE[item.kind];
   if (!title || !where) return null;
   const householdId = membership.household.id;
-  if (item.kind === "receipt") return autoRecordReceipt(supabase, membership, { id: item.id, title, extracted });
+  // A receipt's lines are a person's choices on its own form; only "add on its own" records them all as new.
+  if (item.kind === "receipt") return options.decision === "added" ? null : autoRecordReceipt(supabase, membership, { id: item.id, title, extracted });
   if (item.kind !== "grocery_item" && item.kind !== "school_item" && item.kind !== "bill" && item.kind !== "health_document") return null;
   const input: RouteInput = {
     householdId,
@@ -81,7 +88,7 @@ export async function autoApplyHomeSendItem(
   await routeHomeSendItem(supabase, householdId, item.id, {
     routedTable: created.routedTable,
     routedId: created.routedId,
-    review: { decision: "auto_added", subject: item.subject?.selected ? "resolved" : "not_needed", corrected: false },
+    review: { decision: options.decision ?? "auto_added", subject: item.subject?.selected ? "resolved" : "not_needed", corrected: false },
   });
   const change = await recordHomeSendChange(supabase, {
     householdId,

@@ -950,3 +950,70 @@ test("a receipt is a kind HomeSend can hold, and a recorded purchase a change it
     "an unknown kind was accepted",
   );
 });
+
+// ---------------------------------------------------------------------------
+// Lifecycle (the owner, 2026-11-03): the 30-day archive, Restore, try again.
+// ---------------------------------------------------------------------------
+
+function waitingItem(text, daysAgo) {
+  const id = asProfile(
+    HEAD,
+    `insert into public.home_send_items (household_id, created_by_member_id, source, raw_text, status)
+     values ('${household}', '${headMember}', 'pasted_text', '${text}', 'classified') returning id;`,
+    options,
+  );
+  // updated_at is kept by a trigger; age it the way time would, with the trigger off for this one write.
+  psql(
+    `alter table public.home_send_items disable trigger home_send_items_set_updated_at;
+     update public.home_send_items set updated_at = now() - interval '${daysAgo} days' where id = '${id}';
+     alter table public.home_send_items enable trigger home_send_items_set_updated_at;`,
+    options,
+  );
+  return id;
+}
+
+test("the 30-day archive sets aside only what waited 30 days untouched, once, and audits it", () => {
+  const old = waitingItem("Old school notice", 31);
+  const recent = waitingItem("Recent school notice", 10);
+  const moved = Number(psql(`select public.archive_stale_home_send_items(now(), 50);`, options));
+  assert.ok(moved >= 1);
+  assert.equal(psql(`select status || ' ' || archived_from from public.home_send_items where id = '${old}';`, options), "archived classified");
+  assert.equal(psql(`select status from public.home_send_items where id = '${recent}';`, options), "classified");
+  assert.equal(psql(`select count(*) from public.audit_events where event_type = 'homesend.archived' and target_id = '${old}';`, options), "1");
+  // Idempotent: a second run finds nothing more to move for these rows.
+  psql(`select public.archive_stale_home_send_items(now(), 50);`, options);
+  assert.equal(psql(`select count(*) from public.audit_events where event_type = 'homesend.archived' and target_id = '${old}';`, options), "1");
+});
+
+test("only the delivery clock may run the archive, never a signed-in member", () => {
+  assert.ok(deniedForProfile(HEAD, `select public.archive_stale_home_send_items(now(), 10);`, options), "a member could run the household-wide archive");
+});
+
+test("an archived row says when and from where, and nothing else carries either", () => {
+  assert.throws(() => psql(`update public.home_send_items set status = 'archived' where id = '${waitingItem("No when", 1)}';`, options));
+  assert.throws(() => psql(`update public.home_send_items set archived_at = now() where id = '${waitingItem("No status", 1)}';`, options));
+});
+
+test("a member restores an archived item; an outsider cannot", () => {
+  const id = waitingItem("Restore me", 40);
+  psql(`select public.archive_stale_home_send_items(now(), 50);`, options);
+  assert.equal(psql(`select status from public.home_send_items where id = '${id}';`, options), "archived");
+  assert.ok(
+    deniedForUpdate(
+      OUTSIDER,
+      `update public.home_send_items set status = 'classified', archived_at = null, archived_from = null where id = '${id}';`,
+      `select status from public.home_send_items where id = '${id}';`,
+      "archived",
+      options,
+    ),
+    "an outsider restored another household's item",
+  );
+  asProfile(OTHER_ADULT, `update public.home_send_items set status = 'classified', archived_at = null, archived_from = null where id = '${id}' and status = 'archived';`, options);
+  assert.equal(psql(`select status || ' ' || (updated_at > now() - interval '1 minute') from public.home_send_items where id = '${id}';`, options), "classified true");
+});
+
+test("tries to read again are counted, within bounds", () => {
+  const id = waitingItem("Retry me", 1);
+  assert.equal(psql(`select retry_count from public.home_send_items where id = '${id}';`, options), "0");
+  assert.throws(() => psql(`update public.home_send_items set retry_count = 11 where id = '${id}';`, options));
+});

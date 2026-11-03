@@ -499,17 +499,17 @@ describe("H03 — A health checkup is overdue", () => {
 
 // --- Notices ------------------------------------------------------------------
 
-describe("N01 — Something you sent needs your OK, or could not be read", () => {
+describe("N01 — What you sent needs your OK, or could not be read (one grouped notice)", () => {
   const row = (over: Partial<{ created_by_member_id: string; status: string; classified_kind: string | null }> = {}) => ({ id: "h1", created_by_member_id: "priya", status: "classified", classified_kind: "bill", updated_at: NOW.toISOString(), ...over });
 
   it("goes to the sender when they may confirm it, else an Admin", () => {
-    expect(homesendNotices([row()], household(), NOW)[0]).toMatchObject({ recipientMemberId: "priya", priority: "normal", threadKey: "homesend:h1:classified" });
+    expect(homesendNotices([row()], household(), NOW)[0]).toMatchObject({ recipientMemberId: "priya", priority: "normal", threadKey: "homesend:waiting" });
     expect(homesendNotices([row({ created_by_member_id: "asmi" })], household(), NOW)[0]!.recipientMemberId).toBe("kunal");
     expect(homesendNotices([row({ created_by_member_id: "rekha" })], household(), NOW)[0]!.recipientMemberId).toBe("kunal");
   });
 
   it("says when it failed safely, and ends once it is confirmed, undone or dismissed", () => {
-    expect(homesendNotices([row({ status: "failed" })], household(), NOW)[0]!.title.key).toBe("reminder.homesend.failedTitle");
+    expect(JSON.stringify(homesendNotices([row({ status: "failed" })], household(), NOW)[0]!.body)).toContain("reminder.homesend.group.failed");
     expect(homesendNotices([row({ status: "applied" })], household(), NOW)).toEqual([]);
     expect(homesendNotices([row({ status: "dismissed" })], household(), NOW)).toEqual([]);
   });

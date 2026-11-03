@@ -274,6 +274,21 @@ export const SENSITIVE_ACTIONS: readonly SensitiveAction[] = [
     recordedIn: "packages/core/src/homesend/changes.ts",
   },
   {
+    event: "homesend.archived",
+    because: "Something sent in waited 30 days untouched and was set aside. It is kept and can be restored, so the household should see when it moved.",
+    recordedIn: "supabase/migrations/20261103120000_homesend_lifecycle.sql",
+  },
+  {
+    event: "homesend.restored",
+    because: "An archived HomeSend item was put back to wait for a person.",
+    recordedIn: "packages/core/src/homesend/repository.ts",
+  },
+  {
+    event: "homesend.retry_requested",
+    because: "A person asked WonderHome to read a failed item again, which reads outside content once more.",
+    recordedIn: "packages/core/src/homesend/repository.ts",
+  },
+  {
     event: "homesend.address_created",
     because: "A standing address that can write into this household exists from this moment on.",
     recordedIn: "packages/core/src/homesend/addresses.ts",
@@ -688,6 +703,12 @@ export function describeAuditEvent(
       return { title: "A HomeSend item was dismissed", detail: null };
     case "homesend.undone":
       return { title: "A HomeSend addition was undone", detail: null };
+    case "homesend.archived":
+      return { title: "A HomeSend item was archived after 30 days", detail: "It is kept and can be restored." };
+    case "homesend.restored":
+      return { title: "An archived HomeSend item was restored", detail: null };
+    case "homesend.retry_requested":
+      return { title: "A failed HomeSend item is being read again", detail: null };
     case "homesend.address_created":
       return { title: "A HomeSend email address was set up", detail: null };
     case "homesend.address_rotated":
