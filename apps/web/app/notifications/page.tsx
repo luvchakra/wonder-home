@@ -1,5 +1,6 @@
 import { BellOff, ChevronDown, HandHeart, Settings2 } from "lucide-react";
 import Link from "next/link";
+import type { ReactNode } from "react";
 
 import { createAdminClient } from "@wonderhome/core/db/admin";
 import { isHouseholdAdmin } from "@wonderhome/core/identity/households";
@@ -22,6 +23,7 @@ import { ReminderRow, type ReminderRowLabels } from "../_components/reminder-row
 import { RequestAnswer } from "../_components/request-answer";
 import { PRESET_KEYS, type SnoozePreset } from "../_lib/snooze-presets";
 import { reconcileRemindersNow } from "../_lib/reminders";
+import { SECTION_ORDER, groupReminders, rowViewOf, sectionedGroups, type GroupWords, type ReminderSection } from "../_lib/reminder-groups";
 import {
   REMINDER_COLUMNS,
   byUrgency,
@@ -111,8 +113,26 @@ export default async function NotificationsPage({ searchParams }: { searchParams
     : [];
   const doneRows = closedRows.filter(inCategory);
 
-  const details = await loadReminderDetails(supabase, [...nowRows, ...comingRows, ...doneRows], format, { isAdmin: isHouseholdAdmin(membership) }, t);
+  const details = await loadReminderDetails(supabase, [...nowRows, ...comingRows, ...doneRows], format, { isAdmin: isHouseholdAdmin(membership), now, timeZone }, t);
   const viewOf = (row: ReminderRowData) => ({ row, view: toReminderView(row, details, format, now, timeZone, t) });
+  const words: GroupWords = {
+    homesendTitle: (count) => t("notifications.group.homesend", { count }),
+    homesendLine: t("notifications.group.homesendLine"),
+    alike: (count) => t("notifications.group.alike", { count }),
+  };
+  // Alike reminders say themselves once; each keeps its own row in the table and its own state.
+  const grouped = sectionedGroups(nowRows.map((row) => viewOf(row).view));
+  // A child's or helper's request is a yes or no too: it sits with the rest of "Waiting for your OK".
+  const sections =
+    requests.length > 0 && !grouped.some((entry) => entry.section === "approve")
+      ? SECTION_ORDER.flatMap((section) => (section === "approve" ? [{ section, groups: [] }] : grouped.filter((entry) => entry.section === section)))
+      : grouped;
+  const rowCount = sections.reduce((total, entry) => total + entry.groups.length, 0) + requests.length;
+  const sectionTitle: Record<ReminderSection, TranslationKey> = {
+    overdue: "notifications.section.overdue",
+    approve: "notifications.section.approve",
+    today: "notifications.section.today",
+  };
   const days = snoozeDays(now, timeZone, format, t);
   const labels = rowLabels(t);
 
@@ -120,13 +140,14 @@ export default async function NotificationsPage({ searchParams }: { searchParams
   const unseen = due.filter((row) => row.status === "generated" || row.status === "delivered").map((row) => row.id);
   if (unseen.length > 0) await markNotificationsSeen(supabase, unseen, now);
 
-  const present = new Set([...openRows, ...closedRows].map((row) => row.category));
+  // A chip only for a category that has something open in it.
+  const present = new Set(openRows.map((row) => row.category));
   const hrefFor = (next: NotificationCategory | null) => (next ? `/notifications?category=${next}` : "/notifications");
 
   const firstName = membership.displayName.split(/\s+/)[0];
   const lede =
-    due.length > 0
-      ? t("notifications.lede.count", { count: due.length, name: firstName })
+    rowCount > 0
+      ? t("notifications.lede.count", { count: rowCount, name: firstName })
       : comingRows.length > 0
         ? t("notifications.lede.upcomingOnly", { name: firstName })
         : t("notifications.lede.none", { name: firstName });
@@ -154,6 +175,24 @@ export default async function NotificationsPage({ searchParams }: { searchParams
               ? snoozedUntil
               : null;
 
+  // What a child or helper is waiting on this adult to approve, each with its own Approve and Decline.
+  const requestCards = requests.map((request) => (
+    <Card key={request.id} className="space-y-3 p-4">
+      <div className="flex items-start gap-3">
+        <IconTile icon={HandHeart} tone="people" />
+        <div className="min-w-0 flex-1">
+          <p className="font-semibold break-words">{request.summary}</p>
+          <p className="text-xs text-[var(--wh-foreground-subtle)]">{t("notifications.requests.until", { date: format.date(request.expiresAt, "long"), time: format.time(request.expiresAt) })}</p>
+        </div>
+      </div>
+      <RequestAnswer
+        householdId={membership.household.id}
+        approvalId={request.id}
+        labels={{ approve: t("notifications.requests.approve"), decline: t("notifications.requests.decline"), working: t("common.saving") }}
+      />
+    </Card>
+  ));
+
   return (
     <AppShell active="more" viewer={viewer} secondary={secondary} pathname="/notifications" back={{ href: "/", label: t("notifications.backHome") }} title={t("notifications.title")}>
       <div className="space-y-5">
@@ -176,29 +215,6 @@ export default async function NotificationsPage({ searchParams }: { searchParams
 
         {confirmation ? <Alert tone="info">{confirmation}</Alert> : null}
 
-        {requests.length > 0 ? (
-          <section className="space-y-2">
-            <h2 className="text-base font-semibold">{t("notifications.requests.title")}</h2>
-            <p className="text-sm text-[var(--wh-foreground-muted)]">{t("notifications.requests.lede")}</p>
-            {requests.map((request) => (
-              <Card key={request.id} className="space-y-3 p-4">
-                <div className="flex items-start gap-3">
-                  <IconTile icon={HandHeart} tone="people" />
-                  <div className="min-w-0 flex-1">
-                    <p className="font-semibold break-words">{request.summary}</p>
-                    <p className="text-xs text-[var(--wh-foreground-subtle)]">{t("notifications.requests.until", { date: format.date(request.expiresAt, "long"), time: format.time(request.expiresAt) })}</p>
-                  </div>
-                </div>
-                <RequestAnswer
-                  householdId={membership.household.id}
-                  approvalId={request.id}
-                  labels={{ approve: t("notifications.requests.approve"), decline: t("notifications.requests.decline"), working: t("common.saving") }}
-                />
-              </Card>
-            ))}
-          </section>
-        ) : null}
-
         {/* Push on this phone, offered where reminders are read; nothing when it would not work or is already on. */}
         <PushNudge
           householdId={membership.household.id}
@@ -215,7 +231,8 @@ export default async function NotificationsPage({ searchParams }: { searchParams
         />
 
         {present.size > 1 ? (
-          <nav aria-label={t("notifications.filter.label")} className="flex flex-wrap gap-2">
+          // One line at any width: the chips scroll sideways rather than wrap.
+          <nav aria-label={t("notifications.filter.label")} className="-mx-4 flex gap-2 overflow-x-auto px-4 pb-1 [scrollbar-width:none] sm:mx-0 sm:px-0">
             <CategoryChip href={hrefFor(null)} active={category === null} label={t("notifications.filter.all")} />
             {NOTIFICATION_CATEGORIES.filter((key) => present.has(key)).map((key) => (
               <CategoryChip key={key} href={hrefFor(key)} active={category === key} label={t(`notifications.category.${key}` as TranslationKey)} />
@@ -223,21 +240,32 @@ export default async function NotificationsPage({ searchParams }: { searchParams
           </nav>
         ) : null}
 
-        <section aria-labelledby="needs-you-now" className="space-y-2">
-          <h2 id="needs-you-now" className="flex items-center gap-2 px-1 text-base font-semibold">
-            {t("notifications.section.now")}
-            {nowRows.length > 0 ? <span className="rounded-[var(--wh-radius-pill)] bg-[var(--wh-primary-soft)] px-2 text-sm text-[var(--wh-primary)]">{nowRows.length}</span> : null}
-          </h2>
-          {nowRows.length === 0 ? (
-            <EmptyState icon={BellOff} title={t("notifications.empty.none.title")} description={t("notifications.empty.body")} />
+        {sections.length === 0 && requests.length === 0 ? (
+          <EmptyState icon={BellOff} title={t("notifications.empty.none.title")} description={t("notifications.empty.body")} />
+        ) : null}
+
+        {sections.map(({ section, groups }) => {
+          const list = groups.length === 0 ? null : (
+            <Card className="p-0">
+              <ul className="divide-y divide-[var(--wh-border)]">
+                {groups.map((group) => (
+                  <ReminderRow key={group.key} row={rowViewOf(group, words)} householdId={membership.household.id} snoozeDays={days} labels={labels} />
+                ))}
+              </ul>
+            </Card>
+          );
+          return section === "approve" ? (
+            <ApproveSection key={section} title={t(sectionTitle[section])} count={groups.length + requests.length}>
+              {requestCards}
+              {list}
+            </ApproveSection>
           ) : (
-            <ul className="space-y-3">
-              {nowRows.map((row) => (
-                <ReminderRow key={row.id} card view={viewOf(row).view} householdId={membership.household.id} snoozeDays={days} labels={labels} />
-              ))}
-            </ul>
-          )}
-        </section>
+            <section key={section} aria-labelledby={`section-${section}`} className="space-y-2">
+              <SectionHeading id={`section-${section}`} title={t(sectionTitle[section])} count={groups.length} />
+              {list}
+            </section>
+          );
+        })}
 
         {comingRows.length > 0 ? (
           <section aria-labelledby="coming-up" className="space-y-2">
@@ -247,8 +275,8 @@ export default async function NotificationsPage({ searchParams }: { searchParams
                 <h3 className="px-1 text-sm font-medium text-[var(--wh-foreground-muted)]">{t(`notifications.day.${group.label}` as TranslationKey)}</h3>
                 <Card className="p-0">
                   <ul className="divide-y divide-[var(--wh-border)]">
-                    {group.items.map(({ row, view }) => (
-                      <ReminderRow key={row.id} view={{ ...view, when: format.time(row.scheduled_for) }} householdId={membership.household.id} snoozeDays={days} labels={labels} />
+                    {groupReminders(group.items.map(({ row, view }) => ({ ...view, when: format.time(row.scheduled_for) }))).map((alike) => (
+                      <ReminderRow key={alike.key} row={rowViewOf(alike, words)} householdId={membership.household.id} snoozeDays={days} labels={labels} />
                     ))}
                   </ul>
                 </Card>
@@ -267,9 +295,10 @@ export default async function NotificationsPage({ searchParams }: { searchParams
             </summary>
             <Card className="p-0">
               <ul className="divide-y divide-[var(--wh-border)]">
-                {doneRows.map((row) => (
-                  <ReminderRow key={row.id} view={viewOf(row).view} householdId={membership.household.id} snoozeDays={days} labels={labels} />
-                ))}
+                {doneRows.map((row) => {
+                  const view = viewOf(row).view;
+                  return <ReminderRow key={row.id} row={rowViewOf({ key: row.id, views: [view], lead: view, count: 1 }, words)} householdId={membership.household.id} snoozeDays={days} labels={labels} />;
+                })}
               </ul>
             </Card>
           </details>
@@ -281,13 +310,31 @@ export default async function NotificationsPage({ searchParams }: { searchParams
   );
 }
 
+function SectionHeading({ id, title, count }: { id: string; title: string; count: number }) {
+  return (
+    <h2 id={id} className="flex items-center gap-2 px-1 text-base font-semibold">
+      {title}
+      <span className="rounded-[var(--wh-radius-pill)] bg-[var(--wh-primary-soft)] px-2 text-sm text-[var(--wh-primary)]">{count}</span>
+    </h2>
+  );
+}
+
+function ApproveSection({ title, count, children }: { title: string; count: number; children: ReactNode }) {
+  return (
+    <section aria-labelledby="section-approve" className="space-y-2">
+      <SectionHeading id="section-approve" title={title} count={count} />
+      {children}
+    </section>
+  );
+}
+
 function CategoryChip({ href, active, label }: { href: string; active: boolean; label: string }) {
   return (
     <Link
       href={href}
       aria-current={active ? "page" : undefined}
       className={cn(
-        "inline-flex min-h-10 items-center rounded-[var(--wh-radius-pill)] border px-3.5 text-sm font-medium transition-colors",
+        "inline-flex min-h-10 shrink-0 items-center rounded-[var(--wh-radius-pill)] border px-3.5 text-sm font-medium transition-colors",
         active
           ? "border-[var(--wh-primary)] bg-[var(--wh-primary-soft)] text-[var(--wh-primary)]"
           : "border-[var(--wh-border)] bg-[var(--wh-surface)] text-[var(--wh-foreground-muted)] hover:bg-[var(--wh-surface-muted)]",
@@ -333,5 +380,6 @@ function rowLabels(t: Translate): ReminderRowLabels {
       setting: t("notifications.snooze.setting"),
     },
     dismiss: t("notifications.dismissShort"),
+    more: t("notifications.more"),
   };
 }

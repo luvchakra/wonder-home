@@ -56,16 +56,38 @@ export function byUrgency(a: ReminderRowData, b: ReminderRowData): number {
   return Date.parse(b.scheduled_for) - Date.parse(a.scheduled_for);
 }
 
-type Details = Map<string, { details: { label: string; value: string }[]; link: ReminderView["link"]; complete: ReminderView["complete"]; reason?: string }>;
+type Details = Map<
+  string,
+  {
+    details: { label: string; value: string }[];
+    link: ReminderView["link"];
+    complete: ReminderView["complete"];
+    reason?: string;
+    /** The key fact, said once on the row ("₹300 · due yesterday"); the details then leave it out. */
+    fact?: string;
+    /** Its record's own date has passed. */
+    overdue?: boolean;
+  }
+>;
 
 /** Reads the records behind a set of reminders in one query per kind. */
 export async function loadReminderDetails(
   supabase: SupabaseClient,
   rows: readonly ReminderRowData[],
   format: Formatter,
-  options: { isAdmin: boolean },
+  options: { isAdmin: boolean; now?: Date; timeZone?: string },
   t: Translate,
 ): Promise<Details> {
+  const now = options.now ?? new Date();
+  const today = localMoment(now, options.timeZone ?? "UTC").dateKey;
+  // "due today", "due yesterday", "due 5 November": a day said the way a person would.
+  const dueOn = (dateKey: string) => {
+    const offset = Math.round((Date.parse(`${dateKey}T00:00:00Z`) - Date.parse(`${today}T00:00:00Z`)) / 86_400_000);
+    if (offset === 0) return t("notifications.fact.dueToday");
+    if (offset === 1) return t("notifications.fact.dueTomorrow");
+    if (offset === -1) return t("notifications.fact.dueYesterday");
+    return t("notifications.fact.dueOn", { date: format.date(dateKey, "long") });
+  };
   const ids = (type: string) => [...new Set(rows.filter((row) => row.source_type === type && row.source_id).map((row) => row.source_id!))];
   // A grouped school day names each thing it stands for; they are read like any school item.
   const groupedItems = [...new Set(rows.filter((row) => row.source_type === "school_day").flatMap((row) => itemsOf(row)))];
@@ -97,9 +119,11 @@ export async function loadReminderDetails(
   const dateTime = (value: string) => t("notifications.detail.dateTime", { date: format.date(value, "long"), time: format.time(value) });
 
   for (const bill of (bills.data ?? []) as { id: string; name: string; payee: string | null; amount_minor: number | null; currency: string | null; due_on: string | null; recurrence: string | null }[]) {
+    // The amount and the due day are the row's one line; the details keep the rest.
     const details: { label: string; value: string }[] = [];
-    if (bill.amount_minor !== null && bill.currency) details.push({ label: t("notifications.detail.amount"), value: format.money(bill.amount_minor / 100, bill.currency) });
-    if (bill.due_on) details.push({ label: t("notifications.detail.due"), value: format.date(bill.due_on, "long") });
+    const fact = [bill.amount_minor !== null && bill.currency ? format.money(bill.amount_minor / 100, bill.currency) : null, bill.due_on ? dueOn(bill.due_on) : null]
+      .filter(Boolean)
+      .join(" · ");
     if (bill.payee) details.push({ label: t("notifications.detail.paidTo"), value: bill.payee });
     if (bill.recurrence) {
       details.push({
@@ -109,6 +133,8 @@ export async function loadReminderDetails(
     }
     map.set(`obligation:${bill.id}`, {
       details,
+      ...(fact ? { fact } : {}),
+      overdue: Boolean(bill.due_on && bill.due_on < today),
       link: { href: "/bills", label: t("notifications.link.bill") },
       // Only an Admin can settle a bill; anyone else gets the bill, not a button that would refuse them.
       complete: options.isAdmin ? { label: t("notifications.complete.paid") } : null,
@@ -136,10 +162,10 @@ export async function loadReminderDetails(
     });
   }
   for (const item of schoolRows) {
-    const details = [{ label: schoolNoun(item.kind), value: item.title }];
-    if (item.due_at) details.push({ label: t("notifications.detail.due"), value: dueWords(item)! });
     map.set(`school_item:${item.id}`, {
-      details,
+      details: [{ label: schoolNoun(item.kind), value: item.title }],
+      ...(item.due_at ? { fact: t("notifications.fact.due", { when: dueWords(item)! }) } : {}),
+      overdue: Boolean(item.due_at && Date.parse(item.due_at) < now.getTime() && (item.status === "pending" || item.status === "in_progress")),
       link: { href: "/school", label: t("notifications.link.school") },
       complete: { label: item.kind === "event" || item.kind === "exam" ? t("notifications.complete.ready") : t("notifications.complete.done") },
     });
@@ -147,13 +173,11 @@ export async function loadReminderDetails(
 
   for (const meal of (meals.data ?? []) as { id: string; name: string; ready_by: string; recipes: { name: string; total_minutes: number } | { name: string; total_minutes: number }[] | null }[]) {
     const recipe = Array.isArray(meal.recipes) ? meal.recipes[0] : meal.recipes;
-    const details = [
-      { label: t("notifications.detail.meal"), value: meal.name },
-      { label: t("notifications.detail.readyBy"), value: format.time(meal.ready_by) },
-    ];
+    const details = [{ label: t("notifications.detail.meal"), value: meal.name }];
     if (recipe) details.push({ label: t("notifications.detail.cookingTime"), value: t("notifications.detail.aboutMinutes", { count: recipe.total_minutes }) });
     map.set(`meal:${meal.id}`, {
       details,
+      fact: t("notifications.fact.readyBy", { time: format.time(meal.ready_by) }),
       link: { href: "/meals", label: recipe ? t("notifications.link.recipe") : t("notifications.link.mealPlan") },
       complete: null,
       reason: recipe ? t("notifications.reason.recipe", { count: recipe.total_minutes }) : t("notifications.reason.noRecipe"),
@@ -175,10 +199,8 @@ export async function loadReminderDetails(
 
   for (const event of (events.data ?? []) as { id: string; title: string; starts_at: string; location: string | null }[]) {
     map.set(`family_event:${event.id}`, {
-      details: [
-        { label: t("notifications.detail.starts"), value: dateTime(event.starts_at) },
-        ...(event.location ? [{ label: t("notifications.detail.where"), value: event.location }] : []),
-      ],
+      details: event.location ? [{ label: t("notifications.detail.where"), value: event.location }] : [],
+      fact: dateTime(event.starts_at),
       link: { href: "/calendar?view=day", label: t("notifications.link.today") },
       complete: null,
     });
@@ -190,11 +212,11 @@ export async function loadReminderDetails(
     map.set(`health_appointment:${visit.id}`, {
       details: [
         ...(CARE_TYPES.has(visit.appointment_type) ? [{ label: t("notifications.detail.appointment"), value: t(`healthForm.careType.${visit.appointment_type}` as TranslationKey) }] : []),
-        { label: t("notifications.detail.starts"), value: dateTime(visit.starts_at) },
         ...(withWhom ? [{ label: t("notifications.detail.with"), value: withWhom }] : []),
         ...(visit.location?.trim() ? [{ label: t("notifications.detail.where"), value: visit.location.trim() }] : []),
         ...(visit.preparation_notes?.trim() ? [{ label: t("notifications.detail.prepare"), value: visit.preparation_notes.trim() }] : []),
       ],
+      fact: dateTime(visit.starts_at),
       link: { href: "/health", label: t("notifications.link.health") },
       complete: null,
     });
@@ -278,6 +300,9 @@ export function toReminderView(
     when: day === today ? format.time(at) : format.date(at),
     unread: row.status === "generated" || row.status === "delivered",
     details: found?.details ?? [],
+    fact: found?.fact ?? null,
+    overdue: open && (found?.overdue === true || (row.latest_at !== null && Date.parse(row.latest_at) < now.getTime())),
+    sourceType: row.source_type,
     reason: placementReason(row, format, t) ?? found?.reason ?? null,
     complete: open ? (found?.complete ?? null) : null,
     link: found?.link ?? actionLink(row, t) ?? fallbackLink(row.source_type, t),
