@@ -67,6 +67,8 @@ export type ExecutionContext = {
    * null and it waits in HomeSend. Supplied by the route.
    */
   addFromHomeSend?: (itemId: string) => Promise<AddedOnItsOwn | WaitingInHomeSend | null>;
+  /** Which conversation this turn is in: a check question asked here is answered here (14-061). */
+  surface?: "app" | "alexa" | "whatsapp";
 };
 
 export type ExecutionResult =
@@ -139,6 +141,8 @@ export function canExecute(intent: HouseholdIntent): boolean {
       return intent.utterance.trim().length > 0;
     case "complete_homesend_item":
       return typeof intent.parameters.itemId === "string" && typeof intent.parameters.field === "string" && typeof intent.parameters.answer === "string";
+    case "check_homesend_entry":
+      return typeof intent.parameters.itemId === "string" && typeof intent.parameters.field === "string" && typeof intent.parameters.answer === "string";
     case "fill_homesend_details":
       return true;
     case "set_fitness_goal":
@@ -202,7 +206,11 @@ async function fileWithHomeSend(intent: HouseholdIntent, context: ExecutionConte
   const decided = !next && context.addFromHomeSend ? await context.addFromHomeSend(outcome.itemId).catch(() => null) : null;
   if (wasAdded(decided)) {
     const { handedBackText } = await import("../hometalk/intake-questions");
-    return { ok: true, text: handedBackText("", { added: decided, stillNeeded: [] }).trim(), result: { homeSendItemId: outcome.itemId, added: decided.where } };
+    const added = handedBackText("", { added: decided, stillNeeded: [] }).trim();
+    // Added as Checking: HomeTalk asks its first question straight away (14-061).
+    const check = decided.unconfirmed ? await firstCheckQuestion(outcome.itemId, context) : null;
+    if (check) return { ok: true, text: `${added}\n${check.text}`, result: { homeSendItemId: outcome.itemId, added: decided.where, clarify: check.clarify } };
+    return { ok: true, text: added, result: { homeSendItemId: outcome.itemId, added: decided.where } };
   }
   // Held for a reason the person can act on (I-27): said, with what it read.
   const held = decided ? waitingWords(decided.waiting, decided.title) : null;
@@ -235,12 +243,44 @@ async function completeHomeSendItem(intent: HouseholdIntent, context: ExecutionC
   const decided = context.addFromHomeSend ? await context.addFromHomeSend(itemId).catch(() => null) : null;
   const added = wasAdded(decided) ? decided : null;
   const closing = handedBackText(answered.text, { added: decided, stillNeeded: answered.stillNeeded });
+  // Added as Checking: its first question comes now, before anything queued (14-061).
+  const check = added?.unconfirmed ? await firstCheckQuestion(itemId, context) : null;
+  if (check) return { ok: true, text: `${closing}\n${check.text}`, result: { homeSendItemId: itemId, added: added!.where, clarify: check.clarify } };
   // Filling in several waiting items (14-050): on to the next one that still needs something.
   const queue = Array.isArray(intent.parameters.queue) ? intent.parameters.queue.filter((id): id is string => typeof id === "string") : [];
   const { nextQueuedQuestion } = await import("../hometalk/intake-questions");
   const next = queue.length > 0 ? await nextQueuedQuestion(context.supabase, { householdId: context.householdId, queue, people: context.members }).catch(() => null) : null;
   if (next) return { ok: true, text: `${closing} Next${next.title ? `, **${next.title}**` : ""}: ${next.question}`, result: { homeSendItemId: itemId, ...(added ? { added: added.where } : {}), clarify: next.clarify } };
   return { ok: true, text: closing, result: { homeSendItemId: itemId, ...(added ? { added: added.where } : {}) } };
+}
+
+/** The first question about an entry just added as Checking, in this turn's conversation; null when none waits. */
+async function firstCheckQuestion(itemId: string, context: ExecutionContext) {
+  const { currentCheckQuestion } = await import("../hometalk/checking-questions");
+  const question = await currentCheckQuestion(context.supabase, { householdId: context.householdId, itemId, memberId: context.actorMemberId, via: context.surface === "whatsapp" ? "whatsapp" : "hometalk" }).catch(() => null);
+  return question ? { text: `🔍 Quick check, so it can stop being Checking: ${question.text}`, clarify: question.clarify } : null;
+}
+
+/**
+ * The answer to HomeTalk's question about an entry HomeSend added as
+ * Checking (14-061): yes, no, or what it should be — applied in place on that
+ * one entry, as the member, then the next question, or confirmed once it is
+ * over the household's bar. Only the item's sender answers.
+ */
+async function checkHomeSendEntry(intent: HouseholdIntent, context: ExecutionContext): Promise<ExecutionResult> {
+  const { answerCheckQuestion } = await import("../hometalk/checking-questions");
+  const itemId = String(intent.parameters.itemId);
+  // The channel this turn is in is the one that answered, whichever recorded the question.
+  const parameters = { ...intent.parameters, via: context.surface === "whatsapp" ? "whatsapp" : "hometalk" };
+  const answered = await answerCheckQuestion(context.supabase, {
+    householdId: context.householdId,
+    actorMemberId: context.actorMemberId,
+    parameters,
+    answer: String(intent.parameters.answer ?? intent.utterance),
+    timezone: context.timezone,
+    now: context.now ?? new Date(),
+  });
+  return { ok: true, text: answered.text, result: { homeSendItemId: itemId, ...(answered.clarify ? { clarify: answered.clarify } : {}), ...(answered.confirmed ? { confirmed: true } : {}) } };
 }
 
 /**
@@ -329,6 +369,8 @@ async function runIntent(intent: HouseholdIntent, context: ExecutionContext): Pr
         return await fileWithHomeSend(intent, context);
       case "complete_homesend_item":
         return await completeHomeSendItem(intent, context);
+      case "check_homesend_entry":
+        return await checkHomeSendEntry(intent, context);
       case "fill_homesend_details":
         return await fillHomeSendDetails(intent, context);
       case "plan_event":

@@ -176,7 +176,9 @@ export async function converse(raw: TurnInput): Promise<TurnResult> {
   // Read before normalising too: "no thanks" normalises to a bare "no".
   const leaveWords = isLeaveIt(raw.utterance) ? raw.utterance : input.utterance;
   const leavesIt = !input.pending && isLeaveIt(leaveWords);
-  const short = answersOffer || answersMeant || (leavesIt && input.clarifying) ? ({ kind: "not_a_short_reply" } as const) : resolveShortReply(input.utterance, input.pending, now);
+  // A yes or no to HomeTalk's check on an entry added as Checking (14-061) answers that check.
+  const answersCheck = input.clarifying?.action === "check_homesend_entry" && !input.pending;
+  const short = answersOffer || answersMeant || answersCheck || (leavesIt && input.clarifying) ? ({ kind: "not_a_short_reply" } as const) : resolveShortReply(input.utterance, input.pending, now);
   switch (short.kind) {
     case "approve":
       // Not "done": nothing has run yet. The route carries it out through the

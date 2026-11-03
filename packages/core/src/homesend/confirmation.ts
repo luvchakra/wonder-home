@@ -59,7 +59,7 @@ export type ConfirmationDecision = {
 };
 
 /** Why something that would be added on its own waits: already on the list, the setting, or the bar. */
-export type WaitReason = "on_list" | "wait_for_approval" | "below_bar";
+export type WaitReason = "on_list" | "wait_for_approval" | "below_bar" | "untraced";
 export type WaitingFor = {
   reason: WaitReason;
   /** The household's bar, for "below your bar of N%". */
@@ -200,6 +200,14 @@ export function decideConfirmation(input: ConfirmationInput): ConfirmationDecisi
   // whether it is added at all.
   const unverified = input.understanding?.check?.unverified ?? [];
   const fromAFile = unverified.includes(FROM_A_FILE);
+  // A reading that names something the words sent don't contain (a shop, a
+  // date, an amount, a name) is never added, not even as Checking (the
+  // owner, 2026-11-03, decision 3): it waits in HomeSend for a person. A
+  // photo or a file has no words to check, and that alone is not this.
+  const untraced = input.understanding?.check?.untraced ?? [];
+  if (untraced.length > 0) {
+    return { mode: "prepare", reason: `What WonderHome read as ${listUntraced(untraced)} isn't in what was sent, so nothing was added: a person looks first.`, question: null, wait: { reason: "untraced" } };
+  }
   const checking = !aboveBar || fromAFile ? { unconfirmed: true as const } : {};
   const onList = listed ? { listed: true as const } : {};
 
@@ -217,6 +225,12 @@ export function decideConfirmation(input: ConfirmationInput): ConfirmationDecisi
   if (consequential) return { mode: "prepare", reason, question: null };
   const area = kind === "grocery_item" ? "groceries" : "school";
   return { mode: "prepare", reason, question: null, wait: { reason: "wait_for_approval", area, ...onList } };
+}
+
+/** "the amount and the date": what the reading named that the words sent don't contain. */
+function listUntraced(details: readonly string[]): string {
+  if (details.length === 1) return details[0]!;
+  return `${details.slice(0, -1).join(", ")} and ${details.at(-1)}`;
 }
 
 /** An amount was said ("2 litres", or a number alone, 25-037), not left for WonderHome to pick. */

@@ -67,6 +67,15 @@ export function choicesFor(pending: PendingClarification | null | undefined, con
   }
 
   if (pending.action === "complete_homesend_item") return intakeChoices(pending, context, skip);
+  // A check on an entry added as Checking (14-061): "Yes, that's right" or "No", else the detail's own answers.
+  if (pending.action === "check_homesend_entry") {
+    const health = pending.parameters.kind === "health_document";
+    if (pending.parameters.mode === "confirm") {
+      const set = single([{ label: t("hometalk.choice.right"), say: "yes" }, { label: t("hometalk.choice.notRight"), say: "no" }, skip]);
+      return set && health ? { ...set, health: true } : set;
+    }
+    return intakeChoices(pending, context, skip);
+  }
 
   const awaiting = pending.parameters.awaiting;
   if (awaiting === "quantity") {

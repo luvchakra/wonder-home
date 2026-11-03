@@ -13,6 +13,7 @@ import { intakeQuestion, memberNamedInReply, questionIn } from "../hometalk/inta
 import { translatorFor } from "../i18n/translate";
 import { scorePercent, sureWhy } from "../homesend/auto-add";
 import { decideConfirmation } from "../homesend/confirmation";
+import { startChecking } from "../homesend/checking";
 import { converse, type TurnInput } from "../conversation/engine";
 import { canExecute } from "../conversation/executor";
 import { groundIntent } from "../conversation/grounding";
@@ -719,6 +720,27 @@ describe("processing into HomeSend", () => {
         }
       });
     }
+
+    // 14-061 (the owner, 2026-11-03, decision C): added as Checking, the first check follows on the sender's own
+    // verified link, with the reading said back, and is left open in their WhatsApp conversation for the reply.
+    it("AT-H11 added as Checking: the first check goes to its sender on WhatsApp, left open for the reply", async () => {
+      const { h, id } = await received("text");
+      h.tables.whatsapp_messages![0]!.text_content = "2 litres mustard oil";
+      const out = replies();
+      const addOnItsOwn: WhatsAppIntakeDeps["addOnItsOwn"] = async ({ itemId, memberId }) => {
+        const item = h.tables.home_send_items!.find((row) => row.id === itemId)!;
+        // What `addIfAllowed` does after a Checking add: the questions are planned for the sender.
+        item.understanding = { ...(item.understanding as object), checking: startChecking({ kind: "grocery_item", extracted: item.extracted as never, check: { unverified: [] }, recipientMemberId: memberId, score: 0.9, percent: 95 }) };
+        return { title: "Mustard oil", where: "Groceries", percent: 90, why: "unsure", unconfirmed: true as const };
+      };
+      await processWhatsAppMessage(h.client, id, { config: CONFIG, fetch: out.fetchImpl, ingest: { classify: oil }, ask: async () => "x", addOnItsOwn });
+      expect(out.sent).toHaveLength(1);
+      expect(out.sent[0]!.text).toContain("marked *Checking*");
+      expect(out.sent[0]!.text).toContain("Quick check on Mustard oil");
+      expect(out.sent[0]!.text).toContain("Mustard oil?");
+      const asked = h.tables.conversation_messages!.at(-1)!;
+      expect(asked.metadata).toMatchObject({ mode: "clarify", clarify: { action: "check_homesend_entry", parameters: { field: "name", mode: "confirm", ordinal: 1, via: "whatsapp" } } });
+    });
 
     // I-27 (the owner, 2026-10-26, 8:47 PM IST): Mustard oil already on the shopping list. The app's review is
     // stood in for by HomeSend's own decision, with the match it would find and the list's answer (1 L to buy).

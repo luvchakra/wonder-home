@@ -432,6 +432,7 @@ export const homesendMr: AreaCatalog<typeof homesendEn> = {
   "homesend.why.duplicate": "कदाचित {title} ची दुसरी प्रत",
   "homesend.why.update": "कदाचित {title} बदलेल",
   "homesend.why.photo": "एक फोटो किंवा फाइल",
+  "homesend.why.untraced": "पाठवलेल्या संदेशात नसलेलं काहीतरी वाचलं",
   "homesend.why.instructions": "यात WonderHome साठी सूचना होत्या",
   "homesend.why.byEmail": "ईमेलने आली",
   "homesend.why.check": "तुमच्या मंजुरीसाठी तयार",

@@ -216,6 +216,8 @@ export const REPLY_CLASSES: Readonly<Record<IntentAction, readonly ContentClass[
   file_with_homesend: ["child", "financial"],
   // Says only that the answer was taken and asks the next thing; a value is never said back.
   complete_homesend_item: [],
+  // Says back what was read, to the item's sender only (decision C, the owner 2026-11-03): a child's, a bill's or a health detail.
+  check_homesend_entry: ["child", "financial", "health"],
   // Asks the first question about a waiting item; names its title only, never a value.
   fill_homesend_details: [],
   set_preference: [],

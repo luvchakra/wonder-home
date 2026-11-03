@@ -52,6 +52,12 @@ export const INTENT_ACTIONS = [
    */
   "complete_homesend_item",
   /**
+   * The answer to HomeTalk's question about an entry HomeSend added as
+   * "Checking" (`hometalk/checking-questions.ts`, the owner 2026-11-03,
+   * story 14-061). Only ever the answer to an open question.
+   */
+  "check_homesend_entry",
+  /**
    * "Yes" to HomeTalk's offer to fill in what is waiting in HomeSend ("2 things
    * in HomeSend need a detail: shall we fill them in?", story 14-050): asks the
    * first item's first question, then the next item's after it. Only fills in
@@ -174,7 +180,7 @@ export function disposeIntent(intent: HouseholdIntent): IntentDisposition {
   }
 
   // HomeSend reads the whole sentence itself, so being told about something new names no target here.
-  if (intent.target.kind === "unspecified" && intent.action !== "ask_status" && intent.action !== "check_agents" && intent.action !== "find_places" && intent.action !== "open_screen" && intent.action !== "file_with_homesend" && intent.action !== "complete_homesend_item" && intent.action !== "fill_homesend_details") {
+  if (intent.target.kind === "unspecified" && intent.action !== "ask_status" && intent.action !== "check_agents" && intent.action !== "find_places" && intent.action !== "open_screen" && intent.action !== "file_with_homesend" && intent.action !== "complete_homesend_item" && intent.action !== "check_homesend_entry" && intent.action !== "fill_homesend_details") {
     return { kind: "clarify", question: "Which one did you mean?" };
   }
 

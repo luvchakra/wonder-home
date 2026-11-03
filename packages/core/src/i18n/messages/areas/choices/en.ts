@@ -6,6 +6,8 @@
 export const choicesEn = {
   "hometalk.choice.skip": "Skip",
   "hometalk.choice.yes": "Yes",
+  "hometalk.choice.right": "Yes, that's right",
+  "hometalk.choice.notRight": "No, it's different",
   "hometalk.choice.notNow": "Not now",
   "hometalk.choice.enough": "That's enough",
   "hometalk.choice.ofEach#one": "{count} of each",

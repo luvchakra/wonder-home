@@ -55,6 +55,20 @@ describe("HomeSend confirmation strategy (Wave 3 §12)", () => {
     expect(above.unconfirmed).toBeUndefined();
   });
 
+  it("adds nothing, not even as Checking, when the reading names something that isn't in what was sent (the owner, 2026-11-03, decision 3)", () => {
+    const invented = { readable: true, confidence: "high" as const, score: 0.9, check: { verified: false, unverified: ["the name"], untraced: ["the name"] }, safety: { instructionsIgnored: false, signals: [] } };
+    const decision = decide({ understanding: invented });
+    expect(decision).toMatchObject({ mode: "prepare", wait: { reason: "untraced" } });
+    expect(decision.unconfirmed).toBeUndefined();
+    expect(decision.reason).toBe("What WonderHome read as the name isn't in what was sent, so nothing was added: a person looks first.");
+    // However sure the model and the bar: still nothing added.
+    expect(decide({ understanding: { ...invented, score: 0.99 }, autoAddPercent: 50 }).mode).toBe("prepare");
+    const twice = decide({ understanding: { ...invented, check: { verified: false, unverified: ["the amount", "the date"], untraced: ["the amount", "the date"] } } });
+    expect(twice.reason).toContain("the amount and the date");
+    // A reading stored before the field existed is decided as before.
+    expect(decide({ understanding: { ...invented, check: { verified: false, unverified: ["the name"] } } })).toMatchObject({ mode: "auto_apply", unconfirmed: true });
+  });
+
   it("never applies a bill or a health document on its own, whatever the confidence or setting (consequential)", () => {
     expect(decide({ kind: "bill" })).toMatchObject({ mode: "govern" });
     expect(decide({ kind: "health_document" })).toMatchObject({ mode: "govern" });

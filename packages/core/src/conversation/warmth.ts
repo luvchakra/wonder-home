@@ -55,6 +55,7 @@ const DONE: Partial<Record<IntentAction, string>> = {
   raise_service_request: "🔧",
   file_with_homesend: "📥",
   complete_homesend_item: "📥",
+  check_homesend_entry: "🔍",
   fill_homesend_details: "📥",
   add_bill: "🧾",
   record_bill_payment: "🧾",
