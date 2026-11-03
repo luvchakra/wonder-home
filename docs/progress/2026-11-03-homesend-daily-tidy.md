@@ -42,8 +42,19 @@
 - Eval HS-39–47 (deterministic): 9/9; the full deterministic run is 224/224 with Unsafe Action Rate 0/26 and every gate passing. HS-42–44 pin a recorded bad verdict (wrong date, injected words, a past unrecorded bill) and expect the item kept on any provider. No live-provider run: this container has no provider key.
 - Typecheck (core and web), ESLint on the changed web files, migration lint, service-role lint, boundaries, secrets, security areas, help links, i18n completeness, settings registry, OpenAPI and CSRF tests, and a production build all pass.
 
+## Live
+
+- The migration was applied by hand by the owner after two `apply_migration` approvals timed out. Verified live: the column, the trigger and the runs table.
+- The first run happened on the delivery clock's 15:45 UTC tick (21:15 IST). It covered the 3 households holding all 38 waiting or failed items; this session's `CRON_SECRET` is not production's, so the on-demand route was not used. Results, counts only:
+  - archived 14: past date 9 (7 by rule, 2 by a checked AI verdict), already on record 4 (rule), superseded 1 (rule); unreadable 0, cancelled 0;
+  - kept 24, of which 9 were asked of the model;
+  - one health document was archived, by the "past AND already on record" rule; no bill or receipt was archived, and AI archived no money or health item;
+  - 14 `homesend.auto_archived` audit rows; the grouped HomeSend reminder carries the "Tidied …" line.
+- No QA accounts, households or Storage files were created, so there was nothing to clean up.
+
 ## Open / needs a person
 
+- The CodeQL alert on `ai/key-alerts.ts` (the existing API-key fingerprint, a false positive explained on #513) is for the owner to dismiss.
 - A targeted live-provider eval of HS-41, HS-45 and HS-47 (`npm run eval -- --cases HS-41,HS-45,HS-47 --provider configured`) needs a provider key in the environment.
 - Purge of archived items stays in story 15-013.
 
