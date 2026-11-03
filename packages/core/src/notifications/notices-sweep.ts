@@ -13,6 +13,7 @@ import {
   goalCheckInNotices,
   helperAbsenceNotices,
   homesendNotices,
+  homesendQuestionNotices,
   NOTICE_SOURCE_TYPES,
   orderNotices,
   weatherNotices,
@@ -27,6 +28,7 @@ import {
   type EventRow,
   type GuestRow,
   type HelperRow,
+  type CheckingRow,
   type HomeSendRow,
   type Notice,
   type OrderRow,
@@ -83,13 +85,15 @@ async function sweep(admin: SupabaseClient, householdId: string, now: Date, adap
   const since = (days: number) => new Date(now.getTime() - days * 86_400_000).toISOString();
   const today = localMoment(now, timeZone).dateKey;
 
-  const [members, roles, responsibilities, guardians, items, events, absences, helpers, orders, changes, checkIns, chatMessages, chatThreads, chatParticipants, open, closed, keyAlerts] = await Promise.all([
+  const [members, roles, responsibilities, guardians, items, checks, events, absences, helpers, orders, changes, checkIns, chatMessages, chatThreads, chatParticipants, open, closed, keyAlerts] = await Promise.all([
     admin.from("household_members").select("id, profile_id, member_type, status, display_name, nickname").eq("household_id", householdId),
     admin.from("household_roles").select("member_id, role").eq("household_id", householdId),
     admin.from("responsibilities").select("outcome_key, primary_member_id, backup_member_id").eq("household_id", householdId),
     admin.from("member_guardians").select("child_member_id, guardian_member_id").eq("household_id", householdId),
     // Everything still waiting, however old: one grouped notice counts it all, and the 30-day archive bounds it.
     admin.from("home_send_items").select("id, created_by_member_id, status, classified_kind, content_type, updated_at").eq("household_id", householdId).in("status", ["classified", "failed"]).order("updated_at", { ascending: false }).limit(500),
+    // Entries added as Checking in the last month, with HomeTalk's questions about them (14-062).
+    admin.from("home_send_items").select("id, status, updated_at, checking:understanding->checking").eq("household_id", householdId).eq("status", "routed").gte("updated_at", since(30)).limit(200),
     admin.from("family_events").select("id, title, owner_member_id, starts_at, ends_at, kind, status, all_day").eq("household_id", householdId).gte("starts_at", since(1)).limit(300),
     admin.from("availability_exceptions").select("id, member_id, on_date").eq("household_id", householdId).eq("available", false).gte("on_date", today).limit(200),
     admin.from("helper_profiles").select("member_id").eq("household_id", householdId),
@@ -131,6 +135,7 @@ async function sweep(admin: SupabaseClient, householdId: string, now: Date, adap
 
   const wanted: Notice[] = [
     ...homesendNotices((items.data ?? []) as HomeSendRow[], directory, now, timeZone),
+    ...homesendQuestionNotices((checks.data ?? []) as CheckingRow[], directory, now),
     ...eventReplyNotices(eventRows, guestRows, directory, now),
     ...helperAbsenceNotices((absences.data ?? []) as AbsenceRow[], helperRows, directory, now, timeZone),
     ...orderNotices((orders.data ?? []) as OrderRow[], directory, now),

@@ -79,6 +79,8 @@ export const homesendFr: AreaCatalog<typeof homesendEn> = {
   "homesend.history.cancelledOnRecord": "L’élément enregistré a été annulé",
   "homesend.history.addedOnItsOwn": "Ajouté automatiquement",
   "homesend.history.checking": "En vérification",
+  "homesend.history.checkingOne": "Ajouté · 1 question en attente",
+  "homesend.history.checkingMany": "Ajouté · {count} questions en attente",
   "homesend.history.looksRight": "C'est bon",
   "homesend.history.looksRightAria": "Confirmer que {title} est correct",
   "homesend.history.planned": "{action} : {title} · {reason}",

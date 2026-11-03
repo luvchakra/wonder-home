@@ -21,6 +21,7 @@ import { listIntegrations } from "@wonderhome/core/integrations/repository";
 import { AppShell } from "@wonderhome/core/shell/app-shell";
 import { ActionRow } from "@wonderhome/core/ui/action-row";
 import { Badge, PillLink } from "@wonderhome/core/ui/pill";
+import { unconfirmedEntityIds } from "@wonderhome/core/homesend/changes";
 import { Card } from "@wonderhome/core/ui/card";
 import {
   ExpandableMetricRow,
@@ -94,6 +95,8 @@ export default async function SchoolPage({ searchParams }: { searchParams: Promi
     // Each child's goals and the days kept (08-017), only for the tab that shows them (with each child's score).
     active === "goals" ? listGoals(supabase, householdId).catch(() => []) : Promise.resolve([]),
     active === "goals" ? listCheckIns(supabase, householdId).catch(() => []) : Promise.resolve([]),
+    // School items HomeSend added and is still checking (14-062): "Checking" on the row itself.
+    unconfirmedEntityIds(supabase, householdId).catch(() => new Set<string>()),
   ]);
   // Marks a refusal handled when the page returns early; `await reads` below still throws.
   reads.catch(() => undefined);
@@ -106,7 +109,14 @@ export default async function SchoolPage({ searchParams }: { searchParams: Promi
     );
   }
 
-  const [agenda, members, integrations, enrolments, teachers, activities, periods, exams, examTypes, goals, checkIns] = await reads;
+  const [agenda, members, integrations, enrolments, teachers, activities, periods, exams, examTypes, goals, checkIns, checkingIds] = await reads;
+  // "Checking" beside an item HomeSend added while it is still being checked (the owner, 2026-11-03).
+  const checkingBadge = (id: string) =>
+    checkingIds.has(id) ? (
+      <Badge tone="attention" className="ml-2 align-middle">
+        {t("homesend.history.checking")}
+      </Badge>
+    ) : null;
 
   const children = members.filter((member) => member.memberType === "child");
   // One child at a time (the owner, 2026-10-19: no "Everyone"): the one asked for, else the first.
@@ -241,7 +251,10 @@ export default async function SchoolPage({ searchParams }: { searchParams: Promi
                     <>
                       <IconTile icon={item.kind === "exam" ? CalendarDays : BookOpen} tone="school" />
                       <span className="min-w-0 flex-1">
-                        <span className="block text-sm font-medium">{item.title}</span>
+                        <span className="block text-sm font-medium break-words">
+                          {item.title}
+                          {checkingBadge(item.id)}
+                        </span>
                         <span className="block text-xs text-[var(--wh-foreground-subtle)]">
                           {[nameOf(item.childMemberId), item.subject, dueWords(item)]
                             .filter(Boolean)
@@ -436,7 +449,10 @@ export default async function SchoolPage({ searchParams }: { searchParams: Promi
                               <>
                                 <IconTile icon={item.kind === "homework" || item.kind === "worksheet" ? BookOpen : CalendarDays} tone="school" />
                                 <span className="min-w-0 flex-1">
-                                  <span className="block text-sm font-medium">{item.title}</span>
+                                  <span className="block text-sm font-medium break-words">
+                                    {item.title}
+                                    {checkingBadge(item.id)}
+                                  </span>
                                   <span className="block text-xs text-[var(--wh-foreground-subtle)]">
                                     {[nameOf(item.childMemberId), item.subject, dueWords(item)].filter(Boolean).join(" · ")}
                                   </span>
@@ -470,7 +486,10 @@ export default async function SchoolPage({ searchParams }: { searchParams: Promi
                       <>
                         <IconTile icon={item.kind === "exam" ? CalendarDays : BookOpen} tone="school" />
                         <span className="min-w-0 flex-1">
-                          <span className="block text-sm font-medium">{item.title}</span>
+                          <span className="block text-sm font-medium break-words">
+                            {item.title}
+                            {checkingBadge(item.id)}
+                          </span>
                           <span className="block text-xs text-[var(--wh-foreground-subtle)]">
                             {[
                               nameOf(item.childMemberId),
@@ -525,7 +544,10 @@ export default async function SchoolPage({ searchParams }: { searchParams: Promi
                           <>
                             <IconTile icon={CalendarDays} tone="school" />
                             <span className="min-w-0 flex-1">
-                              <span className="block text-sm font-medium">{item.title}</span>
+                              <span className="block text-sm font-medium break-words">
+                                {item.title}
+                                {checkingBadge(item.id)}
+                              </span>
                               <span className="block text-xs text-[var(--wh-foreground-subtle)]">
                                 {[nameOf(item.childMemberId), formatDate(schoolDayZone(item, timezone), item.dueAt!, "long"), timeWords(item)].filter(Boolean).join(" · ")}
                               </span>

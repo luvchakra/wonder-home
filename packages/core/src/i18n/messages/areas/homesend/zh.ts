@@ -79,6 +79,8 @@ export const homesendZh: AreaCatalog<typeof homesendEn> = {
   "homesend.history.cancelledOnRecord": "已取消原有记录",
   "homesend.history.addedOnItsOwn": "自动添加",
   "homesend.history.checking": "核对中",
+  "homesend.history.checkingOne": "已添加 · 待确认 1 个问题",
+  "homesend.history.checkingMany": "已添加 · 待确认 {count} 个问题",
   "homesend.history.looksRight": "没问题",
   "homesend.history.looksRightAria": "确认 {title} 没问题",
   "homesend.history.planned": "{action}：{title} · {reason}",

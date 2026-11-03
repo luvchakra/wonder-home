@@ -117,6 +117,7 @@ import { buildPersonalView, type PersonalView } from "@wonderhome/core/identity/
 import { agendaAllows, channelAllowsAction, channelRefusal, narrowToChannel, VOICE_NOT_ALLOWED, voiceAllowsAction, type ChannelLimits } from "@wonderhome/core/voicelink/scopes";
 
 import { addIfAllowed } from "@/app/(auth)/home-send-auto";
+import { reconcileRemindersNow } from "@/app/_lib/reminders";
 import { householdAgenda, narrowAgenda, type HouseholdAgenda } from "@/app/_lib/agenda";
 import { continueAmaf, pendingAmaf, startAmaf } from "@/app/_lib/hometalk-amaf";
 import { continueWelcome, pendingWelcome } from "@/app/_lib/hometalk-welcome";
@@ -1154,6 +1155,8 @@ async function turnInEnglish(input: HomeTalkInput, speaking: Speaking) {
     text = done.ok ? done.text : failedReply(done);
     // What the executor asked next — HomeTalk's question about a HomeSend item — stays open for the next turn.
     if (done.ok && isIntakeQuestion(done.result.clarify)) followUp = done.result.clarify;
+    // Answers raised a Checking entry over the bar: its held reminders start now (14-062).
+    if (done.ok && done.result.confirmed === true) after(() => reconcileRemindersNow(householdId, { force: true }));
     outcome = done.ok ? { status: "executed", result: done.result } : { status: "failed", result: { reason: done.reason } };
     // What was actually written — the row, not what was asked for — is
     // what the next turn's "it" means.

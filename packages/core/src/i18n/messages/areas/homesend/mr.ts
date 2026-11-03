@@ -79,6 +79,8 @@ export const homesendMr: AreaCatalog<typeof homesendEn> = {
   "homesend.history.cancelledOnRecord": "नोंदीतले रद्द केले",
   "homesend.history.addedOnItsOwn": "आपोआप जोडले",
   "homesend.history.checking": "तपासणी सुरू",
+  "homesend.history.checkingOne": "जोडलं · 1 प्रश्न तपासत आहे",
+  "homesend.history.checkingMany": "जोडलं · {count} प्रश्न तपासत आहे",
   "homesend.history.looksRight": "बरोबर आहे",
   "homesend.history.looksRightAria": "{title} बरोबर असल्याची खात्री करा",
   "homesend.history.planned": "{action}: {title} · {reason}",

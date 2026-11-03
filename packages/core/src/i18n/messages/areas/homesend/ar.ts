@@ -79,6 +79,8 @@ export const homesendAr: AreaCatalog<typeof homesendEn> = {
   "homesend.history.cancelledOnRecord": "أُلغي المسجّل مسبقًا",
   "homesend.history.addedOnItsOwn": "أُضيف تلقائيًا",
   "homesend.history.checking": "قيد التحقق",
+  "homesend.history.checkingOne": "أُضيف · سؤال واحد للتحقق",
+  "homesend.history.checkingMany": "أُضيف · {count} أسئلة للتحقق",
   "homesend.history.looksRight": "صحيح",
   "homesend.history.looksRightAria": "تأكيد أن {title} صحيح",
   "homesend.history.planned": "{action}: {title} · {reason}",

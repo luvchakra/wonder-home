@@ -5,6 +5,7 @@ import type { Directory } from "./plan";
 import type { NotificationCategory } from "./policies";
 import { localMoment } from "./timing";
 import { countWaiting, isStale, type WaitingGroup } from "../homesend/waiting";
+import { questionsLeft, readCheckingState } from "../homesend/checking";
 
 /**
  * Notices (stories 27-004 to 27-014): notifications about something that
@@ -121,6 +122,48 @@ export function homesendNotices(rows: readonly HomeSendRow[], directory: Directo
     });
   }
   return notices;
+}
+
+// --- HomeSend: questions waiting about entries added as Checking (14-062; the owner, 2026-11-03) ---
+
+/** An item HomeSend added; `checking` is its `understanding.checking` (`homesend/checking.ts`). */
+export type CheckingRow = { id: string; status: string; updated_at: string; checking: unknown };
+
+/**
+ * One notice per person for every question HomeTalk is still waiting on —
+ * never one per item: "3 HomeSend questions waiting · answer in HomeTalk or on
+ * WhatsApp". It goes only to the person each question is for (the item's
+ * sender, decision C), reachable and with an account, is rewritten as
+ * questions are answered, and resolves by itself when none is left (the
+ * sweep's own reconcile). Only a count is named: what an entry says is never
+ * on a lock screen. Undone items don't count.
+ */
+export function homesendQuestionNotices(rows: readonly CheckingRow[], directory: Directory, now: Date): Notice[] {
+  const byRecipient = new Map<string, { count: number; newest: CheckingRow }>();
+  for (const row of rows) {
+    if (row.status !== "routed") continue;
+    const state = readCheckingState(row.checking);
+    const left = questionsLeft(row.checking);
+    if (!state || left === 0 || !reachable(directory, state.recipientMemberId)) continue;
+    const entry = byRecipient.get(state.recipientMemberId);
+    if (!entry) byRecipient.set(state.recipientMemberId, { count: left, newest: row });
+    else {
+      entry.count += left;
+      if (row.updated_at > entry.newest.updated_at) entry.newest = row;
+    }
+  }
+  return [...byRecipient].map(([recipient, { count, newest }]) => ({
+    sourceType: "homesend_item" as const,
+    sourceId: newest.id,
+    threadKey: "homesend:questions",
+    recipientMemberId: recipient,
+    category: "system" as const,
+    priority: "normal" as const,
+    title: msg("reminder.homesend.questions.title", { count }),
+    body: msg("reminder.homesend.questions.body"),
+    action: { action: "open", target: "/ai" },
+    expiresAt: new Date(now.getTime() + GROUPED_EXPIRY_DAYS * DAY_MS),
+  }));
 }
 
 // --- A guest's reply to an invitation (27-005) ------------------------------

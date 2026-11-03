@@ -47,6 +47,7 @@ import {
 import { ExpandableRow } from "@wonderhome/core/ui/expandable-row";
 import { IconTile } from "@wonderhome/core/ui/icon-tile";
 import { Badge, PillLink } from "@wonderhome/core/ui/pill";
+import { unconfirmedEntityIds } from "@wonderhome/core/homesend/changes";
 import { QuoteCard } from "@wonderhome/core/ui/quote-card";
 import { SectionHeader } from "@wonderhome/core/ui/section-header";
 import { SegmentedControl } from "@wonderhome/core/ui/segmented-control";
@@ -139,7 +140,7 @@ export default async function BillsPage({
   }
 
   const active = tab === "transactions" || tab === "budget" ? tab : "overview";
-  const [agenda, obligations, members, historyRows, budgetRows, integrations, address, givenPeriods] =
+  const [agenda, obligations, members, historyRows, budgetRows, integrations, address, givenPeriods, checkingIds] =
     await Promise.all([
       financeAgenda(supabase, householdId).catch(() => null),
       listObligations(supabase, householdId).catch(() => []),
@@ -160,6 +161,8 @@ export default async function BillsPage({
       loadHouseholdAddress(supabase, householdId).catch(() => null),
       // Amounts given ahead for coming months; paid months are the history above.
       listGivenPeriods(supabase, householdId).catch(() => new Map()),
+      // Bills HomeSend added and is still checking (14-062): "Checking" on the row itself.
+      unconfirmedEntityIds(supabase, householdId).catch(() => new Set<string>()),
     ]);
 
   // A stale mailbox and "no bills by email" must never look alike (17-003): if
@@ -361,6 +364,7 @@ export default async function BillsPage({
                 <BillRow
                   key={bill.id}
                   bill={bill}
+                  checking={checkingIds.has(bill.id) ? t("homesend.history.checking") : null}
                   owner={nameOf(bill.responsibleMemberId)}
                   timezone={timezone}
                   needsYou={needs.some((n) => n.action?.target === bill.id)}
@@ -395,6 +399,7 @@ export default async function BillsPage({
                 <BillRow
                   key={bill.id}
                   bill={bill}
+                  checking={checkingIds.has(bill.id) ? t("homesend.history.checking") : null}
                   owner={nameOf(bill.responsibleMemberId)}
                   timezone={timezone}
                   needsYou={false}
@@ -512,6 +517,7 @@ export default async function BillsPage({
                       <BillRow
                         key={bill.id}
                         bill={bill}
+                        checking={checkingIds.has(bill.id) ? t("homesend.history.checking") : null}
                         owner={nameOf(bill.responsibleMemberId)}
                         timezone={timezone}
                         needsYou={needs.some(
@@ -736,6 +742,7 @@ export default async function BillsPage({
 
 function BillRow({
   bill,
+  checking,
   owner,
   timezone,
   needsYou,
@@ -751,6 +758,8 @@ function BillRow({
   defaultCurrency,
 }: {
   bill: Obligation;
+  /** "Checking" while HomeSend's entry for it is unconfirmed (14-062); null otherwise. */
+  checking?: string | null;
   owner: string | null;
   timezone: string;
   needsYou: boolean;
@@ -796,7 +805,14 @@ function BillRow({
         <>
           <IconTile icon={Wallet} tone="money" />
           <span className="min-w-0 flex-1">
-            <span className="block text-sm font-medium">{bill.name}</span>
+            <span className="block text-sm font-medium break-words">
+              {bill.name}
+              {checking ? (
+                <Badge tone="attention" className="ml-2 align-middle">
+                  {checking}
+                </Badge>
+              ) : null}
+            </span>
             <span className="block text-xs text-[var(--wh-foreground-subtle)]">
               {due} · {amount}
               {owner ? ` · ${owner}` : ""}

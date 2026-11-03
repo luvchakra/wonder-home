@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 type Row = Record<string, unknown>;
 
 import { CHANNEL_ADAPTERS } from "./channels";
-import { adminOf, aiKeyNotices, chatNotices, eventChangeNotices, goalCheckInNotices, mentions, eventReplyNotices, helperAbsenceNotices, homesendNotices, orderNotices, weatherNotices, type EventRow } from "./notices";
+import { adminOf, aiKeyNotices, chatNotices, eventChangeNotices, goalCheckInNotices, mentions, eventReplyNotices, helperAbsenceNotices, homesendNotices, homesendQuestionNotices, orderNotices, weatherNotices, type EventRow } from "./notices";
 import type { LaundryNeed } from "../home/laundry";
 import type { WeatherWindow } from "../home/weather";
 import { sweepNotices } from "./notices-sweep";
@@ -26,6 +26,29 @@ const directory = buildDirectory(members, roles, [{ outcome_key: "home.cleaning"
 describe("who hears what nobody is named for", () => {
   it("is the head of the household first", () => {
     expect(adminOf(directory)).toBe("kunal");
+  });
+});
+
+describe("questions waiting about entries added as Checking, one notice per person (14-062)", () => {
+  const state = (recipient: string, ordinal: number, done: string | null = null) => ({
+    version: 1, recipientMemberId: recipient, base: 0.9, percent: 95,
+    planned: [{ field: "payee", mode: "confirm" }, { field: "amount", mode: "confirm" }, { field: "dueDate", mode: "confirm" }],
+    answered: [], open: done ? null : { field: "amount", mode: "confirm", ordinal }, done,
+  });
+  const row = (id: string, checking: unknown, status = "routed") => ({ id, status, updated_at: NOW.toISOString(), checking });
+
+  it("counts every question left for the sender, in one notice that names only a count", () => {
+    const notices = homesendQuestionNotices([row("a", state("upasana", 2)), row("b", state("upasana", 1))], directory, NOW);
+    expect(notices).toHaveLength(1);
+    expect(notices[0]).toMatchObject({ recipientMemberId: "upasana", threadKey: "homesend:questions", title: { key: "reminder.homesend.questions.title", params: { count: 5 } }, action: { action: "open", target: "/ai" } });
+    expect(JSON.stringify(notices[0])).not.toMatch(/BESCOM|amount|2140/);
+  });
+
+  it("says nothing once answered, finished, undone, or for someone it can't reach", () => {
+    expect(homesendQuestionNotices([row("a", state("upasana", 1, "confirmed"))], directory, NOW)).toEqual([]);
+    expect(homesendQuestionNotices([row("a", state("upasana", 1), "undone")], directory, NOW)).toEqual([]);
+    expect(homesendQuestionNotices([row("a", state("asmi", 1))], directory, NOW)).toEqual([]);
+    expect(homesendQuestionNotices([row("a", null)], directory, NOW)).toEqual([]);
   });
 });
 

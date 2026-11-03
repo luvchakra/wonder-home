@@ -81,6 +81,8 @@ export const homesendEn = {
   "homesend.history.cancelledOnRecord": "Cancelled the one on record",
   "homesend.history.addedOnItsOwn": "Added on its own",
   "homesend.history.checking": "Checking",
+  "homesend.history.checkingOne": "Added · checking 1 question",
+  "homesend.history.checkingMany": "Added · checking {count} questions",
   "homesend.history.looksRight": "Looks right",
   "homesend.history.looksRightAria": "Confirm {title} is right",
   "homesend.history.planned": "{action}: {title} · {reason}",
