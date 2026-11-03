@@ -432,6 +432,7 @@ export const homesendZh: AreaCatalog<typeof homesendEn> = {
   "homesend.why.duplicate": "可能与 {title} 重复",
   "homesend.why.update": "可能会更改 {title}",
   "homesend.why.photo": "一张照片或文件",
+  "homesend.why.untraced": "读到了发送内容里没有的信息",
   "homesend.why.instructions": "里面有针对 WonderHome 的指令",
   "homesend.why.byEmail": "通过邮件收到",
   "homesend.why.check": "等你确认",

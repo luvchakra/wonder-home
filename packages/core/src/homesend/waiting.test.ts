@@ -81,6 +81,9 @@ describe("why it waits, in a few words from evidence", () => {
     expect(whyItWaits(duplicate)).toEqual({ code: "duplicate", title: "Science Exhibition" });
     // Below the bar it is added, marked Checking (the owner, 2026-11-03); one still waiting only needs a look.
     expect(whyItWaits(evidence({ autonomy: "execute", autoAddPercent: 95 }))).toEqual({ code: "check" });
+    // A reading of something the words sent don't contain is never added (the owner, 2026-11-03, decision 3).
+    const invented = understanding({ check: { verified: false, unverified: ["the name"], untraced: ["the name"] } }) as ConfirmationInput["understanding"];
+    expect(whyItWaits(evidence({ autonomy: "execute", understanding: invented }))).toEqual({ code: "untraced" });
   });
 
   it("says money and health wait for a person, and who it's for when nobody is named", () => {

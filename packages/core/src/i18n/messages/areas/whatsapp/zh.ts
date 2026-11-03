@@ -36,6 +36,7 @@ export const whatsappZh: AreaCatalog<typeof whatsappEn> = {
   "whatsapp.wait.approvalGroceries": "你家把买菜设为「等待批准」，所以它在 HomeSend 里等你批准。",
   "whatsapp.wait.approvalSchool": "你家把学校作业设为「等待批准」，所以它在 HomeSend 里等你批准。",
   "whatsapp.wait.belowBar": "WonderHome 只有在把握超过 {percent}% 时才会自动添加，所以它在 HomeSend 里等你查看。",
+  "whatsapp.wait.untraced": "WonderHome 读到的部分内容不在你发送的信息里，所以什么都没有添加：它在 HomeSend 里等你查看。",
   "whatsapp.addedHealthRecord": "一条健康记录",
   "whatsapp.addedMoneyEntry": "一条记录",
   "whatsapp.tooLarge": "⚠️ 这个文件对 WonderHome 来说太大了——请发送小于 10MB 的文件。",

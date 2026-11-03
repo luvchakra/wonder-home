@@ -36,6 +36,7 @@ export const whatsappDe: AreaCatalog<typeof whatsappEn> = {
   "whatsapp.wait.approvalGroceries": "Dein Haushalt hat Einkäufe auf „Auf Freigabe warten“ gestellt, deshalb wartet es in HomeSend auf deine Freigabe.",
   "whatsapp.wait.approvalSchool": "Dein Haushalt hat Schulaufgaben auf „Auf Freigabe warten“ gestellt, deshalb wartet es in HomeSend auf deine Freigabe.",
   "whatsapp.wait.belowBar": "WonderHome fügt nur selbst hinzu, wenn es sich zu mehr als {percent} % sicher ist, deshalb wartet es in HomeSend auf deine Prüfung.",
+  "whatsapp.wait.untraced": "Ein Teil dessen, was WonderHome gelesen hat, steht nicht in deiner Nachricht, deshalb wurde nichts hinzugefügt: Es wartet in HomeSend auf deine Prüfung.",
   "whatsapp.addedHealthRecord": "Gesundheitseintrag",
   "whatsapp.addedMoneyEntry": "Eintrag",
   "whatsapp.tooLarge": "⚠️ Diese Datei ist für WonderHome zu groß – bitte schick eine unter 10 MB.",

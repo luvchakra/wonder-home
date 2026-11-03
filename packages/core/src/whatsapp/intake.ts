@@ -1179,6 +1179,7 @@ export function acknowledgementFor(
     return { text: `${t("whatsapp.ack.gotIt")} ${t("whatsapp.wait.onList", { title: shortTitle(options.wait!.title) ?? "" })}`, asks: false };
   }
   if (wait?.reason === "wait_for_approval") return { text: `${t("whatsapp.ack.gotIt")} ${found} ${t(wait.area === "school" ? "whatsapp.wait.approvalSchool" : "whatsapp.wait.approvalGroceries")}`, asks: false };
+  if (wait?.reason === "untraced") return { text: `${t("whatsapp.ack.gotIt")} ${found} ${t("whatsapp.wait.untraced")}`, asks: false };
   if (wait?.reason === "below_bar") return { text: `${t("whatsapp.ack.gotIt")} ${found} ${t("whatsapp.wait.belowBar", { percent: wait.percent ?? 95 })}`, asks: false };
   return { text: `${t("whatsapp.ack.gotIt")} ${found} ${t("whatsapp.ack.waiting")}`, asks: false };
 }

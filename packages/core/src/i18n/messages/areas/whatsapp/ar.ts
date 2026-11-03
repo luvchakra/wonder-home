@@ -36,6 +36,7 @@ export const whatsappAr: AreaCatalog<typeof whatsappEn> = {
   "whatsapp.wait.approvalGroceries": "أسرتك ضبطت البقالة على «انتظار الموافقة»، لذلك ينتظر في HomeSend موافقتك.",
   "whatsapp.wait.approvalSchool": "أسرتك ضبطت الواجبات المدرسية على «انتظار الموافقة»، لذلك ينتظر في HomeSend موافقتك.",
   "whatsapp.wait.belowBar": "لا يضيف WonderHome بنفسه إلا عندما يكون متأكدًا بأكثر من {percent}%، لذلك ينتظر في HomeSend حتى تتحقق منه.",
+  "whatsapp.wait.untraced": "جزء مما قرأه WonderHome غير موجود فيما أرسلته، لذلك لم يُضَف شيء: إنه ينتظر مراجعتك في HomeSend.",
   "whatsapp.addedHealthRecord": "سجلًا صحيًا",
   "whatsapp.addedMoneyEntry": "إدخالًا",
   "whatsapp.tooLarge": "⚠️ هذا الملف كبير جدًا على WonderHome — يُرجى إرسال ملف أصغر من 10 ميغابايت.",

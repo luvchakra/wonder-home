@@ -34,6 +34,7 @@ export const whatsappEn = {
   "whatsapp.wait.approvalGroceries": "Your household has groceries set to Wait for Approval, so it's waiting in HomeSend for you to approve.",
   "whatsapp.wait.approvalSchool": "Your household has school work set to Wait for Approval, so it's waiting in HomeSend for you to approve.",
   "whatsapp.wait.belowBar": "WonderHome adds things on its own only when it's more than {percent}% sure, so it's waiting in HomeSend for you to check.",
+  "whatsapp.wait.untraced": "Part of what WonderHome read isn't in what you sent, so nothing was added: it's waiting in HomeSend for you to check.",
   "whatsapp.addedHealthRecord": "a health record",
   "whatsapp.addedMoneyEntry": "an entry",
   "whatsapp.tooLarge": "⚠️ That file is too large for WonderHome — please send one under 10MB.",

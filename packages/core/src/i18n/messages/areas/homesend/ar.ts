@@ -452,6 +452,7 @@ export const homesendAr: AreaCatalog<typeof homesendEn> = {
   "homesend.why.duplicate": "قد يكون نسخة من {title}",
   "homesend.why.update": "قد يغيّر {title}",
   "homesend.why.photo": "صورة أو ملف",
+  "homesend.why.untraced": "قرأ شيئًا غير موجود فيما أُرسل",
   "homesend.why.instructions": "كان فيه تعليمات موجهة إلى WonderHome",
   "homesend.why.byEmail": "وصل بالبريد",
   "homesend.why.check": "جاهز لموافقتك",

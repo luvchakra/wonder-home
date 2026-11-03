@@ -27,6 +27,13 @@ export type ReadingCheck = {
   verified: boolean;
   /** What could not be checked, in the household's words: "the amount", "the date". Empty when verified. */
   unverified: string[];
+  /**
+   * What the reading names that the words sent don't contain — a name, an
+   * amount, a payee, a shop or a date read in, not just left out. Such a
+   * reading is never added, not even as Checking (the owner, 2026-11-03,
+   * decision 3). Absent on readings stored before it existed.
+   */
+  untraced?: string[];
 };
 
 const MONTHS = ["jan", "feb", "mar", "apr", "may", "jun", "jul", "aug", "sep", "oct", "nov", "dec"];
@@ -117,13 +124,14 @@ export function checkReading(reading: IntakeExtraction, sourceText: string | nul
 
   const found = new Set(words(sourceText));
   const written = numbers(sourceText);
-  if (reading.title?.trim() && !named(reading.title, found)) unverified.push("the name");
-  if (reading.amount !== null && !written.some((value) => Math.abs(value - reading.amount!) < 0.005)) unverified.push("the amount");
-  if (reading.payee?.trim() && !named(reading.payee, found)) unverified.push("who it's paid to");
-  if (reading.merchant?.trim() && !named(reading.merchant, found)) unverified.push("the shop");
+  const untraced: string[] = [];
+  if (reading.title?.trim() && !named(reading.title, found)) untraced.push("the name");
+  if (reading.amount !== null && !written.some((value) => Math.abs(value - reading.amount!) < 0.005)) untraced.push("the amount");
+  if (reading.payee?.trim() && !named(reading.payee, found)) untraced.push("who it's paid to");
+  if (reading.merchant?.trim() && !named(reading.merchant, found)) untraced.push("the shop");
   const day = reading.dueDate ?? reading.documentDate;
-  if (reading.dateText?.trim() ? !phrased(reading.dateText, found) : day ? !dated(day, found) : false) unverified.push("the date");
+  if (reading.dateText?.trim() ? !phrased(reading.dateText, found) : day ? !dated(day, found) : false) untraced.push("the date");
 
-  const distinct = [...new Set(unverified)];
-  return { verified: distinct.length === 0, unverified: distinct };
+  const distinct = [...new Set([...unverified, ...untraced])];
+  return { verified: distinct.length === 0, unverified: distinct, untraced };
 }

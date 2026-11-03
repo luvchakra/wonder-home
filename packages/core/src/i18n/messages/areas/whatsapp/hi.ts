@@ -36,6 +36,7 @@ export const whatsappHi: AreaCatalog<typeof whatsappEn> = {
   "whatsapp.wait.approvalGroceries": "आपके परिवार ने किराने को \"मंज़ूरी का इंतज़ार\" पर रखा है, इसलिए यह HomeSend में आपकी मंज़ूरी का इंतज़ार कर रहा है।",
   "whatsapp.wait.approvalSchool": "आपके परिवार ने स्कूल के काम को \"मंज़ूरी का इंतज़ार\" पर रखा है, इसलिए यह HomeSend में आपकी मंज़ूरी का इंतज़ार कर रहा है।",
   "whatsapp.wait.belowBar": "WonderHome अपने आप तभी जोड़ता है जब वह {percent}% से ज़्यादा पक्का हो, इसलिए यह HomeSend में आपके देखने का इंतज़ार कर रहा है।",
+  "whatsapp.wait.untraced": "WonderHome ने जो पढ़ा उसका कुछ हिस्सा आपके भेजे संदेश में नहीं है, इसलिए कुछ नहीं जोड़ा गया: यह HomeSend में आपकी जाँच का इंतज़ार कर रहा है।",
   "whatsapp.addedHealthRecord": "एक स्वास्थ्य रिकॉर्ड",
   "whatsapp.addedMoneyEntry": "एक प्रविष्टि",
   "whatsapp.tooLarge": "⚠️ यह फ़ाइल WonderHome के लिए बहुत बड़ी है — कृपया 10MB से छोटी फ़ाइल भेजें।",

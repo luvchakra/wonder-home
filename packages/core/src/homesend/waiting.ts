@@ -60,6 +60,7 @@ export type WaitWhy =
   | { code: "photo" }
   | { code: "instructions" }
   | { code: "by_email" }
+  | { code: "untraced" }
   | { code: "check" };
 
 export type WaitEvidence = {
@@ -107,6 +108,8 @@ export function whyItWaits(evidence: WaitEvidence): WaitWhy {
   if (understanding?.safety.instructionsIgnored) return { code: "instructions" };
   if ((extracted?.needs?.length ?? 0) > 0) return { code: "several" };
   if (!evidence.memberInitiated) return { code: "by_email" };
+  // Read something the words sent don't contain: nothing was added (the owner, 2026-11-03, decision 3).
+  if (confirmation.wait?.reason === "untraced") return { code: "untraced" };
   if (confirmation.wait?.reason === "wait_for_approval") return { code: "approval", area: confirmation.wait.area ?? "groceries" };
   if (confirmation.wait?.reason === "below_bar") return { code: "below_bar", percent: confirmation.wait.percent ?? 95 };
   return { code: "check" };
