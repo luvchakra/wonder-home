@@ -13,6 +13,10 @@ decision that shapes later work each earns a note, written before moving on.
 | 2026-11-03 | [Home address: flat / house / wing line](2026-11-03-home-address-unit-line.md) |
 |---|---|
 <<<<<<< Updated upstream
+<<<<<<< Updated upstream
+=======
+| 2026-11-03 | [Settings search goes deep](2026-11-03-settings-deep-search.md) |
+>>>>>>> Stashed changes
 | 2026-11-03 | [Settings: Assistant & voice card starts collapsed](2026-11-03-settings-assistant-collapsed.md) |
 =======
 | 2026-11-03 | [Notifications: crisp rows, grouped, in sections](2026-11-03-notifications-crisp.md) |

@@ -19,6 +19,7 @@
     "./household/*": "./src/household/*.ts",
     "./home/*": "./src/home/*.ts",
     "./help/*": "./src/help/*.ts",
+    "./settings-search/*": "./src/settings-search/*.ts",
     "./school/*": "./src/school/*.ts",
     "./portals/*": "./src/portals/*.ts",
     "./connections/*": "./src/connections/*.ts",

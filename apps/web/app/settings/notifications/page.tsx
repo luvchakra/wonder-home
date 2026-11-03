@@ -29,6 +29,7 @@ import { reasonWords } from "../../_lib/channel-check-words";
 import { channelPreferenceLabels, reminderPresetLabel, reminderSettingsLabels } from "../../_lib/settings-labels";
 import { DeliverySection } from "./delivery-section";
 import { HouseholdNotificationsSection } from "./household-section";
+import { OpenOnHash } from "../../_components/open-on-hash";
 
 export const metadata = { title: "Notifications" };
 export const dynamic = "force-dynamic";
@@ -137,12 +138,14 @@ export default async function NotificationSettingsPage() {
       title={t("settingsPage.notifications.title")}
     >
       <div className="space-y-6">
+        <OpenOnHash />
         <header className="wh-rise">
           <h1 className="text-[1.625rem] font-bold tracking-tight sm:text-3xl">{t("settingsPage.notifications.heading")}</h1>
           <p className="mt-0.5 text-sm text-[var(--wh-foreground-muted)]">{t("settingsPage.notifications.lede")}</p>
         </header>
 
         {/* The notification center (the owner, 2026-10-22): each kind's on/off, timing and channels in one place. */}
+<div id="notification-center" className="scroll-mt-20">
         <NotificationCenterCard
           householdId={membership.household.id}
           kinds={NOTIFICATION_CATEGORIES.map((category) => {
@@ -180,12 +183,16 @@ export default async function NotificationSettingsPage() {
             failed: t("channelRouting.failed"),
           }}
         />
+</div>
 
         {/* Keyed on what is saved, so a saved change redraws the form with it. */}
+<div id="quiet-hours" className="scroll-mt-20">
         <QuietHoursCard
           key={quiet ? `${quiet.from}-${quiet.until}` : "off"}
           householdId={membership.household.id} quiet={quiet} times={times} timeZone={timeZone} save={saveQuietHoursAction} labels={reminderLabels} />
+</div>
 
+<div id="smart-reminders" className="scroll-mt-20">
         <SmartRemindersCard
           key={`${smart.dailyDigest}-${smart.learnTiming}`}
           householdId={membership.household.id}
@@ -194,8 +201,9 @@ export default async function NotificationSettingsPage() {
           save={saveSmartRemindersAction}
           labels={reminderLabels}
         />
+</div>
 
-        <Card className="space-y-3">
+        <Card id="routing" className="scroll-mt-20 space-y-3">
           {routing.length > 0 ? (
             // Folded like the playbook cards (the owner, 2026-10-29): the owned-outcomes
             // list was a wall that pushed the channels below off-screen. Native
@@ -238,6 +246,7 @@ export default async function NotificationSettingsPage() {
         </Card>
 
         {/* Push on this phone first: it is what reaches someone in time (story 23-015). */}
+<div id="push" className="scroll-mt-20">
         <PushDeviceCard
           householdId={membership.household.id}
           publicKey={webPushPublicKey()}
@@ -260,8 +269,9 @@ export default async function NotificationSettingsPage() {
             otherDevices: t("push.device.otherDevices", { count: "{count}" }),
           }}
         />
+</div>
 
-        <h2 className="pt-2 text-base font-semibold">{t("settingsPage.notifications.channels")}</h2>
+        <h2 id="channels" className="scroll-mt-20 pt-2 text-base font-semibold">{t("settingsPage.notifications.channels")}</h2>
         {emailOffered ? null : <p className="text-sm text-[var(--wh-foreground-muted)]">{t("settingsPage.notifications.noEmail")}</p>}
         <div className="space-y-4">
           {preferences.filter((preference) => (preference.channel !== "email" || emailOffered) && householdAllows(preference.channel)).map((preference) => (

@@ -28,6 +28,7 @@ import {
 } from "../../_components/privacy-forms";
 import { RetentionWindowPicker } from "../../_components/retention-window-picker";
 import { formatDate, requireSession } from "../../_lib/session";
+import { OpenOnHash } from "../../_components/open-on-hash";
 import {
   cancelDeletionLabels,
   confirmItIsYouLabels,
@@ -93,6 +94,7 @@ export default async function PrivacyCentrePage() {
       title={t("settingsPage.privacy.title")}
     >
       <div className="space-y-6">
+        <OpenOnHash />
         <header className="wh-rise">
           <h1 className="text-[1.625rem] font-bold tracking-tight sm:text-3xl">{t("settingsPage.privacy.heading")}</h1>
           <p className="mt-0.5 text-sm text-[var(--wh-foreground-muted)]">{t("settingsPage.privacy.lede")}</p>
@@ -119,7 +121,7 @@ export default async function PrivacyCentrePage() {
           </Card>
         </section>
 
-        <section>
+        <section id="retention" className="scroll-mt-20">
           <SectionHeader title={t("settingsPage.privacy.section.retention")} />
           <Card className="p-2">
             <ul className="divide-y divide-[var(--wh-border)]">
@@ -146,7 +148,7 @@ export default async function PrivacyCentrePage() {
           </Card>
         </section>
 
-        <section>
+        <section id="export" className="scroll-mt-20">
           <SectionHeader title={t("settingsPage.privacy.section.export")} />
           <Card className="space-y-4">
             <div className="flex items-start gap-3">
@@ -170,7 +172,7 @@ export default async function PrivacyCentrePage() {
           </Card>
         </section>
 
-        <section>
+        <section id="delete" className="scroll-mt-20">
           <SectionHeader title={t("settingsPage.privacy.section.delete")} />
           <Card className="space-y-4">
             <div className="flex items-start gap-3">

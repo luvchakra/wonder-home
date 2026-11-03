@@ -21,6 +21,7 @@ import { MemberAvatarControl } from "../../_components/member-avatar-control";
 import { MemberProfileForm } from "../../_components/member-profile-form";
 import { officeField } from "../../_lib/office-field";
 import { requireSession, roleWords } from "../../_lib/session";
+import { OpenOnHash } from "../../_components/open-on-hash";
 
 export const metadata = { title: "Profile" };
 export const dynamic = "force-dynamic";
@@ -110,6 +111,7 @@ export default async function ProfilePage() {
   return (
     <AppShell active="more" viewer={viewer} secondary={secondary} pathname="/settings/profile" back={{ href: "/more", label: t("common.back") }} title={t("nav.item.profile")}>
       <div className="space-y-4">
+        <OpenOnHash />
         <header className="wh-rise hidden lg:block">
           <h1 className="text-[1.625rem] font-bold tracking-tight sm:text-3xl">{t("nav.item.profile")}</h1>
           <p className="mt-0.5 text-sm text-[var(--wh-foreground-muted)]">{t("profileHome.lede")}</p>
@@ -177,7 +179,7 @@ export default async function ProfilePage() {
           <SettingsRows rows={privacy} />
         </CollapsibleSection>
 
-        <section>
+        <section id="account" className="scroll-mt-20">
           <SectionHeader title={t("settingsHome.group.account")} />
           <form action={signOut}>
             <Button type="submit" variant="secondary" className="w-full gap-2">

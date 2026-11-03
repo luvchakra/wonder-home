@@ -22,6 +22,7 @@ import { cancelPlanLabels, planFormLabels, planPriceNote, planPriceText } from "
 import { formatDate, requireSession } from "../../_lib/session";
 import { ReturnLink, returnLabelKey } from "../../_components/return-link";
 import { safeReturnTo } from "../../_lib/return-to";
+import { OpenOnHash } from "../../_components/open-on-hash";
 
 export const metadata = { title: "Your plan" };
 export const dynamic = "force-dynamic";
@@ -74,6 +75,7 @@ export default async function PlanSettingsPage({ searchParams }: { searchParams:
   return (
     <AppShell active="more" viewer={viewer} secondary={secondary} pathname="/settings/plan" back={{ href: "/settings", label: t("settingsPage.backToSettings") }} title={t("settingsPage.plan.title")}>
       <div className="space-y-6">
+        <OpenOnHash />
         <header className="wh-rise">
           <h1 className="text-[1.625rem] font-bold tracking-tight sm:text-3xl">{t("settingsPage.plan.title")}</h1>
           <p className="mt-0.5 text-sm text-[var(--wh-foreground-muted)]">{t("settingsPage.plan.lede", { household: membership.household.name, plan: current })}</p>
@@ -84,7 +86,7 @@ export default async function PlanSettingsPage({ searchParams }: { searchParams:
         {checkout === "cancelled" ? <Alert tone="info">{t("settingsPage.plan.checkoutCancelled")}</Alert> : null}
 
         {/* The plan the household is on, and what it costs — the primary card (rule 19). */}
-        <Card className="flex gap-3.5 p-4">
+        <Card id="plan-card" className="flex scroll-mt-20 gap-3.5 p-4">
           <IconTile icon={Sparkles} tone="ai" size="lg" />
           <div className="min-w-0 flex-1 space-y-1">
             <p className="flex flex-wrap items-center gap-2 text-lg font-semibold">
@@ -123,7 +125,7 @@ export default async function PlanSettingsPage({ searchParams }: { searchParams:
         </Card>
 
         {metered.length > 0 || trialLines.length > 0 ? (
-          <section>
+          <section id="usage" className="scroll-mt-20">
             <SectionHeader title={t("settingsPage.plan.usage")} />
             <MetricGrid
               metrics={metered.map((feature) =>
@@ -143,7 +145,7 @@ export default async function PlanSettingsPage({ searchParams }: { searchParams:
         ) : null}
 
         {plans.length > 0 ? (
-          <section className="space-y-3">
+          <section id="choose" className="scroll-mt-20 space-y-3">
             <SectionHeader title={t("settingsPage.plan.choose")} />
             {prices.length > 0 ? (
               <SegmentedControl
@@ -187,7 +189,7 @@ export default async function PlanSettingsPage({ searchParams }: { searchParams:
         ) : null}
 
         {manages ? (
-          <section>
+          <section id="billing" className="scroll-mt-20">
             <SectionHeader title={t("settingsPage.plan.billing")} />
             <Card className="p-2">
               <ul>

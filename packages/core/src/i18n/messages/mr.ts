@@ -13,6 +13,7 @@ import { eventsMr } from "./areas/events/mr";
 import { calendarMr } from "./areas/calendar/mr";
 import { memberInviteMr } from "./areas/memberinvite/mr";
 import { whatsNewMr } from "./areas/whatsnew/mr";
+import { settingsSearchMr } from "./areas/settings-search/mr";
 import { todayMr } from "./areas/today/mr";
 import { chatMr } from "./areas/chat/mr";
 import { amafMr } from "./areas/amaf/mr";
@@ -1081,6 +1082,7 @@ export const mr: Catalog = {
   ...eventsMr,
   ...calendarMr,
   ...whatsNewMr,
+  ...settingsSearchMr,
   ...todayMr,
   ...chatMr,
   ...amafMr,

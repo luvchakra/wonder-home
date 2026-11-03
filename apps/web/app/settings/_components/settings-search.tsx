@@ -1,32 +1,22 @@
 "use client";
 
-import { ChevronRight, Search, X } from "lucide-react";
+import { ChevronRight, MessageCircle, Search, X } from "lucide-react";
 import Link from "next/link";
-import { useMemo, useState, type MouseEvent, type ReactNode } from "react";
+import { Fragment, useCallback, useMemo, useRef, useState, type MouseEvent, type ReactNode } from "react";
 
-export type SettingsSearchEntry = {
-  id: string;
-  title: string;
-  /** The card or page the setting lives in, shown under the title. */
-  group: string;
-  meta?: string;
-  href: string;
-  icon: ReactNode;
-};
+import { highlight, searchSettings, type SearchItem } from "@wonderhome/core/settings-search/match";
 
 type Props = {
-  entries: SettingsSearchEntry[];
-  labels: { placeholder: string; clear: string; none: string };
+  labels: { placeholder: string; clear: string; none: string; loading: string; askHomeTalk: string; askBody: string };
   /** The cards, shown while nothing is typed. */
   children: ReactNode;
 };
 
-const fold = (text: string) => text.normalize("NFD").replace(/\p{M}/gu, "").toLowerCase();
-
 /**
  * A result inside this page (`/settings#playbook`) is a card that is not on screen while results
  * are: clear the search so the cards return, then point the URL at the card and let
- * `OpenOnHash` unfold and scroll to it. Results on other pages are ordinary links.
+ * `OpenOnHash` unfold, scroll to, focus and flash it. Results on other pages are ordinary links
+ * and the page they open does the same.
  */
 function openHere(event: MouseEvent<HTMLAnchorElement>, href: string, clear: () => void) {
   if (!href.startsWith("/settings#") || event.metaKey || event.ctrlKey || event.shiftKey) return;
@@ -38,28 +28,49 @@ function openHere(event: MouseEvent<HTMLAnchorElement>, href: string, clear: () 
   });
 }
 
+function Marked({ text, query }: { text: string; query: string }) {
+  return (
+    <>
+      {highlight(text, query).map((piece, index) =>
+        piece.hit ? (
+          <mark key={index} className="rounded-sm bg-[var(--wh-primary-soft,#dbeafe)] px-0.5 text-inherit">
+            {piece.text}
+          </mark>
+        ) : (
+          <Fragment key={index}>{piece.text}</Fragment>
+        ),
+      )}
+    </>
+  );
+}
+
 /**
- * Search at the top of Settings, like a phone's settings: type and the cards
- * give way to a flat list of matching settings, each one tap from its editor.
- * Every typed word must appear in the title, group or meta; titles that start
- * with a word rank first. It filters a small list already in the page, so
- * results appear on every keystroke with no request.
+ * Search at the top of Settings: type and the cards give way to a flat list of the individual
+ * settings that match (every field, toggle and sub-page, however deep), each with its
+ * breadcrumb and one tap from the control itself. The index is the person's own (their
+ * language, only what they may use) and is fetched the first time the box is used, so no page
+ * carries it. Matching is in `@wonderhome/core/settings-search/match`.
  */
-export function SettingsSearch({ entries, labels, children }: Props) {
+export function SettingsSearch({ labels, children }: Props) {
   const [query, setQuery] = useState("");
-  const terms = fold(query).split(/\s+/).filter(Boolean);
+  const [items, setItems] = useState<SearchItem[] | null>(null);
+  const [failed, setFailed] = useState(false);
+  const started = useRef(false);
 
-  const indexed = useMemo(() => entries.map((entry) => ({ entry, title: fold(entry.title), rest: fold(`${entry.group} ${entry.meta ?? ""}`) })), [entries]);
+  const load = useCallback(() => {
+    if (started.current) return;
+    started.current = true;
+    fetch("/settings/search-index", { credentials: "same-origin" })
+      .then((response) => (response.ok ? response.json() : Promise.reject(new Error("index"))))
+      .then((body: { items: SearchItem[] }) => setItems(body.items))
+      .catch(() => {
+        started.current = false;
+        setFailed(true);
+      });
+  }, []);
 
-  const results = useMemo(() => {
-    if (terms.length === 0) return [];
-    return indexed
-      .filter(({ title, rest }) => terms.every((term) => title.includes(term) || rest.includes(term)))
-      .map(({ entry, title }) => ({ entry, rank: terms.every((term) => title.split(/\s+/).some((word) => word.startsWith(term))) ? 0 : terms.every((term) => title.includes(term)) ? 1 : 2 }))
-      .sort((a, b) => a.rank - b.rank)
-      .map(({ entry }) => entry);
-    // eslint-disable-next-line react-hooks/exhaustive-deps -- `terms` is derived from `query`
-  }, [indexed, query]);
+  const typed = query.trim();
+  const results = useMemo(() => (items && typed ? searchSettings(items, typed) : []), [items, typed]);
 
   return (
     <>
@@ -68,7 +79,11 @@ export function SettingsSearch({ entries, labels, children }: Props) {
         <input
           type="search"
           value={query}
-          onChange={(event) => setQuery(event.target.value)}
+          onFocus={load}
+          onChange={(event) => {
+            load();
+            setQuery(event.target.value);
+          }}
           placeholder={labels.placeholder}
           aria-label={labels.placeholder}
           autoComplete="off"
@@ -87,21 +102,31 @@ export function SettingsSearch({ entries, labels, children }: Props) {
         ) : null}
       </div>
 
-      {terms.length === 0 ? (
+      {!typed ? (
         children
-      ) : results.length === 0 ? (
+      ) : !items ? (
         <p role="status" className="px-2 py-6 text-center text-sm text-[var(--wh-foreground-muted)]">
-          {labels.none.replace("{query}", query.trim())}
+          {failed ? labels.none.replace("{query}", typed) : labels.loading}
         </p>
+      ) : results.length === 0 ? (
+        <div role="status" className="space-y-3 px-2 py-6 text-center">
+          <p className="text-sm text-[var(--wh-foreground-muted)]">{labels.none.replace("{query}", typed)}</p>
+          <Link href={`/ai?q=${encodeURIComponent(typed)}`} className="inline-flex min-h-11 items-center gap-2 rounded-full border border-[var(--wh-border)] bg-[var(--wh-surface)] px-4 text-sm font-medium hover:bg-[var(--wh-surface-muted)]">
+            <MessageCircle aria-hidden className="size-4" />
+            {labels.askHomeTalk}
+          </Link>
+          <p className="text-xs text-[var(--wh-foreground-subtle)]">{labels.askBody}</p>
+        </div>
       ) : (
         <ul className="divide-y divide-[var(--wh-border)] overflow-hidden rounded-[var(--wh-radius)] border border-[var(--wh-border)] bg-[var(--wh-surface)]">
-          {results.map((entry) => (
-            <li key={entry.id}>
-              <Link href={entry.href} onClick={(event) => openHere(event, entry.href, () => setQuery(""))} className="flex min-h-14 items-center gap-3 px-3 py-2 hover:bg-[var(--wh-surface-muted)]">
-                {entry.icon}
+          {results.map(({ item }) => (
+            <li key={item.id}>
+              <Link href={item.href} onClick={(event) => openHere(event, item.href, () => setQuery(""))} className="flex min-h-14 items-center gap-3 px-3 py-2 hover:bg-[var(--wh-surface-muted)]">
                 <span className="min-w-0 flex-1">
-                  <span className="block text-sm font-medium">{entry.title}</span>
-                  <span className="block text-xs text-[var(--wh-foreground-subtle)]">{entry.group}</span>
+                  <span className="block text-sm font-medium break-words">
+                    <Marked text={item.label} query={typed} />
+                  </span>
+                  {item.crumbs.length > 0 ? <span className="block text-xs break-words text-[var(--wh-foreground-subtle)]">{item.crumbs.join(" › ")}</span> : null}
                 </span>
                 <ChevronRight aria-hidden className="size-4 shrink-0 text-[var(--wh-foreground-subtle)] rtl:rotate-180" />
               </Link>

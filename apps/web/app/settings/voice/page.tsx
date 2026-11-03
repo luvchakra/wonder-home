@@ -20,6 +20,7 @@ import { geminiFix, geminiLiveGate } from "../../_lib/gemini-live";
 import { safeReturnTo } from "../../_lib/return-to";
 import { formatDate, requireSession } from "../../_lib/session";
 import { speechSourceWords, voiceFormLabels, voiceSummary } from "../../_lib/settings-labels";
+import { OpenOnHash } from "../../_components/open-on-hash";
 
 export const metadata = { title: "Voice" };
 export const dynamic = "force-dynamic";
@@ -82,6 +83,7 @@ export default async function VoiceSettingsPage({ searchParams }: { searchParams
       title={t("settingsPage.voice.title")}
     >
       <div className="space-y-6">
+        <OpenOnHash />
         <header className="wh-rise">
           <h1 className="text-[1.625rem] font-bold tracking-tight sm:text-3xl">{t("settingsPage.voice.heading")}</h1>
           <p className="mt-0.5 text-sm text-[var(--wh-foreground-muted)]">{t("settingsPage.voice.lede")}</p>

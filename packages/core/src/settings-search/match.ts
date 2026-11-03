@@ -81,7 +81,8 @@ function termScore(c: Compiled, term: string): number {
   if (startsWithWord(c.crumbWords, term)) return 30;
   if (startsWithWord(c.descWords, term)) return 24;
   if (typo(c.labelWords, term)) return 22;
-  if (typo(c.keywordWords, term) || typo(c.labelEnWords, term) || typo(c.keywordEnWords, term)) return 18;
+  if (typo(c.keywordWords, term)) return 22;
+  if (typo(c.labelEnWords, term) || typo(c.keywordEnWords, term)) return 18;
   if (typo(c.descWords, term)) return 8;
   return 0;
 }
