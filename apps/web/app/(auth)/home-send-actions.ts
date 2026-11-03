@@ -1,5 +1,6 @@
 "use server";
 
+import { after } from "next/server";
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
 
@@ -33,6 +34,7 @@ import { prepareReview } from "./home-send-review";
 import { autoApplyHomeSendItem } from "./home-send-auto";
 import { addChildFromNotice, addGrocery, createNew, recordReceipt, reviseExisting, routeSchema, type RouteInput } from "./home-send-writes";
 import { formUuid } from "../_lib/form-input";
+import { reconcileRemindersNow } from "../_lib/reminders";
 
 /**
  * HomeSend's entry points (Wave 3): upload a photo, PDF, text file or voice
@@ -706,6 +708,8 @@ export async function confirmHomeSendEntryAction(_previous: RouteHomeItemState, 
     const supabase = await createClient();
     const membership = await requireMembership(supabase, parsed.data.householdId);
     const moved = await confirmHomeSendEntry(supabase, parsed.data.householdId, parsed.data.itemId, { memberId: membership.memberId, how: "person" });
+    // Its held reminders start now, not at the next clock pass (14-062); after the response.
+    if (moved > 0) after(() => reconcileRemindersNow(parsed.data.householdId, { force: true }));
     revalidateDomains();
     return moved > 0 ? { notice: "Thanks — it's confirmed, and its reminders are on." } : { notice: "That one is already confirmed." };
   } catch (thrown) {

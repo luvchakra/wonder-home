@@ -6,6 +6,7 @@ import { useActionState, useRef, useState, type ReactNode } from "react";
 
 import { suggestedIntakeKind } from "@wonderhome/core/ai/intake-kind-check";
 import { gateTranscript } from "@wonderhome/core/homesend/audio";
+import { questionsLeft } from "@wonderhome/core/homesend/checking";
 import type { HomeSendChange } from "@wonderhome/core/homesend/items";
 import { ACCEPTED_UPLOAD_TYPES } from "@wonderhome/core/homesend/normalize";
 import type { DocumentPlan } from "@wonderhome/core/homesend/plan";
@@ -656,6 +657,8 @@ export function HomeSendInbox({
                 const statusLabel = words.status[status];
                 // Added below the bar and still being checked (the owner, 2026-11-03): says so in words, with "Looks right".
                 const checking = itemChanges.some((change) => !change.undoneAt && change.confirmationState === "unconfirmed");
+                // "Added · checking 1 question" while HomeTalk still asks about it (14-062); "Checking" once it waits on a look.
+                const left = checking ? questionsLeft((item.understanding as { checking?: unknown } | null)?.checking) : 0;
                 const onRecord =
                   status === "updated" ? words.updatedOnRecord : status === "cancelled" ? words.cancelledOnRecord : statusLabel;
                 return (
@@ -667,7 +670,7 @@ export function HomeSendInbox({
                           {title}
                           {checking ? (
                             <Badge tone="attention" className="ml-2 align-middle">
-                              {words.checking}
+                              {left === 0 ? words.checking : left === 1 ? words.checkingOne : fillIn(words.checkingMany, { count: String(left) })}
                             </Badge>
                           ) : null}
                         </span>

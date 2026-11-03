@@ -10,6 +10,8 @@ import {
 
 import { may } from "@wonderhome/core/billing/repository";
 import { listAppointments } from "@wonderhome/core/health/appointments";
+import { unconfirmedEntityIds } from "@wonderhome/core/homesend/changes";
+import { Badge } from "@wonderhome/core/ui/pill";
 import {
   healthAppointmentsAgenda,
   healthCheckupsAgenda,
@@ -109,7 +111,7 @@ export default async function HealthPage({
   const active = tab === "privacy" ? "privacy" : "overview";
   const memberId = membership.memberId;
 
-  const [profile, consents, members, appointments, issues, checkups, records, vitals, routines, fitnessGoals, fitnessSessions, householdConsents, guardedChildIds, recentReadings] = await Promise.all([
+  const [profile, consents, members, appointments, issues, checkups, records, vitals, routines, fitnessGoals, fitnessSessions, householdConsents, guardedChildIds, recentReadings, checkingIds] = await Promise.all([
     getHealthProfile(supabase, householdId, memberId).catch(() => null),
     listHealthConsents(supabase, householdId, memberId).catch(() => []),
     listMembers(supabase, householdId, membership.household.ownerMemberId).catch(() => []),
@@ -130,6 +132,8 @@ export default async function HealthPage({
     listGuardedChildIds(supabase, householdId, memberId),
     // What each attached report says (story 21-012); empty until the table reaches the project.
     listRecentReadings(supabase, householdId).catch(() => ({ available: false, readings: [] })),
+    // Records HomeSend added and is still checking (14-062): "Checking" on the row itself.
+    unconfirmedEntityIds(supabase, householdId).catch(() => new Set<string>()),
   ]);
 
   // The sheets' words in the viewer's language; the vital and activity names
@@ -452,7 +456,14 @@ export default async function HealthPage({
                                   <>
                                     <IconTile icon={section.icon} tone={section.tone} />
                                     <span className="min-w-0 flex-1">
-                                      <span className="block text-sm font-medium break-words">{item.title}</span>
+                                      <span className="block text-sm font-medium break-words">
+                                        {item.title}
+                                        {checkingIds.has(record.id) ? (
+                                          <Badge tone="attention" className="ml-2 align-middle">
+                                            {t("homesend.history.checking")}
+                                          </Badge>
+                                        ) : null}
+                                      </span>
                                       <span className="block text-xs break-words text-[var(--wh-foreground-subtle)]">{item.reason}</span>
                                     </span>
                                   </>

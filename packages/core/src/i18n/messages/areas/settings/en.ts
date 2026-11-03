@@ -21,7 +21,7 @@ export const settingsEn = {
   "settingsPage.ai.confirmRequested.on": "On: HomeTalk asks you first, in the conversation, before it plans, adds or changes anything you asked for.",
   "settingsPage.ai.confirmRequested.off": "Off: when you ask HomeTalk to plan, add or change something, it does it straight away and tells you how to undo it. Paying, ordering and access changes always wait for your OK.",
   "settingsPage.ai.autoAdd.title": "How sure HomeSend must be to add on its own",
-  "settingsPage.ai.autoAdd.detail": "For outcomes set to Pre Approved, what you send on WhatsApp, tell HomeTalk or share any other way — photos and files too — is added directly. When WonderHome is more sure than this, that's all; when it isn't, the entry is marked Checking and its reminders wait until you say it's right. Bills, receipts and health documents wait for you unless you allow them below.",
+  "settingsPage.ai.autoAdd.detail": "For outcomes set to Pre Approved, what you send on WhatsApp, tell HomeTalk or share any other way — photos and files too — is added directly. When WonderHome is more sure than this, that's all; when it isn't, the entry is marked Checking and its reminders wait until you say it's right. Bills, receipts and health documents wait for you unless you allow them below. While it's Checking, HomeTalk asks the sender up to three quick questions (on WhatsApp too) until it is sure enough; something that names what your message doesn't contain is never added.",
   "settingsPage.ai.autoAdd.option": "More than {percent}%",
   "settingsPage.ai.autoAdd.optionDefault": "More than {percent}% (recommended)",
   "settingsPage.ai.directAdd.money.title": "Add money entries directly",

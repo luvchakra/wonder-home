@@ -22,6 +22,7 @@ import { Card } from "@wonderhome/core/ui/card";
 import { groceryIcon } from "@wonderhome/core/ui/grocery-row";
 import { IconTile } from "@wonderhome/core/ui/icon-tile";
 import { Badge } from "@wonderhome/core/ui/pill";
+import { unconfirmedEntityIds } from "@wonderhome/core/homesend/changes";
 import { QuoteCard } from "@wonderhome/core/ui/quote-card";
 import { SectionHeader } from "@wonderhome/core/ui/section-header";
 import { EmptyState } from "@wonderhome/core/ui/states";
@@ -94,13 +95,15 @@ export default async function GroceryItemPage({
   }
 
   const words = groceryWords(t, viewer.language);
-  const [purchases, history, all] = await Promise.all([
+  const [purchases, history, all, checkingIds] = await Promise.all([
     listPurchases(supabase, householdId, {
       consumableId: item.id,
       limit: 5,
     }).catch(() => []),
     stockHistory(supabase, householdId, item.id, 8).catch(() => []),
     listConsumables(supabase, householdId).catch(() => []),
+    // Added by HomeSend and still being checked (14-062): "Checking" beside its status.
+    unconfirmedEntityIds(supabase, householdId).catch(() => new Set<string>()),
   ]);
   const raw = all.find((entry) => entry.id === item.id);
   const adult = membership.memberType === "adult";
@@ -197,6 +200,7 @@ export default async function GroceryItemPage({
               {item.category}
             </p>
             <Badge tone={STATUS_TONE[status]}>{words.status[status]}</Badge>
+            {checkingIds.has(item.id) ? <Badge tone="attention">{t("homesend.history.checking")}</Badge> : null}
             <p className="text-sm text-[var(--wh-foreground-muted)]">
               {t("grocery.item.lede")}
             </p>

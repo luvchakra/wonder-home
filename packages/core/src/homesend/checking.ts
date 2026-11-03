@@ -232,6 +232,13 @@ export function afterAnswer(state: CheckingState, outcome: CheckOutcome, via: Ch
   return { ...moved, open: null, done: overTheBar(moved) ? "confirmed" : "please_check" };
 }
 
+/** How many questions are still to answer about an entry being checked; 0 when none waits (14-062). */
+export function questionsLeft(value: unknown): number {
+  const state = readCheckingState(value);
+  if (!state?.open || state.done) return 0;
+  return Math.max(0, state.planned.length - state.open.ordinal + 1);
+}
+
 /** A "no" to a confirm: the same question, asking what it should be — not a new one. */
 export function askCorrection(state: CheckingState): CheckingState {
   return state.open ? { ...state, open: { ...state.open, mode: "correct" } } : state;

@@ -79,6 +79,8 @@ export const homesendEs: AreaCatalog<typeof homesendEn> = {
   "homesend.history.cancelledOnRecord": "Se canceló el que ya estaba registrado",
   "homesend.history.addedOnItsOwn": "Añadido automáticamente",
   "homesend.history.checking": "En revisión",
+  "homesend.history.checkingOne": "Añadido · 1 pregunta pendiente",
+  "homesend.history.checkingMany": "Añadido · {count} preguntas pendientes",
   "homesend.history.looksRight": "Está bien",
   "homesend.history.looksRightAria": "Confirmar que {title} está bien",
   "homesend.history.planned": "{action}: {title} · {reason}",
