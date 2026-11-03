@@ -705,7 +705,7 @@ export const settingsZh: AreaCatalog<typeof settingsEn> = {
   "settingsHome.notifications.quiet": "你的提醒和渠道 · 免打扰 {from}:00 – {until}:00",
   "settingsHome.voiceAssistants.title": "语音助手",
   "settingsHome.voiceAssistants.meta": "Alexa 和 Gemini Voice，以及各自可以做什么",
-  "settingsHome.ai.meta": "{source} · 家庭密钥与数据使用",
+  "settingsHome.ai.meta": "{source} · 数据使用",
   "settingsHome.privacy.title": "隐私与安全",
   "settingsHome.privacy.meta": "数据使用、导出和删除",
   "settingsHome.instamart.connected": "已连接 · 订购你的待买清单",

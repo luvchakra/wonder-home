@@ -751,7 +751,7 @@ export const settingsAr: AreaCatalog<typeof settingsEn> = {
   "settingsHome.notifications.quiet": "تذكيراتك وقنواتك · وقت الهدوء {from}:00 – {until}:00",
   "settingsHome.voiceAssistants.title": "المساعدات الصوتية",
   "settingsHome.voiceAssistants.meta": "Alexa وGemini Voice، وما يمكن لكل منهما فعله",
-  "settingsHome.ai.meta": "{source} · مفتاح المنزل واستخدام البيانات",
+  "settingsHome.ai.meta": "{source} · استخدام البيانات",
   "settingsHome.privacy.title": "الخصوصية والأمان",
   "settingsHome.privacy.meta": "استخدام البيانات والتصدير والحذف",
   "settingsHome.instamart.connected": "مربوط · اطلب قائمة «للشراء»",

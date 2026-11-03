@@ -733,7 +733,7 @@ export const settingsMr: AreaCatalog<typeof settingsEn> = {
   "settingsHome.notifications.quiet": "तुमचे रिमाइंडर आणि चॅनेल · शांत वेळ {from}:00 – {until}:00",
   "settingsHome.voiceAssistants.title": "व्हॉइस असिस्टंट",
   "settingsHome.voiceAssistants.meta": "Alexa आणि Gemini Voice, आणि प्रत्येक काय करू शकतो",
-  "settingsHome.ai.meta": "{source} · घराची की आणि डेटा वापर",
+  "settingsHome.ai.meta": "{source} · डेटा वापर",
   "settingsHome.privacy.title": "गोपनीयता आणि सुरक्षा",
   "settingsHome.privacy.meta": "डेटा वापर, एक्सपोर्ट आणि हटवणे",
   "settingsHome.instamart.connected": "जोडलेले · तुमची 'घ्यायचे' यादी ऑर्डर करा",
