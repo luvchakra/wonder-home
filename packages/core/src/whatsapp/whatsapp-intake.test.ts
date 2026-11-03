@@ -689,10 +689,11 @@ describe("processing into HomeSend", () => {
   // HomeSend's decision (`decideConfirmation`) stands in for the app's review; expected results written first.
   describe("AT-H: WhatsApp end to end under the household's approval settings", () => {
     const oil: IngestDeps["classify"] = async () => extraction({ kind: "grocery_item", title: "Mustard oil", quantity: 2, unit: "l", dueDate: null, dateText: null, schoolKind: null, notes: null, summary: "Buy 2 litres of mustard oil." });
-    const settingsCases: [id: string, autonomy: "execute" | "prepare", bar: number, expected: "added" | "waits"][] = [
+    const settingsCases: [id: string, autonomy: "execute" | "prepare", bar: number, expected: "added" | "checking" | "waits"][] = [
       ["AT-H01", "execute", 95, "added"],
       ["AT-H02", "execute", 60, "added"],
-      ["AT-H03", "execute", 99, "waits"],
+      // Below the bar it is added, marked Checking (the owner, 2026-11-03).
+      ["AT-H03", "execute", 99, "checking"],
       ["AT-H04", "prepare", 95, "waits"],
       ["AT-H05", "prepare", 60, "waits"],
     ];
@@ -705,11 +706,13 @@ describe("processing into HomeSend", () => {
           const item = h.tables.home_send_items!.find((row) => row.id === itemId)!;
           const understanding = item.understanding as never as Parameters<typeof decideConfirmation>[0]["understanding"];
           const decision = decideConfirmation({ kind: "grocery_item", extracted: item.extracted as never, understanding, reconciliation: null, subject: null, memberInitiated: true, autonomy, autoAddPercent: bar });
-          return decision.mode === "auto_apply" ? { title: "Mustard oil", where: "Groceries", percent: scorePercent(understanding?.score), why: sureWhy(understanding) } : null;
+          return decision.mode === "auto_apply" ? { title: "Mustard oil", where: "Groceries", percent: scorePercent(understanding?.score), why: sureWhy(understanding), ...(decision.unconfirmed ? { unconfirmed: true as const } : {}) } : null;
         };
         await processWhatsAppMessage(h.client, id, { config: CONFIG, fetch: out.fetchImpl, ingest: { classify: oil }, ask: async () => "x", addOnItsOwn });
         const reply = out.sent[0]!.text;
-        if (expected === "added") {
+        if (expected === "checking") {
+          expect(reply).toMatch(/^✅ Added \*Mustard oil\* to Groceries \(9\d% sure — every detail is in what you sent\) — marked \*Checking\* until it's confirmed, so its reminders wait\. Say it's right or undo it in HomeSend\.$/);
+        } else if (expected === "added") {
           expect(reply).toMatch(/^✅ Added \*Mustard oil\* to Groceries \(9\d% sure — every detail is in what you sent\) — your household lets WonderHome add these on its own\. You can undo it in HomeSend\.$/);
         } else {
           expect(reply).toBe("Got it 👍 I found groceries: Mustard oil. 🛒 It's waiting in HomeSend for you to check.");
@@ -722,7 +725,8 @@ describe("processing into HomeSend", () => {
     const listedCases: [id: string, autonomy: "execute" | "prepare", bar: number, said: string, quantity: number | null, expected: string][] = [
       ["AT-H08", "execute", 95, "2 litres mustard oil", 2, "✅ Added 2 L more *Mustard oil* (now 3 L) (97% sure — every detail is in what you sent) — your household lets WonderHome add these on its own. You can undo it in HomeSend."],
       ["AT-H09", "prepare", 95, "2 litres mustard oil", 2, "Got it 👍 *Mustard oil* is already on your shopping list, so it's waiting in HomeSend for you to choose. 🛒"],
-      ["AT-H10", "execute", 99, "2 litres mustard oil", 2, "Got it 👍 *Mustard oil* is already on your shopping list, so it's waiting in HomeSend for you to choose. 🛒"],
+      // Below the bar: still the top-up, marked Checking (the owner, 2026-11-03).
+      ["AT-H10", "execute", 99, "2 litres mustard oil", 2, "✅ Added 2 L more *Mustard oil* (now 3 L) (97% sure — every detail is in what you sent) — marked *Checking* until it's confirmed. Say it's right or undo it in HomeSend."],
       // No amount: HomeTalk asks how much first (design §4.6); nothing is added, nothing is echoed.
       ["AT-H11", "execute", 95, "mustard oil", null, "Got it 👍 I found groceries: Mustard oil. 🛒 How much should I get? For example 2 litres or 1 kg."],
     ];
@@ -748,7 +752,7 @@ describe("processing into HomeSend", () => {
             autoAddPercent: bar,
           });
           if (decision.mode !== "auto_apply") return decision.wait ? { waiting: decision.wait, title: "Mustard oil" } : null;
-          return { title: "Mustard oil", where: "Groceries", percent: scorePercent(understanding?.score), why: sureWhy(understanding), ...(decision.topUp ? { more: { added: { quantity: 2000, unit: "ml" }, now: { quantity: 3000, unit: "ml" } } } : {}) };
+          return { title: "Mustard oil", where: "Groceries", percent: scorePercent(understanding?.score), why: sureWhy(understanding), ...(decision.unconfirmed ? { unconfirmed: true as const } : {}), ...(decision.topUp ? { more: { added: { quantity: 2000, unit: "ml" }, now: { quantity: 3000, unit: "ml" } } } : {}) };
         };
         await processWhatsAppMessage(h.client, id, { config: CONFIG, fetch: out.fetchImpl, ingest: { classify: classifyListed }, ask: async () => "x", addOnItsOwn });
         expect(out.sent).toHaveLength(1);

@@ -668,15 +668,18 @@ export function whatsappJobHandler(deps: WhatsAppIntakeDeps): JobHandler {
  * for nobody named, and a bill's or receipt's title loses its numbers.
  */
 export function addedReply(added: AddedOnItsOwn, forName?: string, t: Translate = ENGLISH): string {
+  // Added below the bar: said as Checking, its reminders waiting (the owner, 2026-11-03).
+  const checking = added.unconfirmed === true;
   if (added.kind === "health_document") {
-    return t("whatsapp.added", { title: t("whatsapp.addedHealthRecord"), where: added.where, sure: t === ENGLISH ? sureClause(added) : sureIn(t, added) });
+    return t(checking ? "whatsapp.addedChecking" : "whatsapp.added", { title: t("whatsapp.addedHealthRecord"), where: added.where, sure: t === ENGLISH ? sureClause(added) : sureIn(t, added) });
   }
   const money = added.kind === "bill" || added.kind === "receipt";
   const title = (money ? withoutNumbers(added.title) : shortTitle(added.title)) ?? (money ? t("whatsapp.addedMoneyEntry") : "it");
   const sure = t === ENGLISH ? sureClause(added) : sureIn(t, added);
   // More of a grocery already on the list (I-27): "Added 2 L more *Mustard oil* (now 3 L)".
-  if (added.more) return t("whatsapp.addedMore", { amount: amountWords(added.more.added), title, now: amountWords(added.more.now), sure });
-  return forName ? t("whatsapp.addedFor", { title, name: forName, where: added.where, sure }) : t("whatsapp.added", { title, where: added.where, sure });
+  if (added.more) return t(checking ? "whatsapp.addedMoreChecking" : "whatsapp.addedMore", { amount: amountWords(added.more.added), title, now: amountWords(added.more.now), sure });
+  if (forName) return t(checking ? "whatsapp.addedForChecking" : "whatsapp.addedFor", { title, name: forName, where: added.where, sure });
+  return t(checking ? "whatsapp.addedChecking" : "whatsapp.added", { title, where: added.where, sure });
 }
 
 const ENGLISH: Translate = translator("en", en);

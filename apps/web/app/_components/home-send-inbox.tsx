@@ -19,6 +19,7 @@ import { SectionHeader } from "@wonderhome/core/ui/section-header";
 import { EmptyState } from "@wonderhome/core/ui/states";
 
 import {
+  confirmHomeSendEntryAction,
   confirmTranscriptAction,
   dismissHomeSendItemAction,
   pasteHomeSendItemAction,
@@ -193,6 +194,7 @@ export function HomeSendInbox({
   const [routeState, routeAction, routing] = useActionState<RouteHomeItemState, FormData>(routeHomeSendItemAction, {});
   const [dismissState, dismissAction, dismissing] = useActionState<RouteHomeItemState, FormData>(dismissHomeSendItemAction, {});
   const [undoState, undoAction, undoing] = useActionState<RouteHomeItemState, FormData>(undoHomeSendChangeAction, {});
+  const [confirmState, confirmAction, confirming] = useActionState<RouteHomeItemState, FormData>(confirmHomeSendEntryAction, {});
   const [bulkState, bulkAction, bulkAdding] = useActionState<BulkAddState, FormData>(addSelectedHomeSendItemsAction, {});
   const [retryState, retryAction, retrying] = useActionState<ItemActionState, FormData>(retryHomeSendItemAction, {});
   // Bulk review (the owner, 2026-11-03): ticked rows, and "review one by one".
@@ -249,7 +251,7 @@ export function HomeSendInbox({
 
   // Routing or dismissing closes the confirm step and clears the drop zone
   // back to its resting state, same as `HomeSendSheet` closing itself.
-  const closedNotice = routeState.notice ?? dismissState.notice ?? undoState.notice ?? null;
+  const closedNotice = routeState.notice ?? dismissState.notice ?? undoState.notice ?? confirmState.notice ?? null;
   const [seenClosedNotice, setSeenClosedNotice] = useState(closedNotice);
   if (closedNotice !== seenClosedNotice) {
     setSeenClosedNotice(closedNotice);
@@ -652,6 +654,8 @@ export function HomeSendInbox({
                           ? "cancelled"
                           : "added";
                 const statusLabel = words.status[status];
+                // Added below the bar and still being checked (the owner, 2026-11-03): says so in words, with "Looks right".
+                const checking = itemChanges.some((change) => !change.undoneAt && change.confirmationState === "unconfirmed");
                 const onRecord =
                   status === "updated" ? words.updatedOnRecord : status === "cancelled" ? words.cancelledOnRecord : statusLabel;
                 return (
@@ -659,7 +663,14 @@ export function HomeSendInbox({
                     <div className="flex items-center gap-3">
                       <IconTile icon={presentation.icon} tone={presentation.tone} size="sm" />
                       <span className="min-w-0 flex-1">
-                        <span className="block text-sm font-medium break-words">{title}</span>
+                        <span className="block text-sm font-medium break-words">
+                          {title}
+                          {checking ? (
+                            <Badge tone="attention" className="ml-2 align-middle">
+                              {words.checking}
+                            </Badge>
+                          ) : null}
+                        </span>
                         <span className="block text-xs text-[var(--wh-foreground-subtle)]">
                           {presentation.label}
                           {primaryChange && primaryChange.changeType !== "created" && !primaryChange.undoneAt ? ` · ${onRecord}` : ""}
@@ -667,6 +678,15 @@ export function HomeSendInbox({
                           {percentSure(item.understanding, review.found) ? ` · ${percentSure(item.understanding, review.found)}` : ""}
                         </span>
                       </span>
+                      {checking ? (
+                        <form action={confirmAction}>
+                          <input type="hidden" name="householdId" value={householdId} />
+                          <input type="hidden" name="itemId" value={item.id} />
+                          <Pill type="submit" tone="soft" disabled={confirming} aria-label={fillIn(words.looksRightAria, { title })}>
+                            {words.looksRight}
+                          </Pill>
+                        </form>
+                      ) : null}
                       {canUndoPrimary ? (
                         <form action={undoAction}>
                           <input type="hidden" name="householdId" value={householdId} />
@@ -739,6 +759,7 @@ export function HomeSendInbox({
             </ul>
           </Card>
           {undoState.error ? <Alert>{undoState.error}</Alert> : null}
+          {confirmState.error ? <Alert>{confirmState.error}</Alert> : null}
         </section>
       ) : null}
 

@@ -344,7 +344,7 @@ describe("2026-10-25 Anthropic run: what the live model taught HomeBrain and Hom
     expect(result.pass).toBe(true);
   });
 
-  it("a case about an invented reading keeps it in a provider run, and it still waits for a person (HS-24)", async () => {
+  it("a case about an invented reading keeps it in a provider run, and it is only ever added marked Checking (HS-24)", async () => {
     const hs24 = GOLDEN_CASES.find((c) => c.id === "HS-24")!;
     // A live model reads "We need paneer" correctly: on its own reading there would be nothing to catch.
     const classify = async () => reading({ kind: "grocery_item", title: "Paneer", quantity: 1, unit: "packet", category: "grocery" });

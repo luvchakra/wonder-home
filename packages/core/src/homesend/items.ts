@@ -195,4 +195,16 @@ export type HomeSendChange = {
   fields?: { field: string; label: string; before: string | null; after: string }[] | null;
   /** Where in the document it came from. */
   evidence?: { page: number | null; section: string | null; quote: string } | null;
+  /**
+   * Added below the household's bar and still being checked ("Checking", its
+   * reminders held), or confirmed (the owner, 2026-11-03, `unconfirmed.ts`).
+   * "confirmed" whenever it can't be read.
+   */
+  confirmationState?: HomeSendConfirmationState;
+  /** How sure HomeSend was, 0..1, when it scored the reading. */
+  confidence?: number | null;
 };
+
+/** Whether an entry HomeSend added is still being checked (the owner, 2026-11-03). */
+export const HOME_SEND_CONFIRMATION_STATES = ["unconfirmed", "confirmed"] as const;
+export type HomeSendConfirmationState = (typeof HOME_SEND_CONFIRMATION_STATES)[number];

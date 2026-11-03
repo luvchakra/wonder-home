@@ -11,14 +11,14 @@ in `docs/progress/`; for the running log of what changed when, `tracking/PROGRES
 
 ## The whole picture
 
-**417 of 454 stories done — 91.9%**
+**418 of 457 stories done — 91.5%**
 
 | Status | Stories |
 |---|---:|
-| Done | 417 |
+| Done | 418 |
 | In Progress | 11 |
 | Blocked | 1 |
-| Not Started | 21 |
+| Not Started | 23 |
 | Deferred | 4 |
 
 ## By module
@@ -39,7 +39,7 @@ in `docs/progress/`; for the running log of what changed when, `tracking/PROGRES
 | 11 Bills, Fees & Finance | `█████████░` | 14 | 15 | 1 not started |
 | 12 Family Time & Social Activities | `██████████` | 9 | 9 | — |
 | 13 Maintenance, Laundry & Pet Care | `█████████░` | 10 | 11 | 1 in progress |
-| 14 AI Orchestration & Learning | `████████░░` | 49 | 57 | 1 in progress, 4 not started, 3 deferred |
+| 14 AI Orchestration & Learning | `████████░░` | 50 | 60 | 1 in progress, 6 not started, 3 deferred |
 | 15 Privacy, Security & Governance | `████████░░` | 11 | 13 | 2 not started |
 | 16 Platform Admin & Operations | `██████████` | 9 | 9 | — |
 | 17 External Integrations | `█████████░` | 10 | 11 | 1 not started |
@@ -77,6 +77,8 @@ in `docs/progress/`; for the running log of what changed when, `tracking/PROGRES
 | `14-039` Record index Phase 4: structure-first retrieval and coverage misses | 14 AI Orchestration & Learning | P1 | Not Started |
 | `14-056` HomeBrain 4.0 phase 3b — one structured call: answer or intent | 14 AI Orchestration & Learning | P0 | Not Started |
 | `14-057` HomeBrain 4.0 phase 3c — the reply streamed to the person | 14 AI Orchestration & Learning | P0 | Not Started |
+| `14-061` HomeSend clarifying questions raise a Checking entry over the bar, in HomeTalk and WhatsApp | 14 AI Orchestration & Learning | P0 | Not Started |
+| `14-062` Checking on the record's own screens; one "questions waiting" reminder; eval cases for the loop | 14 AI Orchestration & Learning | P1 | Not Started |
 | `15-013` Data retention phase 2b: notifications (household window) + HomeSend + enable real purge | 15 Privacy, Security & Governance | P1 | Not Started |
 | `15-012` Data retention phase 3: school items (household window) + "recently cleaned" view | 15 Privacy, Security & Governance | P2 | Not Started |
 | `17-017` Read approved senders by signing in (Gmail / Outlook OAuth, read-only) | 17 External Integrations | P2 | Not Started |
@@ -398,7 +400,7 @@ in `docs/progress/`; for the running log of what changed when, `tracking/PROGRES
 
 ### 14 — AI Orchestration & Learning
 
-49 of 57 done `████████░░`
+50 of 60 done `████████░░`
 
 | Story | Priority | Status | Notes |
 |---|---|---|---|
@@ -459,6 +461,9 @@ in `docs/progress/`; for the running log of what changed when, `tracking/PROGRES
 | `14-056` HomeBrain 4.0 phase 3b — one structured call: answer or intent | P0 | Not Started | Split from 14-027. `homebrain/one-pass.ts`: for a turn the rules cannot settle, one model call returns `mode` (answer, clarify, not_on_record, action), `text`, `usedFacts`, `goal` and an optional `intent` in `IntentOutputSchema`, so a question no longer waits on the understanding call first (production 2026-10-13 to 27: understanding p50 2.8 s before the answer's 3.6 s) and an action goes straight into ground → gate → propose. Every gate runs on its output; HT eval cases for questions and actions; Unsafe Action Rate stays 0. Spec §3.6 |
 | `14-057` HomeBrain 4.0 phase 3c — the reply streamed to the person | P0 | Not Started | Split from 14-027. A streamed endpoint and the HomeTalk client showing words as they arrive; the draft carries `usedFacts` before its text, and each sentence is shown only after `validate.ts` passes it against those facts (never an unvalidated word); a sentence that fails stops the stream and the deterministic answer replaces it. Voice speaks sentence chunks through `speakable`. Goal: typed p95 2.5 s to the first token, read from `timings.firstToken`. Needs 14-056 |
 | `14-059` HomeSend: bulk review, one grouped reminder, 30-day archive, Try again | P1 | Done | The owner, 2026-11-03 ("go, 30-day auto-archive is okay"). Tick several waiting items and "Add selected", or "Add all I'm sure of" — only items that need nothing but a yes (`homesend/waiting.ts` `bulkReady`: never a photo or file, a possible duplicate, a missing detail, a plan, or a bill/receipt/health document the Admin hasn't let in directly), each through the same governed write, Undo and audit as one confirm; "Review one by one"; reviews prepared for every waiting item, 20 a page. "Why it waits" on each row from evidence (`whyItWaits`). One HomeSend notice per person ("4 things sent to HomeSend are waiting: 2 school notices, 1 bill, 1 photo or file"), rewritten in place, resolved when nothing waits, in the morning digest with the rest; "still want these?" at 14 days. After 30 days untouched on the household's calendar a waiting or failed item is archived (kept, restorable under "Archived"; `public.archive_stale_home_send_items` on the delivery clock); real purge stays 15-013. "Try again" on a failed link, voice note or unread file, re-read through the job queue (`homesend.reread`), five tries. Migration `20261103120000_homesend_lifecycle.sql`. |
+| `14-060` HomeSend adds directly; below the bar it is added "Checking" | P0 | Done | The owner, 2026-11-03 ("add the entry directly in WonderHome without asking for a review"). Where the outcome is Pre Approved, a complete reading is added at once through the same governed write a person's confirm uses; above the household's bar it is confirmed, at or below it (or read from a photo or file) it is `unconfirmed`: "Checking" badge and "Looks right" in HomeSend's Recently handled, its own bill and school reminders held until confirmed, audited `homesend.auto_added` (score, source) and `homesend.confirmed`. Bills, receipts and health documents still follow "Add money / health entries directly". State on `homesend_changes` (migration `20261103150000_homesend_unconfirmed_entries.sql`, readers fall back to confirmed). |
+| `14-061` HomeSend clarifying questions raise a Checking entry over the bar, in HomeTalk and WhatsApp | P0 | Not Started | The owner, 2026-11-03, decisions A–C. From 14-060: questions from evidence (low-confidence fields, `completeness.ts` gaps, `reconcile.ts` duplicate candidates), one at a time, picked not typed, one question shared by HomeTalk and WhatsApp (answering in either resolves both), answers read through the conversation engine and `homebrain/validate.ts`, applied in place, confidence recomputed, confirmed when over the bar (`confirmHomeSendEntry` how "answers"); three at most, then one "please check". WhatsApp clarifications may include the item's details, only to its sender on their verified link; never authorises anything. |
+| `14-062` Checking on the record's own screens; one "questions waiting" reminder; eval cases for the loop | P1 | Not Started | The owner, 2026-11-03. After 14-061: the "Checking" badge and Undo on the bill, school item, grocery and health record themselves; one grouped "questions waiting" reminder (reusing 14-059's grouping) instead of per-item ones; eval cases: answer raises confidence, WhatsApp answer resolves the HomeTalk question, injection in an answer ignored, cross-household answer refused. |
 
 ### 15 — Privacy, Security & Governance
 

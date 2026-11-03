@@ -68,6 +68,8 @@ export type AddedOnItsOwn = {
   why?: SureWhy | null;
   /** A top-up of a grocery already on the shopping list (I-27): what it added, and what the list says now. */
   more?: { added: Amount; now: Amount };
+  /** Added below the household's bar: marked Checking, its reminders held, until confirmed (the owner, 2026-11-03). */
+  unconfirmed?: true;
 };
 
 /** Something that would have been added on its own, still waiting in HomeSend, and why (`confirmation.ts` `wait`). */

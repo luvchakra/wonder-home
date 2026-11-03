@@ -10,12 +10,13 @@ import { FROM_A_FILE } from "./verify";
 /**
  * How HomeSend confirms what it read (Wave 3 §12):
  *
- *   - high confidence, safe and reversible → may apply on its own, but only
- *     where the domain allows it AND the household's own autonomy setting
- *     for that outcome says "execute" AND the score is above the bar an
- *     Admin picked (`auto-add.ts`, 95% unless changed);
- *   - medium confidence → prepare it and ask;
- *   - low confidence → ask one targeted question;
+ *   - a complete, safe and reversible reading → added directly where the
+ *     domain allows it AND the household's own autonomy setting for that
+ *     outcome says "execute" (the owner, 2026-11-03). Above the bar an Admin
+ *     picked (`auto-add.ts`, 95% unless changed) it is simply added; below
+ *     it, or read from a photo or file, it is added "unconfirmed": shown as
+ *     Checking, its reminders held, while HomeTalk asks;
+ *   - low confidence, or a required detail missing → ask one targeted question;
  *   - consequential (a bill, receipt or health document) → the existing
  *     governance, whatever the confidence — unless an Admin turned on "Add
  *     money entries directly" or "Add health entries directly", when it
@@ -49,6 +50,12 @@ export type ConfirmationDecision = {
   wait?: WaitingFor;
   /** An `auto_apply` that adds to a grocery already on the shopping list, never a second entry (I-27). */
   topUp?: true;
+  /**
+   * An `auto_apply` below the household's bar (or read from a photo or file):
+   * added now, marked "Checking", its reminders held, and HomeTalk asks until
+   * it is sure enough (the owner, 2026-11-03).
+   */
+  unconfirmed?: true;
 };
 
 /** Why something that would be added on its own waits: already on the list, the setting, or the bar. */
@@ -123,14 +130,6 @@ export type ConfirmationInput = {
   duplicate?: boolean;
 };
 
-/** Why a clear reading still waits: what WonderHome could not find in what was sent. */
-function notSureEnough(unverified: readonly string[], percent: number): string {
-  if (unverified.length === 0) return `WonderHome adds things on its own only when it is more than ${percent}% sure, so a person looks first.`;
-  if (unverified.includes(FROM_A_FILE)) return "This was read from a photo or a file, which can't be checked word by word, so a person looks first.";
-  const listed = unverified.length === 1 ? unverified[0] : `${unverified.slice(0, -1).join(", ")} and ${unverified.at(-1)}`;
-  return `WonderHome couldn't check ${listed} against what was sent, so a person looks first.`;
-}
-
 export function decideConfirmation(input: ConfirmationInput): ConfirmationDecision {
   const kind = input.kind;
   const title = input.extracted?.title?.trim() ?? "";
@@ -179,7 +178,6 @@ export function decideConfirmation(input: ConfirmationInput): ConfirmationDecisi
     return { mode: "prepare", reason: `${title} is already on your shopping list, so it waits for you to choose how much more.`, question: null, wait: { reason: "on_list", listed: true } };
   }
   if (input.duplicate) return { mode: "prepare", reason: "This looks like one already recorded, so a person looks first.", question: null };
-  if (confidence === "medium" && !aboveBar) return { mode: "prepare", reason: "WonderHome read it, but not surely enough to act on its own.", question: null };
   if (input.understanding?.safety.instructionsIgnored) {
     return { mode: "prepare", reason: "It contained instructions aimed at WonderHome, so a person looks first.", question: null };
   }
@@ -193,21 +191,26 @@ export function decideConfirmation(input: ConfirmationInput): ConfirmationDecisi
   const outcome = AUTO_APPLY_OUTCOMES[kind];
   if (!outcome) return { mode: "prepare", reason: "Ready for you to check.", question: null };
 
-  // More sure than the household's bar (95% unless an Admin picked another),
-  // or a person confirms (the owner, 2026-10-25 and 2026-10-26).
-  // A photo or a file always waits, whatever the bar: there are no words of its own to check the reading against.
+  // Added directly (the owner, 2026-11-03: "add the entry directly in
+  // WonderHome without asking for a review"). More sure than the household's
+  // bar (95% unless an Admin picked another) it is simply added; below it, or
+  // read from a photo or file (no words of its own to check against), it is
+  // added marked "Checking": its reminders wait and HomeTalk asks until it is
+  // sure enough. What the household's autonomy setting says still decides
+  // whether it is added at all.
   const unverified = input.understanding?.check?.unverified ?? [];
+  const fromAFile = unverified.includes(FROM_A_FILE);
+  const checking = !aboveBar || fromAFile ? { unconfirmed: true as const } : {};
   const onList = listed ? { listed: true as const } : {};
-  if (unverified.includes(FROM_A_FILE)) return { mode: "prepare", reason: notSureEnough(unverified, percent), question: null };
-  if (!aboveBar) return { mode: "prepare", reason: notSureEnough(unverified, percent), question: null, wait: { reason: "below_bar", percent, ...onList } };
 
   // A bill, receipt or health entry is a record of the household's own, never a payment or an order.
   const decision = decideAutonomy(input.autonomy, { outcomeKey: outcome.outcomeKey, kind: consequential ? "change" : "schedule", reversible: true });
   if (decision.outcome === "execute") {
+    const sure = checking.unconfirmed ? ` It wasn't more than ${percent}% sure, so it is marked Checking until you answer a question or say it's right.` : "";
     if (listed) {
-      return { mode: "auto_apply", reason: `Your household lets WonderHome handle ${outcome.label} on its own, and this was clear, so it adds to what is already on the shopping list. Undo it any time.`, question: null, topUp: true };
+      return { mode: "auto_apply", reason: `Your household lets WonderHome handle ${outcome.label} on its own, so it adds to what is already on the shopping list.${sure} Undo it any time.`, question: null, topUp: true, ...checking };
     }
-    return { mode: "auto_apply", reason: `Your household lets WonderHome handle ${outcome.label} on its own, and this was clear. Undo it any time.`, question: null };
+    return { mode: "auto_apply", reason: `Your household lets WonderHome handle ${outcome.label} on its own.${sure} Undo it any time.`, question: null, ...checking };
   }
   const reason = `Your household has ${outcome.label} set to “Wait for Approval”, so WonderHome asks first.`;
   // The row and WhatsApp name groceries or school work; a bill, receipt or health entry waits with the reason alone.

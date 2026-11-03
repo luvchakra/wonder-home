@@ -2,6 +2,8 @@
 
 Owner's request, 2026-10-26: "a detailed design document … which should be ideally implemented for HomeTalk and HomeSend to work properly. Consider all the issues being faced and write down the solutions incorporated in design."
 
+> **Changed 2026-11-03 (owner, story 14-060):** HomeSend now adds directly where the outcome is Pre Approved. Below the household's bar, or read from a photo or file, an entry is added marked **Checking** (`homesend_changes.confirmation_state = 'unconfirmed'`), its own reminders held until someone says it is right or answers raise it over the bar (14-061). Where this file says "below the bar it waits" or "photos and files always wait", read "added as Checking". Bills, receipts and health documents still follow "Add money / health entries directly". See `docs/progress/2026-11-03-homesend-direct-add-checking.md`.
+
 This is the target design. Most of it is live. Section 12 says, issue by issue, what is live (with its PR) and what is still being built. Summary rules stay in `docs/agent-platform.md`; this file explains why the two parts are split the way they are, and how a message moves through them.
 
 ---

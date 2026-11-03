@@ -264,6 +264,16 @@ export const SENSITIVE_ACTIONS: readonly SensitiveAction[] = [
     recordedIn: "packages/core/src/homesend/changes.ts",
   },
   {
+    event: "homesend.auto_added",
+    because: "HomeSend added an entry on its own, without a person's review (the owner, 2026-11-03). The household should see how sure it was, from where, and whether it is still being checked.",
+    recordedIn: "packages/core/src/homesend/changes.ts",
+  },
+  {
+    event: "homesend.confirmed",
+    because: "An entry HomeSend added while still checking became confirmed — by a person, or by answers that raised it over the household's bar — so its reminders start.",
+    recordedIn: "packages/core/src/homesend/changes.ts",
+  },
+  {
     event: "homesend.dismissed",
     because: "A household decided something sent in was not worth acting on — as worth recording as acting on it.",
     recordedIn: "packages/core/src/homesend/repository.ts",
@@ -699,6 +709,13 @@ export function describeAuditEvent(
       return { title: "A HomeSend upload was refused", detail: "It did not read as the file type it claimed to be." };
     case "homesend.applied":
       return { title: "HomeSend added something to the household", detail: stringOr(metadata.intakeId, null) };
+    case "homesend.auto_added":
+      return {
+        title: metadata.confirmationState === "unconfirmed" ? "HomeSend added something and is still checking it" : "HomeSend added something on its own",
+        detail: typeof metadata.confidence === "number" ? `${Math.round(metadata.confidence * 100)}% sure` : stringOr(metadata.source, null),
+      };
+    case "homesend.confirmed":
+      return { title: metadata.how === "answers" ? "Answers confirmed something HomeSend added" : "Someone confirmed something HomeSend added", detail: null };
     case "homesend.dismissed":
       return { title: "A HomeSend item was dismissed", detail: null };
     case "homesend.undone":

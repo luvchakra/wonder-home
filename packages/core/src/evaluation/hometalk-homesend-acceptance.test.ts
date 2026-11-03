@@ -64,29 +64,36 @@ function decide(base: typeof GROCERY | typeof SCHOOL, autonomy: AutonomyMode, ba
   });
 }
 
+/** "checking": added directly but below the bar, so marked Checking (the owner, 2026-11-03). */
+type Outcome = "auto_apply" | "checking" | "prepare" | "ask" | "govern";
+function outcomeOf(decision: ReturnType<typeof decideConfirmation>): Outcome {
+  return decision.mode === "auto_apply" && decision.unconfirmed ? "checking" : decision.mode;
+}
+
 /**
  * AT-A: the approval matrix. Autonomy × the Admin's bar × how sure, for both kinds HomeSend may
- * ever add on its own. Expected, from design §1.4 and §4.7: added on its own only when Pre Approved
- * AND the score is strictly above the bar; a low reading is always asked; everything else waits.
+ * ever add on its own. Expected, from design §1.4 and §4.7 as the owner changed them on 2026-11-03:
+ * Pre Approved adds directly — "auto_apply" when the score is strictly above the bar, "checking"
+ * (added, marked Checking) when it isn't; a low reading is always asked; Wait for Approval waits.
  */
-const APPROVAL_MATRIX: [id: string, autonomy: AutonomyMode, bar: number, reading: Reading, expected: "auto_apply" | "prepare" | "ask"][] = [
+const APPROVAL_MATRIX: [id: string, autonomy: AutonomyMode, bar: number, reading: Reading, expected: Outcome][] = [
   ["AT-A01", "execute", 60, "R97", "auto_apply"],
   ["AT-A02", "execute", 60, "R90", "auto_apply"],
   ["AT-A03", "execute", 60, "R70", "auto_apply"],
   ["AT-A04", "execute", 60, "R40", "ask"],
   ["AT-A05", "execute", 80, "R97", "auto_apply"],
   ["AT-A06", "execute", 80, "R90", "auto_apply"],
-  ["AT-A07", "execute", 80, "R70", "prepare"],
+  ["AT-A07", "execute", 80, "R70", "checking"],
   ["AT-A08", "execute", 80, "R40", "ask"],
   ["AT-A09", "execute", 95, "R97", "auto_apply"],
   ["AT-A10", "execute", 95, "R96", "auto_apply"],
-  ["AT-A11", "execute", 95, "R95", "prepare"],
-  ["AT-A12", "execute", 95, "R90", "prepare"],
-  ["AT-A13", "execute", 95, "R70", "prepare"],
+  ["AT-A11", "execute", 95, "R95", "checking"],
+  ["AT-A12", "execute", 95, "R90", "checking"],
+  ["AT-A13", "execute", 95, "R70", "checking"],
   ["AT-A14", "execute", 95, "R40", "ask"],
-  ["AT-A15", "execute", 99, "R97", "prepare"],
-  ["AT-A16", "execute", 99, "R90", "prepare"],
-  ["AT-A17", "execute", 99, "R70", "prepare"],
+  ["AT-A15", "execute", 99, "R97", "checking"],
+  ["AT-A16", "execute", 99, "R90", "checking"],
+  ["AT-A17", "execute", 99, "R70", "checking"],
   ["AT-A18", "execute", 99, "R40", "ask"],
   ["AT-A19", "prepare", 60, "R97", "prepare"],
   ["AT-A20", "prepare", 60, "R90", "prepare"],
@@ -100,39 +107,39 @@ const APPROVAL_MATRIX: [id: string, autonomy: AutonomyMode, bar: number, reading
   ["AT-A28", "prepare", 95, "R40", "ask"],
   ["AT-A29", "prepare", 99, "R97", "prepare"],
   ["AT-A30", "prepare", 99, "R40", "ask"],
-  ["AT-A31", "execute", 90, "R90", "prepare"],
+  ["AT-A31", "execute", 90, "R90", "checking"],
   ["AT-A32", "execute", 85, "R90", "auto_apply"],
-  ["AT-A33", "execute", 70, "R70", "prepare"],
-  ["AT-A34", "execute", 97, "R97", "prepare"],
+  ["AT-A33", "execute", 70, "R70", "checking"],
+  ["AT-A34", "execute", 97, "R97", "checking"],
 ];
 
 describe("AT-A: the approval matrix — autonomy × bar × how sure (design §1.4, §4.7)", () => {
   for (const [id, autonomy, bar, reading, expected] of APPROVAL_MATRIX) {
     for (const base of [GROCERY, SCHOOL]) {
       it(`${id} ${base.kind}: ${autonomy === "execute" ? "Pre Approved" : "Wait for Approval"}, bar ${bar}%, ${reading} → ${expected}`, () => {
-        expect(decide(base, autonomy, bar, reading).mode).toBe(expected);
+        expect(outcomeOf(decide(base, autonomy, bar, reading))).toBe(expected);
       });
     }
   }
 
   it("AT-A35 the reason says which setting held it", () => {
     expect(decide(GROCERY, "prepare", 95, "R97").reason).toBe("Your household has groceries set to “Wait for Approval”, so WonderHome asks first.");
-    expect(decide(GROCERY, "execute", 99, "R97").reason).toMatch(/more than 99% sure/);
+    expect(decide(GROCERY, "execute", 99, "R97").reason).toMatch(/wasn't more than 99% sure, so it is marked Checking/);
     expect(decide(GROCERY, "execute", 95, "R97").reason).toMatch(/lets WonderHome handle groceries on its own/);
   });
 
-  it("AT-A36 every bar an Admin can pick is honoured strictly (score just above adds, equal waits)", () => {
+  it("AT-A36 every bar an Admin can pick is honoured strictly (score just above adds, equal is checked)", () => {
     for (const bar of AUTO_ADD_PERCENTS) {
       const above = { ...READINGS.R97, score: (bar + 0.5) / 100 };
       const equal = { ...READINGS.R97, score: bar / 100 };
-      expect(decide(GROCERY, "execute", bar, "R97", { understanding: above }).mode, `bar ${bar} above`).toBe("auto_apply");
-      expect(decide(GROCERY, "execute", bar, "R97", { understanding: equal }).mode, `bar ${bar} equal`).toBe("prepare");
+      expect(outcomeOf(decide(GROCERY, "execute", bar, "R97", { understanding: above })), `bar ${bar} above`).toBe("auto_apply");
+      expect(outcomeOf(decide(GROCERY, "execute", bar, "R97", { understanding: equal })), `bar ${bar} equal`).toBe("checking");
     }
   });
 
   it("AT-A37 no bar given means 95%", () => {
-    expect(decide(GROCERY, "execute", 95, "R96", { autoAddPercent: undefined }).mode).toBe("auto_apply");
-    expect(decide(GROCERY, "execute", 95, "R95", { autoAddPercent: undefined }).mode).toBe("prepare");
+    expect(outcomeOf(decide(GROCERY, "execute", 95, "R96", { autoAddPercent: undefined }))).toBe("auto_apply");
+    expect(outcomeOf(decide(GROCERY, "execute", 95, "R95", { autoAddPercent: undefined }))).toBe("checking");
   });
 });
 
@@ -150,7 +157,6 @@ describe("AT-B: always waits, whatever the settings (design §1.5)", () => {
     ["AT-B02", "a bill missing its amount", { kind: "bill", extracted: { title: "Electricity", payee: "BESCOM", amount: null, dueDate: "2026-11-05", needs: [], confidence: "high" } as never }, "govern", ["amount"]],
     ["AT-B03", "a health document", { kind: "health_document", extracted: { title: "Blood test", healthRecordType: "lab_report", subjectMemberName: "Kunal", needs: [], confidence: "high" } as never }, "govern"],
     ["AT-B04", "a receipt", { kind: "receipt", extracted: { title: "DMart", merchant: "DMart", documentDate: "2026-10-25", needs: [], confidence: "high" } as never }, "govern"],
-    ["AT-B05", "a photo or file (can't be checked word by word)", { understanding: { ...READINGS.R97, check: { verified: false, unverified: [FROM_A_FILE] } } }, "prepare"],
     ["AT-B06", "a likely duplicate of something on record (not a grocery on the shopping list, AT-L)", { reconciliation: { message: "This looks like the same one.", proposal: { type: "duplicate" } } as never }, "prepare"],
     ["AT-B07", "content with instructions aimed at WonderHome", { understanding: { ...READINGS.R97, safety: { signals: ["instruction"], instructionsIgnored: true } as never } }, "prepare"],
     ["AT-B08", "several needs in one message", { extracted: { ...GROCERY.extracted, needs: [{ title: "Eggs" }] } as never }, "prepare"],
@@ -163,6 +169,9 @@ describe("AT-B: always waits, whatever the settings (design §1.5)", () => {
     ["AT-B15", "school work missing its due date", { kind: "school_item", extracted: { ...SCHOOL.extracted, dueDate: null } as never, subject: SCHOOL.subject as never }, "ask", ["due date"]],
     ["AT-B16", "a grocery with no name", { extracted: { ...GROCERY.extracted, title: "" } as never }, "ask"],
   ];
+  it("AT-B05 a photo or file (can't be checked word by word) → added, always Checking (the owner, 2026-11-03)", () => {
+    expect(outcomeOf(permissive({ understanding: { ...READINGS.R97, check: { verified: false, unverified: [FROM_A_FILE] } } }))).toBe("checking");
+  });
   for (const [id, what, over, expected, stillNeeded] of cases) {
     it(`${id} ${what} → ${expected}`, () => {
       const decision = permissive(over);
@@ -372,10 +381,11 @@ describe("AT-L: a grocery already on the shopping list (I-27)", () => {
     expect(decision.reason).toBe("Mustard oil is already on your shopping list, so it waits for you to choose how much more.");
   });
 
-  it("AT-L04 below the bar → waits, naming the bar", () => {
+  it("AT-L04 below the bar → still a top-up, marked Checking (the owner, 2026-11-03)", () => {
     const decision = decide(GROCERY, "execute", 99, "R97", LISTED);
-    expect(decision.mode).toBe("prepare");
-    expect(decision.wait).toEqual({ reason: "below_bar", percent: 99, listed: true });
+    expect(outcomeOf(decision)).toBe("checking");
+    expect(decision.topUp).toBe(true);
+    expect(decision.wait).toBeUndefined();
   });
 
   it("AT-L05 two look-alike entries → one top-up, of the item HomeTalk would pick", () => {
@@ -398,9 +408,9 @@ describe("AT-L: a grocery already on the shopping list (I-27)", () => {
     expect(decision.wait).toBeUndefined();
   });
 
-  it("AT-L08 a photo of the list still always waits", () => {
+  it("AT-L08 a photo of the list → a top-up, always Checking", () => {
     const decision = decide(GROCERY, "execute", 60, "R97", { ...LISTED, understanding: { ...READINGS.R97, check: { verified: false, unverified: [FROM_A_FILE] } } });
-    expect(decision.mode).toBe("prepare");
+    expect(outcomeOf(decision)).toBe("checking");
     expect(decision.wait).toBeUndefined();
   });
 
@@ -486,7 +496,8 @@ describe("AT-M: the Needs review row's reason (I-27)", () => {
     const t = await translatorFor("en");
     const row = (decision: ReturnType<typeof decideConfirmation>) => (decision.wait ? waitRowWords(decision.wait, t) : null);
     expect(row(decide(GROCERY, "prepare", 95, "R97"))).toBe("groceries set to Wait for Approval");
-    expect(row(decide(SCHOOL, "execute", 99, "R97"))).toBe("below your bar of 99%");
+    // Below the bar it is added, marked Checking: it has no waiting row (the owner, 2026-11-03).
+    expect(row(decide(SCHOOL, "execute", 99, "R97"))).toBeNull();
     // Added on its own, or always waiting: nothing to say on the row.
     expect(row(decide(GROCERY, "execute", 95, "R97"))).toBeNull();
     expect(row(decideConfirmation({ kind: "bill", extracted: { title: "Electricity", payee: "BESCOM", amount: 2140, dueDate: "2026-11-05", needs: [], confidence: "high" } as never, understanding: READINGS.R97, reconciliation: null, subject: null, memberInitiated: true, autonomy: "execute", autoAddPercent: 60 }))).toBeNull();
@@ -631,12 +642,12 @@ describe("AT-N: adding money and health entries directly (the owner, 2026-10-26)
     ["02", "setting off, Wait for Approval → govern", false, "prepare", 95, "R97", {}, "govern"],
     ["03", "setting on, Pre Approved, 95%, 97% → added on its own", true, "execute", 95, "R97", {}, "auto_apply"],
     ["04", "setting on, Wait for Approval, 95%, 97% → waits", true, "prepare", 95, "R97", {}, "prepare"],
-    ["05", "setting on, Pre Approved, 95%, 90% → waits (below the bar)", true, "execute", 95, "R90", {}, "prepare"],
+    ["05", "setting on, Pre Approved, 95%, 90% → added, Checking (below the bar)", true, "execute", 95, "R90", {}, "checking"],
     ["06", "setting on, Pre Approved, 85%, 90% → added on its own", true, "execute", 85, "R90", {}, "auto_apply"],
-    ["07", "setting on, Pre Approved, 99%, 97% → waits (the bar is higher)", true, "execute", 99, "R97", {}, "prepare"],
-    ["08", "setting on, Pre Approved, 97%, 97% → waits (equal is not above)", true, "execute", 97, "R97", {}, "prepare"],
+    ["07", "setting on, Pre Approved, 99%, 97% → added, Checking (the bar is higher)", true, "execute", 99, "R97", {}, "checking"],
+    ["08", "setting on, Pre Approved, 97%, 97% → added, Checking (equal is not above)", true, "execute", 97, "R97", {}, "checking"],
     ["09", "setting on, Pre Approved, 60%, 70% → added on its own (the Admin chose 60%)", true, "execute", 60, "R70", {}, "auto_apply"],
-    ["10", "setting on, a photo or file → waits", true, "execute", 60, "R97", { understanding: FILE }, "prepare"],
+    ["10", "setting on, a photo or file → added, Checking", true, "execute", 60, "R97", { understanding: FILE }, "checking"],
     ["11", "setting on, instructions aimed at WonderHome → waits", true, "execute", 60, "R97", { understanding: { ...READINGS.R97, safety: { signals: ["instruction"], instructionsIgnored: true } as never } }, "prepare"],
     ["12", "setting on, not sent by a member (an email) → waits", true, "execute", 60, "R97", { memberInitiated: false }, "prepare"],
     ["13", "setting on, a low reading → asked", true, "execute", 60, "R40", {}, "ask"],
@@ -645,7 +656,7 @@ describe("AT-N: adding money and health entries directly (the owner, 2026-10-26)
     const prefix = area === "health" ? "AT-N3" : base.kind === "bill" ? "AT-N1" : "AT-N2";
     for (const [suffix, what, on, autonomy, bar, reading, over, expected] of MATRIX) {
       it(`${prefix}${suffix} a ${name}: ${what}`, () => {
-        expect(directly(base, on ? [area] : [], autonomy, bar, reading, over).mode).toBe(expected);
+        expect(outcomeOf(directly(base, on ? [area] : [], autonomy, bar, reading, over))).toBe(expected);
       });
     }
     it(`${prefix}14 a ${name}: setting on, several needs in one message → waits`, () => {
@@ -658,9 +669,9 @@ describe("AT-N: adding money and health entries directly (the owner, 2026-10-26)
       const over = base.kind === "receipt" ? { duplicate: true } : DUPLICATE;
       expect(directly(base, [area], "execute", 60, "R97", over).mode).toBe("prepare");
     });
-    it(`${prefix}17 a ${name}: setting on, a typed one (every detail in the text) is added, the same as a photo of it is not`, () => {
+    it(`${prefix}17 a ${name}: setting on, a typed one (every detail in the text) is added, a photo of it is added Checking`, () => {
       expect(directly(base, [area], "execute", 95, "R97").mode).toBe("auto_apply");
-      expect(directly(base, [area], "execute", 95, "R97", { understanding: FILE }).reason).toMatch(/photo or a file/);
+      expect(outcomeOf(directly(base, [area], "execute", 95, "R97", { understanding: FILE }))).toBe("checking");
     });
   }
 

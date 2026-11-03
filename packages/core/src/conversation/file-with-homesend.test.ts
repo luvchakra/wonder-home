@@ -74,14 +74,15 @@ describe("AT-J: filed from HomeTalk, under the approval settings", () => {
     const decision = decideConfirmation({ kind: kind as never, extracted: extracted as never, understanding, subject: null, memberInitiated: true, autonomy, autoAddPercent: bar, ...onList });
     if (decision.mode !== "auto_apply") return decision.wait ? { waiting: decision.wait, title: String(extracted.title) } : null;
     const more = decision.topUp ? { more: { added: { quantity: 2000, unit: "ml" }, now: { quantity: 3000, unit: "ml" } } } : {};
-    return { title: String(extracted.title), where: "Groceries", percent: 97, why: "verified" as const, ...more };
+    return { title: String(extracted.title), where: "Groceries", percent: 97, why: "verified" as const, ...(decision.unconfirmed ? { unconfirmed: true as const } : {}), ...more };
   };
   const oil = { title: "Mustard oil", quantity: 2, unit: "l", needs: [], confidence: "high" };
   const bill = { title: "Electricity", payee: "BESCOM", amount: 2140, dueDate: "2026-11-05", needs: [], confidence: "high" };
   // A wait that would otherwise have been added says why, with what was read (I-27, 2026-10-26).
   const cases: [id: string, kind: string, extracted: Record<string, unknown>, autonomy: "execute" | "prepare", bar: number, expected: RegExp, listed?: boolean][] = [
     ["AT-J01", "grocery_item", oil, "execute", 95, /^Added \*\*Mustard oil\*\* to Groceries \(97% sure — every detail is in what you sent\)/],
-    ["AT-J02", "grocery_item", oil, "execute", 99, /^WonderHome adds things on its own only when it is more than 99% sure, so it's waiting in HomeSend for you to check\. I read it as something to buy: \*\*Mustard oil\*\*\.$/],
+    // Below the bar it is added, marked Checking (the owner, 2026-11-03).
+    ["AT-J02", "grocery_item", oil, "execute", 99, /^Added \*\*Mustard oil\*\* to Groceries \(97% sure — every detail is in what you sent\) — marked \*\*Checking\*\* until it's confirmed, so its reminders wait\./],
     ["AT-J03", "grocery_item", oil, "prepare", 60, /^Your household has groceries set to Wait for Approval, so it's waiting in HomeSend for you to approve\. I read it as/],
     ["AT-J04", "bill", bill, "execute", 60, /for you to check before anything is added/],
     ["AT-J05", "grocery_item", oil, "execute", 95, /^Added 2 L more \*\*Mustard oil\*\* \(now 3 L\) \(97% sure/, true],

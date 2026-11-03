@@ -348,6 +348,10 @@ export type HomeSendPageLabels = {
     updatedOnRecord: string;
     cancelledOnRecord: string;
     addedOnItsOwn: string;
+    /** Added below the bar, still being checked (the owner, 2026-11-03). */
+    checking: string;
+    looksRight: string;
+    looksRightAria: string;
     planned: string;
     bought: string;
     boughtLine: string;
@@ -810,6 +814,9 @@ export function homesendPageLabels(t: Translate, language: string): HomeSendPage
       updatedOnRecord: t("homesend.history.updatedOnRecord"),
       cancelledOnRecord: t("homesend.history.cancelledOnRecord"),
       addedOnItsOwn: t("homesend.history.addedOnItsOwn"),
+      checking: t("homesend.history.checking"),
+      looksRight: t("homesend.history.looksRight"),
+      looksRightAria: t("homesend.history.looksRightAria", keep("title")),
       planned: t("homesend.history.planned", keep("action", "title", "reason")),
       bought: t("homesend.history.bought", keep("name")),
       boughtLine: t("homesend.history.boughtLine"),

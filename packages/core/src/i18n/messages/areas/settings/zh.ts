@@ -21,7 +21,7 @@ export const settingsZh: AreaCatalog<typeof settingsEn> = {
   "settingsPage.ai.confirmRequested.on": "开启：HomeTalk 在规划、添加或更改你要求的任何内容之前，会先在对话中问你。",
   "settingsPage.ai.confirmRequested.off": "关闭：当你让 HomeTalk 规划、添加或更改某事时，它会立即去做，并告诉你如何撤销。付款、下单和权限变更始终等你确认。",
   "settingsPage.ai.autoAdd.title": "HomeSend 要多有把握才自行添加",
-  "settingsPage.ai.autoAdd.detail": "对设为 Pre Approved 的结果，你通过 WhatsApp 发送、告诉 HomeTalk 或以其他方式分享的内容，只有在 WonderHome 的把握高于这个值时才会不经询问直接添加。账单、收据和健康文件会等待，除非你在下方允许；照片和文件始终等你确认。",
+  "settingsPage.ai.autoAdd.detail": "对设为 Pre Approved 的结果，你通过 WhatsApp 发送、告诉 HomeTalk 或以其他方式分享的内容（包括照片和文件）会直接添加。WonderHome 的把握高于这个值时就到此为止；不够时，这条记录会标为「核对中」，相关提醒会等你确认没问题后再发。账单、收据和健康文件会等你确认，除非你在下方允许。",
   "settingsPage.ai.autoAdd.option": "高于 {percent}%",
   "settingsPage.ai.autoAdd.optionDefault": "高于 {percent}%（推荐）",
   "settingsPage.ai.directAdd.money.title": "直接添加钱款条目",

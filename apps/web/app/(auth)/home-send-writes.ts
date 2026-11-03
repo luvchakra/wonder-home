@@ -10,7 +10,7 @@ import { createConsumable, listConsumables, recordPurchase } from "@wonderhome/c
 import type { Amount } from "@wonderhome/core/commerce/units";
 import { receiptStockLine } from "@wonderhome/core/commerce/receipt-stock";
 import { currencyCode, unitCostMinor } from "@wonderhome/core/commerce/receipts";
-import { recordHomeSendChange } from "@wonderhome/core/homesend/changes";
+import { recordHomeSendChange, type RecordHomeSendChangeInput } from "@wonderhome/core/homesend/changes";
 import { similarity } from "@wonderhome/core/context/normalize";
 import { findGrocery } from "@wonderhome/core/conversation/grocery-actions";
 import { billShape, eventShape, groceryAmount, groceryShape } from "@wonderhome/core/homesend/record-types";
@@ -425,6 +425,8 @@ export async function recordReceipt(
   membership: Membership,
   input: { householdId: string; itemId: string; merchant?: string | null; purchasedOn: string; currency?: string | null },
   kept: readonly ReceiptLine[],
+  /** Added by HomeSend on its own: every line's change carries how sure, and whether it is still being checked (the owner, 2026-11-03). */
+  auto?: RecordHomeSendChangeInput["auto"],
 ): Promise<{ firstPurchase: string; started: number; stocked: number; cleared: number } | { error: string }> {
   const tracked = await listConsumables(supabase, input.householdId);
   const groceries = new Map<string, GroceryItem>((await listGroceries(supabase, input.householdId)).map((item) => [item.id, item]));
@@ -432,7 +434,7 @@ export async function recordReceipt(
   const byName = new Map<string, { id: string }>(tracked.map((consumable) => [consumable.name.trim().toLowerCase(), { id: consumable.id }]));
   const currency = currencyCode(input.currency);
   const change = (domain: "grocery_item" | "purchase", entityId: string) =>
-    recordHomeSendChange(supabase, { householdId: input.householdId, intakeId: input.itemId, domain, entityId, createdByMemberId: membership.memberId });
+    recordHomeSendChange(supabase, { householdId: input.householdId, intakeId: input.itemId, domain, entityId, createdByMemberId: membership.memberId, ...(auto ? { auto } : {}) });
 
   let firstPurchase: string | null = null;
   let started = 0;
