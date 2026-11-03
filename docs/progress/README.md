@@ -14,12 +14,16 @@ decision that shapes later work each earns a note, written before moving on.
 |---|---|
 <<<<<<< Updated upstream
 <<<<<<< Updated upstream
+<<<<<<< Updated upstream
 =======
 | 2026-11-03 | [Settings search goes deep](2026-11-03-settings-deep-search.md) |
 >>>>>>> Stashed changes
 | 2026-11-03 | [Settings: Assistant & voice card starts collapsed](2026-11-03-settings-assistant-collapsed.md) |
 =======
 | 2026-11-03 | [Notifications: crisp rows, grouped, in sections](2026-11-03-notifications-crisp.md) |
+>>>>>>> Stashed changes
+=======
+| 2026-11-03 | [HomeSend: bulk review, one grouped reminder, 30-day archive, Try again](2026-11-03-homesend-bulk-review-and-lifecycle.md) |
 >>>>>>> Stashed changes
 | 2026-10-31 | [Notes fields grow with their text (shared TextareaField)](2026-10-31-notes-textarea.md) |
 | 2026-10-30 | [Groceries tabs: All, In Kitchen, To Buy](2026-10-30-groceries-tabs.md) |

@@ -4,6 +4,7 @@ import { msg, type NotificationMessage } from "./message";
 import type { Directory } from "./plan";
 import type { NotificationCategory } from "./policies";
 import { localMoment } from "./timing";
+import { countWaiting, isStale, type WaitingGroup } from "../homesend/waiting";
 
 /**
  * Notices (stories 27-004 to 27-014): notifications about something that
@@ -55,50 +56,68 @@ export function adminOf(directory: Directory): string | null {
   return admins[0]?.id ?? null;
 }
 
-// --- HomeSend: an item waiting for a yes (27-004) ---------------------------
+// --- HomeSend: what is waiting for a yes, grouped (27-004; the owner, 2026-11-03) ---
 
 export type HomeSendRow = {
   id: string;
-  created_by_member_id: string;
+  created_by_member_id: string | null;
   status: string;
   classified_kind: string | null;
+  content_type?: string | null;
   updated_at: string;
 };
 
-const WAITING_KIND = new Set(["bill", "school_item", "grocery_item"]);
+const GROUPED_EXPIRY_DAYS = 30;
+
+/** "2 school notices, 1 bill, 1 photo or file", as nested messages so each reader has it in their own language. */
+function groupList(groups: readonly { group: WaitingGroup; count: number }[]): NotificationMessage {
+  const phrases = groups.map(({ group, count }) => msg(`reminder.homesend.group.${group}` as "reminder.homesend.group.bill", { count }));
+  return phrases.slice(1).reduce((joined, next) => msg("reminder.homesend.join", { a: { msg: joined }, b: { msg: next } }), phrases[0]!);
+}
 
 /**
- * One notice per item that is waiting for a person (`classified`), or that
- * failed safely, to the sender when they may confirm it (an adult), otherwise
- * to an Admin. Only the kind of thing is named: what an item says is nobody's
- * to read off a lock screen. It resolves by itself when the item is confirmed,
- * undone, dismissed or read again.
+ * One notice per person for everything waiting in HomeSend — never one per
+ * item: "4 things sent to HomeSend are waiting · 2 school notices, 1 bill, 1
+ * photo or file". Each item counts for the person who may confirm it: its
+ * sender when an adult with an account, otherwise an Admin (an email, a
+ * child's or helper's send). It is rewritten as items arrive or are handled,
+ * and resolves by itself when nothing waits (the sweep's own reconcile). Only
+ * kinds and counts are named: what an item says is nobody's to read off a lock
+ * screen. After 14 days waiting it also asks "still want these?" and says
+ * what happens at 30 (archived, restorable).
  */
-export function homesendNotices(rows: readonly HomeSendRow[], directory: Directory, now: Date, names: ReadonlyMap<string, string> = new Map()): Notice[] {
-  const notices: Notice[] = [];
+export function homesendNotices(rows: readonly HomeSendRow[], directory: Directory, now: Date, timeZone = "UTC"): Notice[] {
+  const byRecipient = new Map<string, HomeSendRow[]>();
   for (const row of rows) {
     if (row.status !== "classified" && row.status !== "failed") continue;
-    const sender = directory.members.get(row.created_by_member_id);
+    const sender = row.created_by_member_id ? directory.members.get(row.created_by_member_id) : undefined;
     const senderMayConfirm = reachable(directory, row.created_by_member_id) && sender?.memberType === "adult";
-    const recipient = senderMayConfirm ? row.created_by_member_id : adminOf(directory);
+    const recipient = senderMayConfirm ? row.created_by_member_id! : adminOf(directory);
     if (!recipient) continue;
-    const failed = row.status === "failed";
-    const kind = row.classified_kind && WAITING_KIND.has(row.classified_kind) ? row.classified_kind : "unknown";
+    const list = byRecipient.get(recipient) ?? [];
+    list.push(row);
+    byRecipient.set(recipient, list);
+  }
+  const notices: Notice[] = [];
+  for (const [recipient, waiting] of byRecipient) {
+    const { total, groups } = countWaiting(waiting);
+    const stale = waiting.filter((row) => isStale(row.updated_at, now, timeZone)).length;
+    const newest = [...waiting].sort((a, b) => b.updated_at.localeCompare(a.updated_at))[0]!;
     notices.push({
       sourceType: "homesend_item",
-      sourceId: row.id,
-      threadKey: `homesend:${row.id}:${row.status}`,
+      sourceId: newest.id,
+      // One open thread per person: rewritten in place, never a second row.
+      threadKey: "homesend:waiting",
       recipientMemberId: recipient,
       category: "system",
       priority: "normal",
-      title: failed ? msg("reminder.homesend.failedTitle") : msg(`reminder.homesend.waiting.${kind}` as "reminder.homesend.waiting.bill"),
-      body: failed
-        ? msg("reminder.homesend.failedBody")
-        : senderMayConfirm || !names.get(row.created_by_member_id)
-          ? msg("reminder.homesend.waitingBody")
-          : msg("reminder.homesend.waitingBodyFrom", { name: names.get(row.created_by_member_id)! }),
+      title: msg("reminder.homesend.grouped.title", { count: total }),
+      body: msg("reminder.homesend.grouped.body", {
+        groups: { msg: groupList(groups) },
+        tail: { msg: stale > 0 ? msg("reminder.homesend.grouped.stale", { count: stale }) : msg("reminder.homesend.grouped.tail") },
+      }),
       action: { action: "open", target: "/home-send" },
-      expiresAt: new Date(now.getTime() + 14 * DAY_MS),
+      expiresAt: new Date(now.getTime() + GROUPED_EXPIRY_DAYS * DAY_MS),
     });
   }
   return notices;

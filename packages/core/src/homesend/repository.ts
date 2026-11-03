@@ -436,3 +436,168 @@ export async function recordDocumentApplied(
   const { error } = await supabase.from("home_send_items").update(update).eq("household_id", householdId).eq("id", itemId);
   if (error) throw new Error(`recordDocumentApplied failed: ${error.code ?? "unknown"}`);
 }
+
+// --- Lifecycle: archive, restore, try again (the owner, 2026-11-03) ---------
+
+/** What the lifecycle keeps beside an item. Every field is optional on the table, so readers default it. */
+export type HomeSendLifecycle = {
+  archivedAt: string | null;
+  /** Where Restore puts it back: waiting or failed. */
+  archivedFrom: HomeSendStatus | null;
+  /** Times a person asked HomeSend to read it again (capped, `waiting.ts` RETRY_CAP). */
+  retryCount: number;
+  /** Set while a read-again is queued; cleared when it has run. */
+  retryRequestedAt: string | null;
+  /** When it last changed — what "untouched for 30 days" is counted from. */
+  updatedAt: string | null;
+};
+
+export const NO_LIFECYCLE: HomeSendLifecycle = { archivedAt: null, archivedFrom: null, retryCount: 0, retryRequestedAt: null, updatedAt: null };
+
+/**
+ * The lifecycle columns for these items, by id. Read on their own, never in
+ * `SELECT_COLUMNS`: before the lifecycle migration is applied the columns are
+ * missing, this read fails, and every item reads as never archived and never
+ * retried — the inbox keeps working in either order (CLAUDE.md, migrations).
+ */
+export async function listHomeSendLifecycle(supabase: SupabaseClient, householdId: string, ids: readonly string[]): Promise<Map<string, HomeSendLifecycle>> {
+  const map = new Map<string, HomeSendLifecycle>();
+  if (ids.length === 0) return map;
+  const { data, error } = await supabase
+    .from("home_send_items")
+    .select("id, archived_at, archived_from, retry_count, retry_requested_at, updated_at")
+    .eq("household_id", householdId)
+    .in("id", ids.slice(0, 500));
+  if (error) return map;
+  for (const row of (data ?? []) as Row[]) {
+    map.set(row.id as string, {
+      archivedAt: (row.archived_at as string | null) ?? null,
+      archivedFrom: (row.archived_from as HomeSendStatus | null) ?? null,
+      retryCount: Number(row.retry_count ?? 0) || 0,
+      retryRequestedAt: (row.retry_requested_at as string | null) ?? null,
+      updatedAt: (row.updated_at as string | null) ?? null,
+    });
+  }
+  return map;
+}
+
+/** Archived items, newest archived first; empty before the migration (no row can be `archived` yet). */
+export async function listArchivedHomeSendItems(supabase: SupabaseClient, householdId: string, limit = 50): Promise<HomeSendItem[]> {
+  const { data, error } = await supabase
+    .from("home_send_items")
+    .select(SELECT_COLUMNS)
+    .eq("household_id", householdId)
+    .eq("status", "archived")
+    .order("created_at", { ascending: false })
+    .limit(Math.min(Math.max(limit, 1), 200));
+  if (error) return [];
+  return (data ?? []).map((row) => fromRow(row as Row));
+}
+
+/** How many are archived, for the "Archived (N)" link; 0 when it can't be read. */
+export async function countArchivedHomeSendItems(supabase: SupabaseClient, householdId: string): Promise<number> {
+  const { count, error } = await supabase.from("home_send_items").select("id", { count: "exact", head: true }).eq("household_id", householdId).eq("status", "archived");
+  return error ? 0 : (count ?? 0);
+}
+
+/**
+ * Restore (the archive's Undo): back to where it was, waiting or failed, and
+ * its 30 days start again (the update touches `updated_at`). Only an archived
+ * item moves; anything else is left alone, so a double tap does nothing twice.
+ */
+export async function restoreHomeSendItem(supabase: SupabaseClient, householdId: string, itemId: string, actorMemberId: string): Promise<boolean> {
+  const { data: current, error: readError } = await supabase
+    .from("home_send_items")
+    .select("archived_from")
+    .eq("household_id", householdId)
+    .eq("id", itemId)
+    .eq("status", "archived")
+    .maybeSingle();
+  if (readError) throw new Error(`restoreHomeSendItem failed: ${readError.code ?? "unknown"}`);
+  if (!current) return false;
+  const back = (current as Row).archived_from;
+  const status: HomeSendStatus = back === "received" || back === "failed" ? back : "classified";
+  const { data, error } = await supabase
+    .from("home_send_items")
+    .update({ status, archived_at: null, archived_from: null })
+    .eq("household_id", householdId)
+    .eq("id", itemId)
+    .eq("status", "archived")
+    .select("id");
+  if (error) throw new Error(`restoreHomeSendItem failed: ${error.code ?? "unknown"}`);
+  const moved = (data ?? []).length > 0;
+  if (moved) await auditChange({ householdId, actorMemberId, eventType: "homesend.restored", targetTable: "home_send_items", targetId: itemId });
+  return moved;
+}
+
+/**
+ * Marks a failed item as asked to be read again, and counts the try — only
+ * while it is still failed, nothing is already queued, and it is under the
+ * cap; otherwise nothing changes and false comes back. The read itself runs
+ * on the job queue (`retry-queue.ts`).
+ */
+export async function markHomeSendRetryRequested(supabase: SupabaseClient, householdId: string, itemId: string, input: { cap: number; tries: number; actorMemberId: string; now?: Date }): Promise<boolean> {
+  if (input.tries >= input.cap) return false;
+  const { data, error } = await supabase
+    .from("home_send_items")
+    .update({ retry_count: input.tries + 1, retry_requested_at: (input.now ?? new Date()).toISOString() })
+    .eq("household_id", householdId)
+    .eq("id", itemId)
+    .eq("status", "failed")
+    .eq("retry_count", input.tries)
+    .is("retry_requested_at", null)
+    .select("id");
+  if (error) throw new Error(`markHomeSendRetryRequested failed: ${error.code ?? "unknown"}`);
+  const marked = (data ?? []).length > 0;
+  if (marked) await auditChange({ householdId, actorMemberId: input.actorMemberId, eventType: "homesend.retry_requested", targetTable: "home_send_items", targetId: itemId, metadata: { attempt: input.tries + 1 } });
+  return marked;
+}
+
+/** The read-again has run, whatever came of it: the row may be asked again (under the cap). */
+export async function clearHomeSendRetryRequested(supabase: SupabaseClient, householdId: string, itemId: string): Promise<void> {
+  const { error } = await supabase.from("home_send_items").update({ retry_requested_at: null }).eq("household_id", householdId).eq("id", itemId);
+  if (error) throw new Error(`clearHomeSendRetryRequested failed: ${error.code ?? "unknown"}`);
+}
+
+/**
+ * The 30-day archive, for every household, in one bounded call to the
+ * database (`public.archive_stale_home_send_items`): an item waiting or
+ * failed and untouched for 30 days on its household's own calendar becomes
+ * `archived` — kept, restorable. Idempotent: an archived item is not waiting,
+ * so a second run finds nothing. Before the migration the function is
+ * missing and this archives nothing.
+ */
+export async function archiveStaleHomeSendItems(admin: SupabaseClient, input: { now?: Date; limit?: number } = {}): Promise<number> {
+  const { data, error } = await admin.rpc("archive_stale_home_send_items", { p_now: (input.now ?? new Date()).toISOString(), p_limit: Math.min(Math.max(input.limit ?? 200, 1), 1000) });
+  if (error) return 0;
+  return typeof data === "number" ? data : Number(data ?? 0) || 0;
+}
+
+/**
+ * Claims a waiting item for one write, so two overlapping requests (a double
+ * tap, two people adding at once) never both add it: a compare-and-swap on
+ * `updated_at`, which the row's trigger moves on every update. Only the
+ * request whose update matched the time it read goes on; the other is told
+ * no. A claim that is never followed by a write leaves the item waiting.
+ */
+export async function claimWaitingHomeSendItem(supabase: SupabaseClient, householdId: string, itemId: string): Promise<boolean> {
+  const { data: current, error: readError } = await supabase
+    .from("home_send_items")
+    .select("status, updated_at")
+    .eq("household_id", householdId)
+    .eq("id", itemId)
+    .maybeSingle();
+  if (readError || !current) return false;
+  const row = current as Row;
+  if (!PENDING_STATUSES.includes(row.status as HomeSendStatus)) return false;
+  const { data, error } = await supabase
+    .from("home_send_items")
+    .update({ status: row.status })
+    .eq("household_id", householdId)
+    .eq("id", itemId)
+    .eq("status", row.status as string)
+    .eq("updated_at", row.updated_at as string)
+    .select("id");
+  if (error) return false;
+  return (data ?? []).length > 0;
+}

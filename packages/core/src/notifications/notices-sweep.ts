@@ -88,7 +88,8 @@ async function sweep(admin: SupabaseClient, householdId: string, now: Date, adap
     admin.from("household_roles").select("member_id, role").eq("household_id", householdId),
     admin.from("responsibilities").select("outcome_key, primary_member_id, backup_member_id").eq("household_id", householdId),
     admin.from("member_guardians").select("child_member_id, guardian_member_id").eq("household_id", householdId),
-    admin.from("home_send_items").select("id, created_by_member_id, status, classified_kind, updated_at").eq("household_id", householdId).in("status", ["classified", "failed"]).gte("updated_at", since(14)).limit(200),
+    // Everything still waiting, however old: one grouped notice counts it all, and the 30-day archive bounds it.
+    admin.from("home_send_items").select("id, created_by_member_id, status, classified_kind, content_type, updated_at").eq("household_id", householdId).in("status", ["classified", "failed"]).order("updated_at", { ascending: false }).limit(500),
     admin.from("family_events").select("id, title, owner_member_id, starts_at, ends_at, kind, status, all_day").eq("household_id", householdId).gte("starts_at", since(1)).limit(300),
     admin.from("availability_exceptions").select("id, member_id, on_date").eq("household_id", householdId).eq("available", false).gte("on_date", today).limit(200),
     admin.from("helper_profiles").select("member_id").eq("household_id", householdId),
@@ -129,7 +130,7 @@ async function sweep(admin: SupabaseClient, householdId: string, now: Date, adap
   const weather = forecast?.state === "ready" ? weatherNotices(forecast.windows, eventRows, weatherNeeds.laundry, directory, now, timeZone) : [];
 
   const wanted: Notice[] = [
-    ...homesendNotices((items.data ?? []) as HomeSendRow[], directory, now, names),
+    ...homesendNotices((items.data ?? []) as HomeSendRow[], directory, now, timeZone),
     ...eventReplyNotices(eventRows, guestRows, directory, now),
     ...helperAbsenceNotices((absences.data ?? []) as AbsenceRow[], helperRows, directory, now, timeZone),
     ...orderNotices((orders.data ?? []) as OrderRow[], directory, now),

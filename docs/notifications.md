@@ -108,8 +108,12 @@ reminders about real records, never lines of text fired and forgotten.
 - **Notices** (stories 27-004 to 27-014, `notices.ts`, `notices-sweep.ts`). A
   notice is about something that happened and is still true, derived from a
   record exactly like a reminder: one thread per record, idempotent, resolved
-  when the record settles, never fired and forgotten. Today: a HomeSend item
-  waiting for a yes or failed safely (the kind of thing only), a guest's reply
+  when the record settles, never fired and forgotten. Today: what waits in
+  HomeSend, as one grouped notice per person (thread `homesend:waiting`: "4
+  things sent to HomeSend are waiting: 2 school notices, 1 bill, 1 photo or
+  file", kinds and counts only, rewritten in place, resolved when nothing
+  waits, "still want these?" once something has waited 14 days; story
+  14-059), a guest's reply
   (one updating thread, to the owner), a helper away, an order's progress, an
   event moved or cancelled by someone else (recorded by a database trigger into
   `family_event_changes`; never to the editor, never to anyone off the event),

@@ -1,6 +1,7 @@
 "use client";
 
-import { Camera, ClipboardPaste, GraduationCap, HeartPulse, HelpCircle, Link2, Mic, PenLine, Receipt, ShieldAlert, ShoppingBasket, UploadCloud, Wallet, X } from "lucide-react";
+import { Archive, Camera, ClipboardPaste, GraduationCap, HeartPulse, HelpCircle, Link2, Mic, PenLine, Receipt, RotateCw, ShieldAlert, ShoppingBasket, UploadCloud, Wallet, X } from "lucide-react";
+import Link from "next/link";
 import { useActionState, useRef, useState, type ReactNode } from "react";
 
 import { suggestedIntakeKind } from "@wonderhome/core/ai/intake-kind-check";
@@ -28,7 +29,8 @@ import {
   type RouteHomeItemState,
   type SendHomeItemState,
 } from "../(auth)/home-send-actions";
-import { fillIn, type HomeSendPageLabels, type HomeSendSourceLabels } from "../_lib/homesend-labels";
+import { addSelectedHomeSendItemsAction, retryHomeSendItemAction, type BulkAddState, type ItemActionState } from "../(auth)/home-send-bulk-actions";
+import { countWords, fillIn, type HomeSendPageLabels, type HomeSendSourceLabels } from "../_lib/homesend-labels";
 import { describeSource, HomeSendConfirmStep, percentSure, TranscriptCheck, type ReviewConfirmation, type ReviewReconciliation, type ReviewSubject } from "./home-send-intake";
 
 /** What the server prepared for an item already waiting (`home-send-review.ts`): who it is for, and whether it is already on record. */
@@ -39,6 +41,10 @@ export type PreparedReview = {
   plan?: DocumentPlan | null;
   /** Why it waits when it would otherwise be added on its own ("already on the shopping list"), worded on the server (I-27). */
   waitWords?: string | null;
+  /** Why it waits, whatever the reason ("a photo", "amount not clear", "possible duplicate of …"), worded on the server from evidence. */
+  why?: string | null;
+  /** One yes among several is all it needs (`waiting.ts` `bulkReady`): it may be ticked and added with others. */
+  ready?: boolean;
 };
 
 const KIND_PRESENTATION: Record<string, { icon: typeof Wallet; tone: IconTone }> = {
@@ -144,8 +150,20 @@ export function HomeSendInbox({
   senders = {},
   filterLabel = null,
   filter = null,
+  pendingTotal,
+  moreHref = null,
+  failedInfo = {},
+  archived = null,
   labels,
 }: {
+  /** Every waiting item, of which `pending` is the page shown. */
+  pendingTotal?: number;
+  /** "Show more": the next page of waiting items, when there is one. */
+  moreHref?: string | null;
+  /** What "Try again" can do for each failed item, and its tries so far, worded on the server. */
+  failedInfo?: Record<string, { canRetry: boolean; line: string | null }>;
+  /** The link to what the 30-day archive set aside, when anything is there. */
+  archived?: { href: string; label: string } | null;
   /** The screen's words in the viewer's language (`homesendPageLabels`). */
   labels: HomeSendPageLabels;
   householdId: string;
@@ -175,6 +193,12 @@ export function HomeSendInbox({
   const [routeState, routeAction, routing] = useActionState<RouteHomeItemState, FormData>(routeHomeSendItemAction, {});
   const [dismissState, dismissAction, dismissing] = useActionState<RouteHomeItemState, FormData>(dismissHomeSendItemAction, {});
   const [undoState, undoAction, undoing] = useActionState<RouteHomeItemState, FormData>(undoHomeSendChangeAction, {});
+  const [bulkState, bulkAction, bulkAdding] = useActionState<BulkAddState, FormData>(addSelectedHomeSendItemsAction, {});
+  const [retryState, retryAction, retrying] = useActionState<ItemActionState, FormData>(retryHomeSendItemAction, {});
+  // Bulk review (the owner, 2026-11-03): ticked rows, and "review one by one".
+  const [selected, setSelected] = useState<ReadonlySet<string>>(new Set());
+  const [inOrder, setInOrder] = useState(false);
+  const [handled, setHandled] = useState<ReadonlySet<string>>(new Set());
 
   const [mode, setMode] = useState<"drop" | "paste">("drop");
   const [dragOver, setDragOver] = useState(false);
@@ -214,6 +238,15 @@ export function HomeSendInbox({
     }
   }
 
+  const [seenBulk, setSeenBulk] = useState(bulkState);
+  if (bulkState !== seenBulk) {
+    setSeenBulk(bulkState);
+    if (bulkState.results) {
+      setSelected(new Set());
+      setHandled(new Set([...handled, ...bulkState.results.filter((result) => result.added).map((result) => result.id)]));
+    }
+  }
+
   // Routing or dismissing closes the confirm step and clears the drop zone
   // back to its resting state, same as `HomeSendSheet` closing itself.
   const closedNotice = routeState.notice ?? dismissState.notice ?? undoState.notice ?? null;
@@ -221,7 +254,16 @@ export function HomeSendInbox({
   if (closedNotice !== seenClosedNotice) {
     setSeenClosedNotice(closedNotice);
     if (closedNotice) {
-      setOpenItem(null);
+      // Reviewing one by one: the one just handled is set aside and the next waiting one opens.
+      const done = openItem ? new Set([...handled, openItem.id]) : handled;
+      setHandled(done);
+      const next = inOrder ? pending.find((item) => !done.has(item.id)) : undefined;
+      if (next) {
+        openReview(next);
+      } else {
+        setOpenItem(null);
+        setInOrder(false);
+      }
       setMode("drop");
     }
   }
@@ -258,7 +300,16 @@ export function HomeSendInbox({
 
   const prefill = openItem?.extracted ?? null;
   const defaultKind = suggestedIntakeKind(openItem?.classifiedKind, prefill);
-  const pendingOthers = pending.filter((item) => item.id !== openItem?.id);
+  const pendingOthers = pending.filter((item) => item.id !== openItem?.id && !handled.has(item.id));
+  const readyIds = pendingOthers.filter((item) => reviews[item.id]?.ready).map((item) => item.id);
+  const chosen = [...selected].filter((id) => readyIds.includes(id));
+  const bulkIds = chosen.length > 0 ? chosen : readyIds;
+  const toggle = (id: string) => setSelected((current) => {
+    const next = new Set(current);
+    if (next.has(id)) next.delete(id);
+    else next.add(id);
+    return next;
+  });
   const failedOthers = failed.filter((item) => item.id !== openItem?.id);
   const changesByIntakeId = new Map<string, HomeSendChange[]>();
   for (const change of changes) {
@@ -412,16 +463,70 @@ export function HomeSendInbox({
 
       {filter}
 
+      {bulkState.error ? <Alert>{bulkState.error}</Alert> : null}
+      {bulkState.results && bulkState.results.length > 0 ? (
+        <Alert tone={bulkState.results.every((result) => result.added) ? "info" : undefined}>
+          <span className="block">{countWords(words.bulk.added, bulkState.results.filter((result) => result.added).length)}</span>
+          {bulkState.results
+            .filter((result) => !result.added)
+            .map((result) => (
+              <span key={result.id} className="block break-words">{fillIn(words.bulk.notAdded, { title: result.title || words.kind.unknown || "" })}</span>
+            ))}
+        </Alert>
+      ) : null}
+
       {pendingOthers.length > 0 ? (
-        <section>
-          <SectionHeader title={words.needsReview} count={pendingOthers.length} />
+        <section className="space-y-2">
+          <SectionHeader title={words.needsReview} count={pendingOthers.length + Math.max(0, (pendingTotal ?? pending.length) - pending.length)} />
+          {readyIds.length > 0 || pendingOthers.length > 1 ? (
+            <div className="flex flex-wrap items-center gap-2">
+              {readyIds.length > 0 ? (
+                <form action={bulkAction}>
+                  <input type="hidden" name="householdId" value={householdId} />
+                  {bulkIds.map((id) => (
+                    <input key={id} type="hidden" name="itemId" value={id} />
+                  ))}
+                  {/* One button for one job (rule 14): it adds what is ticked, or, with nothing ticked, every one that needs only a yes. */}
+                  <Pill type="submit" tone="primary" disabled={bulkAdding || routing}>
+                    {bulkAdding ? words.bulk.adding : chosen.length > 0 ? fillIn(words.bulk.addSelected, { count: chosen.length }) : countWords(words.bulk.addSure, readyIds.length)}
+                  </Pill>
+                </form>
+              ) : null}
+              {pendingOthers.length > 1 && !inOrder ? (
+                <Pill
+                  type="button"
+                  tone="quiet"
+                  onClick={() => {
+                    setInOrder(true);
+                    openReview(pendingOthers[0]!);
+                  }}
+                >
+                  {words.bulk.reviewInOrder}
+                </Pill>
+              ) : null}
+              {inOrder ? (
+                <Pill
+                  type="button"
+                  tone="quiet"
+                  onClick={() => {
+                    setInOrder(false);
+                    setOpenItem(null);
+                  }}
+                >
+                  {words.bulk.stop}
+                </Pill>
+              ) : null}
+            </div>
+          ) : null}
+          {readyIds.length > 0 ? <p className="text-xs text-[var(--wh-foreground-subtle)]">{words.bulk.hint}</p> : null}
           <Card className="p-2">
             <ul className="divide-y divide-[var(--wh-border)]">
               {pendingOthers.map((item) => {
                 const heard = uncheckedTranscript(item);
                 const presentation = item.source === "audio_note" && heard ? { icon: Mic, tone: "neutral" as IconTone, label: words.voiceNote } : presentationFor(item.classifiedKind, words.kind);
                 // Something that would be added on its own says why it waits, in a few words (I-27).
-                const waiting = reviews[item.id]?.waitWords;
+                const waiting = reviews[item.id]?.why ?? reviews[item.id]?.waitWords;
+                const ready = Boolean(reviews[item.id]?.ready);
                 const reason = heard
                   ? words.checkHeard
                   : waiting
@@ -430,6 +535,15 @@ export function HomeSendInbox({
                 const title = titleFor(item, review.source);
                 return (
                   <li key={item.id} className="flex items-center gap-3 py-2.5">
+                    {ready ? (
+                      <input
+                        type="checkbox"
+                        checked={selected.has(item.id)}
+                        onChange={() => toggle(item.id)}
+                        aria-label={fillIn(words.bulk.select, { title })}
+                        className="size-5 shrink-0 accent-[var(--wh-primary)]"
+                      />
+                    ) : null}
                     <IconTile icon={presentation.icon} tone={presentation.tone} size="sm" />
                     <span className="min-w-0 flex-1">
                       <span className="block text-sm font-medium break-words">{title}</span>
@@ -446,6 +560,11 @@ export function HomeSendInbox({
               })}
             </ul>
           </Card>
+          {moreHref ? (
+            <Link href={moreHref} className="block text-center text-sm font-medium text-[var(--wh-primary)]">
+              {words.bulk.showMore}
+            </Link>
+          ) : null}
         </section>
       ) : null}
 
@@ -461,8 +580,21 @@ export function HomeSendInbox({
                     <IconTile icon={item.source === "link" ? Link2 : ShieldAlert} tone="neutral" size="sm" />
                     <span className="min-w-0 flex-1">
                       <span className="block text-sm font-medium break-words">{title}</span>
-                      <span className="block text-xs text-[var(--wh-foreground-subtle)]">{item.failureReason ? (words.failure[item.failureReason] ?? words.couldNotRead) : words.couldNotRead}</span>
+                      <span className="block text-xs text-[var(--wh-foreground-subtle)]">
+                        {item.failureReason ? (words.failure[item.failureReason] ?? words.couldNotRead) : words.couldNotRead}
+                        {retryState.itemId === item.id && retryState.done === "retry_queued" ? ` · ${words.retry.queued}` : failedInfo[item.id]?.line ? ` · ${failedInfo[item.id]!.line}` : ""}
+                      </span>
+                      {retryState.itemId === item.id && retryState.error ? <span className="block text-xs text-[var(--wh-foreground-muted)]">{retryState.error}</span> : null}
                     </span>
+                    {failedInfo[item.id]?.canRetry && !(retryState.itemId === item.id && retryState.done) ? (
+                      <form action={retryAction}>
+                        <input type="hidden" name="householdId" value={householdId} />
+                        <input type="hidden" name="itemId" value={item.id} />
+                        <Pill type="submit" tone="quiet" disabled={retrying} aria-label={fillIn(words.retry.tryAgainAria, { title })} title={words.retry.tryAgain}>
+                          <RotateCw aria-hidden className="size-3.5" />
+                        </Pill>
+                      </form>
+                    ) : null}
                     <Pill type="button" tone="quiet" onClick={() => openReview(item, true)} aria-label={fillIn(words.fillByHandAria, { title })} title={words.fillByHand}>
                       <PenLine aria-hidden className="size-3.5" />
                     </Pill>
@@ -608,6 +740,12 @@ export function HomeSendInbox({
           </Card>
           {undoState.error ? <Alert>{undoState.error}</Alert> : null}
         </section>
+      ) : null}
+
+      {archived ? (
+        <Link href={archived.href} className="flex items-center justify-center gap-1.5 text-sm text-[var(--wh-foreground-muted)]">
+          <Archive aria-hidden className="size-4" /> {archived.label}
+        </Link>
       ) : null}
 
       {pending.length === 0 && failed.length === 0 && history.length === 0 ? (

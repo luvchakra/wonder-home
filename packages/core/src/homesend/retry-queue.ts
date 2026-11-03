@@ -1,8 +1,8 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 
 import { log } from "../observability/logger";
-import { understand, type IngestDeps } from "./ingest";
-import { getHomeSendItem } from "./repository";
+import { rereadFailedItem, understand, type IngestDeps } from "./ingest";
+import { clearHomeSendRetryRequested, getHomeSendItem, markHomeSendFailed } from "./repository";
 import { notificationJobHandlers } from "../notifications/retry-handler";
 
 /**
@@ -45,6 +45,28 @@ export async function enqueueClassifyRetry(admin: SupabaseClient, input: { house
   return !error;
 }
 
+/**
+ * "Try again" on an item that failed safely (the owner, 2026-11-03): a person
+ * asked, the try was counted on the item (`markHomeSendRetryRequested`, five
+ * at most), and this job reads it again on the same queue — leased, deduped
+ * per item, worked by the delivery clock, never on the person's request.
+ */
+export const REREAD_KIND = "homesend.reread";
+
+export async function enqueueReread(admin: SupabaseClient, input: { householdId: string; itemId: string; now?: Date }): Promise<boolean> {
+  const { error } = await admin.from("jobs").insert({
+    household_id: input.householdId,
+    kind: REREAD_KIND,
+    payload: { itemId: input.itemId },
+    dedupe_key: input.itemId,
+    run_after: (input.now ?? new Date()).toISOString(),
+    // One read per tap: the person's own count is the cap, not the queue's retries.
+    max_attempts: 1,
+  });
+  if (error && error.code !== "23505") throw new Error(`enqueueReread failed: ${error.code ?? "unknown"}`);
+  return !error;
+}
+
 export type ClaimedJob = { id: string; household_id: string | null; kind: string; payload: Record<string, unknown> | null; attempts: number };
 
 /** Another kind of job this worker also knows how to run (e.g. WhatsApp message processing). */
@@ -69,7 +91,12 @@ export async function drainJobs(
   for (const job of jobs) {
     let failure: string | null = null;
     try {
-      const handler = job.kind === CLASSIFY_RETRY_KIND ? (a: SupabaseClient, j: ClaimedJob) => retryClassification(a, j, options.deps) : options.handlers?.[job.kind] ?? notificationJobHandlers()[job.kind];
+      const handler =
+        job.kind === CLASSIFY_RETRY_KIND
+          ? (a: SupabaseClient, j: ClaimedJob) => retryClassification(a, j, options.deps)
+          : job.kind === REREAD_KIND
+            ? (a: SupabaseClient, j: ClaimedJob) => rereadJob(a, j, options.deps)
+            : options.handlers?.[job.kind] ?? notificationJobHandlers()[job.kind];
       if (!handler) {
         failure = "unknown job kind";
       } else {
@@ -116,4 +143,29 @@ async function retryClassification(admin: SupabaseClient, job: ClaimedJob, deps?
     deps,
   );
   return outcome.classifyFailed ? "failed" : "read";
+}
+
+/**
+ * One read-again. Whatever comes of it — read and waiting for a person, or
+ * failed safely again — the item may be asked again (under its cap), so the
+ * "Trying again" mark is cleared. A read that throws keeps the item failed,
+ * never lost, and never half-read.
+ */
+async function rereadJob(admin: SupabaseClient, job: ClaimedJob, deps?: IngestDeps): Promise<"read" | "skipped" | "failed"> {
+  const itemId = typeof job.payload?.itemId === "string" ? job.payload.itemId : null;
+  if (!itemId || !job.household_id) return "skipped";
+  const item = await getHomeSendItem(admin, job.household_id, itemId);
+  if (!item) return "skipped";
+  try {
+    if (item.status !== "failed") return "skipped";
+    try {
+      await rereadFailedItem(admin, item, deps);
+    } catch (thrown) {
+      log.warn("homesend reread failed", { reason: thrown instanceof Error ? thrown.name : "unknown", allow: ["reason"] });
+      await markHomeSendFailed(admin, job.household_id, itemId, item.failureReason ?? "unreadable").catch(() => undefined);
+    }
+    return "read";
+  } finally {
+    await clearHomeSendRetryRequested(admin, job.household_id, itemId).catch(() => undefined);
+  }
 }

@@ -29,28 +29,49 @@ describe("who hears what nobody is named for", () => {
   });
 });
 
-describe("a HomeSend item waiting for your OK (27-004)", () => {
+describe("what waits in HomeSend, as one grouped notice per person (27-004)", () => {
   const item = (over: Record<string, unknown> = {}) => ({ id: "i1", created_by_member_id: "upasana", status: "classified", classified_kind: "bill", updated_at: NOW.toISOString(), ...over });
 
   it("tells the adult who sent it, by the kind of thing and nothing about what it says", () => {
     const [notice] = homesendNotices([item()], directory, NOW);
-    expect(notice).toMatchObject({ recipientMemberId: "upasana", threadKey: "homesend:i1:classified", sourceType: "homesend_item", title: { key: "reminder.homesend.waiting.bill" }, body: { key: "reminder.homesend.waitingBody" } });
+    expect(notice).toMatchObject({ recipientMemberId: "upasana", threadKey: "homesend:waiting", sourceType: "homesend_item", title: { key: "reminder.homesend.grouped.title", params: { count: 1 } } });
+    expect(notice!.body).toEqual({ key: "reminder.homesend.grouped.body", params: { groups: { msg: { key: "reminder.homesend.group.bill", params: { count: 1 } } }, tail: { msg: { key: "reminder.homesend.grouped.tail" } } } });
     expect(JSON.stringify(notice)).not.toContain("subject");
   });
 
-  it("tells an Admin when the sender may not confirm it, and says who sent it", () => {
-    const names = new Map([["sunita", "Sunita"]]);
-    const [notice] = homesendNotices([item({ created_by_member_id: "sunita", classified_kind: "grocery_item" })], directory, NOW, names);
-    expect(notice).toMatchObject({ recipientMemberId: "kunal", title: { key: "reminder.homesend.waiting.grocery_item" }, body: { key: "reminder.homesend.waitingBodyFrom", params: { name: "Sunita" } } });
+  it("is one notice for many items, counting each kind, most consequential first", () => {
+    const rows = [
+      item({ id: "a", classified_kind: "school_item" }),
+      item({ id: "b", classified_kind: "school_item" }),
+      item({ id: "c", classified_kind: "bill" }),
+      item({ id: "d", classified_kind: "unknown", content_type: "image/jpeg" }),
+      item({ id: "e", status: "failed", classified_kind: null }),
+    ];
+    const notices = homesendNotices(rows, directory, NOW);
+    expect(notices).toHaveLength(1);
+    expect(notices[0]!.title).toEqual({ key: "reminder.homesend.grouped.title", params: { count: 5 } });
+    const groups = JSON.stringify(notices[0]!.body);
+    const order = ["group.bill", "group.school_item", "group.photo", "group.failed"].map((key) => groups.indexOf(key));
+    expect(order.every((at) => at >= 0)).toBe(true);
+    expect([...order].sort((x, y) => x - y)).toEqual(order);
+    expect(groups).toContain('"reminder.homesend.group.school_item","params":{"count":2}');
   });
 
-  it("says something failed safely, and says nothing about an item that is not waiting", () => {
-    expect(homesendNotices([item({ status: "failed" })], directory, NOW)[0]).toMatchObject({ title: { key: "reminder.homesend.failedTitle" }, threadKey: "homesend:i1:failed" });
-    for (const status of ["received", "routed", "dismissed", "undone"]) expect(homesendNotices([item({ status })], directory, NOW)).toEqual([]);
+  it("counts an item for an Admin when the sender may not confirm it, and for nobody else", () => {
+    const notices = homesendNotices([item(), item({ id: "i2", created_by_member_id: "sunita", classified_kind: "grocery_item" }), item({ id: "i3", created_by_member_id: null })], directory, NOW);
+    expect(notices.map((notice) => [notice.recipientMemberId, (notice.title.params as { count: number }).count]).sort()).toEqual([["kunal", 2], ["upasana", 1]]);
   });
 
-  it("names an unrecognised kind plainly", () => {
-    expect(homesendNotices([item({ classified_kind: null })], directory, NOW)[0]!.title).toEqual({ key: "reminder.homesend.waiting.unknown" });
+  it("says nothing when nothing is waiting", () => {
+    for (const status of ["received", "routed", "dismissed", "undone", "archived"]) expect(homesendNotices([item({ status })], directory, NOW)).toEqual([]);
+  });
+
+  it("asks 'still want these?' once something has waited two weeks on the household's clock", () => {
+    const old = new Date(NOW.getTime() - 14 * 86_400_000).toISOString();
+    const [notice] = homesendNotices([item(), item({ id: "i2", updated_at: old })], directory, NOW, "Asia/Kolkata");
+    expect(JSON.stringify(notice!.body)).toContain('"reminder.homesend.grouped.stale","params":{"count":1}');
+    const [fresh] = homesendNotices([item()], directory, NOW, "Asia/Kolkata");
+    expect(JSON.stringify(fresh!.body)).toContain("reminder.homesend.grouped.tail");
   });
 });
 
@@ -212,10 +233,21 @@ describe("the notice sweep", () => {
     const { client, tables } = memoryDatabase(base());
     expect(await sweepNotices(client, "h1", NOW, { adapters })).toEqual({ created: 1, updated: 0, resolved: 0 });
     expect(tables.notifications).toHaveLength(1);
-    expect(tables.notifications![0]).toMatchObject({ recipient_member_id: "upasana", title: "A bill is waiting for your OK", source_type: "homesend_item", category: "system", thread_key: "homesend:i1:classified" });
-    expect(tables.notifications![0]!.message).toMatchObject({ title: { key: "reminder.homesend.waiting.bill" } });
+    expect(tables.notifications![0]).toMatchObject({ recipient_member_id: "upasana", title: "1 thing sent to HomeSend is waiting", body: "1 bill. Nothing is added until you say yes.", source_type: "homesend_item", category: "system", thread_key: "homesend:waiting" });
+    expect(tables.notifications![0]!.message).toMatchObject({ title: { key: "reminder.homesend.grouped.title" } });
     expect(await sweepNotices(client, "h1", NOW, { adapters })).toEqual({ created: 0, updated: 0, resolved: 0 });
     expect(tables.notifications).toHaveLength(1);
+  });
+
+  it("rewrites the one grouped notice as more arrive, never a second row", async () => {
+    const { client, tables } = memoryDatabase(base());
+    await sweepNotices(client, "h1", NOW, { adapters });
+    tables.home_send_items!.push({ id: "i2", household_id: "h1", created_by_member_id: "upasana", status: "classified", classified_kind: "school_item", updated_at: NOW.toISOString() });
+    expect(await sweepNotices(client, "h1", NOW, { adapters })).toEqual({ created: 0, updated: 1, resolved: 0 });
+    const open = tables.notifications!.filter((row) => row.status !== "resolved" && row.thread_key === "homesend:waiting");
+    expect(open).toHaveLength(1);
+    expect(open[0]!.title).toBe("2 things sent to HomeSend are waiting");
+    expect(open[0]!.body).toBe("1 bill, 1 school notice. Nothing is added until you say yes.");
   });
 
   it("resolves the notice when the item is confirmed", async () => {
