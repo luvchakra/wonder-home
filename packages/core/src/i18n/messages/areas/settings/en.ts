@@ -753,7 +753,7 @@ export const settingsEn = {
   "settingsHome.notifications.quiet": "Your reminders and channels · quiet {from}:00 – {until}:00",
   "settingsHome.voiceAssistants.title": "Voice assistants",
   "settingsHome.voiceAssistants.meta": "Alexa and Gemini Voice, and what each may do",
-  "settingsHome.ai.meta": "{source} · household key and data use",
+  "settingsHome.ai.meta": "{source} · data use",
   "settingsHome.privacy.title": "Privacy & security",
   "settingsHome.privacy.meta": "Data use, export and deletion",
   "settingsHome.instamart.connected": "Connected · order your To buy list",

@@ -740,7 +740,7 @@ export const settingsEs: AreaCatalog<typeof settingsEn> = {
   "settingsHome.notifications.quiet": "Tus recordatorios y canales · silencio {from}:00 – {until}:00",
   "settingsHome.voiceAssistants.title": "Asistentes de voz",
   "settingsHome.voiceAssistants.meta": "Alexa y Gemini Voice, y lo que puede hacer cada uno",
-  "settingsHome.ai.meta": "{source} · clave del hogar y uso de datos",
+  "settingsHome.ai.meta": "{source} · uso de datos",
   "settingsHome.privacy.title": "Privacidad y seguridad",
   "settingsHome.privacy.meta": "Uso de datos, exportación y eliminación",
   "settingsHome.instamart.connected": "Conectado · pide tu lista de Por comprar",

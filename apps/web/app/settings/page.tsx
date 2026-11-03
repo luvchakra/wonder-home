@@ -59,7 +59,7 @@ function SettingsRows({ rows }: { rows: Row[] }) {
  * item; Profile's is the avatar menu.
  *
  * Laid out as a short stack of collapsible chevron cards (the owner, 2026-10-29),
- * grouped and ordered from most-used to administrative: the assistant (open),
+ * grouped and ordered from most-used to administrative: the assistant,
  * then connections and the plan, then — for Admins — the household's own
  * administration (Manage Household, the home address and the activity record),
  * each folded closed. Deep links like `/settings?tab=household#address` or
@@ -162,7 +162,7 @@ export default async function SettingsPage() {
             </>
           ) : null}
 
-          <CollapsibleSection icon={Bot} tone="ai" title={t("settingsHome.group.assistant")} defaultOpen>
+          <CollapsibleSection id="assistant" icon={Bot} tone="ai" title={t("settingsHome.group.assistant")}>
             <SettingsRows rows={assistant} />
           </CollapsibleSection>
 
