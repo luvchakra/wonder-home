@@ -20,7 +20,14 @@ reminders about real records, never lines of text fired and forgotten.
 - **Reconcile.** `reconcile.ts` brings the notifications table in line
   with those records (create, update, resolve, expire; idempotent). It runs
   after any signed-in page (throttled), before `/notifications` reads, and
-  from the daily cron.
+  from the daily cron. The page load takes the pass when the throttle has
+  lapsed or a record changed since the last pass (`reconcileClaimFilter`),
+  so something paid or confirmed is gone the next time the screen opens.
+- **The screen** (`apps/web/app/_lib/reminder-groups.ts`, 2026-11-03). Alike
+  reminders show as one row (all HomeSend items waiting are one row); rows sit
+  in Overdue / Waiting for your OK / Today, each with one thing to do and the
+  rest behind a tap and a ⋯. Grouping is display only: every reminder keeps its
+  own row, state and recipient.
 - **Timing.** `policies.ts` defines when each kind lands, as per-category
   presets a person picks from (`reminder_preferences`). Every time is on
   the household's clock (`timing.ts`); never read `getUTCHours()` for a

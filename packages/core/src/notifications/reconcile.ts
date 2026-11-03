@@ -121,14 +121,30 @@ export async function reconcileHouseholdReminders(
   }
 }
 
-/** Takes this household's turn, or reports that another pass ran recently. */
-async function claimReconcile(admin: SupabaseClient, householdId: string, now: Date): Promise<boolean> {
+/** A pass that finished this recently is not taken again, even when a record has changed since. */
+const RECLAIM_AFTER_SECONDS = 15;
+
+/**
+ * Which households' turn it is: the last pass is older than the throttle, or
+ * a record a reminder reads changed since it (`wh.mark_reminders_due` moved
+ * `next_due_at` to now) and that pass is more than a few seconds old. Without
+ * the second half, a bill paid or a HomeSend item confirmed a minute after a
+ * pass left its reminder on the Notifications screen for up to five minutes
+ * (the owner, 2026-11-03: "too many things going on").
+ */
+export function reconcileClaimFilter(now: Date): string {
   const cutoff = new Date(now.getTime() - RECONCILE_EVERY_MINUTES * 60_000).toISOString();
+  const recent = new Date(now.getTime() - RECLAIM_AFTER_SECONDS * 1000).toISOString();
+  return `reconciled_at.lt."${cutoff}",and(next_due_at.lte."${now.toISOString()}",reconciled_at.lt."${recent}")`;
+}
+
+/** Takes this household's turn, or reports that another pass ran recently and nothing has changed since. */
+async function claimReconcile(admin: SupabaseClient, householdId: string, now: Date): Promise<boolean> {
   const { data: updated, error: updateError } = await admin
     .from("notification_reconciliations")
     .update({ reconciled_at: now.toISOString() })
     .eq("household_id", householdId)
-    .lt("reconciled_at", cutoff)
+    .or(reconcileClaimFilter(now))
     .select("household_id");
   if (updateError) return false;
   if (updated && updated.length > 0) return true;

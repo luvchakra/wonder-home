@@ -179,3 +179,13 @@ describe("a reminder held back by quiet hours goes out the same way when it land
     expect(sent).toEqual([]);
   });
 });
+
+describe("a page load takes the pass again once a record changed (the owner, 2026-11-03)", () => {
+  it("claims when the throttle lapsed, or when a write moved the next check to now", async () => {
+    const { reconcileClaimFilter } = await import("./reconcile");
+    const now = new Date("2026-11-03T10:00:00.000Z");
+    expect(reconcileClaimFilter(now)).toBe(
+      'reconciled_at.lt."2026-11-03T09:55:00.000Z",and(next_due_at.lte."2026-11-03T10:00:00.000Z",reconciled_at.lt."2026-11-03T09:59:45.000Z")',
+    );
+  });
+});

@@ -37,13 +37,23 @@ import type { ActionState } from "./actions";
 
 const idSchema = z.object({ notificationId: z.uuid(), householdId: z.uuid() });
 
+/**
+ * A row may stand for several alike reminders (`_lib/reminder-groups.ts`), so
+ * putting it off or "Not needed" carries each of their ids. Each still goes
+ * through the person's own session one by one, where the recipient guard lets
+ * them change only their own reminder's state.
+ */
+const idsSchema = z.object({ notificationIds: z.array(z.uuid()).min(1).max(50), householdId: z.uuid() });
+const idsOf = (formData: FormData) => [...new Set(formData.getAll("notificationId").map(String))];
+
 export async function dismissReminderAction(_previous: ActionState, formData: FormData): Promise<ActionState> {
-  const parsed = idSchema.safeParse({ notificationId: formData.get("notificationId"), householdId: formData.get("householdId") });
+  const parsed = idsSchema.safeParse({ notificationIds: idsOf(formData), householdId: formData.get("householdId") });
   if (!parsed.success) return { error: "That reminder could not be found." };
   try {
     const supabase = await createClient();
     await requireMembership(supabase, parsed.data.householdId);
-    await dismissNotification(supabase, parsed.data.notificationId);
+    const now = new Date();
+    for (const id of parsed.data.notificationIds) await dismissNotification(supabase, id, now);
   } catch (thrown) {
     return { error: toErrorBody(thrown, "notifications").body.error.message };
   }
@@ -52,7 +62,7 @@ export async function dismissReminderAction(_previous: ActionState, formData: Fo
   redirect("/notifications?done=dismissed");
 }
 
-const snoozeSchema = idSchema.extend({
+const snoozeSchema = idsSchema.extend({
   preset: z.enum([...SNOOZE_PRESETS, "custom"]),
   date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).optional(),
   time: z.string().regex(/^\d{2}:\d{2}$/).optional(),
@@ -60,7 +70,7 @@ const snoozeSchema = idSchema.extend({
 
 export async function snoozeReminderAction(_previous: ActionState, formData: FormData): Promise<ActionState> {
   const parsed = snoozeSchema.safeParse({
-    notificationId: formData.get("notificationId"),
+    notificationIds: idsOf(formData),
     householdId: formData.get("householdId"),
     preset: formData.get("preset"),
     date: formData.get("date") || undefined,
@@ -82,7 +92,7 @@ export async function snoozeReminderAction(_previous: ActionState, formData: For
     } else {
       until = snoozeUntil(parsed.data.preset, now, timeZone);
     }
-    await snoozeNotification(supabase, parsed.data.notificationId, until, now);
+    for (const id of parsed.data.notificationIds) await snoozeNotification(supabase, id, until, now);
   } catch (thrown) {
     return { error: toErrorBody(thrown, "notifications").body.error.message };
   }
