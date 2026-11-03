@@ -31,6 +31,10 @@ export const settingsEn = {
   "settingsPage.ai.directAdd.health.on": "On: a health document you type, forward or tell HomeTalk is added without asking, but only when “Health records kept” is Pre Approved in Responsibilities and WonderHome is more sure than your bar. It stays private to the person it’s about, and a child’s to their guardians. You’re told afterwards, with Undo.",
   "settingsPage.ai.directAdd.health.off": "Off: every health document waits for you to check it.",
   "settingsPage.ai.directAdd.files": "Most bills, receipts and reports arrive as a photo or PDF. Those can’t be checked word by word, so they still wait for you.",
+  "settingsPage.ai.homesendTidy.title": "Tidy up items that no longer apply",
+  "settingsPage.ai.homesendTidy.on": "On: once a day HomeSend archives waiting items whose day has passed, that are already on record or that a newer one replaced. Nothing is deleted.",
+  "settingsPage.ai.homesendTidy.off": "Off: waiting items stay until you handle them, or 30 days untouched.",
+  "settingsPage.ai.homesendTidy.detail": "Rules decide first; AI is asked only when the rules can’t tell, and its answer is checked against the item. Bills, receipts and health documents go only when their day has passed and they’re already on record. Restore any of them under Archived in HomeSend for 30 days.",
   "settingsPage.ai.keySet": "Set {date}",
   "settingsPage.ai.badge.rulesOnly": "Rules only",
   "settingsPage.ai.ownKeyIntro":

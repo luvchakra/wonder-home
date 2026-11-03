@@ -28,6 +28,7 @@ export const settingsSearchDe: AreaCatalog<typeof settingsSearchEn> = {
   "settingsSearch.kw.ai-auto-add": "prozent, sicherheit, automatisch, schwelle",
   "settingsSearch.kw.ai-direct-money": "rechnungen, belege, geld, direkt hinzufügen",
   "settingsSearch.kw.ai-direct-health": "gesundheit, medizin, dokumente, direkt hinzufügen",
+  "settingsSearch.kw.ai-homesend-tidy": "aufräumen, archivieren, alt, abgelaufen, vergangen, doppelt, homesend",
   "settingsSearch.kw.ai-key": "api-schlüssel, schlüssel, token, anbieter, eigener schlüssel",
   "settingsSearch.kw.ai-provider": "anthropic, claude, gemini, openai, modell",
   "settingsSearch.kw.ai-api-key": "schlüssel, api, token, geheimnis, passwort",

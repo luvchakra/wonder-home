@@ -11,6 +11,7 @@ decision that shapes later work each earns a note, written before moving on.
 
 | Date | Note |
 |---|---|
+| 2026-11-03 | [HomeSend daily tidy: archive what no longer applies](2026-11-03-homesend-daily-tidy.md) |
 | 2026-11-03 | [HomeSend "Checking", everywhere it shows](2026-11-03-homesend-checking-everywhere.md) |
 | 2026-11-03 | [HomeSend asks to raise a "Checking" entry over the bar](2026-11-03-homesend-clarifying-questions.md) |
 | 2026-11-03 | [HomeSend adds directly; below the bar it is "Checking"](2026-11-03-homesend-direct-add-checking.md) |

@@ -6,6 +6,7 @@ import type { NotificationCategory } from "./policies";
 import { localMoment } from "./timing";
 import { countWaiting, isStale, type WaitingGroup } from "../homesend/waiting";
 import { questionsLeft, readCheckingState } from "../homesend/checking";
+import { countByGroup, type TidiedEntry } from "../homesend/tidy";
 
 /**
  * Notices (stories 27-004 to 27-014): notifications about something that
@@ -87,23 +88,39 @@ function groupList(groups: readonly { group: WaitingGroup; count: number }[]): N
  * screen. After 14 days waiting it also asks "still want these?" and says
  * what happens at 30 (archived, restorable).
  */
-export function homesendNotices(rows: readonly HomeSendRow[], directory: Directory, now: Date, timeZone = "UTC"): Notice[] {
+export function homesendNotices(rows: readonly HomeSendRow[], directory: Directory, now: Date, timeZone = "UTC", tidied: readonly TidiedEntry[] = []): Notice[] {
+  const recipientOf = (memberId: string | null) => {
+    const sender = memberId ? directory.members.get(memberId) : undefined;
+    const senderMayConfirm = reachable(directory, memberId) && sender?.memberType === "adult";
+    return senderMayConfirm ? memberId! : adminOf(directory);
+  };
   const byRecipient = new Map<string, HomeSendRow[]>();
   for (const row of rows) {
     if (row.status !== "classified" && row.status !== "failed") continue;
-    const sender = row.created_by_member_id ? directory.members.get(row.created_by_member_id) : undefined;
-    const senderMayConfirm = reachable(directory, row.created_by_member_id) && sender?.memberType === "adult";
-    const recipient = senderMayConfirm ? row.created_by_member_id! : adminOf(directory);
+    const recipient = recipientOf(row.created_by_member_id);
     if (!recipient) continue;
     const list = byRecipient.get(recipient) ?? [];
     list.push(row);
     byRecipient.set(recipient, list);
   }
+  // Today's tidy (the owner, 2026-11-03), counted for whoever hears about the items it set aside.
+  const tidiedFor = new Map<string, TidiedEntry[]>();
+  for (const entry of tidied) {
+    const recipient = recipientOf(entry.memberId);
+    if (!recipient) continue;
+    tidiedFor.set(recipient, [...(tidiedFor.get(recipient) ?? []), entry]);
+  }
+  const tidyGroups = (entries: readonly TidiedEntry[]) => {
+    const phrases = countByGroup(entries).map(({ group, count }) => msg(`reminder.homesend.tidy.group.${group}` as "reminder.homesend.tidy.group.past", { count }));
+    return phrases.slice(1).reduce((joined, next) => msg("reminder.homesend.join", { a: { msg: joined }, b: { msg: next } }), phrases[0]!);
+  };
   const notices: Notice[] = [];
   for (const [recipient, waiting] of byRecipient) {
     const { total, groups } = countWaiting(waiting);
     const stale = waiting.filter((row) => isStale(row.updated_at, now, timeZone)).length;
     const newest = [...waiting].sort((a, b) => b.updated_at.localeCompare(a.updated_at))[0]!;
+    const tail = { msg: stale > 0 ? msg("reminder.homesend.grouped.stale", { count: stale }) : msg("reminder.homesend.grouped.tail") };
+    const mine = tidiedFor.get(recipient) ?? [];
     notices.push({
       sourceType: "homesend_item",
       sourceId: newest.id,
@@ -113,12 +130,28 @@ export function homesendNotices(rows: readonly HomeSendRow[], directory: Directo
       category: "system",
       priority: "normal",
       title: msg("reminder.homesend.grouped.title", { count: total }),
-      body: msg("reminder.homesend.grouped.body", {
-        groups: { msg: groupList(groups) },
-        tail: { msg: stale > 0 ? msg("reminder.homesend.grouped.stale", { count: stale }) : msg("reminder.homesend.grouped.tail") },
-      }),
+      body:
+        mine.length > 0
+          ? msg("reminder.homesend.grouped.bodyTidied", { groups: { msg: groupList(groups) }, tail, tidied: { msg: msg("reminder.homesend.tidy.line", { count: mine.length, groups: { msg: tidyGroups(mine) } }) } })
+          : msg("reminder.homesend.grouped.body", { groups: { msg: groupList(groups) }, tail }),
       action: { action: "open", target: "/home-send" },
       expiresAt: new Date(now.getTime() + GROUPED_EXPIRY_DAYS * DAY_MS),
+    });
+  }
+  // Nothing left waiting, but something was tidied today: the same thread says so, once, until tomorrow.
+  for (const [recipient, mine] of tidiedFor) {
+    if (byRecipient.has(recipient)) continue;
+    notices.push({
+      sourceType: "homesend_item",
+      sourceId: mine[0]!.id,
+      threadKey: "homesend:waiting",
+      recipientMemberId: recipient,
+      category: "system",
+      priority: "normal",
+      title: msg("reminder.homesend.tidy.title", { count: mine.length }),
+      body: msg("reminder.homesend.tidy.body", { groups: { msg: tidyGroups(mine) } }),
+      action: { action: "open", target: "/home-send?view=archived" },
+      expiresAt: new Date(now.getTime() + DAY_MS),
     });
   }
   return notices;

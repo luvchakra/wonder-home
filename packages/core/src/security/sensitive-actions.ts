@@ -1,5 +1,14 @@
 import type { AuditEventType } from "../api/audit";
 
+/** How the daily tidy's reasons read in the activity log (`homesend/tidy.ts`). */
+const TIDY_REASON_WORDS: Record<string, string> = {
+  past_date: "Its day has passed",
+  already_recorded: "Already on record",
+  superseded: "Replaced by a newer one",
+  cancelled: "Called off",
+  unreadable: "Still unreadable after every try",
+};
+
 /**
  * Which household actions leave a trail, and where each one is recorded
  * (story 15-006).
@@ -287,6 +296,11 @@ export const SENSITIVE_ACTIONS: readonly SensitiveAction[] = [
     event: "homesend.archived",
     because: "Something sent in waited 30 days untouched and was set aside. It is kept and can be restored, so the household should see when it moved.",
     recordedIn: "supabase/migrations/20261103120000_homesend_lifecycle.sql",
+  },
+  {
+    event: "homesend.auto_archived",
+    because: "The daily tidy set aside something sent in that no longer applies (its day passed, it is already on record, a newer one replaced it, or it could not be read). It is kept and can be restored, so the household should see when and why it moved, and whether a rule or a checked AI verdict decided.",
+    recordedIn: "packages/core/src/homesend/tidy-run.ts",
   },
   {
     event: "homesend.restored",
@@ -722,6 +736,8 @@ export function describeAuditEvent(
       return { title: "A HomeSend addition was undone", detail: null };
     case "homesend.archived":
       return { title: "A HomeSend item was archived after 30 days", detail: "It is kept and can be restored." };
+    case "homesend.auto_archived":
+      return { title: "A HomeSend item that no longer applies was tidied away", detail: `${TIDY_REASON_WORDS[stringOr(metadata.reason, "") ?? ""] ?? "No longer applies"}${metadata.by === "ai" ? " · checked AI verdict" : ""}. It is kept and can be restored.` };
     case "homesend.restored":
       return { title: "An archived HomeSend item was restored", detail: null };
     case "homesend.retry_requested":

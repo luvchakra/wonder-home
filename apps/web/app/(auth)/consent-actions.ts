@@ -8,6 +8,7 @@ import { saveConfirmRequested } from "@wonderhome/core/conversation/consent-repo
 import { asAutoAddPercent, AUTO_ADD_PERCENTS } from "@wonderhome/core/homesend/auto-add";
 import { saveAutoAddPercent } from "@wonderhome/core/household/auto-add-repository";
 import { saveDirectAdd } from "@wonderhome/core/household/direct-add-repository";
+import { saveHomeSendTidy } from "@wonderhome/core/household/homesend-tidy-repository";
 import { RETENTION_WINDOW_CHOICES, saveRetentionWindow } from "@wonderhome/core/privacy/retention-window-repository";
 import { createClient } from "@wonderhome/core/db/server";
 import { requireHouseholdAdmin } from "@wonderhome/core/identity/households";
@@ -94,6 +95,27 @@ export async function saveDirectAddAction(_previous: ActionState, formData: Form
     const supabase = await createClient();
     const membership = await requireHouseholdAdmin(supabase, parsed.data.householdId);
     await saveDirectAdd(supabase, { householdId: parsed.data.householdId, actorMemberId: membership.memberId, area: parsed.data.area, on: parsed.data.on === "on" });
+  } catch (thrown) {
+    return { error: toErrorBody(thrown, "privacy").body.error.message };
+  }
+  revalidatePath("/settings/ai");
+  return { notice: "saved" };
+}
+
+/**
+ * "Tidy up items that no longer apply" (the owner, 2026-11-03): an Admin
+ * decides whether HomeSend's daily tidy may archive waiting items that no
+ * longer apply (`homesend/tidy.ts`). On unless turned off.
+ */
+const homesendTidySchema = z.object({ householdId: z.uuid(), on: z.enum(["on", "off"]) });
+
+export async function saveHomeSendTidyAction(_previous: ActionState, formData: FormData): Promise<ActionState> {
+  const parsed = homesendTidySchema.safeParse(Object.fromEntries(formData));
+  if (!parsed.success) return { error: "Please try again." };
+  try {
+    const supabase = await createClient();
+    const membership = await requireHouseholdAdmin(supabase, parsed.data.householdId);
+    await saveHomeSendTidy(supabase, { householdId: parsed.data.householdId, actorMemberId: membership.memberId, on: parsed.data.on === "on" });
   } catch (thrown) {
     return { error: toErrorBody(thrown, "privacy").body.error.message };
   }

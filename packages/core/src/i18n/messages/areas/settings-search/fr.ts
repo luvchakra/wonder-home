@@ -28,6 +28,7 @@ export const settingsSearchFr: AreaCatalog<typeof settingsSearchEn> = {
   "settingsSearch.kw.ai-auto-add": "pourcentage, confiance, automatique, seuil",
   "settingsSearch.kw.ai-direct-money": "factures, reçus, argent, ajouter directement",
   "settingsSearch.kw.ai-direct-health": "santé, médical, documents, ajouter directement",
+  "settingsSearch.kw.ai-homesend-tidy": "ranger, nettoyer, archiver, ancien, expiré, passé, doublon, homesend",
   "settingsSearch.kw.ai-key": "clé api, clé, jeton, fournisseur, clé personnelle",
   "settingsSearch.kw.ai-provider": "anthropic, claude, gemini, openai, modèle",
   "settingsSearch.kw.ai-api-key": "clé, api, jeton, secret, mot de passe",

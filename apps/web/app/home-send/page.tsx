@@ -9,7 +9,7 @@ import { waitRowWords } from "@wonderhome/core/homesend/auto-add";
 import { listHomeSendChanges } from "@wonderhome/core/homesend/changes";
 import { inboxSegments, inChannel, readInboxChannel } from "@wonderhome/core/homesend/channels";
 import { ingestFile, ingestText } from "@wonderhome/core/homesend/ingest";
-import { countArchivedHomeSendItems, listArchivedHomeSendItems, listHomeSendItems, listHomeSendLifecycle, NO_LIFECYCLE } from "@wonderhome/core/homesend/repository";
+import { countArchivedHomeSendItems, listArchiveReasons, listArchivedHomeSendItems, listHomeSendItems, listHomeSendLifecycle, NO_LIFECYCLE } from "@wonderhome/core/homesend/repository";
 import { bulkReady, daysBetween, retryState, STALE_AFTER_DAYS, whyItWaits } from "@wonderhome/core/homesend/waiting";
 import { recoverWhen } from "@wonderhome/core/homesend/when";
 import { consumeShareHandoff } from "@wonderhome/core/homesend/share-handoff";
@@ -133,10 +133,11 @@ export default async function HomeSendPage({
   // Archived (the 30-day archive): kept, restorable, nothing added.
   if (viewParam === "archived") {
     const archived = await listArchivedHomeSendItems(supabase, householdId, 100);
+    const reasons = await listArchiveReasons(supabase, householdId, archived.map((item) => item.id));
     const labels = homesendPageLabels(t, locale.preferences.language);
     return (
       <AppShell {...shell} back={{ href: "/home-send", label: labels.inbox.archived.back }} title={labels.inbox.archived.title}>
-        <HomeSendArchived householdId={householdId} items={archived} labels={labels} />
+        <HomeSendArchived householdId={householdId} items={archived} reasons={Object.fromEntries(reasons)} labels={labels} />
       </AppShell>
     );
   }

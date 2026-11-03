@@ -1090,3 +1090,39 @@ test("tries to read again are counted, within bounds", () => {
   assert.equal(psql(`select retry_count from public.home_send_items where id = '${id}';`, options), "0");
   assert.throws(() => psql(`update public.home_send_items set retry_count = 11 where id = '${id}';`, options));
 });
+
+// ---------------------------------------------------------------------------
+// The daily tidy (the owner, 2026-11-03): archived with a reason, restorable, never deleted.
+// ---------------------------------------------------------------------------
+
+test("the 30-day archive says why; a tidy archive keeps its own reason; Restore clears it", () => {
+  const old = waitingItem("Old reason", 31);
+  psql(`select public.archive_stale_home_send_items(now(), 50);`, options);
+  assert.equal(psql(`select archive_reason from public.home_send_items where id = '${old}';`, options), "untouched_30_days");
+  const past = waitingItem("Past event", 3);
+  psql(`update public.home_send_items set status = 'archived', archived_from = 'classified', archived_at = now(), archive_reason = 'past_date' where id = '${past}';`, options);
+  assert.equal(psql(`select status || ' ' || archive_reason from public.home_send_items where id = '${past}';`, options), "archived past_date");
+  // Restore, as the app does it: status and where-from only; the trigger clears the reason.
+  asProfile(HEAD, `update public.home_send_items set status = 'classified', archived_at = null, archived_from = null where id = '${past}' and status = 'archived';`, options);
+  assert.equal(psql(`select status || ' ' || coalesce(archive_reason, 'none') from public.home_send_items where id = '${past}';`, options), "classified none");
+  assert.throws(() => psql(`update public.home_send_items set status = 'archived', archived_from = 'classified', archived_at = now(), archive_reason = 'because' where id = '${past}';`, options));
+});
+
+test("a routed item can be archived and restored to routed", () => {
+  const id = waitingItem("Checking source", 2);
+  psql(`update public.home_send_items set status = 'routed', routed_table = 'school_items', routed_id = gen_random_uuid() where id = '${id}';`, options);
+  psql(`update public.home_send_items set status = 'archived', archived_from = 'routed', archived_at = now(), archive_reason = 'past_date' where id = '${id}';`, options);
+  asProfile(HEAD, `update public.home_send_items set status = 'routed', archived_at = null, archived_from = null where id = '${id}' and status = 'archived';`, options);
+  assert.equal(psql(`select status || ' ' || coalesce(archive_reason, 'none') || ' ' || routed_table from public.home_send_items where id = '${id}';`, options), "routed none school_items");
+  // Only an item archived from routed may keep what it routed to.
+  const waiting = waitingItem("Never routed", 2);
+  assert.throws(() => psql(`update public.home_send_items set status = 'archived', archived_from = 'classified', archived_at = now(), archive_reason = 'past_date', routed_table = 'school_items' where id = '${waiting}';`, options));
+});
+
+test("the tidy's day record: one per household per day, written only by the clock, read only by the household's Admins", () => {
+  psql(`insert into public.homesend_tidy_runs (household_id, run_on, state) values ('${household}', '2026-11-03', 'done');`, options);
+  assert.throws(() => psql(`insert into public.homesend_tidy_runs (household_id, run_on) values ('${household}', '2026-11-03');`, options));
+  assert.equal(asProfile(HEAD, `select count(*) from public.homesend_tidy_runs where household_id = '${household}';`, options), "1");
+  assert.equal(asProfile(OUTSIDER, `select count(*) from public.homesend_tidy_runs where household_id = '${household}';`, options), "0");
+  assert.ok(deniedForProfile(HEAD, `insert into public.homesend_tidy_runs (household_id, run_on) values ('${household}', '2026-11-04');`, options), "a member wrote the tidy's day record");
+});

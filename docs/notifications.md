@@ -113,7 +113,11 @@ reminders about real records, never lines of text fired and forgotten.
   things sent to HomeSend are waiting: 2 school notices, 1 bill, 1 photo or
   file", kinds and counts only, rewritten in place, resolved when nothing
   waits, "still want these?" once something has waited 14 days; story
-  14-059), a guest's reply
+  14-059; on a day HomeSend's daily tidy set things aside, the same thread
+  adds one line, "Tidied 3 items that no longer apply (2 past events, 1
+  duplicate)", from that day's `homesend_tidy_runs` row, counts only, and
+  says it on its own until the next day when nothing else waits; story
+  14-063), a guest's reply
   (one updating thread, to the owner), a helper away, an order's progress, an
   event moved or cancelled by someone else (recorded by a database trigger into
   `family_event_changes`; never to the editor, never to anyone off the event),

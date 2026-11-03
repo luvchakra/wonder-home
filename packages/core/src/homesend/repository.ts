@@ -16,6 +16,7 @@ import type {
 } from "./items";
 import type { IntakeChangeReceipt } from "./apply";
 import type { DocumentPlan } from "./plan";
+import { ARCHIVE_REASONS, type ArchiveReason } from "./archive-reasons";
 import type { IntakeUnderstanding } from "./understanding";
 
 /**
@@ -492,6 +493,23 @@ export async function listArchivedHomeSendItems(supabase: SupabaseClient, househ
     .limit(Math.min(Math.max(limit, 1), 200));
   if (error) return [];
   return (data ?? []).map((row) => fromRow(row as Row));
+}
+
+/**
+ * Why each archived item was set aside (`archive_reason`, the daily tidy's
+ * migration), by id. Read on its own: before that migration the column is
+ * missing, this read fails, and no reason is shown.
+ */
+export async function listArchiveReasons(supabase: SupabaseClient, householdId: string, ids: readonly string[]): Promise<Map<string, ArchiveReason>> {
+  const map = new Map<string, ArchiveReason>();
+  if (ids.length === 0) return map;
+  const { data, error } = await supabase.from("home_send_items").select("id, archive_reason").eq("household_id", householdId).in("id", [...ids]).limit(ids.length);
+  if (error) return map;
+  for (const row of (data ?? []) as Row[]) {
+    const reason = row.archive_reason as string | null;
+    if (reason && (ARCHIVE_REASONS as readonly string[]).includes(reason)) map.set(row.id as string, reason as ArchiveReason);
+  }
+  return map;
 }
 
 /** How many are archived, for the "Archived (N)" link; 0 when it can't be read. */

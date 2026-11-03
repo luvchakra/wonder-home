@@ -12,6 +12,7 @@ import { EmptyState } from "@wonderhome/core/ui/states";
 import { restoreHomeSendItemAction, type ItemActionState } from "../(auth)/home-send-bulk-actions";
 import type { HomeSendItem } from "../(auth)/home-send-actions";
 import { fillIn, type HomeSendPageLabels } from "../_lib/homesend-labels";
+import type { ArchiveReason } from "@wonderhome/core/homesend/archive-reasons";
 
 /** A row's name, as the inbox shows it: what was read, else what was sent. */
 function titleOf(item: HomeSendItem, fallback: string): string {
@@ -20,10 +21,10 @@ function titleOf(item: HomeSendItem, fallback: string): string {
 
 /**
  * HomeSend's archive (the owner, 2026-11-03): what waited 30 days untouched,
- * set aside — kept, never added, and put back with Restore (the archive's
- * Undo), which starts its 30 days again.
+ * or what the daily tidy found no longer applies, set aside — kept, never
+ * added, each with why — and put back with Restore (the archive's Undo).
  */
-export function HomeSendArchived({ householdId, items, labels }: { householdId: string; items: HomeSendItem[]; labels: HomeSendPageLabels }) {
+export function HomeSendArchived({ householdId, items, reasons = {}, labels }: { householdId: string; items: HomeSendItem[]; reasons?: Record<string, ArchiveReason>; labels: HomeSendPageLabels }) {
   const [state, restore, restoring] = useActionState<ItemActionState, FormData>(restoreHomeSendItemAction, {});
   const words = labels.inbox;
   if (items.length === 0) return <EmptyState icon={Archive} tone="ai" title={words.archived.empty} description={words.archived.lede} />;
@@ -42,7 +43,10 @@ export function HomeSendArchived({ householdId, items, labels }: { householdId: 
                 <IconTile icon={Archive} tone="neutral" size="sm" />
                 <span className="min-w-0 flex-1">
                   <span className="block text-sm font-medium break-words">{title}</span>
-                  <span className="block text-xs text-[var(--wh-foreground-subtle)]">{kind}</span>
+                  <span className="block text-xs text-[var(--wh-foreground-subtle)]">
+                    {kind}
+                    {reasons[item.id] ? ` · ${words.archived.reason[reasons[item.id]!]}` : null}
+                  </span>
                 </span>
                 <form action={restore}>
                   <input type="hidden" name="householdId" value={householdId} />

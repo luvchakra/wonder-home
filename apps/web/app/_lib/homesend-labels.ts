@@ -1,4 +1,5 @@
 import type { ReceiptAction } from "@wonderhome/core/homesend/apply";
+import { ARCHIVE_REASONS, type ArchiveReason } from "@wonderhome/core/homesend/archive-reasons";
 import type { HomeSendFailureReason } from "@wonderhome/core/homesend/items";
 import type { PlanAction, PlanGroup } from "@wonderhome/core/homesend/plan";
 import type { IntakeUnderstanding } from "@wonderhome/core/homesend/understanding";
@@ -313,7 +314,7 @@ export type HomeSendPageLabels = {
     /** Bulk review (the owner, 2026-11-03). */
     bulk: { select: string; addSelected: string; addSure: CountedWords; adding: string; added: CountedWords; notAdded: string; hint: string; reviewInOrder: string; stop: string; showMore: string };
     retry: { tryAgain: string; tryAgainAria: string; queued: string };
-    archived: { title: string; lede: string; restore: string; restoreAria: string; restored: string; back: string; empty: string };
+    archived: { title: string; lede: string; restore: string; restoreAria: string; restored: string; back: string; empty: string; reason: Record<ArchiveReason, string> };
     dropTitle: string;
     dropHint: string;
     chooseFile: string;
@@ -764,6 +765,7 @@ export function homesendPageLabels(t: Translate, language: string): HomeSendPage
         restored: t("homesend.archived.restored"),
         back: t("homesend.archived.back"),
         empty: t("homesend.archived.empty"),
+        reason: Object.fromEntries(ARCHIVE_REASONS.map((reason) => [reason, t(`homesend.archived.reason.${reason}`)])) as Record<ArchiveReason, string>,
       },
       dropTitle: t("homesend.drop.title"),
       dropHint: t("homesend.drop.hint"),

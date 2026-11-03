@@ -32,6 +32,8 @@ import { detectInstructionInjection } from "../homesend/injection";
 import { reconcileAgainstRecords, type HomeSendCandidate } from "../homesend/reconcile";
 import { adoptMatchedSubject, resolveIntakePeople } from "../homesend/resolve";
 import { buildUnderstanding } from "../homesend/understanding";
+import { checkVerdict, decideByRules, MONEY_OR_HEALTH, newerFromSameSender, tidyFacts, type TidyItem, type TidyVerdict } from "../homesend/tidy";
+import type { TidyJudge } from "../homesend/tidy-model";
 import { compareStages } from "./compare";
 import { calendarFor, contextItemsFor, GOLDEN_HOUSEHOLDS, groundingEnvFor, heldForAdultsFor, memberNames, memberOf, peopleOf, viewerFor } from "./households";
 import type { CaseResult, EvalCase, Expectation, HomeBrainCase, HomeSendCase, HomeTalkCase, Observation } from "./types";
@@ -54,6 +56,8 @@ export type Models = {
   classify?: (source: HomeSendCase["source"], reference: { now: Date; timezone: string }) => Promise<IntakeExtraction | null>;
   /** HomeBrain's answer composer. Absent: the deterministic answer. */
   compose?: AnswerComposer;
+  /** HomeSend's daily tidy verdict. Absent: the case's recorded verdict. */
+  tidy?: TidyJudge;
 };
 
 const EMPTY: Observation = {
@@ -460,6 +464,7 @@ export const BLANK_READING: IntakeExtraction = {
 const CHANGE_DOMAIN = { bill: "bill", school_item: "school_item", activity_item: "activity_item", event: "event", grocery_item: "grocery_item", health_document: "health_document" } as const;
 
 export async function observeHomeSend(c: HomeSendCase, models: Models = {}): Promise<Observation> {
+  if (c.tidy) return observeTidy(c, c.tidy, models);
   const household = GOLDEN_HOUSEHOLDS[c.household];
   // A date phrase is resolved against when the content was written, in the household's timezone.
   const reference = { now: c.source.capturedAt ? new Date(c.source.capturedAt) : household.now, timezone: household.timezone };
@@ -557,6 +562,73 @@ export async function observeHomeSend(c: HomeSendCase, models: Models = {}): Pro
     },
     answer: told.join("\n"),
     confidence: { high: 0.9, medium: 0.7, low: 0.4 }[understanding.confidence],
+  };
+}
+
+// --- HomeSend's daily tidy (the owner, 2026-11-03) -------------------------------
+
+/**
+ * The tidy's decision on one waiting item, through the same rules and the
+ * same check on a model's verdict the daily job uses (`homesend/tidy.ts`):
+ * observed as "archive:<reason>" or "keep".
+ */
+async function observeTidy(c: HomeSendCase, tidy: NonNullable<HomeSendCase["tidy"]>, models: Models): Promise<Observation> {
+  const household = GOLDEN_HOUSEHOLDS[c.household];
+  const reading = { ...BLANK_READING, ...c.reading };
+  const item: TidyItem = {
+    id: c.id,
+    status: "classified",
+    kind: reading.kind,
+    extracted: reading,
+    understanding: { contentSummary: reading.summary ?? "", change: reading.change ?? "new" },
+    sender: `member:${c.actor}`,
+    memberId: c.actor,
+    createdAt: tidy.sentAt,
+    updatedAt: tidy.sentAt,
+    failureReason: null,
+    retryCount: 0,
+    retryRequestedAt: null,
+  };
+  const others: TidyItem[] = (tidy.newer ?? []).map((newer, index) => ({ ...item, id: `${c.id}-n${index + 1}`, extracted: { ...reading, title: newer.title }, createdAt: newer.sentAt, updatedAt: newer.sentAt }));
+  const kind = reading.kind;
+  const reconciliation =
+    kind !== "unknown" && kind !== "receipt" && reading.title
+      ? reconcileAgainstRecords(
+          household.records,
+          household.id,
+          { kind: CHANGE_DOMAIN[kind], title: reading.title, date: reading.dueDate ?? reading.documentDate ?? null, amount: reading.amount, payee: reading.payee, change: reading.change, capturedAt: tidy.sentAt },
+          { timezone: household.timezone, now: new Date(`${tidy.today}T06:00:00Z`), memberNames: memberNames(household) },
+        )
+      : null;
+  const now = new Date(`${tidy.today}T06:00:00Z`);
+  let decision = decideByRules(item, { today: tidy.today, timeZone: household.timezone, now, reconciliation, others });
+  let told = decision.action === "archive" ? `rule: ${decision.reason}` : `kept: ${decision.why}`;
+  let providerFailure: string | null = null;
+  if (decision.action === "keep" && decision.askAi) {
+    const facts = tidyFacts(item);
+    const newer = newerFromSameSender(item, others).slice(0, 3);
+    const newerLabels = new Map(newer.map((other, index) => [`N1.${index + 1}`, other.id]));
+    let verdict: TidyVerdict | undefined;
+    if (models.tidy && !tidy.recordedVerdict) {
+      verdict = (await models.tidy.judge(tidy.today, [{ label: "T1", kind, facts, newer: newer.map((other, index) => ({ label: `N1.${index + 1}`, facts: tidyFacts(other).filter((fact) => fact.id !== "sent") })) }])).get("T1");
+      if (!verdict) providerFailure = "unparseable";
+    } else if (tidy.verdict) verdict = { item: "T1", ...tidy.verdict };
+    if (verdict) {
+      const checked = checkVerdict(verdict, item, { today: tidy.today, facts, newerLabels, reconciliation });
+      decision = checked.ok ? { action: "archive", reason: checked.reason, by: "ai", evidence: checked.evidence } : { action: "keep", why: checked.why === "kept" ? "ai_kept" : "ai_unchecked", askAi: false };
+      told = checked.ok ? `ai: ${checked.reason}` : `kept: ${checked.why}`;
+    }
+  }
+  const moneyOrHealth = MONEY_OR_HEALTH.has(kind);
+  return {
+    ...EMPTY,
+    interpretation: kind,
+    match: { outcome: reconciliation?.proposal.type ?? "new", recordId: reconciliation?.existingId ?? null },
+    action: decision.action === "archive" ? `archive:${decision.reason}` : "keep",
+    // Setting a bill, receipt or health document aside on a model's word alone would be the unsafe outcome.
+    safety: { consequential: moneyOrHealth, executed: moneyOrHealth && decision.action === "archive" && decision.by === "ai", refused: false, injectionFlagged: false },
+    answer: told,
+    providerFailure,
   };
 }
 

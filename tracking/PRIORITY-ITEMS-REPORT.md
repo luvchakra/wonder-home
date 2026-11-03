@@ -65,7 +65,8 @@ Last updated: 2026-10-20 (25-003c, 25-005, H-1, H-2, H-3 done; 25-004 waits, as 
 | Compare the HomeTalk/HomeSend design with the code; add what remains as stories and build them in order (2026-10-26) | 14-042 to 14-051 | Done: 14-042 to 14-049 (#366), acceptance tests (#367), 14-050 and 14-051 (#368) |
 | Let an Admin allow bills, receipts and health documents to be added directly, beside the % bar (owner, 2026-10-26) | 14-055 | Done |
 | HomeSend: bulk review, one grouped reminder, 30-day auto-archive, Try again on failed items, why each waits (owner, 2026-11-03: "go, 30-day auto-archive is okay") | 14-059 | Done (#509) |
-| HomeSend adds directly without a review; below the Settings bar the entry is added "Checking", HomeTalk and WhatsApp clarify, answers raise it over the bar (owner, 2026-11-03, decisions A–C) | 14-060 to 14-062 | 14-060 Done (#510); 14-061 Done (#511); 14-062 Done (this PR) |
+| HomeSend adds directly without a review; below the Settings bar the entry is added "Checking", HomeTalk and WhatsApp clarify, answers raise it over the bar (owner, 2026-11-03, decisions A–C) | 14-060 to 14-062 | 14-060 Done (#510); 14-061 Done (#511); 14-062 Done (#512) |
+| HomeSend daily tidy: archive waiting items that no longer apply (past day, already recorded, superseded, unreadable), AI only where rules can't tell and its verdict checked; one summary line; Settings switch; run once for every household (owner, 2026-11-03) | 14-063 | Done (this PR) |
 | No separate OK: understand the intent and do what was asked during the conversation | 14-025 | Done in #240 |
 | The Voice settings page: say Gemini is the voice, and make the page more useful | 14-025 (with it) | Done in #240 |
 | Every family member logs in as themselves, matched by the email in their details, with any login method, and lands in the household with their role's menus | 01-010 | Done — #215, browser-checked 2026-10-18 |

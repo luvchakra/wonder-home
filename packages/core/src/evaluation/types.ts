@@ -179,6 +179,20 @@ export type HomeSendCase = CaseBase & {
   /** The Admin's "Add money / health entries directly" settings (`homesend/auto-add.ts`); both off when unset. */
   directAdd?: Partial<import("../homesend/auto-add").DirectAdd>;
   transcriptConfidence?: number;
+  /**
+   * The daily tidy (the owner, 2026-11-03): the reading is an item still
+   * waiting, and the case is whether it is archived ("archive:<reason>") or
+   * kept ("keep") on `today`. `verdict` is the recorded model verdict the
+   * deterministic run checks; a live run asks the provider instead, unless
+   * `recordedVerdict` says the case is about this exact verdict.
+   */
+  tidy?: {
+    today: string;
+    sentAt: string;
+    newer?: readonly { title: string; sentAt: string }[];
+    verdict?: Omit<import("../homesend/tidy").TidyVerdict, "item">;
+    recordedVerdict?: boolean;
+  };
 };
 
 export type HomeBrainCase = CaseBase & {

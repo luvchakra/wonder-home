@@ -1,4 +1,6 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
+import { TIDY_REASONS } from "../homesend/archive-reasons";
+import type { TidiedEntry } from "../homesend/tidy";
 
 import { formatterFor } from "../i18n/format";
 import { NO_MEMBER_CHOICES, parseHouseholdSettings, resolvePreferences } from "../i18n/preferences";
@@ -61,6 +63,16 @@ const OPEN = ["generated", "delivered", "seen"];
 
 type Open = { id: string; recipient_member_id: string; thread_key: string; title: string; body: string };
 
+/** Today's tidy, as its run row keeps it: ids, reasons and who sent each, nothing else. */
+function tidiedToday(rows: unknown): TidiedEntry[] {
+  const archived = (Array.isArray(rows) ? (rows[0] as { archived?: unknown } | undefined)?.archived : null) ?? [];
+  if (!Array.isArray(archived)) return [];
+  return archived.filter(
+    (entry): entry is TidiedEntry =>
+      Boolean(entry) && typeof (entry as TidiedEntry).id === "string" && (TIDY_REASONS as readonly string[]).includes((entry as TidiedEntry).reason),
+  );
+}
+
 export async function sweepNotices(
   admin: SupabaseClient,
   householdId: string,
@@ -85,7 +97,7 @@ async function sweep(admin: SupabaseClient, householdId: string, now: Date, adap
   const since = (days: number) => new Date(now.getTime() - days * 86_400_000).toISOString();
   const today = localMoment(now, timeZone).dateKey;
 
-  const [members, roles, responsibilities, guardians, items, checks, events, absences, helpers, orders, changes, checkIns, chatMessages, chatThreads, chatParticipants, open, closed, keyAlerts] = await Promise.all([
+  const [members, roles, responsibilities, guardians, items, checks, events, absences, helpers, orders, changes, checkIns, chatMessages, chatThreads, chatParticipants, open, closed, keyAlerts, tidyRun] = await Promise.all([
     admin.from("household_members").select("id, profile_id, member_type, status, display_name, nickname").eq("household_id", householdId),
     admin.from("household_roles").select("member_id, role").eq("household_id", householdId),
     admin.from("responsibilities").select("outcome_key, primary_member_id, backup_member_id").eq("household_id", householdId),
@@ -112,6 +124,10 @@ async function sweep(admin: SupabaseClient, householdId: string, now: Date, adap
     Promise.resolve()
       .then(() => admin.rpc("household_ai_key_alerts", { p_household_id: householdId }))
       .catch(() => ({ data: [] })),
+    // What HomeSend's daily tidy set aside today, for the one line in the grouped notice; before its migration the read fails and is empty.
+    Promise.resolve()
+      .then(() => admin.from("homesend_tidy_runs").select("archived").eq("household_id", householdId).eq("run_on", today).limit(1))
+      .catch(() => ({ data: [] })),
   ]);
 
   const memberRows = (members.data ?? []) as { id: string; profile_id: string | null; member_type: "adult" | "child" | "helper"; status: string; display_name: string; nickname: string | null }[];
@@ -134,7 +150,7 @@ async function sweep(admin: SupabaseClient, householdId: string, now: Date, adap
   const weather = forecast?.state === "ready" ? weatherNotices(forecast.windows, eventRows, weatherNeeds.laundry, directory, now, timeZone) : [];
 
   const wanted: Notice[] = [
-    ...homesendNotices((items.data ?? []) as HomeSendRow[], directory, now, timeZone),
+    ...homesendNotices((items.data ?? []) as HomeSendRow[], directory, now, timeZone, tidiedToday(tidyRun.data)),
     ...homesendQuestionNotices((checks.data ?? []) as CheckingRow[], directory, now),
     ...eventReplyNotices(eventRows, guestRows, directory, now),
     ...helperAbsenceNotices((absences.data ?? []) as AbsenceRow[], helperRows, directory, now, timeZone),

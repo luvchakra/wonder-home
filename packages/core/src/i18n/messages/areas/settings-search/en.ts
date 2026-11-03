@@ -27,6 +27,7 @@ export const settingsSearchEn = {
   "settingsSearch.kw.ai-auto-add": "percent, confidence, sure, automatic, homesend, threshold",
   "settingsSearch.kw.ai-direct-money": "bills, receipts, money, finance, add directly, automatic",
   "settingsSearch.kw.ai-direct-health": "health, medical, documents, add directly, automatic",
+  "settingsSearch.kw.ai-homesend-tidy": "clean up, tidy, archive, old, expired, past, duplicate, stale, homesend",
   "settingsSearch.kw.ai-key": "api key, key, token, provider, model, own key",
   "settingsSearch.kw.ai-provider": "anthropic, claude, gemini, google, openai, gpt, model",
   "settingsSearch.kw.ai-api-key": "key, api, token, secret, own key",

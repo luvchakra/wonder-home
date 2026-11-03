@@ -31,6 +31,10 @@ export const settingsEs: AreaCatalog<typeof settingsEn> = {
   "settingsPage.ai.directAdd.health.on": "Activado: un documento de salud que escribes, reenvías o le dices a HomeTalk se añade sin preguntar, pero solo cuando «Historial de salud al día» está en Pre Approved en Responsabilidades y WonderHome está más seguro que tu límite. Queda privado para la persona a la que se refiere, y el de un niño para sus tutores. Te avisamos después, con Undo.",
   "settingsPage.ai.directAdd.health.off": "Desactivado: cada documento de salud espera a que lo revises.",
   "settingsPage.ai.directAdd.files": "La mayoría de facturas, recibos e informes llegan como foto o PDF. No se pueden comprobar palabra por palabra, así que siguen esperándote.",
+  "settingsPage.ai.homesendTidy.title": "Ordenar lo que ya no aplica",
+  "settingsPage.ai.homesendTidy.on": "Activado: una vez al día HomeSend archiva lo que espera y cuyo día ya pasó, que ya está registrado o que otro más reciente sustituyó. No se borra nada.",
+  "settingsPage.ai.homesendTidy.off": "Desactivado: lo que espera se queda hasta que lo atiendas o pasen 30 días sin tocarlo.",
+  "settingsPage.ai.homesendTidy.detail": "Primero deciden las reglas; solo se pregunta a la IA cuando las reglas no pueden decidirlo, y su respuesta se comprueba con el propio elemento. Facturas, recibos y documentos de salud solo se archivan si su día ya pasó y ya están registrados. Puedes recuperarlos en Archivados de HomeSend durante 30 días.",
   "settingsPage.ai.keySet": "Configurada el {date}",
   "settingsPage.ai.badge.rulesOnly": "Solo reglas",
   "settingsPage.ai.ownKeyIntro":

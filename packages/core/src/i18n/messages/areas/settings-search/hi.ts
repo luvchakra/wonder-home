@@ -28,6 +28,7 @@ export const settingsSearchHi: AreaCatalog<typeof settingsSearchEn> = {
   "settingsSearch.kw.ai-auto-add": "प्रतिशत, भरोसा, अपने आप, सीमा",
   "settingsSearch.kw.ai-direct-money": "बिल, रसीद, पैसे, सीधे जोड़ें",
   "settingsSearch.kw.ai-direct-health": "सेहत, स्वास्थ्य, दस्तावेज़, सीधे जोड़ें",
+  "settingsSearch.kw.ai-homesend-tidy": "साफ़, हटाएँ, संग्रह, पुराना, बीता, दोहराव, homesend",
   "settingsSearch.kw.ai-key": "एपीआई की, कुंजी, टोकन, प्रदाता, अपनी कुंजी",
   "settingsSearch.kw.ai-provider": "एंथ्रोपिक, क्लॉड, जेमिनी, ओपनएआई, मॉडल",
   "settingsSearch.kw.ai-api-key": "कुंजी, एपीआई, टोकन, पासवर्ड",
