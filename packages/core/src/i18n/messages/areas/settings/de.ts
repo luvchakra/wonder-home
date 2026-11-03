@@ -31,6 +31,10 @@ export const settingsDe: AreaCatalog<typeof settingsEn> = {
   "settingsPage.ai.directAdd.health.on": "An: Ein Gesundheitsdokument, das Sie tippen, weiterleiten oder HomeTalk sagen, wird ohne Nachfrage angelegt – aber nur, wenn „Gesundheitsunterlagen geführt“ unter Zuständigkeiten auf Pre Approved steht und WonderHome sich sicherer ist als Ihr Wert. Es bleibt privat für die Person, um die es geht, und das eines Kindes für seine Erziehungsberechtigten. Sie erfahren es danach, mit Undo.",
   "settingsPage.ai.directAdd.health.off": "Aus: Jedes Gesundheitsdokument wartet, bis Sie es prüfen.",
   "settingsPage.ai.directAdd.files": "Die meisten Rechnungen, Belege und Befunde kommen als Foto oder PDF. Die lassen sich nicht Wort für Wort prüfen und warten daher weiter auf Sie.",
+  "settingsPage.ai.homesendTidy.title": "Aufräumen, was nicht mehr gilt",
+  "settingsPage.ai.homesendTidy.on": "An: Einmal am Tag archiviert HomeSend wartende Sachen, deren Tag vorbei ist, die schon erfasst sind oder durch eine neuere ersetzt wurden. Nichts wird gelöscht.",
+  "settingsPage.ai.homesendTidy.off": "Aus: Wartende Sachen bleiben, bis du sie erledigst oder sie 30 Tage unberührt sind.",
+  "settingsPage.ai.homesendTidy.detail": "Zuerst entscheiden Regeln; die KI wird nur gefragt, wenn die Regeln es nicht sagen können, und ihre Antwort wird am Eintrag geprüft. Rechnungen, Belege und Gesundheitsdokumente gehen nur, wenn ihr Tag vorbei ist und sie schon erfasst sind. Unter „Archiviert“ in HomeSend 30 Tage lang wiederherstellbar.",
   "settingsPage.ai.keySet": "Festgelegt am {date}",
   "settingsPage.ai.badge.rulesOnly": "Nur Regeln",
   "settingsPage.ai.ownKeyIntro":

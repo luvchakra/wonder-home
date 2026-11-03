@@ -74,6 +74,7 @@ export const SETTINGS_REGISTRY: RegistryEntry[] = [
   e("ai-auto-add", "ai-acting", "settingsPage.ai.autoAdd.title", "/settings/ai#auto-add", "everyone", { kw: true, desc: "settingsPage.ai.autoAdd.detail" }),
   e("ai-direct-money", "ai-acting", "settingsPage.ai.directAdd.money.title", "/settings/ai#direct-add-money", "everyone", { kw: true }),
   e("ai-direct-health", "ai-acting", "settingsPage.ai.directAdd.health.title", "/settings/ai#direct-add-health", "everyone", { kw: true }),
+  e("ai-homesend-tidy", "ai-acting", "settingsPage.ai.homesendTidy.title", "/settings/ai#homesend-tidy", "everyone", { kw: true, desc: "settingsPage.ai.homesendTidy.detail" }),
   e("ai-key", "ai", "settingsPage.ai.section.key", "/settings/ai#provider-key", "everyone", { kw: true }),
   e("ai-provider", "ai-key", "settingsPage.aiKey.provider", "/settings/ai#provider", "everyone", { kw: true }),
   e("ai-api-key", "ai-key", "settingsPage.aiKey.apiKey", "/settings/ai#apiKey", "everyone", { kw: true }),

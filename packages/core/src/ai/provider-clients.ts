@@ -40,6 +40,8 @@ export const MODEL_TIMEOUT_MS = {
   muse: 10_000,
   /** A night's sleep (HomeBrain Sleep): nobody is waiting, but a night has many households. */
   sleep: 45_000,
+  /** HomeSend's daily tidy: whether a few waiting items no longer apply. Nobody waits; a slow answer keeps every item. */
+  tidy: 20_000,
 } as const;
 
 export type ModelCallKind = keyof typeof MODEL_TIMEOUT_MS;

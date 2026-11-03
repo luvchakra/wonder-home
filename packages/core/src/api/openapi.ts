@@ -1852,6 +1852,18 @@ export function buildOpenApiDocument(): Json {
           },
         },
       },
+      "/platform/homesend-tidy": {
+        post: {
+          summary: "Run HomeSend's daily tidy now (the owner, 2026-11-03)",
+          description:
+            "Archives waiting HomeSend items that no longer apply (their day has passed, already on record, replaced by a newer one, unreadable after every try; a checked AI verdict only where the rules cannot tell), for every household not yet tidied today on its own calendar. Nothing is deleted; each item is restorable from Archived. Same authorization shape as /platform/retention — a shared secret, never a session. Reports counts only.",
+          responses: {
+            "200": { description: "Counts: households, items archived per reason and by rule or AI, items kept" },
+            "401": { $ref: "#/components/responses/Unauthenticated" },
+            "500": { description: "The run could not start" },
+          },
+        },
+      },
       "/whatsapp/webhook": {
         get: {
           summary: "WhatsApp webhook verification (story 17-006)",

@@ -31,6 +31,10 @@ export const settingsZh: AreaCatalog<typeof settingsEn> = {
   "settingsPage.ai.directAdd.health.on": "开启：你输入、转发或告诉 HomeTalk 的健康文件会不经询问直接添加，但前提是职责分工中“健康记录已整理”设为 Pre Approved，且 WonderHome 的把握高于你设的值。它只对本人可见，孩子的记录只对其监护人可见。之后会通知你，并可 Undo。",
   "settingsPage.ai.directAdd.health.off": "关闭：每份健康文件都等你核对。",
   "settingsPage.ai.directAdd.files": "大多数账单、收据和报告以照片或 PDF 形式发来。这些无法逐字核对，所以仍会等你确认。",
+  "settingsPage.ai.homesendTidy.title": "整理不再适用的内容",
+  "settingsPage.ai.homesendTidy.on": "开启：HomeSend 每天一次，把日期已过、已有记录或已被更新内容取代的待处理内容归档。不会删除任何内容。",
+  "settingsPage.ai.homesendTidy.off": "关闭：待处理内容会一直保留，直到你处理或 30 天无人处理。",
+  "settingsPage.ai.homesendTidy.detail": "先由规则判断；只有规则无法判断时才询问 AI，且它的回答会对照内容本身核实。账单、收据和健康文件只有在日期已过且已有记录时才会归档。30 天内可在 HomeSend 的“已归档”中恢复。",
   "settingsPage.ai.keySet": "设置于 {date}",
   "settingsPage.ai.badge.rulesOnly": "仅规则",
   "settingsPage.ai.ownKeyIntro":

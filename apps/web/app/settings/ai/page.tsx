@@ -7,6 +7,7 @@ import { loadConfirmRequested } from "@wonderhome/core/conversation/consent-repo
 import { AUTO_ADD_PERCENTS } from "@wonderhome/core/homesend/auto-add";
 import { loadAutoAddPercent } from "@wonderhome/core/household/auto-add-repository";
 import { loadDirectAdd } from "@wonderhome/core/household/direct-add-repository";
+import { loadHomeSendTidy } from "@wonderhome/core/household/homesend-tidy-repository";
 import { AppShell } from "@wonderhome/core/shell/app-shell";
 import { Card } from "@wonderhome/core/ui/card";
 import { IconTile } from "@wonderhome/core/ui/icon-tile";
@@ -22,6 +23,7 @@ import { safeReturnTo } from "../../_lib/return-to";
 import { openKeyAlerts } from "@wonderhome/core/ai/key-alert-status";
 import { AutoAddPercentPicker } from "../../_components/auto-add-percent-picker";
 import { DirectAddSwitch } from "../../_components/direct-add-switch";
+import { HomeSendTidySwitch } from "../../_components/homesend-tidy-switch";
 import { KeyAlertBanner } from "../../_components/key-alert-banner";
 import { ConfirmRequestedSwitch } from "../../_components/confirm-requested-switch";
 import { DataUseForm } from "../../_components/data-use-form";
@@ -44,7 +46,7 @@ export default async function AiAssistantSettingsPage({ searchParams }: { search
   const returnTo = safeReturnTo(query.returnTo);
   const { supabase, membership, view, viewer, secondary } = session;
   const householdId = membership.household.id;
-  const [credential, voiceCredential, dataUse, confirmRequested, autoAddPercent, directAdd, keyAlerts] = await Promise.all([
+  const [credential, voiceCredential, dataUse, confirmRequested, autoAddPercent, directAdd, keyAlerts, homesendTidy] = await Promise.all([
     credentialStatus(supabase, householdId).catch(() => ({ configured: false, provider: null, updatedAt: null })),
     geminiVoiceKeyStatus(supabase, householdId).catch(() => ({ configured: false, provider: null, updatedAt: null })),
     loadDataUse(supabase, householdId),
@@ -52,6 +54,7 @@ export default async function AiAssistantSettingsPage({ searchParams }: { search
     loadAutoAddPercent(supabase, householdId),
     loadDirectAdd(supabase, householdId),
     openKeyAlerts(supabase, householdId),
+    loadHomeSendTidy(supabase, householdId),
   ]);
 
   // Which key actually answers, decided in one place so the screen can never
@@ -131,6 +134,21 @@ export default async function AiAssistantSettingsPage({ searchParams }: { search
               />
             </Card>
           ))}
+          {/* HomeSend's daily tidy (the owner, 2026-11-03): beside the other HomeSend choices. */}
+          <Card id="homesend-tidy" className="mt-3 p-4">
+            <HomeSendTidySwitch
+              householdId={householdId}
+              on={homesendTidy !== false}
+              manages={manages}
+              labels={{
+                title: t("settingsPage.ai.homesendTidy.title"),
+                on: t("settingsPage.ai.homesendTidy.on"),
+                off: t("settingsPage.ai.homesendTidy.off"),
+                detail: t("settingsPage.ai.homesendTidy.detail"),
+                adminDecides: t("settingsPage.adminDecides"),
+              }}
+            />
+          </Card>
         </section>
 
 

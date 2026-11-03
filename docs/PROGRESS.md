@@ -11,11 +11,11 @@ in `docs/progress/`; for the running log of what changed when, `tracking/PROGRES
 
 ## The whole picture
 
-**420 of 457 stories done — 91.9%**
+**421 of 458 stories done — 91.9%**
 
 | Status | Stories |
 |---|---:|
-| Done | 420 |
+| Done | 421 |
 | In Progress | 11 |
 | Blocked | 1 |
 | Not Started | 21 |
@@ -39,7 +39,7 @@ in `docs/progress/`; for the running log of what changed when, `tracking/PROGRES
 | 11 Bills, Fees & Finance | `█████████░` | 14 | 15 | 1 not started |
 | 12 Family Time & Social Activities | `██████████` | 9 | 9 | — |
 | 13 Maintenance, Laundry & Pet Care | `█████████░` | 10 | 11 | 1 in progress |
-| 14 AI Orchestration & Learning | `████████░░` | 52 | 60 | 1 in progress, 4 not started, 3 deferred |
+| 14 AI Orchestration & Learning | `████████░░` | 53 | 61 | 1 in progress, 4 not started, 3 deferred |
 | 15 Privacy, Security & Governance | `████████░░` | 11 | 13 | 2 not started |
 | 16 Platform Admin & Operations | `██████████` | 9 | 9 | — |
 | 17 External Integrations | `█████████░` | 10 | 11 | 1 not started |
@@ -398,7 +398,7 @@ in `docs/progress/`; for the running log of what changed when, `tracking/PROGRES
 
 ### 14 — AI Orchestration & Learning
 
-52 of 60 done `████████░░`
+53 of 61 done `████████░░`
 
 | Story | Priority | Status | Notes |
 |---|---|---|---|
@@ -462,6 +462,7 @@ in `docs/progress/`; for the running log of what changed when, `tracking/PROGRES
 | `14-060` HomeSend adds directly; below the bar it is added "Checking" | P0 | Done | The owner, 2026-11-03 ("add the entry directly in WonderHome without asking for a review"). Where the outcome is Pre Approved, a complete reading is added at once through the same governed write a person's confirm uses; above the household's bar it is confirmed, at or below it (or read from a photo or file) it is `unconfirmed`: "Checking" badge and "Looks right" in HomeSend's Recently handled, its own bill and school reminders held until confirmed, audited `homesend.auto_added` (score, source) and `homesend.confirmed`. Bills, receipts and health documents still follow "Add money / health entries directly". State on `homesend_changes` (migration `20261103150000_homesend_unconfirmed_entries.sql`, readers fall back to confirmed). |
 | `14-061` HomeSend clarifying questions raise a Checking entry over the bar, in HomeTalk and WhatsApp | P0 | Done | The owner, 2026-11-03, decisions 1–3 and A–C. A reading naming something not in what was sent adds nothing and waits (`verify.ts` `untraced`, `wait.reason: "untraced"`); Wait for Approval and an email nobody forwarded still wait. Questions from evidence (`homesend/checking.ts`): key details of a photo/file confirmed, useful missing details asked, else the entry confirmed by name; three at most, then one "please check". One question shared by HomeTalk and WhatsApp (`understanding.checking`), action `check_homesend_entry`, answers read deterministically, applied in place through the domain update as the member, score = base + settled share of the gap, confirmed (`confirmHomeSendEntry` how "answers") once over the bar. Injection, other members and other households refused. WhatsApp check only to the sender on their verified link. Eval HT-172–175. No migration. |
 | `14-062` Checking on the record's own screens; one "questions waiting" reminder; eval cases for the loop | P1 | Done | The owner, 2026-11-03. HomeSend Recently handled reads "Added · checking N questions" (`questionsLeft`); bills, school items, health records and the grocery detail show "Checking" (`unconfirmedEntityIds`), each keeping its own edit/remove; one grouped "N HomeSend questions waiting" notice per sender (`homesendQuestionNotices`, thread `homesend:questions`), count only, resolves when answered; confirming runs the reminder pass at once. CLAUDE.md, docs, Settings bar text, help body.10 and FAQ in eight languages; e2e in `help.spec.ts`. Eval cases for the loop shipped in 14-061 (HT-172–175). |
+| `14-063` HomeSend daily tidy: archive what no longer applies, rules first, checked AI verdict | P1 | Done | The owner, 2026-11-03 ("on daily basis check items pending for review and remove the items which don't make sense anymore … use ai to decide"; "run the job once to clear HomeSend"). Once a day per household from 04:00 on its own calendar, on the delivery clock (`homesend/tidy-run.ts`, claimed per day in `homesend_tidy_runs`): waiting, failed and ended-Checking source items. Rules (`homesend/tidy.ts`): past day with a grace day, already on record (`reconcile.ts` duplicate), superseded by a newer same-sender item, unreadable after the retry cap; bills/receipts/health only past AND on record. AI only where rules can't tell (`tidy-model.ts` via `provider-clients.ts`), verdict from a fixed list checked with `homebrain/validate.ts` (cited fields exist, date written there and past); unsure/unchecked keeps. Archived with `archive_reason`, restorable, audited `homesend.auto_archived` (reason, rule/ai). One line in the grouped HomeSend reminder; Settings → AI Assistant "Tidy up items that no longer apply" (default on, Admin, search registry); help body.11 + FAQ in eight languages; eval HS-39–47. Migration `20261103210000_homesend_daily_tidy.sql`. On-demand run: `/api/v1/platform/homesend-tidy`. |
 
 ### 15 — Privacy, Security & Governance
 

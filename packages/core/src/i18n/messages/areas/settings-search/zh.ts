@@ -28,6 +28,7 @@ export const settingsSearchZh: AreaCatalog<typeof settingsSearchEn> = {
   "settingsSearch.kw.ai-auto-add": "百分比, 把握, 自动, 阈值",
   "settingsSearch.kw.ai-direct-money": "账单, 收据, 钱, 直接添加",
   "settingsSearch.kw.ai-direct-health": "健康, 医疗, 文件, 直接添加",
+  "settingsSearch.kw.ai-homesend-tidy": "整理, 清理, 归档, 过期, 重复, homesend",
   "settingsSearch.kw.ai-key": "API 密钥, 密钥, 令牌, 提供商, 自己的密钥",
   "settingsSearch.kw.ai-provider": "anthropic, claude, gemini, openai, 模型",
   "settingsSearch.kw.ai-api-key": "密钥, api, 令牌, 密码",

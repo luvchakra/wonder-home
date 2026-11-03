@@ -454,6 +454,7 @@ export const KNOWLEDGE_REGISTRY = {
   homesend_email_allowlist: { covered: "excluded", reason: "The approved email senders: a privacy gate deciding what forwarded mail WonderHome may read, not knowledge about the household." },
   homesend_changes: { covered: "builder", records: "homeSendItems" },
   homesend_email_events: { covered: "excluded", reason: "Content-free delivery telemetry for forwarded email." },
+  homesend_tidy_runs: { covered: "excluded", reason: "The daily tidy's day record: ids and closed reasons only; the items it archived are known through home_send_items." },
   hometalk_channel_events: { covered: "excluded", reason: "Content-free telemetry for each HomeTalk turn." },
   household_addresses: { covered: "builder", records: "address" },
   household_ai_credentials: { covered: "excluded", reason: "Credentials (the household's AI key)." },

@@ -8,6 +8,7 @@ import { CLOCK_DRAIN_LIMIT, drainKnowledge } from "@wonderhome/core/knowledge/fa
 import { sleepDueHouseholds } from "@wonderhome/core/homebrain/sleep/run";
 import { archiveStaleHomeSendItems } from "@wonderhome/core/homesend/repository";
 import { drainJobs } from "@wonderhome/core/homesend/retry-queue";
+import { runHomeSendTidy } from "@wonderhome/core/homesend/tidy-run";
 import { notificationJobHandlers } from "@wonderhome/core/notifications/retry-handler";
 import { sendDueDigests } from "@wonderhome/core/notifications/digest";
 import { householdsWithNoticeChanges, sweepNotices } from "@wonderhome/core/notifications/notices-sweep";
@@ -145,6 +146,14 @@ async function dispatch(request: Request): Promise<Response> {
       await archiveStaleHomeSendItems(admin, { now, limit: 200 });
     } catch (thrown) {
       log.warn("homesend archive tick failed", { reason: thrown instanceof Error ? thrown.name : "unknown" });
+    }
+    // HomeSend's daily tidy (the owner, 2026-11-03): once a day per household, from 04:00 on its own
+    // clock, waiting items that no longer apply are archived with a reason — rules first, a checked AI
+    // verdict only where the rules can't tell. A few households a tick; claimed per day, so idempotent.
+    try {
+      await runHomeSendTidy(admin, { now, limit: 5 });
+    } catch (thrown) {
+      log.warn("homesend tidy tick failed", { reason: thrown instanceof Error ? thrown.name : "unknown" });
     }
     try {
       await sleepDueHouseholds(admin, now);

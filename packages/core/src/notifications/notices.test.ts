@@ -52,6 +52,41 @@ describe("questions waiting about entries added as Checking, one notice per pers
   });
 });
 
+describe("the daily tidy's one line in the grouped HomeSend notice (the owner, 2026-11-03)", () => {
+  const waiting = { id: "w1", created_by_member_id: "upasana", status: "classified", classified_kind: "school_item", updated_at: NOW.toISOString() };
+  const tidied = [
+    { id: "t1", reason: "past_date" as const, by: "rule" as const, memberId: "upasana" },
+    { id: "t2", reason: "past_date" as const, by: "ai" as const, memberId: "upasana" },
+    { id: "t3", reason: "already_recorded" as const, by: "rule" as const, memberId: "upasana" },
+  ];
+
+  it("adds 'Tidied 3 items … (2 past events, 1 duplicate)' to the waiting notice, counts only", () => {
+    const [notice] = homesendNotices([waiting], directory, NOW, "Asia/Kolkata", tidied);
+    expect(notice!.body).toMatchObject({ key: "reminder.homesend.grouped.bodyTidied" });
+    const line = (notice!.body.params! as unknown as Record<string, { msg: { key: string; params: Record<string, unknown> } }>).tidied!.msg;
+    expect(line).toMatchObject({ key: "reminder.homesend.tidy.line", params: { count: 3 } });
+    expect(JSON.stringify(line)).toContain("reminder.homesend.tidy.group.past");
+    expect(JSON.stringify(line)).toContain("reminder.homesend.tidy.group.duplicate");
+    expect(JSON.stringify(notice)).not.toMatch(/t1|t2|t3/);
+  });
+
+  it("says it on its own, opening Archived, when nothing is left waiting", () => {
+    const [notice] = homesendNotices([], directory, NOW, "Asia/Kolkata", tidied);
+    expect(notice).toMatchObject({ recipientMemberId: "upasana", threadKey: "homesend:waiting", title: { key: "reminder.homesend.tidy.title", params: { count: 3 } }, action: { target: "/home-send?view=archived" } });
+  });
+
+  it("says nothing new when nothing was tidied", () => {
+    const [notice] = homesendNotices([waiting], directory, NOW, "Asia/Kolkata", []);
+    expect(notice!.body).toMatchObject({ key: "reminder.homesend.grouped.body" });
+    expect(homesendNotices([], directory, NOW, "Asia/Kolkata", [])).toEqual([]);
+  });
+
+  it("an email's or a child's item is counted for an Admin", () => {
+    const [notice] = homesendNotices([], directory, NOW, "UTC", [{ id: "t9", reason: "superseded", by: "rule", memberId: null }]);
+    expect(notice!.recipientMemberId).toBe("kunal");
+  });
+});
+
 describe("what waits in HomeSend, as one grouped notice per person (27-004)", () => {
   const item = (over: Record<string, unknown> = {}) => ({ id: "i1", created_by_member_id: "upasana", status: "classified", classified_kind: "bill", updated_at: NOW.toISOString(), ...over });
 

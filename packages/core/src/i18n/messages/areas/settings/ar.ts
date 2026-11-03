@@ -31,6 +31,10 @@ export const settingsAr: AreaCatalog<typeof settingsEn> = {
   "settingsPage.ai.directAdd.health.on": "مفعّل: المستند الصحي الذي تكتبه أو تعيد توجيهه أو تقوله لـ HomeTalk يُضاف دون سؤال، ولكن فقط عندما تكون «حفظ السجلات الصحية» على Pre Approved في المسؤوليات ويكون WonderHome متأكدًا أكثر من حدّك. يبقى خاصًا بالشخص المعني، وسجل الطفل خاصًا بأولياء أمره. تُبلَّغ بعدها، مع Undo.",
   "settingsPage.ai.directAdd.health.off": "متوقف: كل مستند صحي ينتظر أن تتحقق منه.",
   "settingsPage.ai.directAdd.files": "معظم الفواتير والإيصالات والتقارير تصل كصورة أو ملف PDF. لا يمكن التحقق منها كلمة بكلمة، لذا تبقى في انتظارك.",
+  "settingsPage.ai.homesendTidy.title": "رتّب ما لم يعد ينطبق",
+  "settingsPage.ai.homesendTidy.on": "مفعّل: مرة في اليوم يؤرشف HomeSend العناصر المنتظرة التي مضى يومها أو المسجّلة مسبقًا أو التي حلّ محلها أحدث. لا يُحذف شيء.",
+  "settingsPage.ai.homesendTidy.off": "متوقف: تبقى العناصر المنتظرة حتى تتعامل معها، أو 30 يومًا دون أن تُلمس.",
+  "settingsPage.ai.homesendTidy.detail": "تقرّر القواعد أولًا؛ ولا يُسأل الذكاء الاصطناعي إلا حين لا تستطيع القواعد الحسم، ويُتحقق من جوابه مقابل العنصر نفسه. لا تُؤرشف الفواتير والإيصالات والوثائق الصحية إلا إذا مضى يومها وكانت مسجّلة مسبقًا. يمكنك استعادتها من «المؤرشف» في HomeSend خلال 30 يومًا.",
   "settingsPage.ai.keySet": "عُيّن في {date}",
   "settingsPage.ai.badge.rulesOnly": "القواعد فقط",
   "settingsPage.ai.ownKeyIntro":
