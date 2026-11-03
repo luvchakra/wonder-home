@@ -6,7 +6,6 @@ import { startTransition, useActionState, useState, type ReactNode } from "react
 import type { AddAnywayCounts } from "@wonderhome/core/homesend/inbox-view";
 import { Alert } from "@wonderhome/core/ui/alert";
 import { Pill } from "@wonderhome/core/ui/pill";
-import { Popover } from "@wonderhome/core/ui/popover";
 import { ConfirmationSheet } from "@wonderhome/core/ui/sheet";
 
 import { addAllAnywayHomeSendAction, archiveAllHomeSendAction, restoreArchivedHomeSendAction, type ClearState } from "../(auth)/home-send-clear-actions";
@@ -93,27 +92,19 @@ export function HomeSendClear({ householdId, counts, labels, lead }: { household
       <div className="flex items-start gap-2">
         <div className="min-w-0 flex-1">{lead}</div>
         {offered && variant === "menu" ? (
-        <Popover
-          open={menuOpen}
-          onOpenChange={setMenuOpen}
-          label={words.more}
-          side="bottom"
-          align="end"
-          trigger={
-            <button
-              type="button"
-              aria-label={words.more}
-              className="grid size-9 place-items-center rounded-[var(--wh-radius-pill)] text-[var(--wh-foreground-muted)] hover:bg-[var(--wh-surface-muted)] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--wh-primary)]"
-            >
-              <MoreHorizontal aria-hidden className="size-5" />
-            </button>
-          }
-        >
-          <div className="flex flex-col gap-1.5 p-1">{choices}</div>
-        </Popover>
+          // A plain disclosure, not a popover: the two choices open inline under the sentence (no extra library on this page's first load).
+          <button
+            type="button"
+            aria-label={words.more}
+            aria-expanded={menuOpen}
+            onClick={() => setMenuOpen(!menuOpen)}
+            className="grid size-9 shrink-0 place-items-center rounded-[var(--wh-radius-pill)] text-[var(--wh-foreground-muted)] hover:bg-[var(--wh-surface-muted)] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--wh-primary)]"
+          >
+            <MoreHorizontal aria-hidden className="size-5" />
+          </button>
         ) : null}
       </div>
-      {offered && variant === "buttons" ? <div className="flex flex-wrap gap-2">{choices}</div> : null}
+      {offered && (variant === "buttons" || menuOpen) ? <div className="flex flex-wrap gap-2">{choices}</div> : null}
 
       {archiveState.error ? <Alert>{archiveState.error}</Alert> : null}
       {addState.error ? <Alert>{addState.error}</Alert> : null}
