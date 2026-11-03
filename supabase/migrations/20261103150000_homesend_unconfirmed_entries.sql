@@ -99,6 +99,9 @@ begin
 end;
 $$;
 
+-- A trigger function only: nobody calls it directly.
+revoke execute on function wh.guard_homesend_confirmation() from public, anon, authenticated;
+
 drop trigger if exists homesend_changes_guard_confirmation on public.homesend_changes;
 create trigger homesend_changes_guard_confirmation
   before update on public.homesend_changes
