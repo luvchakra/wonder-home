@@ -105,8 +105,9 @@ export type MoveActionState = { tone: "info" | "risk" | null; message: string | 
 export async function moveAllFromVercelAction(_previous: MoveActionState, formData: FormData): Promise<MoveActionState> {
   const staff = await platformStaff("secrets.manage");
   if (!staff || staff.role !== "owner") return { tone: "risk", message: "Only the owner can move settings from Vercel.", report: null };
-  const password = formData.get("password");
-  const check = await confirmStaffPassword(typeof password === "string" ? password.slice(0, 200) : "");
+  const parsed = z.object({ password: z.string().min(1).max(200) }).safeParse({ password: formData.get("password") });
+  if (!parsed.success) return { tone: "risk", message: "That password didn't match. Nothing was moved.", report: null };
+  const check = await confirmStaffPassword(parsed.data.password);
   if (check !== "ok") {
     return {
       tone: "risk",
