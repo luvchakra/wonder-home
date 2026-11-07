@@ -1,10 +1,11 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
+import { z } from "zod";
 import { recordAuditEvent } from "../api/audit";
 import { ApiError } from "../api/errors";
 import { forgetPlatformData } from "../lib/platform-cache";
 import type { PlatformAdmin } from "../platform/admin";
 import { describe as featureLabel } from "./entitlements";
-import { formatPlanPrice, limitWords, PLAN_CURRENCY, type Interval, type PlanEdit, type PlanFeatureRow, type PlanSnapshot } from "./plan-shared";
+import { formatPlanPrice, limitWords, parseAmount, PLAN_CURRENCY, type Interval, type PlanEdit, type PlanFeatureRow, type PlanSnapshot } from "./plan-shared";
 
 /**
  * Editing a plan as members see it (owner request, 2026-11-07).
@@ -57,7 +58,24 @@ export function diffPlan(before: PlanSnapshot, edit: PlanEdit): PlanChange[] {
   return changes;
 }
 
-export { featureLines, parseAmount, planBadge, planEditSchema, yearlySavingWords } from "./plan-shared";
+export { featureLines, parseAmount, planBadge, yearlySavingWords } from "./plan-shared";
+
+const amountText = z
+  .string()
+  .nullable()
+  .refine((value) => value === null || value.trim() === "" || parseAmount(value) !== null, "Use a plain amount such as 349 or 349.50.")
+  .transform((value) => (value === null || value.trim() === "" ? null : parseAmount(value)));
+
+export const planEditSchema = z.object({
+  name: z.string().trim().min(1).max(60),
+  description: z.string().trim().max(300).nullable().transform((value) => (value ? value : null)),
+  monthly: amountText,
+  yearly: amountText,
+  features: z
+    .array(z.object({ featureKey: z.string().regex(/^[a-z][a-z0-9_.]{1,60}$/), enabled: z.boolean(), limit: z.number().int().min(1).max(1_000_000_000).nullable() }))
+    .max(60),
+});
+
 export type { PlanEdit, PlanSnapshot } from "./plan-shared";
 
 export async function loadPlanSnapshots(admin: SupabaseClient): Promise<PlanSnapshot[]> {

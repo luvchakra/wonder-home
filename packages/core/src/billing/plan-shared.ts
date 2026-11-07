@@ -1,5 +1,3 @@
-import { z } from "zod";
-
 import { describe as featureLabel } from "./entitlements";
 import { formatMoney } from "./money";
 
@@ -39,22 +37,13 @@ export function parseAmount(text: string): number | null {
   return Number(trimmed);
 }
 
-const amountText = z
-  .string()
-  .nullable()
-  .refine((value) => value === null || value.trim() === "" || parseAmount(value) !== null, "Use a plain amount such as 349 or 349.50.")
-  .transform((value) => (value === null || value.trim() === "" ? null : parseAmount(value)));
-
-export const planEditSchema = z.object({
-  name: z.string().trim().min(1).max(60),
-  description: z.string().trim().max(300).nullable().transform((value) => (value ? value : null)),
-  monthly: amountText,
-  yearly: amountText,
-  features: z
-    .array(z.object({ featureKey: z.string().regex(/^[a-z][a-z0-9_.]{1,60}$/), enabled: z.boolean(), limit: z.number().int().min(1).max(1_000_000_000).nullable() }))
-    .max(60),
-});
-export type PlanEdit = z.infer<typeof planEditSchema>;
+export type PlanEdit = {
+  name: string;
+  description: string | null;
+  monthly: number | null;
+  yearly: number | null;
+  features: { featureKey: string; enabled: boolean; limit: number | null }[];
+};
 
 export type PlanBadge = "free" | "earlyAccess" | "paid";
 

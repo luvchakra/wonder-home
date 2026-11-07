@@ -4,8 +4,8 @@ import { join } from "node:path";
 import { describe, expect, it, vi } from "vitest";
 
 import { FEATURES } from "./entitlements";
-import { diffPlan, savePlan } from "./plan-edit";
-import { featureLines, parseAmount, planBadge, planEditSchema, yearlySavingWords, type PlanSnapshot } from "./plan-shared";
+import { diffPlan, planEditSchema, savePlan } from "./plan-edit";
+import { featureLines, parseAmount, planBadge, yearlySavingWords, type PlanSnapshot } from "./plan-shared";
 import { platformCan, type PlatformAdmin } from "../platform/admin";
 
 const pro: PlanSnapshot = {
