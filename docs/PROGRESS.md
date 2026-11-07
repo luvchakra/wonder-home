@@ -11,11 +11,11 @@ in `docs/progress/`; for the running log of what changed when, `tracking/PROGRES
 
 ## The whole picture
 
-**423 of 463 stories done — 91.4%**
+**424 of 464 stories done — 91.4%**
 
 | Status | Stories |
 |---|---:|
-| Done | 423 |
+| Done | 424 |
 | In Progress | 11 |
 | Blocked | 1 |
 | Not Started | 24 |
@@ -39,7 +39,7 @@ in `docs/progress/`; for the running log of what changed when, `tracking/PROGRES
 | 11 Bills, Fees & Finance | `█████████░` | 14 | 15 | 1 not started |
 | 12 Family Time & Social Activities | `██████████` | 9 | 9 | — |
 | 13 Maintenance, Laundry & Pet Care | `█████████░` | 10 | 11 | 1 in progress |
-| 14 AI Orchestration & Learning | `████████░░` | 54 | 62 | 1 in progress, 4 not started, 3 deferred |
+| 14 AI Orchestration & Learning | `████████░░` | 55 | 63 | 1 in progress, 4 not started, 3 deferred |
 | 15 Privacy, Security & Governance | `████████░░` | 11 | 13 | 2 not started |
 | 16 Platform Admin & Operations | `███████░░░` | 10 | 13 | 3 not started |
 | 17 External Integrations | `█████████░` | 10 | 11 | 1 not started |
@@ -401,7 +401,7 @@ in `docs/progress/`; for the running log of what changed when, `tracking/PROGRES
 
 ### 14 — AI Orchestration & Learning
 
-54 of 62 done `████████░░`
+55 of 63 done `████████░░`
 
 | Story | Priority | Status | Notes |
 |---|---|---|---|
@@ -466,6 +466,7 @@ in `docs/progress/`; for the running log of what changed when, `tracking/PROGRES
 | `14-061` HomeSend clarifying questions raise a Checking entry over the bar, in HomeTalk and WhatsApp | P0 | Done | The owner, 2026-11-03, decisions 1–3 and A–C. A reading naming something not in what was sent adds nothing and waits (`verify.ts` `untraced`, `wait.reason: "untraced"`); Wait for Approval and an email nobody forwarded still wait. Questions from evidence (`homesend/checking.ts`): key details of a photo/file confirmed, useful missing details asked, else the entry confirmed by name; three at most, then one "please check". One question shared by HomeTalk and WhatsApp (`understanding.checking`), action `check_homesend_entry`, answers read deterministically, applied in place through the domain update as the member, score = base + settled share of the gap, confirmed (`confirmHomeSendEntry` how "answers") once over the bar. Injection, other members and other households refused. WhatsApp check only to the sender on their verified link. Eval HT-172–175. No migration. |
 | `14-062` Checking on the record's own screens; one "questions waiting" reminder; eval cases for the loop | P1 | Done | The owner, 2026-11-03. HomeSend Recently handled reads "Added · checking N questions" (`questionsLeft`); bills, school items, health records and the grocery detail show "Checking" (`unconfirmedEntityIds`), each keeping its own edit/remove; one grouped "N HomeSend questions waiting" notice per sender (`homesendQuestionNotices`, thread `homesend:questions`), count only, resolves when answered; confirming runs the reminder pass at once. CLAUDE.md, docs, Settings bar text, help body.10 and FAQ in eight languages; e2e in `help.spec.ts`. Eval cases for the loop shipped in 14-061 (HT-172–175). |
 | `14-063` HomeSend daily tidy: archive what no longer applies, rules first, checked AI verdict | P1 | Done | The owner, 2026-11-03 ("on daily basis check items pending for review and remove the items which don't make sense anymore … use ai to decide"; "run the job once to clear HomeSend"). Once a day per household from 04:00 on its own calendar, on the delivery clock (`homesend/tidy-run.ts`, claimed per day in `homesend_tidy_runs`): waiting, failed and ended-Checking source items. Rules (`homesend/tidy.ts`): past day with a grace day, already on record (`reconcile.ts` duplicate), superseded by a newer same-sender item, unreadable after the retry cap; bills/receipts/health only past AND on record. AI only where rules can't tell (`tidy-model.ts` via `provider-clients.ts`), verdict from a fixed list checked with `homebrain/validate.ts` (cited fields exist, date written there and past); unsure/unchecked keeps. Archived with `archive_reason`, restorable, audited `homesend.auto_archived` (reason, rule/ai). One line in the grouped HomeSend reminder; Settings → AI Assistant "Tidy up items that no longer apply" (default on, Admin, search registry); help body.11 + FAQ in eight languages; eval HS-39–47. Migration `20261103210000_homesend_daily_tidy.sql`. On-demand run: `/api/v1/platform/homesend-tidy`. |
+| `14-065` HomeSend: remove each item on its own (swipe, detail, ⋯ on desktop), Undo, and Delete for good in Archived | P1 | Done | The owner, 2026-11-03 ("give option to individually delete each item"). Remove archives with `removed_by_person` (a group asks once; an added entry is undone with it); Delete for good removes the row and stored file, sender-or-Admin, audited `homesend.deleted`; Admin "Delete all archived". Migration `20261103230000_homesend_remove_items` (reason value + delete RLS policy), live. `home-send-remove.tsx`, `home-send-remove-actions.ts`, `homesend/remove.ts`. |
 | `14-064` Calm HomeSend page: one sentence, sections by decision, one action per row; "Archive all" and "Add all anyway" | P1 | Done | The owner, 2026-11-03 ("this page is so busy, redesign this page entirely, minimize options … give a button to clear everything in one go, it bypasses all checks"; then: offer both clears, each behind its own confirm). Opening sentence with the counts; "Send something" one row; "Needs a word from you" (Checking entries with an open question, and waiting items, identical ones folded "×5"), "Couldn't be read" (short derived names, raw text only in detail), "Added recently" (7 days, folded), Archived link; channel tabs and per-row % removed; Select for multi-select. Admin-only "Archive all" (restorable, Undo) and "Add all anyway" (added as Checking; money/health switches, outside emails and paying never bypassed; unknown kind and unreadable never added; 1 run/min; audited). `homesend/inbox-view.ts`, `home-send-clear-actions.ts`. No migration. |
 
 ### 15 — Privacy, Security & Governance

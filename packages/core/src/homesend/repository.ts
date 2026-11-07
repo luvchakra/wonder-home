@@ -17,6 +17,7 @@ import type {
 import type { IntakeChangeReceipt } from "./apply";
 import type { DocumentPlan } from "./plan";
 import { ARCHIVE_REASONS, type ArchiveReason } from "./archive-reasons";
+import { mayRemoveHomeSendItem, type RemoveActor } from "./remove";
 import type { IntakeUnderstanding } from "./understanding";
 
 /**
@@ -592,7 +593,7 @@ export async function restoreHomeSendItems(supabase: SupabaseClient, householdId
   if (ids.length === 0) return [];
   const { data: rows, error: readError } = await supabase
     .from("home_send_items")
-    .select("id, archived_from")
+    .select("id, archived_from, archive_reason")
     .eq("household_id", householdId)
     .eq("status", "archived")
     .in("id", ids.slice(0, 500));
@@ -600,9 +601,10 @@ export async function restoreHomeSendItems(supabase: SupabaseClient, householdId
   const byPlace = new Map<HomeSendStatus, string[]>();
   for (const row of (rows ?? []) as Row[]) {
     const back = row.archived_from;
-    // A routed source item is only ever archived by the daily tidy; this Undo never touches one.
-    if (back === "routed") continue;
-    const status: HomeSendStatus = back === "received" || back === "failed" ? back : "classified";
+    // A routed source item is archived by the daily tidy, which this Undo never touches, or removed by a
+    // person after its entry was undone, which comes back as that (undone) item.
+    if (back === "routed" && row.archive_reason !== "removed_by_person") continue;
+    const status: HomeSendStatus = back === "routed" ? "undone" : back === "received" || back === "failed" ? back : "classified";
     byPlace.set(status, [...(byPlace.get(status) ?? []), row.id as string]);
   }
   const restored: string[] = [];
@@ -690,4 +692,99 @@ export async function claimWaitingHomeSendItem(supabase: SupabaseClient, househo
     .select("id");
   if (error) return false;
   return (data ?? []).length > 0;
+}
+
+
+/** Where an item was when removed, in the closed set the `archived_from` check allows. */
+function archivedFromFor(status: string, routedTable: string | null): HomeSendStatus {
+  if (status === "received" || status === "failed" || status === "classified") return status;
+  return routedTable ? "routed" : "classified";
+}
+
+/**
+ * Remove (the owner, 2026-11-03): these items archived with the reason
+ * `removed_by_person`, each remembering where it was, so Restore puts it back.
+ * Waiting, failed, added and dismissed items alike; anything already archived
+ * is left alone. Only items the actor may remove move (`mayRemoveHomeSendItem`,
+ * checked here against the rows themselves, never the ids' say-so). Returns
+ * what moved, and whether each had been added (routed), for the screen's words.
+ */
+export async function removeHomeSendItems(
+  supabase: SupabaseClient,
+  householdId: string,
+  ids: readonly string[],
+  actor: RemoveActor,
+  now: Date = new Date(),
+): Promise<{ moved: string[]; refused: number }> {
+  if (ids.length === 0) return { moved: [], refused: 0 };
+  const { data: rows, error: readError } = await supabase
+    .from("home_send_items")
+    .select("id, status, routed_table, created_by_member_id")
+    .eq("household_id", householdId)
+    .in("id", ids.slice(0, 500))
+    .neq("status", "archived");
+  if (readError) throw new Error(`removeHomeSendItems failed: ${readError.code ?? "unknown"}`);
+  const allowed = ((rows ?? []) as Row[]).filter((row) => mayRemoveHomeSendItem(actor, { createdByMemberId: (row.created_by_member_id as string | null) ?? null }));
+  const refused = ((rows ?? []) as Row[]).length - allowed.length;
+  const byPlace = new Map<HomeSendStatus, string[]>();
+  for (const row of allowed) {
+    const from = archivedFromFor(row.status as string, (row.routed_table as string | null) ?? null);
+    byPlace.set(from, [...(byPlace.get(from) ?? []), row.id as string]);
+  }
+  const moved: string[] = [];
+  for (const [from, list] of byPlace) {
+    const { data, error } = await supabase
+      .from("home_send_items")
+      .update({ status: "archived", archived_from: from, archived_at: now.toISOString(), archive_reason: "removed_by_person", retry_requested_at: null })
+      .eq("household_id", householdId)
+      .in("id", list)
+      .neq("status", "archived")
+      .select("id");
+    if (error) throw new Error(`removeHomeSendItems failed: ${error.code ?? "unknown"}`);
+    moved.push(...((data ?? []) as Row[]).map((row) => row.id as string));
+  }
+  return { moved, refused };
+}
+
+/**
+ * Delete for good (the owner, 2026-11-03): archived items only, removed from
+ * the table together with their stored file and their attachments' files. Only
+ * the intake item goes — whatever it added to a domain table stays, so an item
+ * that still has a live change on record is kept and counted. Only the items
+ * the actor may remove are touched; the database's delete policy checks again.
+ * Returns the ids deleted and how many were kept.
+ */
+export async function deleteArchivedHomeSendItems(
+  supabase: SupabaseClient,
+  householdId: string,
+  input: { ids?: readonly string[]; actor: RemoveActor; limit?: number },
+): Promise<{ deleted: string[]; kept: number }> {
+  const limit = Math.min(input.limit ?? 500, 500);
+  let query = supabase.from("home_send_items").select("id, file_path, created_by_member_id").eq("household_id", householdId).eq("status", "archived");
+  if (input.ids) query = query.in("id", input.ids.slice(0, limit));
+  const { data: rows, error: readError } = await query.limit(limit);
+  if (readError) throw new Error(`deleteArchivedHomeSendItems failed: ${readError.code ?? "unknown"}`);
+  const mine = ((rows ?? []) as Row[]).filter((row) => mayRemoveHomeSendItem(input.actor, { createdByMemberId: (row.created_by_member_id as string | null) ?? null }));
+  if (mine.length === 0) return { deleted: [], kept: 0 };
+  const ids = mine.map((row) => row.id as string);
+  const [live, children] = await Promise.all([
+    supabase.from("homesend_changes").select("intake_id").eq("household_id", householdId).in("intake_id", ids).is("undone_at", null).limit(1000),
+    supabase.from("home_send_items").select("parent_item_id, file_path").eq("household_id", householdId).in("parent_item_id", ids).limit(1000),
+  ]);
+  if (live.error) throw new Error(`deleteArchivedHomeSendItems failed: ${live.error.code ?? "unknown"}`);
+  const withEntry = new Set(((live.data ?? []) as Row[]).map((row) => row.intake_id as string));
+  const doomed = mine.filter((row) => !withEntry.has(row.id as string));
+  const doomedIds = new Set(doomed.map((row) => row.id as string));
+  const paths = [
+    ...doomed.map((row) => row.file_path as string | null),
+    ...(((children.data ?? []) as Row[]).filter((row) => doomedIds.has(row.parent_item_id as string)).map((row) => row.file_path as string | null)),
+  ].filter((path): path is string => Boolean(path));
+  if (paths.length > 0) {
+    const { error: storageError } = await supabase.storage.from("home-send").remove(paths);
+    if (storageError) throw new Error("deleteArchivedHomeSendItems failed: storage");
+  }
+  if (doomed.length === 0) return { deleted: [], kept: withEntry.size };
+  const { data, error } = await supabase.from("home_send_items").delete().eq("household_id", householdId).eq("status", "archived").in("id", [...doomedIds]).select("id");
+  if (error) throw new Error(`deleteArchivedHomeSendItems failed: ${error.code ?? "unknown"}`);
+  return { deleted: ((data ?? []) as Row[]).map((row) => row.id as string), kept: withEntry.size };
 }

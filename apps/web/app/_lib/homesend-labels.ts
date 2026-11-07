@@ -361,6 +361,25 @@ export type HomeSendPageLabels = {
     /** Bulk review (the owner, 2026-11-03). */
     bulk: { select: string; addSelected: string; addSure: CountedWords; adding: string; added: CountedWords; notAdded: string; hint: string; reviewInOrder: string; stop: string; showMore: string };
     retry: { tryAgain: string; tryAgainAria: string; queued: string };
+    /** Remove one item on its own, and Delete for good in the Archived view (the owner, 2026-11-03). */
+    remove: {
+      action: string;
+      aria: string;
+      menu: string;
+      removed: CountedWords;
+      removedEntry: CountedWords;
+      confirmTitle: CountedWords;
+      confirmBody: string;
+      forGood: string;
+      forGoodAria: string;
+      deleteTitle: string;
+      deleteBody: string;
+      deleted: CountedWords;
+      deleteAll: string;
+      deleteAllTitle: CountedWords;
+      deleteSkipped: CountedWords;
+      notAllowed: string;
+    };
     archived: { title: string; lede: string; restore: string; restoreAria: string; restored: string; back: string; empty: string; reason: Record<ArchiveReason, string> };
     dropTitle: string;
     dropHint: string;
@@ -853,6 +872,24 @@ export function homesendPageLabels(t: Translate, language: string): HomeSendPage
         showMore: t("homesend.bulk.showMore"),
       },
       retry: { tryAgain: t("homesend.retry.tryAgain"), tryAgainAria: t("homesend.retry.tryAgainAria", keep("title")), queued: t("homesend.retry.queued") },
+      remove: {
+        action: t("homesend.remove.action"),
+        aria: t("homesend.remove.aria", keep("title")),
+        menu: t("homesend.remove.menu", keep("title")),
+        removed: counted(t, "homesend.remove.removed", {}, language),
+        removedEntry: counted(t, "homesend.remove.removedEntry", {}, language),
+        confirmTitle: counted(t, "homesend.remove.confirmTitle", {}, language),
+        confirmBody: t("homesend.remove.confirmBody"),
+        forGood: t("homesend.remove.forGood"),
+        forGoodAria: t("homesend.remove.forGoodAria", keep("title")),
+        deleteTitle: t("homesend.remove.deleteTitle"),
+        deleteBody: t("homesend.remove.deleteBody"),
+        deleted: counted(t, "homesend.remove.deleted", {}, language),
+        deleteAll: t("homesend.remove.deleteAll"),
+        deleteAllTitle: counted(t, "homesend.remove.deleteAllTitle", {}, language),
+        deleteSkipped: counted(t, "homesend.remove.deleteSkipped", {}, language),
+        notAllowed: t("homesend.remove.notAllowed"),
+      },
       archived: {
         title: t("homesend.archived.title"),
         lede: t("homesend.archived.lede"),

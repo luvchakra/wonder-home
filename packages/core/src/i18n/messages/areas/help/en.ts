@@ -502,6 +502,9 @@ export const helpEn = {
   "help.faq.homesend-clear.q": "What do “Archive all” and “Add all anyway” do?",
   "help.faq.homesend-clear.a":
     "Both are for Admins, and each asks first. “Archive all” moves everything waiting or unreadable to Archived in one go — nothing is added or deleted, Undo puts them straight back, and Restore works for 30 days. “Add all anyway” adds everything waiting, even what HomeSend wasn't sure of, each marked “Checking” with how sure it was, so HomeTalk still asks its questions and each has its own Undo under Added recently. It never passes three rules: bills, receipts and health documents keep waiting while “Add money entries directly” or “Add health entries directly” is off; emails from outside the household keep waiting; and nothing is ever paid. Things HomeSend couldn't tell the kind of, and things it couldn't read, are not added — the confirm says how many.",
+  "help.faq.homesend-remove.q": "How do I remove one HomeSend item, or delete it for good?",
+  "help.faq.homesend-remove.a":
+    "Swipe a row left and tap or complete the swipe to remove it, or open the row and press “Remove” (on a computer there is also a ⋯ menu). You can remove what you sent yourself, and Admins can remove anything. It moves to Archived with an Undo, nothing is deleted, and for an item HomeSend had already added, the entry it added is undone too. A row that stands for several identical items asks first and removes them all. In Archived, “Delete for good” (confirmed first) permanently deletes the item and its stored file — it can’t be undone, and what it added elsewhere stays. Admins can also “Delete all archived”.",
   "help.faq.other-language.q": "Can I use WonderHome in Hindi or another language?",
   "help.faq.other-language.a":
     "Yes. Choose your language in Settings → Language & Region. HomeTalk understands and replies in it, and your reminders arrive in it too.",

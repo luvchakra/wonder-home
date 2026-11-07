@@ -37,6 +37,8 @@ import { addSelectedHomeSendItemsAction, retryHomeSendItemAction, type BulkAddSt
 import { archiveSelectedHomeSendAction, restoreArchivedHomeSendAction, type ClearState } from "../(auth)/home-send-clear-actions";
 import { countWords, fillIn, type HomeSendPageLabels, type HomeSendSourceLabels } from "../_lib/homesend-labels";
 import { HomeSendClear, type ClearCounts } from "./home-send-clear";
+import { RemoveButton, RemoveMenu, RemovableRow, RemoveProvider } from "./home-send-remove";
+import { mayRemoveHomeSendItem } from "@wonderhome/core/homesend/remove";
 import { describeSource, HomeSendConfirmStep, TranscriptCheck, type ReviewConfirmation, type ReviewReconciliation, type ReviewSubject } from "./home-send-intake";
 
 /** What the server prepared for an item already waiting (`home-send-review.ts`): who it is for, and whether it is already on record. */
@@ -158,6 +160,8 @@ export function HomeSendInbox({
   pendingTotal,
   lead,
   isAdmin = false,
+  viewerMemberId = "",
+  viewerType = "adult",
   clearCounts = null,
   moreHref = null,
   failedInfo = {},
@@ -168,6 +172,9 @@ export function HomeSendInbox({
   lead: string;
   /** Admins see the two one-tap clears; the server checks again. */
   isAdmin?: boolean;
+  /** Who is looking, so a row offers Remove only to its sender or an Admin; the server checks again. */
+  viewerMemberId?: string;
+  viewerType?: string;
   /** What "Archive all" and "Add all anyway" would touch, for their confirms. */
   clearCounts?: ClearCounts | null;
   /** Every waiting item, of which `pending` is the page shown. */
@@ -349,9 +356,13 @@ export function HomeSendInbox({
   const needsCount = groups.length + checkingRows.length + Math.max(0, (pendingTotal ?? pending.length) - pending.length);
 
   const archiveDone = archiveSelectedState.done === "archived" && restoreSelectedState.done !== "restored" ? (archiveSelectedState.archivedIds ?? []) : [];
+  const openItemFull = openItem ? [...pending, ...failed, ...history].find((entry) => entry.id === openItem.id) : undefined;
+  const canRemove = (item: HomeSendItem) => mayRemoveHomeSendItem({ memberId: viewerMemberId, memberType: viewerType, isAdmin }, item);
+  const canRemoveOpen = Boolean(openItemFull && canRemove(openItemFull));
   const leadLine = <p className="text-base font-medium text-[var(--wh-foreground)]">{lead}</p>;
 
   return (
+    <RemoveProvider householdId={householdId} labels={words.remove} undoLabel={words.undo} cancelLabel={calm.clear.cancel}>
     <div className="space-y-5">
       {isAdmin && clearCounts ? <HomeSendClear householdId={householdId} counts={clearCounts} labels={labels} lead={leadLine} /> : leadLine}
 
@@ -500,6 +511,11 @@ export function HomeSendInbox({
               </form>
             )}
             {dismissState.error ? <Alert>{dismissState.error}</Alert> : null}
+            {planApplied || !canRemoveOpen ? null : (
+              <div className="flex justify-center">
+                <RemoveButton ids={[openItem.id]} title={titleFor(openItemFull!, review.source)} onRemoved={() => setOpenItem(null)} />
+              </div>
+            )}
           </div>
         )}
       </Card>
@@ -576,16 +592,19 @@ export function HomeSendInbox({
                 const title = titleFor(item, review.source);
                 const presentation = presentationFor(item.classifiedKind, words.kind);
                 return (
-                  <li key={item.id} className="flex items-center gap-3 py-2.5">
-                    <IconTile icon={presentation.icon} tone={presentation.tone} size="sm" />
-                    <span className="min-w-0 flex-1">
-                      <span className="block text-sm font-medium break-words">{title}</span>
-                      <span className="block text-xs text-[var(--wh-foreground-subtle)]">{countWords(calm.questions, left)}</span>
-                    </span>
-                    <PillLink href="/ai" tone="soft" aria-label={fillIn(calm.answerAria, { title })}>
-                      {calm.answer}
-                    </PillLink>
-                  </li>
+                  <RemovableRow key={item.id} ids={[item.id]} title={title} canRemove={canRemove(item)} className="py-2.5">
+                    <div className="flex items-center gap-3">
+                      <IconTile icon={presentation.icon} tone={presentation.tone} size="sm" />
+                      <span className="min-w-0 flex-1">
+                        <span className="block text-sm font-medium break-words">{title}</span>
+                        <span className="block text-xs text-[var(--wh-foreground-subtle)]">{countWords(calm.questions, left)}</span>
+                      </span>
+                      <PillLink href="/ai" tone="soft" aria-label={fillIn(calm.answerAria, { title })}>
+                        {calm.answer}
+                      </PillLink>
+                      {canRemove(item) ? <RemoveMenu ids={[item.id]} title={title} /> : null}
+                    </div>
+                  </RemovableRow>
                 );
               })}
               {groups.map((group) => {
@@ -600,7 +619,7 @@ export function HomeSendInbox({
                 const open = expanded.has(group.key);
                 const sure = percentNumber(item.understanding);
                 return (
-                  <li key={group.key} className="py-2.5">
+                  <RemovableRow key={group.key} ids={idsOf(group.key)} title={title} canRemove={!selecting && group.items.every(canRemove)} className="py-2.5">
                     <div className="flex items-center gap-3">
                       {selecting ? (
                         <input
@@ -635,6 +654,7 @@ export function HomeSendInbox({
                           {calm.check}
                         </Pill>
                       )}
+                      {group.items.every(canRemove) ? <RemoveMenu ids={idsOf(group.key)} title={title} /> : null}
                     </div>
                     {open ? (
                       <div className="mt-2 ml-11 space-y-2 text-xs text-[var(--wh-foreground-muted)]">
@@ -649,9 +669,10 @@ export function HomeSendInbox({
                             {countWords(calm.archiveGroup, many)}
                           </Pill>
                         </form>
+                        {group.items.every(canRemove) ? <RemoveButton ids={idsOf(group.key)} title={title} /> : null}
                       </div>
                     ) : null}
-                  </li>
+                  </RemovableRow>
                 );
               })}
             </ul>
@@ -676,7 +697,7 @@ export function HomeSendInbox({
                 const reason = sentenceCase(item.failureReason ? (words.failure[item.failureReason] ?? words.couldNotRead) : words.couldNotRead);
                 const status = retryState.itemId === item.id && retryState.done === "retry_queued" ? words.retry.queued : (failedInfo[item.id]?.line ?? null);
                 return (
-                  <li key={item.id} className="py-2.5">
+                  <RemovableRow key={item.id} ids={[item.id]} title={title} canRemove={canRemove(item)} className="py-2.5">
                     <div className="flex items-center gap-3">
                       <IconTile icon={item.source === "link" ? Link2 : ShieldAlert} tone="neutral" size="sm" />
                       <button type="button" onClick={() => toggleOpen(item.id)} aria-expanded={open} aria-label={fillIn(calm.detailAria, { title })} className="min-w-0 flex-1 text-left">
@@ -696,6 +717,7 @@ export function HomeSendInbox({
                           {calm.fillIn}
                         </Pill>
                       )}
+                      {canRemove(item) ? <RemoveMenu ids={[item.id]} title={title} /> : null}
                     </div>
                     {retryState.itemId === item.id && retryState.error ? <p className="mt-1 ml-11 text-xs text-[var(--wh-foreground-muted)]">{retryState.error}</p> : null}
                     {open ? (
@@ -727,10 +749,11 @@ export function HomeSendInbox({
                               <X aria-hidden className="size-3.5" /> {words.dismiss}
                             </Pill>
                           </form>
+                          {canRemove(item) ? <RemoveButton ids={[item.id]} title={title} /> : null}
                         </div>
                       </div>
                     ) : null}
-                  </li>
+                  </RemovableRow>
                 );
               })}
             </ul>
@@ -781,7 +804,8 @@ export function HomeSendInbox({
                   status === "updated" ? words.updatedOnRecord : status === "cancelled" ? words.cancelledOnRecord : statusLabel;
                 const reason = checking ? calm.looksRightAsk : primaryChange && primaryChange.changeType !== "created" && !primaryChange.undoneAt ? `${presentation.label} · ${onRecord}` : presentation.label;
                 return (
-                  <li key={item.id} className="space-y-1.5 py-2.5">
+                  <RemovableRow key={item.id} ids={[item.id]} title={title} canRemove={canRemove(item)} className="py-2.5">
+                   <div className="space-y-1.5">
                     <div className="flex items-center gap-3">
                       <IconTile icon={presentation.icon} tone={presentation.tone} size="sm" />
                       <span className="min-w-0 flex-1">
@@ -819,6 +843,7 @@ export function HomeSendInbox({
                       ) : (
                         <Badge tone={status === "added" || status === "recorded" ? "handled" : "neutral"}>{statusLabel}</Badge>
                       )}
+                      {canRemove(item) ? <RemoveMenu ids={[item.id]} title={title} /> : null}
                     </div>
                     {checking && canUndoPrimary ? (
                       <form action={undoAction} className="ml-11">
@@ -878,7 +903,8 @@ export function HomeSendInbox({
                         </div>
                       );
                     })}
-                  </li>
+                   </div>
+                  </RemovableRow>
                 );
               })}
           </ul>
@@ -897,6 +923,7 @@ export function HomeSendInbox({
         <EmptyState icon={UploadCloud} tone="ai" title={words.emptyTitle} description={words.emptyDescription} />
       ) : null}
     </div>
+    </RemoveProvider>
   );
 }
 

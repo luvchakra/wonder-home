@@ -1126,3 +1126,36 @@ test("the tidy's day record: one per household per day, written only by the cloc
   assert.equal(asProfile(OUTSIDER, `select count(*) from public.homesend_tidy_runs where household_id = '${household}';`, options), "0");
   assert.ok(deniedForProfile(HEAD, `insert into public.homesend_tidy_runs (household_id, run_on) values ('${household}', '2026-11-04');`, options), "a member wrote the tidy's day record");
 });
+
+// --- Delete for good (the owner, 2026-11-03) -------------------------------
+
+function deleteCount(profile, id) {
+  // psql reports "DELETE n" through the returning rows: count what came back.
+  return Number(
+    asProfile(profile, `with gone as (delete from public.home_send_items where id = '${id}' returning id) select count(*) from gone;`, options),
+  );
+}
+
+test("an item that is not archived cannot be deleted, not even by an Admin", () => {
+  assert.equal(deleteCount(HEAD, itemId), 0);
+});
+
+test("only an archived item goes; an Admin can delete it", () => {
+  psql(`update public.home_send_items set status = 'archived', archived_from = 'routed', archived_at = now(), archive_reason = 'removed_by_person' where id = '${itemId}';`, options);
+  assert.equal(deleteCount(OUTSIDER, itemId), 0, "another household deleted it");
+  assert.equal(deleteCount(OTHER_ADULT, itemId), 0, "a non-Admin who did not send it deleted it");
+  assert.equal(deleteCount(HEAD, itemId), 1);
+});
+
+test("a non-Admin adult can delete their own archived item, and removed_by_person is an allowed reason", () => {
+  const mine = asProfile(
+    OTHER_ADULT,
+    `insert into public.home_send_items (household_id, created_by_member_id, source, raw_text)
+     select '${household}', id, 'pasted_text', 'Mine' from public.household_members where profile_id = '${OTHER_ADULT}' and household_id = '${household}'
+     returning id;`,
+    options,
+  );
+  psql(`update public.home_send_items set status = 'archived', archived_from = 'received', archived_at = now(), archive_reason = 'removed_by_person' where id = '${mine}';`, options);
+  assert.equal(deleteCount(HEAD, "00000000-0000-4000-8000-000000000000"), 0);
+  assert.equal(deleteCount(OTHER_ADULT, mine), 1);
+});
