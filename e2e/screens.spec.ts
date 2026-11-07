@@ -159,7 +159,7 @@ test.describe("every signed-in screen loads", () => {
     await expect.poll(async () => {
       const { data } = await admin.from("responsibilities").select("outcome_key, ai_mode").eq("household_id", householdId).like("outcome_key", "laundry.%");
       return (data ?? []).map((row) => row.ai_mode).sort();
-    }).toEqual(["execute", "execute"]);
+    }, { timeout: 30_000 }).toEqual(["execute", "execute"]);
     // The other groups are untouched.
     const { data: others } = await admin.from("responsibilities").select("outcome_key, ai_mode").eq("household_id", householdId).not("outcome_key", "like", "laundry.%");
     expect(Object.fromEntries((others ?? []).map((row) => [row.outcome_key, row.ai_mode]))).toEqual({ "meals.dinner_ready": "execute", "pets.cared_for": "prepare" });

@@ -34,3 +34,11 @@
 - Third dispatch (after #529): the playbook test's real cause was that Manage Household is a folded card
   (`details#manage`, #467), so the area cards were not visible; the spec opens it first. #527 also added
   `PATCH /platform-admin/plans/{planKey}` without an OpenAPI entry; documented.
+- Fourth dispatch (after #533): 2 left. (a) Responsibilities group save polled the database for only 5 s on a live
+  round trip; it passed in the previous dispatch and on desktop, nothing in that screen changed, so the poll now waits
+  30 s like the rest of the file. (b) HomeSend "Add all anyway" fails with "Something went wrong": the action builds an
+  admin client, and `playwright.config.ts` deliberately blanks `SUPABASE_SERVICE_ROLE_KEY` on the app server under test
+  (docs/CI.md). That is a harness-security decision, left for the owner (see the reply).
+- Why Background jobs shows no schedule runs yet: every scheduled workflow in this repo runs about 3.5 h after its cron
+  time (drift 23:13 UTC ran 02:43; advisors 22:43 ran 02:20; nightly 21:30 ran 01:03, every night). The first run is
+  expected ~3.5 h after the first slot following #524 (17:53 UTC), so about 21:20-21:40 UTC.
