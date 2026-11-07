@@ -383,6 +383,7 @@ export type HomeSendPageLabels = {
     archived: { title: string; lede: string; restore: string; restoreAria: string; restored: string; back: string; empty: string; reason: Record<ArchiveReason, string> };
     dropTitle: string;
     dropHint: string;
+    pasteAnywhere: string;
     chooseFile: string;
     paste: string;
     keptBelow: string;
@@ -452,6 +453,14 @@ export type HomeSendPageLabels = {
     emailAdmin: string;
     emailAskAdmin: string;
     copyAria: string;
+    addToContacts: string;
+    welcomeTitle: string;
+    welcome1: string;
+    welcome2: string;
+    welcome3: string;
+    welcomeWhatsApp: string;
+    welcomeShare: string;
+    contactName: string;
     copy: string;
     copied: string;
     working: string;
@@ -902,6 +911,7 @@ export function homesendPageLabels(t: Translate, language: string): HomeSendPage
       },
       dropTitle: t("homesend.drop.title"),
       dropHint: t("homesend.drop.hint"),
+      pasteAnywhere: t("homesend.drop.pasteAnywhere"),
       chooseFile: t("homesend.drop.chooseFile"),
       paste: t("homesend.drop.paste"),
       keptBelow: t("homesend.drop.keptBelow"),
@@ -987,6 +997,14 @@ export function homesendPageLabels(t: Translate, language: string): HomeSendPage
       emailAdmin: t("homesend.channels.emailAdmin"),
       emailAskAdmin: t("homesend.channels.emailAskAdmin"),
       copyAria: t("homesend.channels.copyAria"),
+      addToContacts: t("homesend.channels.addToContacts"),
+      welcomeTitle: t("homesend.channels.welcomeTitle"),
+      welcome1: t("homesend.channels.welcome1"),
+      welcome2: t("homesend.channels.welcome2"),
+      welcome3: t("homesend.channels.welcome3"),
+      welcomeWhatsApp: t("homesend.channels.welcomeWhatsApp"),
+      welcomeShare: t("homesend.channels.welcomeShare"),
+      contactName: t("homesend.channels.contactName"),
       copy: t("homesend.channels.copy"),
       copied: t("homesend.channels.copied"),
       working: t("homesend.channels.working"),

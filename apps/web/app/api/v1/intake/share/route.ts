@@ -1,3 +1,4 @@
+import { addIfAllowed } from "../../../../(auth)/home-send-auto";
 import { NextResponse } from "next/server";
 import { z } from "zod";
 import { hitRateLimitFair } from "@wonderhome/core/security/rate-limit";
@@ -68,18 +69,22 @@ export async function POST(request: Request): Promise<Response> {
     // The same per-member intake limit the upload and paste forms use (Wave 5 §15).
     const limiter = createAdminClient();
     if (!(await hitRateLimitFair(limiter, "homesend.intake", actor))) return redirectTo("/home-send?shareError=rate_limited", origin);
+    let itemId: string;
     try {
       // The same one pipeline every other HomeSend input goes through; a
       // file it refuses is still kept, failed safely, in the inbox.
-      if (photo) {
-        await ingestFile(supabase, actor, { bytes: new Uint8Array(await photo.arrayBuffer()), claimedType: photo.type, filename: photo.name || null });
-      } else {
-        await ingestText(supabase, actor, { text: combinedText }, { limit: (bucket) => hitRateLimitFair(limiter, bucket, actor) });
-      }
+      const outcome = photo
+        ? await ingestFile(supabase, actor, { bytes: new Uint8Array(await photo.arrayBuffer()), claimedType: photo.type, filename: photo.name || null })
+        : await ingestText(supabase, actor, { text: combinedText }, { limit: (bucket) => hitRateLimitFair(limiter, bucket, actor) });
+      itemId = outcome.itemId;
+      // Sending is the only work (14-066): a share is put in place on arrival, exactly as an
+      // upload or a WhatsApp forward is — added where the household allows it, else it waits.
+      if (!outcome.duplicate) await addIfAllowed(supabase, membership, itemId, { createdByMemberId: membership.memberId }).catch(() => null);
     } catch (thrown) {
       return redirectTo(`/home-send?shareError=${thrown instanceof IngestRejected ? "size" : "upload"}`, origin);
     }
-    return redirectTo("/home-send", origin);
+    // "Got it" on the page, with Undo when it was added (the page reads the item itself).
+    return redirectTo(`/home-send?shared=${encodeURIComponent(itemId)}`, origin);
   }
 
   const admin = createAdminClient();

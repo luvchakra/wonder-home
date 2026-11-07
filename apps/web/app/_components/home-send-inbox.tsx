@@ -2,7 +2,7 @@
 
 import { Archive, Camera, CheckCircle2, ClipboardPaste, GraduationCap, HeartPulse, HelpCircle, Link2, Mic, PenLine, Receipt, ShieldAlert, ShoppingBasket, UploadCloud, Wallet, X } from "lucide-react";
 import Link from "next/link";
-import { useActionState, useRef, useState } from "react";
+import { startTransition, useActionState, useEffect, useRef, useState } from "react";
 
 import { suggestedIntakeKind } from "@wonderhome/core/ai/intake-kind-check";
 import { gateTranscript } from "@wonderhome/core/homesend/audio";
@@ -167,7 +167,13 @@ export function HomeSendInbox({
   failedInfo = {},
   archived = null,
   labels,
+  shared = null,
+  welcome = null,
 }: {
+  /** The first-time explainer, while the household has never sent anything (14-066). */
+  welcome?: React.ReactNode;
+  /** "Got it — X is added" after a share from the phone, with its Undo (14-066). */
+  shared?: { notice: string; changeId: string; title: string; itemId?: string; whole?: boolean } | null;
   /** The opening sentence (rule 7): the situation in one line, with the counts. */
   lead: string;
   /** Admins see the two one-tap clears; the server checks again. */
@@ -227,7 +233,7 @@ export function HomeSendInbox({
   const [failedNotice, setFailedNotice] = useState<string | null>(null);
   // Applied on its own under the household's own autonomy setting (§12):
   // said so, with its Undo right here as well as in "Recently handled".
-  const [autoApplied, setAutoApplied] = useState<{ notice: string; changeId: string; title: string; itemId?: string; whole?: boolean } | null>(null);
+  const [autoApplied, setAutoApplied] = useState<{ notice: string; changeId: string; title: string; itemId?: string; whole?: boolean } | null>(shared);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const uploadFormRef = useRef<HTMLFormElement>(null);
   const busy = uploading || pasting;
@@ -280,6 +286,40 @@ export function HomeSendInbox({
       setMode("drop");
     }
   }
+
+  // Paste anywhere on the page (14-066): on a computer, Ctrl/⌘+V sends what is on the clipboard
+  // straight in — a copied file or screenshot as an upload, text or a link as a paste — with no
+  // form to open. Typing into a field keeps its own paste.
+  const pasteRef = useRef({ busy, householdId, pasteAction });
+  useEffect(() => {
+    pasteRef.current = { busy, householdId, pasteAction };
+  });
+  useEffect(() => {
+    function onPaste(event: ClipboardEvent) {
+      const target = event.target as HTMLElement | null;
+      if (target?.closest("input, textarea, [contenteditable='true']")) return;
+      const current = pasteRef.current;
+      if (current.busy || !event.clipboardData) return;
+      const file = event.clipboardData.files?.[0];
+      if (file && fileInputRef.current && uploadFormRef.current) {
+        event.preventDefault();
+        const transfer = new DataTransfer();
+        transfer.items.add(file);
+        fileInputRef.current.files = transfer.files;
+        uploadFormRef.current.requestSubmit();
+        return;
+      }
+      const text = event.clipboardData.getData("text/plain").trim();
+      if (!text) return;
+      event.preventDefault();
+      const data = new FormData();
+      data.set("householdId", current.householdId);
+      data.set("text", text);
+      startTransition(() => current.pasteAction(data));
+    }
+    document.addEventListener("paste", onPaste);
+    return () => document.removeEventListener("paste", onPaste);
+  }, []);
 
   function handleDrop(event: React.DragEvent<HTMLDivElement>) {
     event.preventDefault();
@@ -365,6 +405,7 @@ export function HomeSendInbox({
     <RemoveProvider householdId={householdId} labels={words.remove} undoLabel={words.undo} cancelLabel={calm.clear.cancel}>
     <div className="space-y-5">
       {isAdmin && clearCounts ? <HomeSendClear householdId={householdId} counts={clearCounts} labels={labels} lead={leadLine} /> : leadLine}
+      {welcome}
 
       {/* "Send something": one compact row that opens on tap; a file dropped anywhere on it is read (rule 15 keeps the whole drop zone a tap away). */}
       <div
@@ -388,6 +429,7 @@ export function HomeSendInbox({
                 <span className="min-w-0 flex-1">
                   <span className="block text-sm font-semibold">{uploading || pasting ? review.reading : calm.sendTitle}</span>
                   <span className="block text-xs text-[var(--wh-foreground-subtle)]">{calm.sendHint}</span>
+                  <span className="hidden text-xs text-[var(--wh-foreground-subtle)] md:block">{words.pasteAnywhere}</span>
                 </span>
               </button>
             ) : (
@@ -919,7 +961,7 @@ export function HomeSendInbox({
         </Link>
       ) : null}
 
-      {pending.length === 0 && failed.length === 0 && history.length === 0 && !openItem ? (
+      {pending.length === 0 && failed.length === 0 && history.length === 0 && !openItem && !welcome ? (
         <EmptyState icon={UploadCloud} tone="ai" title={words.emptyTitle} description={words.emptyDescription} />
       ) : null}
     </div>

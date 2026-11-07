@@ -1,6 +1,7 @@
 import { Send } from "lucide-react";
 import { redirect } from "next/navigation";
 import type { SupabaseClient } from "@supabase/supabase-js";
+import type { HouseholdMembership } from "@wonderhome/core/identity/schemas";
 
 import { consumableNames, purchaseLabels } from "@wonderhome/core/commerce/repository";
 import { createAdminClient } from "@wonderhome/core/db/admin";
@@ -25,13 +26,14 @@ import { EmptyState } from "@wonderhome/core/ui/states";
 import { formatWhatsAppNumber, whatsappBusinessNumber } from "@wonderhome/core/whatsapp/linking";
 import { listWhatsAppLinks } from "@wonderhome/core/whatsapp/repository";
 
-import { HomeSendChannels } from "../_components/home-send-channels";
+import { HomeSendChannels, HomeSendWelcome } from "../_components/home-send-channels";
 import { prepareReview } from "../(auth)/home-send-review";
 import { HomeSendInbox, type PreparedReview } from "../_components/home-send-inbox";
 import { HomeSendArchived } from "../_components/home-send-archived";
 import { homesendPageLabels } from "../_lib/homesend-labels";
 import { waitEvidence, whyWords } from "../_lib/homesend-waiting";
 import { requireSession } from "../_lib/session";
+import { addIfAllowed } from "../(auth)/home-send-auto";
 
 export const metadata = { title: "HomeSend" };
 
@@ -66,23 +68,25 @@ const isShareError = (value: string | undefined): value is keyof typeof SHARE_ER
  */
 async function resumeShareHandoff(
   supabase: SupabaseClient,
-  householdId: string,
-  memberId: string,
+  membership: HouseholdMembership,
   token: string,
-): Promise<void> {
+): Promise<string | null> {
   const content = await consumeShareHandoff(createAdminClient(), token);
-  if (!content) return;
+  if (!content) return null;
 
-  const actor = { householdId, memberId };
+  const actor = { householdId: membership.household.id, memberId: membership.memberId };
   try {
-    if (content.kind === "file") {
-      await ingestFile(supabase, actor, { bytes: new Uint8Array(content.fileBytes), claimedType: content.fileContentType });
-    } else {
-      await ingestText(supabase, actor, { text: content.rawText });
-    }
+    const outcome =
+      content.kind === "file"
+        ? await ingestFile(supabase, actor, { bytes: new Uint8Array(content.fileBytes), claimedType: content.fileContentType })
+        : await ingestText(supabase, actor, { text: content.rawText });
+    // Put in place on arrival, as a signed-in share is (14-066).
+    if (!outcome.duplicate) await addIfAllowed(supabase, membership, outcome.itemId, { createdByMemberId: membership.memberId }).catch(() => null);
+    return outcome.itemId;
   } catch {
     // A share that cannot be taken in now is not worth failing the page
     // over; the inbox simply does not show it.
+    return null;
   }
 }
 
@@ -101,9 +105,9 @@ async function resumeShareHandoff(
 export default async function HomeSendPage({
   searchParams,
 }: {
-  searchParams: Promise<{ handoff?: string; shareError?: string; shown?: string; view?: string }>;
+  searchParams: Promise<{ handoff?: string; shareError?: string; shown?: string; view?: string; shared?: string }>;
 }) {
-  const [{ handoff, shareError, shown: shownParam, view: viewParam }, session] = await Promise.all([searchParams, requireSession("/home-send")]);
+  const [{ handoff, shareError, shown: shownParam, view: viewParam, shared: sharedParam }, session] = await Promise.all([searchParams, requireSession("/home-send")]);
   const { supabase, membership, view, viewer, secondary, locale } = session;
   const { t } = locale;
   const householdId = membership.household.id;
@@ -112,8 +116,8 @@ export default async function HomeSendPage({
   // on the clean URL so a reload never tries to consume the same (already
   // deleted) token twice.
   if (handoff) {
-    await resumeShareHandoff(supabase, householdId, membership.memberId, handoff);
-    redirect("/home-send");
+    const resumed = await resumeShareHandoff(supabase, membership, handoff);
+    redirect(resumed ? `/home-send?shared=${encodeURIComponent(resumed)}` : "/home-send");
   }
 
   const shell = {
@@ -232,6 +236,22 @@ export default async function HomeSendPage({
   const history = items
     .filter((item) => (item.status === "routed" || item.status === "undone") && (lastChange.get(item.id) ?? Date.parse(item.createdAt)) >= since)
     .slice(0, 30);
+  // "Got it" after a share from the phone (14-066): read from the item itself, never from the URL's say-so.
+  const sharedItem = sharedParam ? items.find((item) => item.id === sharedParam) : undefined;
+  const sharedTitle = sharedItem?.extracted?.title?.trim() || t("homesend.shared.something");
+  const sharedChange = sharedItem?.status === "routed" ? changes.find((change) => change.intakeId === sharedItem.id && !change.undoneAt) : undefined;
+  const shared = sharedChange
+    ? { notice: t("homesend.shared.added", { title: sharedTitle }), changeId: sharedChange.id, title: sharedTitle, itemId: sharedChange.intakeId, whole: sharedChange.domain === "purchase" }
+    : null;
+  const sharedNote = sharedItem && !shared
+    ? sharedItem.status === "failed"
+      ? t("homesend.shared.failed")
+      : sharedItem.status === "classified"
+        ? t("homesend.shared.waiting", { title: sharedTitle })
+        : sharedItem.status === "received"
+          ? t("homesend.shared.reading")
+          : null
+    : null;
   // The opening sentence (rule 7): what needs a word, what couldn't be read — the counts live here, not in badges.
   const checkingOpen = history.filter((item) => questionsLeft((item.understanding as { checking?: unknown } | null)?.checking) > 0 && changes.some((change) => change.intakeId === item.id && !change.undoneAt && change.confirmationState === "unconfirmed")).length;
   const needs = groupIdentical(pending).length + checkingOpen;
@@ -260,6 +280,7 @@ export default async function HomeSendPage({
         </header>
 
         {isShareError(shareError) ? <Alert>{t(SHARE_ERROR_KEYS[shareError])}</Alert> : null}
+        {sharedNote ? <Alert tone="info">{sharedNote}</Alert> : null}
 
         <HomeSendInbox
           householdId={householdId}
@@ -282,6 +303,12 @@ export default async function HomeSendPage({
           groceryNames={groceryNames}
           purchaseNames={purchaseNames}
           labels={labels}
+          shared={shared}
+          welcome={
+            allItems.length === 0 && archivedCount === 0 ? (
+              <HomeSendWelcome whatsapp={whatsappNumber && membership.memberType === "adult" ? { connected: myWhatsApp !== null } : null} labels={labels.channels} />
+            ) : null
+          }
         />
 
         <HomeSendChannels
