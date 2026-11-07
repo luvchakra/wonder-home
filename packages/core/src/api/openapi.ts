@@ -675,6 +675,20 @@ export function buildOpenApiDocument(): Json {
           },
         },
       },
+      "/platform-admin/plans/{planKey}": {
+        parameters: [{ name: "planKey", in: "path", required: true, schema: { type: "string" } }],
+        patch: {
+          summary: "Edit a plan: its name, description, prices and what it includes",
+          description:
+            "Body { edit, confirm }. With `confirm: false` nothing is written and the answer says, in sentences, what saving would change; with `confirm: true` it saves. Platform owner only (`plans.edit`); other staff can read the page and nothing more. A plan's burst and fair-use policies have their own route.",
+          responses: {
+            "200": { description: "The plan key, whether it changed, and the lines that changed" },
+            "400": { $ref: "#/components/responses/BadRequest" },
+            "403": { $ref: "#/components/responses/Forbidden" },
+            "404": { $ref: "#/components/responses/NotFound" },
+          },
+        },
+      },
       "/platform-admin/plans/{planKey}/policies": {
         parameters: [{ name: "planKey", in: "path", required: true, schema: { type: "string" } }],
         get: {

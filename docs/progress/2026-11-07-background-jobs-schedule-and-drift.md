@@ -31,3 +31,6 @@
 - Re-dispatch after #525: 12 failures became 2, one spec: `screens.spec` playbook cards counted the add form's own
   folded "More detail" (added by the settings search work, #467). The spec now selects only the area cards (summary
   with a count). Not run locally (no matching Playwright browser here); confirmed by the next nightly dispatch.
+- Third dispatch (after #529): the playbook test's real cause was that Manage Household is a folded card
+  (`details#manage`, #467), so the area cards were not visible; the spec opens it first. #527 also added
+  `PATCH /platform-admin/plans/{planKey}` without an OpenAPI entry; documented.
