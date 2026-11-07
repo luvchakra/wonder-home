@@ -2,6 +2,7 @@ import { Receipt, Sparkles } from "lucide-react";
 
 import { bestYearlySaving, DEFAULT_PRICE_CURRENCY, formatPrice, listBillingHistory, loadBillingTerms, priceLines } from "@wonderhome/core/billing/account";
 import { describeTrial } from "@wonderhome/core/billing/experiments";
+import { featureLines } from "@wonderhome/core/billing/plan-shared";
 import { listPlanPrices } from "@wonderhome/core/billing/prices";
 import type { BillingInterval } from "@wonderhome/core/billing/provider";
 import { listPlans, loadSubscription, usageSummary } from "@wonderhome/core/billing/repository";
@@ -41,7 +42,7 @@ export default async function PlanSettingsPage({ searchParams }: { searchParams:
   const timezone = membership.household.timezone;
   const interval: BillingInterval = requested === "year" ? "year" : "month";
   const manages = view.permissions.includes("household.manage");
-  const [subscription, plans, usage, prices, terms, history] = await Promise.all([
+  const [subscription, plans, usage, prices, terms, history, planFeatures] = await Promise.all([
     loadSubscription(supabase, householdId).catch(() => null),
     listPlans(supabase).catch(() => []),
     usageSummary(supabase, householdId).catch(() => ({ planKey: null, features: [] })),
@@ -49,6 +50,8 @@ export default async function PlanSettingsPage({ searchParams }: { searchParams:
     loadBillingTerms(supabase, householdId).catch(() => null),
     // The ledger answers only an Admin; anyone else simply has no billing row.
     manages ? listBillingHistory(supabase, householdId, 1).catch(() => []) : Promise.resolve([]),
+    // What each plan includes, read the way the platform-admin preview reads it.
+    supabase.from("plan_features").select("plan_key, feature_key, enabled, limit_per_period, period").order("feature_key").limit(500).then((result) => result.data ?? []),
   ]);
   // Only what is actually counted — an unlimited feature with no fair-use
   // level has no "used of" to show, and "used of unlimited" is not
@@ -176,6 +179,11 @@ export default async function PlanSettingsPage({ searchParams }: { searchParams:
                       priceNote: line ? planPriceNote(t, line) : null,
                       earlyAccess: line?.earlyAccess ?? false,
                       priceId: line?.priceId ?? null,
+                      features: featureLines(
+                        planFeatures
+                          .filter((row) => row.plan_key === key)
+                          .map((row) => ({ featureKey: row.feature_key as string, enabled: Boolean(row.enabled), limit: row.limit_per_period === null ? null : Number(row.limit_per_period), period: row.period as "day" | "month" | "year" | "forever" })),
+                      ),
                     };
                   })}
                   labels={planFormLabels(t)}

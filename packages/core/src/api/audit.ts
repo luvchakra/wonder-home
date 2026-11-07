@@ -65,6 +65,7 @@ export const AUDIT_EVENTS = [
   "developer_key.created",
   "developer_key.revoked",
   "support.access_granted",
+  "platform.plan_updated",
   "feature_flag.changed",
   "homesend.intake_received",
   "homesend.security_rejected",
@@ -136,7 +137,8 @@ export const AUDIT_EVENTS = [
 export type AuditEventType = (typeof AUDIT_EVENTS)[number];
 
 export type AuditEntry = {
-  householdId: string;
+  /** Null for platform-level actions that belong to no household (a plan's price, say). */
+  householdId: string | null;
   eventType: AuditEventType;
   actorMemberId?: string | null;
   actorProfileId?: string | null;
@@ -241,7 +243,7 @@ export async function listAuditEvents(
 export async function auditChange(entry: AuditEntry): Promise<void> {
   // Every audited change is a successful write to this household, so what
   // HomeTalk last read about it is out of date from this moment (Wave 1 §14).
-  invalidateHouseholdContext(entry.householdId);
+  if (entry.householdId) invalidateHouseholdContext(entry.householdId);
   try {
     await recordAuditEvent(createAdminClient(), entry);
   } catch {
