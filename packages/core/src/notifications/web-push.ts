@@ -1,6 +1,7 @@
 import webpush from "web-push";
 
 import type { ChannelAdapter, ChannelNotification, ChannelSendResult } from "./channels";
+import { runtimeEnv } from "../platform/settings/runtime-env";
 
 /**
  * Push notifications through the browser's own push service (story 23-015):
@@ -15,7 +16,7 @@ import type { ChannelAdapter, ChannelNotification, ChannelSendResult } from "./c
  */
 export type WebPushConfig = { publicKey: string; privateKey: string; subject: string };
 
-export function webPushConfigFromEnv(env: Record<string, string | undefined> = process.env): WebPushConfig | null {
+export function webPushConfigFromEnv(env: Record<string, string | undefined> = runtimeEnv()): WebPushConfig | null {
   const publicKey = env.WONDERHOME_VAPID_PUBLIC_KEY?.trim();
   const privateKey = env.WONDERHOME_VAPID_PRIVATE_KEY?.trim();
   const subject = env.WONDERHOME_VAPID_SUBJECT?.trim() || "mailto:support@wonderapps.biz";
@@ -24,7 +25,7 @@ export function webPushConfigFromEnv(env: Record<string, string | undefined> = p
 }
 
 /** The public half, for a browser to subscribe with; null when push is off. */
-export function webPushPublicKey(env: Record<string, string | undefined> = process.env): string | null {
+export function webPushPublicKey(env: Record<string, string | undefined> = runtimeEnv()): string | null {
   return webPushConfigFromEnv(env)?.publicKey ?? null;
 }
 

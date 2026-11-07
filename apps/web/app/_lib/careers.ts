@@ -5,6 +5,7 @@ import { readCareersKey } from "@wonderhome/core/careers/key-store";
 import { createAdminClient } from "@wonderhome/core/db/admin";
 import { createClient } from "@wonderhome/core/db/server";
 import { platformCan, requirePlatformAdmin, type PlatformAdmin } from "@wonderhome/core/platform/admin";
+import { runtimeEnv } from "@wonderhome/core/platform/settings/runtime-env";
 
 /**
  * The careers pages' one way to WonderJobs (the owner, 2026-10-21). Server
@@ -21,7 +22,7 @@ export const CAREERS_APP_NAME = "WonderHome";
 export type CareersConnection = { state: "ready"; client: WonderJobsClient } | { state: "needs_setup" } | { state: "bad_address" };
 
 export async function careersConnection(): Promise<CareersConnection> {
-  const base = careersBase(process.env.WONDERJOBS_CAREERS_URL);
+  const base = careersBase(runtimeEnv().WONDERJOBS_CAREERS_URL);
   if (!base) return { state: "bad_address" };
   const key = await readCareersKey(createAdminClient());
   if (!key) return { state: "needs_setup" };

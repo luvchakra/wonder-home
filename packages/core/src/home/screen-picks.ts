@@ -1,3 +1,4 @@
+import { runtimeEnv } from "../platform/settings/runtime-env";
 /**
  * Films and shows for the Home date card (the owner, 2026-10-21: "any new
  * movies released, any good family stuff to watch on ott … show something
@@ -81,7 +82,7 @@ export function tmdbProvider(key: string, fetcher: typeof fetch = fetch): Screen
   };
 }
 
-export function screenPicksProviderFromEnv(env: Readonly<Record<string, string | undefined>> = process.env): ScreenPicksProvider | null {
+export function screenPicksProviderFromEnv(env: Readonly<Record<string, string | undefined>> = runtimeEnv()): ScreenPicksProvider | null {
   const key = env.TMDB_API_KEY?.trim();
   return key ? tmdbProvider(key) : null;
 }

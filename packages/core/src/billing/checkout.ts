@@ -7,6 +7,7 @@ import { findPlanPrice, providerPlansFor, type PlanPrice } from "./prices";
 import { applyBillingEvent, type BillingEvent, type BillingProvider, type PaymentProviderName, type PaymentStatus, type SubscriptionState } from "./provider";
 import { billingProvidersFromEnv, routingConfigFromEnv, selectPaymentProvider } from "./router";
 import { nextPaymentStatus, statusAfterRefunds } from "./states";
+import { runtimeEnv } from "../platform/settings/runtime-env";
 
 /**
  * Buying a plan, and hearing back about it (story 20-006).
@@ -27,7 +28,7 @@ type Row = Record<string, unknown>;
  * `STRIPE_PRICE_<PLAN>`), or none. Priced checkouts from the catalogue go
  * through `startPricedCheckout` and the router instead.
  */
-export function billingProviderFromEnv(env: Record<string, string | undefined> = process.env): BillingProvider | null {
+export function billingProviderFromEnv(env: Record<string, string | undefined> = runtimeEnv()): BillingProvider | null {
   return billingProvidersFromEnv(env).find((provider) => provider.name === "stripe") ?? null;
 }
 

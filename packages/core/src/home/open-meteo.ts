@@ -2,6 +2,7 @@ import { z } from "zod";
 
 import type { ConnectorError } from "../integrations/connector";
 import type { WeatherProvider, WeatherQuery, WeatherWindow } from "./weather";
+import { runtimeEnv } from "../platform/settings/runtime-env";
 
 /**
  * Open-Meteo as WonderHome's weather provider (story 17-007).
@@ -222,7 +223,7 @@ export function connectorError(code: ConnectorError["code"]): ConnectorError {
  * endpoint nobody decided to use.
  */
 export function weatherProviderFromEnv(
-  env: Record<string, string | undefined> = process.env,
+  env: Record<string, string | undefined> = runtimeEnv(),
   fetchImpl?: Fetch,
 ): OpenMeteoProvider | null {
   if (env.WONDERHOME_WEATHER_PROVIDER?.trim().toLowerCase() !== OPEN_METEO_PROVIDER) return null;

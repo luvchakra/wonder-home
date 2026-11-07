@@ -6,6 +6,7 @@ import { siteOrigin } from "../notifications/email";
 import { QUOTA_ALERT_AFTER_MS } from "../notifications/notices";
 import { keyFingerprint, type KeyAlertKind } from "./key-alerts";
 import { platformKey } from "./model-key";
+import { runtimeEnv } from "../platform/settings/runtime-env";
 
 /**
  * An alert on WonderHome's own key reaches the platform admins (story 14-048,
@@ -24,7 +25,7 @@ export type PlatformKeyAlert = { id: string; provider: string; kind: KeyAlertKin
 type AlertRow = { id: string; provider: string; kind: KeyAlertKind; failures: number; first_seen_at: string; last_seen_at: string; platform_notified_at: string | null };
 
 /** The open alert on the platform's own key, or null (no key, nothing open, or it can't be read). */
-export async function openPlatformKeyAlert(admin: SupabaseClient, env: Record<string, string | undefined> = process.env): Promise<PlatformKeyAlert | null> {
+export async function openPlatformKeyAlert(admin: SupabaseClient, env: Record<string, string | undefined> = runtimeEnv()): Promise<PlatformKeyAlert | null> {
   const key = platformKey(env);
   if (!key) return null;
   const { data, error } = await admin
@@ -70,7 +71,7 @@ export function platformKeyMail(alert: Pick<PlatformKeyAlert, "provider" | "kind
  * Emails the platform's owners and operators about an open alert on the
  * platform key, once. Returns how many were emailed. Never throws.
  */
-export async function tellPlatformAdmins(admin: SupabaseClient, mailer: Mailer | null, now: Date, env: Record<string, string | undefined> = process.env): Promise<number> {
+export async function tellPlatformAdmins(admin: SupabaseClient, mailer: Mailer | null, now: Date, env: Record<string, string | undefined> = runtimeEnv()): Promise<number> {
   try {
     const alert = await openPlatformKeyAlert(admin, env);
     if (!alert || alert.notifiedAt || !mailer) return 0;

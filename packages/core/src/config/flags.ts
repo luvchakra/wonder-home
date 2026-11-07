@@ -1,5 +1,7 @@
 import { z } from "zod";
 
+import { runtimeEnv } from "../platform/settings/runtime-env";
+
 /**
  * Feature configuration (story 00-010).
  *
@@ -73,5 +75,5 @@ export function resolveFlags(source: Record<string, string | undefined>): Record
 }
 
 export function flags(): Record<FlagName, boolean> {
-  return resolveFlags(process.env as Record<string, string | undefined>);
+  return resolveFlags(runtimeEnv());
 }

@@ -5,6 +5,7 @@ import { revalidatePath } from "next/cache";
 import { clearCareersKey, readCareersKey, saveCareersKey } from "@wonderhome/core/careers/key-store";
 import { careersBase, clearCareersCache, testCareersConnection } from "@wonderhome/core/careers/wonderjobs";
 import { adminClientFor, adminGrant } from "@wonderhome/core/db/admin-context";
+import { runtimeEnv } from "@wonderhome/core/platform/settings/runtime-env";
 
 import { careersStaff } from "../../_lib/careers";
 import { formText } from "../../_lib/form-input";
@@ -50,7 +51,7 @@ export async function clearCareersKeyAction(): Promise<KeyActionState> {
 export async function testCareersConnectionAction(): Promise<KeyActionState> {
   const staff = await careersStaff();
   if (!staff) return NOT_ALLOWED;
-  const base = careersBase(process.env.WONDERJOBS_CAREERS_URL);
+  const base = careersBase(runtimeEnv().WONDERJOBS_CAREERS_URL);
   if (!base) return { tone: "risk", message: "Unavailable: WONDERJOBS_CAREERS_URL must be an https address on wonderapps.biz." };
   const key = await readCareersKey(adminClientFor(adminGrant.platformAdmin(staff, "test the careers connection")));
   if (!key) return { tone: "risk", message: "No key is saved yet." };

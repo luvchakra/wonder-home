@@ -1,6 +1,7 @@
 import { createTransport } from "nodemailer";
 
 import { log } from "../observability/logger";
+import { runtimeEnv } from "../platform/settings/runtime-env";
 
 /**
  * WonderHome's own outgoing email, behind a provider-neutral seam.
@@ -21,7 +22,7 @@ import { log } from "../observability/logger";
 
 export type MailConfig = { host: string; port: number; secure: boolean; user: string; password: string; from: string };
 
-export function platformMailConfig(env: Record<string, string | undefined> = process.env): MailConfig | null {
+export function platformMailConfig(env: Record<string, string | undefined> = runtimeEnv()): MailConfig | null {
   const host = env.WONDERHOME_SMTP_HOST?.trim();
   const user = env.WONDERHOME_SMTP_USER?.trim();
   const password = env.WONDERHOME_SMTP_PASSWORD;
@@ -84,7 +85,7 @@ function replyCode(response: unknown): number | null {
 }
 
 /** The deployment's mailer, or null when no mail is configured. */
-export function platformMailer(env: Record<string, string | undefined> = process.env): Mailer | null {
+export function platformMailer(env: Record<string, string | undefined> = runtimeEnv()): Mailer | null {
   const config = platformMailConfig(env);
   return config ? smtpMailer(config) : null;
 }

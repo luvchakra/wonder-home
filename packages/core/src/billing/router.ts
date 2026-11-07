@@ -1,6 +1,7 @@
 import type { BillingProvider, PaymentProviderName } from "./provider";
 import { razorpayFromEnv } from "./razorpay";
 import { stripeFromEnv } from "./stripe";
+import { runtimeEnv } from "../platform/settings/runtime-env";
 
 /**
  * Which payment providers this deployment has, and which one takes a given
@@ -25,7 +26,7 @@ export const PAYMENT_PROVIDERS: readonly PaymentProviderName[] = ["razorpay", "s
 type Env = Record<string, string | undefined>;
 
 /** The providers this deployment turned on (`WONDERHOME_BILLING_PROVIDERS=razorpay,stripe`), live or not. */
-export function enabledProviderNames(env: Env = process.env): PaymentProviderName[] {
+export function enabledProviderNames(env: Env = runtimeEnv()): PaymentProviderName[] {
   const listed = (env.WONDERHOME_BILLING_PROVIDERS ?? env.WONDERHOME_BILLING_PROVIDER ?? "")
     .split(",")
     .map((name) => name.trim().toLowerCase())
@@ -34,7 +35,7 @@ export function enabledProviderNames(env: Env = process.env): PaymentProviderNam
 }
 
 /** Every live provider this deployment has, each fully configured or absent. */
-export function billingProvidersFromEnv(env: Env = process.env): BillingProvider[] {
+export function billingProvidersFromEnv(env: Env = runtimeEnv()): BillingProvider[] {
   const providers: BillingProvider[] = [];
   for (const name of enabledProviderNames(env)) {
     const provider = name === "razorpay" ? razorpayFromEnv(env) : stripeFromEnv(env);
@@ -43,13 +44,13 @@ export function billingProvidersFromEnv(env: Env = process.env): BillingProvider
   return providers;
 }
 
-export function billingProviderNamed(name: string, env: Env = process.env): BillingProvider | null {
+export function billingProviderNamed(name: string, env: Env = runtimeEnv()): BillingProvider | null {
   return billingProvidersFromEnv(env).find((provider) => provider.name === name) ?? null;
 }
 
 export type RoutingConfig = { indiaProvider: PaymentProviderName; internationalProvider: PaymentProviderName };
 
-export function routingConfigFromEnv(env: Env = process.env): RoutingConfig {
+export function routingConfigFromEnv(env: Env = runtimeEnv()): RoutingConfig {
   const pick = (value: string | undefined, fallback: PaymentProviderName) => {
     const name = value?.trim().toLowerCase();
     return (PAYMENT_PROVIDERS as readonly string[]).includes(name ?? "") ? (name as PaymentProviderName) : fallback;

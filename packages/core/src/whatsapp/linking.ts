@@ -1,6 +1,7 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 
 import { en } from "../i18n/messages/en";
+import { runtimeEnv } from "../platform/settings/runtime-env";
 
 /**
  * Linking a WhatsApp number to one adult member (the WhatsApp HomeSend spec
@@ -126,7 +127,7 @@ export async function findActiveIdentity(admin: SupabaseClient, waUserId: string
 }
 
 /** WonderHome's official WhatsApp number, as the deployment configured it, or null. */
-export function whatsappBusinessNumber(env: Record<string, string | undefined> = process.env): string | null {
+export function whatsappBusinessNumber(env: Record<string, string | undefined> = runtimeEnv()): string | null {
   const number = env.WHATSAPP_BUSINESS_NUMBER?.replace(/[\s()-]/g, "");
   return number && /^\+[1-9]\d{7,14}$/.test(number) ? number : null;
 }

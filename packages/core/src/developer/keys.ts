@@ -5,6 +5,7 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 import { auditChange } from "../api/audit";
 import { ApiError } from "../api/errors";
 import { hitRateLimit } from "../security/rate-limit";
+import { runtimeEnv } from "../platform/settings/runtime-env";
 
 /**
  * Partner keys (story 18-008).
@@ -30,7 +31,7 @@ export const SCOPE_WORDS: Record<PartnerScope, string> = {
 const ALPHABET = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789";
 const KEY_PATTERN = /^whk_(test|live)_[A-Za-z0-9]{40}$/;
 
-export function developerApiEnabled(env: Record<string, string | undefined> = process.env): boolean {
+export function developerApiEnabled(env: Record<string, string | undefined> = runtimeEnv()): boolean {
   return env.WONDERHOME_DEVELOPER_API === "on";
 }
 

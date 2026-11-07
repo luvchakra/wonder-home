@@ -20,6 +20,7 @@ import { createEmailAdapter } from "./email";
 import { platformMailer, type Mailer } from "../email/mailer";
 import { createWebPushAdapter, webPushConfigFromEnv } from "./web-push";
 import { createWhatsAppAdapter, whatsappConfigFromEnv } from "./whatsapp";
+import { runtimeEnv } from "../platform/settings/runtime-env";
 
 export const DELIVERY_CHANNELS = ["in_app", "push", "email", "whatsapp"] as const;
 export type DeliveryChannel = (typeof DELIVERY_CHANNELS)[number];
@@ -139,7 +140,7 @@ export const CHANNEL_ADAPTERS: Record<DeliveryChannel, ChannelAdapter> = {
  * is configured (story 17-006), Web Push once its key pair is set (story
  * 23-015), the fixtures otherwise.
  */
-export function channelAdaptersFromEnv(env: Record<string, string | undefined> = process.env, mailer: Mailer | null = platformMailer(env)): Record<DeliveryChannel, ChannelAdapter> {
+export function channelAdaptersFromEnv(env: Record<string, string | undefined> = runtimeEnv(), mailer: Mailer | null = platformMailer(env)): Record<DeliveryChannel, ChannelAdapter> {
   const whatsapp = whatsappConfigFromEnv(env);
   const push = webPushConfigFromEnv(env);
   return {

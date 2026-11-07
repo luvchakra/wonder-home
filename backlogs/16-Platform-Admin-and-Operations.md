@@ -13,6 +13,10 @@
 | 7 | P1 | 16-007 | Privacy requests | Done | `fulfillMaturedDeletions` (the real deletion job 15-007 never built — scrubs a member's PII, keeps the row and its references readable); `privacy-requests.ts` gives staff list/refuse (operator/owner only), wired into `/platform/retention`'s existing sweep |
 | 8 | P1 | 16-008 | Feature flags/audit | Done | `feature-flags.ts`: a reason-coded, audited `setHouseholdFeatureFlag` (operator/owner only, following 16-005's exact shape) turns a staged capability on or off for one household; a household reads its own flags via RLS, matching support-access grants' "the family this concerns can see it" precedent. `audit-log.ts`: `listPlatformAuditEvents` widens who may read the already-redacted `audit_events` rows fleet-wide, never what is safe to show |
 | 9 | P1 | 16-009 | Platform admin landing and Performance | Done | `/platform-admin` landing with section nav (Overview, Performance, Careers); `/platform-admin/performance` shows database, advisor, budget and tip panels, aggregate only, read-only. Staff-only RPC `platform_performance_snapshot` (service role + in-function staff check); tips in `packages/core/src/platform/performance.ts` |
+| 10 | P1 | 16-010 | Admin portal and settings out of Vercel | Done | Grouped sidebar (Run / Configure / Guard) after WonderWorks' admin; Overview, Households & people, Plans & billing, AI & providers, Integrations, Configuration, Secrets, Security. `platform_config` + Vault, registry in `platform/settings/registry.ts`, `runtimeEnv()` lays saved values over the environment (saved → env → default). PR "Admin portal" (2026-11-07) |
+| 11 | P1 | 16-011 | Test connection for each provider key | Not Started | Follow-up of 16-010: a Test button per key (AI, SMTP, WhatsApp, Maps, TMDB, Resend, scanner), as Careers has |
+| 12 | P1 | 16-012 | Editors in Plans & billing | Not Started | Follow-up of 16-010: plan feature policies and experiments are editable only through the API today; move the editors onto the page |
+| 13 | P2 | 16-013 | Claude model choice without a deploy | Not Started | Follow-up of 16-010: `ai/model-client.ts` model constants become per-call reads so `WONDERHOME_AI_*_MODEL` can move into the registry |
 
 **Status flow:** `Not Started` → `In Progress` → `Blocked` → `Done`
 
@@ -222,6 +226,20 @@ alerts .
 - Action buttons on the tip cards (owner, 2026-10-29): a fixed allowlist of guarded database functions (refresh planner statistics; reset query statistics and end stuck connections, owner only with a password re-check), each audited and limited to one run per action and target per minute; schema fixes are copy-only SQL snippets, never run from the web.
 
 **Evidence:** `packages/core/src/platform/performance.test.ts`, `scripts/test-platform-performance-rls.mjs`, `scripts/test-platform-performance-actions-rls.mjs`, `packages/core/src/platform/performance-actions.test.ts`, `apps/web/app/platform-admin/performance/actions.test.ts`, `docs/progress/2026-10-29-platform-admin-performance.md`, `docs/progress/2026-10-29-performance-actions.md`.
+
+### Story 16-010 — Admin portal and settings out of Vercel
+**Epic:** Plans, AI Operations, Privacy & Feature Controls
+**Priority:** P1
+**Goal:** One proper admin portal for running WonderHome, following WonderWorks' admin, with every setting that need not live in Vercel editable there (owner, 2026-11-07).
+
+**Acceptance criteria**
+- Sections grouped as WonderWorks groups its rail; phone drawer and desktop sidebar; every page checks its capability on the server (404 otherwise).
+- A typed registry of every movable setting; a saved value wins over the variable, which wins over the reader's default; nothing saved means behaviour is unchanged.
+- Secrets in Vault only, write-only in the UI (last four, when changed), owner only with a password step-up; never sent to a browser or logged.
+- Every change audited (old → new for a setting, "changed" for a secret) and limited to 20 a minute per person.
+- Bootstrap values (database keys, signing secrets, build-time values) stay in Vercel, each with its reason.
+
+**Evidence:** `packages/core/src/platform/settings/{registry,runtime-env,store}.test.ts`, `apps/web/app/platform-admin/settings-actions.test.ts`, `apps/web/app/platform-admin/menu.test.ts`, `scripts/test-platform-settings-rls.mjs`, `scripts/check-client-bundle.mjs`, `docs/progress/2026-11-07-admin-portal.md`.
 
 ## Module Completion Rule
 Complete dependency-ready P0 stories before P1/P2, but do not block unrelated work on unavailable external providers.

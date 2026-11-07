@@ -1,3 +1,4 @@
+import { runtimeEnv } from "../platform/settings/runtime-env";
 /**
  * Which speech key answers for a household, and whose it is.
  *
@@ -32,7 +33,7 @@ export type SpeechKey =
   | { source: "none"; provider: null; key: null };
 
 /** WonderHome's own speech key, from the deployment's environment. */
-export function platformSpeechKey(env: Record<string, string | undefined> = process.env): string | null {
+export function platformSpeechKey(env: Record<string, string | undefined> = runtimeEnv()): string | null {
   const key = env.WONDERHOME_SPEECH_KEY?.trim();
   return key ? key : null;
 }

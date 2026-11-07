@@ -49,6 +49,7 @@ const NON_TENANT_TABLES = new Set([
   "platform_setting_events", // append-only audit of those switches; service role only
   "careers_key_events", // every save and clear of that key; platform-level like the setting, service role only
   "instamart_oauth_clients", // the OAuth client Swiggy registered for this deployment's redirect URI (25-032); service role only
+  "platform_config", // settings staff saved instead of Vercel (16-010); platform-level, secrets only in Vault, service role only
   "ai_key_alerts", // keyed by an API key's fingerprint (one key may serve the platform or several households); matched to households at read time; service role only
   "platform_job_heartbeats", // when each background step last ran on the GitHub runner (2026-11-07); platform-level, counts only, service role only
 ]);

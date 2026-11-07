@@ -11,6 +11,7 @@ import {
   type PlaceSuggestion,
   type PlacesProvider,
 } from "./provider";
+import { runtimeEnv } from "../platform/settings/runtime-env";
 
 /**
  * Google Places (New) behind the `PlacesProvider` port.
@@ -407,7 +408,7 @@ function point(at: LatLng) {
  * The deployment's place search, or none. Off unless `GOOGLE_MAPS_API_KEY`
  * is set: without it every screen offers a plain address field instead.
  */
-export function placesProviderFromEnv(env: Record<string, string | undefined> = process.env, fetchImpl?: Fetch): PlacesProvider | null {
+export function placesProviderFromEnv(env: Record<string, string | undefined> = runtimeEnv(), fetchImpl?: Fetch): PlacesProvider | null {
   const apiKey = env.GOOGLE_MAPS_API_KEY?.trim();
   if (!apiKey) return null;
   return createGooglePlacesProvider({ apiKey, fetch: fetchImpl });

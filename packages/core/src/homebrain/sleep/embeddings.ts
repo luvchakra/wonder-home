@@ -9,6 +9,7 @@ import { geminiClient, openaiClient } from "../../ai/provider-clients";
 import { contentClassFor } from "../../context/privacy";
 import type { HouseholdContextItem } from "../../context/types";
 import { log } from "../../observability/logger";
+import { runtimeEnv } from "../../platform/settings/runtime-env";
 
 /**
  * Meaning (HomeBrain Sleep): each record the household keeps, as a vector,
@@ -82,7 +83,7 @@ export function createEmbedder(provider: "google" | "openai", apiKey: string): E
 const EMBEDS: ReadonlySet<ModelProvider> = new Set(["google", "openai"]);
 
 /** The key meaning is made with, in the order above; null when the household has none that embeds. */
-export async function embedderFor(householdId: string, env: Record<string, string | undefined> = process.env): Promise<Embedder | null> {
+export async function embedderFor(householdId: string, env: Record<string, string | undefined> = runtimeEnv()): Promise<Embedder | null> {
   const [assistant, voice] = await Promise.all([readHouseholdKey(householdId).catch(() => null), readGeminiVoiceKey(householdId).catch(() => null)]);
   const platform = platformKey(env);
   for (const key of [assistant, voice, platform]) {

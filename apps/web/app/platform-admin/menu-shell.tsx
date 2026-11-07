@@ -1,6 +1,6 @@
 "use client";
 
-import { ArrowLeft, Gauge, LayoutDashboard, LayoutTemplate, Link2, Menu, type LucideIcon } from "lucide-react";
+import { ArrowLeft, Bot, CreditCard, Gauge, KeyRound, LayoutDashboard, LayoutTemplate, Link2, Menu, Plug, ShieldCheck, SlidersHorizontal, Users, type LucideIcon } from "lucide-react";
 import dynamic from "next/dynamic";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
@@ -8,9 +8,21 @@ import { useState, type ReactNode } from "react";
 
 import { IconTile } from "@wonderhome/core/ui/icon-tile";
 
-import { BACK_TO_APP_HREF, currentPlatformHref, type PlatformMenuIcon, type PlatformMenuItem } from "./menu";
+import { BACK_TO_APP_HREF, currentPlatformHref, groupedMenu, type PlatformMenuIcon, type PlatformMenuItem } from "./menu";
 
-export const ICONS: Record<PlatformMenuIcon, LucideIcon> = { overview: LayoutDashboard, performance: Gauge, careers: Link2, landing: LayoutTemplate };
+export const ICONS: Record<PlatformMenuIcon, LucideIcon> = {
+  overview: LayoutDashboard,
+  households: Users,
+  plans: CreditCard,
+  performance: Gauge,
+  ai: Bot,
+  integrations: Plug,
+  configuration: SlidersHorizontal,
+  secrets: KeyRound,
+  careers: Link2,
+  landing: LayoutTemplate,
+  security: ShieldCheck,
+};
 
 export function Row({ href, label, icon: Icon, tone, current, onNavigate }: {
   href: string;
@@ -46,14 +58,19 @@ export function MenuBody({ items, role, onNavigate }: { items: readonly Platform
         <p className="text-base font-semibold tracking-tight">Platform admin</p>
         <p className="text-xs text-[var(--wh-foreground-muted)]">Signed in as {role}</p>
       </div>
-      <nav aria-label="Platform admin sections">
-        <ul className="space-y-1">
-          {items.map((item) => (
-            <li key={item.href}>
-              <Row href={item.href} label={item.label} icon={ICONS[item.icon]} tone={item.tone} current={item.href === current} onNavigate={onNavigate} />
-            </li>
-          ))}
-        </ul>
+      <nav aria-label="Platform admin sections" className="space-y-4">
+        {groupedMenu(items).map(({ group, items: rows }) => (
+          <div key={group ?? "top"} className="space-y-1">
+            {group ? <p className="px-3 text-[0.6875rem] font-semibold tracking-wide text-[var(--wh-foreground-subtle)] uppercase">{group}</p> : null}
+            <ul className="space-y-1">
+              {rows.map((item) => (
+                <li key={item.href}>
+                  <Row href={item.href} label={item.label} icon={ICONS[item.icon]} tone={item.tone} current={item.href === current} onNavigate={onNavigate} />
+                </li>
+              ))}
+            </ul>
+          </div>
+        ))}
       </nav>
     </div>
   );
@@ -68,7 +85,7 @@ export function PlatformMenuShell({ items, role, children }: { items: readonly P
   const [opened, setOpened] = useState(false);
   return (
     <div className="lg:flex lg:min-h-dvh">
-      <aside className="hidden w-64 shrink-0 border-r border-[var(--wh-border)] bg-[var(--wh-surface)] px-3 py-5 lg:block">
+      <aside className="sticky top-0 hidden h-dvh w-64 shrink-0 overflow-y-auto border-r border-[var(--wh-border)] bg-[var(--wh-surface)] px-3 py-5 lg:block">
         <MenuBody items={items} role={role} />
       </aside>
 
