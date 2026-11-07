@@ -648,3 +648,7 @@ stacked on a phone and two to a row from `sm`: at half of a 360 px card the
 names wrapped word by word, which rule 19 says makes them full width. Every
 tile is a real radio, so arrows move between them and the choice posts with
 or without the panel open. Nothing chosen yet opens it straight away.
+
+### `Sparkline`: a figure's shape, never its meaning (rules 3, 9)
+
+`@wonderhome/core/ui/sparkline` draws one series as a server-rendered SVG: no axes, a baseline, the last day dotted, the primary token only. It sits beside a figure that already says the value and its change in words ("+2 on the 7 days before"); the line only shows the shape, and its `aria-label` says the range in words. A flat or empty series is drawn flat, never smoothed into a slope. First used by the platform-admin Overview's Growth & use cards (2026-11-07). No chart library reaches the browser.
