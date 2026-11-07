@@ -107,7 +107,7 @@ queue, whether or not the person has ever signed in on that device.
 - `apps/web/app/home-send/page.tsx` (the handoff resume + `shareError` Alert)
 - `packages/core/src/homesend/share-handoff.ts`
 - `packages/core/src/homesend/classify-and-save.ts` (extracted, shared by upload/paste/share)
-- `supabase/migrations/20260922100000_homesend_share_handoff.sql`
+- `supabase/migrations/20260922100001_homesend_share_handoff.sql`
 - `packages/core/src/api/openapi.ts`, `e2e/domains.spec.ts` (`PUBLIC_PATHS`)
 - `scripts/lint-migration-schema.mjs`, `scripts/test-tenant-isolation-rls.mjs` (`NON_TENANT_TABLES`)
 - `scripts/test-homesend-rls.mjs` (6 new tests, 42 total)

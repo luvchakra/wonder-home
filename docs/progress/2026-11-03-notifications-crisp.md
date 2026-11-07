@@ -14,7 +14,7 @@ The owner, from a phone screenshot of `/notifications`: "too many things going o
 
 ## Stale items
 
-`/notifications` runs a reminder pass before it reads, but the pass was throttled to once per five minutes by `reconciled_at` alone. A bill paid, or a HomeSend item confirmed, a minute after a pass stayed on the screen until the throttle lapsed. `wh.mark_reminders_due` already moves `next_due_at` to now on such writes, but the page's claim ignored that. Now `claimReconcile` also takes the pass when `next_due_at <= now` and the last pass is more than 15 seconds old (`reconcileClaimFilter`, tested). `home_send_items` never had the trigger, so migration `20261103120000_home_send_items_mark_reminders_due.sql` adds it (after insert, update of status, or delete). It adds a trigger only, so it is safe in either order.
+`/notifications` runs a reminder pass before it reads, but the pass was throttled to once per five minutes by `reconciled_at` alone. A bill paid, or a HomeSend item confirmed, a minute after a pass stayed on the screen until the throttle lapsed. `wh.mark_reminders_due` already moves `next_due_at` to now on such writes, but the page's claim ignored that. Now `claimReconcile` also takes the pass when `next_due_at <= now` and the last pass is more than 15 seconds old (`reconcileClaimFilter`, tested). `home_send_items` never had the trigger, so migration `20261103120001_home_send_items_mark_reminders_due.sql` adds it (after insert, update of status, or delete). It adds a trigger only, so it is safe in either order.
 
 ## Verified
 
