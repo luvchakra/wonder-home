@@ -22,6 +22,7 @@ alter table auth.users add column if not exists email_confirmed_at timestamptz;
 -- verified by a texted code (wh.claim_members_by_phone links only a verified one).
 alter table auth.users add column if not exists phone text unique;
 alter table auth.users add column if not exists phone_confirmed_at timestamptz;
+alter table auth.users add column if not exists last_sign_in_at timestamptz;
 
 -- Supabase derives auth.uid() from the request's JWT claims. Tests set the same
 -- GUC, so the policies under test see exactly what they would in production.
