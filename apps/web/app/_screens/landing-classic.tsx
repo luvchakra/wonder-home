@@ -22,7 +22,10 @@ import {
   ListChecks,
   Lock,
   Mail,
+  MapPin,
+  MessageCircle,
   Paperclip,
+  RotateCcw,
   ShieldCheck,
   ShoppingBasket,
   Smartphone,
@@ -272,20 +275,24 @@ export async function ClassicLanding() {
           <DomainGrid className="lg:grid-cols-4">
             {[
               { icon: Users, tone: "people", title: "Family & Profiles", description: "Everyone together. Without the coordination headache." },
-              { icon: Clock3, tone: "primary", title: "Today", description: "Your day. Your focus." },
+              { icon: Clock3, tone: "primary", title: "Today", description: "Your day in one list, with Mark paid on a bill." },
               { icon: ListChecks, tone: "home", title: "Responsibilities", description: "Clear roles. A smoother home." },
-              { icon: Utensils, tone: "meals", title: "Meals & Recipes", description: "Healthy meals. Happier moods." },
-              { icon: ShoppingBasket, tone: "care", title: "Groceries", description: "Never run out again." },
-              { icon: Wallet, tone: "money", title: "Bills & Finance", description: "Stay on top. Stress less." },
+              { icon: Utensils, tone: "meals", title: "Meals & Recipes", description: "Plan the week, keep the recipes." },
+              { icon: ShoppingBasket, tone: "care", title: "Groceries", description: "All, In Kitchen and To Buy, so you never run out." },
+              { icon: Wallet, tone: "money", title: "Bills & Finance", description: "Due dates and budgets that add up. Never paid for you." },
               { icon: GraduationCap, tone: "school", title: "Kids & School", description: "All school info in one place." },
               { icon: HandHeart, tone: "people", title: "Househelper", description: "Support that keeps home running." },
               { icon: HeartPulse, tone: "health", title: "Health & Fitness", description: "Check-ups and routines, kept private." },
-              { icon: Paperclip, tone: "primary", title: "HomeSend", description: "Snap it, send it, sorted." },
+              { icon: Paperclip, tone: "primary", title: "HomeSend", description: "Send anything. Added now, or marked Checking until a quick question settles it." },
               { icon: BadgeCheck, tone: "ai", title: "HomeBrain", description: "Your home, understood." },
-              { icon: CalendarHeart, tone: "people", title: "Family time", description: "Protected time, planned around." },
+              { icon: CalendarHeart, tone: "people", title: "Family calendar", description: "Protected time, plus any calendar you subscribe to." },
+              { icon: MessageCircle, tone: "people", title: "FamilyChat", description: "One chat for the whole family, and groups for the rest." },
+              { icon: MapPin, tone: "care", title: "HomePlaces", description: "Places nearby and the ones your family saved." },
               { icon: Wrench, tone: "home", title: "Home & Upkeep", description: "Repairs, laundry and pets, remembered." },
               { icon: BellRing, tone: "attention", title: "Reminders", description: "One nudge, at the right time." },
-              { icon: Sparkles, tone: "ai", title: "HomeTalk", description: "Talk or type. It asks before it acts." },
+              { icon: Sparkles, tone: "ai", title: "HomeTalk", description: "Talk or type, and get a cheerful answer. It asks before it acts." },
+              { icon: Lock, tone: "care", title: "Private by design", description: "Children see their own view; the home address is for adults." },
+              { icon: RotateCcw, tone: "handled", title: "Undo", description: "What HomeSend adds can be taken back, one item or a whole document." },
               { icon: Languages, tone: "ai", title: "Your language", description: "Eight languages, one home." },
             ].map((item, index) => (
               <div key={item.title} className="wh-reveal" style={{ "--wh-reveal-delay": `${index * 50}ms` } as React.CSSProperties}>
@@ -413,7 +420,7 @@ export async function ClassicLanding() {
             {[
               { icon: Lock, title: "Secure sign-in", copy: "Sessions verified server-side on every request. Sensitive actions ask you to confirm again." },
               { icon: ShieldCheck, title: "Tenant isolation", copy: "Every row is scoped to your household and enforced in the database, not just the app." },
-              { icon: Users, title: "Child privacy", copy: "Children get age-appropriate views. Money, admin and adult conversations never reach them." },
+              { icon: Users, title: "Child privacy", copy: "Children get age-appropriate views. Money, admin and the home address stay with the adults." },
               { icon: Eye, title: "Audited & governed", copy: "AI acts only through governed tools. Sensitive actions are logged, never model-decided." },
             ].map((item, index) => (
               <div key={item.title} className="wh-reveal rounded-[var(--wh-radius)] border border-[var(--wh-border)] bg-[var(--wh-surface)] p-5 shadow-[var(--wh-shadow-card)]" style={{ "--wh-reveal-delay": `${index * 70}ms` } as React.CSSProperties}>

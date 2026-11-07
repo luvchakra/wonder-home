@@ -254,7 +254,7 @@ const ARRIVALS: Arrival[] = [
   { icon: Link2, tone: "people", from: "A link from the swim club", becomes: "Saturday lessons, 8 AM", where: "Family time" },
 ];
 
-/** HomeSend, told as a moment: things arrive, WonderHome reads them, a person says yes. */
+/** HomeSend, told as a moment: things arrive, WonderHome reads them and adds them, asking only when unsure. */
 export function SendItToWonderHome() {
   return (
     <section id="homesend" className="relative overflow-hidden py-20 lg:py-28" style={{ background: "var(--wh-gradient-hero)" }}>
@@ -275,16 +275,16 @@ export function SendItToWonderHome() {
         <div className="wh-reveal">
           <Eyebrow>HomeSend</Eyebrow>
           <h2 className="mt-3 text-[length:var(--wh-text-display)] leading-[1.05] font-bold tracking-tight text-balance">
-            Snap it. Send it. Done.
+            Snap it. Send it. Added.
           </h2>
           <p className="mt-5 max-w-lg text-[1.0625rem] leading-relaxed text-[var(--wh-foreground-muted)]">
-            The fridge-door notice, the bill in your inbox, the list you said out loud in the car. Send it to WonderHome from the app or your phone&apos;s share button, and it lands in the right place.
+            The fridge-door notice, the bill in your inbox, the list you said out loud in the car. Send it from the app, your phone&apos;s share button, WhatsApp or email, and it lands in the right place — straight away.
           </p>
           <ol className="mt-8 space-y-4">
             {[
-              { title: "Send", copy: "A photo, a PDF, a link, a voice note or a pasted message." },
+              { title: "Send", copy: "A photo, a PDF, a link, a forwarded message or a few words typed to HomeTalk." },
               { title: "WonderHome reads it", copy: "Who it's for, what it is, and when — checked against what's already on record." },
-              { title: "You say yes", copy: "Nothing is added until someone confirms, and anything added can be undone." },
+              { title: "Added, or marked Checking", copy: "A clear reading is added straight away. If WonderHome is unsure it is marked Checking, and one quick question in HomeTalk or WhatsApp settles it. Nothing is ever paid for you, and anything added can be undone." },
             ].map((step, index) => (
               <li key={step.title} className="flex gap-3.5">
                 <span aria-hidden className="grid size-7 shrink-0 place-items-center rounded-full bg-[var(--wh-primary)] text-xs font-bold text-[var(--wh-primary-foreground)]">
@@ -307,7 +307,7 @@ export function SendItToWonderHome() {
                 <Paperclip aria-hidden className="size-4 text-[var(--wh-primary)]" /> HomeSend inbox
               </p>
               <span className="rounded-[var(--wh-radius-pill)] bg-[var(--wh-attention-soft)] px-2.5 py-0.5 text-xs font-semibold text-[var(--wh-attention)]">
-                4 waiting for you
+                3 added · 1 checking
               </span>
             </div>
             <ul className="mt-2 divide-y divide-[var(--wh-border)]">
@@ -320,7 +320,7 @@ export function SendItToWonderHome() {
                     <span className="block text-xs text-[var(--wh-foreground-muted)]">Goes to {item.where}</span>
                   </span>
                   <span className="shrink-0 rounded-[var(--wh-radius-pill)] bg-[var(--wh-primary-soft)] px-2.5 py-1 text-xs font-semibold text-[var(--wh-primary)]">
-                    Confirm
+                    {index === ARRIVALS.length - 1 ? "Checking" : "Added"}
                   </span>
                 </li>
               ))}
