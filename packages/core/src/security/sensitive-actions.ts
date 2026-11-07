@@ -253,6 +253,11 @@ export const SENSITIVE_ACTIONS: readonly SensitiveAction[] = [
     recordedIn: "packages/core/src/platform/admin.ts",
   },
   {
+    event: "platform.plan_updated",
+    because: "The platform owner changed what a plan is called, costs or includes. It belongs to no household, so no family reads this row; the platform audit log does.",
+    recordedIn: "packages/core/src/billing/plan-edit.ts",
+  },
+  {
     event: "feature_flag.changed",
     because: "Staff turned an experimental capability on or off for this household. The family can read this row.",
     recordedIn: "packages/core/src/platform/feature-flags.ts",
@@ -732,6 +737,8 @@ export function describeAuditEvent(
         title: "Support was given access",
         detail: stringOr(metadata.reasonCode, "Read-only unless stated otherwise."),
       };
+    case "platform.plan_updated":
+      return { title: "A plan was changed", detail: stringOr(metadata.planKey, null) };
     case "feature_flag.changed":
       return {
         title: "A feature was turned " + (metadata.enabled ? "on" : "off"),
