@@ -28,3 +28,6 @@
 - Also fixed on PR #524: `platform-admin/move-action.test.ts` counted the runner's own env (`LOG_LEVEL`).
 - Verified: `tsc` clean; `packages/core/src/api` 43 tests; the non-browser specs above pass locally. Browser specs
   can't run in this container (Playwright browser version), so the nightly is re-dispatched after merge.
+- Re-dispatch after #525: 12 failures became 2, one spec: `screens.spec` playbook cards counted the add form's own
+  folded "More detail" (added by the settings search work, #467). The spec now selects only the area cards (summary
+  with a count). Not run locally (no matching Playwright browser here); confirmed by the next nightly dispatch.
