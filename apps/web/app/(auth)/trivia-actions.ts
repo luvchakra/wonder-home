@@ -3,7 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
 
-import { createAdminClient } from "@wonderhome/core/db/admin";
+import { adminClientFor, adminGrant } from "@wonderhome/core/db/admin-context";
 import { createClient } from "@wonderhome/core/db/server";
 import { ageBandFor, parseDateOfBirth } from "@wonderhome/core/identity/age";
 import { requireMembership } from "@wonderhome/core/identity/households";
@@ -45,6 +45,9 @@ async function asChild(householdId: string): Promise<Session | null> {
   return actor.memberType === "child" ? { supabase, actor } : null;
 }
 
+/** The service role for this child's own trivia rows, after the checks above: scoped to their household. */
+const serverFor = (actor: HouseholdMembership, purpose: string) => adminClientFor(adminGrant.member(actor, purpose), actor.household.id);
+
 const bandOf = (actor: HouseholdMembership) => triviaBand(ageBandFor(parseDateOfBirth(actor.dateOfBirth ?? "")));
 
 export type TopicResult = { ok: true; topic: { id: string; label: string } } | { ok: false; error: "pick_another" | "too_long" | "too_many" | "slow_down" | "off" | "failed" };
@@ -63,7 +66,7 @@ export async function addTriviaTopicAction(input: { householdId: string; topic: 
       // An instruction typed as a topic is turned away like an unfit one, and kept only as a hash.
       if (!looksLikeInstruction(parsed.data.topic)) return { ok: false, error: "too_long" };
       const key = parsed.data.topic.normalize("NFKC").toLowerCase().replace(/\s+/g, " ").trim();
-      await recordRejection(createAdminClient(), { householdId, memberId: actor.memberId, hash: topicHash(householdId, key), reason: "not_a_topic" }).catch(() => undefined);
+      await recordRejection(serverFor(actor, "keep a turned-away trivia topic as a hash"), { householdId, memberId: actor.memberId, hash: topicHash(householdId, key), reason: "not_a_topic" }).catch(() => undefined);
       return { ok: false, error: "pick_another" };
     }
     const current = await loadChildTrivia(supabase, householdId, actor.memberId, band);
@@ -72,7 +75,7 @@ export async function addTriviaTopicAction(input: { householdId: string; topic: 
     const already = current.topics.find((own) => own.key === topic.key);
     if (already) return { ok: true, topic: { id: already.id, label: already.label } };
     if (current.topics.length >= TRIVIA_TOPICS_PER_CHILD) return { ok: false, error: "too_many" };
-    const admin = createAdminClient();
+    const admin = serverFor(actor, "check and store a child's trivia topic");
     if (!(await hitRateLimit(admin, "trivia.topic", actor.memberId))) return { ok: false, error: "slow_down" };
     const decision = await decideTopic(topic, band, await triviaJudgeFor(admin, householdId));
     if (!decision.ok) {
@@ -116,7 +119,7 @@ export async function triviaShownAction(input: { householdId: string; cardKey: s
     // A reload shows the same card: one record, not two.
     const last = current.history[0];
     if (last && last.key === card.key) return { shownId: last.id };
-    const shownId = await recordShown(createAdminClient(), { householdId: parsed.data.householdId, memberId: session.actor.memberId, card, topic: parsed.data.topic });
+    const shownId = await recordShown(serverFor(session.actor, "record a trivia card shown"), { householdId: parsed.data.householdId, memberId: session.actor.memberId, card, topic: parsed.data.topic });
     return { shownId };
   } catch {
     return { shownId: null };
@@ -136,7 +139,7 @@ export async function triviaNextAction(input: { householdId: string; mode: PickM
     const { topics, uncovered } = topicCardsFor(current.topics);
     const pick = pickNextCard({ topics, history: current.history, level: current.level, mode: parsed.data.mode, seed: `${actor.memberId}:${Date.now()}` });
     if (!pick) return { ok: false };
-    const shownId = await recordShown(createAdminClient(), { householdId: parsed.data.householdId, memberId: actor.memberId, card: pick.card, topic: pick.topic });
+    const shownId = await recordShown(serverFor(actor, "record a trivia card shown"), { householdId: parsed.data.householdId, memberId: actor.memberId, card: pick.card, topic: pick.topic });
     return { ok: true, view: toTriviaView({ pick, shownId, uncovered, streak: quizStreak(current.history), level: current.level }) };
   } catch {
     return { ok: false };
@@ -149,7 +152,7 @@ export async function triviaAnswerAction(input: { householdId: string; shownId: 
   try {
     const session = await asChild(parsed.data.householdId);
     if (!session) return { ok: false };
-    const result = await recordAnswer(createAdminClient(), { householdId: parsed.data.householdId, memberId: session.actor.memberId, shownId: parsed.data.shownId, choice: parsed.data.choice });
+    const result = await recordAnswer(serverFor(session.actor, "record a trivia answer"), { householdId: parsed.data.householdId, memberId: session.actor.memberId, shownId: parsed.data.shownId, choice: parsed.data.choice });
     return result ? { ok: true, ...result } : { ok: false };
   } catch {
     return { ok: false };

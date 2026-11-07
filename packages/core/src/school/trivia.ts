@@ -63,10 +63,21 @@ const ALLOWED = /^[\p{L}\p{M}\p{N} '&.+-]+$/u;
  * spellings of one topic share (`key`). Null when nothing usable is left — a
  * link, an emoji-only line, a paragraph.
  */
+/** Joiners and spaces off both ends, by index rather than a regex (typed text is untrusted: no backtracking). */
+function trimEdges(line: string): string {
+  const lead = " '&.+-";
+  const tail = " '&.-";
+  let start = 0;
+  let end = line.length;
+  while (start < end && lead.includes(line[start]!)) start += 1;
+  while (end > start && tail.includes(line[end - 1]!)) end -= 1;
+  return line.slice(start, end);
+}
+
 export function normaliseTopic(raw: unknown): NormalisedTopic | null {
   if (typeof raw !== "string") return null;
   let line = raw.normalize("NFKC").replace(INVISIBLE, " ").replace(/\p{Extended_Pictographic}/gu, " ");
-  line = line.replace(/[\s_]+/g, " ").trim().replace(/^[\s'&.+-]+|[\s'&.-]+$/g, "");
+  line = trimEdges(line.replace(/[\s_]+/g, " "));
   if (line.length < TRIVIA_TOPIC_MIN || line.length > TRIVIA_TOPIC_MAX) return null;
   if (!ALLOWED.test(line)) return null;
   if (!/\p{L}/u.test(line)) return null;
@@ -114,14 +125,25 @@ const RULES: readonly Rule[] = [
 ];
 
 /** Instructions dressed as a topic: never a topic, whatever else they say. */
-const INJECTION = /\b(ignore|disregard|forget)\b.*\b(instruction|instructions|rules|above|previous|prompt)\b|\b(system prompt|you are now|act as|pretend to be|jailbreak|developer mode|new instructions|respond with|reply with|say that)\b/i;
+const INSTRUCTION_VERBS = new Set(["ignore", "disregard", "forget"]);
+const INSTRUCTION_OBJECTS = new Set(["instruction", "instructions", "rules", "above", "previous", "prompt"]);
+const INSTRUCTION_PHRASES = ["system prompt", "you are now", "act as", "pretend to be", "jailbreak", "developer mode", "new instructions", "respond with", "reply with", "say that"];
+
+/** Instructions dressed as a topic, read word by word (no regex over untrusted text): never a topic. */
+function isInstruction(text: string): boolean {
+  const words = text.slice(0, 400).toLocaleLowerCase("en").split(/[^\p{L}]+/u).filter(Boolean);
+  const verb = words.findIndex((word) => INSTRUCTION_VERBS.has(word));
+  if (verb >= 0 && words.slice(verb + 1).some((word) => INSTRUCTION_OBJECTS.has(word))) return true;
+  const joined = ` ${words.join(" ")} `;
+  return INSTRUCTION_PHRASES.some((phrase) => joined.includes(` ${phrase} `));
+}
 /** Someone the child knows: never a topic (their name is not sent anywhere). */
 const PRIVATE_PERSON = /\b(my|our)\s+(?:best\s+|old\s+|new\s+|favourite\s+|favorite\s+|class\s+)?(mom|mum|mummy|mother|dad|daddy|father|papa|mama|sister|brother|friend|friends|teacher|teachers|classmate|classmates|neighbour|neighbor|neighbours|neighbors|aunt|aunty|auntie|uncle|cousin|cousins|grandma|grandpa|nani|nana|dadi|dada|bestie|crush|boyfriend|girlfriend|school|class|coach|maid|didi|bhaiya)\b|\b(mr|mrs|ms|miss|sir|madam|ma'am)\b\s+\p{L}/iu;
 
 /** Whether raw text reads like an instruction to WonderHome rather than a subject, before it is even a topic (too long or not). */
 export function looksLikeInstruction(raw: string): boolean {
   const line = raw.normalize("NFKC").replace(/\s+/g, " ");
-  return INJECTION.test(line);
+  return isInstruction(line);
 }
 
 export type TopicScreen = { ok: true } | { ok: false; reason: TriviaRejectReason };
@@ -138,7 +160,7 @@ function hasPhrase(key: string, phrase: string): boolean {
  */
 export function screenTopic(topic: NormalisedTopic, band: TriviaBand): TopicScreen {
   const original = topic.label;
-  if (INJECTION.test(original) || INJECTION.test(topic.key)) return { ok: false, reason: "not_a_topic" };
+  if (isInstruction(original) || isInstruction(topic.key)) return { ok: false, reason: "not_a_topic" };
   if (PRIVATE_PERSON.test(original)) return { ok: false, reason: "private_person" };
   if (/\p{N}{6,}/u.test(topic.key.replace(/\s/g, ""))) return { ok: false, reason: "private_person" };
   const keys = [topic.key, deLeet(topic.key), topic.key.replace(/\s+/g, ""), deLeet(topic.key).replace(/\s+/g, "")];
