@@ -10,8 +10,8 @@
 -- updates) still decide who does each piece; this only saves Vercel the call.
 --
 -- Platform-level, no household: counts only in `summary`, never an id or a
--- title. Service role only: RLS on with no policy, and no grant to anon or
--- authenticated.
+-- title. Service role only: RLS on, a deny-all policy for anon and
+-- authenticated, and no grant to either.
 --
 -- Safe in either order: the code treats a missing table as "never ran on
 -- GitHub", so Vercel keeps doing everything until this exists and a run lands.
@@ -30,6 +30,13 @@ create table if not exists public.platform_job_heartbeats (
 alter table public.platform_job_heartbeats enable row level security;
 
 revoke all on table public.platform_job_heartbeats from anon, authenticated;
+
+drop policy if exists platform_job_heartbeats_no_client_access on public.platform_job_heartbeats;
+create policy platform_job_heartbeats_no_client_access
+  on public.platform_job_heartbeats for all
+  to anon, authenticated
+  using (false)
+  with check (false);
 
 comment on table public.platform_job_heartbeats is
   'When each background step last finished on the GitHub runner. Vercel skips a step while it is fresh (packages/core/src/jobs/heartbeat.ts). Service role only; counts, never household data.';
