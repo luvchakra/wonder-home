@@ -10,6 +10,7 @@
  * Never add an entry to make a failing run pass: fix the table or policy.
  */
 export const ALLOW = {
+  "open-policy:public.trivia_pool.trivia_pool_read": "Kids Trivia generated cards (08-035), read-only for any signed-in user; made from a topic word and an age band, no household data and no client write policy.",
   "open-policy:public.grocery_catalog.grocery_catalog_select_signed_in": "Platform catalogue, read-only for any signed-in user; holds no household data and no client write policy.",
   "open-policy:public.ifct_foods.ifct_foods_select_signed_in": "Platform catalogue, read-only for any signed-in user; holds no household data and no client write policy.",
   "open-policy:public.plan_features.plan_features_select_authenticated": "Platform catalogue, read-only for any signed-in user; holds no household data and no client write policy.",
