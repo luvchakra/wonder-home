@@ -14,6 +14,7 @@ import { sendDueDigests } from "@wonderhome/core/notifications/digest";
 import { householdsWithNoticeChanges, sweepNotices } from "@wonderhome/core/notifications/notices-sweep";
 import { tellPlatformAdmins } from "@wonderhome/core/ai/platform-key-alert";
 import { ranOnGitHub } from "@wonderhome/core/jobs/heartbeat";
+import { runTriviaRefill } from "@wonderhome/core/school/trivia-refill";
 import { JOBS } from "@wonderhome/core/jobs/runner";
 import { platformMailer } from "@wonderhome/core/email/mailer";
 import { advanceDueStages, deliverDueNotifications } from "@wonderhome/core/notifications/reconcile";
@@ -166,6 +167,12 @@ async function dispatch(request: Request): Promise<Response> {
       if (!onGitHub.has("clock.homesend-tidy")) await runHomeSendTidy(admin, { now, limit: 5 });
     } catch (thrown) {
       log.warn("homesend tidy tick failed", { reason: thrown instanceof Error ? thrown.name : "unknown" });
+    }
+    // Kids Trivia's low card pools (08-035): a couple a tick, only while GitHub's clock is stale.
+    try {
+      if (!onGitHub.has("clock.trivia-refill")) await runTriviaRefill(admin, { now, limit: 2 });
+    } catch (thrown) {
+      log.warn("trivia refill tick failed", { reason: thrown instanceof Error ? thrown.name : "unknown" });
     }
     try {
       if (!onGitHub.has("clock.homebrain-sleep")) await sleepDueHouseholds(admin, now);

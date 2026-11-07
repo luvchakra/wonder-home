@@ -171,6 +171,21 @@ export function screenTopic(topic: NormalisedTopic, band: TriviaBand): TopicScre
   return { ok: true };
 }
 
+/**
+ * The same word lists, run over a generated card's text (08-035): a reason when
+ * any of them appears, else null. A card is not a topic, so it is checked word
+ * by word over the whole line, with the child's age band.
+ */
+export function unsafeCardText(text: string, band: TriviaBand): TriviaRejectReason | null {
+  const key = text.slice(0, 600).normalize("NFKC").toLocaleLowerCase("en").replace(/[^\p{L}\p{N}]+/gu, " ").trim();
+  if (isInstruction(key)) return "not_a_topic";
+  for (const rule of RULES) {
+    if (rule.bands && !rule.bands.includes(band)) continue;
+    if (rule.words.some((word) => hasPhrase(key, word) || hasPhrase(deLeet(key), word))) return rule.reason;
+  }
+  return null;
+}
+
 // --- cards and what comes next -------------------------------------------------------
 
 export type TriviaCard = {

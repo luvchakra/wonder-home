@@ -115,3 +115,29 @@ test("the child removes their own topic; a guardian removes any of the child's",
   asProfile(GUARDIAN, `delete from public.trivia_topics where member_id = '${child}';`, options);
   assert.equal(psql(`select count(*) from public.trivia_topics where member_id = '${child}';`, options), "0");
 });
+
+test("generated cards (08-035) are readable by any member and written only by the server; the queue and the cap are written by the server and read only by the household's Admins", () => {
+  psql(`insert into public.trivia_pool (topic_key, age_band, language, kind, text) values ('space', 'older_child', 'en', 'fact', 'The Sun is a star.');`, options);
+  psql(`insert into public.trivia_refill_queue (topic_key, age_band, language, label, household_id) values ('space', 'older_child', 'en', 'Space', '${household}');`, options);
+  psql(`insert into public.trivia_generation_usage (household_id, day, batches) values ('${household}', current_date, 1);`, options);
+  for (const who of [CHILD, OTHER_ADULT, OUTSIDER]) assert.equal(asProfile(who, `select count(*) from public.trivia_pool;`, options), "1");
+  for (const who of [CHILD, HEAD]) {
+    assert.throws(() => asProfile(who, `insert into public.trivia_pool (topic_key, age_band, language, kind, text) values ('space', 'older_child', 'en', 'fact', 'Made up by a session.');`, options), /permission denied/);
+    assert.throws(() => asProfile(who, `update public.trivia_pool set text = 'changed';`, options), /permission denied/);
+    assert.throws(() => asProfile(who, `insert into public.trivia_refill_queue (topic_key, age_band, language, label, household_id) values ('x', 'teen', 'en', 'X', '${household}');`, options), /permission denied/);
+    assert.throws(() => asProfile(who, `update public.trivia_generation_usage set batches = 0;`, options), /permission denied/);
+  }
+  // The household's Admins read their own queue and usage; a child, another adult and another household read none.
+  assert.equal(asProfile(HEAD, `select count(*) from public.trivia_refill_queue;`, options), "1");
+  assert.equal(asProfile(HEAD, `select count(*) from public.trivia_generation_usage;`, options), "1");
+  for (const who of [CHILD, OTHER_ADULT, OUTSIDER]) {
+    assert.equal(asProfile(who, `select count(*) from public.trivia_refill_queue;`, options), "0");
+    assert.equal(asProfile(who, `select count(*) from public.trivia_generation_usage;`, options), "0");
+  }
+});
+
+test("a generated card is a fact or a quiz with 3–4 choices and an answer, never half of one", () => {
+  assert.throws(() => psql(`insert into public.trivia_pool (topic_key, age_band, language, kind, text, options) values ('space', 'teen', 'en', 'quiz', 'Which planet is biggest?', '["Mars","Jupiter","Venus"]');`, options), /check/);
+  assert.throws(() => psql(`insert into public.trivia_pool (topic_key, age_band, language, kind, text, options, answer) values ('space', 'teen', 'en', 'quiz', 'Which planet is biggest?', '["Mars","Jupiter"]', 1);`, options), /check/);
+  psql(`insert into public.trivia_pool (topic_key, age_band, language, kind, text, options, answer) values ('space', 'teen', 'en', 'quiz', 'Which planet is biggest?', '["Mars","Jupiter","Venus"]', 1);`, options);
+});

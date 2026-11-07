@@ -139,7 +139,7 @@ Last updated: 2026-10-20 (25-003c, 25-005, H-1, H-2, H-3 done; 25-004 waits, as 
 | The invitation link opens with the guest's name filled in, picked (from contacts on Android) before sending | 26-015 | Done — "Who is it for?" above the link, Pick from contacts where the phone allows it, `?to=` on the link |
 | HomeTalk says it has no food preferences while HomeBrain Review lists them | 04-019 | Done — the Gemini turn never reached WonderHome; family-wide likes questions now answered by rules from every record, Gemini given `get_family_preferences` and told whose record it is |
 | Relationships on Members & roles: "Kunal is father of Asmi", all dropdowns, many rows | 01-013 | Done — the other way round said for each row, impossible rows refused, suggestions from guardians and children, Family details and HomeTalk answer from them |
-| Kids Trivia (2026-11-07): a child picks topics they love; each time they open WonderHome a fun fact or quiz from them, safe for their age; a guardian can see, remove and turn it off | 08-034, 08-035 | 08-034 In Progress (PR 1: topics, safety check, built-in cards, Home card, guardian view); 08-035 Not Started (generated cards, background refill) |
+| Kids Trivia (2026-11-07): a child picks topics they love; each time they open WonderHome a fun fact or quiz from them, safe for their age; a guardian can see, remove and turn it off | 08-034, 08-035 | 08-034 In Progress (PR 1: topics, safety check, built-in cards, Home card, guardian view); 08-035 In Progress (PR 2: generated cards in the child's language, validated and fact-checked, background refill) |
 
 ## C. Waiting only on a browser check
 

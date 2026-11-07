@@ -65,6 +65,8 @@ const NON_TENANT_TABLES = new Set([
   "recipe_catalog_ingredients",
   // The cat's sayings (08-018): WonderHome's own list every household reads and none writes; what a child heard is per household.
   "companion_sayings",
+  // Kids Trivia's generated cards (08-035): made from a topic word and an age band only, every household reads, the server writes.
+  "trivia_pool",
   // The WonderJobs career-site key setting and its audit trail (careers, 2026-10-21): one per deployment, service role only.
   "careers_settings",
   "platform_settings",
