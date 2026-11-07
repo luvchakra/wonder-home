@@ -332,6 +332,20 @@ export function buildOpenApiDocument(): Json {
           },
         },
       },
+      "/households/{householdId}/integrations/school/channels/sync": {
+        parameters: [
+          { name: "householdId", in: "path", required: true, schema: { type: "string", format: "uuid" } },
+        ],
+        post: {
+          summary: "Poll the household's tracked school channels now",
+          description:
+            "An Admin's action. For each active channel it asks the provider for new messages and files each through HomeSend, awaiting a person; nothing is written back to the portal. No school provider has a live channel adapter yet, so today it reports that plainly instead of pretending to poll.",
+          responses: {
+            "200": { description: "What was polled, or that no channel adapter is live yet" },
+            "403": { $ref: "#/components/responses/Forbidden" },
+          },
+        },
+      },
       "/households/{householdId}/integrations/school/sync": {
         parameters: [
           { name: "householdId", in: "path", required: true, schema: { type: "string", format: "uuid" } },
@@ -1629,6 +1643,36 @@ export function buildOpenApiDocument(): Json {
           },
         },
       },
+      "/households/{householdId}/voice/gemini/closed": {
+        parameters: [
+          { name: "householdId", in: "path", required: true, schema: { type: "string", format: "uuid" } },
+        ],
+        post: {
+          summary: "Gemini closed a live voice session, and said why",
+          description:
+            "Body { code, reason }. The socket runs in the browser, so only the page hears Google's reason. When the words say the household's key is out of credits, out of quota or not valid, the alert is recorded against that key and an Admin is told. Nothing else is kept and the key never leaves the server. Answers { recorded }.",
+          responses: {
+            "200": { description: "Whether an alert was recorded" },
+            "400": { $ref: "#/components/responses/BadRequest" },
+            "403": { $ref: "#/components/responses/Forbidden" },
+          },
+        },
+      },
+      "/households/{householdId}/voice/live-engine": {
+        parameters: [
+          { name: "householdId", in: "path", required: true, schema: { type: "string", format: "uuid" } },
+        ],
+        put: {
+          summary: "Set this member's own live-conversation engine",
+          description:
+            "The HomeTalk composer's engine picker writes here, so the choice is the one server-side value Settings → Voice reads too. A personal preference: a member sets only their own engine, and it survives a change of device.",
+          responses: {
+            "200": { description: "The engine now saved for this member" },
+            "400": { $ref: "#/components/responses/BadRequest" },
+            "403": { $ref: "#/components/responses/Forbidden" },
+          },
+        },
+      },
       "/households/{householdId}/voice/gemini/session": {
         parameters: [
           { name: "householdId", in: "path", required: true, schema: { type: "string", format: "uuid" } },
@@ -1748,6 +1792,37 @@ export function buildOpenApiDocument(): Json {
             "200": { description: "The export, as a JSON attachment" },
             "403": { $ref: "#/components/responses/Forbidden" },
             "404": { $ref: "#/components/responses/NotFound" },
+          },
+        },
+      },
+      "/calendar/subscriptions/sync": {
+        get: {
+          summary: "The calendar-feed sweep, as a scheduler calls it with GET",
+          description: "The same sweep as POST, behind the same shared secret.",
+          responses: {
+            "200": { description: "Counts of feeds synced" },
+            "401": { $ref: "#/components/responses/Unauthenticated" },
+          },
+        },
+        post: {
+          summary: "The calendar-feed sweep: re-fetch feeds that are due (story 26-022)",
+          description:
+            "Re-fetches the subscribed calendar feeds whose time has come and reconciles them, read-only, into the calendar; each feed keeps its own ~6 h cadence, so a sweep with nothing due is cheap. Authorised by `Authorization: Bearer $CRON_SECRET`, never a session; refuses everything when no secret is set. Bounded per run.",
+          responses: {
+            "200": { description: "Counts of feeds synced" },
+            "401": { $ref: "#/components/responses/Unauthenticated" },
+            "500": { description: "The due feeds could not be read" },
+          },
+        },
+      },
+      "/security/csp-report": {
+        post: {
+          summary: "Browsers report Content-Security-Policy violations here (SEC-05)",
+          description:
+            "Unauthenticated by nature: the browser posts the report. Keeps nothing but a bounded, redacted log line and always answers 204.",
+          security: [],
+          responses: {
+            "204": { description: "Received" },
           },
         },
       },

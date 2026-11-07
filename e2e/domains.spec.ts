@@ -76,6 +76,7 @@ const PUBLIC_PATHS = new Set([
   "/oauth/voice/token",
   "/voice/alexa",
   "/notifications/email-off",
+  "/security/csp-report", // a browser posts violation reports here; it keeps one redacted log line and answers 204
 ]);
 
 const SERVED = servedPaths().sort();
