@@ -138,7 +138,7 @@ if (import.meta.url === `file://${process.argv[1]}`) {
   console.log(`No WonderJobs client code in client chunks (${careers.length} markers checked).`);
 
   // The settings store is server-only: its functions and the loader never reach a browser.
-  const settings = ["platform_config_read", "platform_config_secret_set", "read saved platform settings"];
+  const settings = ["platform_config_read", "platform_config_secret_set", "platform_config_import", "read saved platform settings"];
   const settingsHits = leaks(staticDir, settings);
   if (settingsHits.length > 0) {
     console.error("The platform settings store is in client JavaScript; it must stay on the server:");

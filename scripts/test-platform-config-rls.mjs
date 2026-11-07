@@ -52,6 +52,7 @@ test("anon and signed-in people can't execute any settings function", () => {
     `select public.platform_config_set('WONDERHOME_DEVELOPER_API', 'on', '${STAFF}');`,
     `select public.platform_config_secret_set('TMDB_API_KEY', 'abcdefghijklmnop', '${STAFF}');`,
     `select public.platform_config_clear('WONDERHOME_WEATHER_PROVIDER', '${STAFF}');`,
+    `select public.platform_config_import('[]'::jsonb, '${STAFF}');`,
   ];
   for (const call of calls) {
     assert.ok(deniedForAnonymous(call, options), `anon: ${call}`);
@@ -86,6 +87,37 @@ test("a secret is kept only in Vault, audited as changed, and never in the statu
   assert.equal(asServiceRole(`select value from public.platform_config_read() where key = 'TMDB_API_KEY';`), value);
   asServiceRole(`select public.platform_config_clear('TMDB_API_KEY', '${STAFF}');`);
   assert.equal(asServiceRole(`select count(*) from public.platform_config_read() where key = 'TMDB_API_KEY';`), "0");
+});
+
+test("moving from Vercel saves new keys in one call, never overwrites, and moves nothing twice", () => {
+  assert.throws(() => asServiceRole(`select public.platform_config_import('[]'::jsonb, '${MEMBER}');`), /not platform staff/);
+  const items = JSON.stringify([
+    { key: "WONDERHOME_WEATHER_PROVIDER", value: "open-meteo", secret: false },
+    { key: "WONDERHOME_DEVELOPER_API", value: "on", secret: false },
+  ]);
+  const first = JSON.parse(asServiceRole(`select public.platform_config_import('${items}'::jsonb, '${STAFF}')::text;`));
+  const status = Object.fromEntries(first.items.map((row) => [row.key, row.status]));
+  assert.equal(status.WONDERHOME_WEATHER_PROVIDER, "already");
+  assert.equal(status.WONDERHOME_DEVELOPER_API, "moved");
+  assert.equal(asServiceRole(`select value from public.platform_config_read() where key = 'WONDERHOME_WEATHER_PROVIDER';`), "off", "an import overwrote a saved value");
+  assert.equal(asServiceRole(`select value from public.platform_config_read() where key = 'WONDERHOME_DEVELOPER_API';`), "on");
+  const audited = psql(`select count(*) from public.audit_events where event_type = 'platform.config_changed' and metadata->>'via' = 'move_from_vercel';`, options);
+  assert.equal(audited, "1");
+  const summary = JSON.parse(psql(`select metadata::text from public.audit_events where event_type = 'platform.config_moved' order by created_at desc limit 1;`, options));
+  assert.equal(summary.moved, 1);
+  assert.equal(summary.already, 1);
+  const second = JSON.parse(asServiceRole(`select public.platform_config_import('${items}'::jsonb, '${STAFF}')::text;`));
+  assert.ok(second.items.every((row) => row.status === "already"), "the second run moved something");
+});
+
+test("a secret moved from Vercel goes to Vault and never into an audit row", { skip: !hasVault() && "no Vault in this database" }, () => {
+  const value = "careers-key-abcdefghijkl5678";
+  const items = JSON.stringify([{ key: "TMDB_API_KEY", value, secret: true }]);
+  asServiceRole(`select public.platform_config_import('${items}'::jsonb, '${STAFF}');`);
+  assert.equal(psql(`select coalesce(value, '') from public.platform_config where key = 'TMDB_API_KEY';`, options), "");
+  assert.equal(asServiceRole(`select value_last4 from public.platform_config_status() where key = 'TMDB_API_KEY';`), "5678");
+  const audit = psql(`select string_agg(metadata::text, ' ') from public.audit_events where event_type in ('platform.config_changed', 'platform.config_moved');`, options);
+  assert.ok(!audit.includes(value) && !audit.includes("5678"), "an audit row holds the secret");
 });
 
 test("more than twenty changes a minute by one person are refused", () => {

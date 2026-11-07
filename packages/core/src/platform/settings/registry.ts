@@ -632,3 +632,31 @@ export function lastFourOf(value: string): string | null {
   const trimmed = value.trim();
   return trimmed.length >= 12 ? trimmed.slice(-4) : null;
 }
+
+/**
+ * Variables that must stay in Vercel, with the reason for each
+ * (docs/progress/2026-11-07-admin-portal.md). None is ever a registry key
+ * (`registry.test.ts`), and "Move all from Vercel" never moves one.
+ */
+export const STAYS_IN_VERCEL: readonly { key: string; why: string }[] = [
+  { key: "NEXT_PUBLIC_SUPABASE_URL", why: "Needed to reach the database the portal's settings live in, and built into the pages." },
+  { key: "NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY", why: "Needed to reach the database the portal's settings live in, and built into the pages." },
+  { key: "SUPABASE_SERVICE_ROLE_KEY", why: "The server reads the settings store with it." },
+  { key: "SUPABASE_ACCESS_TOKEN", why: "It controls the whole database project, so it is never kept inside that database." },
+  { key: "CRON_SECRET", why: "Checks that scheduled calls really come from the scheduler." },
+  { key: "WHATSAPP_APP_SECRET", why: "Checks that WhatsApp messages coming in are really from Meta." },
+  { key: "WHATSAPP_VERIFY_TOKEN", why: "Meta's webhook handshake." },
+  { key: "ALEXA_OAUTH_CLIENT_SECRET", why: "Checks Alexa's account-linking calls coming in." },
+  { key: "RAZORPAY_WEBHOOK_SECRET", why: "Checks that payment events really come from Razorpay." },
+  { key: "STRIPE_WEBHOOK_SECRET", why: "Checks that payment events really come from Stripe." },
+  { key: "RESEND_WEBHOOK_SECRET", why: "Checks that email events really come from Resend." },
+  { key: "WONDERHOME_LINK_SECRET", why: "Signs unsubscribe links; changing it breaks every link already sent." },
+  { key: "CSP_MODE", why: "Read on every request, before the database is." },
+  { key: "LOG_LEVEL", why: "Read on every request, before the database is." },
+  { key: "WONDERHOME_CONTEXT_STORE", why: "Read once when the server starts, as a kill-switch." },
+  { key: "NEXT_PUBLIC_GOOGLE_AUTH_ENABLED", why: "Built into the pages browsers load (the Google sign-in button)." },
+  { key: "NEXT_PUBLIC_CONTACT_EMAIL", why: "Built into the pages browsers load (landing page, Terms)." },
+];
+
+/** Variables no code reads any more: safe to delete in Vercel with nothing to move. */
+export const UNUSED_IN_VERCEL: readonly string[] = ["SECRET_ENCRYPTION_KEY"];

@@ -1,26 +1,9 @@
 import { describe, expect, it } from "vitest";
 
-import { PLATFORM_SETTINGS, SETTING_GROUPS, lastFourOf, mayEdit, settingDefinition, settingsForPage, validateSetting } from "./registry";
+import { PLATFORM_SETTINGS, SETTING_GROUPS, STAYS_IN_VERCEL, UNUSED_IN_VERCEL, lastFourOf, mayEdit, settingDefinition, settingsForPage, validateSetting } from "./registry";
 
-/** Values that must stay in Vercel (docs/progress/2026-11-07-admin-portal.md): never a registry key. */
-const BOOTSTRAP = [
-  "NEXT_PUBLIC_SUPABASE_URL",
-  "NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY",
-  "SUPABASE_SERVICE_ROLE_KEY",
-  "SUPABASE_ACCESS_TOKEN",
-  "SECRET_ENCRYPTION_KEY",
-  "CRON_SECRET",
-  "WHATSAPP_APP_SECRET",
-  "WHATSAPP_VERIFY_TOKEN",
-  "ALEXA_OAUTH_CLIENT_SECRET",
-  "RAZORPAY_WEBHOOK_SECRET",
-  "STRIPE_WEBHOOK_SECRET",
-  "RESEND_WEBHOOK_SECRET",
-  "WONDERHOME_LINK_SECRET",
-  "CSP_MODE",
-  "LOG_LEVEL",
-  "WONDERHOME_CONTEXT_STORE",
-];
+/** Values that must stay in Vercel: never a registry key. */
+const BOOTSTRAP = [...STAYS_IN_VERCEL.map((item) => item.key), ...UNUSED_IN_VERCEL];
 
 describe("platform settings registry", () => {
   it("has each key once, in the database's key shape", () => {
