@@ -51,6 +51,7 @@ const PLATFORM_CAPABILITIES: Record<PlatformRole, readonly string[]> = {
     "feature_flags.manage",
     "audit.read_platform",
     "platform_admin.manage",
+    "plans.edit",
     "privacy_requests.manage",
     "payments.read",
     "payments.refund",

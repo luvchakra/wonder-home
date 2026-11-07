@@ -3,10 +3,13 @@
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 
+import type { FeatureLine } from "@wonderhome/core/billing/plan-shared";
 import type { PlanChangeAssessment } from "@wonderhome/core/billing/plan-change";
 import { Alert } from "@wonderhome/core/ui/alert";
 import { Button } from "@wonderhome/core/ui/button";
 import { Badge } from "@wonderhome/core/ui/pill";
+
+import { PlanCard } from "./plan-card";
 
 /**
  * Changing the household's plan (story 20-004).
@@ -34,6 +37,8 @@ type PlanOption = {
   earlyAccess?: boolean;
   /** Our catalogue price for this interval — what a checkout would charge. */
   priceId?: string | null;
+  /** What the plan includes, in the labels members read. */
+  features?: readonly FeatureLine[];
 };
 type Preview = PlanChangeAssessment & {
   lines: string[];
@@ -167,21 +172,16 @@ export function PlanForm({
             // On a phone the action sits under the plan, so the name, price and
             // description keep the full width (rules 11 and 15).
             <li key={plan.key} className="flex flex-col gap-3 rounded-[var(--wh-radius-sm)] border border-[var(--wh-border)] p-3 sm:flex-row sm:items-center">
-              <div className="min-w-0 flex-1">
-                <p className="flex flex-wrap items-center gap-x-2 gap-y-1 text-sm font-medium">
-                  {plan.name}
-                  {plan.earlyAccess && plan.priceText ? <Badge tone="handled" className="whitespace-nowrap">{labels.earlyAccess}</Badge> : null}
-                </p>
-                {plan.priceText ? (
-                  <p className="mt-0.5 text-sm">
-                    <span className="font-semibold">{plan.priceText}</span>
-                    {plan.priceNote ? <span className="ml-1.5 text-xs text-[var(--wh-foreground-muted)]">{plan.priceNote}</span> : null}
-                  </p>
-                ) : null}
-                {plan.description ? (
-                  <p className="mt-0.5 text-xs text-[var(--wh-foreground-muted)]">{plan.description}</p>
-                ) : null}
-              </div>
+              <PlanCard
+                plan={{
+                  name: plan.name,
+                  description: plan.description,
+                  priceText: plan.priceText,
+                  priceNote: plan.priceNote,
+                  earlyAccessLabel: plan.earlyAccess && plan.priceText ? labels.earlyAccess : null,
+                  features: plan.features,
+                }}
+              />
               {current ? (
                 <Badge tone="handled" className="w-fit">{labels.current}</Badge>
               ) : (
