@@ -148,6 +148,24 @@ Phone: the existing 360 px drawer, now with the same group headings.
 
 ## 4. What shipped (PR 1: portal, settings store, wiring)
 
+### Two settings tables, on purpose
+#518 landed first, with `public.platform_settings`.
+- It holds public presentation switches that anyone may read, such as
+  `landing.variant`.
+- Its writer is `platform_setting_set`.
+
+So this store is named `public.platform_config`, migration
+`20261107210000_platform_config.sql`.
+- Its functions are `platform_config_*`, and its audit event is
+  `platform.config_changed`.
+- Nothing in it is readable from a session.
+- Its own function names keep it from replacing #518's writer.
+
+The Landing page section (`/platform-admin/landing`) sits under Configure.
+Folding `landing.variant` into the registry is left for later, as #518's note
+asks: it needs a public read path, which this store deliberately lacks.
+
+
 - **Portal** (`apps/web/app/platform-admin/`). The sidebar is grouped into Run,
   Configure and Guard (`menu.ts` `groupedMenu`), as a sticky rail on desktop
   and the same groups in the phone drawer.
