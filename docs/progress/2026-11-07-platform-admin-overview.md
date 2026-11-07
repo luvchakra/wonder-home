@@ -25,7 +25,7 @@
 - **Pure model** (`packages/core/src/platform/overview.ts`): parse, needs-you rules, opening sentence, growth, plan arithmetic.
 - **View** (`apps/web/app/platform-admin/_ui/overview-view.tsx`) is separate from the loader (`page.tsx`), so it can be driven with fixture data.
 - **Kit:** a new `Sparkline` (`@wonderhome/core/ui/sparkline`), server-rendered SVG on tokens only. The note is in `design/DESIGN-NOTES.md`. No chart library ships to the browser.
-- The test database's `auth.users` stub gained Supabase's `last_sign_in_at` (`supabase/tests/supabase-shim.sql`).
+- Owners get deep links into the account-level lists from #526: the support-grants item and tile go to `/platform-admin/households/grants`, and each plan row goes to `/platform-admin/households/all?plan=…`. Other staff are sent to Security.
 
 ## Verified
 
