@@ -9,6 +9,7 @@ A red nightly is fixed before other work merges.
 | Pull request | every push to a PR branch | typecheck; ESLint on the changed app files; unit tests related to the changed core files; secret scan, P0 security suite and the deterministic AI evaluation; repo lints (migrations, PostgREST embeds, import boundaries, help links, tracker, brand); DB/RLS tests when migrations change; a production build when app code changes, followed by a check that the user guide's words are not in any client chunk. **No E2E.** | `.github/workflows/ci.yml` |
 | Push to `main` | every merge | the same jobs, with **every** unit test and the **whole** lint; DB/RLS tests and the build always run. Saves the caches pull requests read. **No E2E.** | `.github/workflows/ci.yml` |
 | Nightly | 03:00 IST (21:30 UTC), and by hand | the **full** Playwright suite (mobile and desktop) against a fresh build of `main` | `.github/workflows/e2e-nightly.yml` |
+| Every 10 min, hourly, daily | schedule, and by hand | **background jobs, not tests**: HomeBrain keep-warm, knowledge drain, HomeSend archive and tidy, HomeBrain Sleep, calendar feeds, developer webhooks, the nightly retention sweeps. Runs core code against the live database; Vercel takes a step back when its heartbeat goes stale. See `docs/background-jobs.md` | `.github/workflows/background-jobs.yml` |
 | Your machine | before merging something risky | the spec files that cover it, against a local build | `npm run test:e2e -- <spec files>` |
 
 ## Pull request CI (`ci.yml`)

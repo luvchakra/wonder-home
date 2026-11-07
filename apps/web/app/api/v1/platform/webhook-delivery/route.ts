@@ -1,5 +1,6 @@
 import { toErrorBody } from "@wonderhome/core/api/errors";
 import { createAdminClient } from "@wonderhome/core/db/admin";
+import { ranOnGitHub } from "@wonderhome/core/jobs/heartbeat";
 import { log } from "@wonderhome/core/observability/logger";
 import { deliverPendingWebhooks, type DeliveryOutcome } from "@wonderhome/core/webhooks/deliver";
 
@@ -27,7 +28,12 @@ export async function POST(request: Request) {
   if (!secret || request.headers.get("authorization") !== `Bearer ${secret}`) return refuse();
 
   try {
-    const outcomes = await deliverPendingWebhooks(createAdminClient());
+    const admin = createAdminClient();
+    // The GitHub runner delivers hourly (background-jobs.yml); while it does, this daily call has nothing to add.
+    if ((await ranOnGitHub(admin, ["webhooks"], new Date())).size > 0) {
+      return Response.json({ delivered: 0, retrying: 0, exhausted: 0, skipped: 0, onGitHub: true }, { status: 200, headers: { "cache-control": "no-store" } });
+    }
+    const outcomes = await deliverPendingWebhooks(admin);
     const count = (outcome: DeliveryOutcome["outcome"]) => outcomes.filter((o) => o.outcome === outcome).length;
     const summary = {
       delivered: count("delivered"),

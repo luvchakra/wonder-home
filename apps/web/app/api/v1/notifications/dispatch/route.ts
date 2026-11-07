@@ -13,6 +13,8 @@ import { notificationJobHandlers } from "@wonderhome/core/notifications/retry-ha
 import { sendDueDigests } from "@wonderhome/core/notifications/digest";
 import { householdsWithNoticeChanges, sweepNotices } from "@wonderhome/core/notifications/notices-sweep";
 import { tellPlatformAdmins } from "@wonderhome/core/ai/platform-key-alert";
+import { ranOnGitHub } from "@wonderhome/core/jobs/heartbeat";
+import { JOBS } from "@wonderhome/core/jobs/runner";
 import { platformMailer } from "@wonderhome/core/email/mailer";
 import { advanceDueStages, deliverDueNotifications } from "@wonderhome/core/notifications/reconcile";
 import { whatsappConfigFromEnv } from "@wonderhome/core/notifications/whatsapp";
@@ -40,6 +42,13 @@ import { whatsappAsk, whatsappAutoAdd } from "@/app/_lib/whatsapp-hometalk";
  * and is HomeBrain's body clock: after the response, a household whose
  * night it is (2–5 am on its own clock) and which has not slept today sleeps
  * (`sleepDueHouseholds`, HomeBrain Sleep), a couple per tick.
+ *
+ * Those batch steps (keep-warm, the knowledge drain, HomeSend's archive and
+ * tidy, Sleep) also run on GitHub Actions every ten minutes
+ * (`background-jobs.yml`, 2026-11-07). While GitHub's heartbeat for a step is
+ * fresh this tick skips it; once it goes stale this tick does it again. The
+ * delivery itself (stages, health, due reminders, notices, digests, the key
+ * alert, the retry queue) stays here: it needs its five minutes and the app.
  */
 const MAX_HOUSEHOLDS = 200;
 /** A night's sleep runs after the response; it may take a while for a large household. */
@@ -55,6 +64,8 @@ async function dispatch(request: Request): Promise<Response> {
   }
   const now = new Date();
   const admin = createAdminClient();
+  // Read once, beside the delivery work; any failure answers "none", so this tick does everything.
+  const githubSteps = ranOnGitHub(admin, JOBS.clock, now);
   // Reminders whose next stage is due ("tonight" → "this morning") move on now,
   // not when someone next opens the app; what they make due is delivered below.
   let advanced = 0;
@@ -114,16 +125,17 @@ async function dispatch(request: Request): Promise<Response> {
   }
   // The same clock keeps HomeBrain's stored household contexts whole (14-031):
   // a few that are behind or over an hour old are rebuilt per tick.
+  const onGitHub = await githubSteps;
   let warmed = 0;
   try {
-    warmed = await keepStoresWarm(admin, now);
+    if (!onGitHub.has("clock.context-warm")) warmed = await keepStoresWarm(admin, now);
   } catch (thrown) {
     log.warn("context keep-warm failed", { reason: thrown instanceof Error ? thrown.name : "unknown" });
   }
   // And writes the record index's facts for records whose own drain did not run (14-037): a write outside a request, a failed try.
   let facts = 0;
   try {
-    facts = (await drainKnowledge(admin, { limit: CLOCK_DRAIN_LIMIT, now })).written;
+    if (!onGitHub.has("clock.knowledge")) facts = (await drainKnowledge(admin, { limit: CLOCK_DRAIN_LIMIT, now })).written;
   } catch (thrown) {
     log.warn("knowledge drain failed", { reason: thrown instanceof Error ? thrown.name : "unknown" });
   }
@@ -143,7 +155,7 @@ async function dispatch(request: Request): Promise<Response> {
     // aside — kept, restorable — on each household's own calendar. Bounded and idempotent; the next
     // notice sweep then drops them from the grouped reminder.
     try {
-      await archiveStaleHomeSendItems(admin, { now, limit: 200 });
+      if (!onGitHub.has("clock.homesend-archive")) await archiveStaleHomeSendItems(admin, { now, limit: 200 });
     } catch (thrown) {
       log.warn("homesend archive tick failed", { reason: thrown instanceof Error ? thrown.name : "unknown" });
     }
@@ -151,17 +163,17 @@ async function dispatch(request: Request): Promise<Response> {
     // clock, waiting items that no longer apply are archived with a reason — rules first, a checked AI
     // verdict only where the rules can't tell. A few households a tick; claimed per day, so idempotent.
     try {
-      await runHomeSendTidy(admin, { now, limit: 5 });
+      if (!onGitHub.has("clock.homesend-tidy")) await runHomeSendTidy(admin, { now, limit: 5 });
     } catch (thrown) {
       log.warn("homesend tidy tick failed", { reason: thrown instanceof Error ? thrown.name : "unknown" });
     }
     try {
-      await sleepDueHouseholds(admin, now);
+      if (!onGitHub.has("clock.homebrain-sleep")) await sleepDueHouseholds(admin, now);
     } catch (thrown) {
       log.warn("homebrain sleep tick failed", { reason: thrown instanceof Error ? thrown.name : "unknown" });
     }
   });
-  return Response.json({ ok: true, households: households.length, delivered, advanced, health, noticed, digests, warmed, facts }, { headers: { "cache-control": "no-store" } });
+  return Response.json({ ok: true, households: households.length, delivered, advanced, health, noticed, digests, warmed, facts, onGitHub: onGitHub.size }, { headers: { "cache-control": "no-store" } });
 }
 
 export const POST = dispatch;

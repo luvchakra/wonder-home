@@ -47,7 +47,10 @@ reminders about real records, never lines of text fired and forgotten.
   (`pushWorthSending`): critical always, high and timed reminders within a
   daily ceiling, low never; quiet hours hold except for critical. Every five
   minutes pg_cron calls `/api/v1/notifications/dispatch`
-  (`deliverDueNotifications`), so a reminder lands at its time. The same tick
+  (`deliverDueNotifications`), so a reminder lands at its time. (Its batch
+  steps — keep-warm, knowledge drain, HomeSend archive and tidy, Sleep — run
+  on GitHub Actions while their heartbeat is fresh: `docs/background-jobs.md`.
+  Delivery itself stays on this tick.) The same tick
   moves reminders to their next stage (`advanceDueStages`, at most 40 a tick,
   under the page load's five-minute claim), so "this morning" never waits for
   someone to open the app. It takes only households whose
