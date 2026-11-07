@@ -1,6 +1,7 @@
 import { createHmac, timingSafeEqual } from "node:crypto";
 
 import { z } from "zod";
+import { runtimeEnv } from "../platform/settings/runtime-env";
 
 /**
  * The inbound-email side of HomeSend Phase 2, behind a provider-neutral
@@ -26,7 +27,7 @@ import { z } from "zod";
 const SIGNATURE_TOLERANCE_SECONDS = 5 * 60;
 
 export function platformResendConfig(
-  env: Record<string, string | undefined> = process.env,
+  env: Record<string, string | undefined> = runtimeEnv(),
 ): { apiKey: string; webhookSecret: string } | null {
   const apiKey = env.RESEND_API_KEY?.trim();
   const webhookSecret = env.RESEND_WEBHOOK_SECRET?.trim();

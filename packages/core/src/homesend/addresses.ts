@@ -3,6 +3,7 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 import { auditChange } from "../api/audit";
 import { ApiError } from "../api/errors";
 import type { HomeSendAddress, HomeSendAddressStatus } from "./items";
+import { runtimeEnv } from "../platform/settings/runtime-env";
 
 /**
  * The household's own HomeSend email address (Phase 2).
@@ -33,7 +34,7 @@ function fromRow(row: Row): HomeSendAddress {
 const SELECT_COLUMNS = "id, household_id, address, status, created_at, rotated_at, revoked_at";
 
 /** The domain HomeSend addresses are minted under, from the deployment's own environment. Unset means the feature is not configured. */
-export function platformHomeSendEmailDomain(env: Record<string, string | undefined> = process.env): string | null {
+export function platformHomeSendEmailDomain(env: Record<string, string | undefined> = runtimeEnv()): string | null {
   const domain = env.WONDERHOME_HOMESEND_EMAIL_DOMAIN?.trim();
   return domain ? domain : null;
 }

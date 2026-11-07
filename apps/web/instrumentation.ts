@@ -15,11 +15,20 @@ import { assertConfiguration } from "@wonderhome/core/config/startup";
  * turn reads it. Without a service-role key or the table it answers null
  * and reads fall back to the live path. Imported only for Node, so the edge
  * bundle never carries it.
+ *
+ * Settings saved in the platform admin are laid over the environment here
+ * too (`platform/settings/runtime-env.ts`): saved value, then the variable,
+ * then the reader's default.
  */
 export async function register() {
   assertConfiguration("public");
   if (process.env.NEXT_RUNTIME === "nodejs") {
-    const [{ enableContextStore }, { after }] = await Promise.all([import("@wonderhome/core/homebrain/context-store"), import("next/server")]);
+    const [{ enableContextStore }, { after }, { enablePlatformSettings }] = await Promise.all([
+      import("@wonderhome/core/homebrain/context-store"),
+      import("next/server"),
+      import("@wonderhome/core/platform/settings/server"),
+    ]);
     enableContextStore({ schedule: (task) => after(task) });
+    await enablePlatformSettings();
   }
 }

@@ -19,6 +19,8 @@ export const PLATFORM_DATA = {
   plan_catalog: { tables: ["plan_features", "entitlement_experiments"], ttlMs: 60_000 },
   /** Non-secret platform switches (the landing-page variant), public read, changed in the portal. */
   platform_settings: { tables: ["platform_settings"], ttlMs: 30_000 },
+  /** Staff-saved settings laid over the environment (`platform/settings/runtime-env.ts`). Service role only. */
+  platform_config: { tables: ["platform_config"], ttlMs: 60_000 },
 } as const satisfies Record<string, { tables: readonly string[]; ttlMs: number }>;
 
 export type PlatformDataKey = keyof typeof PLATFORM_DATA;

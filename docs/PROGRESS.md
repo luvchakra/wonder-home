@@ -11,14 +11,14 @@ in `docs/progress/`; for the running log of what changed when, `tracking/PROGRES
 
 ## The whole picture
 
-**422 of 459 stories done — 91.9%**
+**423 of 463 stories done — 91.4%**
 
 | Status | Stories |
 |---|---:|
-| Done | 422 |
+| Done | 423 |
 | In Progress | 11 |
 | Blocked | 1 |
-| Not Started | 21 |
+| Not Started | 24 |
 | Deferred | 4 |
 
 ## By module
@@ -41,7 +41,7 @@ in `docs/progress/`; for the running log of what changed when, `tracking/PROGRES
 | 13 Maintenance, Laundry & Pet Care | `█████████░` | 10 | 11 | 1 in progress |
 | 14 AI Orchestration & Learning | `████████░░` | 54 | 62 | 1 in progress, 4 not started, 3 deferred |
 | 15 Privacy, Security & Governance | `████████░░` | 11 | 13 | 2 not started |
-| 16 Platform Admin & Operations | `██████████` | 9 | 9 | — |
+| 16 Platform Admin & Operations | `███████░░░` | 10 | 13 | 3 not started |
 | 17 External Integrations | `█████████░` | 10 | 11 | 1 not started |
 | 18 API & Developer Platform | `██████████` | 8 | 8 | — |
 | 19 Testing, Observability & Production | `██████████` | 8 | 8 | — |
@@ -79,6 +79,9 @@ in `docs/progress/`; for the running log of what changed when, `tracking/PROGRES
 | `14-057` HomeBrain 4.0 phase 3c — the reply streamed to the person | 14 AI Orchestration & Learning | P0 | Not Started |
 | `15-013` Data retention phase 2b: notifications (household window) + HomeSend + enable real purge | 15 Privacy, Security & Governance | P1 | Not Started |
 | `15-012` Data retention phase 3: school items (household window) + "recently cleaned" view | 15 Privacy, Security & Governance | P2 | Not Started |
+| `16-011` Test connection for each provider key | 16 Platform Admin & Operations | P1 | Not Started |
+| `16-012` Editors in Plans & billing | 16 Platform Admin & Operations | P1 | Not Started |
+| `16-013` Claude model choice without a deploy | 16 Platform Admin & Operations | P2 | Not Started |
 | `17-017` Read approved senders by signing in (Gmail / Outlook OAuth, read-only) | 17 External Integrations | P2 | Not Started |
 | `21-011` Edit an appointment | 21 Health and Fitness | P2 | Not Started |
 | `22-008` Right-to-left readiness | 22 Internationalization and Localization | P1 | Deferred |
@@ -487,7 +490,7 @@ in `docs/progress/`; for the running log of what changed when, `tracking/PROGRES
 
 ### 16 — Platform Admin & Operations
 
-9 of 9 done `██████████`
+10 of 13 done `███████░░░`
 
 | Story | Priority | Status | Notes |
 |---|---|---|---|
@@ -500,6 +503,10 @@ in `docs/progress/`; for the running log of what changed when, `tracking/PROGRES
 | `16-007` Privacy requests | P1 | Done | `fulfillMaturedDeletions` (the real deletion job 15-007 never built — scrubs a member's PII, keeps the row and its references readable); `privacy-requests.ts` gives staff list/refuse (operator/owner only), wired into `/platform/retention`'s existing sweep |
 | `16-008` Feature flags/audit | P1 | Done | `feature-flags.ts`: a reason-coded, audited `setHouseholdFeatureFlag` (operator/owner only, following 16-005's exact shape) turns a staged capability on or off for one household; a household reads its own flags via RLS, matching support-access grants' "the family this concerns can see it" precedent. `audit-log.ts`: `listPlatformAuditEvents` widens who may read the already-redacted `audit_events` rows fleet-wide, never what is safe to show |
 | `16-009` Platform admin landing and Performance | P1 | Done | `/platform-admin` landing with section nav (Overview, Performance, Careers); `/platform-admin/performance` shows database, advisor, budget and tip panels, aggregate only, read-only. Staff-only RPC `platform_performance_snapshot` (service role + in-function staff check); tips in `packages/core/src/platform/performance.ts` |
+| `16-010` Admin portal and settings out of Vercel | P1 | Done | Grouped sidebar (Run / Configure / Guard) after WonderWorks' admin; Overview, Households & people, Plans & billing, AI & providers, Integrations, Configuration, Secrets, Security. `platform_config` + Vault, registry in `platform/settings/registry.ts`, `runtimeEnv()` lays saved values over the environment (saved → env → default). PR "Admin portal" (2026-11-07) |
+| `16-011` Test connection for each provider key | P1 | Not Started | Follow-up of 16-010: a Test button per key (AI, SMTP, WhatsApp, Maps, TMDB, Resend, scanner), as Careers has |
+| `16-012` Editors in Plans & billing | P1 | Not Started | Follow-up of 16-010: plan feature policies and experiments are editable only through the API today; move the editors onto the page |
+| `16-013` Claude model choice without a deploy | P2 | Not Started | Follow-up of 16-010: `ai/model-client.ts` model constants become per-call reads so `WONDERHOME_AI_*_MODEL` can move into the registry |
 
 ### 17 — External Integrations
 
@@ -753,4 +760,4 @@ in `docs/progress/`; for the running log of what changed when, `tracking/PROGRES
 | `27-024` The notification center | P0 | Done | The owner, 2026-10-22: "add notification center where adult can update their notification choices". Settings → Notifications opens with one row per kind (`_components/notification-center-card.tsx`, `ExpandableRow`): the collapsed row says in words whether it comes, when and where; opened, "Get these", "When" and "Where" change it, each saving at once and only that kind (`saveReminderKindAction`), so an untouched kind keeps following the household's starting timing. It replaces the separate timing and "What goes where" cards (both removed). A kind or channel an Admin turned off for the household says so and is not offered. Words in eight languages; help ¶8 and the reminder-timing FAQ |
 | `27-025` Household notifications for Admins | P0 | Done | The owner, 2026-10-22: "notification related admin settings that can control the notification experience of all users". Manage Household → Household notifications (`/household/notifications`, Admins only): each kind on or off for everyone and its starting timing; which channels beyond the app may reach anyone; whether an unanswered reminder takes the second-channel step and the backup step; the household's quiet hours. Kept as two versioned, audited `policies` rows (`notifications/household-settings.ts`; Quiet hours keeps HomeTalk's row), written only when something changed and only real choices. Enforced on the server: `reconcile.ts` (kinds off, starting timing, both steps, quiet hours) and `deliverNotification` (a channel off holds everything but a critical alert). A person narrows these and never widens them. Help ¶15 in eight languages |
 
-_Generated 2026-11-03 from 28 backlog files._
+_Generated 2026-11-07 from 28 backlog files._

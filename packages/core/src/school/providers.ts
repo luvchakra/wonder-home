@@ -1,6 +1,7 @@
 import type { ProviderRecord } from "../integrations/connector";
 import { getConnector, registerConnector } from "../integrations/registry";
 import { createFixtureSchoolConnector, SCHOOL_SCOPES, type SchoolConnector, type SchoolPayload } from "./connector";
+import { runtimeEnv } from "../platform/settings/runtime-env";
 
 /**
  * The school provider catalog (story 08-028).
@@ -139,7 +140,7 @@ export function getSchoolProvider(id: string): SchoolProviderDescriptor | null {
  */
 export function schoolProviderAvailability(
   descriptor: SchoolProviderDescriptor,
-  env: Record<string, string | undefined> = process.env,
+  env: Record<string, string | undefined> = runtimeEnv(),
 ): SchoolProviderAvailability {
   if (descriptor.requiredEnv.length === 0) return "available";
   const ready = descriptor.requiredEnv.every((key) => (env[key]?.trim() ?? "") !== "");
@@ -159,7 +160,7 @@ export type SchoolProviderCatalogEntry = SchoolProviderDescriptor & {
  * environment is set — never for a portal that is merely named.
  */
 export function schoolProviderCatalog(
-  env: Record<string, string | undefined> = process.env,
+  env: Record<string, string | undefined> = runtimeEnv(),
 ): SchoolProviderCatalogEntry[] {
   return SCHOOL_PROVIDERS.map((descriptor) => {
     const availability = schoolProviderAvailability(descriptor, env);
@@ -203,7 +204,7 @@ export function createSchoolProviderConnector(
 /** The connector for a provider id, or `null` when it cannot sync for this deployment. */
 export function schoolConnectorFor(
   provider: string,
-  env: Record<string, string | undefined> = process.env,
+  env: Record<string, string | undefined> = runtimeEnv(),
 ): SchoolConnector | null {
   const descriptor = getSchoolProvider(provider);
   return descriptor ? createSchoolProviderConnector(descriptor, { env }) : null;
@@ -220,7 +221,7 @@ export function schoolConnectorFor(
  *
  * Returns the ids registered, for a startup log and for tests.
  */
-export function registerSchoolProviders(env: Record<string, string | undefined> = process.env): string[] {
+export function registerSchoolProviders(env: Record<string, string | undefined> = runtimeEnv()): string[] {
   const registered: string[] = [];
   for (const descriptor of SCHOOL_PROVIDERS) {
     if (getConnector("school", descriptor.id)) {

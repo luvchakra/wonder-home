@@ -73,6 +73,8 @@ const NON_TENANT_TABLES = new Set([
   "instamart_oauth_clients",
   // When each background step last ran on the GitHub runner (2026-11-07): platform-level, service role only, counts only.
   "platform_job_heartbeats",
+  // Settings saved in the platform admin instead of Vercel (16-010): one per deployment, service role only.
+  "platform_config",
 ]);
 
 export function lintMigrationSource(filename, sql) {

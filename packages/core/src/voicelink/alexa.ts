@@ -2,6 +2,7 @@ import { rootCertificates } from "node:tls";
 import { createVerify, X509Certificate } from "node:crypto";
 
 import type { HomeTalkResponse } from "../hometalk/contract";
+import { runtimeEnv } from "../platform/settings/runtime-env";
 
 /**
  * Alexa as a HomeTalk channel (voice integration phase 4,
@@ -28,7 +29,7 @@ import type { HomeTalkResponse } from "../hometalk/contract";
 export const ALEXA_TIMESTAMP_TOLERANCE_SECONDS = 150;
 
 /** The configured skill, or null — Alexa is inert until a deployment sets it. */
-export function alexaSkillId(env: Record<string, string | undefined> = process.env): string | null {
+export function alexaSkillId(env: Record<string, string | undefined> = runtimeEnv()): string | null {
   const id = env.ALEXA_SKILL_ID?.trim();
   return id && /^amzn1\.ask\.skill\.[0-9a-f-]{36}$/.test(id) ? id : null;
 }

@@ -1,3 +1,4 @@
+import { runtimeEnv } from "../platform/settings/runtime-env";
 /**
  * Which model key answers for a household, and whose it is.
  *
@@ -44,15 +45,12 @@ export function resolveModelKey(household: HouseholdKey, platform: PlatformKey):
 }
 
 /**
- * WonderHome's own key, from the deployment's environment.
- *
- * There is no platform administration screen to set this on — the platform
- * boundary is API routes only — so it is an environment variable, and the
- * settings screen tells an operator exactly that rather than pointing at a
- * page that does not exist.
+ * WonderHome's own key: the one the owner saved in the platform admin
+ * (Secrets, 16-010), else the deployment's `WONDERHOME_AI_KEY` variable
+ * (`runtimeEnv()` lays the saved value over the environment).
  */
 export function platformKey(
-  env: Record<string, string | undefined> = process.env,
+  env: Record<string, string | undefined> = runtimeEnv(),
 ): PlatformKey {
   const key = env.WONDERHOME_AI_KEY?.trim();
   if (!key) return null;

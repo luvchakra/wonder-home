@@ -1,4 +1,5 @@
 import type { ChannelAdapter, ChannelError, ChannelNotification, ChannelSendResult } from "./channels";
+import { runtimeEnv } from "../platform/settings/runtime-env";
 
 /**
  * WhatsApp as a delivery channel (story 17-006), through Meta's WhatsApp
@@ -241,7 +242,7 @@ export type WhatsAppEnv = {
 };
 
 /** The deployment's WhatsApp, or none. A half-configured channel is not a channel. */
-export function whatsappConfigFromEnv(env: Record<string, string | undefined> = process.env, fetchImpl?: Fetch): WhatsAppEnv | null {
+export function whatsappConfigFromEnv(env: Record<string, string | undefined> = runtimeEnv(), fetchImpl?: Fetch): WhatsAppEnv | null {
   const accessToken = env.WHATSAPP_ACCESS_TOKEN?.trim();
   const phoneNumberId = env.WHATSAPP_PHONE_NUMBER_ID?.trim();
   const templateName = env.WHATSAPP_TEMPLATE_NAME?.trim();

@@ -1,3 +1,4 @@
+import { runtimeEnv } from "../../platform/settings/runtime-env";
 /**
  * Whether this deployment orders on Swiggy Instamart (story 25-032), and
  * where Swiggy is.
@@ -18,7 +19,7 @@ export type InstamartMode = "off" | "live" | "fixture";
 
 const SWIGGY_HOSTS = new Set(["https://mcp.swiggy.com", "https://mcp-staging.swiggy.com"]);
 
-export function instamartMode(env: Record<string, string | undefined> = process.env): InstamartMode {
+export function instamartMode(env: Record<string, string | undefined> = runtimeEnv()): InstamartMode {
   const value = env.WONDERHOME_INSTAMART?.trim().toLowerCase();
   if (value === "on") return "live";
   if (value === "fixture") return "fixture";
@@ -26,13 +27,13 @@ export function instamartMode(env: Record<string, string | undefined> = process.
 }
 
 /** Swiggy's MCP origin: production unless a deployment names staging. */
-export function swiggyBase(env: Record<string, string | undefined> = process.env): string {
+export function swiggyBase(env: Record<string, string | undefined> = runtimeEnv()): string {
   const raw = env.SWIGGY_MCP_BASE?.trim().replace(/\/+$/, "");
   return raw && SWIGGY_HOSTS.has(raw) ? raw : "https://mcp.swiggy.com";
 }
 
 /** The Instamart server under that origin. */
-export function instamartEndpoint(env: Record<string, string | undefined> = process.env): string {
+export function instamartEndpoint(env: Record<string, string | undefined> = runtimeEnv()): string {
   return `${swiggyBase(env)}/im`;
 }
 

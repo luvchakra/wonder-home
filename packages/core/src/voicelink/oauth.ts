@@ -1,6 +1,7 @@
 import { createHash, randomBytes, timingSafeEqual } from "node:crypto";
 
 import { DEFAULT_VOICE_SCOPES, normaliseScopes, type VoiceScope } from "./scopes";
+import { runtimeEnv } from "../platform/settings/runtime-env";
 
 /**
  * WonderHome as the OAuth 2.0 authorization server a voice provider links
@@ -32,7 +33,7 @@ export type VoiceOAuthClient = {
 };
 
 /** The clients this deployment has configured. Empty until someone sets them. */
-export function voiceOAuthClients(env: Record<string, string | undefined> = process.env): VoiceOAuthClient[] {
+export function voiceOAuthClients(env: Record<string, string | undefined> = runtimeEnv()): VoiceOAuthClient[] {
   const clients: VoiceOAuthClient[] = [];
   const id = env.ALEXA_OAUTH_CLIENT_ID?.trim();
   const secret = env.ALEXA_OAUTH_CLIENT_SECRET?.trim();

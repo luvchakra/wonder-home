@@ -6,6 +6,7 @@ import { geminiClient } from "../ai/provider-clients";
 import { SCREEN_KEYS, screenFor } from "../conversation/screens";
 import type { HomeTalkResponse } from "../hometalk/contract";
 import { VOICE_SCOPES, type VoiceScope } from "./scopes";
+import { runtimeEnv } from "../platform/settings/runtime-env";
 
 /**
  * Gemini Voice (voice integration phase 3): Gemini Live as a voice surface
@@ -28,7 +29,7 @@ import { VOICE_SCOPES, type VoiceScope } from "./scopes";
  */
 
 /** The Live model, from Google's current Live API documentation. An operator can move it without a deploy. */
-export function geminiLiveModel(env: Record<string, string | undefined> = process.env): string {
+export function geminiLiveModel(env: Record<string, string | undefined> = runtimeEnv()): string {
   return env.WONDERHOME_GEMINI_LIVE_MODEL?.trim() || "gemini-3.8-live";
 }
 

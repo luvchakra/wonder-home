@@ -137,6 +137,17 @@ if (import.meta.url === `file://${process.argv[1]}`) {
   }
   console.log(`No WonderJobs client code in client chunks (${careers.length} markers checked).`);
 
+  // The settings store is server-only: its functions and the loader never reach a browser.
+  const settings = ["platform_config_read", "platform_config_secret_set", "read saved platform settings"];
+  const settingsHits = leaks(staticDir, settings);
+  if (settingsHits.length > 0) {
+    console.error("The platform settings store is in client JavaScript; it must stay on the server:");
+    for (const { path, phrase } of settingsHits.slice(0, 20)) console.error(`  ${path.replace(`${ROOT}/`, "")}: "${phrase}"`);
+    console.error("Read settings only on the server (packages/core/src/platform/settings/store.ts and server.ts).");
+    process.exit(1);
+  }
+  console.log(`No platform settings store code in client chunks (${settings.length} markers checked).`);
+
   // zod is ~90 KB gzipped: it validates on the server, and a client screen imports
   // option lists from a zod-free module instead (voice/settings-options.ts,
   // performance audit 2026-10-28).

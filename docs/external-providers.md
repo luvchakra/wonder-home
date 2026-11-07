@@ -5,6 +5,7 @@ Reference detail moved verbatim from CLAUDE.md (2026-10-24, token-economy pass).
 ## Summary rules (from CLAUDE.md)
 
 Detail: `docs/external-providers.md`.
+- **Where a provider's settings live (16-010, owner 2026-11-07):** every variable named below can be saved in the platform admin (AI & providers, Integrations, Configuration, Secrets) and is read through `runtimeEnv()` (`platform/settings/runtime-env.ts`): saved value, then the Vercel variable, then the reader's default. Webhook and cron signing secrets stay in Vercel. A new provider variable is a registry entry (`platform/settings/registry.ts`) and a reader defaulting to `runtimeEnv()`.
 - Never invent credentials or claim a live integration. Build provider-neutral ports and deterministic mocks first. A provider is live only after credentials, authentication, contract behaviour and integration tests are configured.
 - **Weather** (`home/weather-service.ts` `householdWeather`) is off unless `WONDERHOME_WEATHER_PROVIDER=open-meteo`. It speaks only when it changes a decision, and appears only on Home's date card.
 - **Films and shows** on the date card (`home/screen-picks.ts`) come from TMDB, off unless `TMDB_API_KEY` is set. Never show a title no provider sent.

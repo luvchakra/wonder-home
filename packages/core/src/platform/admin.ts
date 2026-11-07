@@ -40,6 +40,7 @@ const PLATFORM_CAPABILITIES: Record<PlatformRole, readonly string[]> = {
     "careers.manage",
     "settings.manage",
     "performance.maintain",
+    "settings.manage",
   ],
   owner: [
     "household.read_with_grant",
@@ -57,6 +58,8 @@ const PLATFORM_CAPABILITIES: Record<PlatformRole, readonly string[]> = {
     "settings.manage",
     "performance.maintain",
     "performance.reset",
+    "settings.manage",
+    "secrets.manage",
   ],
 };
 
