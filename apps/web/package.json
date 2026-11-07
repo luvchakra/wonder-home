@@ -12,6 +12,7 @@
     "test": "vitest run --passWithNoTests"
   },
   "dependencies": {
+    "@vercel/analytics": "^2.0.1",
     "@wonderhome/core": "*",
     "next": "16.4.3",
     "react": "19.3.1",
