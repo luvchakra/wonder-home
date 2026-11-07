@@ -51,11 +51,16 @@ import { RelationshipsCard } from "./relationships";
 import { formatDate, formatTime, requireSession } from "../_lib/session";
 import { MemberRoleControl } from "../_components/member-role-control";
 import { ChildQuietControl } from "../_components/child-quiet-control";
+import { TriviaGuardian } from "../_components/trivia-guardian";
 import { LocationAudienceChoice } from "../_components/location-audience-choice";
 import { LocationSharingToggle } from "../_components/location-sharing-toggle";
 import { createAdminClient } from "@wonderhome/core/db/admin";
 import { childQuietHours } from "@wonderhome/core/notifications/child-quiet";
 import { atLocal, localMoment } from "@wonderhome/core/notifications/timing";
+import type { TranslationKey } from "@wonderhome/core/i18n/translate";
+import { TRIVIA_REJECT_REASONS } from "@wonderhome/core/school/trivia";
+import { TRIVIA_CATEGORIES } from "@wonderhome/core/school/trivia-curated";
+import { loadGuardianTrivia, type GuardianTrivia } from "@wonderhome/core/school/trivia-repository";
 
 export const metadata = { title: "Our Family" };
 
@@ -118,6 +123,8 @@ export default async function FamilyPage() {
   const childIds = members.filter((member) => member.memberType === "child").map((member) => member.id);
   const isAdminViewer = isHouseholdAdmin(membership);
   const quietAdmin = childIds.length > 0 ? createAdminClient() : null;
+  // Kids Trivia (08-034): read as the viewer, so RLS gives each child's only to their guardians and the Admins.
+  const triviaRead = childIds.length > 0 && membership.memberType !== "child" ? loadGuardianTrivia(supabase, householdId, childIds).catch(() => new Map<string, GuardianTrivia>()) : Promise.resolve(new Map<string, GuardianTrivia>());
   const [guardedRows, quietRows] = quietAdmin
     ? await Promise.all([
         isAdminViewer
@@ -126,6 +133,7 @@ export default async function FamilyPage() {
         quietAdmin.from("notification_preferences").select("member_id, quiet_from, quiet_until, quiet_from_minute, quiet_until_minute").eq("household_id", householdId).eq("channel", "in_app").in("member_id", childIds),
       ]).catch(() => [{ data: [] }, { data: [] }] as const)
     : [{ data: [] }, { data: [] }];
+  const triviaOf = await triviaRead;
   const guarded = new Set(((guardedRows.data ?? []) as { child_member_id: string }[]).map((row) => row.child_member_id));
   const quietOf = new Map(((quietRows.data ?? []) as { member_id: string; quiet_from: number | null; quiet_until: number | null; quiet_from_minute: number | null; quiet_until_minute: number | null }[]).map((row) => [row.member_id, row]));
   const todayKey = localMoment(now, timezone).dateKey;
@@ -354,6 +362,34 @@ export default async function FamilyPage() {
                             useDefault: t("family.childQuiet.useDefault"),
                             saved: t("family.childQuiet.saved"),
                             restored: t("family.childQuiet.restored"),
+                          }}
+                        />
+                      ) : null}
+                      {member.memberType === "child" && (isAdminViewer || guarded.has(member.id)) && triviaOf.has(member.id) ? (
+                        <TriviaGuardian
+                          householdId={householdId}
+                          childId={member.id}
+                          trivia={triviaOf.get(member.id)!}
+                          labels={{
+                            title: t("trivia.guardian.title", { name: member.displayName }),
+                            on: t("trivia.guardian.on", { name: member.displayName }),
+                            off: t("trivia.guardian.off", { name: member.displayName }),
+                            turnOn: t("trivia.guardian.turnOn"),
+                            turnOff: t("trivia.guardian.turnOff"),
+                            topics: t("trivia.guardian.topics"),
+                            noTopics: t("trivia.guardian.noTopics"),
+                            remove: t("trivia.topics.remove", { topic: "{topic}" }),
+                            recent: t("trivia.guardian.recent"),
+                            noRecent: t("trivia.guardian.noRecent"),
+                            fact: t("trivia.didYouKnow"),
+                            quiz: t("trivia.quizTime"),
+                            right: t("trivia.guardian.right"),
+                            notRight: t("trivia.guardian.notRight"),
+                            turnedAway: t("trivia.guardian.turnedAway", { reasons: "{reasons}" }),
+                            privacy: t("trivia.guardian.privacy", { name: member.displayName }),
+                            reasons: Object.fromEntries(TRIVIA_REJECT_REASONS.map((reason) => [reason, t(`trivia.reason.${reason}` as TranslationKey)])),
+                            categories: Object.fromEntries(TRIVIA_CATEGORIES.map((category) => [category, t(`trivia.category.${category}` as TranslationKey)])),
+                            shownAt: Object.fromEntries((triviaOf.get(member.id)?.recent ?? []).map((shown) => [shown.shownAt, locale.format.date(new Date(shown.shownAt))])),
                           }}
                         />
                       ) : null}

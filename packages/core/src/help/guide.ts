@@ -141,8 +141,8 @@ const SECTIONS: readonly SectionShape[] = [
   {
     id: "school",
     group: "Everyday use",
-    updated: "2026-10-28",
-    keywords: ["goals", "goal", "stars", "streak", "badges", "reward", "level", "fun", "child home", "game", "school", "homework", "exam", "child", "study", "deadline", "portal", "teacher", "screenshot", "notice", "class teacher", "subject teacher", "activity", "class", "music", "piano", "karate", "competition", "medal", "award", "timetable", "time table", "period", "exam", "exams", "unit test", "mid-term", "finals", "syllabus", "study material", "cat", "companion", "pet", "cat name", "earn stars", "ways to earn stars", "score", "scores", "goal from class", "goal from homework", "start from", "rewards earned", "show me"],
+    updated: "2026-11-07",
+    keywords: ["trivia", "quiz", "did you know", "fun facts", "trivia topics", "read it to me", "too hard", "too easy", "goals", "goal", "stars", "streak", "badges", "reward", "level", "fun", "child home", "game", "school", "homework", "exam", "child", "study", "deadline", "portal", "teacher", "screenshot", "notice", "class teacher", "subject teacher", "activity", "class", "music", "piano", "karate", "competition", "medal", "award", "timetable", "time table", "period", "exam", "exams", "unit test", "mid-term", "finals", "syllabus", "study material", "cat", "companion", "pet", "cat name", "earn stars", "ways to earn stars", "score", "scores", "goal from class", "goal from homework", "start from", "rewards earned", "show me"],
   },
   {
     id: "meals-and-shopping",

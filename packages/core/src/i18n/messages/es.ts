@@ -1,6 +1,7 @@
 import type { Catalog } from "./en";
 import { billsEs } from "./areas/bills/es";
 import { schoolEs } from "./areas/school/es";
+import { triviaEs } from "./areas/trivia/es";
 import { recipesEs } from "./areas/recipes/es";
 import { healthEs } from "./areas/health/es";
 import { helpersEs } from "./areas/helpers/es";
@@ -1116,6 +1117,7 @@ export const es: Catalog = {
   "mealForm.ideas.for": "Para",
   ...billsEs,
   ...schoolEs,
+  ...triviaEs,
   ...recipesEs,
   ...healthEs,
   ...helpersEs,

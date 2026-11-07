@@ -42,6 +42,8 @@ export const MODEL_TIMEOUT_MS = {
   sleep: 45_000,
   /** HomeSend's daily tidy: whether a few waiting items no longer apply. Nobody waits; a slow answer keeps every item. */
   tidy: 20_000,
+  /** Kids Trivia: whether a topic a child typed suits their age. The child is waiting; past this the rules' answer stands. */
+  trivia_check: 8_000,
 } as const;
 
 export type ModelCallKind = keyof typeof MODEL_TIMEOUT_MS;

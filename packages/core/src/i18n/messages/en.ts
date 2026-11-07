@@ -10,6 +10,7 @@
  */
 import { billsEn } from "./areas/bills/en";
 import { schoolEn } from "./areas/school/en";
+import { triviaEn } from "./areas/trivia/en";
 import { recipesEn } from "./areas/recipes/en";
 import { healthEn } from "./areas/health/en";
 import { helpersEn } from "./areas/helpers/en";
@@ -1126,6 +1127,7 @@ export const en = {
   "mealForm.ideas.for": "For",
   ...billsEn,
   ...schoolEn,
+  ...triviaEn,
   ...recipesEn,
   ...healthEn,
   ...helpersEn,
