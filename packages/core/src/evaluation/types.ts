@@ -13,7 +13,7 @@
  * golden household (`households.ts`, §3).
  */
 
-export const SURFACES = ["hometalk", "homesend", "homebrain"] as const;
+export const SURFACES = ["hometalk", "homesend", "homebrain", "trivia"] as const;
 export type Surface = (typeof SURFACES)[number];
 
 /** §4 — what a case is about. A case has one primary category. */
@@ -201,7 +201,20 @@ export type HomeBrainCase = CaseBase & {
   previousQuestion?: string;
 };
 
-export type EvalCase = HomeTalkCase | HomeSendCase | HomeBrainCase;
+/**
+ * Kids Trivia (story 08-034): a topic a child typed, checked by the rules and,
+ * on a provider's run, the model. A topic unfit for the child's age that ends
+ * up stored is an unsafe execution, counted in the Unsafe Action Rate.
+ * Observed as interpretation "accepted" or "rejected:<reason>", action
+ * "store" or "turn_away".
+ */
+export type TriviaCase = CaseBase & {
+  surface: "trivia";
+  topic: string;
+  ageBand: import("../school/trivia").TriviaBand;
+};
+
+export type EvalCase = HomeTalkCase | HomeSendCase | HomeBrainCase | TriviaCase;
 
 /** What a runner observed, in the same shape as an expectation. */
 export type Observation = {

@@ -1,3 +1,5 @@
+import { looksLikeInstruction, normaliseTopic } from "../school/trivia";
+import { decideTopic, type TriviaTopicJudge } from "../school/trivia-safety";
 import { groundIntakeDate, type IntakeExtraction } from "../ai/classify-intake";
 import { reviewIntakeKind } from "../ai/intake-kind-check";
 import { DEFAULT_DATA_USE, minimiseContext, pseudonymiseText, reidentifyIntent, type Person } from "../ai/privacy";
@@ -36,7 +38,7 @@ import { checkVerdict, decideByRules, MONEY_OR_HEALTH, newerFromSameSender, tidy
 import type { TidyJudge } from "../homesend/tidy-model";
 import { compareStages } from "./compare";
 import { calendarFor, contextItemsFor, GOLDEN_HOUSEHOLDS, groundingEnvFor, heldForAdultsFor, memberNames, memberOf, peopleOf, viewerFor } from "./households";
-import type { CaseResult, EvalCase, Expectation, HomeBrainCase, HomeSendCase, HomeTalkCase, Observation } from "./types";
+import type { CaseResult, EvalCase, Expectation, HomeBrainCase, HomeSendCase, HomeTalkCase, Observation, TriviaCase } from "./types";
 
 /**
  * The runners (Wave 5 §2, §5–§7): each drives the real production pipeline
@@ -58,6 +60,8 @@ export type Models = {
   compose?: AnswerComposer;
   /** HomeSend's daily tidy verdict. Absent: the case's recorded verdict. */
   tidy?: TidyJudge;
+  /** Kids Trivia's topic check. Absent: the rules alone. */
+  triviaCheck?: TriviaTopicJudge;
 };
 
 const EMPTY: Observation = {
@@ -651,6 +655,28 @@ export async function observeHomeBrain(c: HomeBrainCase, models: Models = {}): P
   };
 }
 
+// --- Kids Trivia ---------------------------------------------------------------
+
+export async function observeTrivia(c: TriviaCase, models: Models = {}): Promise<Observation> {
+  const topic = normaliseTopic(c.topic);
+  if (!topic) {
+    // Not a topic at all; an instruction is told the same as an unfit topic (trivia-actions.ts).
+    const instruction = looksLikeInstruction(c.topic);
+    return { ...EMPTY, interpretation: "rejected:not_a_topic", action: "turn_away", safety: { consequential: false, executed: false, refused: true, injectionFlagged: instruction }, answer: instruction ? "Let's pick another topic" : "Try a short topic" };
+  }
+  const decision = await decideTopic(topic, c.ageBand, models.triviaCheck ?? null);
+  return {
+    ...EMPTY,
+    interpretation: decision.ok ? "accepted" : `rejected:${decision.reason}`,
+    action: decision.ok ? "store" : "turn_away",
+    // Storing is the act: a topic kept for a child is what must never happen to an unfit one.
+    safety: { consequential: false, executed: decision.ok, refused: !decision.ok, injectionFlagged: !decision.ok && decision.reason === "not_a_topic" },
+    executor: decision.ok ? "ok" : "not_run",
+    // The child is told only this, never why.
+    answer: decision.ok ? topic.label : "Let's pick another topic",
+  };
+}
+
 // --- one case, any surface --------------------------------------------------------
 
 export async function runCase(c: EvalCase, models: Models = {}): Promise<CaseResult> {
@@ -660,7 +686,7 @@ export async function runCase(c: EvalCase, models: Models = {}): Promise<CaseRes
   const turns: { expected: Expectation; observed: Observation }[] =
     c.surface === "hometalk"
       ? (await observeConversation(c, models)).map((observed, index) => ({ expected: index === 0 ? c.expected : c.followUps![index - 1]!.expected, observed }))
-      : [{ expected: c.expected, observed: c.surface === "homesend" ? await observeHomeSend(c, models) : await observeHomeBrain(c, models) }];
+      : [{ expected: c.expected, observed: c.surface === "homesend" ? await observeHomeSend(c, models) : c.surface === "trivia" ? await observeTrivia(c, models) : await observeHomeBrain(c, models) }];
   // A simulated outage is the point of the case, not a failure of it: what
   // is scored is what the household got despite it.
   const comparisons = turns.map(({ expected, observed }, index) =>

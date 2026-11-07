@@ -1,4 +1,4 @@
-import { BookOpen, CalendarHeart, Flame, PartyPopper, Sparkles, Star, Target, Trophy } from "lucide-react";
+import { BookOpen, CalendarHeart, Flame, Heart, PartyPopper, Sparkles, Star, Target, Trophy } from "lucide-react";
 
 import { listEvents } from "@wonderhome/core/family/repository";
 import type { FamilyEvent } from "@wonderhome/core/family/schedule";
@@ -23,9 +23,16 @@ import { SectionHeader } from "@wonderhome/core/ui/section-header";
 import { SegmentedControl } from "@wonderhome/core/ui/segmented-control";
 import { ExpandableRow } from "@wonderhome/core/ui/expandable-row";
 import { EmptyState } from "@wonderhome/core/ui/states";
+import { CollapsibleSection } from "@wonderhome/core/ui/collapsible-section";
+import { ageBandFor, parseDateOfBirth } from "@wonderhome/core/identity/age";
+import { pickNextCard, quizStreak, triviaBand } from "@wonderhome/core/school/trivia";
+import { TRIVIA_CATEGORIES } from "@wonderhome/core/school/trivia-curated";
+import { loadChildTrivia, topicCardsFor } from "@wonderhome/core/school/trivia-repository";
 
 import { CompanionCard } from "../_components/companion-card";
 import { KidDoneButton } from "../_components/kid-done-button";
+import { TriviaCard, TriviaTopics } from "../_components/trivia-card";
+import { toTriviaView } from "../_lib/trivia-view";
 import { ScrollToSection } from "../_components/scroll-to-section";
 import { eventWhen } from "../_lib/event-when";
 import { formatDate, formatTime, type Session } from "../_lib/session";
@@ -53,7 +60,7 @@ export async function ChildHome({ session, tab = "today" }: { session: Session; 
   const today = new Intl.DateTimeFormat("en-CA", { timeZone: timezone }).format(now);
   const firstName = view.displayName.split(" ")[0] ?? view.displayName;
 
-  const [items, events, goals, checkIns, companion, newest, activities, periods, duties, sayings] = await Promise.all([
+  const [items, events, goals, checkIns, companion, newest, activities, periods, duties, sayings, trivia] = await Promise.all([
     listSchoolItems(supabase, householdId, { childMemberId: memberId }).catch(() => [] as SchoolItem[]),
     listEvents(supabase, householdId, { from: new Date(now.getTime() - 86_400_000), to: new Date(now.getTime() + 14 * 86_400_000) }).catch(() => [] as FamilyEvent[]),
     listGoals(supabase, householdId, memberId).catch(() => []),
@@ -90,6 +97,8 @@ export async function ChildHome({ session, tab = "today" }: { session: Session; 
       ),
     // What the cat has not told them yet, for their age (never twice).
     nextSayings(supabase, memberId, session.locale.preferences.language).catch(() => null),
+    // Kids Trivia (08-034): their topics, the cards they've seen and how hard they like it.
+    loadChildTrivia(supabase, householdId, memberId, triviaBand(view.ageBand ?? ageBandFor(parseDateOfBirth(membership.dateOfBirth ?? "")))).catch(() => null),
   ]);
 
   const school = childView(items, now);
@@ -147,6 +156,11 @@ export async function ChildHome({ session, tab = "today" }: { session: Session; 
     ...(line.href ? { href: line.href } : {}),
     ...(line.sayingId ? { sayingId: line.sayingId } : {}),
   }));
+
+  // One trivia card each opening: the topic after last time's, the other kind, never the same card twice running.
+  const triviaCards = trivia?.enabled ? topicCardsFor(trivia.topics) : null;
+  const triviaPick = trivia && triviaCards ? pickNextCard({ topics: triviaCards.topics, history: trivia.history, level: trivia.level, mode: "open", seed: `${memberId}:${today}:${trivia.history.length}` }) : null;
+  const triviaView = trivia && triviaCards && triviaPick ? toTriviaView({ pick: triviaPick, shownId: null, uncovered: triviaCards.uncovered, streak: quizStreak(trivia.history), level: trivia.level }) : null;
 
   const doneLabels = (name: string, stars: number) => ({
     doIt: t("kids.do"),
@@ -208,6 +222,59 @@ export async function ChildHome({ session, tab = "today" }: { session: Session; 
 
         {active === "today" ? (
           <>
+            {trivia?.enabled && triviaView ? (
+              <section id="trivia" className="scroll-mt-20 space-y-3">
+                <TriviaCard
+                  householdId={householdId}
+                  initial={triviaView}
+                  language={session.locale.preferences.language}
+                  labels={{
+                    didYouKnow: t("trivia.didYouKnow"),
+                    quizTime: t("trivia.quizTime"),
+                    about: t("trivia.about", { topic: "{topic}" }),
+                    uncovered: t("trivia.uncovered", { topic: "{topic}", category: "{category}" }),
+                    another: t("trivia.another"),
+                    nextTopic: t("trivia.nextTopic"),
+                    readAloud: t("trivia.readAloud"),
+                    stopReading: t("trivia.stopReading"),
+                    tooHard: t("trivia.tooHard"),
+                    tooEasy: t("trivia.tooEasy"),
+                    easier: t("trivia.easier"),
+                    harder: t("trivia.harder"),
+                    right: t("trivia.right"),
+                    wrong: t("trivia.wrong", { answer: "{answer}" }),
+                    streak: t("trivia.streak", { count: "{count}" }),
+                    inEnglish: t("trivia.inEnglish"),
+                    choices: t("trivia.choices"),
+                    categories: Object.fromEntries(TRIVIA_CATEGORIES.map((category) => [category, t(`trivia.category.${category}` as TranslationKey)])),
+                  }}
+                />
+                <CollapsibleSection icon={Heart} tone="school" as="h3" title={t("trivia.topics.title")} intro={t("trivia.topics.lede")} count={trivia.topics.length || undefined} defaultOpen={trivia.topics.length === 0}>
+                  <TriviaTopics
+                    householdId={householdId}
+                    topics={trivia.topics.map((topic) => ({ id: topic.id, label: topic.label }))}
+                    labels={{
+                      field: t("trivia.topics.field"),
+                      placeholder: t("trivia.topics.placeholder"),
+                      add: t("trivia.topics.add"),
+                      adding: t("trivia.topics.adding"),
+                      suggested: t("trivia.topics.suggested"),
+                      remove: t("trivia.topics.remove", { topic: "{topic}" }),
+                      none: t("trivia.topics.none"),
+                      suggestions: t("trivia.topics.suggestions").split("|"),
+                      errors: {
+                        pick_another: t("trivia.error.pick_another"),
+                        too_long: t("trivia.error.too_long"),
+                        too_many: t("trivia.error.too_many"),
+                        slow_down: t("trivia.error.slow_down"),
+                        off: t("trivia.error.off"),
+                        failed: t("trivia.error.failed"),
+                      },
+                    }}
+                  />
+                </CollapsibleSection>
+              </section>
+            ) : null}
             <section id="missions" className="scroll-mt-20">
               <SectionHeader title={t("kids.today.missions")} count={missionCount || undefined} />
               {missionCount === 0 ? (

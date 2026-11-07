@@ -1,6 +1,7 @@
 import type { Catalog } from "./en";
 import { billsHi } from "./areas/bills/hi";
 import { schoolHi } from "./areas/school/hi";
+import { triviaHi } from "./areas/trivia/hi";
 import { recipesHi } from "./areas/recipes/hi";
 import { healthHi } from "./areas/health/hi";
 import { helpersHi } from "./areas/helpers/hi";
@@ -1116,6 +1117,7 @@ export const hi: Catalog = {
   "mealForm.ideas.for": "किसके लिए",
   ...billsHi,
   ...schoolHi,
+  ...triviaHi,
   ...recipesHi,
   ...healthHi,
   ...helpersHi,

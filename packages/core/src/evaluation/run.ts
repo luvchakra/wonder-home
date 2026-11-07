@@ -2,6 +2,7 @@ import { classifyIntake } from "../ai/classify-intake";
 import { CLAUDE_ANSWER_MODEL, CLAUDE_INTAKE_MODEL, CLAUDE_UNDERSTANDING_MODEL, createAnswerComposer, createClaudeUnderstanding, createGeminiUnderstanding, createOpenAIUnderstanding, GEMINI_MODEL, OPENAI_MODEL } from "../ai/model-client";
 import type { ModelKey } from "../ai/model-key";
 import { createTidyJudge } from "../homesend/tidy-model";
+import { createTriviaTopicJudge } from "../school/trivia-safety";
 import { GOLDEN_CASES } from "./cases";
 import { runCase, type Models } from "./runners";
 import type { EvalCase, EvaluationRun } from "./types";
@@ -45,6 +46,7 @@ export function modelsFor(target: RunTarget): { models: Models; model: string } 
         ),
       compose: createAnswerComposer(target.provider, target.key),
       tidy: createTidyJudge(target.provider, target.key),
+      triviaCheck: createTriviaTopicJudge(target.provider, target.key),
     },
   };
 }

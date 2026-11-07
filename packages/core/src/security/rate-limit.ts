@@ -65,6 +65,8 @@ export const RATE_LIMITS = {
   "voice.tool": { max: 120, windowSeconds: 900 },
   /** Gemini Live turns written down for the chat, per member: one per turn of a lively conversation. */
   "voice.transcribe": { max: 120, windowSeconds: 900 },
+  /** Kids Trivia topics a child adds, per member: each may ask the model whether it suits them. */
+  "trivia.topic": { max: 20, windowSeconds: 3600 },
   /** "Send a test" notification, per member: enough to check each channel, never a way to spam one (story 27-003). */
   "notification.test": { max: 8, windowSeconds: 600 },
   /** Area searches for weather, per member (story 17-007): each is an outbound geocoding call. */
@@ -122,6 +124,7 @@ export const RATE_LIMIT_SCOPES: Record<RateLimitBucket, Scope> = {
   "voice.tool": "session",
   "voice.transcribe": "member",
   "notification.test": "member",
+  "trivia.topic": "member",
   "weather.search": "member",
   "places.search": "member",
   "event.reply": "ip",
