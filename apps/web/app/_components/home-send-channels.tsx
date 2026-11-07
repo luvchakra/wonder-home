@@ -1,6 +1,6 @@
 "use client";
 
-import { Check, ChevronRight, Copy, Download, Mail, MessageCircle } from "lucide-react";
+import { Check, ChevronRight, Contact, Copy, Download, Mail, MessageCircle, Send } from "lucide-react";
 import Link from "next/link";
 import { useActionState, useState } from "react";
 
@@ -100,6 +100,13 @@ function WhatsAppChannel({ number, connected, labels }: { number: string; connec
   );
 }
 
+/** The forwarding address as a vCard (RFC 6350 3.0 for the widest phone support), as a data URI. */
+export function vcardHref(address: string, name: string): string {
+  const clean = (value: string) => value.replace(/[\r\n;,]/g, " ").trim();
+  const card = ["BEGIN:VCARD", "VERSION:3.0", `FN:${clean(name)}`, `N:;${clean(name)};;;`, "ORG:WonderHome", `EMAIL;TYPE=INTERNET:${clean(address)}`, "END:VCARD"].join("\r\n");
+  return `data:text/vcard;charset=utf-8,${encodeURIComponent(card)}`;
+}
+
 function EmailChannel({
   householdId,
   isAdmin,
@@ -154,6 +161,17 @@ function EmailChannel({
             {copied ? labels.copied : labels.copy}
           </Pill>
         </div>
+      ) : null}
+      {/* Add to contacts (14-066): the address as a contact card, so forwarding to it is picking a name, not typing one. */}
+      {address?.status === "active" ? (
+        <a
+          href={vcardHref(address.address, labels.contactName)}
+          download="WonderHome HomeSend.vcf"
+          className="inline-flex items-center gap-1.5 text-sm font-medium text-[var(--wh-primary)] underline-offset-2 hover:underline"
+        >
+          <Contact aria-hidden className="size-4" />
+          {labels.addToContacts}
+        </a>
       ) : null}
 
       {isAdmin ? (
@@ -229,5 +247,48 @@ function InstallChannel({ labels }: { labels: ChannelLabels }) {
         </Button>
       </Sheet>
     </>
+  );
+}
+
+/**
+ * The first-time explainer (14-066): three lines and the two one-tap setups,
+ * shown only while the household has never sent HomeSend anything — so it is
+ * seen once, with nothing stored to remember it.
+ */
+export function HomeSendWelcome({ whatsapp, labels }: { whatsapp: { connected: boolean } | null; labels: ChannelLabels }) {
+  const install = useInstallPrompt();
+  const [guide, setGuide] = useState(false);
+  const showWhatsApp = Boolean(whatsapp && !whatsapp.connected);
+  return (
+    <Card className="space-y-3 p-4">
+      <div className="flex items-start gap-3">
+        <IconTile icon={Send} tone="primary" />
+        <div className="min-w-0 flex-1 space-y-1 text-sm">
+          <p className="font-semibold">{labels.welcomeTitle}</p>
+          <p className="text-[var(--wh-foreground-muted)]">{labels.welcome1}</p>
+          <p className="text-[var(--wh-foreground-muted)]">{labels.welcome2}</p>
+          <p className="text-[var(--wh-foreground-muted)]">{labels.welcome3}</p>
+        </div>
+      </div>
+      {showWhatsApp || !install.installed ? (
+        <div className="flex flex-wrap gap-2">
+          {showWhatsApp ? (
+            <Link href="/settings/connections#whatsapp" className="inline-flex items-center gap-1.5 rounded-full bg-[var(--wh-primary)] px-3 py-1.5 text-sm font-medium text-[var(--wh-primary-foreground)]">
+              <MessageCircle aria-hidden className="size-4" />
+              {labels.welcomeWhatsApp}
+            </Link>
+          ) : null}
+          {!install.installed ? (
+            <Pill type="button" tone="quiet" onClick={() => (install.canPrompt ? void install.prompt() : setGuide(true))}>
+              <Download aria-hidden className="size-3.5" />
+              {labels.welcomeShare}
+            </Pill>
+          ) : null}
+        </div>
+      ) : null}
+      <Sheet open={guide} onOpenChange={setGuide} title={labels.installTitle} description={labels.installDescription}>
+        <p className="text-sm text-[var(--wh-foreground-muted)]">{labels.installBody}</p>
+      </Sheet>
+    </Card>
   );
 }
