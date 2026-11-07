@@ -10,6 +10,7 @@ export const homesendEs: AreaCatalog<typeof homesendEn> = {
   "homesend.shareError.upload": "No se pudo guardar lo que compartiste: vuelve a enviarlo.",
   "homesend.shareError.rateLimited": "Se ha compartido demasiado desde esta conexión últimamente: espera unos minutos y vuelve a intentarlo.",
   "homesend.shared.added": "Recibido — {title} está añadido. Deshaz si no es correcto.",
+  "homesend.shared.moved": "Recibido — {title} ya estaba registrado, así que pasó a su nuevo día. Deshaz si no es correcto.",
   "homesend.shared.waiting": "Recibido — {title} necesita una palabra tuya, abajo.",
   "homesend.shared.failed": "Recibido — no se pudo leer. Está en “No se pudo leer”.",
   "homesend.shared.reading": "Recibido — leyéndolo ahora.",

@@ -241,7 +241,7 @@ export default async function HomeSendPage({
   const sharedTitle = sharedItem?.extracted?.title?.trim() || t("homesend.shared.something");
   const sharedChange = sharedItem?.status === "routed" ? changes.find((change) => change.intakeId === sharedItem.id && !change.undoneAt) : undefined;
   const shared = sharedChange
-    ? { notice: t("homesend.shared.added", { title: sharedTitle }), changeId: sharedChange.id, title: sharedTitle, itemId: sharedChange.intakeId, whole: sharedChange.domain === "purchase" }
+    ? { notice: t(sharedChange.changeType === "updated" ? "homesend.shared.moved" : "homesend.shared.added", { title: sharedTitle }), changeId: sharedChange.id, title: sharedTitle, itemId: sharedChange.intakeId, whole: sharedChange.domain === "purchase" }
     : null;
   const sharedNote = sharedItem && !shared
     ? sharedItem.status === "failed"

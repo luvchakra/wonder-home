@@ -10,6 +10,7 @@ export const homesendFr: AreaCatalog<typeof homesendEn> = {
   "homesend.shareError.upload": "Ce partage n’a pas pu être enregistré : essayez de l’envoyer à nouveau.",
   "homesend.shareError.rateLimited": "Trop de partages depuis cette connexion récemment : patientez quelques minutes puis réessayez.",
   "homesend.shared.added": "Bien reçu — {title} est ajouté. Annulez si ce n'est pas juste.",
+  "homesend.shared.moved": "Bien reçu — {title} était déjà enregistré, il a été déplacé à son nouveau jour. Annulez si ce n'est pas juste.",
   "homesend.shared.waiting": "Bien reçu — {title} attend un mot de vous, ci-dessous.",
   "homesend.shared.failed": "Bien reçu — impossible de le lire. Il est dans « Illisible ».",
   "homesend.shared.reading": "Bien reçu — lecture en cours.",

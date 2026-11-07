@@ -18,7 +18,7 @@ import { confirmHomeSendEntry, getHomeSendChange, hasActiveHomeSendChanges, list
 import type { ConfirmationDecision } from "@wonderhome/core/homesend/confirmation";
 import type { DocumentPlan } from "@wonderhome/core/homesend/plan";
 import { type HomeSendChange, type HomeSendExtraction, type HomeSendItem, type HomeSendKind, type HomeSendReviewOutcome } from "@wonderhome/core/homesend/items";
-import { reconcileHomeSend, type HomeSendReconciliation } from "@wonderhome/core/homesend/reconcile";
+import { reconcileHomeSend, shortDate, type HomeSendReconciliation } from "@wonderhome/core/homesend/reconcile";
 import type { SubjectResolution } from "@wonderhome/core/homesend/resolve";
 import { confirmTranscript, ingestFile, ingestText, IngestRejected, type IngestOutcome, type IngestState } from "@wonderhome/core/homesend/ingest";
 import { dismissHomeSendItem, getHomeSendItem, listRecordedReceipts, markHomeSendUndone, routeHomeSendItem } from "@wonderhome/core/homesend/repository";
@@ -80,6 +80,12 @@ export type SendHomeItemState = {
  * "I found Asmi's existing Science Exhibition for 28 Sep" before anyone
  * presses Add.
  */
+/** "Science Exhibition — moved from 28 Sep to 2 Oct, not added twice." */
+function movedNotice(title: string, moved: { from: string | null; to: string }): string {
+  const from = shortDate(moved.from);
+  return `${title} — moved ${from ? `from ${from} ` : ""}to ${shortDate(moved.to) ?? moved.to} on its own, not added twice. Undo puts the old day back.`;
+}
+
 async function withReview(
   supabase: Awaited<ReturnType<typeof createClient>>,
   membership: Awaited<ReturnType<typeof requireMembership>>,
@@ -105,8 +111,10 @@ async function withReview(
       supabase,
       membership,
       { id: item.id, kind: item.classifiedKind, extracted: item.extracted, subject: review.subject },
-      { checking: { unconfirmed, confidence: review.understanding?.score ?? null, source } },
+      { checking: { unconfirmed, confidence: review.understanding?.score ?? null, source }, ...(review.confirmation.update ? { update: review.confirmation.update } : {}) },
     ).catch(() => null);
+    // A record on file moved to its new day, not a second copy (14-066, part 3).
+    if (applied?.moved) return { notice: movedNotice(applied.title, applied.moved), autoApplied: { ...applied, itemId: item.id } };
     // How sure it was, with the entry (the owner, 2026-10-26).
     // The score's own reason, not the decision's (design §7).
     const sure = sureClause({ percent: scorePercent(review.understanding?.score), why: sureWhy(review.understanding) });

@@ -9,6 +9,7 @@ export const homesendEn = {
   "homesend.shareError.upload": "That share couldn't be saved — please try sending it in again.",
   "homesend.shareError.rateLimited": "Too many shares from this connection recently — please wait a few minutes and try again.",
   "homesend.shared.added": "Got it — {title} is added. Undo if that's not right.",
+  "homesend.shared.moved": "Got it — {title} was already on record, so it moved to its new day. Undo if that's not right.",
   "homesend.shared.waiting": "Got it — {title} needs a word from you, below.",
   "homesend.shared.failed": "Got it — it couldn't be read. It's under “Couldn't be read”.",
   "homesend.shared.reading": "Got it — reading it now.",

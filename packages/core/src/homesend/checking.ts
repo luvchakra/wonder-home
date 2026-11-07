@@ -10,9 +10,11 @@ import { FROM_A_FILE, type ReadingCheck } from "./verify";
  *
  * Every question comes from evidence, never from a guess:
  *
- *   - read from a photo or a file: each key detail the reading holds is
- *     confirmed ("Did I read the amount right: ₹2,140?"), because nothing could
- *     be checked word by word (`verify.ts` `FROM_A_FILE`);
+ *   - read from a photo or a file: one "Looks right?" over everything it read
+ *     ("Electricity · ₹2,140 · due 12 Nov"), because nothing could be checked
+ *     word by word (`verify.ts` `FROM_A_FILE`). One yes confirms it (14-066,
+ *     part 3: one tap instead of up to three); a no goes on to the details,
+ *     one at a time, still three questions in all;
  *   - a useful detail the reading lacks (`completeness.ts`, need "useful"):
  *     asked, as HomeTalk asks before an add;
  *   - otherwise (heard at 93%, or a "medium" reading): the entry itself is
@@ -30,8 +32,12 @@ import { FROM_A_FILE, type ReadingCheck } from "./verify";
 
 export const MAX_CHECK_QUESTIONS = 3;
 
-/** Confirm what was read, or fill in what wasn't; "correct" follows a "no" to a confirm. */
-export type CheckMode = "confirm" | "fill" | "correct";
+/**
+ * Confirm what was read, or fill in what wasn't; "correct" follows a "no" to
+ * a confirm. "confirm_all" is the one "Looks right?" over a photo's or file's
+ * whole reading (14-066, part 3); its `field` is the first detail it names.
+ */
+export type CheckMode = "confirm" | "fill" | "correct" | "confirm_all";
 export type CheckQuestion = { field: DetailField; mode: Exclude<CheckMode, "correct"> };
 
 export type CheckOutcome = "yes" | "corrected" | "filled" | "skipped";
@@ -52,7 +58,8 @@ export type CheckingState = {
   /** The household's bar when it was added, in percent. */
   percent: number;
   planned: CheckQuestion[];
-  answered: { field: DetailField; outcome: CheckOutcome; via: CheckChannel; at: string }[];
+  /** `whole`: the answer was to "Looks right?" over the whole reading. */
+  answered: { field: DetailField; outcome: CheckOutcome; via: CheckChannel; at: string; whole?: true }[];
   /** The question waiting for an answer; its `ordinal` is its place in `planned`, from 1. */
   open: { field: DetailField; mode: CheckMode; ordinal: number; retried?: true } | null;
   /** How it ended: over the bar, or left for a person to check. Null while asking. */
@@ -134,6 +141,8 @@ export function planCheckQuestions(input: {
   for (const spec of missingDetails(kind, input.extracted)) if (spec.need === "useful" && spec.answer !== "person") add({ field: spec.field, mode: "fill" });
   // Otherwise the entry itself is confirmed, by the first thing a person knows it by.
   if (!fromAFile && held[0]) planned.unshift({ field: held[0], mode: "confirm" });
+  // A photo or file: one "Looks right?" first; its details follow only after a no, so three questions at most in all.
+  if (fromAFile && held[0]) return [{ field: held[0], mode: "confirm_all" }, ...planned.slice(0, MAX_CHECK_QUESTIONS - 1)];
   return planned.slice(0, MAX_CHECK_QUESTIONS);
 }
 
@@ -176,9 +185,12 @@ function clamp(value: number): number {
  * the gap to 100%. Three questions, two answered from 90%: 90 + 10 × 2⁄3 ≈ 96.7%.
  */
 export function checkedScore(state: Pick<CheckingState, "base" | "planned" | "answered">): number {
-  if (state.planned.length === 0) return clamp(state.base);
-  const settled = state.answered.filter((entry) => entry.outcome !== "skipped").length;
-  return clamp(state.base + (1 - state.base) * Math.min(1, settled / state.planned.length));
+  // "Looks right" over the whole reading settles all of it.
+  if (state.answered.some((entry) => entry.whole && entry.outcome === "yes")) return 1;
+  const details = state.planned.filter((question) => question.mode !== "confirm_all");
+  if (details.length === 0) return clamp(state.base);
+  const settled = state.answered.filter((entry) => !entry.whole && entry.outcome !== "skipped").length;
+  return clamp(state.base + (1 - state.base) * Math.min(1, settled / details.length));
 }
 
 /** Strictly above the household's bar, as `confirmation.ts` reads it. */
@@ -189,7 +201,7 @@ export function overTheBar(state: CheckingState): boolean {
 // --- Reading an answer -----------------------------------------------------------------
 
 const YES = /^(?:y|yes|yeah|yep|yup|ok|okay|correct|right|that'?s right|that'?s correct|looks right|it'?s right|exactly|sure|haan|ha|ji|haan ji|si|sí|oui|ja|是|对|好|👍|✅)(?:[ ,!.]+(?:that'?s right|it is|thanks|thank you|correct))?[.!]*$/i;
-const NO = /^(?:n|no|nope|nah|wrong|not right|that'?s wrong|incorrect|nahi|nahin|non|nein|不|不对|👎|❌)[.!]*$/i;
+const NO = /^(?:n|no|nope|nah|wrong|not right|that'?s wrong|incorrect|fix (?:it|something|this)|something'?s wrong|nahi|nahin|non|nein|不|不对|👎|❌)[.!]*$/i;
 /** "No, it's 3 litres" — the correction after the no. */
 const NO_THEN = /^(?:no|nope|nah|not quite|wrong|actually)[,.!:;\s-]+(?:it'?s|it is|it was|should be|make it)?\s*/i;
 
@@ -211,8 +223,11 @@ export function splitCheckAnswer(mode: CheckMode, answer: string): CheckReading 
   const said = answer.trim().replace(/[*_~`]/g, "").replace(/\s+/g, " ");
   if (!said || said.length > 160) return { kind: "unread" };
   if (/^(?:skip|pass|don'?t know|not sure|dunno|no idea|later|leave it)[.!]*$/i.test(said)) return { kind: "skip" };
-  if (mode === "confirm" && YES.test(said)) return { kind: "yes" };
-  if (mode === "confirm" && NO.test(said)) return { kind: "no" };
+  const confirming = mode === "confirm" || mode === "confirm_all";
+  if (confirming && YES.test(said)) return { kind: "yes" };
+  if (confirming && NO.test(said)) return { kind: "no" };
+  // "Looks right?" over a whole reading: anything but a yes or a skip goes on to the details, one at a time.
+  if (mode === "confirm_all") return { kind: "no" };
   const corrected = said.replace(NO_THEN, "").trim();
   if (!corrected) return mode === "confirm" ? { kind: "no" } : { kind: "unread" };
   if (YES.test(corrected) || NO.test(corrected)) return { kind: "unread" };
@@ -223,7 +238,10 @@ export function splitCheckAnswer(mode: CheckMode, answer: string): CheckReading 
 export function afterAnswer(state: CheckingState, outcome: CheckOutcome, via: CheckChannel, at: Date): CheckingState {
   const open = state.open;
   if (!open) return state;
-  const answered = [...state.answered, { field: open.field, outcome, via, at: at.toISOString() }];
+  const whole = open.mode === "confirm_all";
+  const answered = [...state.answered, { field: open.field, outcome, via, at: at.toISOString(), ...(whole ? { whole: true as const } : {}) }];
+  // A skipped "Looks right?" ends with one "please check", never the detail questions behind it.
+  if (whole && outcome === "skipped") return { ...state, answered, open: null, done: "please_check" };
   const next = state.planned[open.ordinal];
   const moved = { ...state, answered };
   // Over the household's bar: confirmed now, whatever is left to ask ("till you reach the threshold").
@@ -236,12 +254,23 @@ export function afterAnswer(state: CheckingState, outcome: CheckOutcome, via: Ch
 export function questionsLeft(value: unknown): number {
   const state = readCheckingState(value);
   if (!state?.open || state.done) return 0;
+  // One tap settles it; the details behind it are asked only after a no.
+  if (state.open.mode === "confirm_all") return 1;
   return Math.max(0, state.planned.length - state.open.ordinal + 1);
 }
 
-/** A "no" to a confirm: the same question, asking what it should be — not a new one. */
+/**
+ * A "no" to a confirm: the same question, asking what it should be — not a
+ * new one. A "no" to "Looks right?" goes on to the details it read, one at a
+ * time; with none planned it ends with one "please check".
+ */
 export function askCorrection(state: CheckingState): CheckingState {
-  return state.open ? { ...state, open: { ...state.open, mode: "correct" } } : state;
+  if (!state.open) return state;
+  if (state.open.mode === "confirm_all") {
+    const next = state.planned[state.open.ordinal];
+    return next ? { ...state, open: { field: next.field, mode: next.mode, ordinal: state.open.ordinal + 1 } } : { ...state, open: null, done: "please_check" };
+  }
+  return { ...state, open: { ...state.open, mode: "correct" } };
 }
 
 /** Each detail's name in a question, never a code. */

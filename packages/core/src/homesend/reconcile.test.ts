@@ -9,7 +9,7 @@ import type { HouseholdMember } from "../identity/households";
 import type { SchoolItem } from "../school/items";
 import type { SupabaseClient } from "@supabase/supabase-js";
 
-import { proposalFor, reconcileHomeSend, shortDate, type HomeSendCandidate } from "./reconcile";
+import { proposalFor, reconcileAgainstRecords, reconcileHomeSend, shortDate, type HomeSendCandidate } from "./reconcile";
 import { resolveIntakePeople } from "./resolve";
 
 const TZ = "Asia/Kolkata";
@@ -101,6 +101,38 @@ describe("HomeSend reconciliation (Wave 3 §10)", () => {
       ],
     });
     expect(found?.message).toMatch(/it moved to 12 Oct and the amount is now 1310\.00\. Update the existing bill\?$/);
+  });
+
+  describe("a clear move is marked for updating in place (14-066, part 3)", () => {
+    const run = (records: ContextRecords, candidate: HomeSendCandidate) => reconcileAgainstRecords(records, "hh", candidate, { timezone: TZ, now: NOW, memberNames: NAMES });
+
+    it("the same name, the same child, only the day changed, nothing else like it: clear", () => {
+      const found = run({ schoolItems: [exhibition] }, { kind: "school_item", title: "Science Exhibition", date: "2026-09-29", subjectMemberId: "asmi", change: "update" });
+      expect(found?.proposal).toEqual({ type: "update", changes: [{ field: "date", from: "2026-09-28", to: "2026-09-29" }], clear: true });
+    });
+
+    it("a new amount is never clear: money is offered, not changed", () => {
+      const found = run({ obligations: [bill("b-elec", "Electricity bill")] }, { kind: "bill", title: "Electricity bill", payee: "City Power", date: "2026-10-12", amount: 1310, change: "update" });
+      expect(found?.proposal).toMatchObject({ type: "update" });
+      expect(found?.proposal).not.toHaveProperty("clear");
+    });
+
+    it("a bill whose day alone moved is clear", () => {
+      const found = run({ obligations: [bill("b-elec", "Electricity bill")] }, { kind: "bill", title: "Electricity bill", payee: "City Power", date: "2026-10-12", amount: 1240.5, change: "update" });
+      expect(found?.proposal).toMatchObject({ type: "update", clear: true });
+    });
+
+    it("two records it could be: offered, never guessed", () => {
+      const twin = schoolItem("s-sci-2", "asmi", "Science Exhibition", "2026-09-30T04:30:00Z");
+      const found = run({ schoolItems: [exhibition, twin] }, { kind: "school_item", title: "Science Exhibition", date: "2026-10-02", subjectMemberId: "asmi", change: "update" });
+      expect(found?.proposal.type).toBe("update");
+      expect(found?.proposal).not.toHaveProperty("clear");
+    });
+
+    it("a name only somewhat alike is offered, not changed", () => {
+      const found = run({ schoolItems: [exhibition] }, { kind: "school_item", title: "Science Exhibition day", date: "2026-09-29", subjectMemberId: "asmi", change: "update" });
+      if (found?.proposal.type === "update") expect(found.proposal).not.toHaveProperty("clear");
+    });
   });
 
   it("finds nothing for something genuinely new", () => {

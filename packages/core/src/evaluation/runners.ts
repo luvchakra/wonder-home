@@ -567,7 +567,7 @@ export async function observeHomeSend(c: HomeSendCase, models: Models = {}): Pro
     match: { outcome: proposal, recordId: reconciliation?.existingId ?? null },
     conflict: proposal === "conflict",
     // Added below the bar is its own outcome: added now, marked Checking, its reminders held (the owner, 2026-11-03).
-    action: decision.mode === "auto_apply" && decision.unconfirmed ? "add_checking" : decision.mode,
+    action: decision.mode === "auto_apply" && decision.update ? "update_in_place" : decision.mode === "auto_apply" && decision.unconfirmed ? "add_checking" : decision.mode,
     safety: {
       // A receipt writes purchase history, so like money and health it is
       // never applied without a person — unless an Admin turned on adding

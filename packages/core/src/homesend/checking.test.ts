@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { afterAnswer, askCorrection, checkedScore, MAX_CHECK_QUESTIONS, overTheBar, planCheckQuestions, readCheckingState, splitCheckAnswer, startChecking } from "./checking";
+import { afterAnswer, askCorrection, checkedScore, MAX_CHECK_QUESTIONS, overTheBar, planCheckQuestions, questionsLeft, readCheckingState, splitCheckAnswer, startChecking, type CheckingState } from "./checking";
 import { FROM_A_FILE } from "./verify";
 
 const NOW = new Date("2026-11-03T10:00:00Z");
@@ -8,14 +8,15 @@ const FILE = { unverified: [FROM_A_FILE] };
 const TEXT = { unverified: [] };
 
 describe("the questions that raise a Checking entry over the bar (14-061, the owner 2026-11-03)", () => {
-  it("confirms each key detail read from a photo or file, at most three", () => {
+  it("asks one Looks right over a photo or file's whole reading, its details behind it only after a no — three questions at most (14-066, part 3)", () => {
     const bill = { title: "Electricity", payee: "BESCOM", amount: 2140, dueDate: "2026-11-10" };
     expect(planCheckQuestions({ kind: "bill", extracted: bill, check: FILE })).toEqual([
+      { field: "payee", mode: "confirm_all" },
       { field: "payee", mode: "confirm" },
       { field: "amount", mode: "confirm" },
-      { field: "dueDate", mode: "confirm" },
     ]);
     expect(planCheckQuestions({ kind: "health_document", extracted: { title: "Blood test", healthRecordType: "lab_result", documentDate: "2026-11-01" }, check: FILE })).toEqual([
+      { field: "recordType", mode: "confirm_all" },
       { field: "recordType", mode: "confirm" },
       { field: "date", mode: "confirm" },
     ]);
@@ -37,8 +38,53 @@ describe("the questions that raise a Checking entry over the bar (14-061, the ow
   });
 });
 
+describe("one tap for a photo or file (14-066, part 3)", () => {
+  const state = startChecking({ kind: "bill", extracted: { title: "Electricity", payee: "BESCOM", amount: 2140, dueDate: "2026-11-10" }, check: FILE, recipientMemberId: "m1", score: 0.82, percent: 95 })!;
+
+  it("opens on Looks right, counted as one question waiting", () => {
+    expect(state.open).toEqual({ field: "payee", mode: "confirm_all", ordinal: 1 });
+    expect(questionsLeft(state)).toBe(1);
+  });
+
+  it("one yes confirms it at 100%, whatever the bar", () => {
+    const yes = afterAnswer({ ...state, percent: 99 }, "yes", "whatsapp", NOW);
+    expect(yes.done).toBe("confirmed");
+    expect(checkedScore(yes)).toBe(1);
+    expect(yes.answered).toEqual([{ field: "payee", outcome: "yes", via: "whatsapp", at: NOW.toISOString(), whole: true }]);
+  });
+
+  it("a no goes on to the details, one at a time; a skip ends in one 'please check'", () => {
+    const no = askCorrection(state);
+    expect(no.open).toEqual({ field: "payee", mode: "confirm", ordinal: 2 });
+    expect(no.answered).toEqual([]);
+    // Both details then confirmed: 82 + 18 × 2⁄2 = 100%.
+    const done = afterAnswer(afterAnswer(no, "yes", "hometalk", NOW), "corrected", "hometalk", NOW);
+    expect(done.done).toBe("confirmed");
+    const skipped = afterAnswer(state, "skipped", "hometalk", NOW);
+    expect(skipped.done).toBe("please_check");
+    expect(skipped.open).toBeNull();
+  });
+
+  it("anything but a yes or a skip to Looks right is a no", () => {
+    expect(splitCheckAnswer("confirm_all", "Looks right").kind).toBe("yes");
+    expect(splitCheckAnswer("confirm_all", "Fix something").kind).toBe("no");
+    expect(splitCheckAnswer("confirm_all", "the amount is 2,410").kind).toBe("no");
+    expect(splitCheckAnswer("confirm_all", "later").kind).toBe("skip");
+  });
+});
+
 describe("how sure it is after each answer: arithmetic someone can explain (principle 9)", () => {
-  const state = startChecking({ kind: "bill", extracted: { title: "Electricity", payee: "BESCOM", amount: 2140, dueDate: "2026-11-10" }, check: FILE, recipientMemberId: "m1", score: 0.9, percent: 95 })!;
+  const started = startChecking({ kind: "bill", extracted: { title: "Electricity", payee: "BESCOM", amount: 2140, dueDate: "2026-11-10" }, check: TEXT, recipientMemberId: "m1", score: 0.9, percent: 95 })!;
+  // Three detail questions, as a reading heard unsurely can have.
+  const state: CheckingState = {
+    ...started,
+    planned: [
+      { field: "payee", mode: "confirm" },
+      { field: "amount", mode: "confirm" },
+      { field: "dueDate", mode: "confirm" },
+    ],
+    open: { field: "payee", mode: "confirm", ordinal: 1 },
+  };
 
   it("starts at the reading's own score with the first question open", () => {
     expect(state.open).toEqual({ field: "payee", mode: "confirm", ordinal: 1 });

@@ -70,6 +70,8 @@ export type AddedOnItsOwn = {
   more?: { added: Amount; now: Amount };
   /** Added below the household's bar: marked Checking, its reminders held, until confirmed (the owner, 2026-11-03). */
   unconfirmed?: true;
+  /** Not added: a record already on file moved to its new day (14-066, part 3), ISO dates. Undo puts the old day back. */
+  moved?: { from: string | null; to: string };
 };
 
 /** Something that would have been added on its own, still waiting in HomeSend, and why (`confirmation.ts` `wait`). */

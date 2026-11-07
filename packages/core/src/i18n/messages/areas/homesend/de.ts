@@ -10,6 +10,7 @@ export const homesendDe: AreaCatalog<typeof homesendEn> = {
   "homesend.shareError.upload": "Das Geteilte konnte nicht gespeichert werden – bitte schick es noch einmal.",
   "homesend.shareError.rateLimited": "Von dieser Verbindung wurde zuletzt zu viel geteilt – bitte warte ein paar Minuten und versuch es dann erneut.",
   "homesend.shared.added": "Angekommen — {title} ist hinzugefügt. Rückgängig, falls es nicht stimmt.",
+  "homesend.shared.moved": "Angekommen — {title} war schon eingetragen und ist auf den neuen Tag verschoben. Rückgängig, falls es nicht stimmt.",
   "homesend.shared.waiting": "Angekommen — {title} braucht unten ein Wort von dir.",
   "homesend.shared.failed": "Angekommen — es konnte nicht gelesen werden. Es steht unter „Nicht lesbar“.",
   "homesend.shared.reading": "Angekommen — wird gerade gelesen.",

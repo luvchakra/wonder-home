@@ -8,6 +8,7 @@ import { en } from "../i18n/messages/en";
 import { translator, translatorFor, type Translate, type TranslationKey } from "../i18n/translate";
 import { openCheckQuestion } from "../hometalk/checking-questions";
 import { openIntakeQuestion } from "../hometalk/intake-questions";
+import { lastQuestionStartedAt, mayStartQuestion } from "../hometalk/question-cadence";
 import { enqueueClassifyRetry, type ClaimedJob, type JobHandler } from "../homesend/retry-queue";
 import { gateTranscript, TRANSCRIPT_CONFIDENCE_FLOOR, type TranscriptGate } from "../homesend/audio";
 import { amountWords, sureClause, type AddedOnItsOwn, type WaitingInHomeSend } from "../homesend/auto-add";
@@ -539,9 +540,12 @@ async function readMessage(admin: SupabaseClient, messageId: string, deps: Whats
   // What it still lacks is asked by HomeTalk, in this person's WhatsApp
   // conversation with it, one question at a time (`hometalk/intake-questions.ts`,
   // the owner 2026-10-26). HomeSend only says what it found.
+  // At most one question started on WhatsApp an hour per person (14-066, part 3): a burst of forwards
+  // gets one, and the rest follow as it is answered, or wait for HomeTalk in the app.
+  const mayAsk = async () => mayStartQuestion(await lastQuestionStartedAt(admin, { householdId: row.household_id, memberId: row.member_id, now }), now);
   const question =
-    deps.ask && !outcome.duplicate && outcome.state === "needs_review"
-      ? await openIntakeQuestion(admin, { householdId: row.household_id, memberId: row.member_id, itemId: outcome.itemId, surface: "whatsapp", t: await words() }).catch(() => null)
+    deps.ask && !outcome.duplicate && outcome.state === "needs_review" && (await mayAsk())
+      ? await openIntakeQuestion(admin, { householdId: row.household_id, memberId: row.member_id, itemId: outcome.itemId, surface: "whatsapp", t: await words(), cadence: "send" }).catch(() => null)
       : null;
   const t = await words();
   const ack = acknowledgementFor(outcome, { question, t });
@@ -556,13 +560,15 @@ async function readMessage(admin: SupabaseClient, messageId: string, deps: Whats
   else {
     // Added as Checking (14-061): HomeTalk's first question about it follows, to this sender on their own
     // verified link only, with the answers to pick; the reply answers it (decision C, the owner 2026-11-03).
-    const check =
-      decided && "unconfirmed" in decided && decided.unconfirmed
-        ? await openCheckQuestion(admin, { householdId: row.household_id, memberId: row.member_id, itemId: outcome.itemId, surface: "whatsapp", t }).catch(() => null)
-        : null;
+    const checking = Boolean(decided && "unconfirmed" in decided && decided.unconfirmed);
+    const allowed = checking ? await mayAsk() : false;
+    const check = checking && allowed ? await openCheckQuestion(admin, { householdId: row.household_id, memberId: row.member_id, itemId: outcome.itemId, surface: "whatsapp", t, cadence: "send" }).catch(() => null) : null;
     if (check && decided) {
       events.push({ kind: "clarification_requested", householdId: row.household_id });
       await sayHomeTalk(`${addedReply(decided, undefined, t)}\n\n${check}`);
+    } else if (decided && checking && !allowed) {
+      // Held: one question is already out this hour; this one's turn comes after it.
+      await say(`${addedReply(decided, undefined, t)}\n${t("whatsapp.check.later")}`);
     } else await (decided ? say(addedReply(decided, undefined, t)) : ack.asks ? sayHomeTalk(ack.text) : say(ack.text));
   }
   await recordWhatsAppEvents(admin, events);
@@ -682,6 +688,8 @@ export function whatsappJobHandler(deps: WhatsAppIntakeDeps): JobHandler {
 export function addedReply(added: AddedOnItsOwn, forName?: string, t: Translate = ENGLISH): string {
   // Added below the bar: said as Checking, its reminders waiting (the owner, 2026-11-03).
   const checking = added.unconfirmed === true;
+  // A record already on file moved to its new day (14-066, part 3): no date or number said back.
+  if (added.moved) return t("whatsapp.moved", { title: (added.kind === "bill" ? withoutNumbers(added.title) : shortTitle(added.title)) ?? "it" });
   if (added.kind === "health_document") {
     return t(checking ? "whatsapp.addedChecking" : "whatsapp.added", { title: t("whatsapp.addedHealthRecord"), where: added.where, sure: t === ENGLISH ? sureClause(added) : sureIn(t, added) });
   }

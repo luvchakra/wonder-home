@@ -10,6 +10,7 @@ export const homesendAr: AreaCatalog<typeof homesendEn> = {
   "homesend.shareError.upload": "تعذّر حفظ ما شاركته — يُرجى إرساله مرة أخرى.",
   "homesend.shareError.rateLimited": "تمت مشاركة الكثير من هذا الاتصال مؤخرًا — يُرجى الانتظار بضع دقائق ثم المحاولة مرة أخرى.",
   "homesend.shared.added": "وصل — تمت إضافة {title}. تراجع إن لم يكن صحيحاً.",
+  "homesend.shared.moved": "وصل — {title} كان مسجلاً من قبل، فنُقل إلى يومه الجديد. تراجع إن لم يكن صحيحاً.",
   "homesend.shared.waiting": "وصل — {title} يحتاج كلمة منك، في الأسفل.",
   "homesend.shared.failed": "وصل — لكن تعذّرت قراءته. إنه ضمن «تعذّرت قراءته».",
   "homesend.shared.reading": "وصل — جارٍ قراءته الآن.",

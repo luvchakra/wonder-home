@@ -10,6 +10,7 @@ import { translator, type Translate, type TranslationKey } from "../i18n/transla
 import { amountsFor } from "./choice-amounts";
 import { choicesFor } from "./choices";
 import { readDetailAnswer } from "./detail-answers";
+import type { QuestionCadence } from "./question-cadence";
 
 /**
  * HomeTalk asks what a HomeSend entry still lacks (the owner, 2026-10-26:
@@ -192,7 +193,7 @@ function ambiguousNames(understanding: Record<string, unknown> | null): string[]
  */
 export async function openIntakeQuestion(
   admin: SupabaseClient,
-  input: { householdId: string; memberId: string; itemId: string; surface: ConversationSurface; t?: Translate },
+  input: { householdId: string; memberId: string; itemId: string; surface: ConversationSurface; t?: Translate; cadence?: QuestionCadence },
 ): Promise<string | null> {
   const [item, { data: members }, { data: household }] = await Promise.all([
     loadItem(admin, input.householdId, input.itemId),
@@ -217,7 +218,7 @@ export async function openIntakeQuestion(
     sessionId,
     role: "assistant",
     content: said,
-    metadata: { proposal: "clarify", intent: "complete_homesend_item", mode: "clarify", clarify: next.clarify, ...(choices ? { choices } : {}) },
+    metadata: { proposal: "clarify", intent: "complete_homesend_item", mode: "clarify", clarify: next.clarify, ...(choices ? { choices } : {}), ...(input.cadence ? { cadence: input.cadence } : {}) },
   });
   return said;
 }
@@ -369,6 +370,8 @@ export function handedBackText(lead: string, outcome: { added: AddedOnItsOwn | W
   const tail = added?.unconfirmed
     ? " — marked **Checking** until it's confirmed, so its reminders wait. Say it's right or undo it in HomeSend."
     : " — your household lets WonderHome add these on its own. You can undo it in HomeSend.";
+  // A record already on file moved to its new day, not a second copy (14-066, part 3).
+  if (added?.moved) return `${lead} 📅 **${added.title}** was already on record, so I moved it to its new day instead of adding it twice. You can undo it in HomeSend.`;
   if (added?.more) {
     // More of a grocery already on the list (I-27), as HomeTalk's own add says it: "+2 L, now 3 L".
     return `${lead} Added ${amountWords(added.more.added)} more **${added.title}** (now ${amountWords(added.more.now)})${sureClause(added)}${tail}`;
