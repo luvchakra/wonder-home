@@ -14,6 +14,12 @@ export async function platformStaff(capability: string): Promise<PlatformAdmin |
   }
 }
 
+/** The platform owner only: the lists behind Households & people are theirs alone (owner, 2026-11-07). */
+export async function platformOwner(): Promise<PlatformAdmin | null> {
+  const staff = await platformStaff("platform_admin.manage");
+  return staff && staff.role === "owner" ? staff : null;
+}
+
 /**
  * Whether this request's signed-in person is platform staff, once per render.
  * Only the avatar menu's "Platform admin" row asks; the pages behind it still
