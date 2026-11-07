@@ -24,8 +24,9 @@ function client(rows: Row[]): SupabaseClient {
     const hit = () => (table === "home_send_items" ? rows.filter((row) => filters.every((test) => test(row))) : []);
     const builder: Record<string, unknown> = {
       select: () => builder,
-      eq: (column: string, value: unknown) => (filters.push((row) => row[column] === value), builder),
+      eq: (column: string, value: unknown) => (filters.push((row) => valueAt(row, column) === value), builder),
       is: () => builder,
+      order: () => builder,
       limit: () => builder,
       update: (values: Row) => ((patch = values), builder),
       maybeSingle: async () => ({ data: hit()[0] ?? null, error: null }),
@@ -37,6 +38,11 @@ function client(rows: Row[]): SupabaseClient {
     return builder;
   };
   return { from } as unknown as SupabaseClient;
+}
+
+/** A column, or a JSON path like `understanding->checking->>recipientMemberId`. */
+function valueAt(row: Row, column: string): unknown {
+  return column.split(/->>?/).reduce<unknown>((value, key) => (value && typeof value === "object" ? (value as Row)[key] : undefined), row);
 }
 
 const NOW = new Date("2026-11-03T10:00:00Z");
@@ -65,44 +71,72 @@ async function started(rows: Row[], percent = 95) {
 describe("HomeTalk's checks on an entry added as Checking (14-061, the owner 2026-11-03)", () => {
   beforeEach(() => void (calls.length = 0));
 
-  it("asks its first question from evidence, saying back what was read to the sender only (decision C)", async () => {
+  it("asks one Looks right over what was read from a photo, to the sender only (decision C; 14-066, part 3)", async () => {
     const rows = [billItem()];
     const asked = await started(rows);
-    expect(asked.text).toBe("Did I get the sender right: **BESCOM**?");
-    expect(asked.clarify).toMatchObject({ action: "check_homesend_entry", parameters: { itemId: "i1", field: "payee", mode: "confirm", ordinal: 1 } });
+    expect(asked.text).toBe("Here's what I read: **BESCOM · ₹2,140 · 10 Nov**. Looks right?");
+    expect(asked.clarify).toMatchObject({ action: "check_homesend_entry", parameters: { itemId: "i1", field: "payee", mode: "confirm_all", ordinal: 1 } });
     // Someone else in the household is never asked.
     expect(await currentCheckQuestion(client(rows), { householdId: "h1", itemId: "i1", memberId: "m2", via: "hometalk" })).toBeNull();
   });
 
-  it("an answer raises how sure it is, a correction is applied in place, and over the bar it is confirmed", async () => {
+  it("one yes confirms it at 100%, its reminders on", async () => {
     const rows = [billItem()];
     const first = await started(rows);
-    const yes = await answerCheckQuestion(client(rows), { ...ctx, parameters: first.clarify.parameters, answer: "yes" });
+    const yes = await answerCheckQuestion(client(rows), { ...ctx, parameters: first.clarify.parameters, answer: "Looks right" });
+    expect(yes.confirmed).toBe(true);
+    expect(yes.clarify).toBeNull();
+    expect(yes.text).toContain("All checked ✅");
+    expect((calls.find((call) => call.fn === "confirm")!.args[3] as { confidence: number }).confidence).toBe(1);
+  });
+
+  it("a no goes through the details: a correction is applied in place, and over the bar it is confirmed", async () => {
+    const rows = [billItem()];
+    const first = await started(rows);
+    const no = await answerCheckQuestion(client(rows), { ...ctx, parameters: first.clarify.parameters, answer: "Fix something" });
+    expect(no.text).toBe("No problem — let's fix it, one thing at a time. Did I get the sender right: **BESCOM**?");
+    const yes = await answerCheckQuestion(client(rows), { ...ctx, parameters: no.clarify!.parameters, answer: "yes" });
     expect(yes.outcome).toBe("yes");
     expect(yes.text).toContain("Did I get the amount right: **₹2,140**?");
     const corrected = await answerCheckQuestion(client(rows), { ...ctx, parameters: yes.clarify!.parameters, answer: "no, it's 2,410" });
     // Through the bill's own update, on the one record this item added, as the member.
     expect(calls.find((call) => call.fn === "updateObligation")?.args[1]).toEqual({ id: "o1", householdId: "h1", amountMinor: 241000 });
     expect(corrected.confirmed).toBe(true);
-    expect(corrected.text).toContain("All checked ✅");
     const confirm = calls.find((call) => call.fn === "confirm")!;
     expect(confirm.args.slice(1, 3)).toEqual(["h1", "i1"]);
-    expect((confirm.args[3] as { how: string; confidence: number }).how).toBe("answers");
-    expect((confirm.args[3] as { confidence: number }).confidence).toBeCloseTo(0.9 + 0.1 * (2 / 3));
+    expect((confirm.args[3] as { how: string }).how).toBe("answers");
     expect((rows[0]!.extracted as Row).amount).toBe(2410);
   });
 
   it("an answer on WhatsApp resolves the same question asked in HomeTalk: the stale copy is told, then the next question", async () => {
     const rows = [billItem()];
     const first = await started(rows);
-    await answerCheckQuestion(client(rows), { ...ctx, parameters: { ...first.clarify.parameters, via: "whatsapp" }, answer: "yes" });
+    await answerCheckQuestion(client(rows), { ...ctx, parameters: { ...first.clarify.parameters, via: "whatsapp" }, answer: "no" });
     const stale = await answerCheckQuestion(client(rows), { ...ctx, parameters: first.clarify.parameters, answer: "yes" });
     expect(stale.outcome).toBe("stale");
-    expect(stale.text).toContain("already answered on WhatsApp");
-    expect(stale.clarify?.parameters).toMatchObject({ field: "amount", ordinal: 2 });
-    // The stale "yes" settled nothing twice.
+    expect(stale.text).toContain("already answered");
+    expect(stale.clarify?.parameters).toMatchObject({ field: "payee", mode: "confirm", ordinal: 2 });
+    // The stale "yes" settled nothing.
     const state = (rows[0]!.understanding as { checking: { answered: unknown[] } }).checking;
-    expect(state.answered).toHaveLength(1);
+    expect(state.answered).toHaveLength(0);
+    expect(calls.some((call) => call.fn === "confirm")).toBe(false);
+  });
+
+  it("several waiting are one run: once one is settled, the next one's question follows (14-066, part 3)", async () => {
+    const water: Row = { ...billItem(), id: "i2", extracted: { title: "Water", payee: "BWSSB", amount: 410, dueDate: "2026-11-12" }, routed_id: "o2" };
+    const rows = [billItem(), water];
+    await beginChecking(client(rows), { householdId: "h1", itemId: "i2", recipientMemberId: "m1", score: 0.9, percent: 95 });
+    const first = await started(rows);
+    const yes = await answerCheckQuestion(client(rows), { ...ctx, parameters: first.clarify.parameters, answer: "yes" });
+    expect(yes.text).toContain("📥 Next, **Water**: Here's what I read: **BWSSB · ₹410 · 12 Nov**. Looks right?");
+    expect(yes.clarify?.parameters).toMatchObject({ itemId: "i2", mode: "confirm_all" });
+    // Never another member's entry.
+    (rows[1]!.understanding as { checking: { recipientMemberId: string } }).checking.recipientMemberId = "m2";
+    rows[0] = billItem();
+    const again = await started(rows);
+    const alone = await answerCheckQuestion(client(rows), { ...ctx, parameters: again.clarify.parameters, answer: "yes" });
+    expect(alone.text).not.toContain("Next");
+    expect(alone.clarify).toBeNull();
   });
 
   it("ignores instructions in an answer: nothing is applied and the same question stays open", async () => {
@@ -126,9 +160,11 @@ describe("HomeTalk's checks on an entry added as Checking (14-061, the owner 202
 
   it("a no asks what it should be; skips end in one 'please check', Checking kept", async () => {
     const rows = [billItem()];
-    let asked = (await started(rows)).clarify;
-    const no = await answerCheckQuestion(client(rows), { ...ctx, parameters: asked.parameters, answer: "no" });
+    const whole = (await started(rows)).clarify;
+    const details = await answerCheckQuestion(client(rows), { ...ctx, parameters: whole.parameters, answer: "no" });
+    const no = await answerCheckQuestion(client(rows), { ...ctx, parameters: details.clarify!.parameters, answer: "no" });
     expect(no.text).toContain("Who is the bill from?");
+    let asked = no.clarify!;
     asked = no.clarify!;
     for (let index = 0; index < 3; index += 1) {
       const skipped = await answerCheckQuestion(client(rows), { ...ctx, parameters: asked.parameters, answer: "skip" });
@@ -145,7 +181,8 @@ describe("HomeTalk's checks on an entry added as Checking (14-061, the owner 202
   it("an unreadable value gets one polite second ask, then is left as it is", async () => {
     const rows = [billItem()];
     const first = await started(rows);
-    const yes = await answerCheckQuestion(client(rows), { ...ctx, parameters: first.clarify.parameters, answer: "yes" });
+    const details = await answerCheckQuestion(client(rows), { ...ctx, parameters: first.clarify.parameters, answer: "no" });
+    const yes = await answerCheckQuestion(client(rows), { ...ctx, parameters: details.clarify!.parameters, answer: "yes" });
     const unread = await answerCheckQuestion(client(rows), { ...ctx, parameters: yes.clarify!.parameters, answer: "no, lots" });
     expect(unread.text).toContain("Sorry, I couldn't tell");
     const again = await answerCheckQuestion(client(rows), { ...ctx, parameters: unread.clarify!.parameters, answer: "no, lots" });

@@ -10,6 +10,7 @@ export const homesendHi: AreaCatalog<typeof homesendEn> = {
   "homesend.shareError.upload": "यह शेयर सहेजा नहीं जा सका — कृपया इसे फिर से भेजें।",
   "homesend.shareError.rateLimited": "इस कनेक्शन से हाल ही में बहुत ज़्यादा शेयर हुए हैं — कृपया कुछ मिनट रुककर फिर कोशिश करें।",
   "homesend.shared.added": "मिल गया — {title} जोड़ दिया गया। सही न हो तो Undo करें।",
+  "homesend.shared.moved": "मिल गया — {title} पहले से दर्ज था, इसलिए इसे नए दिन पर कर दिया। सही न हो तो Undo करें।",
   "homesend.shared.waiting": "मिल गया — {title} के लिए नीचे आपकी एक बात चाहिए।",
   "homesend.shared.failed": "मिल गया — पर इसे पढ़ा नहीं जा सका। यह “पढ़ा नहीं जा सका” में है।",
   "homesend.shared.reading": "मिल गया — अभी पढ़ रहे हैं।",

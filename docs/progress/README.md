@@ -13,7 +13,7 @@ decision that shapes later work each earns a note, written before moving on.
 |---|---|
 | 2026-11-08 | [Kids Trivia, PR 2: generated cards per topic, refilled in the background (08-035)](2026-11-08-kids-trivia-generated.md) |
 | 2026-11-08 | [Migration files that shared a timestamp: renamed, lint refuses a repeat](2026-11-08-migration-version-clashes.md) |
-| 2026-11-07 | [HomeSend zero touch: design and learned defaults](2026-11-07-homesend-zero-touch.md) |
+| 2026-11-07 | [HomeSend zero touch: learned defaults, one-tap sending, fewer questions](2026-11-07-homesend-zero-touch.md) |
 | 2026-11-07 | [Kids Trivia, PR 1: topics, safety check, built-in cards, Home card, guardian view (08-034)](2026-11-07-kids-trivia.md) |
 | 2026-11-07 | [Platform admin Overview: needs you, growth, health](2026-11-07-platform-admin-overview.md) |
 | 2026-11-07 | [Platform admin: account-level lists](2026-11-07-platform-directory.md) |

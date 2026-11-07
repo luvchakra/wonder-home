@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 
 import { decideConfirmation, type ConfirmationInput } from "./confirmation";
+import { FROM_A_FILE } from "./verify";
 
 const CLEAR: ConfirmationInput = {
   kind: "grocery_item",
@@ -150,5 +151,47 @@ describe("what an entry can't be added without (the owner, 2026-10-26)", () => {
 
   it("never holds a grocery item back for a quantity, which is only useful", () => {
     expect(decide({ extracted: { title: "Coconut oil", quantity: null, needs: [], confidence: "high" } }).mode).toBe("auto_apply");
+  });
+});
+
+describe("a clear move updates the record on file instead of asking (14-066, part 3)", () => {
+  const reading = { readable: true, confidence: "high" as const, score: 0.98, check: { verified: true, unverified: [] }, safety: { signals: [], instructionsIgnored: false } };
+  const move = {
+    message: "I found Asmi's existing Science Exhibition for 28 Sep. This message says it moved to 29 Sep. Update the existing event?",
+    existingId: "s-sci",
+    existing: { title: "Science Exhibition", date: "2026-09-28", status: "pending", subjectMemberId: "asmi", subjectName: "Asmi", amountMinor: null },
+    proposal: { type: "update" as const, changes: [{ field: "date" as const, from: "2026-09-28", to: "2026-09-29" }], clear: true as const },
+  };
+  const base: ConfirmationInput = {
+    kind: "school_item",
+    extracted: { title: "Science Exhibition", dueDate: "2026-09-29", needs: [], confidence: "high" } as never,
+    understanding: reading,
+    reconciliation: move,
+    subject: { question: null, selected: { memberId: "asmi" } } as never,
+    memberInitiated: true,
+    autonomy: "execute",
+  };
+
+  it("Pre Approved and over the bar: moved, with Undo, never a second copy", () => {
+    const decision = decideConfirmation(base);
+    expect(decision.mode).toBe("auto_apply");
+    expect(decision.update).toEqual({ existingId: "s-sci", title: "Science Exhibition", from: "2026-09-28", to: "2026-09-29" });
+    expect(decision.unconfirmed).toBeUndefined();
+  });
+
+  it("everything that holds an add holds a move", () => {
+    expect(decideConfirmation({ ...base, autonomy: "prepare" }).mode).toBe("prepare");
+    expect(decideConfirmation({ ...base, memberInitiated: false }).mode).toBe("prepare");
+    expect(decideConfirmation({ ...base, understanding: { ...reading, score: 0.9 } }).update).toBeUndefined();
+    expect(decideConfirmation({ ...base, understanding: { ...reading, check: { verified: false, unverified: [FROM_A_FILE] } } as never }).mode).toBe("prepare");
+    expect(decideConfirmation({ ...base, understanding: { ...reading, safety: { signals: ["instruction"], instructionsIgnored: true } } as never }).mode).toBe("prepare");
+    // A bill waits unless an Admin lets money entries in directly.
+    expect(decideConfirmation({ ...base, kind: "bill", extracted: { title: "Electricity", payee: "BESCOM", amount: 2140, dueDate: "2026-11-12", needs: [], confidence: "high" } as never }).mode).toBe("govern");
+  });
+
+  it("a move that isn't clear is offered, as before", () => {
+    const offered = decideConfirmation({ ...base, reconciliation: { ...move, proposal: { type: "update", changes: move.proposal.changes } } });
+    expect(offered.mode).toBe("prepare");
+    expect(offered.reason).toBe(move.message);
   });
 });

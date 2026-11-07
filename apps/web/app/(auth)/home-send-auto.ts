@@ -14,7 +14,7 @@ import { OBLIGATION_KINDS } from "@wonderhome/core/finance/payments";
 import { RECORD_TYPES } from "@wonderhome/core/health/records";
 
 import { prepareReview } from "./home-send-review";
-import { createNew, recordReceipt, type RouteInput } from "./home-send-writes";
+import { createNew, recordReceipt, reviseExisting, type RouteInput } from "./home-send-writes";
 
 /** Where each kind added on its own lands, by the area's own name. */
 const WHERE: Partial<Record<HomeSendKind, string>> = {
@@ -58,8 +58,15 @@ export async function autoApplyHomeSendItem(
      * owner, 2026-11-03): their decision, still shown as Checking.
      */
     checking?: { unconfirmed: boolean; confidence: number | null; source: string | null };
+    /**
+     * A clear move of a record already on file (`confirmation.ts` `update`,
+     * 14-066 part 3): that record goes to its new day through the governed
+     * update a person's "Update" uses, recorded with what it replaced so Undo
+     * puts the old day back. Nothing new is added.
+     */
+    update?: { existingId: string; title: string; from: string | null; to: string };
   } = {},
-): Promise<{ changeId: string; title: string; where: string; more?: AddedOnItsOwn["more"]; whole?: boolean } | null> {
+): Promise<{ changeId: string; title: string; where: string; more?: AddedOnItsOwn["more"]; whole?: boolean; moved?: AddedOnItsOwn["moved"] } | null> {
   const extracted = item.extracted;
   const title = extracted?.title?.trim();
   const where = WHERE[item.kind];
@@ -98,6 +105,7 @@ export async function autoApplyHomeSendItem(
     needs: [],
   };
   if (item.kind === "health_document" && !input.subjectMemberId) return null;
+  if (options.update) return autoMove(supabase, membership, { ...input, title: options.update.title || input.title }, options.update, where, autoState(options.checking));
   const created = await createNew(supabase, membership, input);
   if ("error" in created) return null;
   await routeHomeSendItem(supabase, householdId, item.id, {
@@ -115,6 +123,36 @@ export async function autoApplyHomeSendItem(
     ...(auto ? { auto } : {}),
   });
   return { changeId: change.id, title, where, ...(created.more ? { more: created.more } : {}) };
+}
+
+/** A record on file moved to its new day on its own (14-066, part 3): the same write, change row, audit and Undo as a person's "Update". */
+async function autoMove(
+  supabase: SupabaseClient,
+  membership: HouseholdMembership,
+  input: RouteInput,
+  update: { existingId: string; title: string; from: string | null; to: string },
+  where: string,
+  auto: RecordHomeSendChangeInput["auto"],
+): Promise<{ changeId: string; title: string; where: string; moved: NonNullable<AddedOnItsOwn["moved"]> } | null> {
+  if (input.kind !== "bill" && input.kind !== "school_item") return null;
+  const revised = await reviseExisting(supabase, membership, { ...input, decision: "update", existingId: update.existingId, dueDate: update.to, amount: undefined }).catch(() => null);
+  if (!revised) return null;
+  await routeHomeSendItem(supabase, input.householdId, input.itemId, {
+    routedTable: revised.routedTable,
+    routedId: revised.routedId,
+    review: { decision: "auto_added", subject: "not_needed", corrected: false },
+  });
+  const change = await recordHomeSendChange(supabase, {
+    householdId: input.householdId,
+    intakeId: input.itemId,
+    domain: revised.domain,
+    entityId: revised.routedId,
+    createdByMemberId: membership.memberId,
+    changeType: "updated",
+    previous: revised.previous,
+    ...(auto ? { auto } : {}),
+  });
+  return { changeId: change.id, title: input.title, where, moved: { from: update.from, to: update.to } };
 }
 
 /** What an entry added on its own records about itself; "confirmed" unless the decision said it is still being checked. */
@@ -192,7 +230,7 @@ export async function addIfAllowed(
     supabase,
     membership,
     { id: item.id, kind: item.classifiedKind, extracted: item.extracted, subject: review.subject },
-    { checking: { unconfirmed, confidence: review.understanding?.score ?? null, source: item.source } },
+    { checking: { unconfirmed, confidence: review.understanding?.score ?? null, source: item.source }, ...(review.confirmation.update ? { update: review.confirmation.update } : {}) },
   );
   // How sure, and why, goes with every "added on its own" message (design §7).
   if (!applied) return null;
@@ -204,5 +242,6 @@ export async function addIfAllowed(
   }
   const more = review.confirmation.topUp && applied.more ? { more: applied.more } : {};
   const checking = unconfirmed ? { unconfirmed: true as const } : {};
-  return { title: applied.title, where: applied.where, kind: item.classifiedKind, percent: scorePercent(review.understanding?.score), why: sureWhy(review.understanding), ...more, ...checking };
+  const moved = applied.moved ? { moved: applied.moved } : {};
+  return { title: applied.title, where: applied.where, kind: item.classifiedKind, percent: scorePercent(review.understanding?.score), why: sureWhy(review.understanding), ...more, ...checking, ...moved };
 }

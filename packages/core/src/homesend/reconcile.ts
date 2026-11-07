@@ -33,7 +33,13 @@ import type { HomeSendChangeDomain } from "./items";
 
 export type HomeSendProposal =
   | { type: "duplicate" }
-  | { type: "update"; changes: HomeSendFieldChange[] }
+  /**
+   * `clear`: a moved date that plainly is this record — the same name, the
+   * same person, nothing else on record like it, only the day changed
+   * (14-066, part 3). It is updated in place with Undo, where the household
+   * lets HomeSend act on its own (`confirmation.ts`), instead of asking.
+   */
+  | { type: "update"; changes: HomeSendFieldChange[]; clear?: true }
   | { type: "cancellation" }
   | { type: "conflict" };
 
@@ -155,6 +161,8 @@ export function proposalFor(
   match: MatchResult,
   candidate: HomeSendCandidate,
   names: ReadonlyMap<string, string> = new Map(),
+  /** No other record on file resembles this one closely enough to need a decision. */
+  options: { alone?: boolean } = {},
 ): HomeSendReconciliation | null {
   if (!match.item) return null;
   const existing = existingOf(match.item, names);
@@ -206,11 +214,12 @@ export function proposalFor(
         .map((change) => (change.field === "date" ? `it moved to ${shortDate(String(change.to))}` : `the amount is now ${formatAmount(Number(change.to), null)}`))
         .join(" and ");
       const noun = nounFor(candidate.kind, match.item);
+      const clear = clearMove(match, candidate, existing, changes, options.alone === true);
       return {
         verdict: match.verdict,
         existingId: match.item.entityId,
         existing,
-        proposal: { type: "update", changes },
+        proposal: { type: "update", changes, ...(clear ? { clear: true as const } : {}) },
         message: `${found}. This message says ${says}. Update the existing ` + `${noun}?`,
       };
     }
@@ -223,6 +232,23 @@ export function proposalFor(
     proposal: { type: "duplicate" },
     message: `${found}. ${match.verdict === "related_but_different" ? "It may be a different one" : "This looks like the same one"} — keep the existing one, or add this as new?`,
   };
+}
+
+/**
+ * Whether a moved date plainly belongs to this record (14-066, part 3): only
+ * the day changed, the name is the same, it is for the same
+ * person (or for nobody in particular on both sides), and nothing else on
+ * record needs a decision. Anything less is still offered, never applied.
+ */
+export function clearMove(match: MatchResult, candidate: HomeSendCandidate, existing: Existing, changes: readonly HomeSendFieldChange[], alone: boolean): boolean {
+  if (!alone || changes.length !== 1 || changes[0]!.field !== "date" || !existing.date) return false;
+  if (existing.status === "cancelled" || existing.status === "done" || existing.status === "paid") return false;
+  if (!match.reasons.includes("the same name")) return false;
+  if (candidate.kind === "school_item") {
+    const samePerson = match.reasons.includes("for the same person") || (!candidate.subjectMemberId && !existing.subjectMemberId);
+    if (!samePerson) return false;
+  }
+  return true;
 }
 
 /** The strongest existing record this candidate would duplicate, update or cancel, or null when it is genuinely new. */
@@ -287,7 +313,11 @@ export function reconcileAgainstRecords(
   // A cancellation may name its record less exactly than an update does — the
   // closest same-subject match is still the one to ask about.
   const best = matches.find(needsReconciliation) ?? (candidate.change === "cancellation" ? matches[0] : undefined);
-  if (best) return proposalFor(best, candidate, options.memberNames);
+  if (best) {
+    // A record is "alone" when no second one would also need a decision: two Annual Days on file are never guessed between.
+    const alone = matches.filter(needsReconciliation).length === 1;
+    return proposalFor(best, candidate, options.memberNames, { alone });
+  }
 
   // A school notice for something already on the family calendar ("School
   // meeting" and the "Parent-teacher meeting" the parents put there). The

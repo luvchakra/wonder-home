@@ -12,6 +12,7 @@ import {
   CHECK_LABELS,
   checkedScore,
   readCheckingState,
+  questionsLeft,
   readValue,
   splitCheckAnswer,
   startChecking,
@@ -32,6 +33,7 @@ import { schoolWhen } from "../school/times";
 import { choicesFor } from "./choices";
 import { readDetailAnswer } from "./detail-answers";
 import { DETAIL_QUESTIONS, questionIn, secondAsk } from "./intake-questions";
+import type { QuestionCadence } from "./question-cadence";
 
 /**
  * HomeTalk's questions about an entry HomeSend added as "Checking" (the
@@ -147,14 +149,38 @@ export function shownValue(kind: HomeSendKind, field: DetailField, extracted: Co
   return String(value);
 }
 
+/** "Electricity · ₹2,140 · 12 Nov": each key detail the reading holds, in the order a person knows it by. */
+export function readingSummary(kind: HomeSendKind, extracted: CompletenessReading): string | null {
+  if (kind === "unknown") return null;
+  const fields = SUMMARY_FIELDS[kind];
+  const values = fields.map((field) => shownValue(kind, field, extracted)).filter((value): value is string => Boolean(value));
+  const unique = values.filter((value, index) => values.indexOf(value) === index);
+  return unique.length > 0 ? unique.join(" · ") : null;
+}
+
+const SUMMARY_FIELDS: Record<Exclude<HomeSendKind, "unknown">, readonly DetailField[]> = {
+  grocery_item: ["name", "quantity"],
+  school_item: ["title", "dueDate"],
+  activity_item: ["className", "date"],
+  event: ["title", "date"],
+  bill: ["payee", "amount", "dueDate"],
+  health_document: ["recordType", "date"],
+  receipt: ["merchant", "date"],
+};
+
 /**
  * The question, in English (inside a HomeTalk turn, which answers in the
  * member's language) or through `t` (said outside a turn, on WhatsApp). A
  * confirm says the value back: decision C allows it, to the item's sender only.
  */
 export function checkQuestionText(kind: HomeSendKind, open: { field: DetailField; mode: CheckMode }, extracted: CompletenessReading, t?: Translate): string {
-  const value = shownValue(kind, open.field, extracted);
   const english = !t;
+  // One "Looks right?" over everything read from a photo or file (14-066, part 3).
+  if (open.mode === "confirm_all") {
+    const summary = readingSummary(kind, extracted);
+    if (summary) return english ? `Here's what I read: **${summary}**. Looks right?` : t("whatsapp.check.confirmAll", { summary });
+  }
+  const value = shownValue(kind, open.field, extracted);
   const label = english ? CHECK_LABELS[open.field] : t(LABEL_KEYS[open.field] ?? "whatsapp.check.label.title");
   if (open.mode === "confirm" && value) {
     const whole = open.field === "name" || open.field === "title";
@@ -200,13 +226,18 @@ export async function currentCheckQuestion(
  */
 export async function openCheckQuestion(
   admin: SupabaseClient,
-  input: { householdId: string; memberId: string; itemId: string; surface: ConversationSurface; t?: Translate; lead?: string },
+  input: { householdId: string; memberId: string; itemId: string; surface: ConversationSurface; t?: Translate; lead?: string; cadence?: QuestionCadence },
 ): Promise<string | null> {
   const via: CheckChannel = input.surface === "whatsapp" ? "whatsapp" : "hometalk";
   const t = input.t ?? translator("en", en);
-  const current = await currentCheckQuestion(admin, { householdId: input.householdId, itemId: input.itemId, memberId: input.memberId, via, t });
+  const [current, others] = await Promise.all([
+    currentCheckQuestion(admin, { householdId: input.householdId, itemId: input.itemId, memberId: input.memberId, via, t }),
+    waitingChecks(admin, { householdId: input.householdId, memberId: input.memberId, excludeItemId: input.itemId }).catch(() => []),
+  ]);
   if (!current) return null;
-  const lead = input.lead ?? t("whatsapp.check.lead", { title: current.title ?? "" });
+  // Several waiting are one run, said once (14-066, part 3): "3 quick ones — first, Electricity:".
+  const count = 1 + countWaiting(others);
+  const lead = input.lead ?? (count > 1 ? t("whatsapp.check.leadMany", { count, title: current.title ?? "" }) : t("whatsapp.check.lead", { title: current.title ?? "" }));
   const said = lead ? `${lead}\n${current.text}` : current.text;
   const [{ data: household }, sessionId] = await Promise.all([
     admin.from("households").select("timezone").eq("id", input.householdId).maybeSingle(),
@@ -219,7 +250,7 @@ export async function openCheckQuestion(
     sessionId,
     role: "assistant",
     content: said,
-    metadata: { proposal: "clarify", intent: CHECK_ACTION, mode: "clarify", clarify: current.clarify, ...(choices ? { choices } : {}) },
+    metadata: { proposal: "clarify", intent: CHECK_ACTION, mode: "clarify", clarify: current.clarify, ...(choices ? { choices } : {}), ...(input.cadence ? { cadence: input.cadence } : {}) },
   });
   return said;
 }
@@ -290,9 +321,12 @@ export async function answerCheckQuestion(
     lead = "No problem.";
   } else if (split.kind === "no") {
     const next = askCorrection(state);
-    const question = checkQuestionText(kind, next.open!, (item.extracted ?? null) as CompletenessReading);
     if (!(await saveState(client, item, input.householdId, next))) return { text: "I couldn't save that just now. It's still Checking in HomeSend.", clarify: null };
-    return { text: `Thanks for checking. ${question}`, clarify: clarifyFor(item, next, question, via) };
+    // "Looks right?" said no, with no detail to go through: one "please check".
+    if (!next.open) return { text: `Thanks for checking. **${title}** stays Checking for now.\n💡 Have a look in HomeSend to fix it, or undo it.`, clarify: null, outcome: "skipped" };
+    const question = checkQuestionText(kind, next.open, (item.extracted ?? null) as CompletenessReading);
+    const lead = open.mode === "confirm_all" ? "No problem — let's fix it, one thing at a time." : "Thanks for checking.";
+    return { text: `${lead} ${question}`, clarify: clarifyFor(item, next, question, via) };
   } else {
     const read = split.kind === "value" ? readDetailAnswer(kind, open.field, split.text, { timezone: input.timezone, now: input.now }) : null;
     if (read && read !== "skip") {
@@ -321,15 +355,64 @@ export async function answerCheckQuestion(
 
   if (next.done === "confirmed") {
     const moved = await confirmHomeSendEntry(client, input.householdId, item.id, { memberId: input.actorMemberId, how: "answers", confidence: checkedScore(next) }).catch(() => 0);
-    if (moved > 0) return { text: `${lead} All checked ✅ **${shownTitle}** is confirmed, and its reminders are on.`, clarify: null, confirmed: true, outcome };
-    return { text: `${lead} **${shownTitle}** isn't Checking any more.`, clarify: null, outcome };
+    const said = moved > 0 ? `${lead} All checked ✅ **${shownTitle}** is confirmed, and its reminders are on.` : `${lead} **${shownTitle}** isn't Checking any more.`;
+    return withNextWaiting(client, { householdId: input.householdId, memberId: input.actorMemberId, excludeItemId: item.id, via }, { text: said, clarify: null, outcome, ...(moved > 0 ? { confirmed: true as const } : {}) });
   }
   if (next.done === "please_check") {
-    return { text: `${lead} **${shownTitle}** stays Checking for now.\n💡 Have a look in HomeSend and tap Looks right, or undo it.`, clarify: null, outcome };
+    return withNextWaiting(client, { householdId: input.householdId, memberId: input.actorMemberId, excludeItemId: item.id, via }, { text: `${lead} **${shownTitle}** stays Checking for now.\n💡 Have a look in HomeSend and tap Looks right, or undo it.`, clarify: null, outcome });
   }
   const question = checkQuestionText(kind, next.open!, (extracted ?? item.extracted ?? null) as CompletenessReading);
   const asked = { ...item, extracted: extracted ?? item.extracted };
   return { text: `${lead} ${question}`, clarify: clarifyFor(asked, next, question, via), outcome };
+}
+
+// --- Batching: the next waiting question, and how many are left (14-066, part 3) -------------
+
+type WaitingCheck = ItemRow & { created_at?: string };
+
+/**
+ * Entries still Checking whose open question is for this member, oldest
+ * first, read in their household through the given client. Bounded: a person
+ * is never shown more than a handful at once.
+ */
+export async function waitingChecks(client: SupabaseClient, input: { householdId: string; memberId: string; excludeItemId?: string }): Promise<WaitingCheck[]> {
+  const { data, error } = await client
+    .from("home_send_items")
+    .select("id, status, classified_kind, extracted, understanding, routed_table, routed_id, created_by_member_id, created_at")
+    .eq("household_id", input.householdId)
+    .eq("status", "routed")
+    .eq("understanding->checking->>recipientMemberId", input.memberId)
+    .order("created_at", { ascending: true })
+    .limit(20);
+  if (error) return [];
+  return ((data ?? []) as WaitingCheck[]).filter((row) => {
+    if (row.id === input.excludeItemId || !row.classified_kind) return false;
+    const state = readCheckingState(row.understanding?.checking);
+    return Boolean(state?.open && !state.done);
+  });
+}
+
+/** How many questions wait for this member across every entry still Checking (`questionsLeft` each). */
+export function countWaiting(rows: readonly Pick<ItemRow, "understanding">[]): number {
+  return rows.reduce((total, row) => total + questionsLeft(row.understanding?.checking), 0);
+}
+
+/**
+ * Several questions waiting become one run (design principle 4): once an
+ * entry is settled, the next entry's question follows in the same reply,
+ * "Next, **Maths worksheet** (2 more after this): …". Never on another
+ * member's entry; never more than the one next question.
+ */
+async function withNextWaiting(client: SupabaseClient, input: { householdId: string; memberId: string; excludeItemId: string; via: CheckChannel }, answer: CheckAnswer): Promise<CheckAnswer> {
+  const rows = await waitingChecks(client, input).catch(() => []);
+  const first = rows[0];
+  const state = readCheckingState(first?.understanding?.checking);
+  if (!first?.classified_kind || !state?.open) return answer;
+  const question = checkQuestionText(first.classified_kind, state.open, (first.extracted ?? null) as CompletenessReading);
+  const title = typeof first.extracted?.title === "string" ? first.extracted.title : null;
+  const after = countWaiting(rows) - questionsLeft(first.understanding?.checking);
+  const more = after > 0 ? ` (${after} more after this)` : "";
+  return { ...answer, text: `${answer.text}\n📥 Next${title ? `, **${title}**` : ""}${more}: ${question}`, clarify: clarifyFor(first, state, question, input.via) };
 }
 
 /**

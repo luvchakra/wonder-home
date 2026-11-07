@@ -10,6 +10,7 @@ export const homesendMr: AreaCatalog<typeof homesendEn> = {
   "homesend.shareError.upload": "हे शेअर सेव्ह करता आले नाही — कृपया ते पुन्हा पाठवून पाहा.",
   "homesend.shareError.rateLimited": "या कनेक्शनवरून अलीकडे खूप जास्त शेअर झाले आहेत — कृपया काही मिनिटे थांबून पुन्हा प्रयत्न करा.",
   "homesend.shared.added": "मिळाले — {title} जोडले. बरोबर नसेल तर Undo करा.",
+  "homesend.shared.moved": "मिळाले — {title} आधीच नोंदलेलं होतं, म्हणून ते नव्या दिवशी हलवलं. बरोबर नसेल तर Undo करा.",
   "homesend.shared.waiting": "मिळाले — {title} साठी खाली तुमचे एक उत्तर हवे आहे.",
   "homesend.shared.failed": "मिळाले — पण ते वाचता आले नाही. ते “वाचता आले नाही” मध्ये आहे.",
   "homesend.shared.reading": "मिळाले — आता वाचत आहोत.",

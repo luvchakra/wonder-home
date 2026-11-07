@@ -10,6 +10,7 @@ export const homesendZh: AreaCatalog<typeof homesendEn> = {
   "homesend.shareError.upload": "分享的内容未能保存——请重新发送。",
   "homesend.shareError.rateLimited": "此网络连接最近分享次数过多——请稍等几分钟再试。",
   "homesend.shared.added": "收到 — 已添加 {title}。如果不对，可以撤销。",
+  "homesend.shared.moved": "收到 — {title} 已经有记录，所以改到了新的日期。如果不对，可以撤销。",
   "homesend.shared.waiting": "收到 — {title} 需要你在下方确认一下。",
   "homesend.shared.failed": "收到 — 但无法读取。它在“无法读取”中。",
   "homesend.shared.reading": "收到 — 正在读取。",

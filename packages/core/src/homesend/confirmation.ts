@@ -56,6 +56,13 @@ export type ConfirmationDecision = {
    * it is sure enough (the owner, 2026-11-03).
    */
   unconfirmed?: true;
+  /**
+   * An `auto_apply` that moves a record already on file to its new day
+   * instead of adding a second one (14-066, part 3): the reconciliation's
+   * `clear` move, through the same governed update a person's "Update" uses,
+   * with the same Undo. Never an amount, never a cancellation.
+   */
+  update?: { existingId: string; title: string; from: string | null; to: string };
 };
 
 /** Why something that would be added on its own waits: already on the list, the setting, or the bar. */
@@ -110,7 +117,7 @@ export type ConfirmationInput = {
   /** The reading; the rest of its fields decide whether it is complete (`completeness.ts`). */
   extracted: (Pick<HomeSendExtraction, "title" | "needs" | "confidence"> & NonNullable<CompletenessReading>) | null;
   understanding: Pick<IntakeUnderstanding, "readable" | "confidence" | "safety" | "score" | "check"> | null;
-  reconciliation: Pick<HomeSendReconciliation, "message" | "proposal"> | null;
+  reconciliation: (Pick<HomeSendReconciliation, "message" | "proposal"> & Partial<Pick<HomeSendReconciliation, "existingId" | "existing">>) | null;
   subject: Pick<SubjectResolution, "question" | "selected"> | null;
   /** A member sent it in themselves; an email arrives with nobody in the household acting. */
   memberInitiated: boolean;
@@ -173,7 +180,11 @@ export function decideConfirmation(input: ConfirmationInput): ConfirmationDecisi
   // added to the entry that is there. Without an amount it waits for the
   // person to choose. Every other match keeps the duplicate rule (I-4).
   const listed = kind === "grocery_item" && input.onShoppingList === true && input.reconciliation?.proposal.type === "duplicate";
-  if (input.reconciliation && !listed) return { mode: "prepare", reason: input.reconciliation.message, question: null };
+  // A moved date that plainly is a record on file (14-066, part 3) goes on
+  // through every rule below and, where it may act on its own, moves that
+  // record instead of asking. Anything less clear is offered, as before.
+  const move = clearMoveOf(input.reconciliation);
+  if (input.reconciliation && !listed && !move) return { mode: "prepare", reason: input.reconciliation.message, question: null };
   if (listed && !hasAmount(input.extracted)) {
     return { mode: "prepare", reason: `${title} is already on your shopping list, so it waits for you to choose how much more.`, question: null, wait: { reason: "on_list", listed: true } };
   }
@@ -209,10 +220,16 @@ export function decideConfirmation(input: ConfirmationInput): ConfirmationDecisi
     return { mode: "prepare", reason: `What WonderHome read as ${listUntraced(untraced)} isn't in what was sent, so nothing was added: a person looks first.`, question: null, wait: { reason: "untraced" } };
   }
   const checking = !aboveBar || fromAFile ? { unconfirmed: true as const } : {};
+  // A move is never made "Checking": an existing record is changed only when the reading is over the bar and has words of its own.
+  if (move && checking.unconfirmed) return { mode: "prepare", reason: input.reconciliation!.message, question: null };
   const onList = listed ? { listed: true as const } : {};
 
   // A bill, receipt or health entry is a record of the household's own, never a payment or an order.
   const decision = decideAutonomy(input.autonomy, { outcomeKey: outcome.outcomeKey, kind: consequential ? "change" : "schedule", reversible: true });
+  if (decision.outcome === "execute" && move) {
+    return { mode: "auto_apply", reason: `Your household lets WonderHome handle ${outcome.label} on its own, so it moved the one already on record. Undo it any time.`, question: null, update: move };
+  }
+  if (move) return { mode: "prepare", reason: input.reconciliation!.message, question: null };
   if (decision.outcome === "execute") {
     const sure = checking.unconfirmed ? ` It wasn't more than ${percent}% sure, so it is marked Checking until you answer a question or say it's right.` : "";
     if (listed) {
@@ -225,6 +242,15 @@ export function decideConfirmation(input: ConfirmationInput): ConfirmationDecisi
   if (consequential) return { mode: "prepare", reason, question: null };
   const area = kind === "grocery_item" ? "groceries" : "school";
   return { mode: "prepare", reason, question: null, wait: { reason: "wait_for_approval", area, ...onList } };
+}
+
+/** The record to move and its new day, when the reconciliation is a clear move of one record's date (`reconcile.ts` `clearMove`). */
+function clearMoveOf(reconciliation: ConfirmationInput["reconciliation"]): ConfirmationDecision["update"] | null {
+  const proposal = reconciliation?.proposal;
+  if (proposal?.type !== "update" || !proposal.clear || !reconciliation?.existingId) return null;
+  const change = proposal.changes.find((entry) => entry.field === "date");
+  if (!change || typeof change.to !== "string") return null;
+  return { existingId: reconciliation.existingId, title: reconciliation.existing?.title ?? "", from: typeof change.from === "string" ? change.from : null, to: change.to };
 }
 
 /** "the amount and the date": what the reading named that the words sent don't contain. */
