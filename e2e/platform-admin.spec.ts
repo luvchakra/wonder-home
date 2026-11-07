@@ -1,3 +1,5 @@
+import { randomBytes } from "node:crypto";
+
 import { createClient, type SupabaseClient } from "@supabase/supabase-js";
 import { expect, test, type Page } from "@playwright/test";
 
@@ -43,8 +45,8 @@ test.describe("signed in as an operator", () => {
   let admin: SupabaseClient;
   let userId = "";
   let hadSaved = false;
-  const email = `staff-${Date.now()}-${Math.random().toString(36).slice(2, 8)}@${E2E_EMAIL_DOMAIN}`;
-  const password = `E2e!${Math.random().toString(36).slice(2, 12)}`;
+  const email = `staff-${Date.now()}-${randomBytes(4).toString("hex")}@${E2E_EMAIL_DOMAIN}`;
+  const password = `E2e!${randomBytes(18).toString("base64url")}`;
 
   test.beforeAll(async () => {
     admin = createClient(url!, serviceKey!, { auth: { persistSession: false } });
