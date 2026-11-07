@@ -5,7 +5,6 @@ import { useActionState, useState } from "react";
 
 import { Alert } from "@wonderhome/core/ui/alert";
 import { Button } from "@wonderhome/core/ui/button";
-import { PasswordField } from "@wonderhome/core/ui/password-field";
 import { Badge, type BadgeTone } from "@wonderhome/core/ui/pill";
 
 import { moveAllFromVercelAction, type MoveActionState } from "../settings-actions";
@@ -22,8 +21,8 @@ const OUTCOME: Record<string, { label: string; tone: BadgeTone }> = {
 
 /**
  * One button that moves every setting Vercel still holds into the portal
- * (owner, 2026-11-07). The owner's password is asked again; what comes back is
- * names and words only, never a value.
+ * (owner, 2026-11-07). Owner only, no password; what comes back is names and
+ * words only, never a value.
  */
 export function MoveAllFromVercel({ canMove, stillInVercel }: { canMove: boolean; stillInVercel: number }) {
   const [state, move, moving] = useActionState(moveAllFromVercelAction, IDLE);
@@ -43,8 +42,7 @@ export function MoveAllFromVercel({ canMove, stillInVercel }: { canMove: boolean
   return (
     <div className="space-y-4">
       {canMove ? (
-        <form action={move} className="space-y-3" autoComplete="off">
-          <PasswordField label="Your password" name="password" autoComplete="current-password" required hint="Moving secrets needs your password again." />
+        <form action={move}>
           <Button type="submit" disabled={moving}>{moving ? "Moving…" : stillInVercel > 0 ? `Move all from Vercel (${stillInVercel})` : "Move all from Vercel"}</Button>
         </form>
       ) : (
