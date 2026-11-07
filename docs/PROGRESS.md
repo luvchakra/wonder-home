@@ -11,11 +11,11 @@ in `docs/progress/`; for the running log of what changed when, `tracking/PROGRES
 
 ## The whole picture
 
-**424 of 464 stories done — 91.4%**
+**425 of 465 stories done — 91.4%**
 
 | Status | Stories |
 |---|---:|
-| Done | 424 |
+| Done | 425 |
 | In Progress | 11 |
 | Blocked | 1 |
 | Not Started | 24 |
