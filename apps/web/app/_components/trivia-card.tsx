@@ -1,7 +1,7 @@
 "use client";
 
 import { Check, Lightbulb, Plus, Puzzle, Square, Volume2, X } from "lucide-react";
-import { useEffect, useRef, useState, useTransition } from "react";
+import { useEffect, useRef, useState, useSyncExternalStore, useTransition } from "react";
 
 import { Button } from "@wonderhome/core/ui/button";
 import { Card } from "@wonderhome/core/ui/card";
@@ -36,6 +36,8 @@ export type TriviaLabels = {
   categories: Record<string, string>;
 };
 
+const noSubscribe = () => () => undefined;
+
 const fill = (template: string, values: Record<string, string | number>) => template.replace(/\{(\w+)\}/g, (whole, key: string) => (key in values ? String(values[key]) : whole));
 
 /**
@@ -54,12 +56,12 @@ export function TriviaCard({ householdId, initial, language, labels }: { househo
   const [streak, setStreak] = useState(initial.streak);
   const [note, setNote] = useState<string | null>(null);
   const [speaking, setSpeaking] = useState(false);
-  const [canSpeak, setCanSpeak] = useState(false);
+  // Whether this device can read aloud: false on the server, read once in the browser.
+  const canSpeak = useSyncExternalStore(noSubscribe, () => "speechSynthesis" in window, () => false);
   const [pending, startTransition] = useTransition();
   const recorded = useRef(false);
 
   useEffect(() => {
-    setCanSpeak(typeof window !== "undefined" && "speechSynthesis" in window);
     // The card the page opened with is on record once it is seen, so the next opening brings another.
     if (recorded.current || initial.shownId) return;
     recorded.current = true;
