@@ -96,25 +96,15 @@ export async function clearSettingAction(_previous: SettingActionState, formData
 export type MoveActionState = { tone: "info" | "risk" | null; message: string | null; report: MoveReport | null };
 
 /**
- * "Move all from Vercel" (owner, 2026-11-07): the owner alone, with their
- * password again. Every movable setting Vercel has and the portal doesn't is
+ * "Move all from Vercel" (owner, 2026-11-07): the owner alone; no password
+ * step-up (owner, 2026-11-07: "no need to ask for this password"). Every movable setting Vercel has and the portal doesn't is
  * saved here in one go, then read back. Values are read from this server's
  * environment and never come back: the answer is counts, setting names and
  * words (`MoveReport`).
  */
-export async function moveAllFromVercelAction(_previous: MoveActionState, formData: FormData): Promise<MoveActionState> {
+export async function moveAllFromVercelAction(): Promise<MoveActionState> {
   const staff = await platformStaff("secrets.manage");
   if (!staff || staff.role !== "owner") return { tone: "risk", message: "Only the owner can move settings from Vercel.", report: null };
-  const parsed = z.object({ password: z.string().min(1).max(200) }).safeParse({ password: formData.get("password") });
-  if (!parsed.success) return { tone: "risk", message: "That password didn't match. Nothing was moved.", report: null };
-  const check = await confirmStaffPassword(parsed.data.password);
-  if (check !== "ok") {
-    return {
-      tone: "risk",
-      message: check === "limited" ? "Too many attempts. Wait a moment." : check === "unavailable" ? "We couldn't check your password just now. Nothing was moved." : "That password didn't match. Nothing was moved.",
-      report: null,
-    };
-  }
   const result = await moveAllFromEnvironment(adminClientFor(adminGrant.platformAdmin(staff, "move every setting from Vercel")), staff.profileId, process.env);
   if ("error" in result) {
     return {

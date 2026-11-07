@@ -11,7 +11,7 @@ So nothing breaks while you move settings over. Delete a Vercel variable only on
 
 ## The one-button way (start here)
 1. Open **home.wonderapps.biz/platform-admin** → **Configuration** → **Move all from Vercel** (Integrations and Secrets link to it too). Owner only.
-2. Enter your password and tap **Move all from Vercel**.
+2. Tap **Move all from Vercel**. It doesn't ask for your password (owner, 2026-11-07).
    - Every setting Vercel has and the portal doesn't is saved here, in one go. Secrets go to Supabase Vault, as a manual save does.
    - A setting already saved in the portal is never overwritten.
    - Nothing that must stay in Vercel is ever moved.
