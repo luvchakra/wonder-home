@@ -243,6 +243,7 @@ asks: it needs a public read path, which this store deliberately lacks.
   registry.
 
 ### Vercel variables the owner can delete once a value is saved here
+The owner's guide, step by step, is in `docs/admin-portal-config-migration.md`.
 Each row in the portal says "Vercel still has this variable" once its value
 is saved here. A Vercel variable can go only after its row shows "Saved here".
 Candidates, all in Vercel today:
