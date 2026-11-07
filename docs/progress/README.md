@@ -11,6 +11,7 @@ decision that shapes later work each earns a note, written before moving on.
 
 | Date | Note |
 |---|---|
+| 2026-11-07 | [New landing and the Landing page setting](2026-11-07-landing-variant.md) |
 | 2026-11-03 | [HomeSend daily tidy: archive what no longer applies](2026-11-03-homesend-daily-tidy.md) |
 | 2026-11-03 | [HomeSend "Checking", everywhere it shows](2026-11-03-homesend-checking-everywhere.md) |
 | 2026-11-03 | [HomeSend: a calm page, and two one-tap clears](2026-11-03-homesend-calm-page.md) |
@@ -416,4 +417,3 @@ decision that shapes later work each earns a note, written before moving on.
 | 2026-09-18 | [Database moved to the Mumbai Supabase project](2026-09-18-database-move-to-ap-south-1.md) |
 | 2026-09-17 | [Performance pass: compute beside the data, verify sessions locally](2026-09-17-performance-pass.md) |
 | 2026-09-17 | [Design system v3: kit, every screen, the assistant, the landing page](2026-09-17-design-system-v3.md) |
-| 2026-11-07 | [New landing and the Landing page setting](2026-11-07-landing-variant.md) |
