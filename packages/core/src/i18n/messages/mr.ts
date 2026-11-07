@@ -8,6 +8,7 @@ import { homesendMr } from "./areas/homesend/mr";
 import { settingsMr } from "./areas/settings/mr";
 import { householdMr } from "./areas/household/mr";
 import { entryMr } from "./areas/entry/mr";
+import { landingMr } from "./areas/landing/mr";
 import { installMr } from "./areas/install/mr";
 import { eventsMr } from "./areas/events/mr";
 import { calendarMr } from "./areas/calendar/mr";
@@ -1122,6 +1123,7 @@ export const mr: Catalog = {
   ...settingsMr,
   ...householdMr,
   ...entryMr,
+  ...landingMr,
   ...installMr,
   ...eventsMr,
   ...calendarMr,

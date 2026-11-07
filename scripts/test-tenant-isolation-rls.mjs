@@ -45,6 +45,8 @@ const NON_TENANT_TABLES = new Set([
   "ifct_foods", // IFCT 2017 (ICMR-NIN) Indian reference foods, linked from the catalog; every member reads
   "companion_sayings", // the cat's sayings (08-021): WonderHome's own list every member reads and none writes
   "careers_settings", // the one WonderJobs career-site key setting (17-010); platform-level, service role only
+  "platform_settings", // non-secret platform switches (landing variant); public read, service-role write
+  "platform_setting_events", // append-only audit of those switches; service role only
   "careers_key_events", // every save and clear of that key; platform-level like the setting, service role only
   "instamart_oauth_clients", // the OAuth client Swiggy registered for this deployment's redirect URI (25-032); service role only
   "ai_key_alerts", // keyed by an API key's fingerprint (one key may serve the platform or several households); matched to households at read time; service role only

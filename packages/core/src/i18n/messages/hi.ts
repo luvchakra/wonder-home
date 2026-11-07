@@ -8,6 +8,7 @@ import { homesendHi } from "./areas/homesend/hi";
 import { settingsHi } from "./areas/settings/hi";
 import { householdHi } from "./areas/household/hi";
 import { entryHi } from "./areas/entry/hi";
+import { landingHi } from "./areas/landing/hi";
 import { installHi } from "./areas/install/hi";
 import { eventsHi } from "./areas/events/hi";
 import { calendarHi } from "./areas/calendar/hi";
@@ -1122,6 +1123,7 @@ export const hi: Catalog = {
   ...settingsHi,
   ...householdHi,
   ...entryHi,
+  ...landingHi,
   ...installHi,
   ...eventsHi,
   ...calendarHi,

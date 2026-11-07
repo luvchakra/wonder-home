@@ -52,7 +52,7 @@ function locate(page, spec) {
 const oneLine = (s) => s.replace(/\s+/g, ' ').trim();
 const round = (n) => Math.round(n);
 
-const browser = await chromium.launch();
+const browser = await chromium.launch(process.env.PLAYWRIGHT_CHROMIUM_PATH ? { executablePath: process.env.PLAYWRIGHT_CHROMIUM_PATH } : {});
 try {
   const width = Number(values.width);
   const context = await browser.newContext({

@@ -17,6 +17,7 @@ import { homesendEn } from "./areas/homesend/en";
 import { settingsEn } from "./areas/settings/en";
 import { householdEn } from "./areas/household/en";
 import { entryEn } from "./areas/entry/en";
+import { landingEn } from "./areas/landing/en";
 import { installEn } from "./areas/install/en";
 import { eventsEn } from "./areas/events/en";
 import { calendarEn } from "./areas/calendar/en";
@@ -1132,6 +1133,7 @@ export const en = {
   ...settingsEn,
   ...householdEn,
   ...entryEn,
+  ...landingEn,
   ...installEn,
   ...eventsEn,
   ...calendarEn,

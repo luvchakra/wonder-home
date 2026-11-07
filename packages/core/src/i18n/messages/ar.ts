@@ -8,6 +8,7 @@ import { homesendAr } from "./areas/homesend/ar";
 import { settingsAr } from "./areas/settings/ar";
 import { householdAr } from "./areas/household/ar";
 import { entryAr } from "./areas/entry/ar";
+import { landingAr } from "./areas/landing/ar";
 import { installAr } from "./areas/install/ar";
 import { eventsAr } from "./areas/events/ar";
 import { calendarAr } from "./areas/calendar/ar";
@@ -1148,6 +1149,7 @@ export const ar: Catalog = {
   ...settingsAr,
   ...householdAr,
   ...entryAr,
+  ...landingAr,
   ...installAr,
   ...eventsAr,
   ...calendarAr,

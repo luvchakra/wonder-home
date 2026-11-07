@@ -1,24 +1,34 @@
 import { createClient, getVerifiedUser } from "@wonderhome/core/db/server";
+import { landingVariant } from "@wonderhome/core/platform/settings";
 
+import { visitorLocale } from "./_lib/entry-locale";
 import { buildSession, membershipsOrClaimed } from "./_lib/session";
 import { ChildHome } from "./_screens/child-home";
 import { HomeDashboard } from "./_screens/home-dashboard";
-import { Landing } from "./_screens/landing";
+import { ClassicLanding } from "./_screens/landing-classic";
+import { NewLanding } from "./_screens/landing-new";
 
 export const dynamic = "force-dynamic";
 
 /** The landing page is the one screen a search engine is welcome to read. */
-export const metadata = { robots: { index: true, follow: true } };
+export async function generateMetadata() {
+  const { t } = await visitorLocale();
+  return { title: t("landing.meta.title"), description: t("landing.meta.description"), robots: { index: true, follow: true } };
+}
 
 /**
  * "/" is three different screens depending on who is looking: the landing
  * page for a visitor, the household dashboard for an adult, and the child
  * view for a child — a different framing, not a reduced one.
  */
-export default async function HomePage({ searchParams }: { searchParams: Promise<{ tab?: string }> }) {
-  const [supabase, user, { tab }] = await Promise.all([createClient(), getVerifiedUser(), searchParams]);
+export default async function HomePage({ searchParams }: { searchParams: Promise<{ tab?: string; landing?: string }> }) {
+  const [supabase, user, { tab, landing }] = await Promise.all([createClient(), getVerifiedUser(), searchParams]);
 
-  if (!user) return <Landing />;
+  if (!user) {
+    // `?landing=classic|new` previews either page without changing the setting (staff checking before they switch; the end-to-end suite).
+    const variant = landing === "classic" || landing === "new" ? landing : await landingVariant(supabase);
+    return variant === "classic" ? <ClassicLanding /> : <NewLanding />;
+  }
 
   const memberships = await membershipsOrClaimed(supabase);
   if (memberships.length === 0) {

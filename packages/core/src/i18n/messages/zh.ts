@@ -8,6 +8,7 @@ import { homesendZh } from "./areas/homesend/zh";
 import { settingsZh } from "./areas/settings/zh";
 import { householdZh } from "./areas/household/zh";
 import { entryZh } from "./areas/entry/zh";
+import { landingZh } from "./areas/landing/zh";
 import { installZh } from "./areas/install/zh";
 import { eventsZh } from "./areas/events/zh";
 import { calendarZh } from "./areas/calendar/zh";
@@ -1122,6 +1123,7 @@ export const zh: Catalog = {
   ...settingsZh,
   ...householdZh,
   ...entryZh,
+  ...landingZh,
   ...installZh,
   ...eventsZh,
   ...calendarZh,

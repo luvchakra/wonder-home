@@ -139,7 +139,7 @@
    "reason": "Signed-in member path: wrap with adminGrant.member/householdAdmin.",
    "story": "SEC-04b"
   },
-  "apps/web/app/_screens/landing.tsx": {
+  "apps/web/app/_screens/landing-classic.tsx": {
    "class": "household-scoped",
    "sites": 1,
    "reason": "Signed-in member path: wrap with adminGrant.member/householdAdmin.",
