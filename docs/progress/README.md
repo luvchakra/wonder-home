@@ -423,3 +423,4 @@ decision that shapes later work each earns a note, written before moving on.
 | 2026-09-18 | [Database moved to the Mumbai Supabase project](2026-09-18-database-move-to-ap-south-1.md) |
 | 2026-09-17 | [Performance pass: compute beside the data, verify sessions locally](2026-09-17-performance-pass.md) |
 | 2026-09-17 | [Design system v3: kit, every screen, the assistant, the landing page](2026-09-17-design-system-v3.md) |
+- [2026-11-07 HomeSend: remove each item, Delete for good](2026-11-07-homesend-remove-items.md)
