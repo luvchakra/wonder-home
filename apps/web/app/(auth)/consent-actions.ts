@@ -3,7 +3,9 @@
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
 
+import { auditChange } from "@wonderhome/core/api/audit";
 import { toErrorBody } from "@wonderhome/core/api/errors";
+import { forgetLearnedDefaults } from "@wonderhome/core/homesend/learned-repository";
 import { saveConfirmRequested } from "@wonderhome/core/conversation/consent-repository";
 import { asAutoAddPercent, AUTO_ADD_PERCENTS } from "@wonderhome/core/homesend/auto-add";
 import { saveAutoAddPercent } from "@wonderhome/core/household/auto-add-repository";
@@ -121,4 +123,27 @@ export async function saveHomeSendTidyAction(_previous: ActionState, formData: F
   }
   revalidatePath("/settings/ai");
   return { notice: "saved" };
+}
+
+const forgetLearnedSchema = z.object({ householdId: z.string().uuid(), id: z.string().uuid().optional() });
+
+/**
+ * "Forget" on what HomeSend has learned (14-066): an Admin clears one thing
+ * HomeSend remembered about who a sender's items are for, or all of it.
+ * HomeSend then asks again the next time. Audited with the count only.
+ */
+export async function forgetLearnedAction(_previous: ActionState, formData: FormData): Promise<ActionState> {
+  const raw = Object.fromEntries(formData);
+  const parsed = forgetLearnedSchema.safeParse({ householdId: raw.householdId, id: raw.id || undefined });
+  if (!parsed.success) return { error: "Please try again." };
+  try {
+    const supabase = await createClient();
+    const membership = await requireHouseholdAdmin(supabase, parsed.data.householdId);
+    const count = await forgetLearnedDefaults(supabase, parsed.data.householdId, parsed.data.id);
+    await auditChange({ householdId: parsed.data.householdId, actorMemberId: membership.memberId, eventType: "homesend.learned_forgotten", targetTable: "homesend_learned_defaults", targetId: parsed.data.id ?? null, metadata: { count, all: !parsed.data.id } });
+  } catch (thrown) {
+    return { error: toErrorBody(thrown, "privacy").body.error.message };
+  }
+  revalidatePath("/settings/ai");
+  return { notice: "forgotten" };
 }

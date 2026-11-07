@@ -390,6 +390,8 @@ export function buildContextItems(records: ContextRecords, options: BuildOptions
           ...(member.memberType === "adult" && member.workHours ? { workHours: `${member.workHours.starts}–${member.workHours.ends}` } : {}),
           ...(member.ageYears !== null && member.ageYears !== undefined ? { ageYears: member.ageYears } : {}),
           ...(schoolsOf(member.id).length > 0 ? { school: schoolsOf(member.id).join(", ") } : {}),
+          // The schools' own names, for HomeSend to match a notice to a child (14-066).
+          ...(schoolsOf(member.id).length > 0 ? { schoolNames: (records.enrolments ?? []).filter((enrolment) => enrolment.childMemberId === member.id).map((enrolment) => enrolment.schoolName) } : {}),
           ...(member.nicknamePreferred && member.nickname ? { goesBy: member.nickname } : {}),
           ...((records.languages?.get(member.id)?.length ?? 0) > 0 ? { speaks: spokenSummary(records.languages!.get(member.id)!) } : {}),
         },

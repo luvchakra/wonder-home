@@ -106,7 +106,7 @@ const SECTIONS: readonly SectionShape[] = [
     id: "home-send",
     group: "Everyday use",
     updated: "2026-11-07",
-    keywords: ["remove", "delete for good", "delete permanently", "swipe to remove", "archive all", "add all anyway", "clear everything", "clear all", "couldn't be read", "needs a word", "added recently", "send something", "identical", "tidy up", "tidy", "no longer applies", "past event", "duplicate", "archive reason", "checking", "looks right", "added directly", "questions waiting", "check question", "clarify", "answer on whatsapp", "unconfirmed", "add selected", "add all", "bulk", "select several", "review one by one", "archived", "archive", "restore", "try again", "retry", "still want", "grouped reminder", "homesend", "upload", "photo", "pdf", "screenshot", "forward", "email", "share", "paperclip", "school notice", "receipt", "whatsapp", "voice note", "link", "undo", "still needed", "missing", "quantity", "fill in", "offer", "shopping list", "top up", "why waiting", "add money entries directly", "add health entries directly", "bill", "health document", "approved senders", "allowlist", "allowed sender", "forwarding address", "block sender", "email privacy"],
+    keywords: ["learned", "what homesend has learned", "forget", "which child", "who is this for", "remembers", "remove", "delete for good", "delete permanently", "swipe to remove", "archive all", "add all anyway", "clear everything", "clear all", "couldn't be read", "needs a word", "added recently", "send something", "identical", "tidy up", "tidy", "no longer applies", "past event", "duplicate", "archive reason", "checking", "looks right", "added directly", "questions waiting", "check question", "clarify", "answer on whatsapp", "unconfirmed", "add selected", "add all", "bulk", "select several", "review one by one", "archived", "archive", "restore", "try again", "retry", "still want", "grouped reminder", "homesend", "upload", "photo", "pdf", "screenshot", "forward", "email", "share", "paperclip", "school notice", "receipt", "whatsapp", "voice note", "link", "undo", "still needed", "missing", "quantity", "fill in", "offer", "shopping list", "top up", "why waiting", "add money entries directly", "add health entries directly", "bill", "health document", "approved senders", "allowlist", "allowed sender", "forwarding address", "block sender", "email privacy"],
   },
   {
     id: "today-and-home",
@@ -272,6 +272,7 @@ const FAQ_SHAPE: readonly Pick<FaqEntry, "id" | "section">[] = [
   { id: "homesend-questions", section: "home-send" },
   { id: "homesend-clear", section: "home-send" },
   { id: "homesend-remove", section: "home-send" },
+  { id: "homesend-learned", section: "home-send" },
   { id: "other-language", section: "language" },
   { id: "reminder-timing", section: "notifications" },
   { id: "health-visibility", section: "health" },

@@ -30,6 +30,7 @@ import { cancelSchoolItem, restoreSchoolItem, updateSchoolItem } from "@wonderho
 import { standDownActivity, standDownActivityNote } from "@wonderhome/core/school/activities";
 import { setEventCancelled } from "@wonderhome/core/family/event-detail";
 
+import { learnSubject } from "@wonderhome/core/homesend/learned-repository";
 import { prepareReview } from "./home-send-review";
 import { autoApplyHomeSendItem } from "./home-send-auto";
 import { addChildFromNotice, addGrocery, createNew, recordReceipt, reviseExisting, routeSchema, type RouteInput } from "./home-send-writes";
@@ -500,6 +501,17 @@ export async function routeHomeSendItemAction(_previous: RouteHomeItemState, for
       // Anything it had to add first (a class the child did not have yet) is its own change, undone with it.
       for (const also of created.also ?? []) {
         await recordHomeSendChange(supabase, { householdId: input.householdId, intakeId: input.itemId, domain: also.domain, entityId: also.entityId, createdByMemberId: membership.memberId });
+      }
+      // The child a person picked for an outside sender's notice is remembered, so it isn't asked again (14-066).
+      if ((input.kind === "school_item" || input.kind === "activity_item") && input.childMemberId && intake) {
+        await learnSubject(supabase, {
+          householdId: input.householdId,
+          kind: input.kind,
+          sender: intake.senderAddress ?? intake.understanding?.provenance.sender ?? null,
+          person: { memberId: input.childMemberId, memberType: "child" },
+          learnedByMemberId: membership.memberId,
+          itemId: input.itemId,
+        }).catch(() => false);
       }
     }
 
