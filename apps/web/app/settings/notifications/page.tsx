@@ -97,10 +97,11 @@ export default async function NotificationSettingsPage() {
   // WhatsApp once its Cloud API is configured, in-app always.
   const adapters = channelAdaptersFromEnv();
   // Will each channel reach this person, and if not, why (story 27-003).
-  const admin = createAdminClient();
+  // The admin client is made inside the guarded call: a deployment without the service key still shows the page.
+  const admin = () => createAdminClient();
   const [checks, accountEmail] = await Promise.all([
-    loadChannelChecks(admin, { memberId: membership.memberId, timeZone }, adapters).catch(() => []),
-    emailAddressFor(admin, membership.memberId).catch(() => null),
+    Promise.resolve().then(() => loadChannelChecks(admin(), { memberId: membership.memberId, timeZone }, adapters)).catch(() => []),
+    Promise.resolve().then(() => emailAddressFor(admin(), membership.memberId)).catch(() => null),
   ]);
   // Email goes only to the confirmed address of the person's own account (story 27-001). Someone
   // with none, a helper who signs in by phone, is not offered it: WhatsApp and push are theirs (27-015).

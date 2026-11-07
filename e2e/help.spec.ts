@@ -123,7 +123,7 @@ test("every answer the assistant can give lands on a real section", () => {
 
 test("the HomeSend checks (14-062) are in the guide and the FAQ, and a question about them lands on HomeSend", () => {
   const section = GUIDE.find((entry) => entry.id === "home-send")!;
-  expect(section.body.some((paragraph) => paragraph.includes("Added · checking 1 question"))).toBe(true);
+  expect(section.body.some((paragraph) => paragraph.includes("1 question waiting in HomeTalk"))).toBe(true);
   expect(FAQ.some((entry) => entry.section === "home-send" && /questions HomeTalk asks/.test(entry.question))).toBe(true);
   expect(answerQuestion("why is HomeTalk asking about something HomeSend added on WhatsApp").sectionId).toBe("home-send");
 });

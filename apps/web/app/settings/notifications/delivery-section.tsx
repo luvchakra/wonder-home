@@ -22,7 +22,7 @@ const KNOWN_REASONS = ["unavailable", "rejected", "no_target", "not_configured",
 export async function DeliverySection({ session }: { session: Session }) {
   const { membership, locale } = session;
   const { t } = locale;
-  const report = await loadDeliveryReport(createAdminClient(), membership.household.id).catch(() => null);
+  const report = await Promise.resolve().then(() => loadDeliveryReport(createAdminClient(), membership.household.id)).catch(() => null);
   const anyFailed = report?.channels.some((channel) => channel.failed > 0) ?? false;
   const anySent = report?.channels.some((channel) => channel.sent > 0) ?? false;
 
