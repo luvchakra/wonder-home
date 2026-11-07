@@ -323,7 +323,8 @@ test.describe("every signed-in screen loads", () => {
     await signIn(page);
     await page.goto("/settings?tab=household");
     const playbook = page.locator("section#playbook");
-    const groups = playbook.locator("details");
+    // The add form folds its own "More detail" under the same section; the area cards are the ones whose summary carries a count.
+    const groups = playbook.locator("details").filter({ has: page.locator("summary", { hasText: /·\s*\d+/ }) });
     // One card per area, alphabetical by its label, each closed with its count.
     await expect(groups.locator("summary")).toHaveText([/Laundry\s*· 1/, /Meals\s*· 1/, /Pets\s*· 1/]);
     const meals = groups.nth(1);
