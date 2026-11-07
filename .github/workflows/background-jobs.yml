@@ -23,7 +23,7 @@ name: Background jobs
 
 on:
   schedule:
-    - cron: "3-59/10 * * * *" # clock + calendar-sync
+    - cron: "3,13,23,33,43,53 * * * *" # clock + calendar-sync
     - cron: "47 * * * *" # webhooks
     - cron: "17 2 * * *" # daily, 07:47 IST (before Vercel's 03:00 UTC retention call)
   workflow_dispatch:

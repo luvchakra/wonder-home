@@ -11,6 +11,7 @@ decision that shapes later work each earns a note, written before moving on.
 
 | Date | Note |
 |---|---|
+| 2026-11-07 | [Background jobs schedule, migration drift, nightly E2E](2026-11-07-background-jobs-schedule-and-drift.md) |
 | 2026-11-07 | [Move all from Vercel: one button](2026-11-07-move-all-from-vercel.md) |
 | 2026-11-07 | [Platform admin portal and settings out of Vercel (16-010)](2026-11-07-admin-portal.md) |
 | 2026-11-07 | [New landing and the Landing page setting](2026-11-07-landing-variant.md) |
