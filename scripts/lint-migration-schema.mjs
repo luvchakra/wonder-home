@@ -6,7 +6,8 @@
  * statically and expensive to discover in production:
  *
  *   1. Migration filenames are `<14-digit timestamp>_<snake_case>.sql`, so the
- *      apply order is unambiguous.
+ *      apply order is unambiguous, and no two files share a timestamp: the
+ *      live history (`supabase_migrations.schema_migrations`) keys on it.
  *   2. Every created table enables row level security. RLS is defense in depth,
  *      but a table that never enables it has no second line at all.
  *   3. Every household-owned table carries a household_id column.
@@ -122,6 +123,27 @@ export function lintMigrationSource(filename, sql) {
   return problems;
 }
 
+/**
+ * Two files with one timestamp apply in an order their names no longer state,
+ * and only one of them can be recorded in `supabase_migrations.schema_migrations`,
+ * whose primary key is the version (the 2026-11-07 clash of `child_trivia`
+ * and `homesend_learned_defaults`, both 20261107233000).
+ */
+export function duplicateVersions(filenames) {
+  const byVersion = new Map();
+  for (const name of filenames) {
+    const version = name.slice(0, 14);
+    if (!/^\d{14}$/.test(version)) continue;
+    byVersion.set(version, [...(byVersion.get(version) ?? []), name]);
+  }
+  return [...byVersion.entries()]
+    .filter(([, names]) => names.length > 1)
+    .map(
+      ([version, names]) =>
+        `version ${version} is used by ${names.length} files: ${names.join(", ")} (rename all but one)`,
+    );
+}
+
 /** Returns the parenthesised column list of a `create table` statement. */
 function tableBody(sql, table) {
   const start = sql.search(
@@ -149,9 +171,10 @@ function main() {
     return;
   }
 
-  const problems = files.flatMap((name) =>
-    lintMigrationSource(name, readFileSync(join(MIGRATIONS_DIR, name), "utf8")),
-  );
+  const problems = [
+    ...duplicateVersions(files),
+    ...files.flatMap((name) => lintMigrationSource(name, readFileSync(join(MIGRATIONS_DIR, name), "utf8"))),
+  ];
 
   if (problems.length > 0) {
     console.error("Migration lint failed:");

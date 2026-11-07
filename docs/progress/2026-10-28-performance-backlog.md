@@ -4,7 +4,7 @@ Works through "Backlog" in [2026-10-28-performance-audit.md](2026-10-28-performa
 
 ## B1: the last per-row policy helpers in set form
 
-**Migration:** `supabase/migrations/20261028190000_policy_helpers_set_form.sql`.
+**Migration:** `supabase/migrations/20261028190001_policy_helpers_set_form.sql`.
 
 What it does:
 - Adds six set-form helpers, each `security definer`, granted to `authenticated` only:

@@ -27,7 +27,7 @@ never auto-applied.
    does. No `notes` field was added to the secondary shape: `createConsumable`'s
    input type has nowhere to put one, so nothing was built with nowhere to go.
 2. **`homesend_changes_one_per_intake_domain`** (migration
-   `20260922090000_homesend_secondary_domain.sql`) — narrows the existing
+   `20260922090001_homesend_secondary_domain.sql`) — narrows the existing
    one-row-per-intake uniqueness to one-row-per-intake-*per-domain*. An
    intake can now have a `bill` change and a `grocery_item` change, but
    never two of the same domain.
@@ -104,7 +104,7 @@ never auto-applied.
 
 ## Where the code lives
 
-- `supabase/migrations/20260922090000_homesend_secondary_domain.sql`
+- `supabase/migrations/20260922090001_homesend_secondary_domain.sql`
 - `packages/core/src/ai/classify-intake.ts`
 - `packages/core/src/homesend/items.ts`, `changes.ts`
 - `apps/web/app/(auth)/home-send-actions.ts`

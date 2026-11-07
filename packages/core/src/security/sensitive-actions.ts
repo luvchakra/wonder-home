@@ -300,7 +300,7 @@ export const SENSITIVE_ACTIONS: readonly SensitiveAction[] = [
   {
     event: "homesend.archived",
     because: "Something sent in waited 30 days untouched and was set aside. It is kept and can be restored, so the household should see when it moved.",
-    recordedIn: "supabase/migrations/20261103120000_homesend_lifecycle.sql",
+    recordedIn: "supabase/migrations/20261103120002_homesend_lifecycle.sql",
   },
   {
     event: "homesend.auto_archived",

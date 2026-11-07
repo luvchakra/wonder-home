@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
 
-import { lintMigrationSource } from "./lint-migration-schema.mjs";
+import { duplicateVersions, lintMigrationSource } from "./lint-migration-schema.mjs";
 
 const GOOD_NAME = "20260917000100_bootstrap_conventions.sql";
 
@@ -89,4 +89,15 @@ test("ignores rules that only appear inside comments", () => {
     select 1;
   `;
   assert.deepEqual(lintMigrationSource(GOOD_NAME, sql), []);
+});
+
+test("rejects two migrations that share one timestamp", () => {
+  const problems = duplicateVersions([
+    "20261107233000_child_trivia.sql",
+    "20261107233000_homesend_learned_defaults.sql",
+    "20261107234500_platform_overview.sql",
+  ]);
+  assert.equal(problems.length, 1);
+  assert.match(problems[0], /20261107233000 is used by 2 files/);
+  assert.deepEqual(duplicateVersions(["20261107233000_child_trivia.sql", "20261107233500_homesend_learned_defaults.sql"]), []);
 });

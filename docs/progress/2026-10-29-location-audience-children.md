@@ -7,7 +7,7 @@
 ## What changed
 
 - **Data.** `member_location_sharing.visible_to_children boolean not null default false`
-  (`supabase/migrations/20261029100000_member_location_visible_to_children.sql`).
+  (`supabase/migrations/20261029100001_member_location_visible_to_children.sql`).
   The read policy on `member_locations` is recreated: self and the household's
   adults read exactly as before; a **child** of the household may now read a
   member's position, but only when that member is sharing **and** chose
@@ -69,7 +69,7 @@
 
 ## Where the code lives
 
-Migration `supabase/migrations/20261029100000_member_location_visible_to_children.sql`;
+Migration `supabase/migrations/20261029100001_member_location_visible_to_children.sql`;
 core `packages/core/src/location/sharing.ts`; action `apps/web/app/(auth)/location-actions.ts`;
 UI `apps/web/app/_components/location-audience-choice.tsx`, `apps/web/app/settings/location/page.tsx`,
 `apps/web/app/family/page.tsx`; strings under `packages/core/src/i18n/messages/areas/{settings,help}/*`.
