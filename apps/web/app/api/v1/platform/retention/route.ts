@@ -1,19 +1,16 @@
 import { toErrorBody } from "@wonderhome/core/api/errors";
 import { reconcileAllProviders, type ReconciliationSummary } from "@wonderhome/core/billing/reconcile";
-import { importOpenFoodFacts, todaysQueries, type ImportReport } from "@wonderhome/core/commerce/catalog-import";
 import { createAdminClient } from "@wonderhome/core/db/admin";
 import { runHealthReminderSweep } from "@wonderhome/core/health/reminders";
 import { runMeasurementRoutineSweep } from "@wonderhome/core/health/routine-reminders";
 import { drainJobs, type DrainOutcome } from "@wonderhome/core/homesend/retry-queue";
+import { runRetentionSweeps } from "@wonderhome/core/jobs/daily";
+import { ranOnGitHub } from "@wonderhome/core/jobs/heartbeat";
 import { reconcileAllHouseholds, type SweepSummary } from "@wonderhome/core/notifications/reconcile";
 import { notificationJobHandlers } from "@wonderhome/core/notifications/retry-handler";
 import { whatsappConfigFromEnv } from "@wonderhome/core/notifications/whatsapp";
 import { WHATSAPP_PROCESS_KIND, whatsappJobHandler } from "@wonderhome/core/whatsapp/intake";
-import { pruneExpiredShareHandoffs } from "@wonderhome/core/homesend/share-handoff";
 import { log } from "@wonderhome/core/observability/logger";
-import { purgeSoftDeleted, runRetentionCleanup, type CleanupSummary } from "@wonderhome/core/privacy/cleanup";
-import { fulfillMaturedDeletions } from "@wonderhome/core/privacy/fulfill-deletion";
-import { purgeExpired, summarise } from "@wonderhome/core/privacy/purge";
 
 import { whatsappAsk, whatsappAutoAdd } from "@/app/_lib/whatsapp-hometalk";
 
@@ -53,62 +50,13 @@ export async function POST(request: Request) {
 
   try {
     const admin = createAdminClient();
-    const outcomes = await purgeExpired(admin);
-
-    // Not a `RetentionClass`: staged, pre-account share content has its own
-    // fixed 30-minute window rather than the day-scale schedule the Privacy
-    // Centre publishes (see `pruneExpiredShareHandoffs`'s own doc comment),
-    // so it is swept here directly rather than forced into that schedule.
-    let handoffsDeleted = 0;
-    let handoffsError: string | undefined;
-    try {
-      handoffsDeleted = await pruneExpiredShareHandoffs(admin);
-    } catch (thrown) {
-      handoffsError = thrown instanceof Error ? thrown.message : "unknown";
-    }
-    // Also not a `RetentionClass`: a matured deletion request acts on its own
-    // `acts_at`, not on an age cutoff `purgeExpired`'s table-scan pattern
-    // fits — `fulfill-deletion.ts`'s own doc comment says why.
-    let deletionsFulfilled = 0;
-    let deletionsFailed = 0;
-    try {
-      const deletionOutcomes = await fulfillMaturedDeletions(admin);
-      deletionsFulfilled = deletionOutcomes.filter((outcome) => outcome.fulfilled).length;
-      deletionsFailed = deletionOutcomes.filter((outcome) => !outcome.fulfilled).length;
-    } catch (thrown) {
-      deletionsFailed = -1; // The lookup itself failed, not one request within it.
-      log.error("deletion fulfillment sweep failed", {
-        reason: thrown instanceof Error ? thrown.message : "unknown",
-        allow: ["reason"],
-      });
-    }
-
-    // Periodic cleanup of passed household ephemera (the owner, 2026-10-28,
-    // `docs/data-retention.md`): the household's OWN retention window applied
-    // to records a person created, soft-delete only (the hard purge is gated
-    // off, G7). Folded in here for the same reasons the sweeps below are, and
-    // because it belongs beside `purgeExpired` — this is retention too.
-    let cleanupSummary: CleanupSummary | null = null;
-    let cleanupError: string | undefined;
-    try {
-      cleanupSummary = await runRetentionCleanup(admin);
-    } catch (thrown) {
-      cleanupError = thrown instanceof Error ? thrown.message : "unknown";
-      log.error("retention cleanup failed", { reason: cleanupError, allow: ["reason"] });
-    }
-
-    // The purge runs DRY-RUN only (the owner, Q4 — "yes, dry-run first"): it
-    // reports how many soft-deleted rows are past the grace window and deletes
-    // nothing. Real deletion stays gated until the owner has seen a report.
-    let purgeDryRun: { dryRun: boolean; wouldDelete: number } | null = null;
-    let purgeError: string | undefined;
-    try {
-      const { outcomes } = await purgeSoftDeleted(admin, new Date(), { dryRun: true });
-      purgeDryRun = { dryRun: true, wouldDelete: outcomes.reduce((sum, o) => sum + o.marked, 0) };
-    } catch (thrown) {
-      purgeError = thrown instanceof Error ? thrown.message : "unknown";
-      log.error("retention purge dry-run failed", { reason: purgeError, allow: ["reason"] });
-    }
+    const now = new Date();
+    // The sweeps that send nothing (purge, handoffs, deletions, cleanup, the
+    // purge dry-run, old events, catalog staples) run on GitHub Actions too
+    // (`background-jobs.yml`, 2026-11-07); while its `daily.retention`
+    // heartbeat is fresh they are skipped here, and done here once it is not.
+    const onGitHub = (await ranOnGitHub(admin, ["daily.retention"], now)).has("daily.retention");
+    const retention = onGitHub ? null : await runRetentionSweeps(admin, now);
 
     // Not a retention sweep at all — folded into this route rather than
     // given its own cron entry because the project's Hobby-tier plan caps
@@ -170,39 +118,13 @@ export async function POST(request: Request) {
       jobsError = thrown instanceof Error ? thrown.message : "unknown";
       log.error("job queue drain failed", { reason: jobsError, allow: ["reason"] });
     }
-    const dayAgo = new Date(Date.now() - 86_400_000).toISOString();
-    const ninetyDaysAgo = new Date(Date.now() - 90 * 86_400_000).toISOString();
-    const counters = await admin.from("rate_limit_counters").delete({ count: "exact" }).lt("window_start", dayAgo);
-    const emailEvents = await admin.from("homesend_email_events").delete({ count: "exact" }).lt("created_at", ninetyDaysAgo);
-    const channelEvents = await admin.from("hometalk_channel_events").delete({ count: "exact" }).lt("created_at", ninetyDaysAgo);
-    const whatsappEvents = await admin.from("whatsapp_events").delete({ count: "exact" }).lt("created_at", ninetyDaysAgo);
-    // A connect code is useful for fifteen minutes; a day later it is only a hash to keep.
-    const linkRequests = await admin.from("whatsapp_link_requests").delete({ count: "exact" }).lt("expires_at", dayAgo);
-
-    const swept = [
-      ...outcomes.map(({ table, deleted, error }) => ({ table, deleted, error })),
-      { table: "homesend_share_handoffs", deleted: handoffsDeleted, error: handoffsError },
-      { table: "rate_limit_counters", deleted: counters.count ?? 0, error: counters.error?.code },
-      { table: "homesend_email_events", deleted: emailEvents.count ?? 0, error: emailEvents.error?.code },
-      { table: "hometalk_channel_events", deleted: channelEvents.count ?? 0, error: channelEvents.error?.code },
-      { table: "whatsapp_events", deleted: whatsappEvents.count ?? 0, error: whatsappEvents.error?.code },
-      { table: "whatsapp_link_requests", deleted: linkRequests.count ?? 0, error: linkRequests.error?.code },
-    ];
-    const failed = swept.filter((row) => row.error);
-
     log.info("retention sweep", {
-      summary: summarise(outcomes),
-      handoffsDeleted,
-      deletionsFulfilled,
-      deletionsFailed,
+      onGitHub,
       reminderSummary,
       routineReminderSummary,
       smartReminderSummary,
       jobsSummary,
-      cleanupSummary,
-      purgeDryRun,
-      failed: failed.length,
-      allow: ["summary", "handoffsDeleted", "deletionsFulfilled", "deletionsFailed", "reminderSummary", "routineReminderSummary", "smartReminderSummary", "jobsSummary", "cleanupSummary", "purgeDryRun", "failed"],
+      allow: ["onGitHub", "reminderSummary", "routineReminderSummary", "smartReminderSummary", "jobsSummary"],
     });
 
     // Counts only. What was deleted is exactly what must not be reported back.
@@ -217,31 +139,23 @@ export async function POST(request: Request) {
       log.error("payments reconciliation failed", { reason: reconciliationError, allow: ["reason"] });
     }
 
-    // The shared grocery catalog (HomeFood 25-006): a few staples a night,
-    // from Open Food Facts, so it stays current without one long run.
-    let catalog: ImportReport | null = null;
-    try {
-      catalog = await importOpenFoodFacts(admin, fetch, todaysQueries(new Date()));
-    } catch (thrown) {
-      log.warn("grocery catalog refresh failed", { reason: thrown instanceof Error ? thrown.name : "unknown", allow: ["reason"] });
-    }
-
     return Response.json(
       {
-        swept,
-        catalog,
-        deletionsFulfilled,
-        deletionsFailed,
+        onGitHub,
+        swept: retention?.swept ?? [],
+        catalog: retention?.catalog ?? null,
+        deletionsFulfilled: retention?.deletionsFulfilled ?? 0,
+        deletionsFailed: retention?.deletionsFailed ?? 0,
         healthReminders: reminderSummary ?? { error: reminderError },
         routineReminders: routineReminderSummary ?? { error: routineReminderError },
         smartReminders: smartReminderSummary ?? { error: smartReminderError },
         jobs: jobsSummary ?? { error: jobsError },
-        cleanup: cleanupSummary ?? { error: cleanupError },
-        purgeDryRun: purgeDryRun ?? { error: purgeError },
+        cleanup: retention?.cleanup ?? null,
+        purgeDryRun: retention?.purgeDryRun ?? null,
         reconciliation: reconciliation ?? { error: reconciliationError },
       },
       {
-        status: failed.length > 0 || deletionsFailed !== 0 || reminderError || routineReminderError || smartReminderError || jobsError || cleanupError || purgeError || reconciliationError ? 207 : 200,
+        status: retention?.partial || reminderError || routineReminderError || smartReminderError || jobsError || reconciliationError ? 207 : 200,
         headers: { "cache-control": "no-store" },
       },
     );

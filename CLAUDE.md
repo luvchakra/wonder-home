@@ -161,6 +161,7 @@ The user guide is for signed-in members only.
 - **Release notes** (`help/release-notes.ts`, shown at `/help#release-notes`) are written only once the owner confirms a version is live. Add one entry at the top of `RELEASE_NOTES`: that day's date, `fromPr` one after the previous `throughPr`, and `throughPr` the last PR live. Cover each user-facing feature in that range, one item per feature, in UI labels; leave out fixes, CI and docs. Words are `help.release.<id>.title` and `.item.N` in all eight languages. Never edit an older entry except to correct it.
 
 ## Where it is hosted
+- Scheduled and batch work runs on GitHub Actions (`background-jobs.yml`); Vercel keeps delivery, people's requests and webhooks, and takes a step back when its heartbeat goes stale (`docs/background-jobs.md`).
 - Vercel team `kunals-projects-9f64757f` (Hobby). Projects: `wonderhome` (`prj_wmkKrjqrezwGc8av9LEdjbcU46cO`, serves `home.wonderapps.biz`, production from `main`); `wonder-apps` (`prj_eAN93HE8LG4URCWU0JlhBQtokWuM`, `wonderapps.biz`). Table and history: `docs/hosting.md`.
 - Call the Vercel connector without `teamId`/`slug`; naming the team returns 403 until it is re-authorised.
 

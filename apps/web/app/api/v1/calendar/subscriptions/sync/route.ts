@@ -1,5 +1,6 @@
 import { createAdminClient } from "@wonderhome/core/db/admin";
 import { syncDueSubscriptions } from "@wonderhome/core/calendar/subscriptions/sync";
+import { ranOnGitHub } from "@wonderhome/core/jobs/heartbeat";
 import { log } from "@wonderhome/core/observability/logger";
 
 /**
@@ -23,6 +24,10 @@ async function sync(request: Request): Promise<Response> {
   }
 
   const admin = createAdminClient();
+  // The GitHub runner syncs feeds every 15 minutes (background-jobs.yml); while it does, this call has nothing to add.
+  if ((await ranOnGitHub(admin, ["calendar-sync"], new Date())).size > 0) {
+    return Response.json({ ok: true, synced: 0, failed: 0, onGitHub: true }, { headers: { "cache-control": "no-store" } });
+  }
   try {
     const result = await syncDueSubscriptions(admin, {
       limit: MAX_FEEDS_PER_RUN,

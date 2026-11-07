@@ -53,6 +53,7 @@
     "./platform/*": "./src/platform/*.ts",
     "./navigation/*": "./src/navigation/*.ts",
     "./notifications/*": "./src/notifications/*.ts",
+    "./jobs/*": "./src/jobs/*.ts",
     "./pwa/*": "./src/pwa/*.ts",
     "./webhooks/*": "./src/webhooks/*.ts",
     "./health/*": "./src/health/*.ts",

@@ -1,0 +1,117 @@
+# WonderHome's background jobs, on this runner instead of Vercel (the owner, 2026-11-07: "to reduce load on
+# Vercel, transfer processes to GitHub as much as possible", the WonderWorks pattern). Each run executes the app's
+# own core code (scripts/jobs.mjs → packages/core/src/jobs/runner.ts) straight against Supabase; the site is never
+# called. Every step writes a heartbeat (platform_job_heartbeats); Vercel's side of the same step (the delivery
+# clock, the daily cron, the calendar sync) skips it while that is fresh and takes it back by itself when it goes
+# stale, so a missing secret or a red run never leaves work undone. Each step keeps its own claims, so a late,
+# doubled or overlapping run (here or on Vercel) does nothing twice. docs/background-jobs.md has the full map.
+#
+#   clock          every 10 min   HomeBrain keep-warm, knowledge drain, HomeSend 30-day archive and daily tidy
+#                                 (04:00 household time), HomeBrain Sleep (2–5 am household time); then the
+#                                 calendar feeds whose sync has come
+#   webhooks       hourly         developer webhooks waiting (daily on Vercel's plan)
+#   daily          07:47 IST      the retention sweeps that send nothing (purge, cleanup, deletions, catalog)
+#
+# Repository secrets (Settings → Secrets and variables → Actions): SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY
+# (required; the live project's, the values Vercel has as NEXT_PUBLIC_SUPABASE_URL / SUPABASE_SERVICE_ROLE_KEY).
+# Optional: WONDERHOME_AI_KEY, WONDERHOME_AI_PROVIDER, WONDERHOME_AI_MODEL, WONDERHOME_AI_UNDERSTANDING_MODEL (the
+# Vercel values) — without the key the tidy and Sleep steps stay on Vercel. Until the required two exist every run
+# says so and exits green; Vercel keeps doing everything.
+#
+# Only schedule and workflow_dispatch: never a pull request, so no fork ever runs with these secrets.
+name: Background jobs
+
+on:
+  schedule:
+    - cron: "3-59/10 * * * *" # clock + calendar-sync
+    - cron: "47 * * * *" # webhooks
+    - cron: "17 2 * * *" # daily, 07:47 IST (before Vercel's 03:00 UTC retention call)
+  workflow_dispatch:
+    inputs:
+      job:
+        description: "Which job"
+        type: choice
+        default: clock
+        options: [clock, calendar-sync, webhooks, daily]
+      dry_run:
+        description: "Dry run: load the code, reach the database, print the plan; nothing is claimed, written or sent"
+        type: boolean
+        default: false
+
+permissions:
+  contents: read
+
+jobs:
+  run:
+    name: Run ${{ inputs.job || (github.event.schedule == '47 * * * *' && 'webhooks') || (github.event.schedule == '17 2 * * *' && 'daily') || 'clock' }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    concurrency:
+      # One run of each job at a time; a run that overlaps waits rather than cancels the one working.
+      group: background-jobs-${{ inputs.job || (github.event.schedule == '47 * * * *' && 'webhooks') || (github.event.schedule == '17 2 * * *' && 'daily') || 'clock' }}
+      cancel-in-progress: false
+    env:
+      JOB: ${{ inputs.job || (github.event.schedule == '47 * * * *' && 'webhooks') || (github.event.schedule == '17 2 * * *' && 'daily') || 'clock' }}
+      DRY_RUN: ${{ inputs.dry_run && '--dry-run' || '' }}
+      RUNNER_READY: ${{ secrets.SUPABASE_URL != '' && secrets.SUPABASE_SERVICE_ROLE_KEY != '' }}
+    steps:
+      - name: Secrets present
+        if: env.RUNNER_READY != 'true'
+        run: echo "::warning::SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY aren't set as repository secrets, so nothing ran here; Vercel keeps doing these jobs. See the comment at the top of .github/workflows/background-jobs.yml."
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        if: env.RUNNER_READY == 'true'
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        if: env.RUNNER_READY == 'true'
+        with:
+          node-version: 22
+          cache: npm
+      - name: Install
+        if: env.RUNNER_READY == 'true'
+        run: npm ci --no-audit --no-fund --silent
+        env:
+          PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD: "1"
+      - name: Run ${{ env.JOB }}
+        if: env.RUNNER_READY == 'true'
+        timeout-minutes: 15
+        env:
+          NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+          WONDERHOME_AI_KEY: ${{ secrets.WONDERHOME_AI_KEY }}
+          WONDERHOME_AI_PROVIDER: ${{ secrets.WONDERHOME_AI_PROVIDER }}
+          WONDERHOME_AI_MODEL: ${{ secrets.WONDERHOME_AI_MODEL }}
+          WONDERHOME_AI_UNDERSTANDING_MODEL: ${{ secrets.WONDERHOME_AI_UNDERSTANDING_MODEL }}
+        run: |
+          node scripts/jobs.mjs "$JOB" $DRY_RUN
+          # The clock run also syncs calendar feeds (every 10 min; each feed is claimed when its sync comes).
+          if [ "$JOB" = "clock" ]; then node scripts/jobs.mjs calendar-sync $DRY_RUN; fi
+
+  # Nobody watches a background job: a failed scheduled run opens one issue (once, not every ten minutes), and the
+  # next green run closes it.
+  alert:
+    name: Alert on failure
+    needs: [run]
+    if: always() && github.event_name == 'schedule' && needs.run.result != 'skipped' && needs.run.result != 'cancelled'
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      issues: write
+    steps:
+      - env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+          RESULT: ${{ needs.run.result }}
+          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+          SCHEDULE: ${{ github.event.schedule }}
+        run: |
+          title="Background jobs failing"
+          n=$(gh issue list --state open --limit 100 --json number,title --jq ".[] | select(.title == \"$title\") | .number" | head -n 1)
+          if [ "$RESULT" = "success" ]; then
+            if [ -n "$n" ]; then gh issue close "$n" --comment "Green again: $RUN_URL"; fi
+            exit 0
+          fi
+          if [ -z "$n" ]; then
+            body=$(printf 'A scheduled background job (`%s`, commit `%s`) ended %s. Vercel takes each failed step back once its heartbeat goes stale, so nothing is left undone, but the runner needs fixing. The run log names the step.\n\n%s' "$SCHEDULE" "${GITHUB_SHA:0:7}" "$RESULT" "$RUN_URL")
+            gh issue create --title "$title" --body "$body"
+          fi
