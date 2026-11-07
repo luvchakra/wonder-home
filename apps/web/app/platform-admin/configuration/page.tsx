@@ -1,6 +1,7 @@
-import { settingGroupsFor } from "../../_lib/platform-settings-view";
+import { settingGroupsFor, settingTotals } from "../../_lib/platform-settings-view";
 import { platformStaff } from "../../_lib/platform-staff";
 import { PageBody, PageTitle, Panel } from "../_ui/page-title";
+import { MoveAllFromVercel } from "../_ui/move-all";
 import { SettingGroups } from "../_ui/setting-groups";
 
 export const dynamic = "force-dynamic";
@@ -18,11 +19,22 @@ const STAYS_IN_VERCEL = [
 export default async function PlatformConfigurationPage() {
   const staff = await platformStaff("operations.read");
   if (!staff) return null; // the layout has already answered 404
-  const { groups, storeReady } = await settingGroupsFor(staff, "configuration");
+  const [{ groups, storeReady }, { totals }] = await Promise.all([settingGroupsFor(staff, "configuration"), settingTotals(staff)]);
 
   return (
     <PageBody>
       <PageTitle title="Configuration" subtitle="Switches for whole features. A change here reaches every server within a minute, with no redeploy." />
+      <Panel
+        id="move-all"
+        title="Move all from Vercel"
+        description={
+          totals.environment > 0
+            ? `${totals.environment} settings still come from Vercel. One tap saves each here (never overwriting one already saved), checks it reads back the same, and lists the Vercel variables you can then delete.`
+            : "Every setting Vercel had is saved here. Run it again any time: it moves only what is new."
+        }
+      >
+        <MoveAllFromVercel canMove={staff.role === "owner" && storeReady} stillInVercel={totals.environment} />
+      </Panel>
       <SettingGroups groups={groups} storeReady={storeReady} />
       <Panel title="What stays in Vercel" description="Everything else is here. These few stay in Vercel on purpose.">
         <ul className="space-y-2">

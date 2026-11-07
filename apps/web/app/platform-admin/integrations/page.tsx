@@ -27,6 +27,11 @@ export default async function PlatformIntegrationsPage() {
             .
           </>
         }
+        actions={
+          <Link href="/platform-admin/configuration#move-all" className="text-sm font-medium text-[var(--wh-primary)] hover:underline">
+            Move all from Vercel
+          </Link>
+        }
       />
       <SettingGroups groups={groups} storeReady={storeReady} />
     </PageBody>

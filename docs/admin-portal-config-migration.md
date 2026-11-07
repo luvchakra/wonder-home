@@ -7,12 +7,33 @@ WonderHome reads each setting in this order:
 2. the Vercel variable;
 3. the built-in default.
 
-So nothing breaks while you move settings over. Move one setting at a time, and delete a Vercel variable only once its row shows **Saved here** and you have checked the feature still works.
+So nothing breaks while you move settings over. Delete a Vercel variable only once its row shows **Saved here** and you have checked the feature still works.
+
+## The one-button way (start here)
+1. Open **home.wonderapps.biz/platform-admin** → **Configuration** → **Move all from Vercel** (Integrations and Secrets link to it too). Owner only.
+2. Enter your password and tap **Move all from Vercel**.
+   - Every setting Vercel has and the portal doesn't is saved here, in one go. Secrets go to Supabase Vault, as a manual save does.
+   - A setting already saved in the portal is never overwritten.
+   - Nothing that must stay in Vercel is ever moved.
+3. Read the result. It counts what was **moved**, **already in the portal**, **not set** in Vercel and what **must stay in Vercel**, then one line per setting:
+   - **Moved**: saved, and it reads back the same as Vercel's (a secret by its last four characters).
+   - **Already here**: left as it is.
+   - **Check it**: saved, but it reads back differently. Open its row before deleting anything.
+   - **Not moved**: Vercel's value isn't one the setting accepts, or it couldn't be saved just now. Enter it on its row, or run the button again in a minute.
+4. Tap **Copy list** under **Safe to delete in Vercel**. Delete those variables in Vercel (project `wonderhome` → Settings → Environment Variables → each variable's ⋯ menu → **Delete**, in every environment), then redeploy once.
+   - WonderHome deletes nothing in Vercel itself: the app holds no Vercel token.
+   - The Vercel value stays a fallback in code, so a variable you leave behind does no harm.
+5. Leave the **Must stay in Vercel** list alone; each has its reason beside it.
+
+Running it again is safe: it moves only what is new. The 20-changes-a-minute limit is checked once for the whole move, but it writes one Security → Setting changes line per setting, so for a minute after a big move a manual save may say "That's a lot of changes in a minute".
+
+The rest of this guide is the one-setting-at-a-time way: use it for a setting the button reports as **Not moved** or **Check it**, or to enter a value Vercel never had.
 
 ## Before you start (once)
-1. Run the two migrations, if they have not been run yet: dashboard → project `wonderhome` → SQL Editor. Run in order:
+1. Run the three migrations, if they have not been run yet: dashboard → project `wonderhome` → SQL Editor. Run in order:
    - `supabase/migrations/20261107200000_platform_settings.sql`
    - `supabase/migrations/20261107210000_platform_config.sql`
+   - `supabase/migrations/20261107230000_platform_config_import.sql` (already applied to the live project on 2026-11-07)
    - the `insert into supabase_migrations.schema_migrations …` line from PR #519.
 2. Open **home.wonderapps.biz/platform-admin**. If the yellow note "The settings store isn't reachable just now" still shows, the migrations aren't in yet.
 3. Have the values ready.

@@ -6,6 +6,7 @@ import { z } from "zod";
 import { adminClientFor, adminGrant } from "@wonderhome/core/db/admin-context";
 import { platformCan } from "@wonderhome/core/platform/admin";
 import { mayEdit, settingDefinition } from "@wonderhome/core/platform/settings/registry";
+import { moveAllFromEnvironment, type MoveReport } from "@wonderhome/core/platform/settings/move";
 import { forgetRuntimeEnv } from "@wonderhome/core/platform/settings/runtime-env";
 import { clearSetting, saveSetting } from "@wonderhome/core/platform/settings/store";
 
@@ -90,4 +91,44 @@ export async function clearSettingAction(_previous: SettingActionState, formData
   if (!result.ok) return { tone: "risk", message: result.reason === "limited" ? "That's a lot of changes in a minute. Wait a moment." : "It couldn't be cleared just now. Try again.", key: entry.key };
   done();
   return { tone: "info", message: "Cleared. WonderHome goes back to the Vercel value, or the default.", key: entry.key };
+}
+
+export type MoveActionState = { tone: "info" | "risk" | null; message: string | null; report: MoveReport | null };
+
+/**
+ * "Move all from Vercel" (owner, 2026-11-07): the owner alone, with their
+ * password again. Every movable setting Vercel has and the portal doesn't is
+ * saved here in one go, then read back. Values are read from this server's
+ * environment and never come back: the answer is counts, setting names and
+ * words (`MoveReport`).
+ */
+export async function moveAllFromVercelAction(_previous: MoveActionState, formData: FormData): Promise<MoveActionState> {
+  const staff = await platformStaff("secrets.manage");
+  if (!staff || staff.role !== "owner") return { tone: "risk", message: "Only the owner can move settings from Vercel.", report: null };
+  const parsed = z.object({ password: z.string().min(1).max(200) }).safeParse({ password: formData.get("password") });
+  if (!parsed.success) return { tone: "risk", message: "That password didn't match. Nothing was moved.", report: null };
+  const check = await confirmStaffPassword(parsed.data.password);
+  if (check !== "ok") {
+    return {
+      tone: "risk",
+      message: check === "limited" ? "Too many attempts. Wait a moment." : check === "unavailable" ? "We couldn't check your password just now. Nothing was moved." : "That password didn't match. Nothing was moved.",
+      report: null,
+    };
+  }
+  const result = await moveAllFromEnvironment(adminClientFor(adminGrant.platformAdmin(staff, "move every setting from Vercel")), staff.profileId, process.env);
+  if ("error" in result) {
+    return {
+      tone: "risk",
+      message: result.error === "limited" ? "That's a lot of changes in a minute. Wait a moment, then try again. Nothing was moved." : "The settings store isn't reachable just now. Nothing was moved.",
+      report: null,
+    };
+  }
+  if (result.counts.moved + result.counts.mismatch > 0) done();
+  const { moved, alreadyInPortal, notSet, mustStay, invalid, failed, mismatch } = result.counts;
+  const problems = invalid + failed + mismatch;
+  const message =
+    moved === 0 && problems === 0
+      ? `Nothing new to move: ${alreadyInPortal} already in the portal, ${notSet} not set in Vercel, ${mustStay} must stay in Vercel.`
+      : `Moved ${moved}. ${alreadyInPortal} already in the portal, ${notSet} not set in Vercel, ${mustStay} must stay in Vercel.${problems ? ` ${problems} need a look (below).` : ""}`;
+  return { tone: problems ? "risk" : "info", message, report: result };
 }

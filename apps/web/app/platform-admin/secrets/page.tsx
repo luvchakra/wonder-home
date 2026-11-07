@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { notFound } from "next/navigation";
 
 import { secretGroups } from "../../_lib/platform-settings-view";
@@ -19,6 +20,11 @@ export default async function PlatformSecretsPage() {
       <PageTitle
         title="Secrets"
         subtitle="Keys for the services WonderHome uses. Each one is stored encrypted, never shown again once saved (only its last four characters), and needs your password to change."
+        actions={
+          <Link href="/platform-admin/configuration#move-all" className="text-sm font-medium text-[var(--wh-primary)] hover:underline">
+            Move all from Vercel
+          </Link>
+        }
       />
       <SettingGroups groups={groups} storeReady={storeReady} />
     </PageBody>
