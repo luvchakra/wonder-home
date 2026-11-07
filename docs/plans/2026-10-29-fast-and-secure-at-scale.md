@@ -122,7 +122,7 @@ Each story: **Goal · Why (evidence) · Scope / Out of scope · Acceptance (meas
 | SEC-08 | Clear the Supabase security advisors | P1 | S | PERF-13 |
 
 #### PERF-13 — Apply the 3 pending migrations to the live project
-- **Goal:** `20261028190000_policy_helpers_set_form`, `20261028171000_child_visibility_set_form`, `20261028170000_chat_rpcs_revoke_anon` are live.
+- **Goal:** `20261028190001_policy_helpers_set_form`, `20261028171000_child_visibility_set_form`, `20261028170000_chat_rpcs_revoke_anon` are live.
 - **Why:** Written and merged in-branch but not applied live (`apply_migration` timed out previously); the set-form wins (e.g. `health_vitals` 711 → 1.5 ms) and the `anon` revoke are not yet realized in production.
 - **Scope:** Apply via MCP `apply_migration`, else hand the owner the SQL (dashboard → SQL Editor). Then `npm run verify:live`. **Out of scope:** any new schema.
 - **Acceptance:** `list_migrations` shows all three; advisor re-run shows the chat RPCs no longer `anon`-executable; `verify:live` green.

@@ -47,7 +47,7 @@ away), and offered no retry on failed items although `retry-queue.ts` existed.
    `reminder.homesend.*` messages, so each reader gets plurals and list
    separators in their own language, in all eight languages. The morning
    digest needs no change: it already includes a person's open notices.
-4. **30-day archive.** Migration `20261103120000_homesend_lifecycle.sql`:
+4. **30-day archive.** Migration `20261103120002_homesend_lifecycle.sql`:
    - adds `archived` status, `archived_at`, `archived_from`, `retry_count` and
      `retry_requested_at`, plus consistency checks and two partial indexes;
    - adds `public.archive_stale_home_send_items(p_now, p_limit)`. It is
@@ -135,4 +135,4 @@ missing function as nothing to do.
 `packages/core/src/notifications/{notices.ts,notices-sweep.ts}`,
 `apps/web/app/(auth)/home-send-bulk-actions.ts`, `apps/web/app/_lib/homesend-waiting.ts`,
 `apps/web/app/_components/{home-send-inbox.tsx,home-send-archived.tsx}`, `apps/web/app/home-send/page.tsx`,
-`supabase/migrations/20261103120000_homesend_lifecycle.sql`.
+`supabase/migrations/20261103120002_homesend_lifecycle.sql`.
