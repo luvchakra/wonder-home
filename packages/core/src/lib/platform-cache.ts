@@ -17,6 +17,8 @@
 export const PLATFORM_DATA = {
   /** Every plan's features and the running entitlement experiments, read on every gated screen. */
   plan_catalog: { tables: ["plan_features", "entitlement_experiments"], ttlMs: 60_000 },
+  /** Non-secret platform switches (the landing-page variant), public read, changed in the portal. */
+  platform_settings: { tables: ["platform_settings"], ttlMs: 30_000 },
 } as const satisfies Record<string, { tables: readonly string[]; ttlMs: number }>;
 
 export type PlatformDataKey = keyof typeof PLATFORM_DATA;

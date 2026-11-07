@@ -18,6 +18,9 @@ export default async function PlatformAdminPage() {
     ...(platformCan(staff, "careers.manage")
       ? [{ href: "/platform-admin/careers", title: "Careers connection", body: "The key that connects the public careers pages to WonderJobs." }]
       : []),
+    ...(platformCan(staff, "settings.manage")
+      ? [{ href: "/platform-admin/landing", title: "Landing page", body: "Choose which public home page signed-out visitors see: the new one-page landing or the classic one. Takes effect within a minute." }]
+      : []),
   ];
 
   return (

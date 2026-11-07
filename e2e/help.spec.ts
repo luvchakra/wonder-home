@@ -87,7 +87,7 @@ test("no client chunk a signed-out visitor downloads carries the guide's words",
 });
 
 test("the landing page points a visitor at contact, and at the guide only through sign-in", async ({ page, isMobile }) => {
-  await page.goto("/");
+  await page.goto("/?landing=classic");
   if (isMobile) await page.getByRole("button", { name: "Open menu" }).click();
 
   const nav = page.getByRole("navigation", { name: "Landing" }).first();

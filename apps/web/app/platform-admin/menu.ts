@@ -3,7 +3,7 @@ import { currentNavHref } from "@wonderhome/core/navigation/current-nav";
 /** Where "Back to WonderHome" goes, on every platform-admin page. */
 export const BACK_TO_APP_HREF = "/";
 
-export type PlatformMenuIcon = "overview" | "performance" | "careers";
+export type PlatformMenuIcon = "overview" | "performance" | "careers" | "landing";
 export type PlatformMenuTone = "primary" | "ai" | "people";
 
 export type PlatformMenuEntry = {
@@ -24,6 +24,7 @@ export const PLATFORM_MENU: readonly PlatformMenuEntry[] = [
   { href: "/platform-admin", label: "Overview", icon: "overview", tone: "primary" },
   { href: "/platform-admin/performance", label: "Performance", icon: "performance", tone: "ai" },
   { href: "/platform-admin/careers", label: "Careers connection", icon: "careers", tone: "people", capability: "careers.manage" },
+  { href: "/platform-admin/landing", label: "Landing page", icon: "landing", tone: "primary", capability: "settings.manage" },
 ];
 
 export type PlatformMenuItem = Omit<PlatformMenuEntry, "capability">;

@@ -8,6 +8,7 @@ import { homesendEs } from "./areas/homesend/es";
 import { settingsEs } from "./areas/settings/es";
 import { householdEs } from "./areas/household/es";
 import { entryEs } from "./areas/entry/es";
+import { landingEs } from "./areas/landing/es";
 import { installEs } from "./areas/install/es";
 import { eventsEs } from "./areas/events/es";
 import { calendarEs } from "./areas/calendar/es";
@@ -1122,6 +1123,7 @@ export const es: Catalog = {
   ...settingsEs,
   ...householdEs,
   ...entryEs,
+  ...landingEs,
   ...installEs,
   ...eventsEs,
   ...calendarEs,

@@ -133,7 +133,7 @@ const loadPlans = unstable_cache(async (): Promise<Plan[]> => {
   }
 }, ["landing-plans"], { revalidate: 3600 });
 
-export async function Landing() {
+export async function ClassicLanding() {
   const plans = await loadPlans();
   // A contact address is configuration: where none is set, the section offers
   // the routes that do work rather than a mailto addressed to nobody.

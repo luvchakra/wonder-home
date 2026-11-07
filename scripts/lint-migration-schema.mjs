@@ -66,6 +66,8 @@ const NON_TENANT_TABLES = new Set([
   "companion_sayings",
   // The WonderJobs career-site key setting and its audit trail (careers, 2026-10-21): one per deployment, service role only.
   "careers_settings",
+  "platform_settings",
+  "platform_setting_events",
   "careers_key_events",
   // The OAuth client Swiggy registered for this deployment's Instamart redirect URI (25-032): one per deployment, service role only.
   "instamart_oauth_clients",

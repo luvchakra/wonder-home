@@ -1,6 +1,6 @@
 "use client";
 
-import { ArrowLeft, Gauge, LayoutDashboard, Link2, Menu, type LucideIcon } from "lucide-react";
+import { ArrowLeft, Gauge, LayoutDashboard, LayoutTemplate, Link2, Menu, type LucideIcon } from "lucide-react";
 import dynamic from "next/dynamic";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
@@ -10,7 +10,7 @@ import { IconTile } from "@wonderhome/core/ui/icon-tile";
 
 import { BACK_TO_APP_HREF, currentPlatformHref, type PlatformMenuIcon, type PlatformMenuItem } from "./menu";
 
-export const ICONS: Record<PlatformMenuIcon, LucideIcon> = { overview: LayoutDashboard, performance: Gauge, careers: Link2 };
+export const ICONS: Record<PlatformMenuIcon, LucideIcon> = { overview: LayoutDashboard, performance: Gauge, careers: Link2, landing: LayoutTemplate };
 
 export function Row({ href, label, icon: Icon, tone, current, onNavigate }: {
   href: string;
