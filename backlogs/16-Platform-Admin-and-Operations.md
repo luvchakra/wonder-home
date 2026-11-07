@@ -17,6 +17,7 @@
 | 11 | P1 | 16-011 | Test connection for each provider key | Not Started | Follow-up of 16-010: a Test button per key (AI, SMTP, WhatsApp, Maps, TMDB, Resend, scanner), as Careers has |
 | 12 | P1 | 16-012 | Editors in Plans & billing | Not Started | Follow-up of 16-010: plan feature policies and experiments are editable only through the API today; move the editors onto the page |
 | 13 | P2 | 16-013 | Claude model choice without a deploy | Not Started | Follow-up of 16-010: `ai/model-client.ts` model constants become per-call reads so `WONDERHOME_AI_*_MODEL` can move into the registry |
+| 14 | P1 | 16-014 | Actionable Overview | Done | Owner, 2026-11-07. `/platform-admin` opens with the state in a sentence, then Needs you (one action each, raised only from real signals: failing or stale background jobs, AI key alerts, HomeTalk/HomeSend/delivery failure spikes, billing differences, failed plan payments, advisor findings beyond baseline, open support grants, settings still from Vercel, Vercel variables to delete, quiet setups), Growth & use (7/30 days with deltas and sparklines, plans adding up to the total, HomeSend confirmed vs checking) and Health (jobs, HomeTalk p95, failures, advisor, migrations). One staff-only RPC `platform_overview`, kept per server for 60 s; `packages/core/src/platform/overview.ts`. Not watched yet: nightly E2E, deploy state (no GitHub/Vercel token in the portal), CSP reports (not stored) |
 
 **Status flow:** `Not Started` → `In Progress` → `Blocked` → `Done`
 

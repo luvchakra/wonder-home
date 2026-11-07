@@ -41,7 +41,7 @@ in `docs/progress/`; for the running log of what changed when, `tracking/PROGRES
 | 13 Maintenance, Laundry & Pet Care | `█████████░` | 10 | 11 | 1 in progress |
 | 14 AI Orchestration & Learning | `████████░░` | 55 | 63 | 1 in progress, 4 not started, 3 deferred |
 | 15 Privacy, Security & Governance | `████████░░` | 11 | 13 | 2 not started |
-| 16 Platform Admin & Operations | `███████░░░` | 10 | 13 | 3 not started |
+| 16 Platform Admin & Operations | `███████░░░` | 11 | 14 | 3 not started |
 | 17 External Integrations | `█████████░` | 10 | 11 | 1 not started |
 | 18 API & Developer Platform | `██████████` | 8 | 8 | — |
 | 19 Testing, Observability & Production | `██████████` | 8 | 8 | — |
@@ -491,7 +491,7 @@ in `docs/progress/`; for the running log of what changed when, `tracking/PROGRES
 
 ### 16 — Platform Admin & Operations
 
-10 of 13 done `███████░░░`
+11 of 14 done `███████░░░`
 
 | Story | Priority | Status | Notes |
 |---|---|---|---|
@@ -508,6 +508,7 @@ in `docs/progress/`; for the running log of what changed when, `tracking/PROGRES
 | `16-011` Test connection for each provider key | P1 | Not Started | Follow-up of 16-010: a Test button per key (AI, SMTP, WhatsApp, Maps, TMDB, Resend, scanner), as Careers has |
 | `16-012` Editors in Plans & billing | P1 | Not Started | Follow-up of 16-010: plan feature policies and experiments are editable only through the API today; move the editors onto the page |
 | `16-013` Claude model choice without a deploy | P2 | Not Started | Follow-up of 16-010: `ai/model-client.ts` model constants become per-call reads so `WONDERHOME_AI_*_MODEL` can move into the registry |
+| `16-014` Actionable Overview | P1 | Done | Owner, 2026-11-07. `/platform-admin` opens with the state in a sentence, then Needs you (one action each, raised only from real signals: failing or stale background jobs, AI key alerts, HomeTalk/HomeSend/delivery failure spikes, billing differences, failed plan payments, advisor findings beyond baseline, open support grants, settings still from Vercel, Vercel variables to delete, quiet setups), Growth & use (7/30 days with deltas and sparklines, plans adding up to the total, HomeSend confirmed vs checking) and Health (jobs, HomeTalk p95, failures, advisor, migrations). One staff-only RPC `platform_overview`, kept per server for 60 s; `packages/core/src/platform/overview.ts`. Not watched yet: nightly E2E, deploy state (no GitHub/Vercel token in the portal), CSP reports (not stored) |
 
 ### 17 — External Integrations
 
