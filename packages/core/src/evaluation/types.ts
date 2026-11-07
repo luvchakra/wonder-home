@@ -161,7 +161,7 @@ export type HomeTalkTurn = { utterance: string; expected: Expectation };
 export type HomeSendCase = CaseBase & {
   surface: "homesend";
   /** The source content as it arrived. */
-  source: { channel: "pasted_text" | "email" | "audio" | "link" | "file"; text: string; subject?: string; attachment?: string; capturedAt?: string };
+  source: { channel: "pasted_text" | "email" | "audio" | "link" | "file"; text: string; subject?: string; attachment?: string; capturedAt?: string; from?: string };
   /**
    * What the classifier read it as — the recorded model interpretation the
    * deterministic run scores the rest of the chain against. A live-provider
@@ -175,6 +175,10 @@ export type HomeSendCase = CaseBase & {
    */
   recordedReading?: boolean;
   memberInitiated?: boolean;
+  /** What the household told HomeSend before (14-066): which child a sender's items are for. */
+  learned?: { key: string; valueMemberId: string; mixed?: boolean }[];
+  /** Schools on record for the case (14-066), added to the household's records. */
+  enrolments?: { childMemberId: string; schoolName: string }[];
   autonomy?: "prepare" | "execute";
   /** The Admin's "Add money / health entries directly" settings (`homesend/auto-add.ts`); both off when unset. */
   directAdd?: Partial<import("../homesend/auto-add").DirectAdd>;

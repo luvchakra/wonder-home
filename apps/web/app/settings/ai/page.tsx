@@ -8,6 +8,9 @@ import { AUTO_ADD_PERCENTS } from "@wonderhome/core/homesend/auto-add";
 import { loadAutoAddPercent } from "@wonderhome/core/household/auto-add-repository";
 import { loadDirectAdd } from "@wonderhome/core/household/direct-add-repository";
 import { loadHomeSendTidy } from "@wonderhome/core/household/homesend-tidy-repository";
+import { keyLabel } from "@wonderhome/core/homesend/learned";
+import { listLearnedDefaults } from "@wonderhome/core/homesend/learned-repository";
+import { listMembers } from "@wonderhome/core/identity/households";
 import { AppShell } from "@wonderhome/core/shell/app-shell";
 import { Card } from "@wonderhome/core/ui/card";
 import { IconTile } from "@wonderhome/core/ui/icon-tile";
@@ -23,6 +26,7 @@ import { safeReturnTo } from "../../_lib/return-to";
 import { openKeyAlerts } from "@wonderhome/core/ai/key-alert-status";
 import { AutoAddPercentPicker } from "../../_components/auto-add-percent-picker";
 import { DirectAddSwitch } from "../../_components/direct-add-switch";
+import { HomeSendLearned } from "../../_components/homesend-learned";
 import { HomeSendTidySwitch } from "../../_components/homesend-tidy-switch";
 import { KeyAlertBanner } from "../../_components/key-alert-banner";
 import { ConfirmRequestedSwitch } from "../../_components/confirm-requested-switch";
@@ -46,7 +50,7 @@ export default async function AiAssistantSettingsPage({ searchParams }: { search
   const returnTo = safeReturnTo(query.returnTo);
   const { supabase, membership, view, viewer, secondary } = session;
   const householdId = membership.household.id;
-  const [credential, voiceCredential, dataUse, confirmRequested, autoAddPercent, directAdd, keyAlerts, homesendTidy] = await Promise.all([
+  const [credential, voiceCredential, dataUse, confirmRequested, autoAddPercent, directAdd, keyAlerts, homesendTidy, learned, members] = await Promise.all([
     credentialStatus(supabase, householdId).catch(() => ({ configured: false, provider: null, updatedAt: null })),
     geminiVoiceKeyStatus(supabase, householdId).catch(() => ({ configured: false, provider: null, updatedAt: null })),
     loadDataUse(supabase, householdId),
@@ -55,6 +59,8 @@ export default async function AiAssistantSettingsPage({ searchParams }: { search
     loadDirectAdd(supabase, householdId),
     openKeyAlerts(supabase, householdId),
     loadHomeSendTidy(supabase, householdId),
+    listLearnedDefaults(supabase, householdId).catch(() => []),
+    listMembers(supabase, householdId, null).catch(() => []),
   ]);
 
   // Which key actually answers, decided in one place so the screen can never
@@ -64,6 +70,19 @@ export default async function AiAssistantSettingsPage({ searchParams }: { search
   const manages = view.permissions.includes("household.manage");
   const { t } = session.locale;
   const keyWords = keySourceWords(t, key.source);
+  // What HomeSend learned (14-066), in words: "class2@lakeside.edu → Tara", and who taught it when.
+  const nameOf = new Map(members.map((member) => [member.id, member.displayName]));
+  const learnedRows = learned
+    .filter((row) => nameOf.has(row.valueMemberId))
+    .map((row) => {
+      const date = formatDate(membership.household.timezone, new Date(row.learnedAt));
+      const by = row.learnedByMemberId ? nameOf.get(row.learnedByMemberId) : undefined;
+      return {
+        id: row.id,
+        name: `${keyLabel(row.key)} → ${nameOf.get(row.valueMemberId)}`,
+        reason: row.mixed ? t("settingsPage.ai.learned.mixed") : by ? t("settingsPage.ai.learned.by", { name: by, date }) : t("settingsPage.ai.learned.on", { date }),
+      };
+    });
   // Gemini voice runs only on Google: its own key first, else the assistant's when that is Google's.
   const voiceLine = voiceCredential.configured
     ? t("settingsPage.ai.voiceKey.own", { date: voiceCredential.updatedAt ? formatDate(membership.household.timezone, voiceCredential.updatedAt, "long") : "" })
@@ -145,6 +164,23 @@ export default async function AiAssistantSettingsPage({ searchParams }: { search
                 on: t("settingsPage.ai.homesendTidy.on"),
                 off: t("settingsPage.ai.homesendTidy.off"),
                 detail: t("settingsPage.ai.homesendTidy.detail"),
+                adminDecides: t("settingsPage.adminDecides"),
+              }}
+            />
+          </Card>
+          {/* What HomeSend has learned (14-066): so the same question is never asked twice. */}
+          <Card id="homesend-learned" className="mt-3 p-4">
+            <HomeSendLearned
+              householdId={householdId}
+              rows={learnedRows}
+              manages={manages}
+              labels={{
+                title: t("settingsPage.ai.learned.title"),
+                intro: t("settingsPage.ai.learned.intro"),
+                empty: t("settingsPage.ai.learned.empty"),
+                forget: t("settingsPage.ai.learned.forget"),
+                forgetAll: t("settingsPage.ai.learned.forgetAll"),
+                forgotten: t("settingsPage.ai.learned.forgotten"),
                 adminDecides: t("settingsPage.adminDecides"),
               }}
             />

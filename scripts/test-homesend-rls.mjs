@@ -1159,3 +1159,49 @@ test("a non-Admin adult can delete their own archived item, and removed_by_perso
   assert.equal(deleteCount(HEAD, "00000000-0000-4000-8000-000000000000"), 0);
   assert.equal(deleteCount(OTHER_ADULT, mine), 1);
 });
+
+// ---------------------------------------------------------------------------
+// What HomeSend learned (story 14-066): one household's, written as the member
+// who answered, about a member of the same household; only an Admin forgets.
+// ---------------------------------------------------------------------------
+
+test("learned defaults stay in the household, are written as yourself, and only an Admin forgets them", () => {
+  const child = psql(
+    `insert into public.household_members (household_id, member_type, display_name) values ('${household}', 'child', 'Asmi') returning id;`,
+    options,
+  );
+  const outsiderMember = psql(`select id from public.household_members where household_id = '${otherHousehold}' limit 1;`, options);
+  const other = otherAdultMember();
+  // A member learns as themselves, about a child of their own household.
+  asProfile(
+    HEAD,
+    `insert into public.homesend_learned_defaults (household_id, kind, key, value_member_id, learned_by_member_id)
+     values ('${household}', 'sender_child', 'sender:class2@school.example', '${child}', '${headMember}');`,
+    options,
+  );
+  assert.equal(asProfile(OTHER_ADULT, `select count(*) from public.homesend_learned_defaults;`, options), "1");
+  assert.equal(asProfile(OUTSIDER, `select count(*) from public.homesend_learned_defaults;`, options), "0");
+  // Never as somebody else.
+  assert.ok(
+    deniedForProfile(OTHER_ADULT, `insert into public.homesend_learned_defaults (household_id, kind, key, value_member_id, learned_by_member_id) values ('${household}', 'sender_child', 'sender:x@y.example', '${child}', '${headMember}');`, options),
+    "a member learned in another member's name",
+  );
+  // Never pointing at a member of another household.
+  assert.ok(
+    deniedForProfile(HEAD, `insert into public.homesend_learned_defaults (household_id, kind, key, value_member_id, learned_by_member_id) values ('${household}', 'sender_child', 'sender:z@y.example', '${outsiderMember}', '${headMember}');`, options),
+    "a learned default pointed across households",
+  );
+  // Never into another household.
+  assert.ok(
+    deniedForProfile(OUTSIDER, `insert into public.homesend_learned_defaults (household_id, kind, key, value_member_id, learned_by_member_id) values ('${household}', 'sender_child', 'sender:q@y.example', '${child}', '${outsiderMember}');`, options),
+    "an outsider wrote into the household",
+  );
+  // Only the kinds HomeSend knows.
+  assert.throws(() => psql(`insert into public.homesend_learned_defaults (household_id, kind, key, value_member_id) values ('${household}', 'approve_money', 'sender:a@b.example', '${child}');`, options));
+  // A non-Admin cannot forget; an Admin can.
+  asProfile(OTHER_ADULT, `delete from public.homesend_learned_defaults where household_id = '${household}';`, options);
+  assert.equal(psql(`select count(*) from public.homesend_learned_defaults where household_id = '${household}';`, options), "1");
+  assert.ok(other);
+  asProfile(HEAD, `delete from public.homesend_learned_defaults where household_id = '${household}';`, options);
+  assert.equal(psql(`select count(*) from public.homesend_learned_defaults where household_id = '${household}';`, options), "0");
+});

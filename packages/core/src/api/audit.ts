@@ -83,6 +83,7 @@ export const AUDIT_EVENTS = [
   "homesend.deleted",
   "homesend.added_all_anyway",
   "homesend.added_anyway",
+  "homesend.learned_forgotten",
   "homesend.retry_requested",
   "homesend.address_created",
   "homesend.address_rotated",

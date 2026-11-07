@@ -170,10 +170,10 @@ export function memberNamedInReply(text: string, members: readonly Pick<IntakePe
   return fits.length === 1 ? { id: fits[0]!.id, displayName: fits[0]!.displayName } : null;
 }
 
-type ItemRow = { id: string; status: string; classified_kind: HomeSendKind | null; extracted: Record<string, unknown> | null; understanding: Record<string, unknown> | null };
+type ItemRow = { id: string; status: string; classified_kind: HomeSendKind | null; extracted: Record<string, unknown> | null; understanding: Record<string, unknown> | null; sender_address?: string | null };
 
 async function loadItem(client: SupabaseClient, householdId: string, itemId: string): Promise<ItemRow | null> {
-  const { data } = await client.from("home_send_items").select("id, status, classified_kind, extracted, understanding").eq("household_id", householdId).eq("id", itemId).maybeSingle();
+  const { data } = await client.from("home_send_items").select("id, status, classified_kind, extracted, understanding, sender_address").eq("household_id", householdId).eq("id", itemId).maybeSingle();
   return (data as ItemRow | null) ?? null;
 }
 
@@ -269,7 +269,7 @@ export type IntakeAnswer = {
  */
 export async function answerIntakeQuestion(
   client: SupabaseClient,
-  input: { householdId: string; parameters: Record<string, unknown>; answer: string; people: readonly IntakePerson[]; timezone: string; now: Date },
+  input: { householdId: string; parameters: Record<string, unknown>; answer: string; people: readonly IntakePerson[]; timezone: string; now: Date; memberId?: string },
 ): Promise<IntakeAnswer> {
   const itemId = typeof input.parameters.itemId === "string" ? input.parameters.itemId : "";
   const field = input.parameters.field as DetailField;
@@ -284,11 +284,13 @@ export async function answerIntakeQuestion(
   let patch: Record<string, unknown> | null = null;
   let unread = false;
   let understanding = item.understanding;
+  let answeredPerson: { id: string; memberType?: string | null } | null = null;
 
   if (field === "child" || field === "person") {
     const choices = (Array.isArray(input.parameters.choices) ? input.parameters.choices : []) as IntakePerson[];
     const member = memberNamedInReply(input.answer, choices.length > 0 ? choices : input.people);
     if (member) {
+      answeredPerson = { id: member.id, memberType: (choices.length > 0 ? choices : input.people).find((person) => person.id === member.id)?.memberType ?? null };
       patch = { subjectMemberName: member.displayName, people: [member.displayName] };
       // The review reads who an item is for from its understanding's references (`homesend/resolve.ts`).
       understanding = item.understanding ? { ...item.understanding, references: [{ text: member.displayName, candidates: [], confidence: 0 }] } : null;
@@ -331,6 +333,21 @@ export async function answerIntakeQuestion(
       .eq("household_id", input.householdId)
       .eq("id", item.id);
     if (error) return { text: "I couldn't save that to HomeSend just now. It's still waiting there for you.", clarify: null, handBack: false, stillNeeded: [], title: null };
+    // Who a sender's items are for is remembered, so it is never asked again (14-066).
+    const person = (field === "child" || field === "person") && typeof patch.subjectMemberName === "string" ? answeredPerson : null;
+    if (person && input.memberId) {
+      const { learnSubject } = await import("../homesend/learned-repository");
+      const provenance = item.understanding?.provenance as { sender?: unknown } | undefined;
+      await learnSubject(client, {
+        householdId: input.householdId,
+        kind,
+        sender: item.sender_address ?? (typeof provenance?.sender === "string" ? provenance.sender : null),
+        person: { memberId: person.id, memberType: person.memberType ?? null },
+        learnedByMemberId: input.memberId,
+        itemId: item.id,
+        now: input.now,
+      }).catch(() => false);
+    }
   }
 
   const title = typeof filled.title === "string" ? filled.title : null;
@@ -380,7 +397,7 @@ export async function waitingForDetails(client: SupabaseClient, input: { househo
   const since = new Date(input.now.getTime() - OFFER_WINDOW_DAYS * 86_400_000).toISOString();
   const { data, error } = await client
     .from("home_send_items")
-    .select("id, status, classified_kind, extracted, understanding")
+    .select("id, status, classified_kind, extracted, understanding, sender_address")
     .eq("household_id", input.householdId)
     .eq("status", "classified")
     .gte("created_at", since)

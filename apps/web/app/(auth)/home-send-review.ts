@@ -14,6 +14,8 @@ import type { HomeSendExtraction, HomeSendKind } from "@wonderhome/core/homesend
 import { listRecordedReceipts } from "@wonderhome/core/homesend/repository";
 import { buildDocumentPlan, readPlanContext, type DocumentPlan } from "@wonderhome/core/homesend/plan";
 import { reconcileHomeSend, type HomeSendReconciliation } from "@wonderhome/core/homesend/reconcile";
+import { inferSubject } from "@wonderhome/core/homesend/learned";
+import { listLearnedDefaults } from "@wonderhome/core/homesend/learned-repository";
 import { adoptMatchedSubject, resolveIntakePeople, type SubjectResolution } from "@wonderhome/core/homesend/resolve";
 import type { DocumentReading } from "@wonderhome/core/homesend/document";
 import type { IntakeUnderstanding } from "@wonderhome/core/homesend/understanding";
@@ -126,6 +128,10 @@ export async function prepareReview(
     createdAt?: string | null;
     /** Null for an email: nobody in the household was acting when it arrived. */
     createdByMemberId: string | null;
+    /** An email's From, for what HomeSend learned about this sender (14-066). */
+    senderAddress?: string | null;
+    /** The words it came with, where a school may be named (14-066). */
+    rawText?: string | null;
   },
 ): Promise<ReviewPreparation> {
   const kind = item.classifiedKind;
@@ -164,9 +170,26 @@ export async function prepareReview(
     return { subject: null, reconciliation: null, understanding: item.understanding, confirmation: confirm(null, null, item.understanding, "prepare") };
   }
 
-  const people = await householdPeople(supabase, membership).catch(() => []);
-  const resolution = item.understanding
+  // Who it is for may come from what the household told HomeSend before (14-066): read in the same wave.
+  const childKind = kind === "school_item" || kind === "activity_item";
+  const [people, learned] = await Promise.all([
+    householdPeople(supabase, membership).catch(() => []),
+    childKind ? listLearnedDefaults(supabase, membership.household.id).catch(() => []) : Promise.resolve([]),
+  ]);
+  const resolved = item.understanding
     ? resolveIntakePeople(item.understanding, people, { viewerMemberId: membership.memberId })
+    : null;
+  // Asked "who is this for"? First, what the content's school, this sender's history or the one child at school settles.
+  const resolution = resolved
+    ? {
+        ...resolved,
+        subject: inferSubject(kind, resolved.subject, {
+          items: people,
+          learned,
+          sender: item.senderAddress ?? item.understanding?.provenance.sender ?? null,
+          text: [item.extracted.title, item.extracted.notes, item.extracted.subject, item.extracted.summary, item.understanding?.contentSummary, item.rawText].filter((part): part is string => typeof part === "string").join("\n"),
+        }),
+      }
     : null;
   const understanding = item.understanding && resolution ? { ...item.understanding, references: resolution.references } : item.understanding;
   const memberNames = new Map(people.map((person) => [person.entityId, String(person.attributes.displayName)]));

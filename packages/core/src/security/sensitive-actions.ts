@@ -343,6 +343,11 @@ export const SENSITIVE_ACTIONS: readonly SensitiveAction[] = [
     recordedIn: "apps/web/app/(auth)/home-send-clear-actions.ts",
   },
   {
+    event: "homesend.learned_forgotten",
+    because: "An Admin made HomeSend forget which child a sender's notices are for, so it asks again. It records how many were forgotten.",
+    recordedIn: "apps/web/app/(auth)/consent-actions.ts",
+  },
+  {
     event: "homesend.retry_requested",
     because: "A person asked WonderHome to read a failed item again, which reads outside content once more.",
     recordedIn: "packages/core/src/homesend/repository.ts",
@@ -792,6 +797,8 @@ export function describeAuditEvent(
       };
     case "homesend.added_anyway":
       return { title: "HomeSend added something on an Admin's say-so and is still checking it", detail: typeof metadata.confidence === "number" ? `${Math.round(metadata.confidence * 100)}% sure` : null };
+    case "homesend.learned_forgotten":
+      return { title: "HomeSend was told to forget what it learned", detail: typeof metadata.count === "number" ? `${metadata.count} forgotten. It will ask again.` : "It will ask again." };
     case "homesend.retry_requested":
       return { title: "A failed HomeSend item is being read again", detail: null };
     case "homesend.address_created":

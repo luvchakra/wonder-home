@@ -238,6 +238,7 @@ async function completeHomeSendItem(intent: HouseholdIntent, context: ExecutionC
     people: context.members,
     timezone: context.timezone,
     now: context.now ?? new Date(),
+    memberId: context.actorMemberId,
   });
   if (!answered.handBack) return { ok: true, text: answered.text, result: { homeSendItemId: itemId, ...(answered.clarify ? { clarify: answered.clarify } : {}) } };
   const decided = context.addFromHomeSend ? await context.addFromHomeSend(itemId).catch(() => null) : null;

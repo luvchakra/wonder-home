@@ -455,6 +455,7 @@ export const KNOWLEDGE_REGISTRY = {
   homesend_changes: { covered: "builder", records: "homeSendItems" },
   homesend_email_events: { covered: "excluded", reason: "Content-free delivery telemetry for forwarded email." },
   homesend_tidy_runs: { covered: "excluded", reason: "The daily tidy's day record: ids and closed reasons only; the items it archived are known through home_send_items." },
+  homesend_learned_defaults: { covered: "excluded", reason: "Which child an outside sender's notices are for, kept only so HomeSend need not ask again; a convenience for intake, not knowledge about the household, and the child is already known through household_members." },
   hometalk_channel_events: { covered: "excluded", reason: "Content-free telemetry for each HomeTalk turn." },
   household_addresses: { covered: "builder", records: "address" },
   household_ai_credentials: { covered: "excluded", reason: "Credentials (the household's AI key)." },

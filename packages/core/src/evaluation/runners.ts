@@ -32,6 +32,7 @@ import { directAddAreaOf, NO_DIRECT_ADD } from "../homesend/auto-add";
 import { decideConfirmation } from "../homesend/confirmation";
 import { detectInstructionInjection } from "../homesend/injection";
 import { reconcileAgainstRecords, type HomeSendCandidate } from "../homesend/reconcile";
+import { inferSubject } from "../homesend/learned";
 import { adoptMatchedSubject, resolveIntakePeople } from "../homesend/resolve";
 import { buildUnderstanding } from "../homesend/understanding";
 import { checkVerdict, decideByRules, MONEY_OR_HEALTH, newerFromSameSender, tidyFacts, type TidyItem, type TidyVerdict } from "../homesend/tidy";
@@ -491,8 +492,19 @@ export async function observeHomeSend(c: HomeSendCase, models: Models = {}): Pro
     injection,
   });
 
-  const items = contextItemsFor(household, c.actor);
-  const resolution = resolveIntakePeople(understanding, items, { viewerMemberId: c.actor });
+  const withSchools = c.enrolments ? { ...household, records: { ...household.records, enrolments: [...(household.records.enrolments ?? []), ...c.enrolments.map((row) => ({ ...row, grade: null }))] } } : household;
+  const items = contextItemsFor(withSchools as typeof household, c.actor);
+  const resolved = resolveIntakePeople(understanding, items, { viewerMemberId: c.actor });
+  // As the review does (14-066): the content's school, the sender's history, or the one child at school.
+  const resolution = {
+    ...resolved,
+    subject: inferSubject(reading.kind, resolved.subject, {
+      items,
+      learned: (c.learned ?? []).map((row, n) => ({ id: `learned-${n}`, kind: "sender_child" as const, key: row.key, valueMemberId: row.valueMemberId, learnedByMemberId: c.actor, learnedFromItemId: null, learnedAt: household.now.toISOString(), mixed: row.mixed === true })),
+      sender: c.source.from ?? null,
+      text: [c.source.subject, c.source.text, reading.title, reading.summary].filter((part): part is string => typeof part === "string").join("\n"),
+    }),
+  };
   const kind = reading.kind;
   const date = reading.dueDate ?? reading.documentDate ?? null;
   const reconciliation =
