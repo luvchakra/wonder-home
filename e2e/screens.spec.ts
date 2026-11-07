@@ -322,6 +322,8 @@ test.describe("every signed-in screen loads", () => {
   test("Settings → Household: the playbook is grouped into folded cards that open with their chevron", async ({ page }) => {
     await signIn(page);
     await page.goto("/settings?tab=household");
+    // Manage Household is a folded card of its own: open it before looking inside.
+    await page.locator("details#manage").evaluate((card) => ((card as HTMLDetailsElement).open = true));
     const playbook = page.locator("section#playbook");
     // The add form folds its own "More detail" under the same section; the area cards are the ones whose summary carries a count.
     const groups = playbook.locator("details").filter({ has: page.locator("summary", { hasText: /·\s*\d+/ }) });
