@@ -11,7 +11,7 @@
 --                              member may read it; only the server writes.
 --   trivia_refill_queue      — which topic/band/language pools are low, and the
 --                              household whose model and budget will refill it.
---                              Server only.
+--                              Written by the server; its Admins may read it.
 --   trivia_generation_usage  — batches written per household per day, for the
 --                              cost cap. Server only.
 --
@@ -77,7 +77,18 @@ alter table public.trivia_pool enable row level security;
 alter table public.trivia_refill_queue enable row level security;
 alter table public.trivia_generation_usage enable row level security;
 
--- Generic cards: any signed-in member may read them. No policy on the other two: server only.
+-- The queue and the usage are written only by the server; a household's Admins may read their own rows.
+drop policy if exists trivia_refill_queue_admin_read on public.trivia_refill_queue;
+create policy trivia_refill_queue_admin_read on public.trivia_refill_queue for select to authenticated
+  using (household_id in (select wh.admin_households()));
+grant select on public.trivia_refill_queue to authenticated;
+
+drop policy if exists trivia_generation_usage_admin_read on public.trivia_generation_usage;
+create policy trivia_generation_usage_admin_read on public.trivia_generation_usage for select to authenticated
+  using (household_id in (select wh.admin_households()));
+grant select on public.trivia_generation_usage to authenticated;
+
+-- Generic cards: any signed-in member may read them; only the server writes.
 drop policy if exists trivia_pool_read on public.trivia_pool;
 create policy trivia_pool_read on public.trivia_pool for select to authenticated using (true);
 grant select on public.trivia_pool to authenticated;
