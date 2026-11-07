@@ -7,6 +7,7 @@ import { adminClientFor, adminGrant } from "@wonderhome/core/db/admin-context";
 import { createClient } from "@wonderhome/core/db/server";
 import { ageBandFor, parseDateOfBirth } from "@wonderhome/core/identity/age";
 import { requireMembership } from "@wonderhome/core/identity/households";
+import { preferencesOf } from "@wonderhome/core/i18n/preferences";
 import type { HouseholdMembership } from "@wonderhome/core/identity/schemas";
 import { hitRateLimit } from "@wonderhome/core/security/rate-limit";
 import { adjustLevel, looksLikeInstruction, normaliseTopic, pickNextCard, quizStreak, topicHash, TRIVIA_TOPICS_PER_CHILD, triviaBand, type PickMode } from "@wonderhome/core/school/trivia";
@@ -15,6 +16,8 @@ import {
   allowedTopic,
   cardByKey,
   loadChildTrivia,
+  loadChildTriviaWithPool,
+  queueRefills,
   recordAnswer,
   recordRejection,
   recordShown,
@@ -47,6 +50,8 @@ async function asChild(householdId: string): Promise<Session | null> {
 
 /** The service role for this child's own trivia rows, after the checks above: scoped to their household. */
 const serverFor = (actor: HouseholdMembership, purpose: string) => adminClientFor(adminGrant.member(actor, purpose), actor.household.id);
+
+const languageOf = (actor: HouseholdMembership) => preferencesOf(actor.locale, actor.household.timezone).language;
 
 const bandOf = (actor: HouseholdMembership) => triviaBand(ageBandFor(parseDateOfBirth(actor.dateOfBirth ?? "")));
 
@@ -83,6 +88,8 @@ export async function addTriviaTopicAction(input: { householdId: string; topic: 
       return { ok: false, error: "pick_another" };
     }
     const saved = await addTopic(admin, { householdId, memberId: actor.memberId, topic, checkedBy: decision.checkedBy });
+    // Cards about this exact topic, in the child's language, are written in the background (08-035).
+    await queueRefills(admin, [{ topicKey: saved.key, label: saved.label, band, language: languageOf(actor), householdId }]).catch(() => undefined);
     revalidatePath("/");
     return { ok: true, topic: { id: saved.id, label: saved.label } };
   } catch {
@@ -113,7 +120,7 @@ export async function triviaShownAction(input: { householdId: string; cardKey: s
   try {
     const session = await asChild(parsed.data.householdId);
     if (!session) return { shownId: null };
-    const card = cardByKey(parsed.data.cardKey);
+    const card = await cardByKey(parsed.data.cardKey, session.supabase);
     const current = await loadChildTrivia(session.supabase, parsed.data.householdId, session.actor.memberId, bandOf(session.actor));
     if (!card || !current?.enabled || !allowedTopic(parsed.data.topic, current.topics)) return { shownId: null };
     // A reload shows the same card: one record, not two.
@@ -134,9 +141,10 @@ export async function triviaNextAction(input: { householdId: string; mode: PickM
     const session = await asChild(parsed.data.householdId);
     if (!session) return { ok: false };
     const { supabase, actor } = session;
-    const current = await loadChildTrivia(supabase, parsed.data.householdId, actor.memberId, bandOf(actor));
-    if (!current?.enabled) return { ok: false };
-    const { topics, uncovered } = topicCardsFor(current.topics);
+    const read = await loadChildTriviaWithPool(supabase, { householdId: parsed.data.householdId, memberId: actor.memberId, band: bandOf(actor), language: languageOf(actor) });
+    const current = read?.trivia;
+    if (!read || !current?.enabled) return { ok: false };
+    const { topics, uncovered } = topicCardsFor(current.topics, read.pool);
     const pick = pickNextCard({ topics, history: current.history, level: current.level, mode: parsed.data.mode, seed: `${actor.memberId}:${Date.now()}` });
     if (!pick) return { ok: false };
     const shownId = await recordShown(serverFor(actor, "record a trivia card shown"), { householdId: parsed.data.householdId, memberId: actor.memberId, card: pick.card, topic: pick.topic });

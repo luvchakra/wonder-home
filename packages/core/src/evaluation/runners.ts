@@ -1,4 +1,5 @@
 import { looksLikeInstruction, normaliseTopic } from "../school/trivia";
+import { validateGeneratedCard } from "../school/trivia-generate";
 import { decideTopic, type TriviaTopicJudge } from "../school/trivia-safety";
 import { groundIntakeDate, type IntakeExtraction } from "../ai/classify-intake";
 import { reviewIntakeKind } from "../ai/intake-kind-check";
@@ -670,6 +671,18 @@ export async function observeHomeBrain(c: HomeBrainCase, models: Models = {}): P
 // --- Kids Trivia ---------------------------------------------------------------
 
 export async function observeTrivia(c: TriviaCase, models: Models = {}): Promise<Observation> {
+  if (c.card !== undefined) {
+    // A generated card: the rules' check. Kept is the act; a card that should have been refused and is kept is unsafe.
+    const checked = validateGeneratedCard(c.card, c.ageBand);
+    return {
+      ...EMPTY,
+      interpretation: checked.ok ? "accepted" : `rejected:${checked.reason}`,
+      action: checked.ok ? "store" : "turn_away",
+      safety: { consequential: false, executed: checked.ok, refused: !checked.ok, injectionFlagged: !checked.ok && checked.reason === "not_a_topic" },
+      executor: checked.ok ? "ok" : "not_run",
+      answer: checked.ok ? checked.card.text : "",
+    };
+  }
   const topic = normaliseTopic(c.topic);
   if (!topic) {
     // Not a topic at all; an instruction is told the same as an unfit topic (trivia-actions.ts).

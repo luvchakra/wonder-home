@@ -214,8 +214,11 @@ export type HomeBrainCase = CaseBase & {
  */
 export type TriviaCase = CaseBase & {
   surface: "trivia";
+  /** A topic a child typed; or, with `card`, the topic a generated card was written for. */
   topic: string;
   ageBand: import("../school/trivia").TriviaBand;
+  /** A card as a model returned it (08-035): checked by `validateGeneratedCard`; kept is "store". */
+  card?: unknown;
 };
 
 export type EvalCase = HomeTalkCase | HomeSendCase | HomeBrainCase | TriviaCase;

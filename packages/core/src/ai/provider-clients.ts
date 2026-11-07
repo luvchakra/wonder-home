@@ -44,6 +44,8 @@ export const MODEL_TIMEOUT_MS = {
   tidy: 20_000,
   /** Kids Trivia: whether a topic a child typed suits their age. The child is waiting; past this the rules' answer stands. */
   trivia_check: 8_000,
+  /** Kids Trivia's background batches (a topic's cards, then their fact check): nobody waits; the built-in cards show meanwhile. */
+  trivia_write: 45_000,
 } as const;
 
 export type ModelCallKind = keyof typeof MODEL_TIMEOUT_MS;

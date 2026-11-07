@@ -116,7 +116,7 @@ export function TriviaGuardian({ householdId, childId, trivia, labels }: { house
                     .filter(Boolean)
                     .join(" · ")}
                 </p>
-                <p lang="en" className="text-sm break-words">
+                <p className="text-sm break-words">
                   {shown.text}
                 </p>
               </li>

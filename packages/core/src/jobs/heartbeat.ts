@@ -30,6 +30,8 @@ export const JOB_STEPS = {
   "clock.homesend-tidy": { staleAfterMinutes: 30 },
   /** HomeBrain Sleep, 2–5 am on each household's clock, once a night. */
   "clock.homebrain-sleep": { staleAfterMinutes: 30 },
+  /** Kids Trivia's low card pools, refilled a few at a time (08-035). */
+  "clock.trivia-refill": { staleAfterMinutes: 30 },
   /** Subscribed calendar feeds whose next sync has come. */
   "calendar-sync": { staleAfterMinutes: 45 },
   /** Developer webhooks waiting to be delivered or retried. */

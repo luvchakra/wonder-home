@@ -27,7 +27,9 @@ import { CollapsibleSection } from "@wonderhome/core/ui/collapsible-section";
 import { ageBandFor, parseDateOfBirth } from "@wonderhome/core/identity/age";
 import { pickNextCard, quizStreak, triviaBand } from "@wonderhome/core/school/trivia";
 import { TRIVIA_CATEGORIES } from "@wonderhome/core/school/trivia-curated";
-import { loadChildTrivia, topicCardsFor } from "@wonderhome/core/school/trivia-repository";
+import { loadChildTriviaWithPool, queueRefills, topicCardsFor } from "@wonderhome/core/school/trivia-repository";
+import { adminClientFor, adminGrant } from "@wonderhome/core/db/admin-context";
+import { after } from "next/server";
 
 import { CompanionCard } from "../_components/companion-card";
 import { KidDoneButton } from "../_components/kid-done-button";
@@ -60,7 +62,8 @@ export async function ChildHome({ session, tab = "today" }: { session: Session; 
   const today = new Intl.DateTimeFormat("en-CA", { timeZone: timezone }).format(now);
   const firstName = view.displayName.split(" ")[0] ?? view.displayName;
 
-  const [items, events, goals, checkIns, companion, newest, activities, periods, duties, sayings, trivia] = await Promise.all([
+  const triviaBandNow = triviaBand(view.ageBand ?? ageBandFor(parseDateOfBirth(membership.dateOfBirth ?? "")));
+  const [items, events, goals, checkIns, companion, newest, activities, periods, duties, sayings, triviaRead] = await Promise.all([
     listSchoolItems(supabase, householdId, { childMemberId: memberId }).catch(() => [] as SchoolItem[]),
     listEvents(supabase, householdId, { from: new Date(now.getTime() - 86_400_000), to: new Date(now.getTime() + 14 * 86_400_000) }).catch(() => [] as FamilyEvent[]),
     listGoals(supabase, householdId, memberId).catch(() => []),
@@ -98,7 +101,7 @@ export async function ChildHome({ session, tab = "today" }: { session: Session; 
     // What the cat has not told them yet, for their age (never twice).
     nextSayings(supabase, memberId, session.locale.preferences.language).catch(() => null),
     // Kids Trivia (08-034): their topics, the cards they've seen and how hard they like it.
-    loadChildTrivia(supabase, householdId, memberId, triviaBand(view.ageBand ?? ageBandFor(parseDateOfBirth(membership.dateOfBirth ?? "")))).catch(() => null),
+    loadChildTriviaWithPool(supabase, { householdId, memberId, band: triviaBandNow, language: session.locale.preferences.language }).catch(() => null),
   ]);
 
   const school = childView(items, now);
@@ -158,7 +161,15 @@ export async function ChildHome({ session, tab = "today" }: { session: Session; 
   }));
 
   // One trivia card each opening: the topic after last time's, the other kind, never the same card twice running.
-  const triviaCards = trivia?.enabled ? topicCardsFor(trivia.topics) : null;
+  const trivia = triviaRead?.trivia ?? null;
+  const triviaCards = trivia?.enabled ? topicCardsFor(trivia.topics, triviaRead!.pool) : null;
+  // A topic whose cards in the child's language are running low is queued for the background refill (08-035), after the response.
+  if (triviaRead && triviaRead.low.length > 0) {
+    const low = triviaRead.low;
+    after(() =>
+      queueRefills(adminClientFor(adminGrant.member(membership, "queue a low trivia pool for refill"), householdId), low.map((topic) => ({ topicKey: topic.key, label: topic.label, band: triviaBandNow, language: session.locale.preferences.language, householdId }))).catch(() => undefined),
+    );
+  }
   const triviaPick = trivia && triviaCards ? pickNextCard({ topics: triviaCards.topics, history: trivia.history, level: trivia.level, mode: "open", seed: `${memberId}:${today}:${trivia.history.length}` }) : null;
   const triviaView = trivia && triviaCards && triviaPick ? toTriviaView({ pick: triviaPick, shownId: null, uncovered: triviaCards.uncovered, streak: quizStreak(trivia.history), level: trivia.level }) : null;
 

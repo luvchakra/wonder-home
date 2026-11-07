@@ -6,6 +6,7 @@ import { keepStoresWarm } from "../homebrain/context-store";
 import { sleepDueHouseholds } from "../homebrain/sleep/run";
 import { archiveStaleHomeSendItems } from "../homesend/repository";
 import { runHomeSendTidy } from "../homesend/tidy-run";
+import { runTriviaRefill } from "../school/trivia-refill";
 import { CLOCK_DRAIN_LIMIT, drainKnowledge } from "../knowledge/facts";
 import { deliverPendingWebhooks } from "../webhooks/deliver";
 import { runRetentionSweeps } from "./daily";
@@ -36,7 +37,7 @@ import { JOB_STEPS, recordHeartbeat, type JobStep, type StepSummary } from "./he
  * which already calls `deliverNotification` within minutes.
  */
 export const JOBS = {
-  clock: ["clock.context-warm", "clock.knowledge", "clock.homesend-archive", "clock.homesend-tidy", "clock.homebrain-sleep"],
+  clock: ["clock.context-warm", "clock.knowledge", "clock.homesend-archive", "clock.homesend-tidy", "clock.homebrain-sleep", "clock.trivia-refill"],
   "calendar-sync": ["calendar-sync"],
   webhooks: ["webhooks"],
   daily: ["daily.retention"],
@@ -66,6 +67,11 @@ export const STEP_RUNNERS: Record<JobStep, StepRunner> = {
     return { ready: result.ready, households: result.households.length, archived: result.households.reduce((sum, h) => sum + h.archived.length, 0) };
   },
   "clock.homebrain-sleep": async (admin, now) => ({ slept: (await sleepDueHouseholds(admin, now, 6)).length }),
+  // Each refill uses the asking household's own model terms, not the runner's key: not a NEEDS_MODEL step.
+  "clock.trivia-refill": async (admin, now) => {
+    const result = await runTriviaRefill(admin, { now, limit: 4 });
+    return { looked: result.looked, written: result.written, cards: result.cards };
+  },
   "calendar-sync": async (admin, now) => {
     const result = await syncDueSubscriptions(admin, { now, limit: 50 });
     return { synced: result.synced, failed: result.failed };

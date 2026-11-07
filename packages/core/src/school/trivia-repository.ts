@@ -1,6 +1,6 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 
-import { categoryFor, CURATED_CARDS, curatedCard, TRIVIA_CATEGORIES, type TriviaCategory } from "./trivia-curated";
+import { categoryFor, CURATED_CARDS, curatedCard, TRIVIA_CATEGORIES } from "./trivia-curated";
 import {
   clampLevel,
   defaultLevel,
@@ -75,26 +75,99 @@ export async function loadChildTrivia(supabase: SupabaseClient, householdId: str
  * topics has any (or they have none), every category is offered under its own
  * name, so the card is never empty and never pretends to be about their topic.
  */
-export function topicCardsFor(topics: readonly TriviaTopic[]): { topics: TopicCards[]; uncovered: string[] } {
+export function topicCardsFor(topics: readonly TriviaTopic[], pool: ReadonlyMap<string, readonly TriviaCard[]> = new Map()): { topics: TopicCards[]; uncovered: string[] } {
   const covered: TopicCards[] = [];
   const uncovered: string[] = [];
-  const used = new Set<TriviaCategory>();
   for (const topic of topics) {
+    // The topic's own generated cards (08-035) first, then its built-in category's.
     const category = categoryFor(topic.key);
-    if (!category) {
+    const cards = [...(pool.get(topic.key) ?? []), ...(category ? CURATED_CARDS[category] : [])];
+    if (cards.length === 0) {
       uncovered.push(topic.label);
       continue;
     }
-    used.add(category);
-    covered.push({ topic: topic.label, cards: CURATED_CARDS[category] });
+    covered.push({ topic: topic.label, cards });
   }
   if (covered.length > 0) return { topics: covered, uncovered };
   return { topics: TRIVIA_CATEGORIES.map((category) => ({ topic: `${CATEGORY_TOPIC}${category}`, cards: CURATED_CARDS[category] })), uncovered };
 }
 
-/** A card by its key, wherever it came from. */
-export function cardByKey(key: string): TriviaCard | null {
-  return curatedCard(key);
+/** A topic's pool is low below this many cards in the child's language: a refill is queued (08-035). */
+export const POOL_LOW = 8;
+/** A refill stops once a pool has this many cards. */
+export const POOL_TARGET = 20;
+/** A generated card's key: "g:" and its row id. */
+export const GENERATED_PREFIX = "g:";
+
+type PoolRow = { id: string; topic_key: string; language: string; kind: "fact" | "quiz"; text: string; options: string[] | null; answer: number | null; explain: string | null; difficulty: number };
+
+function poolCard(row: PoolRow): TriviaCard {
+  return {
+    key: `${GENERATED_PREFIX}${row.id}`,
+    kind: row.kind,
+    text: row.text,
+    ...(row.kind === "quiz" && row.options && row.answer !== null ? { options: row.options, answer: row.answer, ...(row.explain ? { explain: row.explain } : {}) } : {}),
+    category: "generated",
+    difficulty: clampLevel(row.difficulty),
+    language: row.language,
+  };
+}
+
+const POOL_COLUMNS = "id, topic_key, language, kind, text, options, answer, explain, difficulty";
+
+/**
+ * Generated cards for the child's topics, age band and language (English when
+ * a topic has none in their language yet), by topic key, and how many each
+ * topic has in their own language. Empty when the pool table is not there.
+ */
+export async function loadPoolCards(
+  supabase: SupabaseClient,
+  topicKeys: readonly string[],
+  band: TriviaBand,
+  language: string,
+): Promise<{ cards: Map<string, TriviaCard[]>; ownLanguage: Map<string, number> }> {
+  const cards = new Map<string, TriviaCard[]>();
+  const ownLanguage = new Map<string, number>();
+  if (topicKeys.length === 0) return { cards, ownLanguage };
+  const languages = language === "en" ? ["en"] : [language, "en"];
+  const { data, error } = await supabase
+    .from("trivia_pool")
+    .select(POOL_COLUMNS)
+    .in("topic_key", [...topicKeys])
+    .eq("age_band", band)
+    .in("language", languages)
+    .order("created_at", { ascending: false })
+    .limit(POOL_TARGET * 2 * topicKeys.length);
+  if (error) return { cards, ownLanguage };
+  const rows = (data ?? []) as PoolRow[];
+  for (const key of topicKeys) {
+    const own = rows.filter((row) => row.topic_key === key && row.language === language);
+    ownLanguage.set(key, own.length);
+    const chosen = own.length > 0 ? own : rows.filter((row) => row.topic_key === key && row.language === "en");
+    if (chosen.length > 0) cards.set(key, chosen.map(poolCard));
+  }
+  return { cards, ownLanguage };
+}
+
+/** A card by its key, wherever it came from: built in, or a generated one from the pool. */
+export async function cardByKey(key: string, supabase: SupabaseClient): Promise<TriviaCard | null> {
+  if (!key.startsWith(GENERATED_PREFIX)) return curatedCard(key);
+  const id = key.slice(GENERATED_PREFIX.length);
+  if (!/^[0-9a-f-]{36}$/.test(id)) return null;
+  const { data } = await supabase.from("trivia_pool").select(POOL_COLUMNS).eq("id", id).maybeSingle();
+  return data ? poolCard(data as PoolRow) : null;
+}
+
+/** Pools that are low, queued for the background refill with the household whose model and budget will write them. */
+export async function queueRefills(
+  admin: SupabaseClient,
+  rows: readonly { topicKey: string; label: string; band: TriviaBand; language: string; householdId: string }[],
+): Promise<void> {
+  if (rows.length === 0) return;
+  await admin.from("trivia_refill_queue").upsert(
+    rows.map((row) => ({ topic_key: row.topicKey, age_band: row.band, language: row.language, label: row.label, household_id: row.householdId })),
+    { onConflict: "topic_key,age_band,language", ignoreDuplicates: true },
+  );
 }
 
 /** The topic a card may be recorded under for this child: one of their topics, or a built-in category. */
@@ -131,7 +204,7 @@ export async function recordAnswer(
     .maybeSingle();
   const row = data as { item_key: string; kind: string; answered_correct: boolean | null } | null;
   if (!row || row.kind !== "quiz") return null;
-  const card = cardByKey(row.item_key);
+  const card = await cardByKey(row.item_key, admin);
   if (!card || card.answer === undefined) return null;
   const correct = input.choice === card.answer;
   if (row.answered_correct === null) {
@@ -239,4 +312,21 @@ export async function loadGuardianTrivia(supabase: SupabaseClient, householdId: 
     }
   }
   return out;
+}
+
+/**
+ * A child's Trivia with its generated cards, in one awaited step for a page's
+ * wave: their settings, topics and history, then the pool for those topics.
+ * `low` lists the topics whose pool in the child's language is below
+ * `POOL_LOW`, for the caller to queue after its response.
+ */
+export async function loadChildTriviaWithPool(
+  supabase: SupabaseClient,
+  input: { householdId: string; memberId: string; band: TriviaBand; language: string },
+): Promise<{ trivia: ChildTrivia; pool: Map<string, TriviaCard[]>; low: TriviaTopic[] } | null> {
+  const trivia = await loadChildTrivia(supabase, input.householdId, input.memberId, input.band);
+  if (!trivia) return null;
+  if (!trivia.enabled || trivia.topics.length === 0) return { trivia, pool: new Map(), low: [] };
+  const { cards, ownLanguage } = await loadPoolCards(supabase, trivia.topics.map((topic) => topic.key), input.band, input.language);
+  return { trivia, pool: cards, low: trivia.topics.filter((topic) => (ownLanguage.get(topic.key) ?? 0) < POOL_LOW) };
 }
