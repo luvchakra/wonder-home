@@ -1,6 +1,7 @@
 import type { Metadata, Viewport } from "next";
 import { Caveat, Sora } from "next/font/google";
 import { connection } from "next/server";
+import { Analytics } from "@vercel/analytics/next";
 
 import { TAGLINE } from "@wonderhome/core/brand/mark";
 import { InstallPromptCapture } from "@wonderhome/core/shell/install-prompt-capture";
@@ -142,6 +143,7 @@ export default async function RootLayout({ children }: { children: React.ReactNo
         <LocationReporter />
         {/* A live HomeTalk conversation lives here, so it carries on from screen to screen. */}
         <LiveTalkProvider>{children}</LiveTalkProvider>
+        <Analytics />
       </body>
     </html>
   );
