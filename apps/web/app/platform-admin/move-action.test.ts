@@ -32,6 +32,7 @@ vi.mock("../_lib/platform-staff", () => ({
 vi.mock("../_lib/platform-step-up", () => ({ confirmStaffPassword: vi.fn(async () => "wrong") }));
 
 const { moveAllFromVercelAction } = await import("./settings-actions");
+const { PLATFORM_SETTINGS, STAYS_IN_VERCEL, UNUSED_IN_VERCEL } = await import("@wonderhome/core/platform/settings/registry");
 
 const SECRET = "sk-test-WonderHomeOwnKey-abcdefgh9876";
 const MAPS = "AIzaSyExampleExampleExample4321";
@@ -69,6 +70,10 @@ beforeEach(() => {
   state.logs = [];
   state.rpc = fakeRpc();
   vi.unstubAllEnvs();
+  // Hermetic: whatever the runner's own environment sets (CI sets some of these) must not change the counts.
+  for (const key of [...PLATFORM_SETTINGS.map((entry) => entry.key), ...STAYS_IN_VERCEL.map((stay) => stay.key), ...UNUSED_IN_VERCEL]) {
+    vi.stubEnv(key, "");
+  }
   vi.stubEnv("WONDERHOME_AI_KEY", SECRET);
   vi.stubEnv("GOOGLE_MAPS_API_KEY", MAPS);
   vi.stubEnv("WONDERHOME_WEATHER_PROVIDER", "open-meteo");
