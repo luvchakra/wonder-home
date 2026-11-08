@@ -483,7 +483,10 @@ approval is refused and closed, never carried out. Production quality
 Production hardening (Wave 5 §14–§17):
 - **Rate limits.** Every rate limit goes through `security/rate-limit.ts`'s
   `hitRateLimit`, which reaches the service-role-only
-  `public.rate_limit_hit`. It fails open, because it throttles abuse and is
+  `public.rate_limit_hit` (fixed, clock-aligned windows), or
+  `public.rate_limit_hit_rolling` for a bucket marked `rolling` — one whose
+  promise is "one per minute" and must hold across a minute boundary
+  (HomeSend's "Add all anyway"). It fails open, because it throttles abuse and is
   not an authorization gate. Its refusal says the pause is temporary and
   that nothing was lost.
 - **Plan policies.** A burst limit and a fair-use level are plan data on
