@@ -27,6 +27,19 @@ and clears in one tap with Undo", mobile and desktop.
    `test.setTimeout(120_000)` and a 15 s wait on the three later server-action results;
    no assertion changed.
 
+## Follow-up: the first nightly after the fix (run 42444329691)
+
+356 passed, 3 flaky, 1 failed: mobile again at "pausing for a minute". The counter was
+right: that household's two allowed runs were 62.8 s apart (03:54:06.8, 03:55:09.6), so
+the second was rightly allowed. The spec assumed it reached its second click within 60 s
+of the first, which a slow runner on a busy live database did not (57014 statement
+timeouts and `page.goto` timeouts elsewhere in the same run). Its retry was correctly
+refused, then failed in `afterAll`: deleting the household outran 30 s.
+**Spec fix (second PR):** after the first run the spec checks the household's counter
+holds exactly one hit and restarts that hit's clock, so the second click is inside the
+minute however slow the runner was; the refusal assertion is unchanged. `afterAll` gets
+90 s. Verified 4/4 against live (`--repeat-each 2`).
+
 ## Verified
 
 - `packages/core/src/security/rate-limit.test.ts` (new case: `homesend.add_all` uses the rolling RPC).
