@@ -41,6 +41,19 @@ describe("rate limit observability and fairness (SEC-06)", () => {
     })();
   });
 
+  it("counts \"Add all anyway\" over the last minute, not the clock's minute, so two runs either side of :00 are not both allowed", async () => {
+    const names: string[] = [];
+    const admin = {
+      rpc: async (name: string) => {
+        names.push(name);
+        return { data: true, error: null };
+      },
+    } as never;
+    await hitRateLimit(admin, "homesend.add_all", "h1");
+    await hitRateLimit(admin, "homesend.link", "m1");
+    expect(names).toEqual(["rate_limit_hit_rolling", "rate_limit_hit"]);
+  });
+
   it("raises an error-level event when the counter is unreachable, and still lets the request through", async () => {
     const admin = fakeAdmin(() => new Error("db down"));
     expect(await hitRateLimit(admin, "ai.model", "h1")).toBe(true);

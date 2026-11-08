@@ -441,6 +441,10 @@ test.describe("every signed-in screen loads", () => {
   // The owner, 2026-11-03: a calm HomeSend — identical items folded, unreadable ones named plainly,
   // and two one-tap clears behind their own confirms, each with its guards and an Undo.
   test("HomeSend folds identical items, names what couldn't be read, and clears in one tap with Undo", async ({ page }) => {
+    // Four server actions against the live database, each re-rendering the page from a runner far from
+    // ap-south-1 (the queries themselves take tens of ms): the default 30 s test budget and 5 s waits ran
+    // out mid-step in the nightly. The budget fits the steps; every assertion is unchanged.
+    test.setTimeout(120_000);
     const member = await admin.from("household_members").select("id").eq("household_id", householdId).eq("profile_id", userId).single();
     if (member.error) throw member.error;
     // Start from an empty HomeSend in this test's own household.
@@ -500,7 +504,7 @@ test.describe("every signed-in screen loads", () => {
     await page.reload();
     await page.getByRole("button", { name: "Add all anyway" }).click();
     await page.getByRole("dialog").getByRole("button", { name: "Add all anyway" }).click();
-    await expect(page.getByText(/pausing for a minute/)).toBeVisible();
+    await expect(page.getByText(/pausing for a minute/)).toBeVisible({ timeout: 15_000 });
     const sugar = await admin.from("home_send_items").select("status").eq("id", extra.data.id).single();
     expect(sugar.data?.status).toBe("classified");
     await admin.from("home_send_items").delete().eq("id", extra.data.id);
@@ -511,11 +515,11 @@ test.describe("every signed-in screen loads", () => {
     const archiveSheet = page.getByRole("dialog");
     await expect(archiveSheet).toContainText("Archive 7 items?");
     await archiveSheet.getByRole("button", { name: "Archive all" }).click();
-    await expect(page.getByText("Archived 7.")).toBeVisible();
+    await expect(page.getByText("Archived 7.")).toBeVisible({ timeout: 15_000 });
     const archived = await admin.from("home_send_items").select("id", { count: "exact", head: true }).eq("household_id", householdId).eq("status", "archived");
     expect(archived.count).toBe(7);
     await page.getByRole("button", { name: "Undo", exact: true }).first().click();
-    await expect(page.getByText("Put 7 back.")).toBeVisible();
+    await expect(page.getByText("Put 7 back.")).toBeVisible({ timeout: 15_000 });
     const back = await admin.from("home_send_items").select("status").eq("household_id", householdId).neq("status", "routed");
     expect((back.data ?? []).map((row) => row.status).sort()).toEqual(["classified", "classified", "classified", "classified", "classified", "classified", "failed"]);
   });

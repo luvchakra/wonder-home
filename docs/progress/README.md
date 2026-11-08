@@ -11,6 +11,7 @@ decision that shapes later work each earns a note, written before moving on.
 
 | Date | Note |
 |---|---|
+| 2026-11-08 | [E2E nightly: HomeSend "Add all anyway" one run a minute, across a minute boundary](2026-11-08-homesend-add-all-rolling-limit.md) |
 | 2026-11-08 | [Kids Trivia, PR 2: generated cards per topic, refilled in the background (08-035)](2026-11-08-kids-trivia-generated.md) |
 | 2026-11-08 | [Migration files that shared a timestamp: renamed, lint refuses a repeat](2026-11-08-migration-version-clashes.md) |
 | 2026-11-07 | [HomeSend zero touch: learned defaults, one-tap sending, fewer questions](2026-11-07-homesend-zero-touch.md) |
