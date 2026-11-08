@@ -34,7 +34,7 @@ export const RATE_LIMITS = {
   /** "Try again" on a failed HomeSend item, per member: each is one more read of outside content. */
   "homesend.retry": { max: 10, windowSeconds: 600 },
   /** "Add all anyway" in HomeSend, per household (the owner, 2026-11-03): one run a minute, each reads and writes every waiting item. */
-  "homesend.add_all": { max: 1, windowSeconds: 60 },
+  "homesend.add_all": { max: 1, windowSeconds: 60, rolling: true },
   /** Forwarded emails processed, per household per hour. */
   "homesend.email": { max: 60, windowSeconds: 3600 },
   /** Messages a linked member sends to WonderHome on WhatsApp, per member per hour. */
@@ -204,9 +204,12 @@ function noteUnavailable(bucket: RateLimitBucket, reason: string, now = Date.now
  * Needs a service-role client (`public.rate_limit_hit` is granted to it alone).
  */
 export async function hitRateLimit(admin: SupabaseClient, bucket: RateLimitBucket, subject: string): Promise<boolean> {
-  const { max, windowSeconds } = RATE_LIMITS[bucket];
+  const limit: { max: number; windowSeconds: number; rolling?: boolean } = RATE_LIMITS[bucket];
+  const { max, windowSeconds } = limit;
   try {
-    const { data, error } = await admin.rpc("rate_limit_hit", { p_bucket: bucket, p_subject: subject, p_window_seconds: windowSeconds, p_max: max });
+    // A rolling bucket counts the last windowSeconds, not the clock's current window, so
+    // "one a minute" holds across a minute boundary (the 2026-11-08 nightly).
+    const { data, error } = await admin.rpc(limit.rolling ? "rate_limit_hit_rolling" : "rate_limit_hit", { p_bucket: bucket, p_subject: subject, p_window_seconds: windowSeconds, p_max: max });
     if (error) throw error;
     const allowed = data !== false;
     if (!allowed) noteRejection(bucket, subject);
