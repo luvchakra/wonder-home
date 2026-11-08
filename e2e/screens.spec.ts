@@ -479,11 +479,17 @@ test.describe("every signed-in screen loads", () => {
     const audit = await admin.from("audit_events").select("event_type").eq("household_id", householdId).in("event_type", ["homesend.added_all_anyway", "homesend.added_anyway"]);
     expect((audit.data ?? []).map((row) => row.event_type).sort()).toEqual(["homesend.added_all_anyway", "homesend.added_anyway"]);
 
-    // A second run inside the minute is refused, never run twice.
+    // A second run inside the minute is refused, never run twice. The first run left nothing it can add,
+    // so the button is hidden; one more grocery gives it something, then it is removed so the counts below hold.
+    const extra = await admin.from("home_send_items").insert({ ...base, raw_text: "2 kg sugar", status: "classified", classified_kind: "grocery_item", extracted: { ...grocery, title: "Sugar", quantity: 2 }, understanding: understanding("grocery_item", 0.72, "Buy sugar") }).select("id").single();
+    if (extra.error) throw extra.error;
     await page.reload();
     await page.getByRole("button", { name: "Add all anyway" }).click();
     await page.getByRole("dialog").getByRole("button", { name: "Add all anyway" }).click();
     await expect(page.getByText(/pausing for a minute/)).toBeVisible();
+    const sugar = await admin.from("home_send_items").select("status").eq("id", extra.data.id).single();
+    expect(sugar.data?.status).toBe("classified");
+    await admin.from("home_send_items").delete().eq("id", extra.data.id);
 
     // Archive all: every waiting and unreadable item set aside, and Undo puts back exactly those.
     await page.reload();
