@@ -101,6 +101,8 @@ Details, budgets and how to add to them: `docs/performance-budgets.md`.
 
 Without them those specs report themselves skipped.
 
+**The app server's service-role key (owner, 2026-11-08).** The nightly sets `E2E_SERVER_SERVICE_KEY=1`, so the app server Playwright starts gets `E2E_SUPABASE_SERVICE_ROLE_KEY` as its `SUPABASE_SERVICE_ROLE_KEY`, which server actions such as HomeSend "Add all anyway" need. `playwright.config.ts` passes it only when `E2E_ALLOW_LIVE_PROJECT=1` as well; otherwise it stays blank. Pull-request workflows never set it. It ends at launch, with `E2E_ALLOW_LIVE_PROJECT`.
+
 Signed-in specs need a build made for that project. `NEXT_PUBLIC_*` values are inlined at build time, server code included. The nightly builds with them, and so does `npm run test:e2e` without `E2E_SKIP_BUILD`. A placeholder build reused with `E2E_SKIP_BUILD=1` makes every sign-in fail.
 
 **Start it by hand:**
