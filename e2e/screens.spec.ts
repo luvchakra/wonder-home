@@ -107,6 +107,9 @@ test.describe("every signed-in screen loads", () => {
   const fakeFingerprint = createHash("sha256").update(fakeVoiceKey, "utf8").digest("hex");
 
   test.afterAll(async () => {
+    // Deleting the household cascades through every table the tests filled; on a busy live database
+    // that outran the default 30 s (nightly 42444329691).
+    test.setTimeout(90_000);
     if (admin) await admin.from("ai_key_alerts").delete().eq("key_fingerprint", fakeFingerprint);
     if (householdId) await admin.from("households").delete().eq("id", householdId);
     if (userId) await admin.auth.admin.deleteUser(userId);
@@ -501,6 +504,10 @@ test.describe("every signed-in screen loads", () => {
     // so the button is hidden; one more grocery gives it something, then it is removed so the counts below hold.
     const extra = await admin.from("home_send_items").insert({ ...base, raw_text: "2 kg sugar", status: "classified", classified_kind: "grocery_item", extracted: { ...grocery, title: "Sugar", quantity: 2 }, understanding: understanding("grocery_item", 0.72, "Buy sugar") }).select("id").single();
     if (extra.error) throw extra.error;
+    // The first run's hit is on the household's rolling counter. Its clock restarts now, so this click is
+    // inside the minute however long a slow runner took to get here (nightly 42444329691: 62.8 s, rightly allowed).
+    const hit = await admin.from("rate_limit_counters").update({ window_start: new Date().toISOString() }).eq("bucket", "homesend.add_all").eq("subject", householdId).select("hits");
+    expect(hit.data).toEqual([{ hits: 1 }]);
     await page.reload();
     await page.getByRole("button", { name: "Add all anyway" }).click();
     await page.getByRole("dialog").getByRole("button", { name: "Add all anyway" }).click();
