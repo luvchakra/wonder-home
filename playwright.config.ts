@@ -59,7 +59,12 @@ if (!liveAllowed && PRODUCTION_PROJECT_REFS.some((ref) => supabaseUrl.includes(r
 const serverEnv = {
   NEXT_PUBLIC_SUPABASE_URL: supabaseUrl,
   NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY: process.env.E2E_SUPABASE_PUBLISHABLE_KEY || "sb_publishable_ci_placeholder_key",
-  SUPABASE_SERVICE_ROLE_KEY: "",
+  // Blank unless the nightly opts in (E2E_SERVER_SERVICE_KEY=1): the owner
+  // allowed the nightly's app server the real key on 2026-11-08 so server
+  // actions that need it ("Add all anyway") can be tested pre-launch. Pull
+  // requests never set it. Ends at launch with E2E_ALLOW_LIVE_PROJECT.
+  SUPABASE_SERVICE_ROLE_KEY:
+    process.env.E2E_SERVER_SERVICE_KEY === "1" && liveAllowed ? (process.env.E2E_SUPABASE_SERVICE_ROLE_KEY ?? "") : "",
   WONDERHOME_AI_KEY: "",
 };
 

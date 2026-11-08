@@ -91,6 +91,10 @@ jobs:
       E2E_SUPABASE_PUBLISHABLE_KEY: ${{ secrets.E2E_SUPABASE_PUBLISHABLE_KEY }}
       E2E_SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.E2E_SUPABASE_SERVICE_ROLE_KEY }}
       E2E_ALLOW_LIVE_PROJECT: ${{ vars.E2E_ALLOW_LIVE_PROJECT || secrets.E2E_ALLOW_LIVE_PROJECT }}
+      # The app server Playwright starts gets the service-role key too (owner,
+      # 2026-11-08), only here and only pre-launch; playwright.config.ts blanks
+      # it unless E2E_ALLOW_LIVE_PROJECT is also 1. Never set on PR workflows.
+      E2E_SERVER_SERVICE_KEY: "1"
     # The part's own budget (at most 60 minutes) ends the tests cleanly with a
     # summary; this is only the backstop for a hang outside Playwright.
     timeout-minutes: 90

@@ -42,3 +42,7 @@
 - Why Background jobs shows no schedule runs yet: every scheduled workflow in this repo runs about 3.5 h after its cron
   time (drift 23:13 UTC ran 02:43; advisors 22:43 ran 02:20; nightly 21:30 ran 01:03, every night). The first run is
   expected ~3.5 h after the first slot following #524 (17:53 UTC), so about 21:20-21:40 UTC.
+
+## Outcome (2026-11-08)
+- **Schedule confirmed.** GitHub delivers this repository's scheduled runs about 3.5 h late and sparsely. The first `event=schedule` runs succeeded: webhooks at 19:04 UTC (run 42404368746), clock at 21:06 UTC (run 42414219244). Every clock step's heartbeat in `platform_job_heartbeats` shows `runner=github` with no errors. Vercel's heartbeat fallback stays on until the one-week check on 14 Nov (`docs/background-jobs.md`).
+- **Nightly at 358/360.** The only red spec was HomeSend "Add all anyway" (mobile and desktop), which needs the service-role key on the app server. The owner allowed it on 2026-11-08, for the nightly only and pre-launch only. `E2E_SERVER_SERVICE_KEY=1` in `e2e-nightly.yml` is gated in `playwright.config.ts` on `E2E_ALLOW_LIVE_PROJECT=1`, and documented in `docs/CI.md`.
