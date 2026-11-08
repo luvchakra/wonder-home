@@ -1,7 +1,7 @@
 import { createHash } from "node:crypto";
 
 import { createClient, type SupabaseClient } from "@supabase/supabase-js";
-import { expect, test, type Page } from "@playwright/test";
+import { expect, test, type BrowserContext, type Page } from "@playwright/test";
 
 import { streamed } from "./streaming";
 
@@ -112,7 +112,20 @@ test.describe("every signed-in screen loads", () => {
     if (userId) await admin.auth.admin.deleteUser(userId);
   });
 
+  /**
+   * The session from the first sign-in, reused by later tests. Each sign-in counts against
+   * `auth.attempt` (30 per address per 10 minutes); since the nightly's app server has the
+   * service-role key (#539) that limit is enforced, and 13 tests × 2 projects plus retries
+   * passed it. A reused session that no longer works falls back to the form.
+   */
+  let savedCookies: Awaited<ReturnType<BrowserContext["cookies"]>> | null = null;
+
   async function signIn(page: Page) {
+    if (savedCookies) {
+      await page.context().addCookies(savedCookies);
+      await page.goto("/household/responsibilities");
+      if (/\/household\/responsibilities$/.test(page.url())) return;
+    }
     await page.goto("/household/responsibilities");
     await expect(page).toHaveURL(/\/sign-in\?next=/);
     await streamed(page);
@@ -120,6 +133,7 @@ test.describe("every signed-in screen loads", () => {
     await page.locator('input[name="password"]').fill(password);
     await page.getByRole("button", { name: "Sign in", exact: true }).click();
     await expect(page).toHaveURL(/\/household\/responsibilities$/);
+    savedCookies = await page.context().cookies();
   }
 
   test("no main screen shows the error screen or a server error", async ({ page }) => {
