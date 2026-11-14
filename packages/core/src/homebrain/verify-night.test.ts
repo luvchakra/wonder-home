@@ -31,13 +31,15 @@ const plan = (entries: VerifyEntry[], extra: Partial<Parameters<typeof planVerif
   planVerification({ entries, sources: [], rules: [], names, alreadyRaised: new Set(), now, ...extra });
 
 describe("nightly verification: conflicts", () => {
-  it("raises a duplicate on the later copy, defaulting to keep one", () => {
+  it("raises a duplicate on the later copy, defaulting to keep both", () => {
     const first = entry({ createdAt: "2026-11-14T08:00:00Z" });
     const copy = entry({ createdAt: "2026-11-14T09:00:00Z" });
     const { conflicts } = plan([first, copy]);
     expect(conflicts).toHaveLength(1);
-    expect(conflicts[0]).toMatchObject({ reason: "duplicate", changeId: copy.changeId, otherChangeId: first.changeId, defaultAnswerId: "keep_one" });
-    expect(conflicts[0]!.answers.find((answer) => answer.id === "keep_one")?.action).toBe("undo_this");
+    expect(conflicts[0]).toMatchObject({ reason: "duplicate", changeId: copy.changeId, itemId: copy.itemId, otherChangeId: first.changeId, defaultAnswerId: "keep" });
+    // Only a person's tap removes the copy; the default keeps both.
+    expect(conflicts[0]!.answers.find((answer) => answer.id === "remove")?.action).toBe("undo_this");
+    expect(conflicts[0]!.answers.find((answer) => answer.id === conflicts[0]!.defaultAnswerId)?.action).toBe("keep");
   });
   it("a grocery said twice is a top-up, not a duplicate", () => {
     expect(plan([entry({ kind: "grocery_item", amount: null, title: "milk", label: "Milk" }), entry({ kind: "grocery_item", amount: null, title: "milk", label: "Milk" })]).conflicts).toEqual([]);
@@ -47,7 +49,7 @@ describe("nightly verification: conflicts", () => {
     const b = entry({ kind: "school_item", title: "ptm", label: "PTM", time: "16:00", subjectMemberId: "anya", amount: null });
     const { conflicts } = plan([a, b]);
     expect(conflicts.map((c) => c.reason)).toEqual(["date_clash"]);
-    expect(conflicts[0]!.defaultAnswerId).toBe("keep_both");
+    expect(conflicts[0]!.defaultAnswerId).toBe("keep");
     expect(conflicts[0]!.question).toContain("Anya");
   });
   it("raises an unusual amount without saying it", () => {

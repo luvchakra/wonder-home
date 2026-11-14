@@ -32,3 +32,13 @@ Story 14-069. The owner asked for HomeBrain, HomeSend and HomeTalk to work as on
   - `resolveGaps` in `conversation/grounding.ts`.
   Until the first of these lands, `needs-sink.ts` returns null: conflicts are only counted and entries are kept, which is every conflict's default.
 - **Not yet run:** the 360 px and desktop ui-check of Settings (it needs the live migration), and the live-provider run of the HB cases.
+
+## Follow-up (after part A, #546)
+- **Conflicts now reach "Needs you".** The sleep job raises them through `askNeedsYou` (`homebrain/needs-sink.ts`) as soon as `needs_you_items` exists. Answers are "Keep it" (every default) and "Remove it", which runs HomeSend's Undo on a person's tap only (`hometalk/needs-you-answer.ts`).
+- **The duplicate default is now "keep both", not "remove the copy".** A question nobody answers never removes anything. The words are in eight languages.
+- **`confirmed_basis` is written by part A's confirm paths:**
+  - `confirmHomeSendEntry`: "person" or "answer";
+  - `confirmByAction` and a tapped "Looks right": "person";
+  - the 24-hour default: no basis (null), because nobody said so.
+- **Verified:** vitest on homebrain, hometalk, homesend and evaluation; eval HB-15–39 25/25; web needs-you and components 18/18.
+- **Still open, waiting on part B:** `learnFromCorrection` in `entry-corrections.ts` and `hometalk-turn.ts`, and `resolveGaps` in grounding.

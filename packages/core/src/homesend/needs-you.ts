@@ -41,7 +41,8 @@ export async function applyHomeSendAnswer(
   if (effect.effect === "confirm") {
     const { data, error } = await client
       .from("homesend_changes")
-      .update({ confirmation_state: "confirmed", confirmed_at: how.now.toISOString(), confirmed_by_member_id: how.byDefault ? null : how.memberId })
+      // A person's "Looks right" is "person"; the 24-hour default states no basis (null): nobody said so.
+      .update({ confirmation_state: "confirmed", confirmed_at: how.now.toISOString(), confirmed_by_member_id: how.byDefault ? null : how.memberId, confirmed_basis: how.byDefault ? null : "person" })
       .eq("household_id", householdId)
       .eq("intake_id", item.subjectId)
       .eq("confirmation_state", "unconfirmed")

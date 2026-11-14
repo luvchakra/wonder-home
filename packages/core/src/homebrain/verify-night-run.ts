@@ -20,7 +20,7 @@ import { planVerification, type Conflict, type SourceItem, type VerifyEntry } fr
 /** Where conflicts go: the one "Needs you" list. Injected so the sleep job and tests choose. */
 export type NeedsSink = {
   /** Change ids already raised by HomeBrain, so nothing is asked twice. */
-  alreadyRaised(admin: SupabaseClient, householdId: string, changeIds: readonly string[]): Promise<Set<string>>;
+  alreadyRaised(admin: SupabaseClient, householdId: string, entries: readonly { changeId: string; itemId: string }[]): Promise<Set<string>>;
   raise(admin: SupabaseClient, householdId: string, conflict: Conflict, now: Date): Promise<boolean>;
 };
 
@@ -116,8 +116,8 @@ export async function verifyHousehold(admin: SupabaseClient, householdId: string
         contentHash: row.content_hash,
       }));
 
-    const recentIds = entries.filter((entry) => Date.parse(entry.createdAt) >= now.getTime() - 48 * 3_600_000).map((entry) => entry.changeId);
-    const alreadyRaised = sink && recentIds.length > 0 ? await sink.alreadyRaised(admin, householdId, recentIds).catch(() => new Set(recentIds)) : new Set<string>();
+    const recent = entries.filter((entry) => Date.parse(entry.createdAt) >= now.getTime() - 48 * 3_600_000).map((entry) => ({ changeId: entry.changeId, itemId: entry.itemId }));
+    const alreadyRaised = sink && recent.length > 0 ? await sink.alreadyRaised(admin, householdId, recent).catch(() => new Set(recent.map((entry) => entry.changeId))) : new Set<string>();
     const plan = planVerification({ entries, sources, rules, names, alreadyRaised, now });
     counts.conflicts = plan.conflicts.length;
 

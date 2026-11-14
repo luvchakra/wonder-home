@@ -150,7 +150,7 @@ export const HOMEBRAIN_MEMORY: HomeBrainCase[] = [
   // --- The nightly check ----------------------------------------------------------
   {
     id: "HB-34", surface: "homebrain", household: "A", category: "duplicates", actor: "a-kunal",
-    description: "The same bill added twice is raised once, defaulting to keep the first and undo the copy.",
+    description: "The same bill added twice is raised once; only a person removes the copy, the default keeps both.",
     question: "Check last night's entries: the electricity bill twice.",
     memory: {
       check: "verify", now: NOW,
@@ -159,7 +159,7 @@ export const HOMEBRAIN_MEMORY: HomeBrainCase[] = [
         { changeId: "c2", kind: "bill", label: "Electricity", date: "2026-10-25", amount: 2840, payee: "City Power", createdAt: "2026-10-01T09:00:00Z" },
       ],
     },
-    expected: { conflict: true, action: "raise:duplicate", answer: { includes: ["Keep just one", "undo the copy"] } },
+    expected: { conflict: true, action: "raise:duplicate", answer: { includes: ["Remove the copy?", "I'll keep both"] } },
   },
   {
     id: "HB-35", surface: "homebrain", household: "A", category: "duplicates", actor: "a-kunal",
