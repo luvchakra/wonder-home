@@ -12,6 +12,7 @@ import { createEmailHomeSendItem } from "./repository";
 import { drainJobs, enqueueClassifyRetry } from "./retry-queue";
 import { loadRecordFirst } from "../household/direct-add-repository";
 import { holdFromNewSender, senderStates, senderVerdict } from "./sender-trust";
+import type { TrustedEmailAdd } from "./trusted-arrival";
 
 /**
  * The email intake channel's front door (HomeSend Phase 2), as one function
@@ -52,6 +53,11 @@ export type EmailWebhookDeps = {
   defer: (work: () => Promise<void>) => void;
   /** The clock the signature's freshness is judged by. */
   now?: () => Date;
+  /**
+   * Adds a trusted sender's email on arrival, after the response is sent
+   * (`trusted-arrival.ts`). Omitted, it waits for a member, as before.
+   */
+  addTrusted?: TrustedEmailAdd;
 };
 
 function unauthenticated(): Response {
@@ -226,6 +232,12 @@ export async function handleEmailWebhook(request: Request, deps: EmailWebhookDep
           text: body,
         }, deps.ingest);
         failed = outcome.classifyFailed === true;
+        // Read: a trusted sender's email is added now, not when a member next opens HomeSend.
+        if (!failed && deps.addTrusted) {
+          const add = deps.addTrusted;
+          const itemId = item.id;
+          deps.defer(() => add({ householdId, itemId }));
+        }
       } catch (thrown) {
         // Understanding is a convenience, not the point of this request —
         // the item is already safely persisted and reachable for manual entry.
@@ -274,7 +286,7 @@ export async function handleEmailWebhook(request: Request, deps: EmailWebhookDep
   // whatever is left.
   if (queuedRetry) {
     deps.defer(async () => {
-      await drainJobs(supabase, { limit: 3 }).catch((thrown) =>
+      await drainJobs(supabase, { limit: 3, ...(deps.addTrusted ? { addTrusted: deps.addTrusted } : {}) }).catch((thrown) =>
         log.warn("homesend retry drain failed", { reason: thrown instanceof Error ? thrown.name : "unknown", allow: ["reason"] }),
       );
     });

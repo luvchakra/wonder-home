@@ -93,7 +93,19 @@ export const AUTO_APPLY_OUTCOMES: Partial<Record<HomeSendKind, { outcomeKey: str
   bill: { outcomeKey: "finance.bills_paid", label: "the bills" },
   receipt: { outcomeKey: "finance.budget_reviewed", label: "the budget check" },
   health_document: { outcomeKey: "health.records_kept", label: "health records" },
+  // Record first (the owner, 2026-11-14): an event or a class's day is written
+  // down, never acted on. No responsibility owns these keys, so the household's
+  // "What “Wait for Approval” holds" choice alone decides (`RECORD_ONLY`).
+  event: { outcomeKey: "calendar.family_events", label: "the family calendar" },
+  activity_item: { outcomeKey: "kids.activities", label: "the class in Kids & School" },
 };
+
+/**
+ * Kinds that only write something down and have no responsibility of their
+ * own: on "Only actions" they are recorded (confirmed above the bar, Checking
+ * below it, with Undo); on "Everything" they wait, as before 14 Nov.
+ */
+const RECORD_ONLY: ReadonlySet<HomeSendKind> = new Set(["event", "activity_item"]);
 
 /** Why a bill, receipt or health document waits while the household's "add directly" setting for it is off. */
 const CONSEQUENTIAL: Partial<Record<HomeSendKind, string>> = {
@@ -246,7 +258,17 @@ export function decideConfirmation(input: ConfirmationInput): ConfirmationDecisi
   // Decision 1 (the owner, 2026-11-14): Wait for Approval holds actions, not
   // writing information down. A new entry is recorded anyway, attributed and
   // undoable; a move of a record already on file still waits, as before.
-  const recordAnyway = held.outcome !== "execute" && input.approvalScope === "actions" && !move && decideAutonomy("execute", proposed).outcome === "execute";
+  const recordOnly = RECORD_ONLY.has(kind);
+  const recordAnyway =
+    !recordOnly && held.outcome !== "execute" && input.approvalScope === "actions" && !move && decideAutonomy("execute", proposed).outcome === "execute";
+  if (recordOnly) {
+    if (move) return { mode: "prepare", reason: input.reconciliation!.message, question: null };
+    if (input.approvalScope !== "actions") {
+      return { mode: "prepare", reason: "Your household has “Wait for Approval” holding everything, so WonderHome asks first.", question: null };
+    }
+    const sure = !checking.unconfirmed ? "" : ` It wasn't more than ${percent}% sure, so it is marked Checking until you answer a question or say it's right.`;
+    return { mode: "auto_apply", reason: `Writing a day down never waits, so WonderHome put it on ${outcome.label}.${sure} Undo it any time.`, question: null, ...checking };
+  }
   const decision = recordAnyway ? ({ outcome: "execute" } as const) : held;
   if (decision.outcome === "execute" && move) {
     return { mode: "auto_apply", reason: `Your household lets WonderHome handle ${outcome.label} on its own, so it moved the one already on record. Undo it any time.`, question: null, update: move };

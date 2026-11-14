@@ -225,3 +225,34 @@ describe("HS-009 — the same delivery twice is one email, read once", () => {
     expect(events()).toContain("duplicate");
   });
 });
+
+describe("14-068 — a trusted sender's email is added on arrival, after the response", () => {
+  it("hands a read email to the add-on-arrival step, deferred; held mail from a new sender is not", async () => {
+    const { deps, items } = harness();
+    const added: { householdId: string; itemId: string }[] = [];
+    const deferred: (() => Promise<void>)[] = [];
+    const response = await handleEmailWebhook(delivery(RECEIVED), {
+      ...deps,
+      defer: (work) => {
+        deferred.push(work);
+      },
+      addTrusted: async (input) => {
+        added.push(input);
+      },
+    });
+    expect(response.status).toBe(200);
+    // Nothing is added while Resend waits for the answer.
+    expect(added).toEqual([]);
+    for (const work of deferred) await work();
+    const email = items().find((row) => row.source === "email")!;
+    expect(added).toEqual([{ householdId: HOUSEHOLD, itemId: email.id }]);
+
+    const held = harness({ allowlist: [] });
+    const heldAdded: unknown[] = [];
+    const heldDeferred: (() => Promise<void>)[] = [];
+    await handleEmailWebhook(delivery(RECEIVED), { ...held.deps, defer: (work) => void heldDeferred.push(work), addTrusted: async (input) => void heldAdded.push(input) });
+    for (const work of heldDeferred) await work();
+    expect(heldAdded).toEqual([]);
+  });
+});
+

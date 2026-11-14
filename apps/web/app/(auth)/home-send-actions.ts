@@ -120,7 +120,7 @@ async function withReview(
     // The score's own reason, not the decision's (design §7).
     const sure = sureClause({ percent: scorePercent(review.understanding?.score), why: sureWhy(review.understanding) });
     // Below the bar it is added, marked Checking (the owner, 2026-11-03).
-    const checking = unconfirmed ? " — marked Checking until it's confirmed, so its reminders wait" : "";
+    const checking = unconfirmed ? " — marked Checking until it's confirmed" : "";
     if (applied) return { notice: `${applied.title} — added to ${applied.where} on its own${sure}${checking}.`, autoApplied: { ...applied, itemId: item.id, ...(unconfirmed ? { unconfirmed: true } : {}) } };
   }
   // Allowed but not written (the plan, or the domain refused it): it waits, and never says it was added.
