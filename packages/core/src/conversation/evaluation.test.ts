@@ -468,6 +468,16 @@ describe("groceries in conversation (Groceries §5.3, cases A–H)", () => {
     expect(result.kind === "reply" && result.text).toBe("Should I use cherry tomatoes or plum tomatoes?");
   });
 
+  it("F′: \"add tomatoes\" when the household taught \"tomatoes\" means cherry tomatoes is not asked again (14-069)", async () => {
+    const taught = [{ id: "r1", kind: "phrase_item" as const, key: "phrase:tomatoes", valueMemberId: null, valueText: "Cherry tomatoes", learnedByMemberId: null, learnedFromItemId: null, learnedAt: "2026-11-01T00:00:00Z", mixed: false, source: "pick" as const, times: 1 }];
+    const result = await turn("add half a kilo of tomatoes to the list", { ground: (intent) => groundIntent(intent, { ...env(), groceries: async () => KITCHEN, rules: async () => taught }) });
+    expect(result.kind === "reply" && result.proposal.kind).not.toBe("clarify");
+    expect(result.kind === "reply" && String(result.intent.parameters.item)).toMatch(/cherry tomatoes/i);
+    // A mixed rule settles nothing: the question comes back.
+    const mixed = await turn("add half a kilo of tomatoes to the list", { ground: (intent) => groundIntent(intent, { ...env(), groceries: async () => KITCHEN, rules: async () => [{ ...taught[0]!, mixed: true }] }) });
+    expect(mixed.kind === "reply" && mixed.proposal.kind).toBe("clarify");
+  });
+
   it("G: \"remove 500 grams of rice from the shopping list\" takes that much off the list", async () => {
     const result = await grocTurn("No, I meant remove 500 grams of rice from the shopping list");
     expect(result.kind === "reply" && result.intent).toMatchObject({ action: "remove_from_list", parameters: { item: "500 grams of rice" } });

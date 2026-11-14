@@ -1,3 +1,5 @@
+import { groceryFromRule } from "../homebrain/grocery-lesson";
+import type { HouseholdRule } from "../homebrain/rules";
 import { matchBill } from "./bill-talk";
 import { readBareNumber, sayAmount } from "../commerce/bare-amount";
 import { readAcrossUnits } from "../commerce/pack-amount";
@@ -67,6 +69,8 @@ export type GroundingEnv = {
   assets?: () => Promise<readonly { id: string; name: string }[]>;
   /** What the household keeps on its Groceries list, for "tomatoes or cherry tomatoes?". */
   groceries?: () => Promise<readonly GroceryItem[]>;
+  /** The household's learned rules (14-069, `homebrain/rules.ts`): "atta" the household already told it means one grocery is not asked again. */
+  rules?: () => Promise<readonly HouseholdRule[]>;
 };
 
 export type SchoolItemRef = { id: string; title: string; childMemberId: string; dueAt: string | null; status: string; dueTimeKnown?: boolean; endsAt?: string | null };
@@ -298,9 +302,20 @@ export async function groundIntent(intent: HouseholdIntent, env: GroundingEnv): 
   if (GROCERY_LINE_ACTIONS.has(grounded.action) && env.groceries) {
     const known = [...(await env.groceries().catch(() => []))];
     const names = typeof grounded.parameters.item === "string" ? [grounded.parameters.item] : Array.isArray(grounded.parameters.items) ? (grounded.parameters.items as string[]) : [];
+    const rules = env.rules ? await env.rules().catch(() => []) : [];
     for (const name of names) {
       const read = readItemAmount(name);
       const candidates = groceryCandidates(read.item || name, known);
+      // Know before asking (14-069): the household told WonderHome which one these words mean.
+      const taught = candidates.length > 1 ? groceryFromRule(read.item || name, candidates, rules) : null;
+      if (taught) {
+        const named = name.replace(read.item || name, taught.name);
+        grounded.parameters =
+          typeof grounded.parameters.item === "string"
+            ? { ...grounded.parameters, item: named }
+            : { ...grounded.parameters, items: (grounded.parameters.items as string[]).map((entry) => (entry === name ? named : entry)) };
+        continue;
+      }
       if (candidates.length > 1) {
         const options = candidates.slice(0, 4).map((candidate) => ({ entityType: "consumable", entityId: candidate.id, label: candidate.name, source: "clarification" as const, at }));
         return clarify(grounded, "item", `Should I use ${joinOr(candidates.slice(0, 4).map((candidate) => candidate.name.toLowerCase()))}?`, options);
