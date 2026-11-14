@@ -26,6 +26,7 @@ import { applyCorrection, describeCorrection, readCorrection, TARGET_KIND_FOR_AC
 import { heldBecause, leansOnEarlier, partialSummary, splitRequest, type PartOutcome } from "@wonderhome/core/conversation/decompose";
 import { confidenceLead, groundIntent, type GroundingEnv, type SchoolItemRef } from "@wonderhome/core/conversation/grounding";
 import { classifyShortReply, type HouseholdIntent } from "@wonderhome/core/conversation/intent";
+import { UNDOABLE } from "@wonderhome/core/conversation/undo-offer";
 import { attributeMemory } from "@wonderhome/core/conversation/memory";
 import { localDateTime, pendingWords, roleWords } from "@wonderhome/core/conversation/moment";
 import {
@@ -194,8 +195,6 @@ export type HomeTalkBody = z.infer<typeof bodySchema>;
 /** What the rules read with certainty, so no model is asked to read it again. */
 const RULES_SETTLE: ReadonlySet<HouseholdIntent["action"]> = new Set(["ask_status", "greet", "find_places", "open_screen", "check_agents"]);
 
-/** What "undo" can take back (`undoExecuted`), so the reply offers it only where it works. */
-const UNDOABLE: ReadonlySet<HouseholdIntent["action"]> = new Set(["add_to_list", "set_reminder", "record_absence", "plan_event", "plan_meal"]);
 
 /** What one HomeTalk turn is given. */
 export type HomeTalkInput = {
