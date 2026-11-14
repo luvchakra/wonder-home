@@ -1,7 +1,6 @@
 "use server";
 
 import { after } from "next/server";
-import { revalidatePath } from "next/cache";
 import { z } from "zod";
 
 import { auditChange } from "@wonderhome/core/api/audit";
@@ -58,9 +57,9 @@ export async function answerNeedsYouAction(_previous: NeedsYouState, formData: F
     }
     // A confirmed entry's reminders lose "not yet confirmed" now, not at the next clock pass.
     if (item.source === "homesend_check") after(() => reconcileRemindersNow(householdId, { force: true }));
-    revalidatePath("/ai");
-    revalidatePath("/");
-    revalidatePath("/home-send");
+    // No revalidatePath: any revalidation in an action re-draws the page the tap came from, which would take the
+    // row (and its "Done") away before it is read. The row says the outcome; every page showing the list renders
+    // per request, so it is fresh on the next visit.
     return { result: outcome === "done" ? "done" : "settled", id };
   } catch (thrown) {
     log.warn("answering a needs-you question failed", { reason: thrown instanceof Error ? thrown.name : "unknown" });
