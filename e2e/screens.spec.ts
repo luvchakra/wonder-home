@@ -197,8 +197,11 @@ test.describe("every signed-in screen loads", () => {
     await page.goto("/settings/ai");
     await expect(page.getByText(ERROR_SCREEN)).toHaveCount(0);
     const picker = page.getByRole("combobox", { name: "How sure HomeSend must be to add on its own" });
-    await expect(picker).toHaveValue("95");
-    await expect(picker.locator("option")).toHaveText(["More than 60%", "More than 70%", "More than 80%", "More than 85%", "More than 90%", "More than 95% (recommended)", "More than 97%", "More than 99%"]);
+    // Until an Admin picks one bar, each kind's bar follows the household's own accuracy (HomeBrain knows, 14-069).
+    await expect(picker).toHaveValue("0");
+    await expect(picker.locator("option")).toHaveText(["Set for each kind by WonderHome (recommended)", "More than 60%", "More than 70%", "More than 80%", "More than 85%", "More than 90%", "More than 95%", "More than 97%", "More than 99%"]);
+    await expect(page.getByText("Right now, for each kind")).toBeVisible();
+    await expect(page.getByText(/^Groceries: more than \d+%$/)).toBeVisible();
     await picker.selectOption("85");
     await expect.poll(async () => {
       const { data } = await admin.from("policies").select("rule").eq("household_id", householdId).eq("category", "ai_autonomy").eq("active", true).eq("name", "Add from HomeSend only when more sure than").maybeSingle();
@@ -206,6 +209,15 @@ test.describe("every signed-in screen loads", () => {
     }).toBe(85);
     await page.reload();
     await expect(page.getByRole("combobox", { name: "How sure HomeSend must be to add on its own" })).toHaveValue("85");
+    // The Admin's bar applies to every kind: the per-kind rows give way to one line saying so.
+    await expect(page.getByText(/Your bar of more than 85% applies to every kind/)).toBeVisible();
+    await expect(page.getByText(/^Groceries: more than \d+%$/)).toHaveCount(0);
+    // Back to "Set for each kind by WonderHome": stored as no single bar.
+    await page.getByRole("combobox", { name: "How sure HomeSend must be to add on its own" }).selectOption("0");
+    await expect.poll(async () => {
+      const { data } = await admin.from("policies").select("rule").eq("household_id", householdId).eq("category", "ai_autonomy").eq("active", true).eq("name", "Add from HomeSend only when more sure than").maybeSingle();
+      return (data?.rule as { auto?: boolean } | undefined)?.auto ?? null;
+    }).toBe(true);
     // Nothing overflows the phone width.
     expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(360);
   });
