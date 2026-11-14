@@ -1,3 +1,6 @@
+import { groceryPickLesson } from "@wonderhome/core/homebrain/grocery-lesson";
+import type { HouseholdRule } from "@wonderhome/core/homebrain/rules";
+import { learnFromAnswer, listHouseholdRules } from "@wonderhome/core/homebrain/rules-repository";
 import { z } from "zod";
 
 import { readHouseholdKey } from "@wonderhome/core/ai/credentials";
@@ -593,6 +596,7 @@ async function turnInEnglish(input: HomeTalkInput, speaking: Speaking) {
   let schoolRead: Promise<SchoolItemRef[]> | null = null;
   let assetRead: Promise<{ id: string; name: string }[]> | null = null;
   let billRead: Promise<{ id: string; name: string; billType: string | null }[]> | null = null;
+  let householdRulesRead: Promise<HouseholdRule[]> | undefined;
   const groundingEnv = (read: () => Promise<ReferenceState>): GroundingEnv => ({
     people: peopleItems,
     viewerMemberId: membership.memberId,
@@ -603,6 +607,8 @@ async function turnInEnglish(input: HomeTalkInput, speaking: Speaking) {
     catalogRecipes: () => listCatalogRecipes(supabase, publicEnv().NEXT_PUBLIC_SUPABASE_URL).catch(() => []),
     ingredients: (of) => ingredientNames(supabase, householdId, of).catch(() => []),
     groceries: () => listGroceries(supabase, householdId).catch(() => []),
+    // The household's learned rules (14-069): what its words for a grocery mean.
+    rules: () => (householdRulesRead ??= listHouseholdRules(supabase, householdId).catch(() => [])),
     schoolItems: () =>
       (schoolRead ??= listSchoolItems(supabase, householdId)
         .then((items) => items.map((entry) => ({ id: entry.id, title: entry.title, childMemberId: entry.childMemberId, dueAt: entry.dueAt?.toISOString() ?? null, status: entry.status, dueTimeKnown: entry.dueTimeKnown, endsAt: entry.endsAt?.toISOString() ?? null })))
@@ -855,6 +861,16 @@ async function turnInEnglish(input: HomeTalkInput, speaking: Speaking) {
   });
   const understoodAt = Date.now();
   if (result.kind === "reply") carry(speaking, replyClassesFor(result.intent.action));
+  // A grocery picked from "Should I use …?" is remembered for those words (14-069), after the response.
+  const picked = result.kind === "reply" && !corrected ? groceryPickLesson(clarifying, result.intent) : null;
+  if (picked) {
+    after(() =>
+      learnFromAnswer(supabase, { householdId, memberId: membership.memberId, kind: "grocery_item", field: "item", phrase: picked.phrase, to: { text: picked.item }, source: "pick" }).then(
+        () => undefined,
+        () => undefined,
+      ),
+    );
+  }
 
   // What the assistant says: the engine's line, unless something real
   // happened this turn — a question answered from the household's own

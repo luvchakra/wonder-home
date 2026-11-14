@@ -1,4 +1,5 @@
 import { observeMemory } from "./memory-runner";
+import { fillSubject } from "../homebrain/subject-fill";
 import { looksLikeInstruction, normaliseTopic } from "../school/trivia";
 import { validateGeneratedCard } from "../school/trivia-generate";
 import { decideTopic, type TriviaTopicJudge } from "../school/trivia-safety";
@@ -35,7 +36,6 @@ import { directAddAreaOf, NO_DIRECT_ADD } from "../homesend/auto-add";
 import { decideConfirmation } from "../homesend/confirmation";
 import { detectInstructionInjection } from "../homesend/injection";
 import { reconcileAgainstRecords, type HomeSendCandidate } from "../homesend/reconcile";
-import { inferSubject } from "../homesend/learned";
 import { adoptMatchedSubject, resolveIntakePeople } from "../homesend/resolve";
 import { buildUnderstanding } from "../homesend/understanding";
 import { checkQuestion, endingFor, waitingQuestion } from "../homesend/deadlines";
@@ -507,9 +507,10 @@ export async function observeHomeSend(c: HomeSendCase, models: Models = {}): Pro
   // As the review does (14-066): the content's school, the sender's history, or the one child at school.
   const resolution = {
     ...resolved,
-    subject: inferSubject(reading.kind, resolved.subject, {
+    // As the review does (14-069): the 14-066 inference, then HomeBrain's memory over the household's rules.
+    subject: fillSubject(reading.kind, resolved.subject, {
       items,
-      learned: (c.learned ?? []).map((row, n) => ({ id: `learned-${n}`, kind: "sender_child" as const, key: row.key, valueMemberId: row.valueMemberId, learnedByMemberId: c.actor, learnedFromItemId: null, learnedAt: household.now.toISOString(), mixed: row.mixed === true })),
+      rules: (c.learned ?? []).map((row, n) => ({ id: `learned-${n}`, kind: "sender_child" as const, key: row.key, valueMemberId: row.valueMemberId, valueText: null, learnedByMemberId: c.actor, learnedFromItemId: null, learnedAt: household.now.toISOString(), mixed: row.mixed === true, source: "answer" as const, times: 1 })),
       sender: c.source.from ?? null,
       text: [c.source.subject, c.source.text, reading.title, reading.summary].filter((part): part is string => typeof part === "string").join("\n"),
     }),

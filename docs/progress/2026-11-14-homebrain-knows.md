@@ -42,3 +42,15 @@ Story 14-069. The owner asked for HomeBrain, HomeSend and HomeTalk to work as on
   - the 24-hour default: no basis (null), because nobody said so.
 - **Verified:** vitest on homebrain, hometalk, homesend and evaluation; eval HB-15–39 25/25; web needs-you and components 18/18.
 - **Still open, waiting on part B:** `learnFromCorrection` in `entry-corrections.ts` and `hometalk-turn.ts`, and `resolveGaps` in grounding.
+
+## Last wiring (after part B, #550)
+- **HomeSend's "Who is this for?"** goes through `homebrain/subject-fill.ts`: the 14-066 inference, then the memory resolver over every rule. Used in `home-send-review.ts` and the eval runner.
+- **HomeTalk grounding reads the phrase rules.** "add atta" goes straight to the grocery the household picked before; a mixed rule still asks. A pick from "Should I use …?" teaches the rule after the response (`grocery-lesson.ts`, `hometalk-turn.ts`).
+- **Part B's plain corrections already call `learnFromCorrection`** (`entry-corrections.ts`).
+- **HomeTalk's corrections of its own actions learn nothing.** Without an outside sender or the original words, no lesson is safe.
+- **Verified:**
+  - vitest on homebrain and conversation: 1005/1005; evaluation, homebrain and learned: 620/620;
+  - eval: every HS case 71/71, the grocery HT cases 18/18, HB-15–39 25/25;
+  - web `_lib`: 42/42;
+  - typecheck clean, boundaries lint passed.
+- **Story 14-069 is Done.**

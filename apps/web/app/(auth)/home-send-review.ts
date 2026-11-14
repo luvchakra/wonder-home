@@ -15,8 +15,8 @@ import type { HomeSendExtraction, HomeSendKind } from "@wonderhome/core/homesend
 import { listRecordedReceipts } from "@wonderhome/core/homesend/repository";
 import { buildDocumentPlan, readPlanContext, type DocumentPlan } from "@wonderhome/core/homesend/plan";
 import { reconcileHomeSend, type HomeSendReconciliation } from "@wonderhome/core/homesend/reconcile";
-import { inferSubject } from "@wonderhome/core/homesend/learned";
-import { listLearnedDefaults } from "@wonderhome/core/homesend/learned-repository";
+import { fillSubject } from "@wonderhome/core/homebrain/subject-fill";
+import { listHouseholdRules } from "@wonderhome/core/homebrain/rules-repository";
 import { adoptMatchedSubject, resolveIntakePeople, type SubjectResolution } from "@wonderhome/core/homesend/resolve";
 import type { DocumentReading } from "@wonderhome/core/homesend/document";
 import type { IntakeUnderstanding } from "@wonderhome/core/homesend/understanding";
@@ -180,11 +180,11 @@ export async function prepareReview(
     return { subject: null, reconciliation: null, understanding: item.understanding, confirmation: confirm(null, null, item.understanding, "prepare") };
   }
 
-  // Who it is for may come from what the household told HomeSend before (14-066): read in the same wave.
+  // Who it is for may come from what the household told HomeSend before (14-066, 14-069 rules): read in the same wave.
   const childKind = kind === "school_item" || kind === "activity_item";
-  const [people, learned] = await Promise.all([
+  const [people, rules] = await Promise.all([
     householdPeople(supabase, membership).catch(() => []),
-    childKind ? listLearnedDefaults(supabase, membership.household.id).catch(() => []) : Promise.resolve([]),
+    childKind ? listHouseholdRules(supabase, membership.household.id).catch(() => []) : Promise.resolve([]),
   ]);
   const resolved = item.understanding
     ? resolveIntakePeople(item.understanding, people, { viewerMemberId: membership.memberId })
@@ -193,9 +193,9 @@ export async function prepareReview(
   const resolution = resolved
     ? {
         ...resolved,
-        subject: inferSubject(kind, resolved.subject, {
+        subject: fillSubject(kind, resolved.subject, {
           items: people,
-          learned,
+          rules,
           sender: item.senderAddress ?? item.understanding?.provenance.sender ?? null,
           text: [item.extracted.title, item.extracted.notes, item.extracted.subject, item.extracted.summary, item.understanding?.contentSummary, item.rawText].filter((part): part is string => typeof part === "string").join("\n"),
         }),
