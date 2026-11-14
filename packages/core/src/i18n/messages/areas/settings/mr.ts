@@ -11,7 +11,6 @@ export const settingsMr: AreaCatalog<typeof settingsEn> = {
   "settingsPage.replaceKey": "की बदला",
   "settingsPage.aMember": "एक सदस्य",
   "settingsPage.listSeparator": ", ",
-
   "settingsPage.ai.title": "AI सहाय्यक",
   "settingsPage.ai.lede": "{household} साठी कोणते मॉडेल उत्तर देते, आणि त्याला काय सांगितले जाऊ शकते.",
   "settingsPage.ai.section.key": "प्रदाता आणि की",
@@ -23,13 +22,19 @@ export const settingsMr: AreaCatalog<typeof settingsEn> = {
   "settingsPage.ai.autoAdd.title": "स्वतः जोडण्यासाठी HomeSend ला किती खात्री हवी",
   "settingsPage.ai.autoAdd.detail": "Pre Approved असलेल्या परिणामांसाठी, तुम्ही WhatsApp वर पाठवलेले, HomeTalk ला सांगितलेले किंवा इतर मार्गाने शेअर केलेले — फोटो आणि फाइल्ससुद्धा — थेट जोडले जाते. WonderHome ला यापेक्षा जास्त खात्री असेल तर इतकंच; नसेल तर नोंदीवर \"तपासणी सुरू\" दिसतं आणि तुम्ही ती बरोबर आहे म्हणेपर्यंत तिचे रिमाइंडर थांबतात. बिले, पावत्या आणि आरोग्य कागदपत्रे तुम्ही खाली परवानगी दिल्याशिवाय तुमची वाट पाहतात. तपासणी सुरू असेपर्यंत HomeTalk पाठवणाऱ्याला (WhatsApp वरही) पुरेशी खात्री होईपर्यंत जास्तीत जास्त तीन छोटे प्रश्न विचारतो; तुमच्या संदेशात नसलेल्या गोष्टीचं नाव घेणारी नोंद कधीच जोडली जात नाही.",
   "settingsPage.ai.autoAdd.option": "{percent}% पेक्षा जास्त",
-  "settingsPage.ai.directAdd.money.title": "पैशाच्या नोंदी थेट जोडा",
-  "settingsPage.ai.directAdd.money.on": "चालू: तुम्ही टाइप केलेले, फॉरवर्ड केलेले किंवा HomeTalk ला सांगितलेले बिल किंवा पावती न विचारता जोडली जाते, पण फक्त जबाबदाऱ्या मध्ये “बिले वेळेवर भरली” (पावतीसाठी “मासिक बजेट तपासणी”) Pre Approved असेल आणि WonderHome ला तुमच्या मर्यादेपेक्षा जास्त खात्री असेल तेव्हा. नंतर तुम्हाला Undo सह कळवले जाते. कधीही काहीही भरले जात नाही.",
-  "settingsPage.ai.directAdd.money.off": "बंद: प्रत्येक बिल आणि पावती तुमच्या तपासणीची वाट पाहते.",
-  "settingsPage.ai.directAdd.health.title": "आरोग्य नोंदी थेट जोडा",
-  "settingsPage.ai.directAdd.health.on": "चालू: तुम्ही टाइप केलेले, फॉरवर्ड केलेले किंवा HomeTalk ला सांगितलेले आरोग्य कागदपत्र न विचारता जोडले जाते, पण फक्त जबाबदाऱ्या मध्ये “आरोग्य नोंदी ठेवल्या” Pre Approved असेल आणि WonderHome ला तुमच्या मर्यादेपेक्षा जास्त खात्री असेल तेव्हा. ते त्या व्यक्तीपुरते खाजगी राहते, आणि मुलाचे त्याच्या पालकांपुरते. नंतर तुम्हाला Undo सह कळवले जाते.",
-  "settingsPage.ai.directAdd.health.off": "बंद: प्रत्येक आरोग्य कागदपत्र तुमच्या तपासणीची वाट पाहते.",
-  "settingsPage.ai.directAdd.files": "बहुतेक बिले, पावत्या आणि अहवाल फोटो किंवा PDF म्हणून येतात. ते शब्दशः तपासता येत नाहीत, म्हणून ते अजूनही तुमची वाट पाहतात.",
+  "settingsPage.ai.recordFirst.approvalScope.title": "“Wait for Approval” काय थांबवते",
+  "settingsPage.ai.recordFirst.approvalScope.detail": "Wait for Approval असलेल्या जबाबदाऱ्यांसाठी. फक्त कामे: तुम्ही पाठवलेले किंवा सांगितलेले नोंदवले जाते, आणि पेमेंट, ऑर्डर किंवा बुकिंग होकाराची वाट पाहतात. सर्व काही: कोणी मंजूर करेपर्यंत काहीही नोंदवले जात नाही.",
+  "settingsPage.ai.recordFirst.approvalScope.actions": "फक्त कामे (शिफारस)",
+  "settingsPage.ai.recordFirst.approvalScope.everything": "सर्व काही",
+  "settingsPage.ai.recordFirst.moneyHealth.title": "पैसे आणि आरोग्य नोंदी",
+  "settingsPage.ai.recordFirst.moneyHealth.detail": "HomeSend मध्ये पाठवलेली बिले, पावत्या आणि आरोग्य कागदपत्रे. तपासणी सुरू म्हणून, प्रत्येकाची पुष्टी एका टॅपने होते; पुष्टी झालेली म्हणून, फक्त WonderHome ला तुमच्या मर्यादेपेक्षा जास्त खात्री असेल तेव्हा. तपासणी सुरू असलेले बिल पेमेंटपूर्वी तपासण्याची आठवण करून देते. आरोग्य कागदपत्र त्या व्यक्तीच्या आरोग्य नोंदीत जाते, त्यांच्यापुरते खाजगी, आणि मुलाचे त्याच्या पालकांपुरते. कधीही काहीही भरले जात नाही.",
+  "settingsPage.ai.recordFirst.moneyHealth.checking": "तपासणी सुरू (शिफारस)",
+  "settingsPage.ai.recordFirst.moneyHealth.confirmed": "मर्यादेवर पुष्टी",
+  "settingsPage.ai.recordFirst.moneyHealth.review": "तपासणीची वाट पाहा",
+  "settingsPage.ai.recordFirst.outsideSenders.title": "नवीन पाठवणाऱ्यांचे ईमेल",
+  "settingsPage.ai.recordFirst.outsideSenders.detail": "घराबाहेरील कोणाकडून तुमच्या घराच्या HomeSend पत्त्यावर आलेले मेल. एकदा विचारा: Admins ना विचारले जाते “या पाठवणाऱ्यावर विश्वास ठेवायचा?”, मेल न वाचता वाट पाहते, आणि विश्वासू पाठवणाऱ्याचे मेल यापुढे थेट येते. फक्त Admin ने जोडलेले: बाकी सर्व न वाचता सोडले जातात.",
+  "settingsPage.ai.recordFirst.outsideSenders.ask_once": "एकदा विचारा (शिफारस)",
+  "settingsPage.ai.recordFirst.outsideSenders.review": "फक्त Admin ने जोडलेले",
   "settingsPage.ai.homesendTidy.title": "आता लागू नसलेले बाजूला ठेवा",
   "settingsPage.ai.homesendTidy.on": "चालू: दिवसातून एकदा HomeSend वाट पाहणाऱ्या अशा गोष्टी संग्रहात ठेवते ज्यांचा दिवस होऊन गेला, ज्या आधीच नोंदल्या आहेत किंवा ज्यांची जागा नव्याने घेतली. काहीही हटवले जात नाही.",
   "settingsPage.ai.homesendTidy.off": "बंद: वाट पाहणाऱ्या गोष्टी तुम्ही हाताळेपर्यंत किंवा 30 दिवस न हाताळल्या जाईपर्यंत राहतात.",
@@ -102,7 +107,6 @@ export const settingsMr: AreaCatalog<typeof settingsEn> = {
   "settingsPage.aiKey.newKey": "नवी की",
   "settingsPage.aiKey.newKeyPlaceholder": "बदलण्यासाठी नवी की पेस्ट करा",
   "settingsPage.aiKey.remove": "काढा आणि WonderHome च्या कीवर परत जा",
-
   "settingsPage.dataUse.nothing": "तुमच्या घराबद्दल काहीही कोणत्याही मॉडेल प्रदात्याला पाठवले जात नाही. सहाय्यक फक्त स्वतःच्या नियमांतून उत्तर देतो.",
   "settingsPage.dataUse.maxItems#one": "उत्तर देण्यासाठी आवश्यक तेवढेच, आणि एका वेळी कधीही {count} पेक्षा जास्त गोष्ट नाही.",
   "settingsPage.dataUse.maxItems#other": "उत्तर देण्यासाठी आवश्यक तेवढेच, आणि एका वेळी कधीही {count} पेक्षा जास्त गोष्टी नाहीत.",
@@ -139,7 +143,6 @@ export const settingsMr: AreaCatalog<typeof settingsEn> = {
   "settingsPage.dataUseForm.footer":
     "की आणि टोकन कधीही पाठवले जात नाहीत, आणि ही सेटिंग नाही. काहीही बाहेर जाण्यापूर्वी नावांच्या जागी भूमिका लिहिल्या जातात, त्यामुळे प्रदात्याला “मूल A” दिसते, तुमचे मूल कधीच नाही.",
   "settingsPage.dataUseForm.submit": "तुम्ही ज्याला संमती देता ते सेव्ह करा",
-
   "settingsPage.notifications.title": "सूचना",
   "settingsPage.notifications.heading": "WonderHome कडून तुम्हाला कसे कळते",
   "settingsPage.notifications.lede": "तुमची स्वतःची निवड — तुम्ही सेट केल्याने इतर कोणाच्याही सूचना बदलत नाहीत.",
@@ -263,7 +266,6 @@ export const settingsMr: AreaCatalog<typeof settingsEn> = {
   "settingsPage.notifications.smart.learn": "मी सहसा केव्हा कृती करतो ते शिका",
   "settingsPage.notifications.smart.learnBody":
     "एखाद्या प्रकारचे रिमाइंडर तुम्ही किमान पाच वेळा साधारण एकाच वेळी हाताळले की, त्या प्रकारचे पहिले रिमाइंडर त्या वेळेच्या आसपास येऊ लागते. वर तुम्ही निवडलेली वेळ नेहमी लागू राहते, आणि शांत वेळही लागू राहते.",
-
   "settingsPage.privacy.title": "गोपनीयता",
   "settingsPage.privacy.heading": "तुमची गोपनीयता",
   "settingsPage.privacy.lede": "या घरातून काय बाहेर जाते, आम्ही गोष्टी किती काळ ठेवतो, आणि तुमचा डेटा सोबत कसा न्यायचा किंवा कसा काढून टाकायचा.",
@@ -364,7 +366,6 @@ export const settingsMr: AreaCatalog<typeof settingsEn> = {
   "settingsPage.privacy.request.status.cancelled": "रद्द",
   "settingsPage.privacy.request.status.refused": "नाकारले",
   "settingsPage.privacy.quote": "तुमचे घर. तुमचा डेटा. तुमचा निर्णय.",
-
   "settingsPage.voice.title": "आवाज",
   "settingsPage.voice.heading": "WonderHome तुमच्याशी कसा बोलतो",
   "settingsPage.voice.lede": "तुम्ही कोणाशी बोलता, उत्तरे कशी ऐकू येतात, आणि तो किती लक्षपूर्वक ऐकतो.",
@@ -506,7 +507,6 @@ export const settingsMr: AreaCatalog<typeof settingsEn> = {
     "Text-to-Speech आणि Speech-to-Text चालू असलेल्या Google Cloud प्रोजेक्टमधून. फक्त या घरासाठी साठवली जाते, आणि पुन्हा कधीही वाचता येत नाही.",
   "settingsPage.voice.ownKey.use": "ही की वापरा",
   "settingsPage.voice.ownKey.remove": "ती काढा आणि WonderHome च्या स्पीच सेवेवर परत जा",
-
   "settingsPage.voiceAssistants.title": "व्हॉइस असिस्टंट",
   "settingsPage.voiceAssistants.lede": "{household} मधील कोणासाठी तरी WonderHome शी बोलणारे स्पीकर — आणि प्रत्येक नेमके काय करू शकतो.",
   "settingsPage.voiceAssistants.linking": "एक जोडणे",
@@ -562,7 +562,6 @@ export const settingsMr: AreaCatalog<typeof settingsEn> = {
   "settingsPage.voiceAssistants.scope.pets.read": "पाळीव प्राणी आणि त्यांची काळजी",
   "settingsPage.voiceAssistants.scope.notifications.create": "तुमच्यासाठी रिमाइंडर सेट करणे",
   "settingsPage.voiceAssistants.quote": "तुमचे घर, तुमच्या अटींवर.",
-
   "settingsPage.whatsapp.lede": "WhatsApp वरून WonderHome ला गोष्टी फॉरवर्ड करा, आणि त्या तुमच्या तपासणीसाठी {household} च्या HomeSend मध्ये येतात.",
   "settingsPage.whatsapp.readError": "तुमची WhatsApp जोडणी आत्ता वाचता आली नाही. काहीही बदलले नाही — थोड्या वेळाने पुन्हा प्रयत्न करा.",
   "settingsPage.whatsapp.yours": "तुमचे WhatsApp",
@@ -621,7 +620,6 @@ export const settingsMr: AreaCatalog<typeof settingsEn> = {
   "settingsPage.whatsapp.linked.homesend": "ते तुमच्या तपासणीसाठी HomeSend मध्ये दिसते",
   "settingsPage.whatsapp.linked.nothingPaid": "WhatsApp वरून काहीही भरले, बुक किंवा पाठवले जात नाही — तुम्ही ॲपमध्ये ठरवता",
   "settingsPage.whatsapp.goHomeSend": "HomeSend वर जा",
-
   "settingsPage.plan.title": "तुमचा प्लॅन",
   "settingsPage.plan.back": "तुमच्या प्लॅनवर परत",
   "settingsPage.plan.lede": "{household} {plan} प्लॅनवर आहे.",
@@ -674,7 +672,6 @@ export const settingsMr: AreaCatalog<typeof settingsEn> = {
   "settingsPage.plan.leave": "आहे तसेच राहू द्या",
   "settingsPage.plan.workOutFailed": "आम्ही आत्ता याचा हिशोब करू शकलो नाही.",
   "settingsPage.plan.changeFailed": "आम्ही आत्ता प्लॅन बदलू शकलो नाही.",
-
   "settingsPage.checkout.title": "चेकआउट",
   "settingsPage.checkout.adminOnly": "फक्त एक Admin प्लॅन बदलू शकतात",
   "settingsPage.checkout.adminOnlyBody": "प्लॅन निवडण्यासाठी तुमच्या घरातील एका Admin ना सांगा.",
@@ -702,7 +699,6 @@ export const settingsMr: AreaCatalog<typeof settingsEn> = {
   "settingsPage.checkout.notNow": "आत्ता नाही",
   "settingsPage.checkout.opening": "{provider} उघडत आहे…",
   "settingsPage.checkout.openFailed": "आम्ही पेमेंट पेज उघडू शकलो नाही. काहीही शुल्क घेतले नाही.",
-
   "settingsPage.confirmed.title": "पेमेंट",
   "settingsPage.confirmed.yourNewPlan": "तुमचा नवीन प्लॅन",
   "settingsPage.confirmed.cancelled": "कोणतेही पेमेंट घेतले नाही",
@@ -715,7 +711,6 @@ export const settingsMr: AreaCatalog<typeof settingsEn> = {
     "आम्ही पेमेंट प्रदात्याच्या पुष्टीची वाट पाहत आहोत — सहसा एका मिनिटापेक्षा कमी. तुम्ही हे पेज सोडू शकता: पुष्टी होताच {plan} आपोआप सुरू होईल, आणि काहीही दोनदा आकारले जात नाही.",
   "settingsPage.confirmed.receipt": "पावती पाहा",
   "settingsPage.confirmed.quote": "कमी मानसिक ताण. कुटुंबासाठी जास्त वेळ.",
-
   "settingsPage.billing.lede": "{household} चे प्रत्येक पेमेंट, पेमेंट प्रदात्याने पुष्टी केल्याप्रमाणे.",
   "settingsPage.billing.adminOnly": "फक्त एक Admin बिलिंग पाहू शकतात",
   "settingsPage.billing.adminOnlyBody": "पेमेंट घरातील Admins आणि पेमेंट प्रदाता यांच्यात असतात.",
@@ -741,7 +736,6 @@ export const settingsMr: AreaCatalog<typeof settingsEn> = {
   "settingsPage.billing.method.emi": "EMI",
   "settingsPage.billing.method.bank_transfer": "बँक ट्रान्सफर",
   "settingsPage.billing.method.other": "इतर",
-
   "settingsPage.invoice.title": "इनव्हॉइस",
   "settingsPage.invoice.numbered": "इनव्हॉइस {number}",
   "settingsPage.invoice.back": "बिलिंग इतिहासावर परत",

@@ -283,9 +283,10 @@ export const VOICE_CAPABILITIES: readonly Capability[] = [
     // entry, in the channel it was asked in, WhatsApp included. It never
     // pays, orders or approves anything.
     id: "homesend_checking",
-    label: "Answering a check on something HomeSend added",
+    label: "Answering a check on, or correcting, something HomeSend added",
     category: "low_risk",
-    actions: ["check_homesend_entry"],
+    // "No, it's on the 12th" (2026-11-14): fixes the member's own recent entry in place, with Undo.
+    actions: ["check_homesend_entry", "correct_entry"],
     geminiTools: [],
     policy: everywhere,
   },

@@ -114,7 +114,8 @@ export function canExecute(intent: HouseholdIntent): boolean {
     // weekend" stays a plan the household finishes itself.
     case "plan_event": {
       const window = (intent.parameters.windowResolved ?? intent.parameters.whenResolved) as { precision?: string; window?: unknown } | undefined;
-      return Boolean(window && (window.window || (intent.parameters.protected === true && window.precision === "day")));
+      // Record first (2026-11-14): a plan with a day but no time goes on the calendar as an all-day entry, never left waiting.
+      return Boolean(window && (window.window || window.precision === "day"));
     }
     case "record_absence":
       return intent.target.kind === "member" && Boolean(intent.target.reference);
@@ -145,6 +146,11 @@ export function canExecute(intent: HouseholdIntent): boolean {
       return typeof intent.parameters.itemId === "string" && typeof intent.parameters.field === "string" && typeof intent.parameters.answer === "string";
     case "fill_homesend_details":
       return true;
+    // Only ever the server's own reading of a plain correction (`plain-corrections.ts`), never a model's.
+    case "correct_entry": {
+      const correction = intent.parameters.correction as { field?: unknown; text?: unknown; to?: unknown } | null | undefined;
+      return intent.understanding?.source === "rules" && Boolean(correction) && ((correction!.field === "person" && typeof correction!.to === "string") || ((correction!.field === "date" || correction!.field === "amount") && typeof correction!.text === "string"));
+    }
     case "set_fitness_goal":
       return (
         typeof intent.parameters.activity === "string" &&
@@ -285,6 +291,41 @@ async function checkHomeSendEntry(intent: HouseholdIntent, context: ExecutionCon
 }
 
 /**
+ * "No, it's on the 12th" (the owner, 2026-11-14): the speaker's most recent
+ * matching entry, fixed in place through its domain's update, with Undo.
+ */
+async function correctEntry(intent: HouseholdIntent, context: ExecutionContext): Promise<ExecutionResult> {
+  const { correctRecentEntry } = await import("../hometalk/entry-corrections");
+  const correction = intent.parameters.correction as import("./plain-corrections").PlainCorrection;
+  const fixed = await correctRecentEntry(context.supabase, {
+    householdId: context.householdId,
+    actorMemberId: context.actorMemberId,
+    people: context.members,
+    correction,
+    utterance: intent.utterance,
+    timezone: context.timezone,
+    now: context.now ?? new Date(),
+    ...(context.admin ? { admin: context.admin } : {}),
+  });
+  if (!fixed) return { ok: false, reason: "I couldn't find a recent entry of yours that fits, so I haven't changed anything. You can fix it on its own screen." };
+  const shown = correctedWords(fixed.field, fixed.after, context.timezone);
+  const confirmed = fixed.confirmed ? " It's confirmed now." : "";
+  return {
+    ok: true,
+    text: `Fixed **${fixed.title}**: ${shown}.${confirmed}`,
+    result: { homeSendItemId: fixed.itemId, title: fixed.title, field: fixed.field, undo: { itemId: fixed.itemId, field: fixed.field, before: fixed.before } },
+  };
+}
+
+/** The new value, as the reply says it: "now on Fri 12 Dec", "now for Kabir", "now 1,240". */
+function correctedWords(field: string, after: Record<string, unknown>, timezone: string): string {
+  if (field === "person") return `now for ${String(after.subjectMemberName ?? "them")}`;
+  if (field === "amount") return `now ${Number(after.amount).toLocaleString("en-IN")}`;
+  const day = String(after.dueDate ?? after.documentDate ?? "");
+  return day ? `now ${describeDate(day, "on", timezone)}` : "updated";
+}
+
+/**
  * "Yes" to HomeTalk's offer to fill in what waits in HomeSend (14-050): the
  * first item's first question, with the rest queued behind it; "no" leaves
  * them all waiting. Only questions — nothing is written here.
@@ -374,6 +415,8 @@ async function runIntent(intent: HouseholdIntent, context: ExecutionContext): Pr
         return await checkHomeSendEntry(intent, context);
       case "fill_homesend_details":
         return await fillHomeSendDetails(intent, context);
+      case "correct_entry":
+        return await correctEntry(intent, context);
       case "plan_event":
         return await putOnCalendar(intent, context);
       case "record_absence":
@@ -483,6 +526,13 @@ async function undoForCorrection(
     case "record_bill_payment":
     case "set_bill_amount":
       return (await undoBillTalk(corrects.actionType, result, context)) ?? { ok: false, reason: "I cannot change that one from here yet, so I left it as it was." };
+    case "correct_entry": {
+      const undo = result.undo as import("../hometalk/entry-corrections").EntryCorrectionUndo | undefined;
+      if (!undo) return { ok: false, reason: "I could not find what I changed, so I left it as it was." };
+      const { undoEntryCorrection } = await import("../hometalk/entry-corrections");
+      const back = await undoEntryCorrection(context.supabase, { householdId: context.householdId, actorMemberId: context.actorMemberId, undo, timezone: context.timezone });
+      return back ? { ok: true, text: `Put **${String(result.title ?? "it")}** back as it was.` } : { ok: false, reason: "I could not put that back, so I left it as it is. You can change it on its own screen." };
+    }
     default:
       return { ok: false, reason: "I cannot change that one from here yet, so I left it as it was. You can change it on its own screen." };
   }
@@ -591,10 +641,12 @@ async function putOnCalendar(intent: HouseholdIntent, context: ExecutionContext)
   if (!resolved?.date) return { ok: false, reason: "Which day is it for?" };
   const protectedTime = intent.parameters.protected === true;
   const span = resolved.window ?? (protectedTime ? { from: "09:00", to: "21:00" } : null);
-  if (!span) return { ok: false, reason: notYetDoable("plan_event") };
+  // A day with no time (record first, 2026-11-14): written down as an all-day entry; the time can be added on the calendar.
+  const allDay = !span;
+  if (allDay && resolved.precision && resolved.precision !== "day") return { ok: false, reason: notYetDoable("plan_event") };
   const clock = (value: string) => ({ hour: Number(value.slice(0, 2)), minute: Number(value.slice(3, 5)) });
-  const from = clock(span.from);
-  const to = clock(span.to);
+  const from = clock(span?.from ?? "00:00");
+  const to = clock(span?.to ?? "23:59");
   const what = String(intent.parameters.what ?? "Family time").trim();
   const title = what.charAt(0).toUpperCase() + what.slice(1);
   const label = (resolved.label ?? resolved.date).replace(/\s*\(.*\)$/, "");
@@ -611,6 +663,7 @@ async function putOnCalendar(intent: HouseholdIntent, context: ExecutionContext)
       endsAt: zonedTimeToUtcIso(resolved.date, to.hour, to.minute, context.timezone),
       protected: protectedTime,
       ownerMemberId: context.actorMemberId,
+      ...(allDay ? { allDay: true } : {}),
     },
     { timeZone: context.timezone },
   );
@@ -624,6 +677,13 @@ async function putOnCalendar(intent: HouseholdIntent, context: ExecutionContext)
   }
   const id = added.id;
   const hours = `${formatHourMinute(from.hour, from.minute)}–${formatHourMinute(to.hour, to.minute)}`;
+  if (allDay) {
+    return {
+      ok: true,
+      text: `Put **${what}** on the family calendar ${onDay(label)}, all day. Add a time on ${linkTo("/calendar", "Calendar")} if it has one.`,
+      result: { eventId: id, title, protected: false, allDay: true },
+    };
+  }
   return {
     ok: true,
     text: protectedTime

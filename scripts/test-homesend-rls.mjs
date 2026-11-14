@@ -1205,3 +1205,47 @@ test("learned defaults stay in the household, are written as yourself, and only 
   asProfile(HEAD, `delete from public.homesend_learned_defaults where household_id = '${household}';`, options);
   assert.equal(psql(`select count(*) from public.homesend_learned_defaults where household_id = '${household}';`, options), "0");
 });
+
+// --- Decision 5 (the owner, 2026-11-14): new email senders, asked about once ---
+
+test("members see the senders their household was asked about; another household sees none", () => {
+  psql(
+    `insert into public.homesend_email_senders (household_id, address, state)
+     values ('${household}', 'accounts@greenvalley.example', 'pending');`,
+    options,
+  );
+  assert.equal(asProfile(HEAD, `select count(*) from public.homesend_email_senders;`, options), "1");
+  assert.equal(asProfile(OTHER_ADULT, `select count(*) from public.homesend_email_senders;`, options), "1");
+  assert.equal(asProfile(OUTSIDER, `select count(*) from public.homesend_email_senders;`, options), "0");
+});
+
+test("nobody signed in writes a sender's state — not even an Admin: the server answers after its own Admin check", () => {
+  assert.ok(
+    deniedForProfile(HEAD, `insert into public.homesend_email_senders (household_id, address) values ('${household}', 'someone@else.example');`, options),
+  );
+  try {
+    asProfile(HEAD, `update public.homesend_email_senders set state = 'trusted';`, options);
+  } catch {
+    // Refused outright is as good as changing nothing.
+  }
+  assert.equal(psql(`select state from public.homesend_email_senders where address = 'accounts@greenvalley.example';`, options).trim(), "pending");
+});
+
+test("an item held from a new sender keeps a reason the check accepts", () => {
+  const held = psql(
+    `insert into public.home_send_items (household_id, source, raw_text, sender_address)
+     values ('${household}', 'email', 'Fees due Friday', 'accounts@greenvalley.example') returning id;`,
+    options,
+  ).trim();
+  psql(
+    `update public.home_send_items set status = 'archived', archived_from = 'received', archived_at = now(), archive_reason = 'new_sender' where id = '${held}';`,
+    options,
+  );
+  assert.equal(psql(`select archive_reason from public.home_send_items where id = '${held}';`, options).trim(), "new_sender");
+  for (const reason of ["sender_blocked", "sender_not_answered"]) {
+    psql(`update public.home_send_items set archive_reason = '${reason}' where id = '${held}';`, options);
+  }
+  // Trust puts it back to be read: leaving "archived" clears the reason.
+  psql(`update public.home_send_items set status = 'received', archived_from = null, archived_at = null where id = '${held}';`, options);
+  assert.equal(psql(`select coalesce(archive_reason, 'none') from public.home_send_items where id = '${held}';`, options).trim(), "none");
+});

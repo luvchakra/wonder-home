@@ -98,6 +98,8 @@ const ACTION_SCOPE: Partial<Record<IntentAction, VoiceScope | "none">> = {
   complete_homesend_item: "none",
   // Answering HomeTalk's question about the member's own entry added as Checking.
   check_homesend_entry: "none",
+  // A plain correction of the member's own recent entry: never pays, orders or approves.
+  correct_entry: "none",
   // "Yes" to the offer to fill in the member's own waiting items: questions only.
   fill_homesend_details: "none",
   raise_service_request: "home.write",

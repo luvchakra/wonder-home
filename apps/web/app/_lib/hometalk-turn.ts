@@ -17,6 +17,8 @@ import { UNDO_LINE, warmReply, warmUndo } from "@wonderhome/core/conversation/wa
 import { loadConfirmRequested } from "@wonderhome/core/conversation/consent-repository";
 import { approvalRefusal } from "@wonderhome/core/conversation/approval";
 import { referToAdult } from "@wonderhome/core/conversation/referral";
+import { loadDirectAdd } from "@wonderhome/core/household/direct-add-repository";
+import { readPlainCorrection } from "@wonderhome/core/conversation/plain-corrections";
 import { applyCorrection, describeCorrection, readCorrection, TARGET_KIND_FOR_ACTION, type CorrectableAction } from "@wonderhome/core/conversation/corrections";
 import { heldBecause, leansOnEarlier, partialSummary, splitRequest, type PartOutcome } from "@wonderhome/core/conversation/decompose";
 import { confidenceLead, groundIntent, type GroundingEnv, type SchoolItemRef } from "@wonderhome/core/conversation/grounding";
@@ -342,12 +344,14 @@ async function turnInEnglish(input: HomeTalkInput, speaking: Speaking) {
   }
   const overFairUse = entitlement.fairUse === "over";
 
-  const [entitled, sessionId, autonomyFor, people, confirmRequestedChanges] = await Promise.all([
+  const [entitled, sessionId, autonomyFor, people, confirmRequestedChanges, moneyHealthReview] = await Promise.all([
     consequentialEntitlements(supabase, householdId),
     openSession(admin, { householdId, memberId: membership.memberId, channel: body.channel, surface: surfaceForChannel(source) }),
     autonomyLookup(supabase, householdId),
     listPeople(supabase, householdId),
     loadConfirmRequested(supabase, householdId),
+    // Decision 2 switched back: a bill or appointment said in HomeTalk is asked first ("Wait for review").
+    loadDirectAdd(supabase, householdId).then((add) => ({ money: !add.money, health: !add.health })),
   ]);
   speaking.people = people;
 
@@ -531,7 +535,11 @@ async function turnInEnglish(input: HomeTalkInput, speaking: Speaking) {
   // anything the household did not just ask for. What comes out is an
   // ordinary intent: grounded, gated and executed like any other, and an
   // executed original is undone through its own service.
-  const correction = readCorrection(body.utterance);
+  // Plain corrections (the owner, 2026-11-14): "No, it's on the 12th", "That's
+  // for Kabir, not Meera", "The amount is 1,240" — first against what HomeTalk
+  // just did here, then the speaker's most recent matching HomeSend entry.
+  const plain = readCorrection(body.utterance) ? null : readPlainCorrection(body.utterance, { timezone: membership.household.timezone, now: new Date() });
+  const correction = readCorrection(body.utterance) ?? (plain && plain.field !== "amount" ? { kind: "value" as const, to: plain.field === "person" ? plain.to : plain.text } : null);
   let correcting: CorrectableAction | null = null;
   let corrected: HouseholdIntent | null = null;
   if (correction) {
@@ -556,6 +564,19 @@ async function turnInEnglish(input: HomeTalkInput, speaking: Speaking) {
         break;
       }
     }
+  }
+  if (!corrected && plain) {
+    // Nothing HomeTalk just did fits: the speaker's own most recent entry, fixed in place with Undo (`hometalk/entry-corrections.ts`).
+    corrected = {
+      action: "correct_entry",
+      actorMemberId: membership.memberId,
+      target: { kind: "unspecified" },
+      parameters: { correction: plain },
+      confidence: 0.92,
+      channel: body.channel,
+      utterance: body.utterance,
+      understanding: { source: "rules" },
+    };
   }
 
   // Grounding (Wave 4): the household's people for "Asmi", "Dad", "the
@@ -708,6 +729,7 @@ async function turnInEnglish(input: HomeTalkInput, speaking: Speaking) {
         },
         executable: canExecute,
         confirmRequestedChanges,
+        moneyHealthReview,
         sessionId,
         understand: routing.understandPart?.(part),
         history: routing.history,
@@ -824,6 +846,7 @@ async function turnInEnglish(input: HomeTalkInput, speaking: Speaking) {
     },
     executable: canExecute,
     confirmRequestedChanges,
+    moneyHealthReview,
     sessionId,
     understand: corrected ? () => corrected : plainQuestion || rulesRead ? undefined : routing.understand,
     history: routing.history,

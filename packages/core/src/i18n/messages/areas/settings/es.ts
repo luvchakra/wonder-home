@@ -11,7 +11,6 @@ export const settingsEs: AreaCatalog<typeof settingsEn> = {
   "settingsPage.replaceKey": "Reemplazar clave",
   "settingsPage.aMember": "Un miembro",
   "settingsPage.listSeparator": ", ",
-
   "settingsPage.ai.title": "Asistente de IA",
   "settingsPage.ai.lede": "Qué modelo responde por {household} y qué se le puede contar.",
   "settingsPage.ai.section.key": "Proveedor y clave",
@@ -23,13 +22,19 @@ export const settingsEs: AreaCatalog<typeof settingsEn> = {
   "settingsPage.ai.autoAdd.title": "Qué tan seguro debe estar HomeSend para añadir por su cuenta",
   "settingsPage.ai.autoAdd.detail": "En los resultados con «Pre Approved», lo que envías por WhatsApp, le dices a HomeTalk o compartes de otra forma —también fotos y archivos— se añade directamente. Si WonderHome está más seguro que esto, ya está; si no, la entrada queda marcada «En revisión» y sus recordatorios esperan hasta que confirmes que está bien. Las facturas, los recibos y los documentos de salud te esperan salvo que los permitas abajo. Mientras está en revisión, HomeTalk hace a quien lo envió hasta tres preguntas rápidas (también en WhatsApp) hasta estar lo bastante seguro; algo que menciona lo que tu mensaje no contiene nunca se añade.",
   "settingsPage.ai.autoAdd.option": "Más del {percent} %",
-  "settingsPage.ai.directAdd.money.title": "Añadir entradas de dinero directamente",
-  "settingsPage.ai.directAdd.money.on": "Activado: una factura o un recibo que escribes, reenvías o le dices a HomeTalk se añade sin preguntar, pero solo cuando «Facturas pagadas a tiempo» (para un recibo, «Revisión mensual del presupuesto») está en Pre Approved en Responsabilidades y WonderHome está más seguro que tu límite. Te avisamos después, con Undo. Nunca se paga nada.",
-  "settingsPage.ai.directAdd.money.off": "Desactivado: cada factura y recibo espera a que lo revises.",
-  "settingsPage.ai.directAdd.health.title": "Añadir entradas de salud directamente",
-  "settingsPage.ai.directAdd.health.on": "Activado: un documento de salud que escribes, reenvías o le dices a HomeTalk se añade sin preguntar, pero solo cuando «Historial de salud al día» está en Pre Approved en Responsabilidades y WonderHome está más seguro que tu límite. Queda privado para la persona a la que se refiere, y el de un niño para sus tutores. Te avisamos después, con Undo.",
-  "settingsPage.ai.directAdd.health.off": "Desactivado: cada documento de salud espera a que lo revises.",
-  "settingsPage.ai.directAdd.files": "La mayoría de facturas, recibos e informes llegan como foto o PDF. No se pueden comprobar palabra por palabra, así que siguen esperándote.",
+  "settingsPage.ai.recordFirst.approvalScope.title": "Qué retiene «Wait for Approval»",
+  "settingsPage.ai.recordFirst.approvalScope.detail": "Para responsabilidades en Wait for Approval. Solo acciones: lo que envías o dices se anota, y pagar, pedir o reservar espera un sí. Todo: no se anota nada hasta que alguien lo aprueba.",
+  "settingsPage.ai.recordFirst.approvalScope.actions": "Solo acciones (recomendado)",
+  "settingsPage.ai.recordFirst.approvalScope.everything": "Todo",
+  "settingsPage.ai.recordFirst.moneyHealth.title": "Entradas de dinero y salud",
+  "settingsPage.ai.recordFirst.moneyHealth.detail": "Facturas, recibos y documentos de salud enviados a HomeSend. En revisión: un toque confirma cada uno; como confirmado: solo cuando WonderHome está más seguro que tu límite. Una factura En revisión te recuerda revisarla antes de pagar. Un documento de salud va al historial de esa persona, privado para ella, y el de un niño para sus tutores. Nunca se paga nada.",
+  "settingsPage.ai.recordFirst.moneyHealth.checking": "En revisión (recomendado)",
+  "settingsPage.ai.recordFirst.moneyHealth.confirmed": "Confirmado sobre el límite",
+  "settingsPage.ai.recordFirst.moneyHealth.review": "Esperar revisión",
+  "settingsPage.ai.recordFirst.outsideSenders.title": "Correo de remitentes nuevos",
+  "settingsPage.ai.recordFirst.outsideSenders.detail": "Correo a la dirección HomeSend de tu hogar de alguien de fuera. Preguntar una vez: a los administradores se les pregunta «¿Confiar en este remitente?», el correo espera sin leer, y un remitente de confianza pasa desde entonces. Solo los que añadió un administrador: el resto se descarta sin leer.",
+  "settingsPage.ai.recordFirst.outsideSenders.ask_once": "Preguntar una vez (recomendado)",
+  "settingsPage.ai.recordFirst.outsideSenders.review": "Solo los que añadió un admin",
   "settingsPage.ai.homesendTidy.title": "Ordenar lo que ya no aplica",
   "settingsPage.ai.homesendTidy.on": "Activado: una vez al día HomeSend archiva lo que espera y cuyo día ya pasó, que ya está registrado o que otro más reciente sustituyó. No se borra nada.",
   "settingsPage.ai.homesendTidy.off": "Desactivado: lo que espera se queda hasta que lo atiendas o pasen 30 días sin tocarlo.",
@@ -102,7 +107,6 @@ export const settingsEs: AreaCatalog<typeof settingsEn> = {
   "settingsPage.aiKey.newKey": "Clave nueva",
   "settingsPage.aiKey.newKeyPlaceholder": "Pega una clave nueva para reemplazarla",
   "settingsPage.aiKey.remove": "Quitarla y volver a la clave de WonderHome",
-
   "settingsPage.dataUse.nothing": "No se envía nada sobre tu hogar a ningún proveedor de modelos. El asistente responde solo con sus propias reglas.",
   "settingsPage.dataUse.maxItems#one": "Solo lo necesario para responder, y nunca más de {count} cosa a la vez.",
   "settingsPage.dataUse.maxItems#other": "Solo lo necesario para responder, y nunca más de {count} cosas a la vez.",
@@ -140,7 +144,6 @@ export const settingsEs: AreaCatalog<typeof settingsEn> = {
   "settingsPage.dataUseForm.footer":
     "Las claves y los tokens nunca se envían, y eso no es una opción. Los nombres se sustituyen por funciones antes de que salga nada, así un proveedor ve «Niño A», nunca a tu hijo.",
   "settingsPage.dataUseForm.submit": "Guardar lo que aceptas",
-
   "settingsPage.notifications.title": "Notificaciones",
   "settingsPage.notifications.heading": "Cómo te avisa WonderHome",
   "settingsPage.notifications.lede": "Tus propias preferencias: las notificaciones de nadie más cambian cuando configuras las tuyas.",
@@ -264,7 +267,6 @@ export const settingsEs: AreaCatalog<typeof settingsEn> = {
   "settingsPage.notifications.smart.learn": "Aprender cuándo suelo actuar",
   "settingsPage.notifications.smart.learnBody":
     "Cuando hayas atendido un tipo de recordatorio más o menos a la misma hora al menos cinco veces, el primer recordatorio de ese tipo pasa a llegar hacia esa hora. El momento que elegiste arriba siempre prevalece, y las horas de silencio se siguen respetando.",
-
   "settingsPage.privacy.title": "Privacidad",
   "settingsPage.privacy.heading": "Tu privacidad",
   "settingsPage.privacy.lede": "Qué sale de esta casa, cuánto tiempo guardamos las cosas y cómo llevarte tus datos o hacer que se eliminen.",
@@ -366,7 +368,6 @@ export const settingsEs: AreaCatalog<typeof settingsEn> = {
   "settingsPage.privacy.request.status.cancelled": "cancelada",
   "settingsPage.privacy.request.status.refused": "rechazada",
   "settingsPage.privacy.quote": "Tu hogar. Tus datos. Tu decisión.",
-
   "settingsPage.voice.title": "Voz",
   "settingsPage.voice.heading": "Cómo habla WonderHome contigo",
   "settingsPage.voice.lede": "Con quién hablas, cómo suenan las respuestas y con qué atención escucha.",
@@ -510,7 +511,6 @@ export const settingsEs: AreaCatalog<typeof settingsEn> = {
     "De un proyecto de Google Cloud con Text-to-Speech y Speech-to-Text activados. Se guarda solo para este hogar y nunca se puede volver a leer.",
   "settingsPage.voice.ownKey.use": "Usar esta clave",
   "settingsPage.voice.ownKey.remove": "Quitarla y volver al servicio de voz de WonderHome",
-
   "settingsPage.voiceAssistants.title": "Asistentes de voz",
   "settingsPage.voiceAssistants.lede": "Altavoces que hablan con WonderHome en nombre de alguien de {household}, y exactamente qué puede hacer cada uno.",
   "settingsPage.voiceAssistants.linking": "Vincular uno",
@@ -568,7 +568,6 @@ export const settingsEs: AreaCatalog<typeof settingsEn> = {
   "settingsPage.voiceAssistants.scope.pets.read": "Las mascotas y sus cuidados",
   "settingsPage.voiceAssistants.scope.notifications.create": "Crear recordatorios para ti",
   "settingsPage.voiceAssistants.quote": "Tu hogar, a tu manera.",
-
   "settingsPage.whatsapp.lede": "Reenvía cosas a WonderHome desde WhatsApp y llegarán al HomeSend de {household} para que las revises.",
   "settingsPage.whatsapp.readError": "No hemos podido leer tu vinculación de WhatsApp en este momento. No ha cambiado nada; inténtalo de nuevo en un momento.",
   "settingsPage.whatsapp.yours": "Tu WhatsApp",
@@ -627,7 +626,6 @@ export const settingsEs: AreaCatalog<typeof settingsEn> = {
   "settingsPage.whatsapp.linked.homesend": "Aparece en HomeSend para que lo revises",
   "settingsPage.whatsapp.linked.nothingPaid": "Desde WhatsApp no se paga, reserva ni envía nada: tú decides en la app",
   "settingsPage.whatsapp.goHomeSend": "Ir a HomeSend",
-
   "settingsPage.plan.title": "Tu plan",
   "settingsPage.plan.back": "Volver a tu plan",
   "settingsPage.plan.lede": "{household} tiene el plan {plan}.",
@@ -680,7 +678,6 @@ export const settingsEs: AreaCatalog<typeof settingsEn> = {
   "settingsPage.plan.leave": "Dejarlo como está",
   "settingsPage.plan.workOutFailed": "No hemos podido calcularlo en este momento.",
   "settingsPage.plan.changeFailed": "No hemos podido cambiar el plan en este momento.",
-
   "settingsPage.checkout.title": "Finalizar compra",
   "settingsPage.checkout.adminOnly": "Solo un Admin puede cambiar el plan",
   "settingsPage.checkout.adminOnlyBody": "Pide a un Admin de tu hogar que elija un plan.",
@@ -708,7 +705,6 @@ export const settingsEs: AreaCatalog<typeof settingsEn> = {
   "settingsPage.checkout.notNow": "Ahora no",
   "settingsPage.checkout.opening": "Abriendo {provider}…",
   "settingsPage.checkout.openFailed": "No hemos podido abrir la página de pago. No se ha cobrado nada.",
-
   "settingsPage.confirmed.title": "Pago",
   "settingsPage.confirmed.yourNewPlan": "tu nuevo plan",
   "settingsPage.confirmed.cancelled": "No se ha cobrado nada",
@@ -721,7 +717,6 @@ export const settingsEs: AreaCatalog<typeof settingsEn> = {
     "Estamos esperando a que el proveedor de pagos lo confirme; suele tardar menos de un minuto. Puedes salir de esta página: {plan} empezará por sí solo en cuanto se confirme, y nunca se cobra dos veces.",
   "settingsPage.confirmed.receipt": "Ver el recibo",
   "settingsPage.confirmed.quote": "Menos carga mental. Más tiempo en familia.",
-
   "settingsPage.billing.lede": "Cada pago de {household}, tal como lo confirmó el proveedor de pagos.",
   "settingsPage.billing.adminOnly": "Solo un Admin puede ver la facturación",
   "settingsPage.billing.adminOnlyBody": "Los pagos son cosa de los Admins del hogar y el proveedor de pagos.",
@@ -748,7 +743,6 @@ export const settingsEs: AreaCatalog<typeof settingsEn> = {
   "settingsPage.billing.method.emi": "EMI",
   "settingsPage.billing.method.bank_transfer": "Transferencia bancaria",
   "settingsPage.billing.method.other": "Otro",
-
   "settingsPage.invoice.title": "Factura",
   "settingsPage.invoice.numbered": "Factura {number}",
   "settingsPage.invoice.back": "Volver al historial de facturación",

@@ -59,7 +59,7 @@ import type { QuestionCadence } from "./question-cadence";
 
 export const CHECK_ACTION = "check_homesend_entry";
 
-type ItemRow = {
+export type ItemRow = {
   id: string;
   status: string;
   classified_kind: HomeSendKind | null;
@@ -421,6 +421,14 @@ async function withNextWaiting(client: SupabaseClient, input: { householdId: str
  * here (a receipt's lines, a grocery that was already tracked): it is then
  * noted on the item and left for its own screen.
  */
+/** The same in-place write, for a plain correction of a recent entry (`entry-corrections.ts`). */
+export async function applyHomeSendPatch(
+  client: SupabaseClient,
+  input: { householdId: string; actorMemberId: string; item: ItemRow; field: DetailField; patch: Record<string, unknown>; timezone: string },
+): Promise<boolean> {
+  return applyInPlace(client, input);
+}
+
 async function applyInPlace(
   client: SupabaseClient,
   input: { householdId: string; actorMemberId: string; item: ItemRow; field: DetailField; patch: Record<string, unknown>; timezone: string },
@@ -445,8 +453,10 @@ async function applyInPlace(
       case "school_items": {
         const when = typeof patch.dueDate === "string" ? schoolWhen({ date: patch.dueDate, time: typeof patch.dueTime === "string" ? patch.dueTime : null, endTime: typeof patch.endTime === "string" ? patch.endTime : null, timezone: input.timezone }) : null;
         const title = typeof patch.title === "string" ? { title: patch.title } : {};
-        if (!when && !("title" in title)) return false;
-        await updateSchoolItem(client, householdId, id, { ...title, ...(when ?? {}) });
+        // "That's for Kabir, not Meera" (a plain correction, 2026-11-14): the child it is filed under.
+        const child = typeof patch.subjectMemberId === "string" ? { childMemberId: patch.subjectMemberId } : {};
+        if (!when && !("title" in title) && !("childMemberId" in child)) return false;
+        await updateSchoolItem(client, householdId, id, { ...title, ...child, ...(when ?? {}) });
         return true;
       }
       case "health_records": {

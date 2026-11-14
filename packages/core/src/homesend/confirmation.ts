@@ -6,6 +6,7 @@ import type { IntakeUnderstanding } from "./understanding";
 import { DEFAULT_AUTO_ADD_PERCENT, directAddAreaOf, NO_DIRECT_ADD, type DirectAdd } from "./auto-add";
 import { listDetails, missingRequired, type CompletenessReading } from "./completeness";
 import { FROM_A_FILE } from "./verify";
+import type { ApprovalScope } from "./record-first";
 
 /**
  * How HomeSend confirms what it read (Wave 3 §12):
@@ -96,9 +97,9 @@ export const AUTO_APPLY_OUTCOMES: Partial<Record<HomeSendKind, { outcomeKey: str
 
 /** Why a bill, receipt or health document waits while the household's "add directly" setting for it is off. */
 const CONSEQUENTIAL: Partial<Record<HomeSendKind, string>> = {
-  bill: "A bill is about money, so it waits for a person unless an Admin lets WonderHome add money entries directly.",
-  health_document: "A health document is private, so it waits for a person unless an Admin lets WonderHome add health entries directly.",
-  receipt: "A receipt becomes purchase history line by line, so it waits for a person unless an Admin lets WonderHome add money entries directly.",
+  bill: "A bill is about money, so it waits for a person: your household has money entries set to “Wait for review”.",
+  health_document: "A health document is private, so it waits for a person: your household has health entries set to “Wait for review”.",
+  receipt: "A receipt becomes purchase history line by line, so it waits for a person: your household has money entries set to “Wait for review”.",
 };
 
 const KIND_LABEL: Record<HomeSendKind, string> = {
@@ -135,6 +136,18 @@ export type ConfirmationInput = {
   directAdd?: DirectAdd;
   /** Already on record by a check of its own kind (a receipt with the same shop, day and total). */
   duplicate?: boolean;
+  /**
+   * Decision 1 (`record-first.ts`): "actions" records in an area set to Wait
+   * for Approval anyway, since recording is reversible; "everything" (the
+   * default here, and the 3 Nov behaviour) waits. Callers pass the household's choice.
+   */
+  approvalScope?: ApprovalScope;
+  /**
+   * Decision 5: an email from a sender the household trusts (on its
+   * allowlist, with "Email from new senders" on "Ask once") flows like a
+   * member's own item. Its content stays untrusted (`injection.ts`).
+   */
+  trustedSender?: boolean;
 };
 
 export function decideConfirmation(input: ConfirmationInput): ConfirmationDecision {
@@ -154,6 +167,7 @@ export function decideConfirmation(input: ConfirmationInput): ConfirmationDecisi
   // Held for a person unless the Admin's matching setting is on; what it still needs is reported beside it.
   const directArea = directAddAreaOf(kind);
   const allowed = directArea !== null && (input.directAdd ?? NO_DIRECT_ADD)[directArea];
+  // "Wait for review" (decision 2 switched back) keeps the 3 Nov behaviour.
   if (consequential && !allowed) return { mode: "govern", reason: consequential, question: null, ...stillNeeded };
 
   const confidence = input.understanding?.confidence ?? input.extracted?.confidence ?? "low";
@@ -195,7 +209,7 @@ export function decideConfirmation(input: ConfirmationInput): ConfirmationDecisi
   if ((input.extracted?.needs?.length ?? 0) > 0) {
     return { mode: "prepare", reason: "It asks for more than one thing, and each is yours to confirm.", question: null };
   }
-  if (!input.memberInitiated) {
+  if (!input.memberInitiated && !input.trustedSender) {
     return { mode: "prepare", reason: "Nobody in the household sent this in directly, so a person looks first.", question: null };
   }
 
@@ -219,21 +233,36 @@ export function decideConfirmation(input: ConfirmationInput): ConfirmationDecisi
   if (untraced.length > 0) {
     return { mode: "prepare", reason: `What WonderHome read as ${listUntraced(untraced)} isn't in what was sent, so nothing was added: a person looks first.`, question: null, wait: { reason: "untraced" } };
   }
-  const checking = !aboveBar || fromAFile ? { unconfirmed: true as const } : {};
+  // Decision 2: money and health on "Record as Checking" are always Checking, so a person confirms them with one tap.
+  const checkingOnly = directArea !== null && (input.directAdd ?? NO_DIRECT_ADD).checking?.[directArea] === true;
+  const checking = !aboveBar || fromAFile || checkingOnly ? { unconfirmed: true as const } : {};
   // A move is never made "Checking": an existing record is changed only when the reading is over the bar and has words of its own.
   if (move && checking.unconfirmed) return { mode: "prepare", reason: input.reconciliation!.message, question: null };
   const onList = listed ? { listed: true as const } : {};
 
   // A bill, receipt or health entry is a record of the household's own, never a payment or an order.
-  const decision = decideAutonomy(input.autonomy, { outcomeKey: outcome.outcomeKey, kind: consequential ? "change" : "schedule", reversible: true });
+  const proposed = { outcomeKey: outcome.outcomeKey, kind: consequential ? ("change" as const) : ("schedule" as const), reversible: true };
+  const held = decideAutonomy(input.autonomy, proposed);
+  // Decision 1 (the owner, 2026-11-14): Wait for Approval holds actions, not
+  // writing information down. A new entry is recorded anyway, attributed and
+  // undoable; a move of a record already on file still waits, as before.
+  const recordAnyway = held.outcome !== "execute" && input.approvalScope === "actions" && !move && decideAutonomy("execute", proposed).outcome === "execute";
+  const decision = recordAnyway ? ({ outcome: "execute" } as const) : held;
   if (decision.outcome === "execute" && move) {
     return { mode: "auto_apply", reason: `Your household lets WonderHome handle ${outcome.label} on its own, so it moved the one already on record. Undo it any time.`, question: null, update: move };
   }
   if (move) return { mode: "prepare", reason: input.reconciliation!.message, question: null };
   if (decision.outcome === "execute") {
-    const sure = checking.unconfirmed ? ` It wasn't more than ${percent}% sure, so it is marked Checking until you answer a question or say it's right.` : "";
+    const sure = !checking.unconfirmed
+      ? ""
+      : checkingOnly && aboveBar && !fromAFile
+        ? ` ${directArea === "money" ? "Money" : "Health"} entries are marked Checking until you say it's right.`
+        : ` It wasn't more than ${percent}% sure, so it is marked Checking until you answer a question or say it's right.`;
     if (listed) {
       return { mode: "auto_apply", reason: `Your household lets WonderHome handle ${outcome.label} on its own, so it adds to what is already on the shopping list.${sure} Undo it any time.`, question: null, topUp: true, ...checking };
+    }
+    if (recordAnyway) {
+      return { mode: "auto_apply", reason: `Your household has ${outcome.label} set to “Wait for Approval”, which holds actions like paying or ordering, so WonderHome recorded it.${sure} Undo it any time.`, question: null, ...checking };
     }
     return { mode: "auto_apply", reason: `Your household lets WonderHome handle ${outcome.label} on its own.${sure} Undo it any time.`, question: null, ...checking };
   }

@@ -452,6 +452,7 @@ export const KNOWLEDGE_REGISTRY = {
   homebrain_runs: { covered: "excluded", reason: "When HomeBrain's nightly tidy ran." },
   homesend_addresses: { covered: "excluded", reason: "The household's forwarding address: a credential." },
   homesend_email_allowlist: { covered: "excluded", reason: "The approved email senders: a privacy gate deciding what forwarded mail WonderHome may read, not knowledge about the household." },
+  homesend_email_senders: { covered: "excluded", reason: "Email senders the household was asked about (pending, trusted, blocked): the state of the email privacy gate, not knowledge about the household." },
   homesend_changes: { covered: "builder", records: "homeSendItems" },
   homesend_email_events: { covered: "excluded", reason: "Content-free delivery telemetry for forwarded email." },
   needs_you_items: { covered: "excluded", reason: "The \"Needs you\" questions (2026-11-14): closed codes and ids about records HomeTalk already reads (HomeSend items, entries, proposals); HomeTalk shows them in its own list, never as a fact." },

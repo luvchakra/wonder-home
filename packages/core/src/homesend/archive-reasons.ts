@@ -8,5 +8,8 @@ export const TIDY_REASONS = ["past_date", "already_recorded", "superseded", "unr
 export type TidyReason = (typeof TIDY_REASONS)[number];
 /** Set aside so every item ends as something (2026-11-14, "Nothing waits"): not household information, kept as a household note, or unreadable and not sent again. */
 export const NOTHING_WAITS_REASONS = ["not_household", "kept_as_note", "not_resent"] as const;
-export const ARCHIVE_REASONS = ["untouched_30_days", ...TIDY_REASONS, "removed_by_person", ...NOTHING_WAITS_REASONS] as const;
+/** Email from a sender nobody has said to trust (decision 5, 2026-11-14): held, blocked, or not answered in time. */
+export const SENDER_REASONS = ["new_sender", "sender_blocked", "sender_not_answered"] as const;
+export type SenderReason = (typeof SENDER_REASONS)[number];
+export const ARCHIVE_REASONS = ["untouched_30_days", ...TIDY_REASONS, "removed_by_person", ...NOTHING_WAITS_REASONS, ...SENDER_REASONS] as const;
 export type ArchiveReason = (typeof ARCHIVE_REASONS)[number];

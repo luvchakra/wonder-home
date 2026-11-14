@@ -700,8 +700,8 @@ describe("AT-N: adding money and health entries directly (the owner, 2026-10-26)
     expect(directly(BILL, [], "execute", 60, "R97", { extracted: { ...BILL.extracted, amount: null } as never })).toMatchObject({ mode: "govern", stillNeeded: ["amount"] });
   });
   it("AT-N321 the reasons say which setting held it, and what was allowed", () => {
-    expect(directly(BILL, [], "execute", 60, "R97").reason).toMatch(/add money entries directly/);
-    expect(directly(HEALTH, [], "execute", 60, "R97").reason).toMatch(/add health entries directly/);
+    expect(directly(BILL, [], "execute", 60, "R97").reason).toMatch(/money entries set to “Wait for review”/);
+    expect(directly(HEALTH, [], "execute", 60, "R97").reason).toMatch(/health entries set to “Wait for review”/);
     expect(directly(BILL, ["money"], "execute", 95, "R97").reason).toMatch(/the bills on its own/);
     expect(directly(HEALTH, ["health"], "prepare", 95, "R97").reason).toMatch(/health records.*Wait for Approval/);
   });

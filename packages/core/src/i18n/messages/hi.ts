@@ -292,6 +292,8 @@ export const hi: Catalog = {
   "reminder.homesend.waiting.grocery_item": "एक ग्रोसरी सूची आपकी मंज़ूरी का इंतज़ार कर रही है",
   "reminder.homesend.waiting.unknown": "HomeSend में भेजी गई कोई चीज़ आपकी मंज़ूरी का इंतज़ार कर रही है",
   "reminder.homesend.waitingBody": "उसे जाँचने के लिए HomeSend खोलें। आपके हाँ कहने तक कुछ नहीं जुड़ेगा।",
+  "reminder.proposal.waitingTitle": "अब भी आपकी मंज़ूरी का इंतज़ार",
+  "reminder.proposal.waitingBody": "{summary}। हाँ या ना कहने के लिए HomeTalk खोलें। {hours} घंटे में कोई जवाब न दे तो यह बिना किए बंद हो जाएगा।",
   "reminder.homesend.waitingBodyFrom": "{name} ने इसे HomeSend में भेजा। आपके हाँ कहने तक कुछ नहीं जुड़ेगा।",
   "reminder.homesend.failedTitle": "HomeSend में भेजी गई कोई चीज़ पढ़ी नहीं जा सकी",
   "reminder.homesend.failedBody": "वह HomeSend में “सुरक्षित रूप से विफल” के नीचे सुरक्षित है, और कुछ नहीं जोड़ा गया।",

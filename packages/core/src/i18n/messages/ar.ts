@@ -296,6 +296,8 @@ export const ar: Catalog = {
   "reminder.homesend.waiting.grocery_item": "قائمة بقالة تنتظر موافقتك",
   "reminder.homesend.waiting.unknown": "شيء أُرسل إلى HomeSend ينتظر موافقتك",
   "reminder.homesend.waitingBody": "افتح HomeSend لتراجعه. لا يُضاف شيء حتى تقول نعم.",
+  "reminder.proposal.waitingTitle": "لا يزال بانتظار موافقتك",
+  "reminder.proposal.waitingBody": "{summary}. افتح HomeTalk لتقول نعم أو لا. إن لم يُجب أحد خلال {hours} ساعة، يُغلق دون تنفيذ.",
   "reminder.homesend.waitingBodyFrom": "أرسله {name} إلى HomeSend. لا يُضاف شيء حتى تقول نعم.",
   "reminder.homesend.failedTitle": "تعذّرت قراءة شيء أُرسل إلى HomeSend",
   "reminder.homesend.failedBody": "هو محفوظ بأمان تحت «فشل آمن» في HomeSend، ولم يُضف شيء.",

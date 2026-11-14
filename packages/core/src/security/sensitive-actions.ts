@@ -392,6 +392,21 @@ export const SENSITIVE_ACTIONS: readonly SensitiveAction[] = [
     recordedIn: "packages/core/src/homesend/email-allowlist.ts",
   },
   {
+    event: "homesend.sender_held",
+    because: "Mail from a sender nobody approved is kept set aside, unread, until the household answers “Trust this sender?” (decision 5, 2026-11-14).",
+    recordedIn: "packages/core/src/homesend/sender-trust.ts",
+  },
+  {
+    event: "homesend.sender_trusted",
+    because: "Answering “Trust” about a new email sender adds it to the approved senders, widening what WonderHome reads (decision 5, 2026-11-14).",
+    recordedIn: "packages/core/src/homesend/sender-trust.ts",
+  },
+  {
+    event: "homesend.sender_blocked",
+    because: "Answering “Not ours” about a sender sets its mail aside and drops what it sends later.",
+    recordedIn: "packages/core/src/homesend/sender-trust.ts",
+  },
+  {
     event: "homesend.allowlist_removed",
     because: "Removing an approved sender narrows what WonderHome will read — as worth recording as approving one.",
     recordedIn: "packages/core/src/homesend/email-allowlist.ts",
@@ -832,6 +847,12 @@ export function describeAuditEvent(
       return { title: "The HomeSend email address was rotated", detail: "The old address stopped working." };
     case "homesend.address_revoked":
       return { title: "The HomeSend email address was turned off", detail: null };
+    case "homesend.sender_held":
+      return { title: "Mail from a new sender was set aside", detail: "Nothing in it is read until someone trusts the sender." };
+    case "homesend.sender_trusted":
+      return { title: "A new email sender was trusted", detail: "WonderHome will read mail from this sender." };
+    case "homesend.sender_blocked":
+      return { title: "An email sender was marked “Not ours”", detail: "Its mail is set aside." };
     case "homesend.allowlist_added":
       return { title: "An approved email sender was added", detail: "WonderHome will read mail from this sender." };
     case "homesend.allowlist_removed":

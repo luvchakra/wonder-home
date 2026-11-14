@@ -1,3 +1,4 @@
+import type { TranslationKey } from "@wonderhome/core/i18n/translate";
 import { Bot, Mic, ShieldCheck } from "lucide-react";
 
 import { credentialStatus, geminiVoiceKeyStatus } from "@wonderhome/core/ai/credentials";
@@ -5,7 +6,8 @@ import { describeKeySource, platformKey, resolveModelKey } from "@wonderhome/cor
 import { loadDataUse } from "@wonderhome/core/ai/privacy-repository";
 import { loadConfirmRequested } from "@wonderhome/core/conversation/consent-repository";
 import { AUTO_ADD_PERCENTS } from "@wonderhome/core/homesend/auto-add";
-import { loadDirectAdd } from "@wonderhome/core/household/direct-add-repository";
+import { loadRecordFirst } from "@wonderhome/core/household/direct-add-repository";
+import { APPROVAL_SCOPES, MONEY_HEALTH_MODES, OUTSIDE_SENDER_MODES } from "@wonderhome/core/homesend/record-first";
 import { loadHomeSendTidy } from "@wonderhome/core/household/homesend-tidy-repository";
 import { loadNothingWaits } from "@wonderhome/core/household/nothing-waits-repository";
 import { BAR_KINDS, effectiveBar, MIN_HISTORY } from "@wonderhome/core/homebrain/kind-bar";
@@ -27,7 +29,7 @@ import { ReturnLink, returnLabelKey } from "../../_components/return-link";
 import { safeReturnTo } from "../../_lib/return-to";
 import { openKeyAlerts } from "@wonderhome/core/ai/key-alert-status";
 import { AutoAddPercentPicker } from "../../_components/auto-add-percent-picker";
-import { DirectAddSwitch } from "../../_components/direct-add-switch";
+import { RecordFirstPicker } from "../../_components/record-first-picker";
 import { HomeSendLearned } from "../../_components/homesend-learned";
 import { HomeSendTidySwitch } from "../../_components/homesend-tidy-switch";
 import { KeyAlertBanner } from "../../_components/key-alert-banner";
@@ -52,13 +54,13 @@ export default async function AiAssistantSettingsPage({ searchParams }: { search
   const returnTo = safeReturnTo(query.returnTo);
   const { supabase, membership, view, viewer, secondary } = session;
   const householdId = membership.household.id;
-  const [credential, voiceCredential, dataUse, confirmRequested, chosenPercent, directAdd, keyAlerts, homesendTidy, nothingWaits, learned, members, kindBars] = await Promise.all([
+  const [credential, voiceCredential, dataUse, confirmRequested, chosenPercent, recordFirst, keyAlerts, homesendTidy, nothingWaits, learned, members, kindBars] = await Promise.all([
     credentialStatus(supabase, householdId).catch(() => ({ configured: false, provider: null, updatedAt: null })),
     geminiVoiceKeyStatus(supabase, householdId).catch(() => ({ configured: false, provider: null, updatedAt: null })),
     loadDataUse(supabase, householdId),
     loadConfirmRequested(supabase, householdId),
     loadChosenAutoAddPercent(supabase, householdId),
-    loadDirectAdd(supabase, householdId),
+    loadRecordFirst(supabase, householdId),
     openKeyAlerts(supabase, householdId),
     loadHomeSendTidy(supabase, householdId),
     loadNothingWaits(supabase, householdId),
@@ -188,19 +190,25 @@ export default async function AiAssistantSettingsPage({ searchParams }: { search
               )}
             </div>
           </Card>
-          {/* Whether bills and receipts, or health documents, may be added on their own at all (the owner, 2026-10-26): right beside the bar. */}
-          {(["money", "health"] as const).map((area) => (
-            <Card key={area} id={`direct-add-${area}`} className="mt-3 p-4">
-              <DirectAddSwitch
+          {/* Record first (the owner, 2026-11-14): what waits, money and health, new email senders — beside the bar. */}
+          {(
+            [
+              ["approvalScope", "approval-scope", APPROVAL_SCOPES, recordFirst.approvalScope],
+              ["moneyHealth", "money-health", MONEY_HEALTH_MODES, recordFirst.moneyHealth],
+              ["outsideSenders", "new-senders", OUTSIDE_SENDER_MODES, recordFirst.outsideSenders],
+            ] as const
+          ).map(([setting, anchor, options, value]) => (
+            <Card key={setting} id={anchor} className="mt-3 scroll-mt-20 p-4">
+              <RecordFirstPicker
                 householdId={householdId}
-                area={area}
-                on={directAdd[area]}
+                setting={setting}
+                value={value}
+                options={options}
                 manages={manages}
                 labels={{
-                  title: t(`settingsPage.ai.directAdd.${area}.title`),
-                  on: t(`settingsPage.ai.directAdd.${area}.on`),
-                  off: t(`settingsPage.ai.directAdd.${area}.off`),
-                  files: t("settingsPage.ai.directAdd.files"),
+                  title: t(`settingsPage.ai.recordFirst.${setting}.title`),
+                  detail: t(`settingsPage.ai.recordFirst.${setting}.detail`),
+                  option: Object.fromEntries(options.map((option: string) => [option, t(`settingsPage.ai.recordFirst.${setting}.${option}` as TranslationKey)])),
                   adminDecides: t("settingsPage.adminDecides"),
                 }}
               />

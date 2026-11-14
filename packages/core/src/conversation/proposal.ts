@@ -31,6 +31,8 @@ export type ProposalContext = {
   requestedBy?: "person" | "agent";
   /** "Ask before acting on what I say" (Settings → AI Assistant): every act becomes a question first. */
   confirmRequested?: boolean;
+  /** Money or health kept on "Wait for review" (Settings → AI Assistant, decision 2): a bill or appointment is asked first. */
+  moneyHealthReview?: Partial<Record<"money" | "health", boolean>>;
 };
 
 export type ActionPreview = {
@@ -105,6 +107,7 @@ const ACTION_KIND: Record<HouseholdIntent["action"], ProposedAction["kind"]> = {
   // that one record, the sender's own, undoable with the entry; never a
   // payment, a permission or anything else.
   check_homesend_entry: "draft",
+  correct_entry: "draft",
   // Only asks about items that still wait in HomeSend.
   fill_homesend_details: "draft",
   set_preference: "draft",
@@ -202,7 +205,7 @@ export function proposeFromIntent(intent: HouseholdIntent, context: ProposalCont
 
   const decision =
     context.requestedBy === "person"
-      ? decideForRequest({ tier: consentTier(intent, context.actor), mode: context.autonomy, action, confirmRequested: context.confirmRequested === true, confirmReason: confirmReasonFor(intent.action) })
+      ? decideForRequest({ tier: consentTier(intent, context.actor, { moneyHealthReview: context.moneyHealthReview }), mode: context.autonomy, action, confirmRequested: context.confirmRequested === true, confirmReason: confirmReasonFor(intent.action) })
       : decideAutonomy(context.autonomy, action);
   const preview = buildPreview(intent, decision.reason, action.reversible);
 
@@ -306,6 +309,8 @@ function summarize(intent: HouseholdIntent): string {
       return "Add your answer to what's waiting in HomeSend";
     case "check_homesend_entry":
       return "Use your answer to check what HomeSend added";
+    case "correct_entry":
+      return "Fix your most recent entry";
     case "fill_homesend_details":
       return "Fill in what's waiting in HomeSend";
     case "make_payment":
@@ -372,6 +377,8 @@ function describeChanges(intent: HouseholdIntent): string[] {
       return ["Add your answer to the item in HomeSend", "Ask the next thing it needs, or leave it for you to check"];
     case "check_homesend_entry":
       return ["Correct the entry with your answer, or keep it as read", "Confirm it once it is sure enough, or ask the next question"];
+    case "correct_entry":
+      return ["Fix the entry in place, with Undo", "Mark it confirmed, since you just checked it"];
     case "fill_homesend_details":
       return ["Ask what each waiting item still needs, one question at a time", "Leave anything you skip waiting in HomeSend"];
     case "make_payment":

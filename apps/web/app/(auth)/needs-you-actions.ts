@@ -7,6 +7,8 @@ import { auditChange } from "@wonderhome/core/api/audit";
 import { createClient } from "@wonderhome/core/db/server";
 import { isOfferedAnswer } from "@wonderhome/core/hometalk/needs-you";
 import { applyNeedsYouAnswer } from "@wonderhome/core/hometalk/needs-you-answer";
+import { adminClientFor, adminGrant } from "@wonderhome/core/db/admin-context";
+import { SENDER_TRUST_SOURCE } from "@wonderhome/core/homesend/sender-trust";
 import { closeNeedsYou, getNeedsYou } from "@wonderhome/core/hometalk/needs-you-repository";
 import { requireMembership } from "@wonderhome/core/identity/households";
 import { log } from "@wonderhome/core/observability/logger";
@@ -41,7 +43,9 @@ export async function answerNeedsYouAction(_previous: NeedsYouState, formData: F
     if (!isOfferedAnswer(item, answer)) return { result: "failed", id };
     const now = new Date();
 
-    let outcome = await applyNeedsYouAnswer(supabase, item, answer, { byDefault: false, actor: { householdId, memberId: membership.memberId }, now });
+    // "Trust this sender?" changes who WonderHome reads: an Admin's answer, written by the server (decision 5).
+    const answering = item.source === SENDER_TRUST_SOURCE ? adminClientFor(adminGrant.householdAdmin(membership, "answer Trust this sender?"), householdId) : supabase;
+    let outcome = await applyNeedsYouAnswer(answering, item, answer, { byDefault: false, actor: { householdId, memberId: membership.memberId }, now });
     if (outcome === "undo") {
       const undo = new FormData();
       undo.set("householdId", householdId);

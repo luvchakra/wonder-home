@@ -9,6 +9,7 @@ import type { AnswerComposer } from "../ai/model-client";
 import { asksTheCalendar, asksWhatIsOn, calendarSpanReply, lookAheadReply, lookAheadSpan, memberNamedIn, readLookAhead, scheduleReply, scheduleSpanOf } from "../calendar/answer";
 import type { PendingClarification } from "../conversation/clarify";
 import { applyCorrection, describeCorrection, readCorrection, type CorrectableAction } from "../conversation/corrections";
+import { readPlainCorrection } from "../conversation/plain-corrections";
 import { converse, pendingFrom, type ConversationTurn, type Understanding } from "../conversation/engine";
 import { canExecute } from "../conversation/executor";
 import { groundIntent } from "../conversation/grounding";
@@ -216,7 +217,9 @@ async function talkTurn(c: HomeTalkCase, utterance: string, carried: Carried, mo
   const references = first ? c.references : undefined;
   // A correction ("actually, make that Friday", "not bread, eggs") is read against the request in
   // hand and becomes an ordinary intent, exactly as the conversation route does it.
-  const correction = readCorrection(utterance);
+  // A plain correction ("No, it's on Sunday", 2026-11-14) of what HomeTalk just did is the same correction.
+  const plain = readCorrection(utterance) ? null : readPlainCorrection(utterance, { timezone: household.timezone, now: household.now });
+  const correction = readCorrection(utterance) ?? (plain && plain.field !== "amount" ? { kind: "value" as const, to: plain.field === "person" ? plain.to : plain.text } : null);
   const corrected =
     correction && carried.last
       ? (() => {
@@ -234,6 +237,7 @@ async function talkTurn(c: HomeTalkCase, utterance: string, carried: Carried, mo
     history: carried.history,
     autonomyFor: () => c.autonomy ?? "prepare",
     confirmRequestedChanges: c.confirmRequestedChanges === true,
+    ...(c.moneyHealthReview ? { moneyHealthReview: c.moneyHealthReview } : {}),
     entitledFor: () => true,
     executable: canExecute,
     sessionId: `eval-${c.id}`,
@@ -546,6 +550,8 @@ export async function observeHomeSend(c: HomeSendCase, models: Models = {}): Pro
     memberInitiated: c.memberInitiated ?? c.source.channel !== "email",
     autonomy: c.autonomy ?? "prepare",
     directAdd,
+    ...(c.approvalScope ? { approvalScope: c.approvalScope } : {}),
+    ...(c.trustedSender ? { trustedSender: true } : {}),
   });
 
   const proposal = reconciliation?.proposal.type ?? "new";

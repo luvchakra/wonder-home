@@ -93,7 +93,7 @@ const SECTIONS: readonly SectionShape[] = [
   {
     id: "talk-to-wonderhome",
     group: "Everyday use",
-    updated: "2026-10-28",
+    updated: "2026-11-14",
     keywords: ["pick an answer", "choices", "buttons", "tap to answer", "ask me about family", "amaf", "put it back", "redo", "interview", "questions about my family", "approve", "approval", "ask a grown-up", "child request", "helper request", "decline", "after school", "after work", "office hours", "school hours", "place book", "saved places", "ai", "assistant", "chat", "voice", "speak", "microphone", "ask", "command", "hometalk", "remind me", "reminder", "correct", "edit", "search messages", "places", "restaurant", "dinner", "park", "nearby", "map", "homeplaces", "welcome", "getting to know", "vacation", "getaway", "trip", "weekend", "holiday", "look again", "check again", "database", "how many", "guests coming", "should we", "noticed", "likes", "food preferences", "who likes what", "what do you know"],
   },
   {
@@ -106,7 +106,7 @@ const SECTIONS: readonly SectionShape[] = [
     id: "home-send",
     group: "Everyday use",
     updated: "2026-11-14",
-    keywords: ["needs you", "default", "nobody answers", "after a day", "household note", "note", "set aside", "not household information", "web page", "advert", "newsletter", "send it again", "not yet confirmed", "check before paying", "daily summary", "remind about entries still checking", "apply a question's default", "moved date", "moved to its new day", "one question", "quick ones", "one an hour", "got it", "paste anywhere", "ctrl+v", "add to contacts", "contact card", "vcard", "share sheet", "learned", "what homesend has learned", "forget", "which child", "household rules", "set for each kind", "bar for each kind", "checked overnight", "unusual amount", "added twice", "who is this for", "remembers", "remove", "delete for good", "delete permanently", "swipe to remove", "archive all", "add all anyway", "clear everything", "clear all", "couldn't be read", "needs a word", "added recently", "send something", "identical", "tidy up", "tidy", "no longer applies", "past event", "duplicate", "archive reason", "checking", "looks right", "added directly", "questions waiting", "check question", "clarify", "answer on whatsapp", "unconfirmed", "add selected", "add all", "bulk", "select several", "review one by one", "archived", "archive", "restore", "try again", "retry", "still want", "grouped reminder", "homesend", "upload", "photo", "pdf", "screenshot", "forward", "email", "share", "paperclip", "school notice", "receipt", "whatsapp", "voice note", "link", "undo", "still needed", "missing", "quantity", "fill in", "offer", "shopping list", "top up", "why waiting", "add money entries directly", "add health entries directly", "bill", "health document", "approved senders", "allowlist", "allowed sender", "forwarding address", "block sender", "email privacy"],
+    keywords: ["needs you", "default", "nobody answers", "after a day", "household note", "note", "set aside", "not household information", "web page", "advert", "newsletter", "send it again", "not yet confirmed", "check before paying", "daily summary", "remind about entries still checking", "apply a question's default", "moved date", "moved to its new day", "one question", "quick ones", "one an hour", "got it", "paste anywhere", "ctrl+v", "add to contacts", "contact card", "vcard", "share sheet", "learned", "what homesend has learned", "forget", "which child", "household rules", "set for each kind", "bar for each kind", "checked overnight", "unusual amount", "added twice", "who is this for", "remembers", "remove", "delete for good", "delete permanently", "swipe to remove", "archive all", "add all anyway", "clear everything", "clear all", "couldn't be read", "needs a word", "added recently", "send something", "identical", "tidy up", "tidy", "no longer applies", "past event", "duplicate", "archive reason", "checking", "looks right", "added directly", "questions waiting", "check question", "clarify", "answer on whatsapp", "unconfirmed", "add selected", "add all", "bulk", "select several", "review one by one", "archived", "archive", "restore", "try again", "retry", "still want", "grouped reminder", "homesend", "upload", "photo", "pdf", "screenshot", "forward", "email", "share", "paperclip", "school notice", "receipt", "whatsapp", "voice note", "link", "undo", "still needed", "missing", "quantity", "fill in", "offer", "shopping list", "top up", "why waiting", "bill", "health document", "approved senders", "allowlist", "allowed sender", "forwarding address", "block sender", "email privacy", "money and health entries", "record as checking", "wait for review", "wait for approval", "new sender", "trust this sender"],
   },
   {
     id: "today-and-home",
@@ -135,7 +135,7 @@ const SECTIONS: readonly SectionShape[] = [
   {
     id: "bills",
     group: "Everyday use",
-    updated: "2026-10-29",
+    updated: "2026-11-14",
     keywords: ["bill", "payment", "money", "finance", "due", "overdue", "budget", "anomaly", "pay", "transaction", "currency", "payee", "electricity", "rent", "emi", "earlier bills", "past bills", "coming up", "pay ahead", "next month", "paid"],
   },
   {
@@ -153,7 +153,7 @@ const SECTIONS: readonly SectionShape[] = [
   {
     id: "health",
     group: "Everyday use",
-    updated: "2026-10-26",
+    updated: "2026-11-14",
     keywords: ["health", "fitness", "vitals", "weight", "blood pressure", "checkup", "appointment", "prescription", "medical record", "routine", "private", "who can see", "people I choose", "share", "sharing", "report", "lab report", "attach report", "read the report", "test results", "reference range", "suggested next steps", "follow-up", "recheck"],
   },
   {
@@ -195,7 +195,7 @@ const SECTIONS: readonly SectionShape[] = [
   {
     id: "ai-autonomy",
     group: "Privacy and trust",
-    updated: "2026-10-28",
+    updated: "2026-11-14",
     keywords: ["autonomy", "permission", "approve", "execute", "automation", "control", "ai settings"],
   },
   {
@@ -213,8 +213,8 @@ const SECTIONS: readonly SectionShape[] = [
   {
     id: "ai-key",
     group: "Privacy and trust",
-    updated: "2026-10-26",
-    keywords: ["api key", "byok", "anthropic", "openai", "gemini", "model", "billing", "own key", "add on its own", "how sure", "add money entries directly", "add health entries directly", "bills", "receipts", "health documents"],
+    updated: "2026-11-14",
+    keywords: ["api key", "byok", "anthropic", "openai", "gemini", "model", "billing", "own key", "add on its own", "how sure", "money and health entries", "record as checking", "wait for review", "wait for approval", "new sender", "trust this sender", "bills", "receipts", "health documents"],
   },
   {
     id: "connections",

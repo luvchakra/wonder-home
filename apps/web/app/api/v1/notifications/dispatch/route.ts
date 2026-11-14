@@ -1,3 +1,5 @@
+import { sweepStaleProposals } from "@wonderhome/core/conversation/proposal-expiry";
+import { expireUnansweredSenders } from "@wonderhome/core/homesend/sender-trust";
 import { after } from "next/server";
 
 import { createAdminClient } from "@wonderhome/core/db/admin";
@@ -116,6 +118,10 @@ async function dispatch(request: Request): Promise<Response> {
   } catch (thrown) {
     log.warn("notice sweep tick failed", { reason: thrown instanceof Error ? thrown.name : "unknown" });
   }
+  // Actions still waiting for a person get one reminder, then close as not done after 48 hours (2026-11-14).
+  await sweepStaleProposals(admin, now);
+  // New email senders nobody answered about in 3 days: their mail is set aside (decision 5).
+  await expireUnansweredSenders(admin, now);
   // An alert on WonderHome's own AI key goes to the platform admins, once (14-048).
   await tellPlatformAdmins(admin, platformMailer(), now);
   // Morning digests (story 27-008): each one whose time has come on its household's clock.

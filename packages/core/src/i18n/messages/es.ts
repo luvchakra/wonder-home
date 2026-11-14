@@ -292,6 +292,8 @@ export const es: Catalog = {
   "reminder.homesend.waiting.grocery_item": "Una lista de la compra espera tu visto bueno",
   "reminder.homesend.waiting.unknown": "Algo enviado a HomeSend espera tu visto bueno",
   "reminder.homesend.waitingBody": "Abre HomeSend para revisarlo. No se añade nada hasta que digas que sí.",
+  "reminder.proposal.waitingTitle": "Sigue esperando tu OK",
+  "reminder.proposal.waitingBody": "{summary}. Abre HomeTalk para decir sí o no. Si nadie responde en {hours} horas, se cierra sin hacerse.",
   "reminder.homesend.waitingBodyFrom": "{name} lo envió a HomeSend. No se añade nada hasta que digas que sí.",
   "reminder.homesend.failedTitle": "Algo enviado a HomeSend no se pudo leer",
   "reminder.homesend.failedBody": "Está guardado en «Fallos seguros» de HomeSend y no se añadió nada.",

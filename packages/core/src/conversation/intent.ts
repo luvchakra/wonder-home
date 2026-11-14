@@ -58,6 +58,14 @@ export const INTENT_ACTIONS = [
    */
   "check_homesend_entry",
   /**
+   * A plain correction of the speaker's most recent matching entry ("No,
+   * it's on the 12th", "That's for Kabir, not Meera", "The amount is 1,240";
+   * the owner 2026-11-14, `plain-corrections.ts`). Fixed in place through the
+   * domain's own update, with Undo; it confirms the entry. Only ever built by
+   * the server from the reader, never by a model.
+   */
+  "correct_entry",
+  /**
    * "Yes" to HomeTalk's offer to fill in what is waiting in HomeSend ("2 things
    * in HomeSend need a detail: shall we fill them in?", story 14-050): asks the
    * first item's first question, then the next item's after it. Only fills in
@@ -180,7 +188,7 @@ export function disposeIntent(intent: HouseholdIntent): IntentDisposition {
   }
 
   // HomeSend reads the whole sentence itself, so being told about something new names no target here.
-  if (intent.target.kind === "unspecified" && intent.action !== "ask_status" && intent.action !== "check_agents" && intent.action !== "find_places" && intent.action !== "open_screen" && intent.action !== "file_with_homesend" && intent.action !== "complete_homesend_item" && intent.action !== "check_homesend_entry" && intent.action !== "fill_homesend_details") {
+  if (intent.target.kind === "unspecified" && intent.action !== "ask_status" && intent.action !== "check_agents" && intent.action !== "find_places" && intent.action !== "open_screen" && intent.action !== "file_with_homesend" && intent.action !== "complete_homesend_item" && intent.action !== "check_homesend_entry" && intent.action !== "fill_homesend_details" && intent.action !== "correct_entry") {
     return { kind: "clarify", question: "Which one did you mean?" };
   }
 
