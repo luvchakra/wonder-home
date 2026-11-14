@@ -19,17 +19,20 @@ All three settings sit on Settings → AI Assistant (Admins), each reversible on
 
 ## Verified
 
-Per the owner's "run only specific test cases" (coordinator, 2026-11-14):
+Per the owner's "run only specific test cases" (coordinator, 2026-11-14), after rebasing onto part C (#545):
 
-- Unit: `src/conversation` + `src/homesend` + `src/household` + `src/hometalk` + `src/evaluation` + `src/voicelink` + `src/security` + help/i18n — all pass (core run 5765/5765 before the last two cases; the touched folders again after: 799 + 144 + 262 + 106).
+- Unit, the touched folders (`homesend`, `hometalk`, `conversation`, `household`, `evaluation`, `i18n`, `help`, `settings-search`, `security`, `homebrain`, `voicelink`): **2838/2838**. Web vitest **151/151** (settings registry included).
 - Eval by id (deterministic): HT-01, HT-18, HT-72, HT-105, HT-122, HT-131 (updated for record first), HT-190–195, HS-80–85 (new): **18/18**. HT-122 now runs with "Ask before acting" on, so the replace-the-proposal path stays covered; HS-81, HT-192 and the email-webhook tests keep each 3 Nov behaviour covered under its switched-back setting.
-- DB (local Postgres, every migration applied from scratch): `test-homesend-rls` 78/78 (3 new: members read the senders table, nobody signed in writes it, the new archive reasons), `test-setup-counts-rls` + `test-ai-corrections-rls` 14/14.
-- Web: typecheck, ESLint on changed app files (0 errors), web vitest 151/151 (settings registry included), `npm run build -w apps/web`, `check:bundle`, `lint:help-links`.
-- Not run here: the live provider run by id (no provider key in this session); see the PR for the browser check.
+- DB (local Postgres, every migration applied from scratch, part C's included): `test-homesend-rls`, `test-setup-counts-rls`, `test-ai-corrections-rls` **92/92** (3 new: members read the senders table, nobody signed in writes it, the new archive reasons).
+- Playwright against the live project (`E2E_ALLOW_LIVE_PROJECT=1`, `E2E_SERVER_SERVICE_KEY=1`, production build): the rewritten Settings → AI Assistant spec, mobile and desktop, **2/2**; the "Add all anyway" spec (now with money on "Wait for review"), mobile and desktop, **2/2** run one at a time (run in parallel with the settings spec, both fail at sign-in in under 2 s: four sign-ins at once hit the auth limit the spec already works around).
+- Browser check on a QA household (production build, 360 px and 1280 px): Settings → AI Assistant shows the three choices with no overflow and no cut-off option, a pick is saved and survives a reload; HomeTalk "Plan a picnic on Sunday" was recorded at once ("📅 Put **picnic** on the family calendar … Say **undo** to take it back"), "undo" took it off the calendar, and "Plan a dinner party Saturday evening and invite the Sharmas" was recorded with no yes asked.
+- Typecheck (core and web), ESLint on changed app files (0 errors), `npm run build -w apps/web`, `check:bundle`, `lint:help-links`, `lint:migrations`, `lint:service-role`, `lint:boundaries`, `lint:secrets`, `security`.
+- Not run here: the live provider run by id (no provider key in this session).
+- QA data: the QA account (`9e2b4d5c…`) and its two households (`ff11557b…`, `4db9b4c6…`) were deleted after the checks (0 households left by those ids); `apps/web/.env.local`, test results and the dev server are gone.
 
 ## Open / needs a person
 
-- The migration `20261114181700_record_first_sender_trust.sql` must be applied live; the Supabase MCP refused this session, so its SQL went to the coordinator for the owner. Until then the webhook drops unknown senders exactly as before (safe in either order).
-- Part A wires `senderTrustNeeds` / `answerSenderTrustAction` into the Needs-you list and owns the "check before paying" reminder words; part C adds `learnFromCorrection` next to `recordSignal` in `entry-corrections.ts`.
+- The migration `20261114181700_record_first_sender_trust.sql` is live: the Supabase MCP refused this session, so the owner ran it in the coordinator's combined batch (23:50 IST) with part A's archive reasons in the same check; the file now lists both parts' reasons so either order keeps all of them.
+- After part A (#546) lands: write the sender question as a `needs_you_items` row (`askNeedsYou`, source `sender_trust`, default `set_aside`) and register its handler; A's deadlines (default at 24 h, 48 h at most) then replace the 3-day sweep. A owns the Checking bill words (`reminder.checking.money`); part C's `learnFromCorrection` is called from `entry-corrections.ts` right after the write (wired after #545 landed).
 - A trusted sender's email is decided as a member's item, but it is added when a member opens or clears HomeSend: an add on arrival needs a member-less governed write (follow-up).
 - `event` and `activity_item` HomeSend kinds still have no automatic outcome; the grocery "how much?" question (owner rule 2026-10-26) is unchanged.

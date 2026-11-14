@@ -60,7 +60,9 @@ create trigger homesend_email_senders_set_updated_at
 alter table public.home_send_items drop constraint if exists home_send_items_archive_reason_check;
 alter table public.home_send_items add constraint home_send_items_archive_reason_check
   check (archive_reason is null or archive_reason in ('untouched_30_days', 'past_date', 'already_recorded', 'superseded', 'cancelled', 'unreadable', 'removed_by_person',
-                                                      'new_sender', 'sender_blocked', 'sender_not_answered'));
+                                                      'new_sender', 'sender_blocked', 'sender_not_answered',
+                                                      -- Part A's reasons (20261114231500_needs_you.sql), so whichever of the two runs second keeps both.
+                                                      'not_household', 'kept_as_note', 'not_resent'));
 
 create index if not exists conversation_actions_proposed_age_idx
   on public.conversation_actions (created_at) where approval_status = 'proposed';
