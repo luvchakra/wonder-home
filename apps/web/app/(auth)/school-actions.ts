@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
 
+import { confirmByAction } from "@wonderhome/core/homesend/changes";
 import { ApiError, toErrorBody } from "@wonderhome/core/api/errors";
 import { createClient } from "@wonderhome/core/db/server";
 import { requireHouseholdAdmin, requireMembership } from "@wonderhome/core/identity/households";
@@ -234,6 +235,8 @@ export async function updateSchoolItemAction(_previous: ActionState, formData: F
       ...schoolWhen({ date: parsed.data.dueAt, time: parsed.data.dueTime, endTime: parsed.data.endTime, timezone: membership.household.timezone }),
       estimatedMinutes: parsed.data.estimatedMinutes === "" ? null : parsed.data.estimatedMinutes,
     });
+    // Editing an entry HomeSend added while Checking confirms it (decision 3, 2026-11-14).
+    await confirmByAction(supabase, parsed.data.householdId, parsed.data.itemId, membership.memberId);
 
     revalidatePath("/school");
     return { notice: "Saved." };

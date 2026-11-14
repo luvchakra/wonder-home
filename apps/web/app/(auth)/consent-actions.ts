@@ -11,6 +11,7 @@ import { asAutoAddPercent, AUTO_ADD_PERCENTS } from "@wonderhome/core/homesend/a
 import { saveAutoAddPercent } from "@wonderhome/core/household/auto-add-repository";
 import { saveDirectAdd } from "@wonderhome/core/household/direct-add-repository";
 import { saveHomeSendTidy } from "@wonderhome/core/household/homesend-tidy-repository";
+import { saveNothingWaits } from "@wonderhome/core/household/nothing-waits-repository";
 import { RETENTION_WINDOW_CHOICES, saveRetentionWindow } from "@wonderhome/core/privacy/retention-window-repository";
 import { createClient } from "@wonderhome/core/db/server";
 import { requireHouseholdAdmin } from "@wonderhome/core/identity/households";
@@ -119,6 +120,27 @@ export async function saveHomeSendTidyAction(_previous: ActionState, formData: F
     const supabase = await createClient();
     const membership = await requireHouseholdAdmin(supabase, parsed.data.householdId);
     await saveHomeSendTidy(supabase, { householdId: parsed.data.householdId, actorMemberId: membership.memberId, on: parsed.data.on === "on" });
+  } catch (thrown) {
+    return { error: toErrorBody(thrown, "privacy").body.error.message };
+  }
+  revalidatePath("/settings/ai");
+  return { notice: "saved" };
+}
+
+/**
+ * The "Nothing waits" switches (2026-11-14): "Remind about entries still
+ * Checking" (decision 3) and "Apply a question's default after a day"
+ * (decision 4). An Admin's, both on unless turned off.
+ */
+const nothingWaitsSchema = z.object({ householdId: z.uuid(), which: z.enum(["remind_checking", "apply_defaults"]), on: z.enum(["on", "off"]) });
+
+export async function saveNothingWaitsAction(_previous: ActionState, formData: FormData): Promise<ActionState> {
+  const parsed = nothingWaitsSchema.safeParse(Object.fromEntries(formData));
+  if (!parsed.success) return { error: "Please try again." };
+  try {
+    const supabase = await createClient();
+    const membership = await requireHouseholdAdmin(supabase, parsed.data.householdId);
+    await saveNothingWaits(supabase, { householdId: parsed.data.householdId, actorMemberId: membership.memberId, which: parsed.data.which, on: parsed.data.on === "on" });
   } catch (thrown) {
     return { error: toErrorBody(thrown, "privacy").body.error.message };
   }

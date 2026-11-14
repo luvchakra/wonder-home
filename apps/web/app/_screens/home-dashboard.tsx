@@ -1,3 +1,4 @@
+import { NeedsYou } from "../_components/needs-you";
 import {
   AlertTriangle,
   CalendarClock,
@@ -206,6 +207,11 @@ export function HomeDashboard({ session }: { session: Session }) {
 
         {/* What reached WonderHome since this person last opened it: temporary, and gone once seen. */}
         <WhatsNewCard items={whatsNew} labels={whatsNewLabels(t, whatsNew.length)} />
+
+        {/* The one "Needs you" list (2026-11-14): at most three, each with its tap answers and its default; nothing when nothing needs this person. */}
+        <Suspense fallback={null}>
+          <NeedsYou supabase={session.supabase} householdId={membership.household.id} timeZone={timezone} language={session.locale.preferences.language} t={t} />
+        </Suspense>
 
         {/* The #tags the family is using in chat this week (the owner, 2026-10-21); nothing until someone tags something. */}
         <Suspense fallback={null}>

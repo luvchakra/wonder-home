@@ -1,3 +1,4 @@
+import { Suspense } from "react";
 import { may } from "@wonderhome/core/billing/repository";
 import { flags } from "@wonderhome/core/config/flags";
 import { currentSessionId, listMessages, type ConversationMessage } from "@wonderhome/core/conversation/repository";
@@ -17,6 +18,7 @@ import { homesendReviewLabels } from "../_lib/homesend-labels";
 import { requireSession } from "../_lib/session";
 import { openKeyAlerts } from "@wonderhome/core/ai/key-alert-status";
 import { KeyAlertBanner } from "../_components/key-alert-banner";
+import { NeedsYou } from "../_components/needs-you";
 import { Assistant, type AssistantMessage } from "./assistant";
 import type { PlaceMark } from "./place-cards";
 import { ConversationSearch } from "./conversation-search";
@@ -157,6 +159,12 @@ export default async function AiPage({ searchParams }: { searchParams: Promise<{
           /> : undefined}
     >
       <KeyAlertBanner alerts={keyAlerts} manages={session.view.permissions.includes("household.manage")} t={locale.t} className="mx-4 mt-2 sm:mx-0" />
+      {/* The one "Needs you" list at the top of HomeTalk (2026-11-14): HomeSend's questions, proposals and approvals together, three at most. */}
+      {entitlement.allowed ? (
+        <Suspense fallback={null}>
+          <NeedsYou supabase={supabase} householdId={householdId} timeZone={membership.household.timezone} language={locale.preferences.language} t={locale.t} className="mx-4 mt-2 sm:mx-0" />
+        </Suspense>
+      ) : null}
       {welcomeWords ? (
         <WelcomeVoice householdId={membership.household.id} texts={welcomeWords} serverVoice={serverVoice} language={voiceSettings.language} label={locale.t("welcome.listen")} />
       ) : null}

@@ -27,7 +27,7 @@ function titleOf(item: HomeSendItem, fallback: string): string {
  * or what the daily tidy found no longer applies, set aside — kept, never
  * added, each with why — and put back with Restore (the archive's Undo).
  */
-export function HomeSendArchived({ householdId, items, reasons = {}, labels, isAdmin = false, viewerMemberId = "", viewerType = "adult" }: { householdId: string; items: HomeSendItem[]; reasons?: Record<string, ArchiveReason>; labels: HomeSendPageLabels; isAdmin?: boolean; viewerMemberId?: string; viewerType?: string }) {
+export function HomeSendArchived({ householdId, items, reasons = {}, labels, isAdmin = false, viewerMemberId = "", viewerType = "adult", compact = false }: { householdId: string; items: HomeSendItem[]; reasons?: Record<string, ArchiveReason>; labels: HomeSendPageLabels; isAdmin?: boolean; viewerMemberId?: string; viewerType?: string; compact?: boolean }) {
   const [state, restore, restoring] = useActionState<ItemActionState, FormData>(restoreHomeSendItemAction, {});
   const [deleteState, deleteAction, deleting] = useActionState<RemoveState, FormData>(deleteArchivedHomeSendAction, {});
   const [asking, setAsking] = useState<{ ids: string[] | "all" } | null>(null);
@@ -46,10 +46,12 @@ export function HomeSendArchived({ householdId, items, reasons = {}, labels, isA
     startTransition(() => deleteAction(data));
   };
   if (shown.length === 0 && deleteState.done === "deleted") return <Alert tone="info">{countWords(del.deleted, deleteState.count ?? 0)}</Alert>;
+  // On the HomeSend page nothing set aside means no section, but the last Restore still says it worked.
+  if (items.length === 0 && compact) return state.done === "restored" ? <Alert tone="info">{words.archived.restored}</Alert> : null;
   if (items.length === 0) return <EmptyState icon={Archive} tone="ai" title={words.archived.empty} description={words.archived.lede} />;
   return (
     <div className="space-y-4">
-      <p className="text-sm text-[var(--wh-foreground-muted)]">{words.archived.lede}</p>
+      {compact ? null : <p className="text-sm text-[var(--wh-foreground-muted)]">{words.archived.lede}</p>}
       {state.error ? <Alert>{state.error}</Alert> : null}
       {state.done === "restored" ? <Alert tone="info">{words.archived.restored}</Alert> : null}
       {deleteState.error ? <Alert>{deleteState.error}</Alert> : null}
@@ -59,7 +61,7 @@ export function HomeSendArchived({ householdId, items, reasons = {}, labels, isA
           {(deleteState.kept ?? 0) > 0 ? ` ${countWords(del.deleteSkipped, deleteState.kept ?? 0)}` : ""}
         </Alert>
       ) : null}
-      {isAdmin && shown.length > 0 ? (
+      {isAdmin && shown.length > 0 && !compact ? (
         <Pill type="button" tone="quiet" disabled={deleting} onClick={() => setAsking({ ids: "all" })}>
           {del.deleteAll}
         </Pill>
@@ -79,7 +81,8 @@ export function HomeSendArchived({ householdId, items, reasons = {}, labels, isA
                     {reasons[item.id] ? ` · ${words.archived.reason[reasons[item.id]!]}` : null}
                   </span>
                 </span>
-                {mayRemoveHomeSendItem(actor, item) ? (
+                {/* On the HomeSend page only Restore, so a name keeps its width at 360 px (rules 11, 15); Delete for good is in the full list. */}
+                {mayRemoveHomeSendItem(actor, item) && !compact ? (
                   <button
                     type="button"
                     disabled={deleting}

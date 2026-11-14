@@ -27,6 +27,7 @@ import {
   homesendAdded,
   jobStatuses,
   needsYou,
+  nothingWaitsNeed,
   openingSentence,
   plansAddUp,
   type GrowthMetric,
@@ -37,6 +38,7 @@ import {
   type Period,
   type AdvisorSignal,
 } from "@wonderhome/core/platform/overview";
+import { nothingWaitsOnTarget, type NothingWaitsMetrics } from "@wonderhome/core/homesend/metrics";
 import { ButtonLink } from "@wonderhome/core/ui/button";
 import type { IconTone } from "@wonderhome/core/ui/icon-tile";
 import { IconTile } from "@wonderhome/core/ui/icon-tile";
@@ -55,6 +57,7 @@ const NEED_ICON: Record<NeedKind, ComponentType<{ className?: string }>> = {
   billing: CreditCard,
   "jobs-stale": Clock,
   "homesend-failures": Inbox,
+  "homesend-stuck": Inbox,
   "delivery-failures": BellRing,
   advisor: Database,
   "payments-failed": CreditCard,
@@ -98,6 +101,8 @@ export type ServiceState = { name: string; href: string; ready: boolean };
 export type OverviewViewProps = {
   snapshot: OverviewSnapshot | null;
   advisor: AdvisorSignal | null;
+  /** "Nothing waits" measures (2026-11-14); null when not measured. */
+  nothingWaits?: NothingWaitsMetrics | null;
   settings: { saved: number; environment: number; stillInVercel: number; storeReady: boolean };
   services: readonly ServiceState[];
   period: Period;
@@ -108,13 +113,14 @@ export type OverviewViewProps = {
  * The Overview, drawn from figures already read (the page does the reading):
  * what needs the admin first, then growth and use, then health (rule 17).
  */
-export function OverviewView({ snapshot, advisor, settings, services, period, role }: OverviewViewProps) {
+export function OverviewView({ snapshot, advisor, nothingWaits = null, settings, services, period, role }: OverviewViewProps) {
   // Every age on the page is measured from when the figures were read, so they agree with each other.
   const nowMs = snapshot ? Date.parse(snapshot.takenAt) : 0;
   const now = new Date(nowMs);
   const isOwner = role === "owner";
   // The grants list (`/platform-admin/households/grants`) is the owner's; everyone else gets Security.
-  const items = (snapshot ? needsYou(snapshot, settings, advisor, now) : []).map((item) =>
+  const stuck = nothingWaitsNeed(nothingWaits);
+  const items = (snapshot ? [...needsYou(snapshot, settings, advisor, now), ...(stuck ? [stuck] : [])] : []).map((item) =>
     item.kind === "support-grants" && isOwner ? { ...item, action: { label: "See the grants", href: "/platform-admin/households/grants" } } : item,
   );
   const lede = snapshot
@@ -226,6 +232,7 @@ export function OverviewView({ snapshot, advisor, settings, services, period, ro
             <div className="grid gap-3 sm:grid-cols-2">
               <PlansBreakdown snapshot={snapshot} linkPlans={isOwner} />
               <HomeSendSplit snapshot={snapshot} period={period} />
+              <NothingWaitsPanel metrics={nothingWaits} />
             </div>
           </>
         ) : null}
@@ -382,6 +389,48 @@ function PlansBreakdown({ snapshot, linkPlans }: { snapshot: OverviewSnapshot; l
           ? `${rows.map((r) => r.households).join(" + ")} = ${total} households. A household with no plan of its own is on Free.`
           : `These add up to ${total}, not ${snapshot.totals.households}: a household changed while the figures were read.`}
       </p>
+    </div>
+  );
+}
+
+/** The four "Nothing waits" measures (2026-11-14), each beside its target, counts out of totals (principle 9). */
+function NothingWaitsPanel({ metrics }: { metrics: NothingWaitsMetrics | null }) {
+  if (!metrics) {
+    return (
+      <div className="space-y-2 rounded-[var(--wh-radius)] border border-[var(--wh-border)] px-3.5 py-3">
+        <h3 className="text-sm font-semibold">Nothing waits</h3>
+        <p className="text-sm text-[var(--wh-foreground-muted)]">Not measured yet.</p>
+      </div>
+    );
+  }
+  const on = nothingWaitsOnTarget(metrics);
+  const oldest = metrics.openByHousehold[0]?.oldestHours ?? null;
+  const rows: { label: string; value: string; target: string; ok: boolean }[] = [
+    { label: "Sends that needed a person (30 days)", value: `${metrics.neededPerson.count} of ${metrics.neededPerson.of}`, target: "under 1 in 10", ok: on.neededPerson },
+    {
+      label: "Open in Needs you",
+      value: metrics.openByHousehold.length === 0 ? "none" : `${metrics.openTotal} in ${metrics.openByHousehold.length} ${metrics.openByHousehold.length === 1 ? "household" : "households"}; most ${Math.max(...metrics.openByHousehold.map((row) => row.open))}, oldest ${oldest} h`,
+      target: "at most 3 a household, none past 48 h",
+      ok: on.open,
+    },
+    { label: "Checking entries older than 7 days, no stated reason", value: `${metrics.checkingOver7d}${metrics.checkingKept > 0 ? ` (and ${metrics.checkingKept} kept Checking: check before paying)` : ""}`, target: "none", ok: on.checking },
+    { label: "Entries undone within 7 days (30 days)", value: `${metrics.undoneWithin7d.count} of ${metrics.undoneWithin7d.of}`, target: "under 1 in 20", ok: on.undone },
+  ];
+  return (
+    <div className="space-y-2 rounded-[var(--wh-radius)] border border-[var(--wh-border)] px-3.5 py-3">
+      <div className="flex items-center gap-2">
+        <IconTile icon={Inbox} tone="ai" size="sm" />
+        <h3 className="text-sm font-semibold">Nothing waits</h3>
+      </div>
+      <ul className="space-y-1.5">
+        {rows.map((row) => (
+          <li key={row.label} className="text-sm">
+            <span className="font-medium">{row.label}:</span> {row.value}{" "}
+            <span className={row.ok ? "text-[var(--wh-handled)]" : "text-[var(--wh-attention)]"}>· {row.ok ? "on target" : "off target"} ({row.target})</span>
+          </li>
+        ))}
+      </ul>
+      <p className="text-xs text-[var(--wh-foreground-subtle)]">Aggregate only, across every household. Per household figures carry no name.</p>
     </div>
   );
 }

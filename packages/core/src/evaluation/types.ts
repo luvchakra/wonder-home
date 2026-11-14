@@ -190,6 +190,23 @@ export type HomeSendCase = CaseBase & {
    * deterministic run checks; a live run asks the provider instead, unless
    * `recordedVerdict` says the case is about this exact verdict.
    */
+  /**
+   * "Nothing waits" (2026-11-14): what a waiting, failed or Checking item
+   * becomes under `homesend/deadlines.ts`, observed as the action
+   * ("set_aside:<reason>", "note", "read_again", "ask_resend",
+   * "ask→default:<answer>", "check→default:<answer>"). The source's words are
+   * the item's text; the reading's kind is its kind.
+   */
+  ending?: {
+    status: "classified" | "failed" | "checking";
+    failureReason?: import("../homesend/items").HomeSendFailureReason;
+    readable?: boolean;
+    retryCount?: number;
+    /** Sent by a member who can be asked (default true). */
+    senderIsMember?: boolean;
+    /** The waiting item looks like something already on record. */
+    duplicate?: boolean;
+  };
   tidy?: {
     today: string;
     sentAt: string;

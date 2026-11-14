@@ -154,6 +154,8 @@ export type HomeSendItem = {
   reviewedAt?: string | null;
   /** What applying a document's plan did, record by record (DDU 2.0 §44); null for anything not applied as a plan. */
   receipt?: IntakeChangeReceipt | null;
+  /** Kept as a household note: HomeSend couldn't tell what it is, so HomeTalk finds it when asked (2026-11-14). */
+  householdNote?: boolean;
   createdAt: string;
 };
 

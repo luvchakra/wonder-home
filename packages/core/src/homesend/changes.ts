@@ -260,3 +260,34 @@ export async function undoHomeSendChange(
     targetId: changeId,
   });
 }
+
+/**
+ * A person acted on an entry HomeSend added while it was still Checking —
+ * marked it paid or done, or edited it — so it is confirmed (decision 3, the
+ * owner, 2026-11-14): acting on it is saying it is right. Through the
+ * person's own client, in their name, audited `homesend.confirmed` with
+ * `how: "acted"`. Its open "Needs you" question is then settled (the next
+ * deadlines pass withdraws it). Never throws: the action it follows has
+ * already succeeded, and a missing confirm only leaves the "not yet
+ * confirmed" mark on.
+ */
+export async function confirmByAction(supabase: SupabaseClient, householdId: string, entityId: string, memberId: string): Promise<number> {
+  try {
+    const { data, error } = await supabase
+      .from("homesend_changes")
+      .update({ confirmation_state: "confirmed", confirmed_at: new Date().toISOString(), confirmed_by_member_id: memberId })
+      .eq("household_id", householdId)
+      .eq("entity_id", entityId)
+      .eq("confirmation_state", "unconfirmed")
+      .is("undone_at", null)
+      .select("id, domain, entity_id, intake_id");
+    if (error) return 0;
+    const rows = (data as Row[] | null) ?? [];
+    for (const row of rows) {
+      await auditChange({ householdId, actorMemberId: memberId, eventType: "homesend.confirmed", targetTable: row.domain as string, targetId: row.entity_id as string, metadata: { intakeId: row.intake_id, how: "acted" } });
+    }
+    return rows.length;
+  } catch {
+    return 0;
+  }
+}

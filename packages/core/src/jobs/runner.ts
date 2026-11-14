@@ -5,6 +5,7 @@ import { syncDueSubscriptions } from "../calendar/subscriptions/sync";
 import { keepStoresWarm } from "../homebrain/context-store";
 import { sleepDueHouseholds } from "../homebrain/sleep/run";
 import { archiveStaleHomeSendItems } from "../homesend/repository";
+import { runNeedsYouDeadlines } from "../hometalk/needs-you-run";
 import { runHomeSendTidy } from "../homesend/tidy-run";
 import { runTriviaRefill } from "../school/trivia-refill";
 import { CLOCK_DRAIN_LIMIT, drainKnowledge } from "../knowledge/facts";
@@ -37,7 +38,7 @@ import { JOB_STEPS, recordHeartbeat, type JobStep, type StepSummary } from "./he
  * which already calls `deliverNotification` within minutes.
  */
 export const JOBS = {
-  clock: ["clock.context-warm", "clock.knowledge", "clock.homesend-archive", "clock.homesend-tidy", "clock.homebrain-sleep", "clock.trivia-refill"],
+  clock: ["clock.context-warm", "clock.knowledge", "clock.homesend-archive", "clock.homesend-tidy", "clock.homesend-deadlines", "clock.homebrain-sleep", "clock.trivia-refill"],
   "calendar-sync": ["calendar-sync"],
   webhooks: ["webhooks"],
   daily: ["daily.retention"],
@@ -65,6 +66,10 @@ export const STEP_RUNNERS: Record<JobStep, StepRunner> = {
   "clock.homesend-tidy": async (admin, now) => {
     const result = await runHomeSendTidy(admin, { now, limit: 25 });
     return { ready: result.ready, households: result.households.length, archived: result.households.reduce((sum, h) => sum + h.archived.length, 0) };
+  },
+  "clock.homesend-deadlines": async (admin, now) => {
+    const result = await runNeedsYouDeadlines(admin, { now, limit: 50 });
+    return { ready: result.ready, defaulted: result.defaulted, expired: result.expired, asked: result.asked, notes: result.notes, setAside: result.setAside, readAgain: result.readAgain, proposalsClosed: result.proposalsClosed };
   },
   "clock.homebrain-sleep": async (admin, now) => ({ slept: (await sleepDueHouseholds(admin, now, 6)).length }),
   // Each refill uses the asking household's own model terms, not the runner's key: not a NEEDS_MODEL step.

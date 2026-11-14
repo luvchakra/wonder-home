@@ -1,4 +1,5 @@
 import { Send } from "lucide-react";
+import Link from "next/link";
 import { redirect } from "next/navigation";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { HouseholdMembership } from "@wonderhome/core/identity/schemas";
@@ -6,32 +7,27 @@ import type { HouseholdMembership } from "@wonderhome/core/identity/schemas";
 import { consumableNames, purchaseLabels } from "@wonderhome/core/commerce/repository";
 import { createAdminClient } from "@wonderhome/core/db/admin";
 import { getHomeSendAddress, platformHomeSendEmailDomain } from "@wonderhome/core/homesend/addresses";
-import { waitRowWords } from "@wonderhome/core/homesend/auto-add";
 import { listHomeSendChanges } from "@wonderhome/core/homesend/changes";
-import { questionsLeft } from "@wonderhome/core/homesend/checking";
-import { addAnywayCounts, groupIdentical } from "@wonderhome/core/homesend/inbox-view";
 import { ingestFile, ingestText } from "@wonderhome/core/homesend/ingest";
-import { countArchivedHomeSendItems, listArchiveReasons, listArchivedHomeSendItems, listHomeSendItems, listHomeSendLifecycle, NO_LIFECYCLE } from "@wonderhome/core/homesend/repository";
-import { bulkReady, daysBetween, retryState, STALE_AFTER_DAYS, whyItWaits } from "@wonderhome/core/homesend/waiting";
+import { countArchivedHomeSendItems, listArchiveReasons, listArchivedHomeSendItems, listHomeSendItems } from "@wonderhome/core/homesend/repository";
+import { loadNeedsYou } from "@wonderhome/core/hometalk/needs-you-repository";
 import { recoverWhen } from "@wonderhome/core/homesend/when";
 import { consumeShareHandoff } from "@wonderhome/core/homesend/share-handoff";
-import { loadDirectAdd } from "@wonderhome/core/household/direct-add-repository";
 import { isHouseholdAdmin, listMembers } from "@wonderhome/core/identity/households";
 import { childrenWithClasses, listActivities } from "@wonderhome/core/school/activities";
 import { whatsappConfigFromEnv } from "@wonderhome/core/notifications/whatsapp";
 import { AppShell } from "@wonderhome/core/shell/app-shell";
 import { Alert } from "@wonderhome/core/ui/alert";
 import { QuoteCard } from "@wonderhome/core/ui/quote-card";
+import { SectionHeader } from "@wonderhome/core/ui/section-header";
 import { EmptyState } from "@wonderhome/core/ui/states";
 import { formatWhatsAppNumber, whatsappBusinessNumber } from "@wonderhome/core/whatsapp/linking";
 import { listWhatsAppLinks } from "@wonderhome/core/whatsapp/repository";
 
 import { HomeSendChannels, HomeSendWelcome } from "../_components/home-send-channels";
-import { prepareReview } from "../(auth)/home-send-review";
-import { HomeSendInbox, type PreparedReview } from "../_components/home-send-inbox";
+import { HomeSendInbox } from "../_components/home-send-inbox";
 import { HomeSendArchived } from "../_components/home-send-archived";
 import { homesendPageLabels } from "../_lib/homesend-labels";
-import { waitEvidence, whyWords } from "../_lib/homesend-waiting";
 import { requireSession } from "../_lib/session";
 import { addIfAllowed } from "../(auth)/home-send-auto";
 
@@ -39,15 +35,9 @@ export const metadata = { title: "HomeSend" };
 
 /** "Added recently" looks back this many days (the owner, 2026-11-03). */
 const RECENT_DAYS = 7;
-/** Waiting items prepared for review per page; "Show more" adds this many (every list has a bound). */
-const PAGE = 20;
-const MOST_SHOWN = 200;
-/** Reviews prepared at once: each reads the household's people and records, so a few at a time, not all together. */
-const PREPARE_AT_ONCE = 5;
+/** Set-aside items shown on the page; the rest are behind "See everything set aside". */
+const SET_ASIDE_SHOWN = 10;
 
-async function inBatches<T>(items: readonly T[], size: number, work: (item: T) => Promise<void>): Promise<void> {
-  for (let start = 0; start < items.length; start += size) await Promise.all(items.slice(start, start + size).map(work));
-}
 export const dynamic = "force-dynamic";
 
 /** Why a share from the phone's share sheet did not arrive, by the `?shareError=` the share route sets. */
@@ -105,9 +95,9 @@ async function resumeShareHandoff(
 export default async function HomeSendPage({
   searchParams,
 }: {
-  searchParams: Promise<{ handoff?: string; shareError?: string; shown?: string; view?: string; shared?: string }>;
+  searchParams: Promise<{ handoff?: string; shareError?: string; view?: string; shared?: string }>;
 }) {
-  const [{ handoff, shareError, shown: shownParam, view: viewParam, shared: sharedParam }, session] = await Promise.all([searchParams, requireSession("/home-send")]);
+  const [{ handoff, shareError, view: viewParam, shared: sharedParam }, session] = await Promise.all([searchParams, requireSession("/home-send")]);
   const { supabase, membership, view, viewer, secondary, locale } = session;
   const { t } = locale;
   const householdId = membership.household.id;
@@ -154,7 +144,7 @@ export default async function HomeSendPage({
   const whatsappNumber = whatsappConfigFromEnv() ? whatsappBusinessNumber() : null;
   const emailConfigured = platformHomeSendEmailDomain() !== null;
   const isAdmin = isHouseholdAdmin(membership);
-  const [allItems, members, changes, address, whatsappLinks, activities, archivedCount, directAdd] = await Promise.all([
+  const [allItems, members, changes, address, whatsappLinks, activities, archivedCount, setAside, needsYou] = await Promise.all([
     listHomeSendItems(supabase, householdId).catch(() => []),
     listMembers(supabase, householdId, membership.household.ownerMemberId).catch(() => []),
     listHomeSendChanges(supabase, householdId).catch(() => []),
@@ -163,9 +153,12 @@ export default async function HomeSendPage({
     // Each child's own classes, so a class outside school is picked, not typed (rule 20).
     listActivities(supabase, householdId).catch(() => []),
     countArchivedHomeSendItems(supabase, householdId),
-    // What "Add all anyway" keeps waiting, said in its confirm; only an Admin is offered it.
-    isAdmin ? loadDirectAdd(supabase, householdId).catch(() => ({ money: false, health: false })) : Promise.resolve({ money: false, health: false }),
+    // "Set aside": the most recent few, each with its reason and Restore; the rest one tap away.
+    listArchivedHomeSendItems(supabase, householdId, SET_ASIDE_SHOWN).catch(() => []),
+    // How many things need a word from this person, for the opening sentence.
+    loadNeedsYou(supabase, householdId).catch(() => ({ shown: [], total: 0 })),
   ]);
+  const setAsideReasons = await listArchiveReasons(supabase, householdId, setAside.map((item) => item.id)).catch(() => new Map());
 
   // One list, no channel tabs (the owner, 2026-11-03): where something came from is in its detail.
   // A waiting item's day and time, from its own words, whatever kind it was
@@ -177,58 +170,10 @@ export default async function HomeSendPage({
   const myWhatsApp = whatsappLinks.find((link) => link.memberId === membership.memberId) ?? null;
 
   const kids = childrenWithClasses(members, activities);
-  // Pending intake survives closing the page (Wave 3 §14): whatever is
-  // waiting on a person, and whatever failed safely, is read back from the
-  // table every time — never held only in the page that sent it.
-  const pending = items.filter((item) => item.status === "received" || item.status === "classified");
-  const failed = items.filter((item) => item.status === "failed");
-
-  // Who each waiting item is for, and whether it is already on record —
-  // worked out now, on this member's own client, so opening one shows the
-  // same "I found Asmi's existing Science Exhibition" a fresh send would.
-  // Every waiting item on this page gets its review, a few at a time; "Show
-  // more" brings the next page (never all of them in one request).
-  const shown = Math.min(Math.max(Number.parseInt(shownParam ?? "", 10) || PAGE, PAGE), MOST_SHOWN);
-  const pendingShown = pending.slice(0, shown);
+  // "Nothing waits" (2026-11-14): nothing is reviewed here any more. What needs a person is one
+  // question in the "Needs you" list at the top of HomeTalk, with a default after 24 hours; this
+  // page is the send box, what was added recently (with Undo) and what was set aside (with Restore).
   const now = new Date();
-  const lifecycle = await listHomeSendLifecycle(supabase, householdId, [...pendingShown, ...failed].map((item) => item.id));
-  const waitingFor = (item: (typeof items)[number]) => daysBetween(new Date(lifecycle.get(item.id)?.updatedAt ?? item.createdAt), now, timezone);
-  const reviews: Record<string, PreparedReview> = {};
-  await inBatches(pendingShown, PREPARE_AT_ONCE, async (item) => {
-    const review = await prepareReview(supabase, membership, item).catch(() => null);
-    if (!review) return;
-    const waiting = review.confirmation.wait;
-    const evidence = waitEvidence(item, review);
-    const days = waitingFor(item);
-    const reason = whyWords(whyItWaits(evidence), t);
-    const why = reason;
-    reviews[item.id] = {
-      subject: review.subject,
-      reconciliation: review.reconciliation,
-      confirmation: review.confirmation,
-      plan: review.plan ?? null,
-      waitWords: waiting ? waitRowWords(waiting, t) : null,
-      // Why it waits, from evidence already worked out — and how long, once it is two weeks.
-      why: days >= STALE_AFTER_DAYS ? `${why} · ${t("homesend.why.waitingDays", { count: days })}` : why,
-      reason,
-      ready: bulkReady(evidence),
-    };
-  });
-  // What "Try again" can do for each failed item, and how many tries it has had.
-  const failedInfo = Object.fromEntries(
-    failed.map((item) => {
-      const state = retryState(item, lifecycle.get(item.id) ?? NO_LIFECYCLE);
-      const line =
-        state.reason === "in_progress"
-          ? t("homesend.retry.trying")
-          : state.reason === "cap"
-            ? t("homesend.retry.cap")
-            : state.tries > 0
-              ? t("homesend.retry.tries", { count: state.tries })
-              : null;
-      return [item.id, { canRetry: state.allowed, line }];
-    }),
-  );
   // "Added recently": what was added (and anything undone) in the last week, by its newest change.
   const since = now.getTime() - RECENT_DAYS * 86_400_000;
   const lastChange = new Map<string, number>();
@@ -252,15 +197,8 @@ export default async function HomeSendPage({
           ? t("homesend.shared.reading")
           : null
     : null;
-  // The opening sentence (rule 7): what needs a word, what couldn't be read — the counts live here, not in badges.
-  const checkingOpen = history.filter((item) => questionsLeft((item.understanding as { checking?: unknown } | null)?.checking) > 0 && changes.some((change) => change.intakeId === item.id && !change.undoneAt && change.confirmationState === "unconfirmed")).length;
-  const needs = groupIdentical(pending).length + checkingOpen;
-  const lead =
-    needs > 0
-      ? [t("homesend.lead.needs", { count: needs }), failed.length > 0 ? t("homesend.lead.failed", { count: failed.length }) : history.length > 0 ? t("homesend.lead.restAdded") : null].filter(Boolean).join(" ")
-      : failed.length > 0
-        ? t("homesend.lead.failed", { count: failed.length })
-        : t("homesend.lead.allClear");
+  // The opening sentence (rule 7): how many things need a word, and where they are.
+  const lead = needsYou.total > 0 ? t("homesend.lead.needsYou", { count: needsYou.total }) : t("homesend.lead.allClear");
   // "Also added to Groceries: White T-shirt" — each need by name, so two of
   // them from one notice can be told apart (and undone) separately.
   const groceryIds = changes.filter((change) => change.domain === "grocery_item").map((change) => change.entityId);
@@ -290,16 +228,16 @@ export default async function HomeSendPage({
           isAdmin={isAdmin}
           viewerMemberId={membership.memberId}
           viewerType={membership.memberType}
-          clearCounts={isAdmin ? { archive: pending.length + failed.length, add: addAnywayCounts(pending, directAdd), failed: failed.length } : null}
-          pending={pendingShown}
-          pendingTotal={pending.length}
-          moreHref={pending.length > pendingShown.length ? `/home-send?${new URLSearchParams({ shown: String(shown + PAGE) })}` : null}
-          failed={failed}
-          failedInfo={failedInfo}
-          archived={archivedCount > 0 ? { href: "/home-send?view=archived", label: t("homesend.archived.link", { count: archivedCount }) } : null}
+          clearCounts={null}
+          pending={[]}
+          pendingTotal={0}
+          moreHref={null}
+          failed={[]}
+          failedInfo={{}}
+          archived={null}
           history={history}
           changes={changes}
-          reviews={reviews}
+          reviews={{}}
           groceryNames={groceryNames}
           purchaseNames={purchaseNames}
           labels={labels}
@@ -310,6 +248,22 @@ export default async function HomeSendPage({
             ) : null
           }
         />
+
+        {/* Always mounted, so Restore's own confirmation survives the list emptying; headed only when something is set aside. */}
+        <section className="space-y-2" aria-labelledby={setAside.length > 0 ? "home-send-set-aside" : undefined}>
+          {setAside.length > 0 ? (
+            <>
+              <SectionHeader title={t("homesend.setAside.title")} count={archivedCount} />
+              <p id="home-send-set-aside" className="text-sm text-[var(--wh-foreground-muted)]">{t("homesend.setAside.lede")}</p>
+            </>
+          ) : null}
+          <HomeSendArchived householdId={householdId} isAdmin={isAdmin} viewerMemberId={membership.memberId} viewerType={membership.memberType} items={setAside} reasons={Object.fromEntries(setAsideReasons)} labels={labels} compact />
+          {archivedCount > setAside.length ? (
+            <Link href="/home-send?view=archived" className="block text-center text-sm text-[var(--wh-primary)]">
+              {t("homesend.setAside.all", { count: archivedCount })}
+            </Link>
+          ) : null}
+        </section>
 
         <HomeSendChannels
           householdId={householdId}

@@ -7,6 +7,7 @@ import { loadConfirmRequested } from "@wonderhome/core/conversation/consent-repo
 import { AUTO_ADD_PERCENTS } from "@wonderhome/core/homesend/auto-add";
 import { loadDirectAdd } from "@wonderhome/core/household/direct-add-repository";
 import { loadHomeSendTidy } from "@wonderhome/core/household/homesend-tidy-repository";
+import { loadNothingWaits } from "@wonderhome/core/household/nothing-waits-repository";
 import { BAR_KINDS, effectiveBar, MIN_HISTORY } from "@wonderhome/core/homebrain/kind-bar";
 import { listKindBars, loadChosenAutoAddPercent } from "@wonderhome/core/homebrain/kind-bar-repository";
 import { MEMBER_RULE_KINDS, ruleKeyLabel, type RuleKind } from "@wonderhome/core/homebrain/rules";
@@ -51,7 +52,7 @@ export default async function AiAssistantSettingsPage({ searchParams }: { search
   const returnTo = safeReturnTo(query.returnTo);
   const { supabase, membership, view, viewer, secondary } = session;
   const householdId = membership.household.id;
-  const [credential, voiceCredential, dataUse, confirmRequested, chosenPercent, directAdd, keyAlerts, homesendTidy, learned, members, kindBars] = await Promise.all([
+  const [credential, voiceCredential, dataUse, confirmRequested, chosenPercent, directAdd, keyAlerts, homesendTidy, nothingWaits, learned, members, kindBars] = await Promise.all([
     credentialStatus(supabase, householdId).catch(() => ({ configured: false, provider: null, updatedAt: null })),
     geminiVoiceKeyStatus(supabase, householdId).catch(() => ({ configured: false, provider: null, updatedAt: null })),
     loadDataUse(supabase, householdId),
@@ -60,6 +61,7 @@ export default async function AiAssistantSettingsPage({ searchParams }: { search
     loadDirectAdd(supabase, householdId),
     openKeyAlerts(supabase, householdId),
     loadHomeSendTidy(supabase, householdId),
+    loadNothingWaits(supabase, householdId),
     listHouseholdRules(supabase, householdId).catch(() => []),
     listMembers(supabase, householdId, null).catch(() => []),
     listKindBars(supabase, householdId).catch(() => []),
@@ -219,6 +221,24 @@ export default async function AiAssistantSettingsPage({ searchParams }: { search
               }}
             />
           </Card>
+          {/* "Nothing waits" (2026-11-14): decisions 3 and 4, each an Admin can switch back. */}
+          {(["remind_checking", "apply_defaults"] as const).map((which) => (
+            <Card key={which} id={`nothing-waits-${which}`} className="mt-3 p-4">
+              <HomeSendTidySwitch
+                householdId={householdId}
+                which={which}
+                on={(which === "remind_checking" ? nothingWaits.remindChecking : nothingWaits.applyDefaults) !== false}
+                manages={manages}
+                labels={{
+                  title: t(`settingsPage.ai.${which === "remind_checking" ? "remindChecking" : "applyDefaults"}.title`),
+                  on: t(`settingsPage.ai.${which === "remind_checking" ? "remindChecking" : "applyDefaults"}.on`),
+                  off: t(`settingsPage.ai.${which === "remind_checking" ? "remindChecking" : "applyDefaults"}.off`),
+                  detail: t(`settingsPage.ai.${which === "remind_checking" ? "remindChecking" : "applyDefaults"}.detail`),
+                  adminDecides: t("settingsPage.adminDecides"),
+                }}
+              />
+            </Card>
+          ))}
           {/* What HomeSend has learned (14-066): so the same question is never asked twice. */}
           <Card id="homesend-learned" className="mt-3 p-4">
             <HomeSendLearned

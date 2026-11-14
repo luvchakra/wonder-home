@@ -201,3 +201,61 @@ export async function loadHomeSendMetrics(supabase: SupabaseClient, options: { w
     queueDepth: queue.count ?? 0,
   });
 }
+
+// --- "Nothing waits" (2026-11-14): how much still needs a person -----------
+
+/**
+ * The four measures the redesign is judged by, from
+ * `public.platform_nothing_waits` (aggregate only, never a household id):
+ * sends that needed a person (count of total, last 30 days); open "Needs you"
+ * items per household with the oldest one's age (anonymous, oldest first);
+ * Checking entries older than 7 days; entries undone within 7 days of being
+ * added. Targets: under 1 in 10; at most 3 open and none older than 48 hours;
+ * none; under 1 in 20.
+ */
+export type NothingWaitsMetrics = {
+  neededPerson: Ratio;
+  openByHousehold: { open: number; oldestHours: number }[];
+  openTotal: number;
+  /** Still Checking after 7 days with no stated reason (the target is none). */
+  checkingOver7d: number;
+  /** Kept Checking on purpose: a money or health entry whose question closed ("check before paying"). */
+  checkingKept: number;
+  undoneWithin7d: Ratio;
+};
+
+const count = (value: unknown): number => {
+  const n = typeof value === "number" || typeof value === "string" ? Number(value) : Number.NaN;
+  return Number.isFinite(n) && n >= 0 ? Math.floor(n) : 0;
+};
+const ratio = (value: unknown): Ratio => {
+  const raw = (value ?? {}) as { count?: unknown; of?: unknown };
+  return { count: count(raw.count), of: count(raw.of) };
+};
+
+/** Reads the function's answer; null when it is missing or not the shape expected (the page says "not measured"). */
+export function parseNothingWaits(raw: unknown): NothingWaitsMetrics | null {
+  if (!raw || typeof raw !== "object") return null;
+  const value = raw as Record<string, unknown>;
+  if (!("neededPerson" in value)) return null;
+  return {
+    neededPerson: ratio(value.neededPerson),
+    openByHousehold: Array.isArray(value.openByHousehold)
+      ? (value.openByHousehold as { open?: unknown; oldestHours?: unknown }[]).slice(0, 20).map((row) => ({ open: count(row.open), oldestHours: count(row.oldestHours) }))
+      : [],
+    openTotal: count(value.openTotal),
+    checkingOver7d: count(value.checkingOver7d),
+    checkingKept: count(value.checkingKept),
+    undoneWithin7d: ratio(value.undoneWithin7d),
+  };
+}
+
+/** Where each measure stands against the redesign's target. */
+export function nothingWaitsOnTarget(metrics: NothingWaitsMetrics): { neededPerson: boolean; open: boolean; checking: boolean; undone: boolean } {
+  return {
+    neededPerson: metrics.neededPerson.of === 0 || metrics.neededPerson.count * 10 < metrics.neededPerson.of,
+    open: metrics.openByHousehold.every((row) => row.open <= 3 && row.oldestHours <= 48),
+    checking: metrics.checkingOver7d === 0,
+    undone: metrics.undoneWithin7d.of === 0 || metrics.undoneWithin7d.count * 20 < metrics.undoneWithin7d.of,
+  };
+}

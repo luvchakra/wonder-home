@@ -1,5 +1,6 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 
+import { loadNothingWaits } from "../household/nothing-waits-repository";
 import { unconfirmedEntityIds } from "../homesend/changes";
 import { formatterFor } from "../i18n/format";
 import { parseCopy, sameCopy } from "./message";
@@ -29,6 +30,7 @@ import { escalateAcrossChannels } from "./channel-escalation";
 import {
   RECONCILED_SOURCE_TYPES,
   billSubject,
+  notYetConfirmed,
   familySubject,
   grocerySubject,
   mealSubject,
@@ -188,7 +190,7 @@ async function reconcile(
   const horizon = (days: number) => new Date(now.getTime() + days * 86_400_000).toISOString();
   const since = (days: number) => new Date(now.getTime() - days * 86_400_000).toISOString();
 
-  const [bills, school, meals, groceries, pets, events, members, roles, responsibilities, guardians, reminderPrefs, channelPrefs, householdPolicies, open, closed, checking] =
+  const [bills, school, meals, groceries, pets, events, members, roles, responsibilities, guardians, reminderPrefs, channelPrefs, householdPolicies, open, closed, checking, nothingWaits] =
     await Promise.all([
       admin
         .from("obligations")
@@ -258,9 +260,12 @@ async function reconcile(
         .in("status", ["acted", "dismissed"])
         .in("source_type", [...RECONCILED_SOURCE_TYPES])
         .gte("created_at", since(30)),
-      // Entries HomeSend added below the household's bar: their own reminders wait until confirmed (the owner, 2026-11-03).
+      // Entries HomeSend added below the household's bar: they remind as usual, marked "not yet confirmed" (decision 3, 2026-11-14).
       unconfirmedEntityIds(admin, householdId),
+      // An Admin may switch decision 3 back: then a Checking entry's reminders wait until it is confirmed (the 2026-11-03 rule).
+      loadNothingWaits(admin, householdId),
     ]);
+  const holdChecking = nothingWaits.remindChecking === false;
 
   // 1. What the records say deserves a reminder.
   const memberRows = (members.data ?? []) as {
@@ -276,13 +281,17 @@ async function reconcile(
 
   const subjects: ReminderSubject[] = [];
   const schoolRows = new Map<ReminderSubject, SchoolItemRow>();
-  for (const row of (bills.data ?? []) as BillRow[]) if (!checking.has(row.id)) push(subjects, billSubject(row, context));
+  for (const row of (bills.data ?? []) as BillRow[]) {
+    if (!checking.has(row.id)) push(subjects, billSubject(row, context));
+    else if (!holdChecking) push(subjects, notYetConfirmed(billSubject(row, context), true, context.format));
+  }
   const eventRows = (events.data ?? []) as FamilyEventRow[];
   for (const row of (school.data ?? []) as SchoolItemRow[]) {
-    if (checking.has(row.id)) continue;
+    if (holdChecking && checking.has(row.id)) continue;
     // The same occasion as a family event that day is reminded once, by the event.
     if (sameOccasionAsEvent(row, eventRows, timeZone)) continue;
-    const subject = schoolSubject(row, displayNames.get(row.child_member_id) ?? null, context);
+    const read = schoolSubject(row, displayNames.get(row.child_member_id) ?? null, context);
+    const subject = checking.has(row.id) ? notYetConfirmed(read, false, context.format) : read;
     // Something already past its moment is no longer worth grouping with the rest.
     if (subject && subject.expiresAt > now) {
       subjects.push(subject);

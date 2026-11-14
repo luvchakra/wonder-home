@@ -4,6 +4,7 @@ import { headers } from "next/headers";
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
 
+import { confirmByAction } from "@wonderhome/core/homesend/changes";
 import { toErrorBody } from "@wonderhome/core/api/errors";
 import { createAdminClient } from "@wonderhome/core/db/admin";
 import { createClient } from "@wonderhome/core/db/server";
@@ -103,6 +104,8 @@ export async function updateEventAction(_previous: EventActionState, formData: F
         ...(input.visibility ? { visibility: input.visibility } : {}),
       },
     });
+    // Editing an event HomeSend added while Checking confirms it (decision 3, 2026-11-14).
+    await confirmByAction(supabase, input.householdId, input.eventId, membership.memberId);
   } catch (thrown) {
     return { error: toErrorBody(thrown, "family").body.error.message };
   }

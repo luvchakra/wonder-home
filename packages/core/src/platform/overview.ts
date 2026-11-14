@@ -167,6 +167,24 @@ export function jobStatuses(jobs: readonly JobRow[], now: Date): JobStatus[] {
 
 /* ------------------------------------------------------------- needs you */
 
+/**
+ * "Nothing waits" (2026-11-14): raised only when the redesign's promise is
+ * broken somewhere — a household's question open past 48 hours, or an entry
+ * still Checking after 7 days. Both mean the deadlines step isn't running.
+ */
+export function nothingWaitsNeed(metrics: { openByHousehold: readonly { open: number; oldestHours: number }[]; checkingOver7d: number } | null): NeedItem | null {
+  if (!metrics) return null;
+  const late = metrics.openByHousehold.filter((row) => row.oldestHours > 48).length;
+  if (late === 0 && metrics.checkingOver7d === 0) return null;
+  return {
+    kind: "homesend-stuck",
+    severity: "attention",
+    title: late > 0 ? `${late} ${late === 1 ? "household has" : "households have"} a question open past 48 hours` : `${metrics.checkingOver7d} ${metrics.checkingOver7d === 1 ? "entry is" : "entries are"} still Checking after 7 days`,
+    why: "Every question applies its default after 24 hours and nothing waits past 48; this means the clock.homesend-deadlines step isn't running.",
+    action: { label: "See the job runs", href: BACKGROUND_JOBS_RUNS_URL, external: true },
+  };
+}
+
 export type NeedSeverity = "critical" | "attention" | "tidy";
 export type NeedKind =
   | "jobs-failing"
@@ -175,6 +193,7 @@ export type NeedKind =
   | "billing"
   | "jobs-stale"
   | "homesend-failures"
+  | "homesend-stuck"
   | "delivery-failures"
   | "advisor"
   | "payments-failed"

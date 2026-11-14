@@ -5,6 +5,7 @@ import { z } from "zod";
 
 import type { SupabaseClient } from "@supabase/supabase-js";
 
+import { confirmByAction } from "@wonderhome/core/homesend/changes";
 import { may } from "@wonderhome/core/billing/repository";
 import { toErrorBody } from "@wonderhome/core/api/errors";
 import { createAdminClient } from "@wonderhome/core/db/admin";
@@ -203,6 +204,8 @@ export async function updateRecordAction(_previous: ActionState, formData: FormD
       if (upload) await discardReportFile(householdId, upload.path);
       throw thrown;
     }
+    // Editing a health record HomeSend added while Checking confirms it (decision 3, 2026-11-14).
+    await confirmByAction(supabase, householdId, record.id, membership.memberId);
     if (filePath !== undefined && current.filePath && current.filePath !== filePath) {
       // What was read from the old report goes with it.
       await forgetReadingsOf(supabase, householdId, record.id, current.filePath).catch(() => undefined);

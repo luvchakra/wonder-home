@@ -11,6 +11,7 @@ decision that shapes later work each earns a note, written before moving on.
 
 | Date | Note |
 |---|---|
+| 2026-11-14 | [Nothing waits: every item ends as something, defaults after a day, one "Needs you" list (14-067)](2026-11-14-nothing-waits.md) |
 | 2026-11-14 | [HomeBrain knows: memory resolver, household rules, nightly verification, a bar for each kind](2026-11-14-homebrain-knows.md) |
 | 2026-11-08 | [E2E nightly: HomeSend "Add all anyway" one run a minute, across a minute boundary](2026-11-08-homesend-add-all-rolling-limit.md) |
 | 2026-11-08 | [Kids Trivia, PR 2: generated cards per topic, refilled in the background (08-035)](2026-11-08-kids-trivia-generated.md) |

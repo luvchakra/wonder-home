@@ -1319,13 +1319,15 @@ export function buildContextItems(records: ContextRecords, options: BuildOptions
       // What a waiting item says, date included, so "moved to the 29th" is
       // seen as a claim still to be confirmed — never as the day on record.
       const said = item.extracted?.dueDate ?? item.extracted?.documentDate ?? null;
-      const waiting = item.status !== "routed" && item.status !== "dismissed" && item.status !== "undone";
+      const waiting = item.status === "received" || item.status === "classified";
       const saidDay = waiting && said && /^\d{4}-\d{2}-\d{2}/.test(said) ? `, for ${dateOf(new Date(`${said.slice(0, 10)}T12:00:00Z`))}` : "";
       add({
         domain: "homesend",
         entityType: "homesend_item",
         entityId: item.id,
-        summary: `Something sent to HomeSend on ${dateOf(new Date(item.createdAt))} was read as ${kind}${title ? `: ${title}` : ""}${saidDay}${item.status === "routed" ? ", and added" : item.status === "dismissed" ? ", and set aside" : item.status === "undone" ? ", and later undone" : ", and is waiting for someone to confirm it"}.`,
+        summary: item.householdNote
+          ? `A household note, sent to HomeSend on ${dateOf(new Date(item.createdAt))}${title ? `: ${title}` : ""}${item.understanding?.contentSummary ? ` (${item.understanding.contentSummary.slice(0, 200)})` : ""}.`
+          : `Something sent to HomeSend on ${dateOf(new Date(item.createdAt))} was read as ${kind}${title ? `: ${title}` : ""}${saidDay}${item.status === "routed" ? ", and added" : item.status === "dismissed" || item.status === "archived" ? ", and set aside" : item.status === "undone" ? ", and later undone" : ", and is waiting for someone to confirm it"}.`,
         need: "what was sent in to HomeSend",
         privacyClass: homeSendClass(item.classifiedKind),
         subjectMemberIds: [item.createdByMemberId],

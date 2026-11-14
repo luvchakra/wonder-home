@@ -108,10 +108,26 @@ reminders about real records, never lines of text fired and forgotten.
   (`drainJobs` falls back to `notificationJobHandlers`). Admins read counts
   per channel under Manage Household → Notification delivery
   (`delivery-report.ts`).
+- **Checking entries remind** (decision 3, 2026-11-14). An entry HomeSend
+  added that is still Checking (`homesend_changes.confirmation_state`) is
+  reminded like any other record, its words marked through `notYetConfirmed`
+  (`sources.ts`): "… Not yet confirmed." and, for a bill, "… Not yet confirmed
+  — check before paying." (`reminder.checking.body`, `reminder.checking.money`).
+  An Admin's "Remind about entries still Checking" (Settings → AI Assistant)
+  switched off holds them until confirmed, the 2026-11-03 rule.
 - **Notices** (stories 27-004 to 27-014, `notices.ts`, `notices-sweep.ts`). A
   notice is about something that happened and is still true, derived from a
   record exactly like a reminder: one thread per record, idempotent, resolved
-  when the record settles, never fired and forgotten. Today: what waits in
+  when the record settles, never fired and forgotten. Today: HomeSend's one
+  **daily summary** per person (2026-11-14, "Nothing waits";
+  `homesendSummaryNotices`, thread `homesend:summary:<day>`, `reminder.homesend.summary.*`
+  and `reminder.needsYou.*`): "WonderHome added 6 things today · 1 needs a word
+  — it's at the top of HomeTalk", counts only, what was added counted for its
+  sender (a child's or helper's for the Admin), what needs a word for whoever it
+  asks; on a day nothing was added but something needs a word, "2 things need a
+  word". It opens `/ai#needs-you` and resolves the next day. It replaces the
+  per-item and grouped notices below, which speak only while the Needs-you
+  migration is missing. Before it: what waits in
   HomeSend, as one grouped notice per person (thread `homesend:waiting`: "4
   things sent to HomeSend are waiting: 2 school notices, 1 bill, 1 photo or
   file", kinds and counts only, rewritten in place, resolved when nothing

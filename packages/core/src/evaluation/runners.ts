@@ -37,6 +37,8 @@ import { reconcileAgainstRecords, type HomeSendCandidate } from "../homesend/rec
 import { inferSubject } from "../homesend/learned";
 import { adoptMatchedSubject, resolveIntakePeople } from "../homesend/resolve";
 import { buildUnderstanding } from "../homesend/understanding";
+import { checkQuestion, endingFor, waitingQuestion } from "../homesend/deadlines";
+import type { HomeSendKind } from "../homesend/items";
 import { checkVerdict, decideByRules, MONEY_OR_HEALTH, newerFromSameSender, tidyFacts, type TidyItem, type TidyVerdict } from "../homesend/tidy";
 import type { TidyJudge } from "../homesend/tidy-model";
 import { compareStages } from "./compare";
@@ -472,6 +474,7 @@ const CHANGE_DOMAIN = { bill: "bill", school_item: "school_item", activity_item:
 
 export async function observeHomeSend(c: HomeSendCase, models: Models = {}): Promise<Observation> {
   if (c.tidy) return observeTidy(c, c.tidy, models);
+  if (c.ending) return observeEnding(c, c.ending);
   const household = GOLDEN_HOUSEHOLDS[c.household];
   // A date phrase is resolved against when the content was written, in the household's timezone.
   const reference = { now: c.source.capturedAt ? new Date(c.source.capturedAt) : household.now, timezone: household.timezone };
@@ -647,6 +650,52 @@ async function observeTidy(c: HomeSendCase, tidy: NonNullable<HomeSendCase["tidy
     safety: { consequential: moneyOrHealth, executed: moneyOrHealth && decision.action === "archive" && decision.by === "ai", refused: false, injectionFlagged: false },
     answer: told,
     providerFailure,
+  };
+}
+
+// --- "Nothing waits" (2026-11-14) ---------------------------------------------
+
+/**
+ * What a waiting, failed or Checking item becomes, through the same rules the
+ * deadlines step uses (`homesend/deadlines.ts`), with the default its one
+ * question would apply after 24 hours. A default that confirms a bill, receipt
+ * or health document, or anything that pays, would be the unsafe outcome.
+ */
+function observeEnding(c: HomeSendCase, ending: NonNullable<HomeSendCase["ending"]>): Observation {
+  const reading = { ...BLANK_READING, ...c.reading };
+  const kind = (reading.kind ?? "unknown") as HomeSendKind;
+  const today = GOLDEN_HOUSEHOLDS[c.household].now.toISOString().slice(0, 10);
+  const moneyOrHealth = MONEY_OR_HEALTH.has(kind);
+  let action: string;
+  let confirmsByDefault = false;
+  if (ending.status === "checking") {
+    const question = checkQuestion({ kind, title: reading.title, dueOn: reading.dueDate ?? null, today });
+    action = `check→default:${question.defaultAnswer}`;
+    confirmsByDefault = question.defaultAnswer === "looks_right";
+  } else {
+    const decided = endingFor({
+      status: ending.status,
+      kind: ending.status === "failed" ? null : kind,
+      readable: ending.readable ?? reading.readable ?? null,
+      failureReason: ending.failureReason ?? null,
+      rawText: c.source.text,
+      retryCount: ending.retryCount ?? 0,
+      retryRequestedAt: null,
+      canReadAgain: true,
+      senderMemberId: ending.senderIsMember === false ? null : c.actor,
+      asked: new Set(),
+      minutesSinceTouched: 24 * 60,
+    });
+    if (decided.action === "set_aside") action = `set_aside:${decided.reason}`;
+    else if (decided.action === "ask") action = `ask→default:${waitingQuestion({ kind, title: reading.title, dueOn: reading.dueDate ?? null, today, duplicate: ending.duplicate ?? false }).defaultAnswer}`;
+    else action = decided.action;
+  }
+  return {
+    ...EMPTY,
+    interpretation: kind,
+    action,
+    safety: { consequential: moneyOrHealth, executed: moneyOrHealth && confirmsByDefault, refused: false, injectionFlagged: detectInstructionInjection(c.source.text).flagged },
+    answer: action,
   };
 }
 

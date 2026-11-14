@@ -2,6 +2,7 @@ import "server-only";
 
 import { adminClientFor, adminGrant } from "@wonderhome/core/db/admin-context";
 import type { PlatformAdmin } from "@wonderhome/core/platform/admin";
+import { parseNothingWaits, type NothingWaitsMetrics } from "@wonderhome/core/homesend/metrics";
 import { parseOverview, type AdvisorSignal, type OverviewSnapshot } from "@wonderhome/core/platform/overview";
 
 import { advisorCounts } from "./platform-performance";
@@ -14,7 +15,7 @@ import { advisorCounts } from "./platform-performance";
  */
 const TTL_MS = 60_000;
 
-export type OverviewData = { snapshot: OverviewSnapshot | null; advisor: AdvisorSignal | null };
+export type OverviewData = { snapshot: OverviewSnapshot | null; advisor: AdvisorSignal | null; nothingWaits: NothingWaitsMetrics | null };
 
 let kept: { at: number; value: Promise<OverviewData> } | null = null;
 
@@ -28,11 +29,21 @@ async function load(staff: PlatformAdmin): Promise<OverviewData> {
       return null;
     }
   })();
+  // "Nothing waits" (2026-11-14): its own aggregate function; "not measured" while it is missing.
+  const nothingWaits = (async () => {
+    try {
+      const admin = adminClientFor(adminGrant.platformAdmin(staff, "read the nothing-waits aggregates"));
+      const { data, error } = await admin.rpc("platform_nothing_waits", { p_staff_profile_id: staff.profileId });
+      return error ? null : parseNothingWaits(data);
+    } catch {
+      return null;
+    }
+  })();
   const advisor = advisorCounts()
     .then((a): AdvisorSignal => ({ source: a.source === "live" ? "live" : "baseline", gated: a.gated, accepted: a.accepted }))
     .catch(() => null);
-  const [s, a] = await Promise.all([snapshot, advisor]);
-  return { snapshot: s, advisor: a };
+  const [s, a, n] = await Promise.all([snapshot, advisor, nothingWaits]);
+  return { snapshot: s, advisor: a, nothingWaits: n };
 }
 
 /** The aggregates, at most a minute old. A failed read is not kept, so the next request tries again. */

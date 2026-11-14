@@ -64,7 +64,7 @@ describe("runJob", () => {
     const result = await runJob(admin, "clock", { env: {}, runners, now: at("2026-11-07T10:00:00Z") });
     expect(result.ok).toBe(true);
     expect(result.steps.filter((s) => s.state === "left-to-vercel").map((s) => s.step)).toEqual(["clock.homesend-tidy", "clock.homebrain-sleep"]);
-    expect([...rows.keys()].sort()).toEqual(["clock.context-warm", "clock.homesend-archive", "clock.knowledge", "clock.trivia-refill"]);
+    expect([...rows.keys()].sort()).toEqual(["clock.context-warm", "clock.homesend-archive", "clock.homesend-deadlines", "clock.knowledge", "clock.trivia-refill"]);
   });
 
   it("dry run claims, writes and runs nothing", async () => {
@@ -90,12 +90,13 @@ describe("runJob", () => {
         "clock.knowledge": async () => ({}),
         "clock.homesend-archive": async () => ({}),
         "clock.homesend-tidy": async () => ({}),
+        "clock.homesend-deadlines": async () => ({}),
         "clock.homebrain-sleep": async () => ({}),
         "clock.trivia-refill": async () => ({}),
       },
     });
     expect(result.ok).toBe(false);
-    expect(result.steps.map((s) => s.state)).toEqual(["failed", "done", "done", "done", "done", "done"]);
+    expect(result.steps.map((s) => s.state)).toEqual(["failed", "done", "done", "done", "done", "done", "done"]);
     expect(rows.get("clock.context-warm")).toMatchObject({ last_ok_at: null, last_error: "TypeError" });
     expect(rows.get("webhooks")?.last_ok_at).toBe("2026-11-07T09:00:00.000Z");
   });
@@ -159,7 +160,7 @@ describe("an irregular GitHub schedule beside the delivery clock", () => {
         await runJob(admin, "clock", {
           env: ENV,
           now,
-          runners: { "clock.context-warm": async () => ({}), "clock.knowledge": async () => ({}), "clock.homesend-archive": async () => ({}), "clock.homesend-tidy": tidy("github"), "clock.homebrain-sleep": async () => ({}) },
+          runners: { "clock.context-warm": async () => ({}), "clock.knowledge": async () => ({}), "clock.homesend-archive": async () => ({}), "clock.homesend-tidy": tidy("github"), "clock.homesend-deadlines": async () => ({}), "clock.homebrain-sleep": async () => ({}) },
         });
       } else {
         const fresh = await ranOnGitHub(admin, ["clock.homesend-tidy"], now);

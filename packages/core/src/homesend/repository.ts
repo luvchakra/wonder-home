@@ -120,6 +120,27 @@ export async function listHomeSendItems(
 }
 
 /**
+ * The household's notes (2026-11-14, "Nothing waits"): items HomeSend
+ * couldn't tell the kind of, kept rather than left waiting. They are the
+ * HomeSend items themselves (archived, reason `kept_as_note`): the words stay
+ * where they arrived, on HomeSend's own table, with their source, audit and
+ * Restore — never copied into HomeBrain's memories, where untrusted content
+ * would read as a belief. HomeTalk reads them as context, newest first.
+ */
+export async function listHouseholdNotes(supabase: SupabaseClient, householdId: string, limit = 30): Promise<HomeSendItem[]> {
+  const { data, error } = await supabase
+    .from("home_send_items")
+    .select(SELECT_COLUMNS)
+    .eq("household_id", householdId)
+    .eq("status", "archived")
+    .eq("archive_reason", "kept_as_note")
+    .order("created_at", { ascending: false })
+    .limit(limit);
+  if (error) return [];
+  return ((data ?? []) as Row[]).map((row) => ({ ...fromRow(row), householdNote: true }));
+}
+
+/**
  * Receipts this household already recorded, as they were read — shop, day and
  * total — for catching the same receipt sent twice (HomeFood 25-003b). An
  * undone receipt is not recorded any more and does not count.
