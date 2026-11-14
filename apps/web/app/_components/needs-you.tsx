@@ -3,7 +3,33 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 import type { Translate } from "@wonderhome/core/i18n/translate";
 import type { NeedsYouItem } from "@wonderhome/core/hometalk/needs-you";
 import { loadNeedsYou } from "@wonderhome/core/hometalk/needs-you-repository";
-import { NeedsYouList, type NeedsYouRow } from "./needs-you-list";
+import { GraduationCap, HeartPulse, Inbox, MessageCircle, ReceiptText, ShoppingBasket } from "lucide-react";
+
+import { ButtonLink } from "@wonderhome/core/ui/button";
+import { Card } from "@wonderhome/core/ui/card";
+import { IconTile, type IconTone } from "@wonderhome/core/ui/icon-tile";
+import { SectionHeader } from "@wonderhome/core/ui/section-header";
+import { NeedsYouAnswers } from "./needs-you-list";
+
+type NeedsYouRow = {
+  id: string;
+  kind: string | null;
+  prompt: string;
+  defaultLine: string;
+  answers: { value: string; label: string }[];
+  /** Answered where it lives (a HomeTalk proposal, an approval). */
+  href: string | null;
+  openLabel: string;
+};
+
+function iconFor(kind: string | null): { icon: typeof Inbox; tone: IconTone } {
+  if (kind === "bill" || kind === "receipt" || kind === "purchase") return { icon: ReceiptText, tone: "money" };
+  if (kind === "school_item" || kind === "activity_item") return { icon: GraduationCap, tone: "school" };
+  if (kind === "health_document") return { icon: HeartPulse, tone: "health" };
+  if (kind === "grocery_item") return { icon: ShoppingBasket, tone: "meals" };
+  if (kind && !kind.includes("homesend")) return { icon: MessageCircle, tone: "ai" };
+  return { icon: Inbox, tone: "ai" };
+}
 
 /**
  * The one "Needs you" list (2026-11-14, decision 4), at the top of HomeTalk
@@ -38,21 +64,37 @@ export async function NeedsYou({
     href: item.answeredInPlace ? null : (item.prompt.href ?? "/ai"),
     openLabel: t("needsYou.answer.open"),
   }));
+  const answerLabels = { done: t("needsYou.result.done"), settled: t("needsYou.result.settled"), failed: t("needsYou.result.failed") };
+  // Each row (rule 4): tinted tile, the question, what happens if nobody answers and when, then the tap answers.
   return (
-    <NeedsYouList
-      householdId={householdId}
-      rows={rows}
-      total={list.total}
-      className={className}
-      labels={{
-        title: t("needsYou.title"),
-        lede: t("needsYou.lede"),
-        more: list.total > list.shown.length ? t("needsYou.more", { count: list.total - list.shown.length }) : null,
-        done: t("needsYou.result.done"),
-        settled: t("needsYou.result.settled"),
-        failed: t("needsYou.result.failed"),
-      }}
-    />
+    <Card id="needs-you" className={className}>
+      <SectionHeader title={t("needsYou.title")} count={list.total} />
+      <p className="mt-1 text-sm text-[var(--wh-foreground-muted)]">{t("needsYou.lede")}</p>
+      <ul className="mt-3 grid gap-3">
+        {rows.map((row) => {
+          const { icon, tone } = iconFor(row.kind);
+          return (
+            <li key={row.id} className="flex gap-3 rounded-[var(--wh-radius-sm)] border border-[var(--wh-border)] bg-[var(--wh-background)] p-3">
+              <IconTile icon={icon} tone={tone} />
+              <div className="min-w-0 flex-1">
+                <p className="text-sm font-medium break-words text-[var(--wh-foreground)]">{row.prompt}</p>
+                <p className="mt-1 text-xs text-[var(--wh-foreground-muted)]">{row.defaultLine}</p>
+                {row.href ? (
+                  <div className="mt-2">
+                    <ButtonLink href={row.href} variant="secondary">
+                      {row.openLabel}
+                    </ButtonLink>
+                  </div>
+                ) : (
+                  <NeedsYouAnswers householdId={householdId} id={row.id} answers={row.answers} labels={answerLabels} />
+                )}
+              </div>
+            </li>
+          );
+        })}
+      </ul>
+      {list.total > list.shown.length ? <p className="mt-3 text-sm text-[var(--wh-foreground-muted)]">{t("needsYou.more", { count: list.total - list.shown.length })}</p> : null}
+    </Card>
   );
 }
 
