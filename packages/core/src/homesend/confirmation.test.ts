@@ -235,4 +235,27 @@ describe("record first (the owner, 2026-11-14; decisions 1, 2 and 5)", () => {
     // Its content is still untrusted: instructions inside it hold it.
     expect(decide({ memberInitiated: false, trustedSender: true, understanding: { ...CLEAR.understanding!, safety: { instructionsIgnored: true, signals: ["instruction"] } } }).mode).toBe("prepare");
   });
+
+  it("records an event or a class's day on its own on \"Only actions\", and waits on \"Everything\" (14-068, record first)", () => {
+    const dinner = { kind: "event" as const, extracted: { title: "Diwali dinner", dueDate: "2026-11-07", needs: [], confidence: "high" as const }, autonomy: "prepare" as const };
+    const recorded = decide({ ...dinner, approvalScope: "actions" });
+    expect(recorded).toMatchObject({ mode: "auto_apply" });
+    expect(recorded.unconfirmed).toBeUndefined();
+    expect(recorded.reason).toContain("put it on the family calendar");
+    expect(recorded.reason).not.toContain("Wait for Approval");
+    // Below the bar: recorded, marked Checking.
+    expect(decide({ ...dinner, approvalScope: "actions", understanding: { ...CLEAR.understanding!, score: 0.9 } })).toMatchObject({ mode: "auto_apply", unconfirmed: true });
+    // Switched back, or unset: waits, as on 3 Nov.
+    expect(decide({ ...dinner, approvalScope: "everything" }).mode).toBe("prepare");
+    expect(decide(dinner).mode).toBe("prepare");
+    // Still never without its day, nor from someone outside the household.
+    expect(decide({ ...dinner, approvalScope: "actions", extracted: { ...dinner.extracted, dueDate: null } }).mode).toBe("ask");
+    expect(decide({ ...dinner, approvalScope: "actions", memberInitiated: false }).mode).toBe("prepare");
+    expect(decide({ ...dinner, approvalScope: "actions", memberInitiated: false, trustedSender: true }).mode).toBe("auto_apply");
+
+    const karate = { kind: "activity_item" as const, extracted: { title: "Grading exam", subject: "Karate", dueDate: "2026-10-25", needs: [], confidence: "high" as const }, autonomy: "prepare" as const, approvalScope: "actions" as const };
+    const asmi = { memberId: "asmi", displayName: "Asmi", memberType: "child" as const };
+    expect(decide({ ...karate, subject: { question: null, selected: asmi } })).toMatchObject({ mode: "auto_apply" });
+    expect(decide({ ...karate, subject: null })).toMatchObject({ mode: "ask", question: "Who is this for?" });
+  });
 });

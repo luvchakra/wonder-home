@@ -1,5 +1,6 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 
+import { ACTIVITY_ITEM_KINDS } from "@wonderhome/core/ai/classify-intake";
 import { CONSUMABLE_CATEGORIES } from "@wonderhome/core/commerce/consumables";
 import { type AddedOnItsOwn, DEFAULT_AUTO_ADD_PERCENT, scorePercent, sureWhy, type WaitingInHomeSend } from "@wonderhome/core/homesend/auto-add";
 import { beginChecking } from "@wonderhome/core/hometalk/checking-questions";
@@ -23,6 +24,8 @@ const WHERE: Partial<Record<HomeSendKind, string>> = {
   bill: "Bills",
   receipt: "Groceries",
   health_document: "Health",
+  event: "Calendar",
+  activity_item: "Kids & School",
 };
 
 /**
@@ -76,7 +79,7 @@ export async function autoApplyHomeSendItem(
   const auto = options.decision === "added" && !options.checking ? undefined : autoState(options.checking);
   // A receipt's lines are a person's choices on its own form; only "add on its own" (or "add all anyway") records them all as new.
   if (item.kind === "receipt") return options.decision === "added" && !options.checking ? null : autoRecordReceipt(supabase, membership, { id: item.id, title, extracted }, auto);
-  if (item.kind !== "grocery_item" && item.kind !== "school_item" && item.kind !== "bill" && item.kind !== "health_document") return null;
+  if (!isRoutedKind(item.kind)) return null;
   const input: RouteInput = {
     householdId,
     itemId: item.id,
@@ -89,6 +92,9 @@ export async function autoApplyHomeSendItem(
     dueTime: extracted?.dueTime ?? undefined,
     endTime: extracted?.endTime ?? undefined,
     childMemberId: item.subject?.selected?.memberId,
+    // A class outside school: which class (the reading's subject) and what it has on the day.
+    activityName: item.kind === "activity_item" ? (extracted?.subject?.trim().slice(0, 120) ?? undefined) : undefined,
+    activityKind: item.kind === "activity_item" ? ACTIVITY_ITEM_KINDS.find((kind) => kind === extracted?.activityKind) : undefined,
     schoolKind: SCHOOL_ITEM_KINDS.find((schoolKind) => schoolKind === extracted?.schoolKind),
     subject: extracted?.subject ?? undefined,
     quantity: extracted?.quantity ?? undefined,
@@ -105,6 +111,7 @@ export async function autoApplyHomeSendItem(
     needs: [],
   };
   if (item.kind === "health_document" && !input.subjectMemberId) return null;
+  if (item.kind === "activity_item" && (!input.childMemberId || !input.activityName)) return null;
   if (options.update) return autoMove(supabase, membership, { ...input, title: options.update.title || input.title }, options.update, where, autoState(options.checking));
   const created = await createNew(supabase, membership, input);
   if ("error" in created) return null;
@@ -122,7 +129,17 @@ export async function autoApplyHomeSendItem(
     ...(created.changeType === "updated" ? { changeType: "updated" as const, previous: created.previous ?? {} } : {}),
     ...(auto ? { auto } : {}),
   });
+  // Anything it had to add first (a class the child did not have yet) is its own change, undone with it.
+  for (const also of created.also ?? []) {
+    await recordHomeSendChange(supabase, { householdId, intakeId: item.id, domain: also.domain, entityId: also.entityId, createdByMemberId: membership.memberId });
+  }
   return { changeId: change.id, title, where, ...(created.more ? { more: created.more } : {}) };
+}
+
+/** The kinds `createNew` files on its own; a receipt has its own path above. */
+const ROUTED_KINDS = ["grocery_item", "school_item", "bill", "health_document", "event", "activity_item"] as const;
+function isRoutedKind(kind: HomeSendKind): kind is (typeof ROUTED_KINDS)[number] {
+  return (ROUTED_KINDS as readonly string[]).includes(kind);
 }
 
 /** A record on file moved to its new day on its own (14-066, part 3): the same write, change row, audit and Undo as a person's "Update". */
@@ -215,7 +232,8 @@ export async function addIfAllowed(
   supabase: SupabaseClient,
   membership: HouseholdMembership,
   itemId: string,
-  options: { createdByMemberId?: string } = {},
+  /** `source` names where it came from in the audit, when not the item's own (a trusted sender's email). */
+  options: { createdByMemberId?: string; source?: string } = {},
 ): Promise<AddedOnItsOwn | WaitingInHomeSend | null> {
   const item = await getHomeSendItem(supabase, membership.household.id, itemId);
   if (!item || item.status !== "classified" || !item.classifiedKind) return null;
@@ -230,7 +248,7 @@ export async function addIfAllowed(
     supabase,
     membership,
     { id: item.id, kind: item.classifiedKind, extracted: item.extracted, subject: review.subject },
-    { checking: { unconfirmed, confidence: review.understanding?.score ?? null, source: item.source }, ...(review.confirmation.update ? { update: review.confirmation.update } : {}) },
+    { checking: { unconfirmed, confidence: review.understanding?.score ?? null, source: options.source ?? item.source }, ...(review.confirmation.update ? { update: review.confirmation.update } : {}) },
   );
   // How sure, and why, goes with every "added on its own" message (design §7).
   if (!applied) return null;

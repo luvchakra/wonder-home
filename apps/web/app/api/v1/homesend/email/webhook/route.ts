@@ -4,6 +4,8 @@ import { createAdminClient } from "@wonderhome/core/db/admin";
 import { platformResendConfig } from "@wonderhome/core/homesend/email-gateway";
 import { handleEmailWebhook } from "@wonderhome/core/homesend/email-webhook";
 
+import { trustedEmailAutoAdd } from "@/app/_lib/homesend-trusted-email";
+
 /**
  * The email intake channel's front door (HomeSend Phase 2). Everything it
  * does is `handleEmailWebhook` (`packages/core/src/homesend/email-webhook.ts`),
@@ -22,7 +24,8 @@ import { handleEmailWebhook } from "@wonderhome/core/homesend/email-webhook";
  */
 export async function POST(request: Request): Promise<Response> {
   const config = platformResendConfig();
-  return handleEmailWebhook(request, { config, supabase: config ? createAdminClient() : (null as never), defer: (work) => after(work) });
+  const supabase = config ? createAdminClient() : null;
+  return handleEmailWebhook(request, { config, supabase: supabase ?? (null as never), defer: (work) => after(work), ...(supabase ? { addTrusted: trustedEmailAutoAdd(supabase) } : {}) });
 }
 
 export const dynamic = "force-dynamic";

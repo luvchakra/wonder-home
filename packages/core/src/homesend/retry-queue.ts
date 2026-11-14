@@ -4,6 +4,7 @@ import { log } from "../observability/logger";
 import { rereadFailedItem, understand, type IngestDeps } from "./ingest";
 import { clearHomeSendRetryRequested, getHomeSendItem, markHomeSendFailed } from "./repository";
 import { notificationJobHandlers } from "../notifications/retry-handler";
+import type { TrustedEmailAdd } from "./trusted-arrival";
 
 /**
  * Persist first, retry where safe (Wave 5 §15 async processing, §16
@@ -81,7 +82,14 @@ export type DrainOutcome = { claimed: number; succeeded: number; retried: number
  */
 export async function drainJobs(
   admin: SupabaseClient,
-  options: { limit?: number; workerId?: string; deps?: IngestDeps; handlers?: Record<string, JobHandler> } = {},
+  options: {
+    limit?: number;
+    workerId?: string;
+    deps?: IngestDeps;
+    handlers?: Record<string, JobHandler>;
+    /** Adds an email read here on its own when its sender is trusted (`trusted-arrival.ts`), e.g. mail held until "Trust". */
+    addTrusted?: TrustedEmailAdd;
+  } = {},
 ): Promise<DrainOutcome> {
   const { data, error } = await admin.rpc("claim_jobs", { p_worker_id: options.workerId ?? "wonderhome", p_limit: options.limit ?? 10, p_lease_seconds: LEASE_SECONDS });
   if (error) throw new Error(`claim_jobs failed: ${error.code ?? "unknown"}`);
@@ -93,7 +101,7 @@ export async function drainJobs(
     try {
       const handler =
         job.kind === CLASSIFY_RETRY_KIND
-          ? (a: SupabaseClient, j: ClaimedJob) => retryClassification(a, j, options.deps)
+          ? (a: SupabaseClient, j: ClaimedJob) => retryClassification(a, j, options.deps, options.addTrusted)
           : job.kind === REREAD_KIND
             ? (a: SupabaseClient, j: ClaimedJob) => rereadJob(a, j, options.deps)
             : options.handlers?.[job.kind] ?? notificationJobHandlers()[job.kind];
@@ -115,7 +123,7 @@ export async function drainJobs(
   return outcome;
 }
 
-async function retryClassification(admin: SupabaseClient, job: ClaimedJob, deps?: IngestDeps): Promise<"read" | "skipped" | "failed"> {
+async function retryClassification(admin: SupabaseClient, job: ClaimedJob, deps?: IngestDeps, addTrusted?: TrustedEmailAdd): Promise<"read" | "skipped" | "failed"> {
   const itemId = typeof job.payload?.itemId === "string" ? job.payload.itemId : null;
   if (!itemId || !job.household_id) return "skipped";
   const item = await getHomeSendItem(admin, job.household_id, itemId);
@@ -142,7 +150,10 @@ async function retryClassification(admin: SupabaseClient, job: ClaimedJob, deps?
     },
     deps,
   );
-  return outcome.classifyFailed ? "failed" : "read";
+  if (outcome.classifyFailed) return "failed";
+  // An email read now (mail held until "Trust this sender?", or read late) is added like one read on arrival.
+  if (channel === "email" && item.createdByMemberId === null && addTrusted) await addTrusted({ householdId: job.household_id, itemId: item.id });
+  return "read";
 }
 
 /**

@@ -25,6 +25,7 @@ import { whatsappConfigFromEnv } from "@wonderhome/core/notifications/whatsapp";
 import { WHATSAPP_PROCESS_KIND, whatsappJobHandler } from "@wonderhome/core/whatsapp/intake";
 import { log } from "@wonderhome/core/observability/logger";
 
+import { trustedEmailAutoAdd } from "@/app/_lib/homesend-trusted-email";
 import { whatsappAsk, whatsappAutoAdd } from "@/app/_lib/whatsapp-hometalk";
 
 /**
@@ -155,6 +156,8 @@ async function dispatch(request: Request): Promise<Response> {
         limit: 10,
         workerId: "dispatch",
         handlers: { ...notificationJobHandlers(), ...(whatsapp ? { [WHATSAPP_PROCESS_KIND]: whatsappJobHandler({ config: whatsapp.adapter, ask: whatsappAsk(createAdminClient()), addOnItsOwn: whatsappAutoAdd(createAdminClient()) }) } : {}) },
+        // An email read on the queue (held until "Trust this sender?") is added on its own when its sender is trusted.
+        addTrusted: trustedEmailAutoAdd(admin),
       });
     } catch (thrown) {
       log.warn("notification retry drain failed", { reason: thrown instanceof Error ? thrown.name : "unknown" });

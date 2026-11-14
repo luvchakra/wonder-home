@@ -311,7 +311,11 @@ async function reconcile(
     const pet = Array.isArray(row.pets) ? row.pets[0] : row.pets;
     if (pet?.active) push(subjects, petSubject({ ...row, pet_name: pet.name }, context));
   }
-  for (const row of eventRows) push(subjects, familySubject(row, context));
+  // A calendar entry HomeSend recorded as Checking reminds too, marked "not yet confirmed" (14-068, events recorded first).
+  for (const row of eventRows) {
+    if (!checking.has(row.id)) push(subjects, familySubject(row, context));
+    else if (!holdChecking) push(subjects, notYetConfirmed(familySubject(row, context), false, context.format));
+  }
 
   // 2. Who is responsible, and how they like to be reminded.
   const directory = buildDirectory(memberRows, roles.data ?? [], responsibilities.data ?? [], guardians.data ?? []);

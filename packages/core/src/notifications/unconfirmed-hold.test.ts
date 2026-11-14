@@ -54,4 +54,30 @@ describe("a Checking entry reminds, marked not yet confirmed", () => {
   it("holds nothing in another household", async () => {
     expect(await run([change({ household_id: "h2" })])).toHaveLength(1);
   });
+
+  it("reminds about a calendar entry HomeSend recorded as Checking, marked not yet confirmed (14-068)", async () => {
+    // Tomorrow at 20:00 in Kolkata.
+    const event = { id: "e1", household_id: "h1", title: "Diwali dinner", kind: "event", starts_at: "2026-10-23T14:30:00Z", status: "planned", owner_member_id: "m1" };
+    const runEvent = async (changes: Record<string, unknown>[], policies: Record<string, unknown>[] = []) => {
+      const { client, tables } = memoryDatabase({
+        households: [{ id: "h1", timezone: "Asia/Kolkata", region: "IN", currency: "INR", measurement_system: "metric", default_language: "en", status: "active" }],
+        household_members: [{ id: "m1", household_id: "h1", profile_id: "u1", member_type: "adult", status: "active", display_name: "Kunal", nickname: null, date_of_birth: null }],
+        household_roles: [{ household_id: "h1", member_id: "m1", role: "head" }],
+        family_events: [event],
+        homesend_changes: changes,
+        policies,
+        notifications: [],
+      } as Record<string, Record<string, unknown>[]>);
+      await reconcileHouseholdReminders(client, "h1", { now, force: true, adapters: CHANNEL_ADAPTERS });
+      return (tables.notifications ?? []).filter((row) => row.source_type === "family_event");
+    };
+    const checking = change({ domain: "event", entity_id: "e1" });
+    const reminders = await runEvent([checking]);
+    expect(reminders).toHaveLength(1);
+    expect(reminders[0]!.body).toMatch(/Not yet confirmed/);
+    expect(reminders[0]!.body).not.toMatch(/before paying/);
+    expect(await runEvent([{ ...checking, confirmation_state: "confirmed" }]).then((rows) => rows[0]!.body)).not.toMatch(/Not yet confirmed/);
+    const off = { household_id: "h1", category: "ai_autonomy", name: "Remind about entries still Checking", active: true, rule: { on: false } };
+    expect(await runEvent([checking], [off])).toEqual([]);
+  });
 });
