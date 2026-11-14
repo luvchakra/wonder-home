@@ -16,6 +16,8 @@ import { embedderFor, namesIn, readVectors, refreshEmbeddings, withoutNames } fr
 import { ruleLinks, validModelLinks, type HomeBrainLink } from "./links";
 import { createSleepModel, type SleepModel } from "./sleep-model";
 import { cosine } from "./similarity";
+import { verifyHousehold, type NeedsSink } from "../verify-night-run";
+import { defaultNeedsSink } from "../needs-sink";
 
 /**
  * One household's night (HomeBrain Sleep): read everything it remembers,
@@ -262,7 +264,12 @@ function linkCandidates(items: readonly HouseholdContextItem[], policy: DataUseP
 // --- the night ------------------------------------------------------------------------
 
 /** One household's sleep. Null when it already slept today, or when another instance is sleeping it. */
-export async function sleepHousehold(admin: SupabaseClient, householdId: string, now: Date = new Date(), options: { model?: SleepModel | null } = {}): Promise<SleepResult | null> {
+export async function sleepHousehold(
+  admin: SupabaseClient,
+  householdId: string,
+  now: Date = new Date(),
+  options: { model?: SleepModel | null; needs?: NeedsSink | null } = {},
+): Promise<SleepResult | null> {
   const { data: household } = await admin.from("households").select("name, timezone").eq("id", householdId).maybeSingle();
   if (!household) return null;
   const timezone = (household as Row).timezone as string;
@@ -351,6 +358,15 @@ export async function sleepHousehold(admin: SupabaseClient, householdId: string,
       links.push(...named.filter((link) => !links.some((rule) => (rule.from === link.from && rule.to === link.to) || (rule.from === link.to && rule.to === link.from))));
     }
     count("linked", await saveLinks(admin, householdId, links, new Set(fresh.map((item) => item.id))));
+
+    // Verify after, not before (Nothing stuck in review, phase 3): each kind's bar, Checking entries the
+    // evidence supports, and only real conflicts to the household's "Needs you" list.
+    const verified = await verifyHousehold(admin, householdId, now, options.needs === undefined ? defaultNeedsSink() : options.needs);
+    count("verified_checked", verified.checked);
+    count("verified_confirmed", verified.confirmed);
+    count("verified_conflicts", verified.conflicts);
+    count("verified_raised", verified.raised);
+    count("kind_bars", verified.bars);
 
     await admin.from("homebrain_runs").update({ outcome: "done", finished_at: new Date().toISOString(), counts, model_provider: model?.provider ?? null }).eq("id", runId);
     return { householdId, localDate: today, counts, modelProvider: model?.provider ?? null };

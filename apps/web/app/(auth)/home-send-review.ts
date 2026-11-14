@@ -4,7 +4,7 @@ import { listGroceries } from "@wonderhome/core/commerce/inventory";
 import { loadHouseholdContext } from "@wonderhome/core/context/repository";
 import { listResponsibilities } from "@wonderhome/core/household/configuration-repository";
 import type { AutonomyMode } from "@wonderhome/core/household/autonomy";
-import { loadAutoAddPercent } from "@wonderhome/core/household/auto-add-repository";
+import { loadAutomationBar } from "@wonderhome/core/homebrain/kind-bar-repository";
 import { loadDirectAdd } from "@wonderhome/core/household/direct-add-repository";
 import { duplicateReceipt } from "@wonderhome/core/commerce/receipt-stock";
 import { directAddAreaOf, NO_DIRECT_ADD, type DirectAdd } from "@wonderhome/core/homesend/auto-add";
@@ -158,7 +158,7 @@ export async function prepareReview(
     const read = item.extracted;
     const [autonomy, autoAddPercent, duplicate] = await Promise.all([
       autonomyFor(supabase, membership.household.id, kind),
-      loadAutoAddPercent(supabase, membership.household.id),
+      loadAutomationBar(supabase, membership.household.id, kind).then((bar) => bar.percent),
       listRecordedReceipts(supabase, membership.household.id)
         .then((recorded) => duplicateReceipt({ id: item.id ?? "", merchant: read.merchant ?? null, purchasedOn: read.documentDate ?? null, total: read.amount ?? null }, recorded) !== null)
         // What is on record couldn't be read: treated as a duplicate, so a person looks first.
@@ -224,7 +224,8 @@ export async function prepareReview(
   const [autonomy, autoAddPercent, onShoppingList, directAdd] = checked
     ? await Promise.all([
         autonomyFor(supabase, membership.household.id, kind),
-        AUTO_APPLY_OUTCOMES[kind] ? loadAutoAddPercent(supabase, membership.household.id) : undefined,
+        // Each kind's bar: the Admin's, or the household's own accuracy for this kind (HomeBrain knows).
+        AUTO_APPLY_OUTCOMES[kind] ? loadAutomationBar(supabase, membership.household.id, kind).then((bar) => bar.percent) : undefined,
         listedCheck ? onTheList(supabase, membership.household.id, item.extracted.title) : false,
         area ? loadDirectAdd(supabase, membership.household.id).catch(() => NO_DIRECT_ADD) : NO_DIRECT_ADD,
       ])
