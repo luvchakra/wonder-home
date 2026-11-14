@@ -11,7 +11,6 @@ export const settingsHi: AreaCatalog<typeof settingsEn> = {
   "settingsPage.replaceKey": "कुंजी बदलें",
   "settingsPage.aMember": "एक सदस्य",
   "settingsPage.listSeparator": ", ",
-
   "settingsPage.ai.title": "AI सहायक",
   "settingsPage.ai.lede": "{household} के लिए कौन-सा मॉडल जवाब देता है, और उसे क्या बताया जा सकता है।",
   "settingsPage.ai.section.key": "प्रदाता और कुंजी",
@@ -23,13 +22,19 @@ export const settingsHi: AreaCatalog<typeof settingsEn> = {
   "settingsPage.ai.autoAdd.title": "ख़ुद जोड़ने के लिए HomeSend को कितना पक्का होना चाहिए",
   "settingsPage.ai.autoAdd.detail": "Pre Approved वाले परिणामों में, जो आप WhatsApp पर भेजते हैं, HomeTalk को बताते हैं या किसी और तरह साझा करते हैं — फ़ोटो और फ़ाइलें भी — वह सीधे जुड़ जाता है। जब WonderHome को इससे ज़्यादा भरोसा हो, बस इतना ही; जब न हो, तो एंट्री पर \"जाँच जारी\" लिखा रहता है और उसके रिमाइंडर तब तक रुकते हैं जब तक आप उसे सही न बताएँ। बिल, रसीदें और स्वास्थ्य दस्तावेज़ आपका इंतज़ार करते हैं, जब तक आप नीचे अनुमति न दें। जाँच जारी रहने तक HomeTalk भेजने वाले से (WhatsApp पर भी) ज़्यादा से ज़्यादा तीन छोटे सवाल पूछता है जब तक भरोसा काफ़ी न हो जाए; जो आपके संदेश में है ही नहीं, उसका नाम लेने वाली चीज़ कभी नहीं जोड़ी जाती।",
   "settingsPage.ai.autoAdd.option": "{percent}% से ज़्यादा",
-  "settingsPage.ai.directAdd.money.title": "पैसों से जुड़ी प्रविष्टियाँ सीधे जोड़ें",
-  "settingsPage.ai.directAdd.money.on": "चालू: आप जो बिल या रसीद लिखकर, फ़ॉरवर्ड करके या HomeTalk को बताकर भेजते हैं, वह बिना पूछे जुड़ती है, पर तभी जब ज़िम्मेदारियाँ में “समय पर बिल भुगतान” (रसीद के लिए “मासिक बजट जाँच”) Pre Approved हो और WonderHome को आपकी सीमा से ज़्यादा भरोसा हो। बाद में आपको बताया जाता है, Undo के साथ। कभी कुछ भुगतान नहीं होता।",
-  "settingsPage.ai.directAdd.money.off": "बंद: हर बिल और रसीद आपकी जाँच का इंतज़ार करती है।",
-  "settingsPage.ai.directAdd.health.title": "स्वास्थ्य प्रविष्टियाँ सीधे जोड़ें",
-  "settingsPage.ai.directAdd.health.on": "चालू: आप जो स्वास्थ्य दस्तावेज़ लिखकर, फ़ॉरवर्ड करके या HomeTalk को बताकर भेजते हैं, वह बिना पूछे जुड़ता है, पर तभी जब ज़िम्मेदारियाँ में “स्वास्थ्य रिकॉर्ड रखे गए” Pre Approved हो और WonderHome को आपकी सीमा से ज़्यादा भरोसा हो। यह उसी व्यक्ति तक निजी रहता है, और बच्चे का रिकॉर्ड उसके अभिभावकों तक। बाद में आपको बताया जाता है, Undo के साथ।",
-  "settingsPage.ai.directAdd.health.off": "बंद: हर स्वास्थ्य दस्तावेज़ आपकी जाँच का इंतज़ार करता है।",
-  "settingsPage.ai.directAdd.files": "ज़्यादातर बिल, रसीदें और रिपोर्ट फ़ोटो या PDF के रूप में आती हैं। उन्हें शब्द-दर-शब्द जाँचा नहीं जा सकता, इसलिए वे अब भी आपका इंतज़ार करती हैं।",
+  "settingsPage.ai.recordFirst.approvalScope.title": "“Wait for Approval” क्या रोकता है",
+  "settingsPage.ai.recordFirst.approvalScope.detail": "Wait for Approval वाली ज़िम्मेदारियों के लिए। केवल काम: आप जो भेजते या कहते हैं वह दर्ज होता है, और भुगतान, ऑर्डर या बुकिंग हाँ का इंतज़ार करते हैं। सब कुछ: किसी की मंज़ूरी तक कुछ दर्ज नहीं होता।",
+  "settingsPage.ai.recordFirst.approvalScope.actions": "केवल काम (सुझाया गया)",
+  "settingsPage.ai.recordFirst.approvalScope.everything": "सब कुछ",
+  "settingsPage.ai.recordFirst.moneyHealth.title": "पैसे और स्वास्थ्य की एंट्री",
+  "settingsPage.ai.recordFirst.moneyHealth.detail": "HomeSend में भेजे गए बिल, रसीदें और स्वास्थ्य दस्तावेज़। जाँच जारी के रूप में, हर एक की पुष्टि एक टैप से होती है; पुष्ट के रूप में, केवल तब जब WonderHome आपकी सीमा से ज़्यादा पक्का हो। जाँच जारी वाला बिल भुगतान से पहले जाँचने की याद दिलाता है। स्वास्थ्य दस्तावेज़ उसी व्यक्ति के स्वास्थ्य रिकॉर्ड में जाता है, जो उनके लिए निजी रहता है, और बच्चे का उसके अभिभावकों तक। कभी कुछ भुगतान नहीं होता।",
+  "settingsPage.ai.recordFirst.moneyHealth.checking": "जाँच जारी (सुझाया गया)",
+  "settingsPage.ai.recordFirst.moneyHealth.confirmed": "सीमा से ऊपर पुष्ट",
+  "settingsPage.ai.recordFirst.moneyHealth.review": "समीक्षा की प्रतीक्षा",
+  "settingsPage.ai.recordFirst.outsideSenders.title": "नए भेजने वालों का ईमेल",
+  "settingsPage.ai.recordFirst.outsideSenders.detail": "घर के बाहर के किसी व्यक्ति से आपके घर के HomeSend पते पर आया मेल। एक बार पूछें: Admins से पूछा जाता है “इस भेजने वाले पर भरोसा करें?”, मेल बिना पढ़े इंतज़ार करता है, और भरोसेमंद भेजने वाले का मेल आगे से सीधे आता है। केवल Admin द्वारा जोड़े गए: बाकी सब बिना पढ़े छोड़ दिए जाते हैं।",
+  "settingsPage.ai.recordFirst.outsideSenders.ask_once": "एक बार पूछें (सुझाया गया)",
+  "settingsPage.ai.recordFirst.outsideSenders.review": "केवल Admin द्वारा जोड़े गए",
   "settingsPage.ai.homesendTidy.title": "जो अब लागू नहीं, उसे हटाएँ",
   "settingsPage.ai.homesendTidy.on": "चालू: दिन में एक बार HomeSend इंतज़ार कर रही वे चीज़ें संग्रह में भेजता है जिनका दिन बीत गया, जो पहले से दर्ज हैं या जिनकी जगह नई आ गई। कुछ भी मिटाया नहीं जाता।",
   "settingsPage.ai.homesendTidy.off": "बंद: इंतज़ार कर रही चीज़ें तब तक रहती हैं जब तक आप उन्हें न देखें, या 30 दिन तक न छुई जाएँ।",
@@ -102,7 +107,6 @@ export const settingsHi: AreaCatalog<typeof settingsEn> = {
   "settingsPage.aiKey.newKey": "नई कुंजी",
   "settingsPage.aiKey.newKeyPlaceholder": "बदलने के लिए नई कुंजी चिपकाएँ",
   "settingsPage.aiKey.remove": "हटाएँ और WonderHome की कुंजी पर लौटें",
-
   "settingsPage.dataUse.nothing": "आपके घर के बारे में कुछ भी किसी मॉडल प्रदाता को नहीं भेजा जाता। सहायक केवल अपने नियमों से जवाब देता है।",
   "settingsPage.dataUse.maxItems#one": "केवल उतना जितना जवाब देने के लिए ज़रूरी है, और एक बार में कभी {count} से ज़्यादा चीज़ नहीं।",
   "settingsPage.dataUse.maxItems#other": "केवल उतना जितना जवाब देने के लिए ज़रूरी है, और एक बार में कभी {count} से ज़्यादा चीज़ें नहीं।",
@@ -139,7 +143,6 @@ export const settingsHi: AreaCatalog<typeof settingsEn> = {
   "settingsPage.dataUseForm.footer":
     "कुंजियाँ और टोकन कभी नहीं भेजे जाते, और यह कोई सेटिंग नहीं है। कुछ भी बाहर जाने से पहले नामों की जगह भूमिकाएँ लिख दी जाती हैं, ताकि प्रदाता को “बच्चा A” दिखे, आपका बच्चा कभी नहीं।",
   "settingsPage.dataUseForm.submit": "जिस पर आप सहमत हैं, उसे सहेजें",
-
   "settingsPage.notifications.title": "सूचनाएँ",
   "settingsPage.notifications.heading": "WonderHome से आपको खबर कैसे मिलती है",
   "settingsPage.notifications.lede": "आपकी अपनी पसंद — आपके सेट करने से किसी और की सूचनाएँ नहीं बदलतीं।",
@@ -263,7 +266,6 @@ export const settingsHi: AreaCatalog<typeof settingsEn> = {
   "settingsPage.notifications.smart.learn": "सीखें कि मैं आमतौर पर कब काम करता/करती हूँ",
   "settingsPage.notifications.smart.learnBody":
     "जब आप किसी तरह के रिमाइंडर को कम से कम पाँच बार लगभग एक ही समय पर निपटा चुके हों, तो उस तरह का पहला रिमाइंडर उसी समय के आसपास आने लगता है। ऊपर चुना गया आपका समय हमेशा मान्य रहता है, और शांत समय भी लागू रहता है।",
-
   "settingsPage.privacy.title": "गोपनीयता",
   "settingsPage.privacy.heading": "आपकी गोपनीयता",
   "settingsPage.privacy.lede": "इस घर से क्या बाहर जाता है, हम चीज़ें कितने समय तक रखते हैं, और अपना डेटा कैसे साथ ले जाएँ या हटवाएँ।",
@@ -364,7 +366,6 @@ export const settingsHi: AreaCatalog<typeof settingsEn> = {
   "settingsPage.privacy.request.status.cancelled": "रद्द",
   "settingsPage.privacy.request.status.refused": "अस्वीकृत",
   "settingsPage.privacy.quote": "आपका घर। आपका डेटा। आपका फ़ैसला।",
-
   "settingsPage.voice.title": "आवाज़",
   "settingsPage.voice.heading": "WonderHome आपसे कैसे बात करता है",
   "settingsPage.voice.lede": "आप किससे बात करते हैं, जवाब कैसे सुनाई देते हैं, और यह कितनी ध्यान से सुनता है।",
@@ -506,7 +507,6 @@ export const settingsHi: AreaCatalog<typeof settingsEn> = {
     "ऐसे Google Cloud प्रोजेक्ट से जिसमें Text-to-Speech और Speech-to-Text चालू हों। केवल इस घर के लिए संग्रहीत, और फिर कभी पढ़ी नहीं जा सकती।",
   "settingsPage.voice.ownKey.use": "यह कुंजी इस्तेमाल करें",
   "settingsPage.voice.ownKey.remove": "इसे हटाएँ और WonderHome की स्पीच सेवा पर लौटें",
-
   "settingsPage.voiceAssistants.title": "वॉइस असिस्टेंट",
   "settingsPage.voiceAssistants.lede": "स्पीकर जो {household} में किसी की ओर से WonderHome से बात करते हैं — और हर एक ठीक-ठीक क्या कर सकता है।",
   "settingsPage.voiceAssistants.linking": "एक जोड़ना",
@@ -562,7 +562,6 @@ export const settingsHi: AreaCatalog<typeof settingsEn> = {
   "settingsPage.voiceAssistants.scope.pets.read": "पालतू जानवर और उनकी देखभाल",
   "settingsPage.voiceAssistants.scope.notifications.create": "आपके लिए रिमाइंडर सेट करना",
   "settingsPage.voiceAssistants.quote": "आपका घर, आपकी शर्तों पर।",
-
   "settingsPage.whatsapp.lede": "WhatsApp से WonderHome को चीज़ें फ़ॉरवर्ड करें, और वे {household} के HomeSend में आपकी जाँच के लिए पहुँच जाती हैं।",
   "settingsPage.whatsapp.readError": "आपका WhatsApp लिंक अभी पढ़ा नहीं जा सका। कुछ नहीं बदला — थोड़ी देर में फिर कोशिश करें।",
   "settingsPage.whatsapp.yours": "आपका WhatsApp",
@@ -621,7 +620,6 @@ export const settingsHi: AreaCatalog<typeof settingsEn> = {
   "settingsPage.whatsapp.linked.homesend": "यह आपकी जाँच के लिए HomeSend में दिखता है",
   "settingsPage.whatsapp.linked.nothingPaid": "WhatsApp से कुछ भी भुगतान, बुक या भेजा नहीं जाता — आप ऐप में तय करते हैं",
   "settingsPage.whatsapp.goHomeSend": "HomeSend पर जाएँ",
-
   "settingsPage.plan.title": "आपका प्लान",
   "settingsPage.plan.back": "अपने प्लान पर वापस",
   "settingsPage.plan.lede": "{household} {plan} प्लान पर है।",
@@ -674,7 +672,6 @@ export const settingsHi: AreaCatalog<typeof settingsEn> = {
   "settingsPage.plan.leave": "जैसा है वैसा रहने दें",
   "settingsPage.plan.workOutFailed": "हम अभी इसका हिसाब नहीं लगा सके।",
   "settingsPage.plan.changeFailed": "हम अभी प्लान नहीं बदल सके।",
-
   "settingsPage.checkout.title": "चेकआउट",
   "settingsPage.checkout.adminOnly": "केवल एक Admin प्लान बदल सकते हैं",
   "settingsPage.checkout.adminOnlyBody": "प्लान चुनने के लिए अपने घर के किसी Admin से कहें।",
@@ -702,7 +699,6 @@ export const settingsHi: AreaCatalog<typeof settingsEn> = {
   "settingsPage.checkout.notNow": "अभी नहीं",
   "settingsPage.checkout.opening": "{provider} खोला जा रहा है…",
   "settingsPage.checkout.openFailed": "हम भुगतान पेज नहीं खोल सके। कोई शुल्क नहीं लिया गया।",
-
   "settingsPage.confirmed.title": "भुगतान",
   "settingsPage.confirmed.yourNewPlan": "आपका नया प्लान",
   "settingsPage.confirmed.cancelled": "कोई भुगतान नहीं लिया गया",
@@ -715,7 +711,6 @@ export const settingsHi: AreaCatalog<typeof settingsEn> = {
     "हम भुगतान प्रदाता की पुष्टि का इंतज़ार कर रहे हैं — आमतौर पर एक मिनट से कम। आप यह पेज छोड़ सकते हैं: पुष्टि होते ही {plan} अपने आप शुरू हो जाएगा, और कोई शुल्क दो बार नहीं लिया जाता।",
   "settingsPage.confirmed.receipt": "रसीद देखें",
   "settingsPage.confirmed.quote": "कम मानसिक बोझ। परिवार के लिए ज़्यादा समय।",
-
   "settingsPage.billing.lede": "{household} का हर भुगतान, जैसा भुगतान प्रदाता ने पुष्टि की।",
   "settingsPage.billing.adminOnly": "केवल एक Admin बिलिंग देख सकते हैं",
   "settingsPage.billing.adminOnlyBody": "भुगतान घर के Admins और भुगतान प्रदाता के बीच होते हैं।",
@@ -741,7 +736,6 @@ export const settingsHi: AreaCatalog<typeof settingsEn> = {
   "settingsPage.billing.method.emi": "EMI",
   "settingsPage.billing.method.bank_transfer": "बैंक ट्रांसफ़र",
   "settingsPage.billing.method.other": "अन्य",
-
   "settingsPage.invoice.title": "इनवॉइस",
   "settingsPage.invoice.numbered": "इनवॉइस {number}",
   "settingsPage.invoice.back": "बिलिंग इतिहास पर वापस",

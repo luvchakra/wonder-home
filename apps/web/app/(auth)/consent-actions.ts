@@ -9,7 +9,8 @@ import { forgetLearnedDefaults } from "@wonderhome/core/homesend/learned-reposit
 import { saveConfirmRequested } from "@wonderhome/core/conversation/consent-repository";
 import { asAutoAddPercent, AUTO_ADD_PERCENTS } from "@wonderhome/core/homesend/auto-add";
 import { saveAutoAddPercent } from "@wonderhome/core/household/auto-add-repository";
-import { saveDirectAdd } from "@wonderhome/core/household/direct-add-repository";
+import { saveRecordFirst } from "@wonderhome/core/household/direct-add-repository";
+import { APPROVAL_SCOPES, MONEY_HEALTH_MODES, OUTSIDE_SENDER_MODES } from "@wonderhome/core/homesend/record-first";
 import { saveHomeSendTidy } from "@wonderhome/core/household/homesend-tidy-repository";
 import { saveNothingWaits } from "@wonderhome/core/household/nothing-waits-repository";
 import { RETENTION_WINDOW_CHOICES, saveRetentionWindow } from "@wonderhome/core/privacy/retention-window-repository";
@@ -86,19 +87,24 @@ export async function saveRetentionWindowAction(_previous: ActionState, formData
 }
 
 /**
- * "Add money entries directly" / "Add health entries directly" (the owner,
- * 2026-10-26): an Admin decides whether bills and receipts, or health
- * documents, may be added on their own at all (`homesend/auto-add.ts`).
+ * Record first (the owner, 2026-11-14, `homesend/record-first.ts`): an Admin
+ * picks what "Wait for Approval" holds, how money and health entries are
+ * recorded, and what happens to email from a new sender. Each one reversible
+ * on its own.
  */
-const directAddSchema = z.object({ householdId: z.uuid(), area: z.enum(["money", "health"]), on: z.enum(["on", "off"]) });
+const recordFirstSchema = z.discriminatedUnion("setting", [
+  z.object({ householdId: z.uuid(), setting: z.literal("approvalScope"), value: z.enum(APPROVAL_SCOPES) }),
+  z.object({ householdId: z.uuid(), setting: z.literal("moneyHealth"), value: z.enum(MONEY_HEALTH_MODES) }),
+  z.object({ householdId: z.uuid(), setting: z.literal("outsideSenders"), value: z.enum(OUTSIDE_SENDER_MODES) }),
+]);
 
-export async function saveDirectAddAction(_previous: ActionState, formData: FormData): Promise<ActionState> {
-  const parsed = directAddSchema.safeParse(Object.fromEntries(formData));
+export async function saveRecordFirstAction(_previous: ActionState, formData: FormData): Promise<ActionState> {
+  const parsed = recordFirstSchema.safeParse(Object.fromEntries(formData));
   if (!parsed.success) return { error: "Please try again." };
   try {
     const supabase = await createClient();
     const membership = await requireHouseholdAdmin(supabase, parsed.data.householdId);
-    await saveDirectAdd(supabase, { householdId: parsed.data.householdId, actorMemberId: membership.memberId, area: parsed.data.area, on: parsed.data.on === "on" });
+    await saveRecordFirst(supabase, { ...parsed.data, actorMemberId: membership.memberId });
   } catch (thrown) {
     return { error: toErrorBody(thrown, "privacy").body.error.message };
   }

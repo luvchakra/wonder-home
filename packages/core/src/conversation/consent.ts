@@ -18,10 +18,18 @@ import type { HouseholdIntent } from "./intent";
  *   likes, a plan, a meal, being away oneself, school ticks,
  *   a repair, what is at home, one's own health notes.
  * - **confirm** — one short question in the same conversation, and a
- *   spoken or typed "yes" is the yes: changing someone else's duty or
- *   schedule, a plan that asks other people (guests), marking someone else
- *   away, booking a health appointment, anyone named back at medium
- *   confidence ("I think you mean Manan…").
+ *   spoken or typed "yes" is the yes: changing who owns a responsibility,
+ *   moving something already on the calendar, anyone named back at medium confidence ("I think you mean Manan…"), and
+ *   a bill or health appointment while the household keeps money or health
+ *   on "Wait for review".
+ *
+ * Record first (the owner, 2026-11-14; plan "Nothing stuck in review",
+ * decision 1): writing information down is reversible, so it never waits.
+ * A calendar entry (with guests or not: nobody outside is messaged), someone
+ * else's day away, a bill, a health appointment, a reminder, a list or a note
+ * is recorded at once and said back with Undo. A yes is asked
+ * only for actions: paying, ordering, messaging someone outside the
+ * household, booking, cancelling, deleting and sharing.
  * - **step_up** — never by voice and never by a yes alone: paying and
  *   ordering. They keep their card on screen, and step-up where it applies.
  *
@@ -63,10 +71,21 @@ const ACT: ReadonlySet<HouseholdIntent["action"]> = new Set([
   "log_health_issue",
   "resolve_health_issue",
   "set_fitness_goal",
+  // Record first (2026-11-14): written down at once, with Undo.
+  "add_bill",
+  "record_health_appointment",
+  "correct_entry",
 ]);
 
-/** Changes that touch someone else's commitments: asked once, in the conversation. */
-const CONFIRM: ReadonlySet<HouseholdIntent["action"]> = new Set(["adjust_schedule", "assign_responsibility", "record_health_appointment", "add_bill"]);
+/**
+ * Who owns a responsibility, and moving something already on the calendar,
+ * change a record the household relies on (both are consequential in the
+ * evaluation's safety gate): asked once, in the conversation.
+ */
+const CONFIRM: ReadonlySet<HouseholdIntent["action"]> = new Set(["assign_responsibility", "adjust_schedule"]);
+
+/** Recorded at once unless the household keeps money or health on "Wait for review" (decision 2). */
+const MONEY_HEALTH: Partial<Record<HouseholdIntent["action"], "money" | "health">> = { add_bill: "money", record_health_appointment: "health" };
 
 /** Never by a yes alone. */
 const STEP_UP: ReadonlySet<HouseholdIntent["action"]> = new Set(["make_payment", "order_items"]);
@@ -76,18 +95,19 @@ const STEP_UP: ReadonlySet<HouseholdIntent["action"]> = new Set(["make_payment",
  * apply (a read, a greeting, a child's or a helper's request): then the
  * household's autonomy setting decides, exactly as before.
  */
-export function consentTier(intent: HouseholdIntent, actor: PermissionContext & { memberId?: string }): ConsentTier | null {
+export function consentTier(
+  intent: HouseholdIntent,
+  actor: PermissionContext & { memberId?: string },
+  household: { moneyHealthReview?: Partial<Record<"money" | "health", boolean>> } = {},
+): ConsentTier | null {
   if (STEP_UP.has(intent.action)) return "step_up";
   if (actor.memberType !== "adult") return null;
   if (CONFIRM.has(intent.action)) return "confirm";
   if (!ACT.has(intent.action)) return null;
 
-  // A plan that asks other people is theirs to hear about: one question first.
-  if (intent.action === "plan_event" && Array.isArray(intent.parameters.guests) && intent.parameters.guests.length > 0) return "confirm";
-  // Marking someone else away changes what others plan around them.
-  if (intent.action === "record_absence" && intent.target.kind === "member" && intent.target.reference && actor.memberId && intent.target.reference !== actor.memberId) {
-    return "confirm";
-  }
+  // "Wait for review" on money or health (decision 2 switched back): a bill or appointment is asked first, as before.
+  const area = MONEY_HEALTH[intent.action];
+  if (area && household.moneyHealthReview?.[area]) return "confirm";
   // A person resolved at medium confidence is named back first ("I think you mean Manan…").
   if (intent.parameters.groundedConfidence === "medium") return "confirm";
   return "act";
@@ -125,7 +145,11 @@ export function decideForRequest(input: {
 
 /** Why a confirm-tier action is asked first, where it is not about someone else's plans. */
 export function confirmReasonFor(action: HouseholdIntent["action"]): string | null {
-  return action === "add_bill" ? "A new bill goes on the household's money records, so I'm checking the details first." : null;
+  if (action === "add_bill") return "Your household keeps money entries for review, so I'm checking the details first.";
+  if (action === "record_health_appointment") return "Your household keeps health entries for review, so I'm checking first.";
+  if (action === "assign_responsibility") return "It changes who looks after something, so I'm checking first.";
+  if (action === "adjust_schedule") return "It moves something already on the calendar, so I'm checking first.";
+  return null;
 }
 
 /** "Undo", "take that back", "scratch that" — the last thing HomeTalk did for this person. */

@@ -1,0 +1,35 @@
+# Record first — "Nothing stuck in review", part B (story 14-068)
+
+**Date:** 2026-11-14 · **Owner's ask:** "think of redesign of HomeBrain, HomeSend and HomeTalk as a cohesive unit so that minimum intervention is required to input information in the app, ensure its not stuck in review. and minimum info is pending for review", then "implement". Plan: "Nothing stuck in review" (coordinator session), phase 2, decisions 1, 2 and 5. Parts A (nothing waits, the Needs-you list) and C (HomeBrain knows) are built in parallel in their own PRs.
+
+## Why
+
+Live on 14 Nov, 48 of 54 HomeTalk actions ran straight away, and 3 proposals (2 calendar plans, 1 setting) were never answered and sat as "proposed" for good. In HomeSend, bills and health documents waited on an Admin switch, areas on "Wait for Approval" held even a grocery, and mail from an unknown sender was dropped unread.
+
+## What changed
+
+1. **HomeTalk records straight away** (`conversation/consent.ts`). A calendar plan (guests are written on it; nobody outside is messaged), someone else's day away, a bill, a health appointment, a reminder, a list or a note is recorded at once with Undo. A yes is still asked for actions (paying and ordering keep their on-screen tap), who owns a responsibility, moving something already on the calendar (`adjust_schedule` stays consequential in the evaluation's safety gate, so it was not loosened), a name resolved at medium confidence, and a bill or appointment while money or health is on "Wait for review". A plan with a day and no time is an all-day calendar entry instead of a dead "prepared" proposal (`executor.ts` `putOnCalendar`).
+2. **Waiting actions expire** (`conversation/proposal-expiry.ts`, `proposal-window.ts`). One reminder after 24 h to whoever decides (the asker, or the grown-up a child's request went to; notification source `approval`, thread `proposal:<id>`, words `reminder.proposal.*` in 8 languages); after 48 h the action, its approval row and notification close as `expired`. Never approved automatically. The on-screen card can be approved for those 48 h (still bound to its fingerprint); a spoken "yes" still counts only within 10 minutes. Runs on the delivery clock (`/api/v1/notifications/dispatch`).
+3. **Decision 1 — "What “Wait for Approval” holds"** (`homesend/record-first.ts`, `confirmation.ts` `approvalScope`). Default "Only actions": a complete reading in a Wait-for-Approval area is recorded (confirmed above the bar, Checking below it); a move of a record on file still waits. "Everything" is the 3 Nov behaviour. Manage Household → Responsibilities words updated in 8 languages.
+4. **Decision 2 — "Money and health entries"** replaces "Add money / health entries directly" (`household/direct-add-repository.ts`). Default "Record as Checking": bills, receipts and health documents go through every rule a grocery does and are always Checking (`DirectAdd.checking`). "Record as confirmed above the bar" is the old switch on; a household that had a switch on keeps "confirmed" for that area until an Admin picks. "Wait for review" is the 3 Nov behaviour, and the answer whenever the setting can't be read. Health documents keep their visibility (self, a child's guardians; no Admin bypass). Paying never happens.
+5. **Decision 5 — "Email from new senders"** (`homesend/sender-trust.ts`, table `homesend_email_senders`). Default "Ask once": the first item from a sender nobody approved is kept but set aside (archived `new_sender`, unread by any model, no attachment fetched) and Admins are asked "Trust this sender?" once. Trust adds the address to the existing allowlist and its held mail is read on the job queue; "Not ours" blocks it (later mail dropped before storing); no answer in 3 days sets it aside (`sender_not_answered`; a later email asks again). Kept email from a trusted sender is decided like a member's item (`trustedSender`); its content stays untrusted. "Read only senders an Admin added" is the 3 Nov behaviour.
+6. **Plain corrections** (`correct_entry`; `conversation/plain-corrections.ts`, `hometalk/entry-corrections.ts`). "No, it's on the 12th", "That's for Kabir, not Meera", "The amount is 1,240", in HomeTalk or on WhatsApp, first correct what HomeTalk just did (a plan's window keeps its part of the day), otherwise the speaker's own most recent matching HomeSend entry from the last 48 h, through the same in-place write a Checking answer uses, with Undo. It confirms a Checking entry and writes an `ai_corrections` row (part C reads it). Built only by the server from the reader (source `rules`); never pays, approves or grants anything.
+
+All three settings sit on Settings → AI Assistant (Admins), each reversible on its own; settings search, help guide (HomeTalk, HomeSend, Bills, Health, AI autonomy, AI Assistant; FAQ "send a notice" and "Add all anyway") and section dates updated in 8 languages. CLAUDE.md "The agent platform" and "External providers", `docs/agent-platform.md` and `docs/external-providers.md` carry the new invariants.
+
+## Verified
+
+Per the owner's "run only specific test cases" (coordinator, 2026-11-14):
+
+- Unit: `src/conversation` + `src/homesend` + `src/household` + `src/hometalk` + `src/evaluation` + `src/voicelink` + `src/security` + help/i18n — all pass (core run 5765/5765 before the last two cases; the touched folders again after: 799 + 144 + 262 + 106).
+- Eval by id (deterministic): HT-01, HT-18, HT-72, HT-105, HT-122, HT-131 (updated for record first), HT-190–195, HS-80–85 (new): **18/18**. HT-122 now runs with "Ask before acting" on, so the replace-the-proposal path stays covered; HS-81, HT-192 and the email-webhook tests keep each 3 Nov behaviour covered under its switched-back setting.
+- DB (local Postgres, every migration applied from scratch): `test-homesend-rls` 78/78 (3 new: members read the senders table, nobody signed in writes it, the new archive reasons), `test-setup-counts-rls` + `test-ai-corrections-rls` 14/14.
+- Web: typecheck, ESLint on changed app files (0 errors), web vitest 151/151 (settings registry included), `npm run build -w apps/web`, `check:bundle`, `lint:help-links`.
+- Not run here: the live provider run by id (no provider key in this session); see the PR for the browser check.
+
+## Open / needs a person
+
+- The migration `20261114181700_record_first_sender_trust.sql` must be applied live; the Supabase MCP refused this session, so its SQL went to the coordinator for the owner. Until then the webhook drops unknown senders exactly as before (safe in either order).
+- Part A wires `senderTrustNeeds` / `answerSenderTrustAction` into the Needs-you list and owns the "check before paying" reminder words; part C adds `learnFromCorrection` next to `recordSignal` in `entry-corrections.ts`.
+- A trusted sender's email is decided as a member's item, but it is added when a member opens or clears HomeSend: an add on arrival needs a member-less governed write (follow-up).
+- `event` and `activity_item` HomeSend kinds still have no automatic outcome; the grocery "how much?" question (owner rule 2026-10-26) is unchanged.

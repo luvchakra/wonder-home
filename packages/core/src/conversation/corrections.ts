@@ -144,6 +144,10 @@ export function applyCorrection(
   if (asDay && "to" in subject.parameters) {
     return finish(currentTarget, { ...parameters, to: correction.to });
   }
+  // A plan's window ("Saturday evening") keeps its part of the day: "No, it's on Sunday" makes it "Sunday evening" (2026-11-14).
+  if (asDay && subject.actionType === "plan_event" && typeof subject.parameters.window === "string") {
+    return finish(currentTarget, { ...parameters, window: withNewDay(subject.parameters.window, correction.to) });
+  }
 
   // A day said about a request with no day in it is not a correction of it
   // — "make that Friday" never turns milk into an item called "Friday".
@@ -194,6 +198,9 @@ export function describeCorrection(subject: CorrectableAction, corrected: Househ
   const beforeWhen = name(before.when) ?? name(before.to);
   const afterWhen = name(after.when) ?? name(after.to);
   if (beforeWhen && afterWhen && beforeWhen !== afterWhen) return `${beforeWhen} → ${afterWhen}`;
+  const beforeWindow = name(before.window);
+  const afterWindow = name(after.window);
+  if (beforeWindow && afterWindow && beforeWindow !== afterWindow) return `${beforeWindow} → ${afterWindow}`;
   return null;
 }
 
@@ -219,6 +226,16 @@ function withoutGrounded(parameters: Record<string, unknown>): Record<string, un
     next[key] = value;
   }
   return next;
+}
+
+const DAY_WORDS = /\b(?:today|tonight|tomorrow|(?:this|next)\s+(?:mon|tues|wednes|thurs|fri|satur|sun)day|(?:mon|tues|wednes|thurs|fri|satur|sun)day|\d{1,2}(?:st|nd|rd|th)?\s+[a-z]{3,9}|[a-z]{3,9}\s+\d{1,2}(?:st|nd|rd|th)?)\b/i;
+const PART_OF_DAY = /\b(morning|afternoon|evening|night)\b/i;
+
+/** "Saturday evening" with "Sunday" → "Sunday evening"; a window with no day of its own takes the new day before it. */
+function withNewDay(window: string, day: string): string {
+  if (DAY_WORDS.test(window)) return window.replace(DAY_WORDS, day);
+  const part = PART_OF_DAY.exec(window)?.[1];
+  return part ? `${day} ${part}` : `${day} ${window}`;
 }
 
 function sameThing(a: string, b: string): boolean {

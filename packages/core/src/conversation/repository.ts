@@ -12,9 +12,10 @@ import { claimFor, isReviewable, reconcileMemory, reviewPlacementFor, type Memor
 import type { ActionPreview, Proposal } from "./proposal";
 import { checkApproval, proposalFingerprint } from "./approval";
 import { salienceOf } from "../homebrain/sleep/salience";
+import { PROPOSAL_EXPIRY_HOURS } from "./proposal-window";
 
-/** How long a proposal waits for a yes (the engine's PROPOSAL_TTL_MINUTES). */
-const APPROVAL_TTL_MINUTES = 10;
+/** How long a proposal's card can be approved on screen: 48 hours, then it expires as not done (`proposal-expiry.ts`). A spoken "yes" counts only within the engine's PROPOSAL_TTL_MINUTES. */
+const APPROVAL_TTL_MINUTES = PROPOSAL_EXPIRY_HOURS * 60;
 
 /**
  * Reading and writing conversations (module 04).

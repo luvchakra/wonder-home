@@ -195,3 +195,44 @@ describe("a clear move updates the record on file instead of asking (14-066, par
     expect(offered.reason).toBe(move.message);
   });
 });
+
+describe("record first (the owner, 2026-11-14; decisions 1, 2 and 5)", () => {
+  const bill = { kind: "bill" as const, extracted: { title: "Electricity", payee: "BESCOM", amount: 2140, dueDate: "2026-11-20", needs: [], confidence: "high" as const } };
+  const checkingMoney = { money: true, health: true, checking: { money: true, health: true } };
+
+  it("decision 1: an area on Wait for Approval still records what is sent, since recording is reversible", () => {
+    const decision = decide({ autonomy: "prepare", approvalScope: "actions" });
+    expect(decision.mode).toBe("auto_apply");
+    expect(decision.reason).toContain("holds actions like paying or ordering");
+    // Switched back to "Everything": the 3 Nov behaviour.
+    expect(decide({ autonomy: "prepare", approvalScope: "everything" }).mode).toBe("prepare");
+    // A move of a record already on file is a change, not a new record: it still waits.
+    const move = { message: "moved", existingId: "s-1", existing: { title: "Milk", date: "2026-11-01" }, proposal: { type: "update" as const, changes: [{ field: "date" as const, from: "2026-11-01", to: "2026-11-02" }], clear: true as const } };
+    expect(decide({ autonomy: "prepare", approvalScope: "actions", reconciliation: move as never }).mode).toBe("prepare");
+  });
+
+  it("decision 2: a bill on Record as Checking is recorded, always Checking, never paid", () => {
+    const decision = decide({ ...bill, directAdd: checkingMoney });
+    expect(decision).toMatchObject({ mode: "auto_apply", unconfirmed: true });
+    expect(decision.reason).toContain("Money entries are marked Checking");
+    // Record as confirmed: over the bar, simply recorded.
+    expect(decide({ ...bill, directAdd: { money: true, health: true } }).unconfirmed).toBeUndefined();
+    // Wait for review: the 3 Nov behaviour.
+    expect(decide({ ...bill, directAdd: { money: false, health: false } }).mode).toBe("govern");
+    // With Wait for Approval on bills and decision 1, still recorded as Checking.
+    expect(decide({ ...bill, directAdd: checkingMoney, autonomy: "prepare", approvalScope: "actions" })).toMatchObject({ mode: "auto_apply", unconfirmed: true });
+  });
+
+  it("decision 2: a health document needs the person it is for before it is filed", () => {
+    const health = { kind: "health_document" as const, extracted: { title: "Blood test", documentDate: "2026-11-10", healthRecordType: "lab_report", subjectMemberName: "Meera", needs: [], confidence: "high" as const } as never, directAdd: checkingMoney };
+    expect(decide(health)).toMatchObject({ mode: "ask", question: "Who is this for?" });
+    expect(decide({ ...health, subject: { question: null, selected: { memberId: "meera" } } as never })).toMatchObject({ mode: "auto_apply", unconfirmed: true });
+  });
+
+  it("decision 5: an email from a trusted sender flows like a member's item; an untrusted one waits", () => {
+    expect(decide({ memberInitiated: false }).mode).toBe("prepare");
+    expect(decide({ memberInitiated: false, trustedSender: true }).mode).toBe("auto_apply");
+    // Its content is still untrusted: instructions inside it hold it.
+    expect(decide({ memberInitiated: false, trustedSender: true, understanding: { ...CLEAR.understanding!, safety: { instructionsIgnored: true, signals: ["instruction"] } } }).mode).toBe("prepare");
+  });
+});

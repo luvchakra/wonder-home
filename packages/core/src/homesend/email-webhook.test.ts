@@ -49,7 +49,7 @@ function delivery(body: object, options: { secret?: string; timestamp?: number; 
 
 const RECEIVED = { type: "email.received", data: { email_id: "email-1", to: [ADDRESS], received_for: [] } };
 
-function harness(options: { allowlist?: { kind: string; value: string }[] } = {}) {
+function harness(options: { allowlist?: { kind: string; value: string }[]; outsideSenders?: "ask_once" | "review" } = {}) {
   // The household has approved the sender's domain, so a genuine delivery is
   // read; tests that need a drop pass an empty or different allowlist.
   const allowlist = (options.allowlist ?? [{ kind: "domain", value: "greenvalley.example.org" }]).map((entry) => ({
@@ -59,6 +59,11 @@ function harness(options: { allowlist?: { kind: string; value: string }[] } = {}
   const db = fakeSupabase({
     homesend_addresses: [{ household_id: HOUSEHOLD, address: ADDRESS, status: "active" }],
     homesend_email_allowlist: allowlist,
+    homesend_email_senders: [],
+    // "Email from new senders" (decision 5): "ask_once" unless a test picks the 3 Nov behaviour.
+    policies: options.outsideSenders
+      ? [{ household_id: HOUSEHOLD, category: "ai_autonomy", name: "Email from new senders", active: true, rule: { value: options.outsideSenders } }]
+      : [],
   });
   const calls = { fetchEmail: 0, fetchAttachment: 0, classify: 0, deferred: 0 };
   const ingest: IngestDeps = {
@@ -153,9 +158,9 @@ describe("HS-006 — a genuine forwarded email, end to end through the webhook",
   });
 });
 
-describe("HS-016 — only mail from an approved sender is read; everyone else is dropped and stored nowhere", () => {
+describe("HS-016 — on “Read only senders an Admin added”, only mail from an approved sender is read; everyone else is dropped and stored nowhere", () => {
   it("a sender not on the allowlist: acked, no item, no attachment fetched, only a non-personal drop counter", async () => {
-    const { deps, calls, items, events } = harness({ allowlist: [{ kind: "domain", value: "someone-else.example" }] });
+    const { deps, calls, items, events } = harness({ allowlist: [{ kind: "domain", value: "someone-else.example" }], outsideSenders: "review" });
     const response = await handleEmailWebhook(delivery(RECEIVED), deps);
     expect(response.status).toBe(200);
     // The message was fetched to learn its sender, but nothing was kept.
@@ -167,11 +172,31 @@ describe("HS-016 — only mail from an approved sender is read; everyone else is
   });
 
   it("an empty allowlist reads nothing — reading only begins once a sender is approved", async () => {
-    const { deps, items, events } = harness({ allowlist: [] });
+    const { deps, items, events } = harness({ allowlist: [], outsideSenders: "review" });
     const response = await handleEmailWebhook(delivery(RECEIVED), deps);
     expect(response.status).toBe(200);
     expect(items()).toHaveLength(0);
     expect(events()).toContain("dropped_not_allowlisted");
+  });
+});
+
+describe("decision 5 — a new sender is asked about once, its mail held unread meanwhile (the owner, 2026-11-14)", () => {
+  it("keeps the first email set aside, unread by any model, no attachment fetched, and asks once", async () => {
+    const { db, deps, calls, items } = harness({ allowlist: [] });
+    const response = await handleEmailWebhook(delivery(RECEIVED), deps);
+    expect(response.status).toBe(200);
+    expect(items()).toHaveLength(1);
+    expect(items()[0]).toMatchObject({ status: "archived", archive_reason: "new_sender", archived_from: "received" });
+    expect(calls.classify).toBe(0);
+    expect(calls.fetchAttachment).toBe(0);
+    expect(db.tables.homesend_email_senders).toEqual([expect.objectContaining({ household_id: HOUSEHOLD, state: "pending", held_count: 1 })]);
+  });
+
+  it("a sender marked “Not ours” is dropped and stored nowhere, as before", async () => {
+    const { db, deps, items } = harness({ allowlist: [] });
+    db.tables.homesend_email_senders = [{ id: "s-1", household_id: HOUSEHOLD, address: "office@greenvalley.example.org", state: "blocked" }];
+    await handleEmailWebhook(delivery(RECEIVED), deps);
+    expect(items()).toHaveLength(0);
   });
 
   it("an exact-address rule lets that sender through and keeps the email", async () => {

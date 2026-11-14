@@ -139,6 +139,8 @@ export type TurnInput = {
   channelLimits?: { allows: (intent: HouseholdIntent) => boolean; refusal: string };
   /** The household turned on "Ask before acting on what I say" (Settings → AI Assistant, §3.9). */
   confirmRequestedChanges?: boolean;
+  /** Money or health kept on "Wait for review" (decision 2): a bill or appointment is asked first. */
+  moneyHealthReview?: Partial<Record<"money" | "health", boolean>>;
   now?: Date;
 };
 
@@ -366,6 +368,7 @@ export async function converse(raw: TurnInput): Promise<TurnResult> {
     // A turn is always a person speaking for themselves (HomeBrain 4.0 §3.9).
     requestedBy: "person",
     confirmRequested: input.confirmRequestedChanges === true,
+    ...(input.moneyHealthReview ? { moneyHealthReview: input.moneyHealthReview } : {}),
   });
   const proposal: Proposal =
     proposed.kind === "executed" && !(input.executable?.(intent) ?? false)

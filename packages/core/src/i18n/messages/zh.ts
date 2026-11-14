@@ -292,6 +292,8 @@ export const zh: Catalog = {
   "reminder.homesend.waiting.grocery_item": "有一张购物清单等你确认",
   "reminder.homesend.waiting.unknown": "发到 HomeSend 的一项内容等你确认",
   "reminder.homesend.waitingBody": "打开 HomeSend 查看。你说“好”之前不会添加任何内容。",
+  "reminder.proposal.waitingTitle": "仍在等你同意",
+  "reminder.proposal.waitingBody": "{summary}。打开 HomeTalk 回答同意或不同意。如果 {hours} 小时内没人回答，它会以未完成关闭。",
   "reminder.homesend.waitingBodyFrom": "{name} 把它发到了 HomeSend。你说“好”之前不会添加任何内容。",
   "reminder.homesend.failedTitle": "发到 HomeSend 的一项内容无法读取",
   "reminder.homesend.failedBody": "它已安全保存在 HomeSend 的“安全失败”中，没有添加任何内容。",

@@ -131,6 +131,8 @@ export type HomeTalkCase = CaseBase & {
   autonomy?: "prepare" | "execute";
   /** The household turned on "Ask before acting on what I say" (HomeBrain 4.0 §3.9). */
   confirmRequestedChanges?: boolean;
+  /** Money or health kept on "Wait for review" (decision 2 switched back, 2026-11-14). */
+  moneyHealthReview?: Partial<Record<"money" | "health", boolean>>;
   /** What the conversation was just about, for "it", "that" and "the same one". */
   references?: import("./households").ReferenceSpec;
   /**
@@ -180,8 +182,12 @@ export type HomeSendCase = CaseBase & {
   /** Schools on record for the case (14-066), added to the household's records. */
   enrolments?: { childMemberId: string; schoolName: string }[];
   autonomy?: "prepare" | "execute";
-  /** The Admin's "Add money / health entries directly" settings (`homesend/auto-add.ts`); both off when unset. */
+  /** What HomeSend may record of money and health (`homesend/auto-add.ts`); both "Wait for review" when unset, the 3 Nov behaviour. */
   directAdd?: Partial<import("../homesend/auto-add").DirectAdd>;
+  /** Decision 1 (2026-11-14): what "Wait for Approval" holds; "everything" (the 3 Nov behaviour) when unset. */
+  approvalScope?: import("../homesend/record-first").ApprovalScope;
+  /** Decision 5: an email from a sender the household trusts. */
+  trustedSender?: boolean;
   transcriptConfidence?: number;
   /**
    * The daily tidy (the owner, 2026-11-03): the reading is an item still

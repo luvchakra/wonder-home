@@ -10,6 +10,8 @@ import { ingestEmailAttachment, understand, type IngestDeps } from "./ingest";
 import { contentHash, htmlToText, MAX_BYTES, normalizeText } from "./normalize";
 import { createEmailHomeSendItem } from "./repository";
 import { drainJobs, enqueueClassifyRetry } from "./retry-queue";
+import { loadRecordFirst } from "../household/direct-add-repository";
+import { holdFromNewSender, senderStates, senderVerdict } from "./sender-trust";
 
 /**
  * The email intake channel's front door (HomeSend Phase 2), as one function
@@ -147,6 +149,16 @@ export async function handleEmailWebhook(request: Request, deps: EmailWebhookDep
     if (!allowed.has(householdId)) events.push({ kind: "dropped_not_allowlisted", householdId });
   }
   const allowedHouseholds = households.filter((householdId) => allowed.has(householdId));
+
+  // Decision 5 (the owner, 2026-11-14): on "Ask once", a household that
+  // hasn't approved this sender keeps the mail set aside instead of dropping
+  // it, unread by any model and with no attachment fetched, and is asked
+  // "Trust this sender?" once (`sender-trust.ts`). A blocked sender, a
+  // household on "Read only senders an Admin added", or a database without
+  // the senders table yet, drops it as before.
+  const others = households.filter((householdId) => !allowed.has(householdId));
+  if (others.length > 0) await holdForNewSender(supabase, others, email);
+
   if (allowedHouseholds.length === 0) {
     // No recipient household approved this sender — ack so the provider does
     // not retry, keep nothing, and never reveal to the sender that the
@@ -279,4 +291,37 @@ export async function handleEmailWebhook(request: Request, deps: EmailWebhookDep
     );
   }
   return finish(new Response(null, { status: 200 }));
+}
+
+/** Keeps one email from a sender a household hasn't approved, set aside, and asks about the sender once. */
+async function holdForNewSender(
+  supabase: SupabaseClient,
+  households: readonly string[],
+  email: { externalId: string; from: string | null; subject?: string | null; text?: string | null; html?: string | null; attachments: readonly unknown[] },
+): Promise<void> {
+  try {
+    if (!email.from) return;
+    const from = email.from;
+    const states = await senderStates(supabase, households, from);
+    if (!states) return;
+    const body = email.text?.trim() ? normalizeText(email.text) : email.html ? htmlToText(email.html).text : "";
+    for (const householdId of households) {
+      const settings = await loadRecordFirst(supabase, householdId);
+      if (senderVerdict({ allowlisted: false, mode: settings.outsideSenders, state: states.get(householdId) ?? null }) !== "hold") continue;
+      const { item, duplicate } = await createEmailHomeSendItem(supabase, {
+        householdId,
+        externalId: email.externalId,
+        senderAddress: email.from,
+        rawText: body || `(${email.attachments.length} attachment${email.attachments.length === 1 ? "" : "s"}, no message text)`,
+        subject: email.subject?.slice(0, 300) ?? null,
+        contentHash: await contentHash(body || email.externalId),
+      });
+      if (duplicate) continue;
+      const held = await holdFromNewSender(supabase, { householdId, from, itemId: item.id });
+      // Couldn't be set aside: not kept at all, exactly as before.
+      if (!held) await supabase.from("home_send_items").delete().eq("id", item.id).eq("household_id", householdId);
+    }
+  } catch (thrown) {
+    log.warn("homesend email webhook: hold for new sender failed", { reason: thrown instanceof Error ? thrown.name : "unknown", allow: ["reason"] });
+  }
 }

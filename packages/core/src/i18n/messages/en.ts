@@ -302,6 +302,8 @@ export const en = {
   "reminder.homesend.waiting.grocery_item": "A grocery list is waiting for your OK",
   "reminder.homesend.waiting.unknown": "Something sent to HomeSend is waiting for your OK",
   "reminder.homesend.waitingBody": "Open HomeSend to check it. Nothing is added until you say yes.",
+  "reminder.proposal.waitingTitle": "Still waiting for your OK",
+  "reminder.proposal.waitingBody": "{summary}. Open HomeTalk to say yes or no. If nobody answers in {hours} hours, it closes as not done.",
   "reminder.homesend.waitingBodyFrom": "{name} sent it to HomeSend. Nothing is added until you say yes.",
   "reminder.homesend.failedTitle": "Something sent to HomeSend could not be read",
   "reminder.homesend.failedBody": "It is kept safely under “Failed safely” in HomeSend, and nothing was added.",

@@ -292,6 +292,8 @@ export const fr: Catalog = {
   "reminder.homesend.waiting.grocery_item": "Une liste de courses attend votre feu vert",
   "reminder.homesend.waiting.unknown": "Quelque chose envoyé à HomeSend attend votre feu vert",
   "reminder.homesend.waitingBody": "Ouvrez HomeSend pour le vérifier. Rien n’est ajouté tant que vous n’avez pas dit oui.",
+  "reminder.proposal.waitingTitle": "Attend toujours votre accord",
+  "reminder.proposal.waitingBody": "{summary}. Ouvrez HomeTalk pour dire oui ou non. Sans réponse dans {hours} heures, c’est clos sans être fait.",
   "reminder.homesend.waitingBodyFrom": "{name} l’a envoyé à HomeSend. Rien n’est ajouté tant que vous n’avez pas dit oui.",
   "reminder.homesend.failedTitle": "Quelque chose envoyé à HomeSend n’a pas pu être lu",
   "reminder.homesend.failedBody": "C’est conservé en sécurité sous « Échecs sans risque » dans HomeSend, et rien n’a été ajouté.",

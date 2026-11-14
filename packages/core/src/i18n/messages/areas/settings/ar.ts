@@ -11,7 +11,6 @@ export const settingsAr: AreaCatalog<typeof settingsEn> = {
   "settingsPage.replaceKey": "استبدال المفتاح",
   "settingsPage.aMember": "أحد الأفراد",
   "settingsPage.listSeparator": "، ",
-
   "settingsPage.ai.title": "مساعد الذكاء الاصطناعي",
   "settingsPage.ai.lede": "أي نموذج يجيب عن {household}، وما الذي يجوز إخباره به.",
   "settingsPage.ai.section.key": "المزوّد والمفتاح",
@@ -23,13 +22,19 @@ export const settingsAr: AreaCatalog<typeof settingsEn> = {
   "settingsPage.ai.autoAdd.title": "مدى تأكد HomeSend قبل أن يضيف بنفسه",
   "settingsPage.ai.autoAdd.detail": "للنتائج المضبوطة على Pre Approved، ما ترسله عبر WhatsApp أو تقوله لـ HomeTalk أو تشاركه بطريقة أخرى — بما في ذلك الصور والملفات — يُضاف مباشرة. إذا كان WonderHome متأكدًا أكثر من هذا فهذا كل شيء؛ وإن لم يكن، يُعلَّم الإدخال «قيد التحقق» وتنتظر تذكيراته حتى تؤكد أنه صحيح. الفواتير والإيصالات والمستندات الصحية تنتظرك ما لم تسمح بها أدناه. ما دام قيد التحقق، يطرح HomeTalk على المرسل حتى ثلاثة أسئلة سريعة (على WhatsApp أيضًا) حتى تكفي ثقته؛ وما يذكر شيئًا لا تحتويه رسالتك لا يُضاف أبدًا.",
   "settingsPage.ai.autoAdd.option": "أكثر من {percent}%",
-  "settingsPage.ai.directAdd.money.title": "إضافة إدخالات المال مباشرة",
-  "settingsPage.ai.directAdd.money.on": "مفعّل: الفاتورة أو الإيصال الذي تكتبه أو تعيد توجيهه أو تقوله لـ HomeTalk يُضاف دون سؤال، ولكن فقط عندما تكون «دفع الفواتير في موعدها» (وللإيصال «مراجعة الميزانية الشهرية») على Pre Approved في المسؤوليات ويكون WonderHome متأكدًا أكثر من حدّك. تُبلَّغ بعدها، مع Undo. لا يُدفع أي شيء أبدًا.",
-  "settingsPage.ai.directAdd.money.off": "متوقف: كل فاتورة وإيصال ينتظر أن تتحقق منه.",
-  "settingsPage.ai.directAdd.health.title": "إضافة الإدخالات الصحية مباشرة",
-  "settingsPage.ai.directAdd.health.on": "مفعّل: المستند الصحي الذي تكتبه أو تعيد توجيهه أو تقوله لـ HomeTalk يُضاف دون سؤال، ولكن فقط عندما تكون «حفظ السجلات الصحية» على Pre Approved في المسؤوليات ويكون WonderHome متأكدًا أكثر من حدّك. يبقى خاصًا بالشخص المعني، وسجل الطفل خاصًا بأولياء أمره. تُبلَّغ بعدها، مع Undo.",
-  "settingsPage.ai.directAdd.health.off": "متوقف: كل مستند صحي ينتظر أن تتحقق منه.",
-  "settingsPage.ai.directAdd.files": "معظم الفواتير والإيصالات والتقارير تصل كصورة أو ملف PDF. لا يمكن التحقق منها كلمة بكلمة، لذا تبقى في انتظارك.",
+  "settingsPage.ai.recordFirst.approvalScope.title": "ما الذي يوقفه „Wait for Approval“",
+  "settingsPage.ai.recordFirst.approvalScope.detail": "للمسؤوليات المضبوطة على Wait for Approval. الإجراءات فقط: يُسجَّل ما ترسله أو تقوله، وينتظر الدفع أو الطلب أو الحجز موافقتك. كل شيء: لا يُسجَّل شيء حتى يوافق أحد.",
+  "settingsPage.ai.recordFirst.approvalScope.actions": "الإجراءات فقط (موصى به)",
+  "settingsPage.ai.recordFirst.approvalScope.everything": "كل شيء",
+  "settingsPage.ai.recordFirst.moneyHealth.title": "إدخالات المال والصحة",
+  "settingsPage.ai.recordFirst.moneyHealth.detail": "الفواتير والإيصالات والمستندات الصحية المرسلة إلى HomeSend. كـ قيد التحقق: نقرة واحدة تؤكد كلًّا منها؛ وكمؤكَّدة: فقط عندما يكون WonderHome أكثر يقينًا من حدّك. الفاتورة قيد التحقق تذكّرك بالتحقق منها قبل الدفع. المستند الصحي يذهب إلى السجل الصحي لذلك الشخص، خاصًا به، وسجل الطفل لأوليائه. لا يُدفع أي شيء أبدًا.",
+  "settingsPage.ai.recordFirst.moneyHealth.checking": "قيد التحقق (موصى به)",
+  "settingsPage.ai.recordFirst.moneyHealth.confirmed": "مؤكَّد فوق الحد",
+  "settingsPage.ai.recordFirst.moneyHealth.review": "انتظار المراجعة",
+  "settingsPage.ai.recordFirst.outsideSenders.title": "بريد من مرسلين جدد",
+  "settingsPage.ai.recordFirst.outsideSenders.detail": "بريد إلى عنوان HomeSend لأسرتك من شخص خارجها. السؤال مرة واحدة: يُسأل المشرفون „هل تثق بهذا المرسل؟“، وينتظر البريد دون قراءة، ويمر المرسل الموثوق بعدها مباشرة. المرسلون الذين أضافهم مشرف فقط: يُتجاهل الباقي دون قراءة.",
+  "settingsPage.ai.recordFirst.outsideSenders.ask_once": "السؤال مرة واحدة (موصى به)",
+  "settingsPage.ai.recordFirst.outsideSenders.review": "فقط من أضافهم مشرف",
   "settingsPage.ai.homesendTidy.title": "رتّب ما لم يعد ينطبق",
   "settingsPage.ai.homesendTidy.on": "مفعّل: مرة في اليوم يؤرشف HomeSend العناصر المنتظرة التي مضى يومها أو المسجّلة مسبقًا أو التي حلّ محلها أحدث. لا يُحذف شيء.",
   "settingsPage.ai.homesendTidy.off": "متوقف: تبقى العناصر المنتظرة حتى تتعامل معها، أو 30 يومًا دون أن تُلمس.",
@@ -102,7 +107,6 @@ export const settingsAr: AreaCatalog<typeof settingsEn> = {
   "settingsPage.aiKey.newKey": "مفتاح جديد",
   "settingsPage.aiKey.newKeyPlaceholder": "الصق مفتاحًا جديدًا لاستبداله",
   "settingsPage.aiKey.remove": "إزالته والعودة إلى مفتاح WonderHome",
-
   "settingsPage.dataUse.nothing": "لا يُرسل أي شيء عن منزلك إلى مزوّد نماذج. يجيب المساعد وفق قواعده الخاصة فقط.",
   "settingsPage.dataUse.maxItems#zero": "فقط ما يلزم للإجابة، ولا شيء في المرة الواحدة.",
   "settingsPage.dataUse.maxItems#one": "فقط ما يلزم للإجابة، وألا يتجاوز أبدًا شيئًا واحدًا في المرة الواحدة.",
@@ -143,7 +147,6 @@ export const settingsAr: AreaCatalog<typeof settingsEn> = {
   "settingsPage.dataUseForm.footer":
     "لا تُرسل المفاتيح والرموز المميزة أبدًا، وهذا ليس إعدادًا. تُستبدل الأسماء بأدوار قبل أن يخرج أي شيء، فيرى المزوّد «الطفل أ»، لا طفلك أبدًا.",
   "settingsPage.dataUseForm.submit": "حفظ ما توافق عليه",
-
   "settingsPage.notifications.title": "الإشعارات",
   "settingsPage.notifications.heading": "كيف يصلك WonderHome",
   "settingsPage.notifications.lede": "تفضيلاتك الخاصة — لا تتغير إشعارات أي شخص آخر عندما تضبط إشعاراتك.",
@@ -266,7 +269,6 @@ export const settingsAr: AreaCatalog<typeof settingsEn> = {
   "settingsPage.notifications.smart.learn": "تعلّم متى أتصرف عادةً",
   "settingsPage.notifications.smart.learnBody":
     "بعد أن تتعامل مع نوع من التذكيرات في الوقت نفسه تقريبًا خمس مرات على الأقل، يصبح أول تذكير من هذا النوع قرابة ذلك الوقت. التوقيت الذي اخترته أعلاه يغلب دائمًا، وتظل ساعات الهدوء سارية.",
-
   "settingsPage.privacy.title": "الخصوصية",
   "settingsPage.privacy.heading": "خصوصيتك",
   "settingsPage.privacy.lede": "ما الذي يغادر هذا البيت، وكم من الوقت نحتفظ بالأشياء، وكيف تأخذ بياناتك معك أو تطلب إزالتها.",
@@ -383,7 +385,6 @@ export const settingsAr: AreaCatalog<typeof settingsEn> = {
   "settingsPage.privacy.request.status.cancelled": "ملغى",
   "settingsPage.privacy.request.status.refused": "مرفوض",
   "settingsPage.privacy.quote": "بيتك. بياناتك. قرارك.",
-
   "settingsPage.voice.title": "الصوت",
   "settingsPage.voice.heading": "كيف يتحدث WonderHome معك",
   "settingsPage.voice.lede": "مع من تتحدث، وكيف تبدو الردود، ومدى انتباهه في الاستماع.",
@@ -524,7 +525,6 @@ export const settingsAr: AreaCatalog<typeof settingsEn> = {
     "من مشروع في Google Cloud مفعّل فيه Text-to-Speech وSpeech-to-Text. يُحفظ لهذه الأسرة فقط، ولا يمكن قراءته مرة أخرى أبدًا.",
   "settingsPage.voice.ownKey.use": "استخدام هذا المفتاح",
   "settingsPage.voice.ownKey.remove": "إزالته والعودة إلى خدمة الكلام من WonderHome",
-
   "settingsPage.voiceAssistants.title": "المساعدات الصوتية",
   "settingsPage.voiceAssistants.lede": "مكبّرات صوت تتحدث إلى WonderHome نيابةً عن أحد أفراد {household} — وما يجوز لكل منها فعله بالضبط.",
   "settingsPage.voiceAssistants.linking": "ربط مساعد",
@@ -580,7 +580,6 @@ export const settingsAr: AreaCatalog<typeof settingsEn> = {
   "settingsPage.voiceAssistants.scope.pets.read": "الحيوانات الأليفة ورعايتها",
   "settingsPage.voiceAssistants.scope.notifications.create": "إنشاء تذكيرات لك",
   "settingsPage.voiceAssistants.quote": "بيتك، وفق شروطك.",
-
   "settingsPage.whatsapp.lede": "أعد توجيه الأشياء إلى WonderHome من WhatsApp، فتصل إلى HomeSend الخاص بـ {household} لتراجعها.",
   "settingsPage.whatsapp.readError": "تعذّرت قراءة ربط WhatsApp الخاص بك الآن. لم يتغير شيء — حاول مرة أخرى بعد قليل.",
   "settingsPage.whatsapp.yours": "WhatsApp الخاص بك",
@@ -639,7 +638,6 @@ export const settingsAr: AreaCatalog<typeof settingsEn> = {
   "settingsPage.whatsapp.linked.homesend": "يظهر في HomeSend لتراجعه",
   "settingsPage.whatsapp.linked.nothingPaid": "لا يُدفع ولا يُحجز ولا يُرسل أي شيء من WhatsApp — أنت تقرر داخل التطبيق",
   "settingsPage.whatsapp.goHomeSend": "الانتقال إلى HomeSend",
-
   "settingsPage.plan.title": "خطتك",
   "settingsPage.plan.back": "العودة إلى خطتك",
   "settingsPage.plan.lede": "{household} على خطة {plan}.",
@@ -692,7 +690,6 @@ export const settingsAr: AreaCatalog<typeof settingsEn> = {
   "settingsPage.plan.leave": "اتركها كما هي",
   "settingsPage.plan.workOutFailed": "تعذّر علينا حساب ذلك الآن.",
   "settingsPage.plan.changeFailed": "تعذّر علينا تغيير الخطة الآن.",
-
   "settingsPage.checkout.title": "إتمام الشراء",
   "settingsPage.checkout.adminOnly": "لا يمكن إلا لأحد المسؤولين تغيير الخطة",
   "settingsPage.checkout.adminOnlyBody": "اطلب من أحد مسؤولي أسرتك اختيار خطة.",
@@ -719,7 +716,6 @@ export const settingsAr: AreaCatalog<typeof settingsEn> = {
   "settingsPage.checkout.notNow": "ليس الآن",
   "settingsPage.checkout.opening": "جارٍ فتح {provider}…",
   "settingsPage.checkout.openFailed": "تعذّر علينا فتح صفحة الدفع. لم يُحتسب أي شيء.",
-
   "settingsPage.confirmed.title": "الدفع",
   "settingsPage.confirmed.yourNewPlan": "خطتك الجديدة",
   "settingsPage.confirmed.cancelled": "لم يُؤخذ أي مبلغ",
@@ -732,7 +728,6 @@ export const settingsAr: AreaCatalog<typeof settingsEn> = {
     "ننتظر تأكيد مزوّد الدفع — عادةً في أقل من دقيقة. يمكنك مغادرة هذه الصفحة: ستبدأ {plan} تلقائيًا فور التأكيد، ولا يُحتسب شيء مرتين.",
   "settingsPage.confirmed.receipt": "عرض الإيصال",
   "settingsPage.confirmed.quote": "عبء ذهني أقل. وقت أكثر للعائلة.",
-
   "settingsPage.billing.lede": "كل دفعة لـ {household}، كما أكّدها مزوّد الدفع.",
   "settingsPage.billing.adminOnly": "لا يمكن إلا لأحد المسؤولين الاطلاع على الفوترة",
   "settingsPage.billing.adminOnlyBody": "المدفوعات شأن بين مسؤولي الأسرة ومزوّد الدفع.",
@@ -759,7 +754,6 @@ export const settingsAr: AreaCatalog<typeof settingsEn> = {
   "settingsPage.billing.method.emi": "EMI",
   "settingsPage.billing.method.bank_transfer": "تحويل مصرفي",
   "settingsPage.billing.method.other": "أخرى",
-
   "settingsPage.invoice.title": "فاتورة",
   "settingsPage.invoice.numbered": "فاتورة {number}",
   "settingsPage.invoice.back": "العودة إلى سجل الفوترة",

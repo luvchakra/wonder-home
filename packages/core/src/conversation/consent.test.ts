@@ -20,12 +20,26 @@ describe("conversational consent (HomeBrain 4.0 §3.9)", () => {
     }
   });
 
-  it("asks once in the conversation when other people are involved", () => {
-    expect(consentTier(intent("plan_event", { guests: ["Sharmas"] }), adult)).toBe("confirm");
-    expect(consentTier(intent("record_absence", {}, { kind: "member", reference: "u" }), adult)).toBe("confirm");
+  it("records first: writing information down is done at once, with Undo (the owner, 2026-11-14)", () => {
+    // Guests are written on the event; nobody outside is messaged.
+    expect(consentTier(intent("plan_event", { guests: ["Sharmas"] }), adult)).toBe("act");
+    expect(consentTier(intent("record_absence", {}, { kind: "member", reference: "u" }), adult)).toBe("act");
     expect(consentTier(intent("record_absence", {}, { kind: "member", reference: "k" }), adult)).toBe("act");
+    expect(consentTier(intent("add_bill"), adult)).toBe("act");
+    expect(consentTier(intent("record_health_appointment"), adult)).toBe("act");
+    expect(consentTier(intent("set_preference"), adult)).toBe("act");
+  });
+
+  it("still asks once where it changes what the household relies on: who owns a responsibility, a move, a name it isn't sure of", () => {
+    expect(consentTier(intent("assign_responsibility"), adult)).toBe("confirm");
     expect(consentTier(intent("adjust_schedule"), adult)).toBe("confirm");
     expect(consentTier(intent("plan_event", { groundedConfidence: "medium" }), adult)).toBe("confirm");
+  });
+
+  it("asks first about a bill or appointment while money or health is kept on Wait for review", () => {
+    expect(consentTier(intent("add_bill"), adult, { moneyHealthReview: { money: true } })).toBe("confirm");
+    expect(consentTier(intent("record_health_appointment"), adult, { moneyHealthReview: { money: true } })).toBe("act");
+    expect(consentTier(intent("record_health_appointment"), adult, { moneyHealthReview: { health: true } })).toBe("confirm");
   });
 
   it("paying and ordering are never done because someone asked", () => {

@@ -5,7 +5,8 @@ import { loadHouseholdContext } from "@wonderhome/core/context/repository";
 import { listResponsibilities } from "@wonderhome/core/household/configuration-repository";
 import type { AutonomyMode } from "@wonderhome/core/household/autonomy";
 import { loadAutomationBar } from "@wonderhome/core/homebrain/kind-bar-repository";
-import { loadDirectAdd } from "@wonderhome/core/household/direct-add-repository";
+import { loadRecordFirst } from "@wonderhome/core/household/direct-add-repository";
+import { CAREFUL_RECORD_FIRST, type ApprovalScope } from "@wonderhome/core/homesend/record-first";
 import { duplicateReceipt } from "@wonderhome/core/commerce/receipt-stock";
 import { directAddAreaOf, NO_DIRECT_ADD, type DirectAdd } from "@wonderhome/core/homesend/auto-add";
 import { AUTO_APPLY_OUTCOMES, decideConfirmation, type ConfirmationDecision } from "@wonderhome/core/homesend/confirmation";
@@ -144,15 +145,24 @@ export async function prepareReview(
     onShoppingList?: boolean,
     directAdd: DirectAdd = NO_DIRECT_ADD,
     duplicate = false,
+    recordFirst: { approvalScope: ApprovalScope; trustedSender: boolean } = { approvalScope: CAREFUL_RECORD_FIRST.approvalScope, trustedSender: false },
   ) =>
-    decideConfirmation({ kind, extracted: item.extracted, understanding, reconciliation, subject, memberInitiated: item.createdByMemberId !== null, autonomy, autoAddPercent, onShoppingList, directAdd, duplicate });
+    decideConfirmation({ kind, extracted: item.extracted, understanding, reconciliation, subject, memberInitiated: item.createdByMemberId !== null, autonomy, autoAddPercent, onShoppingList, directAdd, duplicate, ...recordFirst });
+  // Decision 5: an email is kept only from a sender on the household's
+  // allowlist (one an Admin added, or one someone answered "Trust" about),
+  // so on "Ask once" a kept email flows like a member's own item.
+  const recordFirstFor = (settings: Awaited<ReturnType<typeof loadRecordFirst>>) => ({
+    approvalScope: settings.approvalScope,
+    trustedSender: item.createdByMemberId === null && settings.outsideSenders === "ask_once",
+  });
   // A bill, receipt or health document may be added on its own only when the
   // Admin's matching "add directly" setting is on (the owner, 2026-10-26); off, or unreadable, it waits.
   const area = directAddAreaOf(kind);
   // A receipt is matched line by line on its own confirm form (09-009): it is
   // for nobody in particular and never a second copy of a record.
   if (kind === "receipt" && item.extracted?.title) {
-    const directAdd = await loadDirectAdd(supabase, membership.household.id).catch(() => NO_DIRECT_ADD);
+    const settings = await loadRecordFirst(supabase, membership.household.id);
+    const directAdd = settings.directAdd;
     if (!directAdd.money) return { subject: null, reconciliation: null, understanding: item.understanding, confirmation: confirm(null, null, item.understanding, "prepare") };
     // The same shop, day and total as one already recorded is a duplicate, by the receipt's own check.
     const read = item.extracted;
@@ -164,7 +174,7 @@ export async function prepareReview(
         // What is on record couldn't be read: treated as a duplicate, so a person looks first.
         .catch(() => true),
     ]);
-    return { subject: null, reconciliation: null, understanding: item.understanding, confirmation: confirm(null, null, item.understanding, autonomy, autoAddPercent, false, directAdd, duplicate) };
+    return { subject: null, reconciliation: null, understanding: item.understanding, confirmation: confirm(null, null, item.understanding, autonomy, autoAddPercent, false, directAdd, duplicate, recordFirstFor(settings)) };
   }
   if (!kind || kind === "unknown" || kind === "receipt" || !item.extracted?.title) {
     return { subject: null, reconciliation: null, understanding: item.understanding, confirmation: confirm(null, null, item.understanding, "prepare") };
@@ -221,20 +231,21 @@ export async function prepareReview(
   // The outcome's autonomy, the household's bar and its "add directly" settings (`auto-add.ts`), read together.
   // A grocery it matched may be on the shopping list now: with an amount, that is a top-up, not a duplicate (I-27).
   const listedCheck = kind === "grocery_item" && reconciliation?.proposal.type === "duplicate";
-  const [autonomy, autoAddPercent, onShoppingList, directAdd] = checked
+  const [autonomy, autoAddPercent, onShoppingList, settings] = checked
     ? await Promise.all([
         autonomyFor(supabase, membership.household.id, kind),
         // Each kind's bar: the Admin's, or the household's own accuracy for this kind (HomeBrain knows).
         AUTO_APPLY_OUTCOMES[kind] ? loadAutomationBar(supabase, membership.household.id, kind).then((bar) => bar.percent) : undefined,
         listedCheck ? onTheList(supabase, membership.household.id, item.extracted.title) : false,
-        area ? loadDirectAdd(supabase, membership.household.id).catch(() => NO_DIRECT_ADD) : NO_DIRECT_ADD,
+        loadRecordFirst(supabase, membership.household.id),
       ])
-    : (["prepare", undefined, false, NO_DIRECT_ADD] as const);
+    : (["prepare", undefined, false, null] as const);
+  const directAdd = area && settings ? settings.directAdd : NO_DIRECT_ADD;
   // A document with several records is reviewed as a plan (DDU 2.0), and
   // never applied on its own: every record in it waits for a person.
   const plan = wantsPlan(understanding) ? await planFor(supabase, membership, { understanding, createdAt: item.createdAt }, { people }).catch(() => null) : null;
   const confirmation = plan
     ? { mode: "prepare" as const, reason: "A document with several things in it waits for you to check each one.", question: null }
-    : confirm(subject, reconciliation, understanding, autonomy, autoAddPercent, onShoppingList, directAdd);
+    : confirm(subject, reconciliation, understanding, autonomy, autoAddPercent, onShoppingList, directAdd, false, settings ? recordFirstFor(settings) : undefined);
   return { subject, reconciliation, understanding, confirmation, plan };
 }

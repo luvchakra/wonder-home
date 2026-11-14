@@ -11,7 +11,6 @@ export const settingsZh: AreaCatalog<typeof settingsEn> = {
   "settingsPage.replaceKey": "更换密钥",
   "settingsPage.aMember": "一位成员",
   "settingsPage.listSeparator": "、",
-
   "settingsPage.ai.title": "AI 助手",
   "settingsPage.ai.lede": "由哪个模型为 {household} 作答，以及可以告诉它什么。",
   "settingsPage.ai.section.key": "服务商与密钥",
@@ -23,13 +22,19 @@ export const settingsZh: AreaCatalog<typeof settingsEn> = {
   "settingsPage.ai.autoAdd.title": "HomeSend 要多有把握才自行添加",
   "settingsPage.ai.autoAdd.detail": "对设为 Pre Approved 的结果，你通过 WhatsApp 发送、告诉 HomeTalk 或以其他方式分享的内容（包括照片和文件）会直接添加。WonderHome 的把握高于这个值时就到此为止；不够时，这条记录会标为「核对中」，相关提醒会等你确认没问题后再发。账单、收据和健康文件会等你确认，除非你在下方允许。核对中时，HomeTalk 会向发送者（也在 WhatsApp 上）问最多三个简短问题，直到足够有把握；提到你消息里没有的内容的条目永远不会被添加。",
   "settingsPage.ai.autoAdd.option": "高于 {percent}%",
-  "settingsPage.ai.directAdd.money.title": "直接添加钱款条目",
-  "settingsPage.ai.directAdd.money.on": "开启：你输入、转发或告诉 HomeTalk 的账单或收据会不经询问直接添加，但前提是职责分工中“按时缴费”（收据为“每月预算检查”）设为 Pre Approved，且 WonderHome 的把握高于你设的值。之后会通知你，并可 Undo。绝不会付款。",
-  "settingsPage.ai.directAdd.money.off": "关闭：每张账单和收据都等你核对。",
-  "settingsPage.ai.directAdd.health.title": "直接添加健康条目",
-  "settingsPage.ai.directAdd.health.on": "开启：你输入、转发或告诉 HomeTalk 的健康文件会不经询问直接添加，但前提是职责分工中“健康记录已整理”设为 Pre Approved，且 WonderHome 的把握高于你设的值。它只对本人可见，孩子的记录只对其监护人可见。之后会通知你，并可 Undo。",
-  "settingsPage.ai.directAdd.health.off": "关闭：每份健康文件都等你核对。",
-  "settingsPage.ai.directAdd.files": "大多数账单、收据和报告以照片或 PDF 形式发来。这些无法逐字核对，所以仍会等你确认。",
+  "settingsPage.ai.recordFirst.approvalScope.title": "“Wait for Approval”会暂缓什么",
+  "settingsPage.ai.recordFirst.approvalScope.detail": "适用于设为 Wait for Approval 的职责。仅限行动：你发送或说的内容会被记录，付款、下单或预订则等你同意。全部：在有人批准之前不记录任何内容。",
+  "settingsPage.ai.recordFirst.approvalScope.actions": "仅限行动（推荐）",
+  "settingsPage.ai.recordFirst.approvalScope.everything": "全部",
+  "settingsPage.ai.recordFirst.moneyHealth.title": "金钱和健康条目",
+  "settingsPage.ai.recordFirst.moneyHealth.detail": "发送到 HomeSend 的账单、收据和健康文件。记录为核对中时，点一下即可确认；记录为已确认时，仅在 WonderHome 的把握高于你的标准时。核对中的账单会提醒你付款前先核对。健康文件会放进该人的健康记录，仅本人可见，孩子的仅其监护人可见。绝不会自动付款。",
+  "settingsPage.ai.recordFirst.moneyHealth.checking": "核对中（推荐）",
+  "settingsPage.ai.recordFirst.moneyHealth.confirmed": "高于标准时确认",
+  "settingsPage.ai.recordFirst.moneyHealth.review": "等待审核",
+  "settingsPage.ai.recordFirst.outsideSenders.title": "新发件人的邮件",
+  "settingsPage.ai.recordFirst.outsideSenders.detail": "家庭以外的人发到你家 HomeSend 地址的邮件。只问一次：会问管理员“信任此发件人吗？”，邮件在未读状态下等待，受信任的发件人之后直接放行。仅限管理员添加的：其他邮件一律不读取直接丢弃。",
+  "settingsPage.ai.recordFirst.outsideSenders.ask_once": "只问一次（推荐）",
+  "settingsPage.ai.recordFirst.outsideSenders.review": "仅限管理员添加的",
   "settingsPage.ai.homesendTidy.title": "整理不再适用的内容",
   "settingsPage.ai.homesendTidy.on": "开启：HomeSend 每天一次，把日期已过、已有记录或已被更新内容取代的待处理内容归档。不会删除任何内容。",
   "settingsPage.ai.homesendTidy.off": "关闭：待处理内容会一直保留，直到你处理或 30 天无人处理。",
@@ -100,7 +105,6 @@ export const settingsZh: AreaCatalog<typeof settingsEn> = {
   "settingsPage.aiKey.newKey": "新密钥",
   "settingsPage.aiKey.newKeyPlaceholder": "粘贴新密钥以替换",
   "settingsPage.aiKey.remove": "移除并改回 WonderHome 的密钥",
-
   "settingsPage.dataUse.nothing": "不会向任何模型服务商发送关于你家的任何内容。助手只依据自己的规则作答。",
   "settingsPage.dataUse.maxItems#one": "只发送作答所需的内容，每次绝不超过 {count} 项。",
   "settingsPage.dataUse.maxItems#other": "只发送作答所需的内容，每次绝不超过 {count} 项。",
@@ -135,7 +139,6 @@ export const settingsZh: AreaCatalog<typeof settingsEn> = {
   "settingsPage.dataUseForm.retentionDetail": "默认关闭。开启后，将按照对方而不是我们的条款保留。",
   "settingsPage.dataUseForm.footer": "密钥和令牌绝不会被发送，这不是一项设置。任何内容发出前，姓名都会被替换为角色，服务商看到的是“孩子 A”，绝不会是你的孩子。",
   "settingsPage.dataUseForm.submit": "保存你同意的内容",
-
   "settingsPage.notifications.title": "通知",
   "settingsPage.notifications.heading": "WonderHome 如何通知你",
   "settingsPage.notifications.lede": "这是你自己的偏好——你的设置不会改变其他人的通知。",
@@ -257,7 +260,6 @@ export const settingsZh: AreaCatalog<typeof settingsEn> = {
   "settingsPage.notifications.smart.learn": "学习我通常何时处理",
   "settingsPage.notifications.smart.learnBody":
     "当你至少五次在差不多同一时间处理某类提醒后，这类提醒的第一条会改到那个时间前后。你在上面选择的时间始终优先，免打扰时段也依然有效。",
-
   "settingsPage.privacy.title": "隐私",
   "settingsPage.privacy.heading": "你的隐私",
   "settingsPage.privacy.lede": "哪些内容会离开这个家、我们保存多久，以及如何带走你的数据或要求删除。",
@@ -348,7 +350,6 @@ export const settingsZh: AreaCatalog<typeof settingsEn> = {
   "settingsPage.privacy.request.status.cancelled": "已取消",
   "settingsPage.privacy.request.status.refused": "已拒绝",
   "settingsPage.privacy.quote": "你的家。你的数据。你说了算。",
-
   "settingsPage.voice.title": "语音",
   "settingsPage.voice.heading": "WonderHome 如何与你交谈",
   "settingsPage.voice.lede": "你在和谁交谈、回复听起来如何，以及它听得有多仔细。",
@@ -487,7 +488,6 @@ export const settingsZh: AreaCatalog<typeof settingsEn> = {
   "settingsPage.voice.ownKey.hint": "来自已开启 Text-to-Speech 和 Speech-to-Text 的 Google Cloud 项目。仅为这个家庭保存，之后永远无法再读取。",
   "settingsPage.voice.ownKey.use": "使用此密钥",
   "settingsPage.voice.ownKey.remove": "移除并改回 WonderHome 的语音服务",
-
   "settingsPage.voiceAssistants.title": "语音助手",
   "settingsPage.voiceAssistants.lede": "代表 {household} 中某位成员与 WonderHome 对话的音箱——以及每一个具体可以做什么。",
   "settingsPage.voiceAssistants.linking": "关联一个助手",
@@ -542,7 +542,6 @@ export const settingsZh: AreaCatalog<typeof settingsEn> = {
   "settingsPage.voiceAssistants.scope.pets.read": "宠物及其照料",
   "settingsPage.voiceAssistants.scope.notifications.create": "为你设置提醒",
   "settingsPage.voiceAssistants.quote": "你的家，由你做主。",
-
   "settingsPage.whatsapp.lede": "从 WhatsApp 把内容转发给 WonderHome，它们会进入 {household} 的 HomeSend，等你查看。",
   "settingsPage.whatsapp.readError": "暂时无法读取你的 WhatsApp 关联。没有任何更改——请稍后再试。",
   "settingsPage.whatsapp.yours": "你的 WhatsApp",
@@ -599,7 +598,6 @@ export const settingsZh: AreaCatalog<typeof settingsEn> = {
   "settingsPage.whatsapp.linked.homesend": "它会出现在 HomeSend 中等你查看",
   "settingsPage.whatsapp.linked.nothingPaid": "不会通过 WhatsApp 付款、预订或发送任何内容——由你在应用中决定",
   "settingsPage.whatsapp.goHomeSend": "前往 HomeSend",
-
   "settingsPage.plan.title": "你的套餐",
   "settingsPage.plan.back": "返回你的套餐",
   "settingsPage.plan.lede": "{household} 当前使用 {plan} 套餐。",
@@ -649,7 +647,6 @@ export const settingsZh: AreaCatalog<typeof settingsEn> = {
   "settingsPage.plan.leave": "保持不变",
   "settingsPage.plan.workOutFailed": "暂时无法计算。",
   "settingsPage.plan.changeFailed": "暂时无法更改套餐。",
-
   "settingsPage.checkout.title": "结账",
   "settingsPage.checkout.adminOnly": "只有管理员可以更改套餐",
   "settingsPage.checkout.adminOnlyBody": "请让你家中的管理员选择套餐。",
@@ -675,7 +672,6 @@ export const settingsZh: AreaCatalog<typeof settingsEn> = {
   "settingsPage.checkout.notNow": "暂不",
   "settingsPage.checkout.opening": "正在打开 {provider}…",
   "settingsPage.checkout.openFailed": "无法打开付款页面。没有扣款。",
-
   "settingsPage.confirmed.title": "付款",
   "settingsPage.confirmed.yourNewPlan": "你的新套餐",
   "settingsPage.confirmed.cancelled": "没有扣款",
@@ -687,7 +683,6 @@ export const settingsZh: AreaCatalog<typeof settingsEn> = {
   "settingsPage.confirmed.waitingBody": "我们正在等待支付服务商确认——通常不到一分钟。你可以离开此页面：确认后 {plan} 会自动生效，而且绝不会重复扣款。",
   "settingsPage.confirmed.receipt": "查看收据",
   "settingsPage.confirmed.quote": "少些操心，多些家庭时光。",
-
   "settingsPage.billing.lede": "{household} 的每一笔付款，以支付服务商确认的为准。",
   "settingsPage.billing.adminOnly": "只有管理员可以查看账单",
   "settingsPage.billing.adminOnlyBody": "付款事宜只涉及家庭管理员和支付服务商。",
@@ -713,7 +708,6 @@ export const settingsZh: AreaCatalog<typeof settingsEn> = {
   "settingsPage.billing.method.emi": "EMI",
   "settingsPage.billing.method.bank_transfer": "银行转账",
   "settingsPage.billing.method.other": "其他",
-
   "settingsPage.invoice.title": "发票",
   "settingsPage.invoice.numbered": "发票 {number}",
   "settingsPage.invoice.back": "返回账单记录",

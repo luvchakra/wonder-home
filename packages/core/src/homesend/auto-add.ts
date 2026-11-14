@@ -4,9 +4,9 @@
  *
  * An Admin picks the bar on Settings → AI Assistant; a reading is added on
  * its own only when its score is strictly above it, and only where the
- * outcome's autonomy is "Pre Approved" (`confirmation.ts`). Bills, receipts
- * and health documents wait too, unless an Admin turned on "Add money
- * entries directly" or "Add health entries directly" (`DirectAdd` below).
+ * outcome's autonomy is "Pre Approved", or only actions are held there
+ * (`confirmation.ts`, `record-first.ts` decision 1). Bills, receipts and
+ * health documents follow "Money and health entries" (`DirectAdd` below).
  * Photos and files, paying and deleting still wait whatever any setting says.
  *
  * Pure, so client screens can show a score; the stored choice is read and
@@ -18,6 +18,7 @@ import type { Translate } from "../i18n/translate";
 import type { WaitingFor } from "./confirmation";
 import { FROM_A_FILE, VERIFIED_CONFIDENCE } from "./verify";
 import type { HomeSendKind } from "./items";
+import type { MoneyHealthMode } from "./record-first";
 
 /** The bars an Admin may pick (rule 20: picked, not typed), in percent. */
 export const AUTO_ADD_PERCENTS = [60, 70, 80, 85, 90, 95, 97, 99] as const;
@@ -117,19 +118,27 @@ export function waitRowWords(waiting: WaitingFor, t: Translate): string {
 
 /**
  * Whether bills and receipts ("money") and health documents ("health") may
- * be added on their own at all (the owner, 2026-10-26: "along with the %
- * setting add setting feature to ask user if they want to add entries related
- * to health, entries related to money directly in WonderHome if allowed in
- * responsibilities"). Each is an Admin's choice, off until one turns it on,
- * and off whenever it can't be read (`household/direct-add-repository.ts`).
- * On, the entry still needs its responsibility Pre Approved and a reading
- * above the bar, like any other (`confirmation.ts`).
+ * be recorded without a person's review, and how (decision 2, the owner
+ * 2026-11-14, replacing the two 2026-10-26 switches): `true` means it is
+ * recorded through the same rules as a grocery; `checking[area]` means it is
+ * recorded as Checking whatever the score, so a person confirms it with one
+ * tap. Both off is "Wait for review", and the answer whenever the setting
+ * can't be read (`household/record-first-repository.ts`). Paying never happens.
  */
 export type DirectAddArea = "money" | "health";
-export type DirectAdd = Record<DirectAddArea, boolean>;
+export type DirectAdd = Record<DirectAddArea, boolean> & { checking?: Partial<Record<DirectAddArea, boolean>> };
 
-/** Both off: the default, and the answer whenever the settings can't be read. */
+/** Both waiting for review: the answer whenever the settings can't be read. */
 export const NO_DIRECT_ADD: DirectAdd = { money: false, health: false };
+
+/** What each area's mode (`record-first.ts`) lets HomeSend do. */
+export function directAddFrom(modes: Record<DirectAddArea, MoneyHealthMode>): DirectAdd {
+  return {
+    money: modes.money !== "review",
+    health: modes.health !== "review",
+    checking: { money: modes.money === "checking", health: modes.health === "checking" },
+  };
+}
 
 /** Which of the two settings decides a kind; null for a kind neither decides. */
 export function directAddAreaOf(kind: HomeSendKind | null | undefined): DirectAddArea | null {

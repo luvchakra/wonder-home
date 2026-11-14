@@ -20,7 +20,8 @@ const turn = (over: Partial<TurnInput> = {}): TurnInput => ({
 
 describe("one turn of conversation", () => {
   it("turns a request into a proposal and a short reply", async () => {
-    const result = await converse(turn({ utterance: "Sunita won't be here tomorrow." }));
+    // "Ask before acting on what I say" turns the request into a proposal; without it, it is recorded (record first, 2026-11-14).
+    const result = await converse(turn({ utterance: "Sunita won't be here tomorrow.", confirmRequestedChanges: true }));
 
     expect(result.kind).toBe("reply");
     if (result.kind !== "reply") return;
