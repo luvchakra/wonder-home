@@ -5,11 +5,12 @@ import { describeKeySource, platformKey, resolveModelKey } from "@wonderhome/cor
 import { loadDataUse } from "@wonderhome/core/ai/privacy-repository";
 import { loadConfirmRequested } from "@wonderhome/core/conversation/consent-repository";
 import { AUTO_ADD_PERCENTS } from "@wonderhome/core/homesend/auto-add";
-import { loadAutoAddPercent } from "@wonderhome/core/household/auto-add-repository";
 import { loadDirectAdd } from "@wonderhome/core/household/direct-add-repository";
 import { loadHomeSendTidy } from "@wonderhome/core/household/homesend-tidy-repository";
-import { keyLabel } from "@wonderhome/core/homesend/learned";
-import { listLearnedDefaults } from "@wonderhome/core/homesend/learned-repository";
+import { BAR_KINDS, effectiveBar, MIN_HISTORY } from "@wonderhome/core/homebrain/kind-bar";
+import { listKindBars, loadChosenAutoAddPercent } from "@wonderhome/core/homebrain/kind-bar-repository";
+import { MEMBER_RULE_KINDS, ruleKeyLabel, type RuleKind } from "@wonderhome/core/homebrain/rules";
+import { listHouseholdRules } from "@wonderhome/core/homebrain/rules-repository";
 import { listMembers } from "@wonderhome/core/identity/households";
 import { AppShell } from "@wonderhome/core/shell/app-shell";
 import { Card } from "@wonderhome/core/ui/card";
@@ -50,17 +51,18 @@ export default async function AiAssistantSettingsPage({ searchParams }: { search
   const returnTo = safeReturnTo(query.returnTo);
   const { supabase, membership, view, viewer, secondary } = session;
   const householdId = membership.household.id;
-  const [credential, voiceCredential, dataUse, confirmRequested, autoAddPercent, directAdd, keyAlerts, homesendTidy, learned, members] = await Promise.all([
+  const [credential, voiceCredential, dataUse, confirmRequested, chosenPercent, directAdd, keyAlerts, homesendTidy, learned, members, kindBars] = await Promise.all([
     credentialStatus(supabase, householdId).catch(() => ({ configured: false, provider: null, updatedAt: null })),
     geminiVoiceKeyStatus(supabase, householdId).catch(() => ({ configured: false, provider: null, updatedAt: null })),
     loadDataUse(supabase, householdId),
     loadConfirmRequested(supabase, householdId),
-    loadAutoAddPercent(supabase, householdId),
+    loadChosenAutoAddPercent(supabase, householdId),
     loadDirectAdd(supabase, householdId),
     openKeyAlerts(supabase, householdId),
     loadHomeSendTidy(supabase, householdId),
-    listLearnedDefaults(supabase, householdId).catch(() => []),
+    listHouseholdRules(supabase, householdId).catch(() => []),
     listMembers(supabase, householdId, null).catch(() => []),
+    listKindBars(supabase, householdId).catch(() => []),
   ]);
 
   // Which key actually answers, decided in one place so the screen can never
@@ -70,19 +72,49 @@ export default async function AiAssistantSettingsPage({ searchParams }: { search
   const manages = view.permissions.includes("household.manage");
   const { t } = session.locale;
   const keyWords = keySourceWords(t, key.source);
-  // What HomeSend learned (14-066), in words: "class2@lakeside.edu → Tara", and who taught it when.
+  // What HomeSend learned (14-066, and HomeBrain's household rules): "class2@lakeside.edu → Tara", what kind of rule, who taught it when.
   const nameOf = new Map(members.map((member) => [member.id, member.displayName]));
+  const ruleType: Record<RuleKind, "person" | "area" | "category" | "item" | "place"> = {
+    sender_child: "person",
+    sender_person: "person",
+    sender_area: "area",
+    vendor_category: "category",
+    phrase_item: "item",
+    place_alias: "place",
+  };
   const learnedRows = learned
-    .filter((row) => nameOf.has(row.valueMemberId))
+    // A rule naming someone the household no longer has is not shown (and not used).
+    .filter((row) => !MEMBER_RULE_KINDS.has(row.kind) || (row.valueMemberId !== null && nameOf.has(row.valueMemberId)))
     .map((row) => {
       const date = formatDate(membership.household.timezone, new Date(row.learnedAt));
       const by = row.learnedByMemberId ? nameOf.get(row.learnedByMemberId) : undefined;
-      return {
-        id: row.id,
-        name: `${keyLabel(row.key)} → ${nameOf.get(row.valueMemberId)}`,
-        reason: row.mixed ? t("settingsPage.ai.learned.mixed") : by ? t("settingsPage.ai.learned.by", { name: by, date }) : t("settingsPage.ai.learned.on", { date }),
-      };
+      const value = MEMBER_RULE_KINDS.has(row.kind)
+        ? nameOf.get(row.valueMemberId!)!
+        : row.kind === "sender_area" && (BAR_KINDS as readonly string[]).includes(row.valueText ?? "")
+          ? t(`settingsPage.ai.kindBars.kind.${row.valueText as (typeof BAR_KINDS)[number]}`)
+          : (row.valueText ?? "");
+      const key = row.kind === "phrase_item" || row.kind === "place_alias" ? `“${ruleKeyLabel(row.key)}”` : ruleKeyLabel(row.key);
+      const taught = row.mixed
+        ? row.kind === "sender_child"
+          ? t("settingsPage.ai.learned.mixed")
+          : t("settingsPage.ai.learned.mixedAny")
+        : by
+          ? t(row.source === "correction" ? "settingsPage.ai.learned.corrected" : "settingsPage.ai.learned.by", { name: by, date })
+          : t("settingsPage.ai.learned.on", { date });
+      const times = !row.mixed && row.times > 1 ? ` · ${t("settingsPage.ai.learned.times", { count: row.times })}` : "";
+      return { id: row.id, name: `${key} → ${value}`, reason: `${t(`settingsPage.ai.learned.type.${ruleType[row.kind]}`)} · ${taught}${times}` };
     });
+  // Each kind's bar (HomeBrain): the Admin's when chosen, else from the household's own undo and correction rate.
+  const autoAddPercent = chosenPercent ?? 0;
+  const barRows = BAR_KINDS.map((kind) => {
+    const bar = effectiveBar({ kind, adminPercent: null, learned: kindBars });
+    const history = bar.history;
+    return {
+      kind,
+      name: t("settingsPage.ai.kindBars.row", { kind: t(`settingsPage.ai.kindBars.kind.${kind}`), percent: bar.percent }),
+      reason: history && history.added >= MIN_HISTORY ? t("settingsPage.ai.kindBars.reason", { added: history.added, errors: history.undone + history.corrected }) : t("settingsPage.ai.kindBars.reasonNew"),
+    };
+  });
   // Gemini voice runs only on Google: its own key first, else the assistant's when that is Google's.
   const voiceLine = voiceCredential.configured
     ? t("settingsPage.ai.voiceKey.own", { date: voiceCredential.updatedAt ? formatDate(membership.household.timezone, voiceCredential.updatedAt, "long") : "" })
@@ -125,15 +157,34 @@ export default async function AiAssistantSettingsPage({ searchParams }: { search
             <AutoAddPercentPicker
               householdId={householdId}
               percent={autoAddPercent}
-              options={AUTO_ADD_PERCENTS}
+              options={[0, ...AUTO_ADD_PERCENTS]}
               manages={manages}
               labels={{
                 title: t("settingsPage.ai.autoAdd.title"),
                 detail: t("settingsPage.ai.autoAdd.detail"),
-                option: Object.fromEntries(AUTO_ADD_PERCENTS.map((percent) => [percent, t(percent === 95 ? "settingsPage.ai.autoAdd.optionDefault" : "settingsPage.ai.autoAdd.option", { percent })])),
+                option: { 0: t("settingsPage.ai.autoAdd.optionAuto"), ...Object.fromEntries(AUTO_ADD_PERCENTS.map((percent) => [percent, t("settingsPage.ai.autoAdd.option", { percent })])) },
                 adminDecides: t("settingsPage.adminDecides"),
               }}
             />
+            {/* Each kind's bar right now (HomeBrain knows): one line each, or the Admin's bar for all. */}
+            <div id="kind-bars" className="mt-4 border-t border-[var(--wh-border)] pt-3">
+              <p className="text-sm font-semibold">{t("settingsPage.ai.kindBars.title")}</p>
+              {chosenPercent !== null ? (
+                <p className="mt-0.5 text-sm text-[var(--wh-foreground-muted)]">{t("settingsPage.ai.kindBars.admin", { percent: chosenPercent })}</p>
+              ) : (
+                <>
+                  <p className="mt-0.5 text-sm text-[var(--wh-foreground-muted)]">{t("settingsPage.ai.kindBars.detail")}</p>
+                  <ul className="mt-2 divide-y divide-[var(--wh-border)]">
+                    {barRows.map((row) => (
+                      <li key={row.kind} className="py-2">
+                        <p className="text-sm font-medium break-words">{row.name}</p>
+                        <p className="text-xs text-[var(--wh-foreground-subtle)]">{row.reason}</p>
+                      </li>
+                    ))}
+                  </ul>
+                </>
+              )}
+            </div>
           </Card>
           {/* Whether bills and receipts, or health documents, may be added on their own at all (the owner, 2026-10-26): right beside the bar. */}
           {(["money", "health"] as const).map((area) => (

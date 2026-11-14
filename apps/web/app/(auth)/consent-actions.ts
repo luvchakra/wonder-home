@@ -42,7 +42,8 @@ export async function saveConfirmRequestedAction(_previous: ActionState, formDat
  * How sure HomeSend must be before it adds an entry on its own (the owner,
  * 2026-10-26): an Admin picks the bar from the ones WonderHome offers.
  */
-const autoAddSchema = z.object({ householdId: z.uuid(), percent: z.enum(AUTO_ADD_PERCENTS.map(String) as [string, ...string[]]) });
+/** "0" is "Set for each kind by WonderHome" (`homebrain/kind-bar.ts`). */
+const autoAddSchema = z.object({ householdId: z.uuid(), percent: z.enum(["0", ...AUTO_ADD_PERCENTS.map(String)] as [string, ...string[]]) });
 
 export async function saveAutoAddPercentAction(_previous: ActionState, formData: FormData): Promise<ActionState> {
   const parsed = autoAddSchema.safeParse(Object.fromEntries(formData));
@@ -50,7 +51,7 @@ export async function saveAutoAddPercentAction(_previous: ActionState, formData:
   try {
     const supabase = await createClient();
     const membership = await requireHouseholdAdmin(supabase, parsed.data.householdId);
-    await saveAutoAddPercent(supabase, { householdId: parsed.data.householdId, actorMemberId: membership.memberId, percent: asAutoAddPercent(parsed.data.percent) });
+    await saveAutoAddPercent(supabase, { householdId: parsed.data.householdId, actorMemberId: membership.memberId, percent: parsed.data.percent === "0" ? "auto" : asAutoAddPercent(parsed.data.percent) });
   } catch (thrown) {
     return { error: toErrorBody(thrown, "privacy").body.error.message };
   }

@@ -24,6 +24,8 @@ export async function loadAutoAddPercent(supabase: SupabaseClient, householdId: 
     .maybeSingle();
   if (error) return AUTO_ADD_PERCENTS.at(-1)!;
   if (!data) return DEFAULT_AUTO_ADD_PERCENT;
+  // "Set for each kind by WonderHome" (`homebrain/kind-bar.ts`): no single bar chosen, so the default here.
+  if ((data as { rule: { auto?: unknown } | null }).rule?.auto === true) return DEFAULT_AUTO_ADD_PERCENT;
   // A stored bar WonderHome doesn't offer is read like one that can't be read: the highest.
   const stored = (data as { rule: { percent?: unknown } | null }).rule?.percent;
   return AUTO_ADD_PERCENTS.some((percent) => percent === stored) ? asAutoAddPercent(stored) : AUTO_ADD_PERCENTS.at(-1)!;
@@ -31,13 +33,14 @@ export async function loadAutoAddPercent(supabase: SupabaseClient, householdId: 
 
 export async function saveAutoAddPercent(
   supabase: SupabaseClient,
-  input: { householdId: string; actorMemberId: string; percent: AutoAddPercent },
+  input: { householdId: string; actorMemberId: string; percent: AutoAddPercent | "auto" },
 ): Promise<{ id: string; downstream: string[] }> {
   return savePolicy(supabase, {
     householdId: input.householdId,
     actorMemberId: input.actorMemberId,
     category: "ai_autonomy",
     name: AUTO_ADD_POLICY_NAME,
-    rule: { percent: input.percent },
+    // "auto": each kind's bar follows the household's own accuracy (`homebrain/kind-bar.ts`).
+    rule: input.percent === "auto" ? { auto: true } : { percent: input.percent },
   });
 }

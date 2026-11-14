@@ -1,3 +1,4 @@
+import { observeMemory } from "./memory-runner";
 import { looksLikeInstruction, normaliseTopic } from "../school/trivia";
 import { validateGeneratedCard } from "../school/trivia-generate";
 import { decideTopic, type TriviaTopicJudge } from "../school/trivia-safety";
@@ -652,6 +653,8 @@ async function observeTidy(c: HomeSendCase, tidy: NonNullable<HomeSendCase["tidy
 // --- HomeBrain ----------------------------------------------------------------
 
 export async function observeHomeBrain(c: HomeBrainCase, models: Models = {}): Promise<Observation> {
+  // The memory resolver, lessons, the nightly check and each kind's bar: no model involved.
+  if (c.memory) return observeMemory(c, c.memory, EMPTY);
   const answer = await brainAnswer(c, c.question, c.previousQuestion ?? null, models);
   // A whole-home question can come back without a sentence of its own (the
   // route then shows its summary); the facts HomeBrain chose are the answer.

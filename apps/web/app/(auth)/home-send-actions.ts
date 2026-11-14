@@ -31,6 +31,7 @@ import { standDownActivity, standDownActivityNote } from "@wonderhome/core/schoo
 import { setEventCancelled } from "@wonderhome/core/family/event-detail";
 
 import { learnSubject } from "@wonderhome/core/homesend/learned-repository";
+import { learnFromAnswer } from "@wonderhome/core/homebrain/rules-repository";
 import { prepareReview } from "./home-send-review";
 import { autoApplyHomeSendItem } from "./home-send-auto";
 import { addChildFromNotice, addGrocery, createNew, recordReceipt, reviseExisting, routeSchema, type RouteInput } from "./home-send-writes";
@@ -559,6 +560,12 @@ export async function routeHomeSendItemAction(_previous: RouteHomeItemState, for
         memberId: membership.memberId,
         evidence,
       }).catch((error) => log.warn("correction evidence not recorded", { reason: error instanceof Error ? error.message : "unknown" }));
+      // What the person confirmed teaches the household's rules (HomeBrain knows): a sender's kind when they
+      // changed it, a payee's category. Never an amount or an approval (`homebrain/rules.ts`); best-effort.
+      const sender = intake.senderAddress ?? intake.understanding?.provenance.sender ?? null;
+      const teach = { householdId: input.householdId, memberId: membership.memberId, kind: input.kind, sender, itemId: input.itemId, source: "pick" as const };
+      if (intake.classifiedKind && intake.classifiedKind !== input.kind) await learnFromAnswer(supabase, { ...teach, field: "area", to: { text: input.kind } }).catch(() => 0);
+      if (input.kind === "bill" && input.payee && input.billKind) await learnFromAnswer(supabase, { ...teach, field: "category", vendor: input.payee, to: { text: input.billKind } }).catch(() => 0);
     }
 
     revalidateDomains();

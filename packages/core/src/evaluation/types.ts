@@ -203,6 +203,14 @@ export type HomeBrainCase = CaseBase & {
   surface: "homebrain";
   question: string;
   previousQuestion?: string;
+  /**
+   * HomeBrain knows (Nothing stuck in review, phase 3): instead of a question,
+   * the case checks the memory resolver, a lesson, the nightly verification
+   * or a kind's bar (`memory-runner.ts`). Deterministic: no model is asked,
+   * so a provider's run gives the same answer. `question` then says in words
+   * what is being checked.
+   */
+  memory?: import("./memory-runner").MemorySpec;
 };
 
 /**
