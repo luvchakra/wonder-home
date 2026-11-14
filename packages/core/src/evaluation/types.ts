@@ -204,6 +204,8 @@ export type HomeSendCase = CaseBase & {
     retryCount?: number;
     /** Sent by a member who can be asked (default true). */
     senderIsMember?: boolean;
+    /** The waiting item looks like something already on record. */
+    duplicate?: boolean;
   };
   tidy?: {
     today: string;

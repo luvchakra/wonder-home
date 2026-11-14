@@ -733,6 +733,32 @@ Each of these is one continuous conversation. Every turn's expectation is checke
 
 ---
 
+## NSR — Nothing stuck in review: Nothing waits (part A)
+
+Every item sent ends as something, every question has a default after 24 hours and nothing waits past 48, one "Needs you" list, Checking keeps its reminders (`homesend/deadlines.ts`, `hometalk/needs-you*.ts`, `notifications/sources.ts` `notYetConfirmed`). Golden cases HS-55 to HS-65 and NY-01 to NY-08 run deterministically through `npm run eval -- --cases`; the flows through the step and the notices run in `hometalk/needs-you-run.test.ts`, `notifications/notices.test.ts` and `unconfirmed-hold.test.ts`; who may see and answer runs in `scripts/test-needs-you-rls.mjs`. Part B has NSR-20 to NSR-39, part C NSR-40 to NSR-59.
+
+| ID | Actor | Conversation or flow | Expected | Never | Golden / test | Result |
+|---|---|---|---|---|---|---|
+| NSR-01 | A/Kunal | Pastes a recipe blog page (nav bar, cookie banner, © line) into HomeSend; it can't be placed | Set aside at once, "Not household information" | Waiting; a question | HS-55, needs-you-run.test | Pass |
+| NSR-02 | A/Kunal | Pastes an advert ("Sponsored · 40% off · promo code"); unreadable | Set aside as not household information; nobody asked to resend | A resend question | HS-56 | Pass |
+| NSR-03 | A/Kunal | Pastes a school notice with an "unsubscribe" footer | Treated as household information: one question, default keeps it as a note | Set aside by its footer | HS-57 | Pass |
+| NSR-04 | A/Kunal | Pastes "Plumber Ramesh, call before the monsoon"; no kind; then asks HomeTalk "who was the plumber?" | Kept as a household note; HomeTalk's context carries it ("A household note, sent to HomeSend on …") | Waiting; copied into memories | HS-58, needs-you-run.test, context builders | Pass (the HomeTalk answer itself needs a live model) |
+| NSR-05 | A/Kunal | Sends unreadable text | Read once more another way (read-again job queued), nobody asked yet | A question before the second read | HS-59, needs-you-run.test | Pass |
+| NSR-06 | A/Kunal | Same item, still unreadable an hour after the second read | One "Please send it again" in Needs you; a day later, set aside "not sent again" | A second resend ask | HS-60, NY-07, needs-you-run.test | Pass |
+| NSR-07 | — | Unreadable forwarded email from noreply@ | Set aside; nobody to ask | Waiting | HS-61 | Pass |
+| NSR-08 | — | A file the safety check refused | Set aside with its reason; never read again | A read-again, a question | NY-08 | Pass |
+| NSR-09 | A/Kunal | A bill added as Checking; nobody answers its "Looks right?" for a day | Stays Checking, question closed; reminders say "Not yet confirmed — check before paying" | Confirmed by default; paid | HS-62, needs-you-run.test, unconfirmed-hold.test | Pass |
+| NSR-10 | A/Kunal | A receipt's purchase and a health document added as Checking; no answer | Both stay Checking | Confirmed by default | NY-01, NY-02 | Pass |
+| NSR-11 | A/Kunal | A grocery, a school item and an event added as Checking; no answer | Kept as read (confirmed by default, audited) | Left Checking without a reason | HS-63, NY-03, NY-04, needs-you-run.test | Pass |
+| NSR-12 | A/Kunal | A waiting notice like one already on record; no answer | What's on record is kept; the item set aside "already on record" | A second copy | NY-05, deadlines.test | Pass |
+| NSR-13 | A/Asmi (child) | Asmi sends a school notice that waits | Its question goes to the Admins, not to Asmi | A child answering for the household | needs-you-run.test, test-needs-you-rls | Pass |
+| NSR-14 | A/Kunal | A bill waiting on the money switch | Left for part B (recorded as Checking); no question, no note | Defaulted into a note | HS-65, needs-you-run.test | Pass |
+| NSR-15 | A/Kunal | A HomeTalk proposal left unanswered for 48 hours | Closed as not done | Approved by waiting | needs-you-run.test | Pass |
+| NSR-16 | A/Upasana | Opens HomeTalk with five open questions: a bill due in two days, a school deadline, three others | "Needs you · 5", three shown: the bill, then the school deadline, then the oldest; each with tap answers and "If nobody answers by …" | More than three; no default shown | needs-you.test (ranking) | Pass (the card on screen waits for the migration) |
+| NSR-17 | A/Kunal | Marks a Checking bill paid; edits a Checking school item | Each confirmed in his name; its question withdrawn; reminder loses "not yet confirmed" | A question about a settled entry | confirmByAction, needs-you-run.test | Pass |
+| NSR-18 | A/Kunal (Admin) | Turns off "Apply a question's default after a day" | Nothing applied; questions close at 48 hours with nothing done | A default applied | needs-you-run.test, ui-check (switch saves) | Pass |
+| NSR-19 | A/Kunal | Three things added today, one needs a word | One notice: "WonderHome added 3 things today · 1 needs a word — it's at the top of HomeTalk" | A notice per item | notices.test | Pass |
+
 ## NSR — Nothing stuck in review: HomeBrain knows (part C)
 
 The memory resolver, household rules, the nightly check and each kind's bar (`homebrain/memory-resolve.ts`, `rules.ts`, `verify-night.ts`, `kind-bar.ts`). Golden cases HB-15 to HB-39 run deterministically through `npm run eval -- --cases`.
@@ -797,3 +823,4 @@ Each run adds one row. A failing case links the PR that fixed it.
 | 2026-10-20 | CORE, FAM, HH, OUT through the golden runner with the QA Gemini key (the route's rules-first order) | 59 run (13 need the route or a live setting) | 36 (3 after a fix) | 20 open | #262 (CORE-08, FAM-04, FAM-08) |
 | 2026-10-20 | Re-run of the open CORE, FAM, HH, OUT cases | 9 | 9 (8 after a fix) | 11 open | #263 (CORE-25, CORE-26, FAM-11, FAM-12, HH-02, HH-03, HH-09, OUT-01) |
 | 2026-11-14 | NSR-40 to NSR-58 through `npm run eval -- --cases HB-15…HB-39` (deterministic) and the unit tests; NSR-59 by ui-check | 20 | 19 + NSR-59 (see PR) | 0 | part C PR |
+| 2026-11-14 | NSR-01 to NSR-19 through `npm run eval -- --cases HS-55…HS-65,NY-01…NY-08` (deterministic, 19/19) and the unit, RLS and ui-check runs named in each row | 19 | 19 (NSR-04's spoken answer and NSR-16's card on screen wait for a live model and the migration) | 0 | #546 |

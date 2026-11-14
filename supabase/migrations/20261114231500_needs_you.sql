@@ -26,7 +26,9 @@ alter table public.home_send_items drop constraint if exists home_send_items_arc
 alter table public.home_send_items add constraint home_send_items_archive_reason_check
   check (archive_reason is null or archive_reason in (
     'untouched_30_days', 'past_date', 'already_recorded', 'superseded', 'cancelled', 'unreadable', 'removed_by_person',
-    'not_household', 'kept_as_note', 'not_resent'
+    'not_household', 'kept_as_note', 'not_resent',
+    -- Part B's ("Record first", 20261114181700_record_first_sender_trust.sql): kept here so whichever runs second keeps both.
+    'new_sender', 'sender_blocked', 'sender_not_answered'
   ));
 
 -- HomeTalk finds household notes by these.

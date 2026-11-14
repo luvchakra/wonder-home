@@ -249,18 +249,21 @@ export default async function HomeSendPage({
           }
         />
 
-        {setAside.length > 0 ? (
-          <section className="space-y-2" aria-labelledby="home-send-set-aside">
-            <SectionHeader title={t("homesend.setAside.title")} count={archivedCount} />
-            <p id="home-send-set-aside" className="text-sm text-[var(--wh-foreground-muted)]">{t("homesend.setAside.lede")}</p>
-            <HomeSendArchived householdId={householdId} isAdmin={isAdmin} viewerMemberId={membership.memberId} viewerType={membership.memberType} items={setAside} reasons={Object.fromEntries(setAsideReasons)} labels={labels} compact />
-            {archivedCount > setAside.length ? (
-              <Link href="/home-send?view=archived" className="block text-center text-sm text-[var(--wh-primary)]">
-                {t("homesend.setAside.all", { count: archivedCount })}
-              </Link>
-            ) : null}
-          </section>
-        ) : null}
+        {/* Always mounted, so Restore's own confirmation survives the list emptying; headed only when something is set aside. */}
+        <section className="space-y-2" aria-labelledby={setAside.length > 0 ? "home-send-set-aside" : undefined}>
+          {setAside.length > 0 ? (
+            <>
+              <SectionHeader title={t("homesend.setAside.title")} count={archivedCount} />
+              <p id="home-send-set-aside" className="text-sm text-[var(--wh-foreground-muted)]">{t("homesend.setAside.lede")}</p>
+            </>
+          ) : null}
+          <HomeSendArchived householdId={householdId} isAdmin={isAdmin} viewerMemberId={membership.memberId} viewerType={membership.memberType} items={setAside} reasons={Object.fromEntries(setAsideReasons)} labels={labels} compact />
+          {archivedCount > setAside.length ? (
+            <Link href="/home-send?view=archived" className="block text-center text-sm text-[var(--wh-primary)]">
+              {t("homesend.setAside.all", { count: archivedCount })}
+            </Link>
+          ) : null}
+        </section>
 
         <HomeSendChannels
           householdId={householdId}

@@ -1,4 +1,5 @@
 import { HOMEBRAIN_MEMORY } from "./cases-memory";
+import { NEEDS_YOU } from "./cases-needs-you";
 import type { EvalCase, HomeBrainCase, HomeSendCase, HomeTalkCase, TriviaCase } from "./types";
 
 /**
@@ -1919,4 +1920,4 @@ const TRIVIA_CARDS: TriviaCase[] = [
   },
 ];
 
-export const GOLDEN_CASES: readonly EvalCase[] = [...HOMETALK, ...HOMESEND, ...HOMEBRAIN, ...HOMEBRAIN_MEMORY, ...TRIVIA, ...TRIVIA_CARDS];
+export const GOLDEN_CASES: readonly EvalCase[] = [...HOMETALK, ...HOMESEND, ...NEEDS_YOU, ...HOMEBRAIN, ...HOMEBRAIN_MEMORY, ...TRIVIA, ...TRIVIA_CARDS];

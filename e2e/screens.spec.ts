@@ -387,147 +387,71 @@ test.describe("every signed-in screen loads", () => {
     await page.goto("/ai");
     await expect(page.getByText("The Gemini voice key needs attention")).toHaveCount(0);
   });
-  test("HomeSend shows how sure WonderHome is with each entry, on the list and in the review", async ({ page }) => {
+  // "Nothing waits" (the owner, 2026-11-14): the HomeSend page is the send box, "Added recently" with Undo and
+  // "Set aside" with Restore; nothing waits for review there. Replaces the review-section tests (14-064, 14-066):
+  // waiting items are now one question each in "Needs you" (next test), and the review sections are gone.
+  test("HomeSend is the send box, Added recently and Set aside, and Restore puts an item back", async ({ page }) => {
+    test.setTimeout(90_000);
     const member = await admin.from("household_members").select("id").eq("household_id", householdId).eq("profile_id", userId).single();
     if (member.error) throw member.error;
-    const understanding = {
-      kind: "grocery_item", readable: true, confidence: "high", score: 0.97, check: { verified: true, unverified: [] }, facts: [], change: "new",
-      safety: { signals: [], instructionsIgnored: false }, entities: [], references: [],
-      provenance: { url: null, sender: null, channel: "whatsapp", subject: null, filename: null, contentType: null, transcriptConfidence: null },
-      contentSummary: "A shopping-list line asking to buy mustard oil.",
-      candidateActions: [{ type: "add_grocery_item", confidence: 0.97, fields: { title: "Mustard oil", quantity: 2, unit: "l" } }],
-    };
-    const extracted = { title: "Mustard oil", quantity: 2, unit: "l", notes: null, payee: null, amount: null, people: [], needs: [], lines: [], dueDate: null, subject: null, summary: understanding.contentSummary, billKind: null, category: null, currency: null, secondary: null, confidence: "high", schoolKind: null, documentDate: null, healthRecordType: null, subjectMemberName: null };
-    const inserted = await admin.from("home_send_items").insert({ household_id: householdId, created_by_member_id: member.data.id, source: "pasted_text", raw_text: "2 litres mustard oil", content_type: "text/plain", status: "classified", classified_kind: "grocery_item", extracted, understanding });
-    if (inserted.error) throw inserted.error;
-
-    await signIn(page);
-    await page.goto("/home-send");
-    const row = page.locator("li").filter({ hasText: "Mustard oil" }).first();
-    // The calm page (the owner, 2026-11-03): one plain line on the row; how sure lives in the review.
-    await expect(row).not.toContainText("97% sure");
-    await row.getByRole("button").first().click();
-    await expect(page.getByText(/High · 97% sure · every detail is in what you sent/)).toBeVisible();
-    await expect(page.getByText("Suggested · 97% sure").first()).toBeVisible();
-    await expect(page.getByLabel(/Quantity/)).toHaveValue("2");
-  });
-
-  // The owner, 2026-10-26: HomeSend asks for what an entry still lacks, and Add waits for it.
-  test("HomeSend says what a bill still needs, marks it, and keeps Add off until it is filled in", async ({ page }) => {
-    const member = await admin.from("household_members").select("id").eq("household_id", householdId).eq("profile_id", userId).single();
-    if (member.error) throw member.error;
-    const understanding = {
-      kind: "bill", readable: true, confidence: "high", score: 0.9, check: { verified: true, unverified: [] }, facts: [], change: "new",
-      safety: { signals: [], instructionsIgnored: false }, entities: [], references: [],
-      provenance: { url: null, sender: null, channel: "pasted_text", subject: null, filename: null, contentType: null, transcriptConfidence: null },
-      contentSummary: "A water bill from BWSSB.",
-      candidateActions: [{ type: "add_bill", confidence: 0.9, fields: { title: "Water bill", payee: "BWSSB" } }],
-    };
-    const extracted = { title: "Water bill", payee: "BWSSB", amount: null, currency: null, dueDate: null, notes: null, quantity: null, unit: null, people: [], needs: [], lines: [], subject: null, summary: understanding.contentSummary, billKind: null, category: null, secondary: null, confidence: "high", schoolKind: null, documentDate: null, healthRecordType: null, subjectMemberName: null };
-    const inserted = await admin.from("home_send_items").insert({ household_id: householdId, created_by_member_id: member.data.id, source: "pasted_text", raw_text: "BWSSB water bill", content_type: "text/plain", status: "classified", classified_kind: "bill", extracted, understanding });
-    if (inserted.error) throw inserted.error;
-
-    await signIn(page);
-    await page.goto("/home-send");
-    await page.locator("li").filter({ hasText: "Water bill" }).first().getByRole("button").first().click();
-    await expect(page.getByRole("status").filter({ hasText: "Still needed: Amount, Due" })).toBeVisible();
-    await expect(page.getByLabel("Amount", { exact: true })).toHaveAttribute("aria-invalid", "true");
-    const add = page.getByRole("button", { name: "Add", exact: true });
-    await expect(add).toBeDisabled();
-    await page.getByLabel("Amount", { exact: true }).fill("640");
-    await expect(page.getByRole("status").filter({ hasText: "Still needed: Due" })).toBeVisible();
-    await expect(add).toBeDisabled();
-    await page.getByLabel("Due", { exact: true }).fill("2026-11-10");
-    await expect(page.getByText(/Still needed/)).toHaveCount(0);
-    await expect(add).toBeEnabled();
-  });
-  // The owner, 2026-11-03: a calm HomeSend — identical items folded, unreadable ones named plainly,
-  // and two one-tap clears behind their own confirms, each with its guards and an Undo.
-  test("HomeSend folds identical items, names what couldn't be read, and clears in one tap with Undo", async ({ page }) => {
-    // Four server actions against the live database, each re-rendering the page from a runner far from
-    // ap-south-1 (the queries themselves take tens of ms): the default 30 s test budget and 5 s waits ran
-    // out mid-step in the nightly. The budget fits the steps; every assertion is unchanged.
-    test.setTimeout(120_000);
-    const member = await admin.from("household_members").select("id").eq("household_id", householdId).eq("profile_id", userId).single();
-    if (member.error) throw member.error;
-    // Start from an empty HomeSend in this test's own household.
     await admin.from("homesend_changes").delete().eq("household_id", householdId);
     await admin.from("home_send_items").delete().eq("household_id", householdId);
     const base = { household_id: householdId, created_by_member_id: member.data.id, source: "pasted_text", content_type: "text/plain" };
-    const listing = { title: "Swag Labs product listing", notes: null, needs: [], lines: [], people: [], confidence: "low" };
-    const scraped = "Open Menu Date: 2026-11-03 Open Menu Swag Labs Products Name (A to Z) Sauce Labs Backpack carry.allTheThings() with the sleek, streamlined Sly Pack that melds uncompromising style with unequaled laptop and tablet protection. $29.99 Add to cart Sauce Labs Bike Light A red light isn't the desired state in testing but it sure helps when riding your bike at night. $9.99 Add to cart";
-    const grocery = { title: "Basmati rice", quantity: 5, unit: "kg", notes: null, needs: [], lines: [], people: [], confidence: "medium", category: null };
-    const bill = { title: "Electricity bill", payee: "BESCOM", amount: 1840, currency: "INR", dueDate: "2026-12-10", notes: null, needs: [], lines: [], people: [], confidence: "high" };
-    const understanding = (kind: string, score: number, summary: string) => ({
-      kind, readable: true, confidence: score > 0.8 ? "high" : "medium", score, check: { verified: true, unverified: [] }, facts: [], change: "new",
-      safety: { signals: [], instructionsIgnored: false }, entities: [], references: [],
-      provenance: { url: null, sender: null, channel: "pasted_text", subject: null, filename: null, contentType: null, transcriptConfidence: null },
-      contentSummary: summary, candidateActions: [],
-    });
     const seeded = await admin.from("home_send_items").insert([
-      ...Array.from({ length: 5 }, (_, n) => ({ ...base, raw_text: `listing ${n}`, status: "classified", classified_kind: "unknown", extracted: listing, understanding: understanding("unknown", 0.7, "Swag Labs product listing") })),
-      { ...base, raw_text: "5 kg basmati rice", status: "classified", classified_kind: "grocery_item", extracted: grocery, understanding: understanding("grocery_item", 0.72, "Buy basmati rice") },
-      { ...base, raw_text: "BESCOM bill 1840 due 10 Dec", status: "classified", classified_kind: "bill", extracted: bill, understanding: understanding("bill", 0.96, "An electricity bill") },
-      { ...base, raw_text: scraped, status: "failed", failure_reason: "unreadable" },
-    ]);
+      { ...base, raw_text: "2 litres milk", status: "routed", classified_kind: "grocery_item", extracted: { title: "Milk" } },
+      { ...base, raw_text: "Annual Day rehearsal", status: "archived", archived_from: "classified", archived_at: new Date().toISOString(), archive_reason: "superseded", classified_kind: "school_item", extracted: { title: "Annual Day rehearsal" } },
+      { ...base, raw_text: "Water bill", status: "classified", classified_kind: "bill", extracted: { title: "Water bill" } },
+    ]).select("id, raw_text");
     if (seeded.error) throw seeded.error;
+    const rehearsal = seeded.data.find((row) => row.raw_text === "Annual Day rehearsal")!;
 
     await signIn(page);
     await page.goto("/home-send");
-    await expect(page.getByText("Swag Labs product listing ×5")).toBeVisible();
-    await expect(page.getByText("A pasted web page")).toBeVisible();
-    // The raw scraped text is never a title; it shows only inside the row's detail.
-    await expect(page.getByText(/Open Menu Date/)).toHaveCount(0);
-    await page.getByRole("button", { name: "Show details for A pasted web page" }).click();
-    await expect(page.getByText(/Open Menu Date/)).toBeVisible();
+    await expect(page.getByRole("button", { name: /Send something/ })).toBeVisible();
+    await expect(page.getByRole("heading", { name: /Added recently/ })).toBeVisible();
+    await expect(page.getByRole("heading", { name: /Set aside/ })).toBeVisible();
+    // No review section: the waiting bill is not listed here, and nothing offers to add it from this page.
+    await expect(page.getByRole("heading", { name: /Needs a word from you/ })).toHaveCount(0);
+    await expect(page.getByText("Water bill")).toHaveCount(0);
+    await expect(page.getByRole("button", { name: "Add all anyway" })).toHaveCount(0);
 
-    // Add all anyway: the grocery is added as Checking; the bill waits ("Add money entries directly" is off);
-    // the five HomeSend couldn't tell the kind of have nowhere to go; the unreadable one is never added.
-    await page.getByRole("button", { name: "Add all anyway" }).click();
-    const addSheet = page.getByRole("dialog");
-    await expect(addSheet).toContainText("Add 1 anyway?");
-    await expect(addSheet).toContainText("5 will keep waiting — HomeSend couldn't tell what they are.");
-    await expect(addSheet).toContainText("1 bill or receipt will keep waiting because “Add money entries directly” is off.");
-    await expect(addSheet).toContainText("1 that couldn't be read is not added.");
-    await addSheet.getByRole("button", { name: "Add all anyway" }).click();
-    await expect(page.getByText(/Added 1 as Checking\. 6 are still waiting for you\./)).toBeVisible({ timeout: 30_000 });
-    const rice = await admin.from("home_send_items").select("id, status").eq("household_id", householdId).eq("classified_kind", "grocery_item").single();
-    expect(rice.data?.status).toBe("routed");
-    const change = await admin.from("homesend_changes").select("confirmation_state").eq("intake_id", rice.data!.id).single();
-    expect(change.data?.confirmation_state).toBe("unconfirmed");
-    const billRow = await admin.from("home_send_items").select("status").eq("household_id", householdId).eq("classified_kind", "bill").single();
-    expect(billRow.data?.status).toBe("classified");
-    const audit = await admin.from("audit_events").select("event_type").eq("household_id", householdId).in("event_type", ["homesend.added_all_anyway", "homesend.added_anyway"]);
-    expect((audit.data ?? []).map((row) => row.event_type).sort()).toEqual(["homesend.added_all_anyway", "homesend.added_anyway"]);
+    const row = page.locator("li").filter({ hasText: "Annual Day rehearsal" }).first();
+    await expect(row).toContainText("Replaced by a newer one");
+    await row.getByRole("button", { name: "Restore Annual Day rehearsal" }).click();
+    await expect(page.getByText(/Restored/)).toBeVisible({ timeout: 15_000 });
+    const restored = await admin.from("home_send_items").select("status").eq("id", rehearsal.id).single();
+    expect(restored.data?.status).toBe("classified");
+  });
 
-    // A second run inside the minute is refused, never run twice. The first run left nothing it can add,
-    // so the button is hidden; one more grocery gives it something, then it is removed so the counts below hold.
-    const extra = await admin.from("home_send_items").insert({ ...base, raw_text: "2 kg sugar", status: "classified", classified_kind: "grocery_item", extracted: { ...grocery, title: "Sugar", quantity: 2 }, understanding: understanding("grocery_item", 0.72, "Buy sugar") }).select("id").single();
-    if (extra.error) throw extra.error;
-    // The first run's hit is on the household's rolling counter. Its clock restarts now, so this click is
-    // inside the minute however long a slow runner took to get here (nightly 42444329691: 62.8 s, rightly allowed).
-    const hit = await admin.from("rate_limit_counters").update({ window_start: new Date().toISOString() }).eq("bucket", "homesend.add_all").eq("subject", householdId).select("hits");
-    expect(hit.data).toEqual([{ hits: 1 }]);
-    await page.reload();
-    await page.getByRole("button", { name: "Add all anyway" }).click();
-    await page.getByRole("dialog").getByRole("button", { name: "Add all anyway" }).click();
-    await expect(page.getByText(/pausing for a minute/)).toBeVisible({ timeout: 15_000 });
-    const sugar = await admin.from("home_send_items").select("status").eq("id", extra.data.id).single();
-    expect(sugar.data?.status).toBe("classified");
-    await admin.from("home_send_items").delete().eq("id", extra.data.id);
+  // "Needs you" (2026-11-14, decision 4): a waiting item is one question at the top of HomeTalk, with tap answers
+  // and what happens if nobody answers; one tap settles it in the member's own name.
+  test("Needs you: a waiting item's question shows its default and is settled with one tap", async ({ page }) => {
+    test.setTimeout(90_000);
+    const member = await admin.from("household_members").select("id").eq("household_id", householdId).eq("profile_id", userId).single();
+    if (member.error) throw member.error;
+    await admin.from("needs_you_items").delete().eq("household_id", householdId);
+    const item = await admin.from("home_send_items").insert({ household_id: householdId, created_by_member_id: member.data.id, source: "pasted_text", content_type: "text/plain", raw_text: "Rehearsal next week", status: "classified", classified_kind: "school_item", extracted: { title: "Class 3 rehearsal" } }).select("id").single();
+    if (item.error) throw item.error;
+    const asked = new Date();
+    const question = await admin.from("needs_you_items").insert({
+      household_id: householdId, source: "homesend_waiting", subject_table: "home_send_items", subject_id: item.data.id, recipient_member_id: member.data.id,
+      prompt: { code: "homesend.waiting", title: "Class 3 rehearsal", kind: "school_item" }, answers: [{ value: "note" }, { value: "set_aside" }],
+      default_answer: "note", default_at: new Date(asked.getTime() + 86_400_000).toISOString(), expires_at: new Date(asked.getTime() + 2 * 86_400_000).toISOString(),
+      consequence: 1, status: "open", created_at: asked.toISOString(),
+    }).select("id").single();
+    if (question.error) throw question.error;
 
-    // Archive all: every waiting and unreadable item set aside, and Undo puts back exactly those.
-    await page.reload();
-    await page.getByRole("button", { name: "Archive all" }).click();
-    const archiveSheet = page.getByRole("dialog");
-    await expect(archiveSheet).toContainText("Archive 7 items?");
-    await archiveSheet.getByRole("button", { name: "Archive all" }).click();
-    await expect(page.getByText("Archived 7.")).toBeVisible({ timeout: 15_000 });
-    const archived = await admin.from("home_send_items").select("id", { count: "exact", head: true }).eq("household_id", householdId).eq("status", "archived");
-    expect(archived.count).toBe(7);
-    await page.getByRole("button", { name: "Undo", exact: true }).first().click();
-    await expect(page.getByText("Put 7 back.")).toBeVisible({ timeout: 15_000 });
-    const back = await admin.from("home_send_items").select("status").eq("household_id", householdId).neq("status", "routed");
-    expect((back.data ?? []).map((row) => row.status).sort()).toEqual(["classified", "classified", "classified", "classified", "classified", "classified", "failed"]);
+    await signIn(page);
+    await page.goto("/ai");
+    const card = page.locator("#needs-you");
+    await expect(card.getByRole("heading", { name: /Needs you/ })).toBeVisible();
+    await expect(card).toContainText("What should I do with “Class 3 rehearsal”?");
+    await expect(card).toContainText(/If nobody answers by .+, I'll keep it as a household note/);
+    await card.getByRole("button", { name: "Set aside" }).click();
+    await expect(card.getByRole("status")).toContainText("Done. Thanks!", { timeout: 15_000 });
+    const settled = await admin.from("home_send_items").select("status, archive_reason").eq("id", item.data.id).single();
+    expect(settled.data).toEqual({ status: "archived", archive_reason: "removed_by_person" });
+    const closed = await admin.from("needs_you_items").select("status, answer, answered_by_member_id").eq("id", question.data.id).single();
+    expect(closed.data).toEqual({ status: "answered", answer: "set_aside", answered_by_member_id: member.data.id });
   });
 });

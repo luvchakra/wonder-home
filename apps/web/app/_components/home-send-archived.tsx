@@ -46,6 +46,8 @@ export function HomeSendArchived({ householdId, items, reasons = {}, labels, isA
     startTransition(() => deleteAction(data));
   };
   if (shown.length === 0 && deleteState.done === "deleted") return <Alert tone="info">{countWords(del.deleted, deleteState.count ?? 0)}</Alert>;
+  // On the HomeSend page nothing set aside means no section, but the last Restore still says it worked.
+  if (items.length === 0 && compact) return state.done === "restored" ? <Alert tone="info">{words.archived.restored}</Alert> : null;
   if (items.length === 0) return <EmptyState icon={Archive} tone="ai" title={words.archived.empty} description={words.archived.lede} />;
   return (
     <div className="space-y-4">

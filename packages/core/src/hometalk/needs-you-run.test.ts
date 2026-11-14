@@ -78,6 +78,14 @@ describe("the deadlines step", () => {
     expect(again).toMatchObject({ defaulted: 0, asked: 0, notes: 0, setAside: 0, readAgain: 0 });
   });
 
+  it("withdraws a question whose entry was confirmed elsewhere (Mark paid, an edit)", async () => {
+    const { client, tables } = seed();
+    tables.needs_you_items!.push({ id: "q1", household_id: "h1", source: "homesend_check", subject_id: "elec", status: "open", default_at: "2026-11-20T00:00:00Z", expires_at: "2026-11-21T00:00:00Z" });
+    tables.homesend_changes!.find((row) => row.id === "c1")!.confirmation_state = "confirmed";
+    await runNeedsYouDeadlines(client, { now: NOW, householdIds: ["h1"], sweep: false });
+    expect(tables.needs_you_items!.find((row) => row.id === "q1")).toMatchObject({ status: "withdrawn" });
+  });
+
   it("applies no default when an Admin switched decision 4 off, and closes the question at 48 hours instead", async () => {
     const { client, tables } = seed();
     tables.policies!.push({ household_id: "h1", category: "ai_autonomy", name: "Apply a question's default after a day", active: true, rule: { on: false } });

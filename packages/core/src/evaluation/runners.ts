@@ -687,7 +687,7 @@ function observeEnding(c: HomeSendCase, ending: NonNullable<HomeSendCase["ending
       minutesSinceTouched: 24 * 60,
     });
     if (decided.action === "set_aside") action = `set_aside:${decided.reason}`;
-    else if (decided.action === "ask") action = `ask→default:${waitingQuestion({ kind, title: reading.title, dueOn: reading.dueDate ?? null, today, duplicate: false }).defaultAnswer}`;
+    else if (decided.action === "ask") action = `ask→default:${waitingQuestion({ kind, title: reading.title, dueOn: reading.dueDate ?? null, today, duplicate: ending.duplicate ?? false }).defaultAnswer}`;
     else action = decided.action;
   }
   return {
