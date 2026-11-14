@@ -361,7 +361,7 @@ export async function sleepHousehold(
 
     // Verify after, not before (Nothing stuck in review, phase 3): each kind's bar, Checking entries the
     // evidence supports, and only real conflicts to the household's "Needs you" list.
-    const verified = await verifyHousehold(admin, householdId, now, options.needs === undefined ? defaultNeedsSink() : options.needs);
+    const verified = await verifyHousehold(admin, householdId, now, options.needs === undefined ? await defaultNeedsSink(admin) : options.needs);
     count("verified_checked", verified.checked);
     count("verified_confirmed", verified.confirmed);
     count("verified_conflicts", verified.conflicts);

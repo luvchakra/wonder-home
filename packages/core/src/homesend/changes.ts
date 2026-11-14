@@ -113,6 +113,8 @@ export async function confirmHomeSendEntry(
       confirmation_state: "confirmed",
       confirmed_at: new Date().toISOString(),
       confirmed_by_member_id: by.how === "person" ? by.memberId : null,
+      // Why it is confirmed (14-069, `homesend_changes.confirmed_basis`): a person said so, or answers raised it over the bar.
+      confirmed_basis: by.how === "person" ? "person" : "answer",
       ...(by.how === "answers" ? { confidence: Math.round(Math.min(1, Math.max(0, by.confidence)) * 1000) / 1000 } : {}),
     })
     .eq("household_id", householdId)
@@ -275,7 +277,7 @@ export async function confirmByAction(supabase: SupabaseClient, householdId: str
   try {
     const { data, error } = await supabase
       .from("homesend_changes")
-      .update({ confirmation_state: "confirmed", confirmed_at: new Date().toISOString(), confirmed_by_member_id: memberId })
+      .update({ confirmation_state: "confirmed", confirmed_at: new Date().toISOString(), confirmed_by_member_id: memberId, confirmed_basis: "person" })
       .eq("household_id", householdId)
       .eq("entity_id", entityId)
       .eq("confirmation_state", "unconfirmed")

@@ -10,7 +10,7 @@ import { normalizeWords, ruleFor, vendorKey, type HouseholdRule } from "./rules"
  * For entries added in the last two days it looks for exactly four real
  * conflicts, each raised once into the household's "Needs you" list with a
  * default that applies itself if nobody answers:
- *   duplicate       the same thing recorded twice → default: keep the first, undo the later copy
+ *   duplicate       the same thing recorded twice → default: keep both (a default never removes)
  *   date_clash      two things for the same person at the same day and time → default: keep both
  *   unusual_amount  a bill or receipt far from that payee's usual amount → default: keep it
  *   sender_mismatch a sender the household taught one person or kind sent something else → default: keep it
@@ -51,11 +51,19 @@ export type SourceItem = { itemId: string; kind: string | null; title: string; d
 export const CONFLICT_REASONS = ["duplicate", "date_clash", "unusual_amount", "sender_mismatch"] as const;
 export type ConflictReason = (typeof CONFLICT_REASONS)[number];
 
-export type ConflictAnswer = { id: string; label: string; action: "keep" | "undo_this" | "undo_other" };
+/** "keep" leaves it; "remove" undoes this entry through HomeSend's own Undo, only on a person's tap. */
+export type ConflictAnswer = { id: "keep" | "remove"; label: string; action: "keep" | "undo_this" };
 
 export type Conflict = {
   reason: ConflictReason;
   changeId: string;
+  /** The HomeSend item behind the entry: what "Needs you" asks about and Undo reverses. */
+  itemId: string;
+  /** The entry's own title and kind, for the question's words and topic mark. */
+  label: string;
+  kind: BarKind;
+  /** The entry's day, when it has one: an earlier day leads the list. */
+  dueOn: string | null;
   /** The other entry, for a duplicate or a clash. */
   otherChangeId: string | null;
   /** Who is most likely to know: whoever sent it in, else nobody named (the area owner, Needs-you decides). */
@@ -134,15 +142,20 @@ export function planVerification(input: {
         raise({
           reason: "duplicate",
           changeId: entry.changeId,
+          itemId: entry.itemId,
+          label: entry.label,
+          kind: entry.kind,
+          dueOn: entry.date?.slice(0, 10) ?? null,
           otherChangeId: twin.changeId,
           recipientMemberId: entry.createdByMemberId,
-          question: `“${entry.label}” looks like it was added twice. Keep just one?`,
+          question: `“${entry.label}” looks like it was added twice. Remove the copy?`,
           answers: [
-            { id: "keep_one", label: "Keep one", action: "undo_this" },
-            { id: "keep_both", label: "They're different", action: "keep" },
+            { id: "remove", label: "Remove this copy", action: "undo_this" },
+            { id: "keep", label: "They're different", action: "keep" },
           ],
-          defaultAnswerId: "keep_one",
-          defaultWords: "I'll keep the first one and undo the copy.",
+          // A default never removes anything: unanswered, both stay.
+          defaultAnswerId: "keep",
+          defaultWords: "I'll keep both.",
           evidence: [`Another “${entry.label}”${entry.date ? ` on ${entry.date.slice(0, 10)}` : ""} was added ${twin.createdAt.slice(0, 10)}.`],
         });
         continue;
@@ -160,15 +173,18 @@ export function planVerification(input: {
         raise({
           reason: "date_clash",
           changeId: entry.changeId,
+          itemId: entry.itemId,
+          label: entry.label,
+          kind: entry.kind,
+          dueOn: entry.date?.slice(0, 10) ?? null,
           otherChangeId: clash.changeId,
           recipientMemberId: entry.createdByMemberId,
           question: `“${entry.label}” and “${clash.label}” are both for ${who} at the same time. Is one of them wrong?`,
           answers: [
-            { id: "keep_both", label: "Both are right", action: "keep" },
-            { id: "undo_this", label: `Remove “${entry.label}”`, action: "undo_this" },
-            { id: "undo_other", label: `Remove “${clash.label}”`, action: "undo_other" },
+            { id: "keep", label: "Both are right", action: "keep" },
+            { id: "remove", label: `Remove “${entry.label}”`, action: "undo_this" },
           ],
-          defaultAnswerId: "keep_both",
+          defaultAnswerId: "keep",
           defaultWords: "I'll keep both.",
           evidence: [`Both are on ${entry.date!.slice(0, 10)} at ${entry.time}.`],
         });
@@ -187,12 +203,16 @@ export function planVerification(input: {
           raise({
             reason: "unusual_amount",
             changeId: entry.changeId,
+            itemId: entry.itemId,
+          label: entry.label,
+          kind: entry.kind,
+          dueOn: entry.date?.slice(0, 10) ?? null,
             otherChangeId: null,
             recipientMemberId: entry.createdByMemberId,
             question: `The amount on “${entry.label}” is far ${ratio >= UNUSUAL_HIGH ? "higher" : "lower"} than usual for ${entry.payee}. Is it right?`,
             answers: [
               { id: "keep", label: "It's right", action: "keep" },
-              { id: "undo_this", label: "Remove it", action: "undo_this" },
+              { id: "remove", label: "Remove it", action: "undo_this" },
             ],
             defaultAnswerId: "keep",
             defaultWords: "I'll keep it as it is.",
@@ -215,12 +235,16 @@ export function planVerification(input: {
         raise({
           reason: "sender_mismatch",
           changeId: entry.changeId,
+          itemId: entry.itemId,
+          label: entry.label,
+          kind: entry.kind,
+          dueOn: entry.date?.slice(0, 10) ?? null,
           otherChangeId: null,
           recipientMemberId: entry.createdByMemberId,
           question: `“${entry.label}” came from ${key.replace(/^sender:/, "")}, whose things are usually ${taught}. Is it right as it is?`,
           answers: [
             { id: "keep", label: "It's right", action: "keep" },
-            { id: "undo_this", label: "Remove it", action: "undo_this" },
+            { id: "remove", label: "Remove it", action: "undo_this" },
           ],
           defaultAnswerId: "keep",
           defaultWords: "I'll keep it as it is.",

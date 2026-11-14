@@ -10,7 +10,8 @@ import { handlerFor, type NeedsYouActor } from "./needs-you-repository";
  * and the 24-hour default (`hometalk/needs-you-run.ts`) both go through.
  *
  *   - HomeSend's own questions: `homesend/needs-you.ts`.
- *   - Any other source (part B's "sender_trust", part C's "conflict"): the
+ *   - HomeBrain's nightly conflicts ("homebrain_conflict"): keep, or a person's "remove" (Undo).
+ *   - Any other source (part B's "sender_trust"): the
  *     handler that part registered with `registerNeedsYouHandler`; with none,
  *     "unhandled" (the step closes it as expired at 48 hours, never leaves it open).
  *
@@ -29,6 +30,9 @@ export async function applyNeedsYouAnswer(
     // A default never undoes anything.
     return how.byDefault && result === "undo" ? "settled" : result;
   }
+  // HomeBrain's nightly conflicts (`homebrain/needs-sink.ts`): "remove" runs HomeSend's Undo on a person's tap
+  // only; every other answer, and every default, keeps the entry as it is.
+  if (item.source === "homebrain_conflict") return answer === "remove" && !how.byDefault ? "undo" : "done";
   const handler = handlerFor(item.source);
   if (!handler) return "unhandled";
   return (await handler(client, item, answer, how)) ? "done" : "settled";
