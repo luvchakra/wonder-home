@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { deadlineOf, senderTrustNeeds, senderVerdict, type SenderRow } from "./sender-trust";
+import { applySenderTrustAnswer, deadlineOf, senderQuestion, senderVerdict, SENDER_TRUST_SOURCE, type SenderRow } from "./sender-trust";
 
 const now = new Date("2026-11-14T12:00:00Z");
 const row = (over: Partial<SenderRow> = {}): SenderRow => ({
@@ -26,23 +26,25 @@ describe("outside senders are trusted once (decision 5, the owner 2026-11-14)", 
     expect(senderVerdict({ allowlisted: false, mode: "review", state: null })).toBe("drop");
   });
 
-  it("asks once per sender, with Trust first, a default of setting it aside and a 3-day deadline", () => {
-    const [entry, ...rest] = senderTrustNeeds([row(), row({ id: "s-2", state: "trusted" })], now);
-    expect(rest).toEqual([]);
-    expect(entry).toMatchObject({
-      id: "sender_trust:s-1",
-      kind: "sender_trust",
-      question: { key: "homesend.sender.question", params: { address: "accounts@greenvalley.school" } },
-      answers: [{ key: "trust" }, { key: "not_ours" }],
+  it("asks the Admins once on the Needs-you list, Trust first, set aside by default", () => {
+    expect(senderQuestion({ householdId: "h-1", senderId: "s-1", address: "accounts@greenvalley.school", askedAt: now })).toMatchObject({
+      source: SENDER_TRUST_SOURCE,
+      subjectTable: "homesend_email_senders",
+      subjectId: "s-1",
+      recipientMemberId: null,
+      prompt: { code: "homesend.sender", title: "accounts@greenvalley.school" },
+      answers: [{ value: "trust" }, { value: "not_ours" }],
       defaultAnswer: "set_aside",
-      recipients: "admins",
-      deadline: "2026-11-16T09:00:00.000Z",
     });
   });
 
-  it("stops asking once the deadline has passed: the sweep sets it aside", () => {
-    const old = row({ asked_at: "2026-11-10T09:00:00Z" });
-    expect(deadlineOf(old).getTime()).toBeLessThan(now.getTime());
-    expect(senderTrustNeeds([old], now)).toEqual([]);
+  it("the backstop sets a still-pending sender aside after 48 hours, never sooner", () => {
+    expect(deadlineOf(row({ asked_at: "2026-11-13T09:00:00Z" })).toISOString()).toBe("2026-11-15T09:00:00.000Z");
+  });
+
+  it("a default never trusts a sender, and nobody but a person's tap does", async () => {
+    const untouchable = new Proxy({}, { get: () => { throw new Error("no write expected"); } }) as never;
+    expect(await applySenderTrustAnswer(untouchable, "h-1", "s-1", "trust", { byDefault: true, memberId: null, now })).toBe(false);
+    expect(await applySenderTrustAnswer(untouchable, "h-1", "s-1", "not_ours", { byDefault: false, memberId: null, now })).toBe(false);
   });
 });

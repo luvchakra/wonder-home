@@ -743,7 +743,8 @@ Complete dependency-ready P0 stories before P1/P2, but do not block unrelated wo
 - Waiting actions: one reminder after 24 h, expired as not done after 48 h, never approved on their own (`conversation/proposal-expiry.ts`, delivery clock).
 - Decision 1: "What Wait for Approval holds" (only actions by default). Decision 2: "Money and health entries" (Record as Checking by default; replaces the two 2026-10-26 switches; an old switch that was on carries over). Decision 5: "Email from new senders" (Ask once by default; `homesend/sender-trust.ts`, `homesend_email_senders`). All three on Settings → AI Assistant, Admins, each reversible.
 - Plain corrections in HomeTalk and WhatsApp (`correct_entry`): what HomeTalk just did, else the speaker's most recent matching HomeSend entry, fixed in place, confirmed, Undo, `ai_corrections` signal for part C.
-- Open: the Needs-you list shows the sender question (part A wires `senderTrustNeeds`); "check before paying" reminder words (part A); a member-less write so a trusted sender's email is added on arrival rather than when a member opens it; `event` and `activity_item` kinds still have no automatic outcome in HomeSend; Undo of a HomeTalk recording and the sender question need a browser check at 360 px and desktop.
+- The sender question is a Needs-you row (source `sender_trust`, part A's list); Checking bill words are part A's `reminder.checking.money`.
+- Open: a member-less write so a trusted sender's email is added on arrival rather than when a member opens it; `event` and `activity_item` kinds still have no automatic outcome in HomeSend; the sender question's tap path needs a browser check once a real new sender writes (Settings, HomeTalk record + Undo were checked at 360 px and desktop).
 
 ### Story 14-066 — HomeSend zero touch
 

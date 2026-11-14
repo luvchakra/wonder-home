@@ -490,10 +490,6 @@ export const homesendEn = {
   "homesend.archived.reason.new_sender": "From a new sender, waiting for “Trust this sender?”",
   "homesend.archived.reason.sender_blocked": "Sender marked “Not ours”",
   "homesend.archived.reason.sender_not_answered": "New sender, no answer in 3 days",
-  "homesend.sender.question": "New sender: {address}. Trust it from now on?",
-  "homesend.sender.trust": "Trust",
-  "homesend.sender.notOurs": "Not ours",
-  "homesend.sender.default": "If nobody answers in 3 days, I'll set it aside.",
 
   // The calm page (the owner, 2026-11-03): one sentence, sections by what the reader decides, one action per row.
   "homesend.lead.needs#one": "1 thing needs a word from you.",
@@ -601,6 +597,9 @@ export const homesendEn = {
   "needsYou.prompt.hometalk.proposal": "HomeTalk is waiting for a yes: {title}",
   "needsYou.prompt.approval": "Waiting for an approval: {title}",
   "needsYou.prompt.other": "{title}",
+  "needsYou.prompt.homesend.sender": "New sender: {title}. Trust it from now on?",
+  "needsYou.answer.trust": "Trust",
+  "needsYou.answer.not_ours": "Not ours",
   "needsYou.answer.looks_right": "Looks right",
   "needsYou.answer.not_right": "Not right, undo it",
   "needsYou.answer.note": "Keep as a note",

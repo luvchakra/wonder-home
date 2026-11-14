@@ -1,6 +1,7 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 
 import { applyHomeSendAnswer } from "../homesend/needs-you";
+import { applySenderTrustAnswer, SENDER_TRUST_SOURCE } from "../homesend/sender-trust";
 import type { NeedsYouItem } from "./needs-you";
 import { handlerFor, type NeedsYouActor } from "./needs-you-repository";
 
@@ -33,6 +34,11 @@ export async function applyNeedsYouAnswer(
   // HomeBrain's nightly conflicts (`homebrain/needs-sink.ts`): "remove" runs HomeSend's Undo on a person's tap
   // only; every other answer, and every default, keeps the entry as it is.
   if (item.source === "homebrain_conflict") return answer === "remove" && !how.byDefault ? "undo" : "done";
+  // "Trust this sender?" (part B, decision 5): the caller hands a service client only after checking the person is an Admin.
+  if (item.source === SENDER_TRUST_SOURCE) {
+    const settled = await applySenderTrustAnswer(client, item.householdId, item.subjectId, answer, { byDefault: how.byDefault, memberId: how.actor.memberId, now: how.now });
+    return settled ? "done" : "settled";
+  }
   const handler = handlerFor(item.source);
   if (!handler) return "unhandled";
   return (await handler(client, item, answer, how)) ? "done" : "settled";

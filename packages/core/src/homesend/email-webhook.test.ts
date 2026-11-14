@@ -60,6 +60,7 @@ function harness(options: { allowlist?: { kind: string; value: string }[]; outsi
     homesend_addresses: [{ household_id: HOUSEHOLD, address: ADDRESS, status: "active" }],
     homesend_email_allowlist: allowlist,
     homesend_email_senders: [],
+    needs_you_items: [],
     // "Email from new senders" (decision 5): "ask_once" unless a test picks the 3 Nov behaviour.
     policies: options.outsideSenders
       ? [{ household_id: HOUSEHOLD, category: "ai_autonomy", name: "Email from new senders", active: true, rule: { value: options.outsideSenders } }]
@@ -190,6 +191,8 @@ describe("decision 5 — a new sender is asked about once, its mail held unread 
     expect(calls.classify).toBe(0);
     expect(calls.fetchAttachment).toBe(0);
     expect(db.tables.homesend_email_senders).toEqual([expect.objectContaining({ household_id: HOUSEHOLD, state: "pending", held_count: 1 })]);
+    // One question on the Admins' Needs-you list, set aside by default.
+    expect(db.tables.needs_you_items).toEqual([expect.objectContaining({ household_id: HOUSEHOLD, source: "sender_trust", recipient_member_id: null, default_answer: "set_aside", status: "open" })]);
   });
 
   it("a sender marked “Not ours” is dropped and stored nowhere, as before", async () => {

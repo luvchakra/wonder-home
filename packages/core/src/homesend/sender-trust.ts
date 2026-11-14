@@ -1,6 +1,7 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 
 import { auditChange } from "../api/audit";
+import { askNeedsYou } from "../hometalk/needs-you-repository";
 import { log } from "../observability/logger";
 import { bareAddress } from "./addresses";
 import { enqueueClassifyRetry } from "./retry-queue";
@@ -13,7 +14,8 @@ import { enqueueClassifyRetry } from "./retry-queue";
  * used to be dropped unread. Now, on "Ask once" (`record-first.ts`), the first
  * item from a new sender is kept but set aside: archived with reason
  * `new_sender`, its text never read by a model and its attachments never
- * fetched, and the household is asked once, through the "Needs you" list:
+ * fetched, and the household's Admins are asked once, on the "Needs you"
+ * list (`hometalk/needs-you-repository.ts`, source `sender_trust`):
  * "New sender: x@y. Trust it from now on?"
  *
  * - **Trust**: the sender joins the household's allowlist (the one gate the
@@ -23,21 +25,27 @@ import { enqueueClassifyRetry } from "./retry-queue";
  *   (`injection.ts`).
  * - **Not ours**: its items are set aside (`sender_blocked`) and later mail
  *   from it is dropped before it is stored, as before.
- * - **No answer in 3 days**: its items are set aside (`sender_not_answered`).
- *   A later email asks again, once.
+ * - **No answer**: the list's default (after 24 hours, decision 4) sets its
+ *   items aside (`sender_not_answered`); a 48-hour sweep is the backstop for
+ *   a question the list couldn't take. A later email asks again, once.
  *
  * Every row is the server's: the webhook writes it with the service client,
- * and an answer is applied only after the caller checked the person is an
- * Admin. Paying, approving and permission never come from a sender.
+ * and a person's answer is applied only after the caller checked they are an
+ * Admin. A default never trusts anyone. Paying, approving and permission
+ * never come from a sender.
  */
 
-export const SENDER_TRUST_DAYS = 3;
+/** The plan said 3 days; decision 4 caps every question at 48 hours, so that is the backstop. */
+export const SENDER_TRUST_HOURS = 48;
+const HOUR_MS = 3_600_000;
+
+/** The "Needs you" source for this question (part A's list). */
+export const SENDER_TRUST_SOURCE = "sender_trust";
 
 /** An address inside a LIKE pattern matches itself only: `_` and `%` are literal. */
 function likeEscaped(address: string): string {
   return address.replace(/[\\%_]/g, (character) => `\\${character}`);
 }
-const DAY_MS = 86_400_000;
 
 export type SenderState = "pending" | "trusted" | "blocked" | "not_answered";
 
@@ -49,29 +57,6 @@ export type SenderRow = {
   first_item_id: string | null;
   held_count: number;
   asked_at: string;
-};
-
-/**
- * One entry of part A's "Needs you" list. The shape is the one agreed for
- * every source: a question, tap answers, the default that applies on its own
- * at the deadline, and who is asked.
- */
-export type NeedsYouEntry = {
-  id: string;
-  kind: "sender_trust";
-  householdId: string;
-  /** Words as catalog keys, so each reader has them in their own language. */
-  question: { key: "homesend.sender.question"; params: { address: string } };
-  answers: { key: SenderAnswer; label: "homesend.sender.trust" | "homesend.sender.notOurs" }[];
-  /** What happens when nobody answers by `deadline`: set aside, never trusted. */
-  defaultAnswer: "set_aside";
-  defaultWords: "homesend.sender.default";
-  deadline: string;
-  /** The household's Admins decide who the household trusts. */
-  recipients: "admins";
-  /** How consequential, for ordering the list: an unknown sender is low. */
-  weight: number;
-  heldItems: number;
 };
 
 export type SenderAnswer = "trust" | "not_ours";
@@ -90,44 +75,59 @@ export function senderVerdict(input: { allowlisted: boolean; mode: "ask_once" | 
   return "hold";
 }
 
+/** When the backstop sweep sets a still-pending sender's mail aside. */
 export function deadlineOf(row: Pick<SenderRow, "asked_at">): Date {
-  return new Date(new Date(row.asked_at).getTime() + SENDER_TRUST_DAYS * DAY_MS);
+  return new Date(new Date(row.asked_at).getTime() + SENDER_TRUST_HOURS * HOUR_MS);
 }
 
-/** The open questions, one per pending sender, oldest first; past their deadline they are not asked. */
-export function senderTrustNeeds(rows: readonly SenderRow[], now: Date): NeedsYouEntry[] {
-  return rows
-    .filter((row) => row.state === "pending" && deadlineOf(row).getTime() > now.getTime())
-    .sort((a, b) => a.asked_at.localeCompare(b.asked_at))
-    .map((row) => ({
-      id: `sender_trust:${row.id}`,
-      kind: "sender_trust" as const,
-      householdId: row.household_id,
-      question: { key: "homesend.sender.question" as const, params: { address: row.address } },
-      answers: [
-        { key: "trust" as const, label: "homesend.sender.trust" as const },
-        { key: "not_ours" as const, label: "homesend.sender.notOurs" as const },
-      ],
-      defaultAnswer: "set_aside" as const,
-      defaultWords: "homesend.sender.default" as const,
-      deadline: deadlineOf(row).toISOString(),
-      recipients: "admins" as const,
-      weight: 1,
-      heldItems: row.held_count,
-    }));
+/**
+ * The question as one "Needs you" row: to the Admins (recipient null), Trust
+ * or Not ours, and "set aside" as the default the list applies after 24 hours.
+ */
+export function senderQuestion(input: { householdId: string; senderId: string; address: string; askedAt: Date }) {
+  return {
+    householdId: input.householdId,
+    source: SENDER_TRUST_SOURCE,
+    subjectTable: "homesend_email_senders",
+    subjectId: input.senderId,
+    recipientMemberId: null,
+    prompt: { code: "homesend.sender", title: input.address },
+    answers: [{ value: "trust" }, { value: "not_ours" }],
+    defaultAnswer: "set_aside",
+    consequence: 1 as const,
+    dueOn: null,
+    askedAt: input.askedAt,
+  };
 }
 
-/** The pending senders of one household, bounded, for the "Needs you" list. */
-export async function listPendingSenders(supabase: SupabaseClient, householdId: string): Promise<SenderRow[]> {
-  const { data, error } = await supabase
-    .from("homesend_email_senders")
-    .select("id, household_id, address, state, first_item_id, held_count, asked_at")
-    .eq("household_id", householdId)
-    .eq("state", "pending")
-    .order("asked_at", { ascending: true })
-    .limit(20);
-  if (error || !data) return [];
-  return data as SenderRow[];
+/** Puts the question on the household's "Needs you" list; best-effort (the 48-hour sweep still sets the mail aside). */
+async function ask(admin: SupabaseClient, input: { householdId: string; senderId: string; address: string; askedAt: Date }): Promise<void> {
+  try {
+    await askNeedsYou(admin, senderQuestion(input));
+  } catch (thrown) {
+    log.warn("sender question not added to Needs you", { reason: thrown instanceof Error ? thrown.name : "unknown", allow: ["reason"] });
+  }
+}
+
+/**
+ * The list's answer or default (`hometalk/needs-you-answer.ts`). A tap comes
+ * with a service client only after the caller checked the person is an Admin;
+ * the default runs on the list's own clock. False when it was already settled.
+ */
+export async function applySenderTrustAnswer(
+  admin: SupabaseClient,
+  householdId: string,
+  senderId: string,
+  answer: string,
+  how: { byDefault: boolean; memberId: string | null; now: Date },
+): Promise<boolean> {
+  if (answer === "trust" || answer === "not_ours") {
+    // A default never trusts anyone; only a person's tap does.
+    if (how.byDefault || !how.memberId) return false;
+    const result = await answerSenderTrust(admin, { householdId, senderId, answer, actorMemberId: how.memberId, now: how.now });
+    return result.ok;
+  }
+  return (await setAsideSender(admin, { householdId, senderId, now: how.now })) > 0;
 }
 
 /** Each recipient household's state for this sender; an unreadable table (before the migration) reads as "no state". */
@@ -158,13 +158,16 @@ export async function holdFromNewSender(admin: SupabaseClient, input: { househol
 
   const { data: existing } = await admin.from("homesend_email_senders").select("id, state, held_count").eq("household_id", input.householdId).eq("address", address).maybeSingle();
   if (!existing) {
-    const { error } = await admin.from("homesend_email_senders").insert({ household_id: input.householdId, address, state: "pending", first_item_id: input.itemId, held_count: 1, asked_at: now.toISOString() });
-    if (error) return false;
+    const { data: created, error } = await admin.from("homesend_email_senders").insert({ household_id: input.householdId, address, state: "pending", first_item_id: input.itemId, held_count: 1, asked_at: now.toISOString() }).select("id").single();
+    if (error || !created) return false;
+    await ask(admin, { householdId: input.householdId, senderId: created.id as string, address, askedAt: now });
   } else if (existing.state === "pending") {
+    // Already asked: the one open question stands.
     await admin.from("homesend_email_senders").update({ held_count: (existing.held_count as number) + 1 }).eq("id", existing.id as string);
   } else {
     // Not answered last time: ask again, once, about this new mail.
     await admin.from("homesend_email_senders").update({ state: "pending", held_count: 1, first_item_id: input.itemId, asked_at: now.toISOString(), decided_at: null, decided_by_member_id: null }).eq("id", existing.id as string);
+    await ask(admin, { householdId: input.householdId, senderId: existing.id as string, address, askedAt: now });
   }
   await auditChange({ householdId: input.householdId, actorMemberId: null, eventType: "homesend.sender_held", targetTable: "home_send_items", targetId: input.itemId, metadata: { reason: "new_sender" } }).catch(() => undefined);
   return true;
@@ -228,27 +231,39 @@ export async function answerSenderTrust(
   return { ok: true, released };
 }
 
-/** Senders nobody answered about in 3 days: their items are set aside. Bounded; never trusts anyone. */
+/** Sets one pending sender's held mail aside (no answer in time). Never trusts anyone. 1 when it was still pending. */
+async function setAsideSender(admin: SupabaseClient, input: { householdId: string; senderId: string; now: Date }): Promise<number> {
+  const { data: closed } = await admin
+    .from("homesend_email_senders")
+    .update({ state: "not_answered", decided_at: input.now.toISOString() })
+    .eq("id", input.senderId)
+    .eq("household_id", input.householdId)
+    .eq("state", "pending")
+    .select("address")
+    .maybeSingle();
+  if (!closed) return 0;
+  await admin
+    .from("home_send_items")
+    .update({ archive_reason: "sender_not_answered" })
+    .eq("household_id", input.householdId)
+    .eq("status", "archived")
+    .eq("archive_reason", "new_sender")
+    .ilike("sender_address", `%${likeEscaped(closed.address as string)}%`);
+  return 1;
+}
+
+/** The backstop: a pending sender past 48 hours (its question never reached the list) is set aside. Bounded. */
 export async function expireUnansweredSenders(admin: SupabaseClient, now: Date = new Date(), limit = 100): Promise<number> {
   try {
     const { data } = await admin
       .from("homesend_email_senders")
-      .select("id, household_id, address")
+      .select("id, household_id")
       .eq("state", "pending")
-      .lte("asked_at", new Date(now.getTime() - SENDER_TRUST_DAYS * DAY_MS).toISOString())
+      .lte("asked_at", new Date(now.getTime() - SENDER_TRUST_HOURS * HOUR_MS).toISOString())
       .limit(limit);
     let expired = 0;
-    for (const row of (data ?? []) as { id: string; household_id: string; address: string }[]) {
-      const { data: closed } = await admin.from("homesend_email_senders").update({ state: "not_answered", decided_at: now.toISOString() }).eq("id", row.id).eq("state", "pending").select("id").maybeSingle();
-      if (!closed) continue;
-      expired += 1;
-      await admin
-        .from("home_send_items")
-        .update({ archive_reason: "sender_not_answered" })
-        .eq("household_id", row.household_id)
-        .eq("status", "archived")
-        .eq("archive_reason", "new_sender")
-        .ilike("sender_address", `%${likeEscaped(row.address)}%`);
+    for (const row of (data ?? []) as { id: string; household_id: string }[]) {
+      expired += await setAsideSender(admin, { householdId: row.household_id, senderId: row.id, now });
     }
     return expired;
   } catch (thrown) {
