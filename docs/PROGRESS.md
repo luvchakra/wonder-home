@@ -11,16 +11,12 @@ in `docs/progress/`; for the running log of what changed when, `tracking/PROGRES
 
 ## The whole picture
 
-**428 of 471 stories done — 90.9%**
+**429 of 471 stories done — 91.1%**
 
 | Status | Stories |
 |---|---:|
-| Done | 428 |
-<<<<<<< Updated upstream
+| Done | 429 |
 | In Progress | 13 |
-=======
-| In Progress | 14 |
->>>>>>> Stashed changes
 | Blocked | 1 |
 | Not Started | 24 |
 | Deferred | 4 |
@@ -43,11 +39,7 @@ in `docs/progress/`; for the running log of what changed when, `tracking/PROGRES
 | 11 Bills, Fees & Finance | `█████████░` | 14 | 15 | 1 not started |
 | 12 Family Time & Social Activities | `██████████` | 9 | 9 | — |
 | 13 Maintenance, Laundry & Pet Care | `█████████░` | 10 | 11 | 1 in progress |
-<<<<<<< Updated upstream
-| 14 AI Orchestration & Learning | `████████░░` | 58 | 67 | 1 in progress, 4 not started, 3 deferred |
-=======
-| 14 AI Orchestration & Learning | `████████░░` | 58 | 67 | 2 in progress, 4 not started, 3 deferred |
->>>>>>> Stashed changes
+| 14 AI Orchestration & Learning | `████████░░` | 59 | 67 | 1 in progress, 4 not started, 3 deferred |
 | 15 Privacy, Security & Governance | `████████░░` | 11 | 13 | 2 not started |
 | 16 Platform Admin & Operations | `███████░░░` | 11 | 14 | 3 not started |
 | 17 External Integrations | `█████████░` | 10 | 11 | 1 not started |
@@ -87,11 +79,6 @@ in `docs/progress/`; for the running log of what changed when, `tracking/PROGRES
 | `14-039` Record index Phase 4: structure-first retrieval and coverage misses | 14 AI Orchestration & Learning | P1 | Not Started |
 | `14-056` HomeBrain 4.0 phase 3b — one structured call: answer or intent | 14 AI Orchestration & Learning | P0 | Not Started |
 | `14-057` HomeBrain 4.0 phase 3c — the reply streamed to the person | 14 AI Orchestration & Learning | P0 | Not Started |
-<<<<<<< Updated upstream
-| `14-068` Record first: HomeTalk records straight away, waiting actions expire after 48 h, Wait for Approval holds actions only, money and health recorded as Checking, new email senders trusted once, plain corrections | 14 AI Orchestration & Learning | P0 | In Progress — PR open |
-=======
-| `14-069` Nothing stuck in review, part C "HomeBrain knows": memory resolver, household rules from every answer and correction, nightly verification, a bar for each kind | 14 AI Orchestration & Learning | P0 | In Progress |
->>>>>>> Stashed changes
 | `15-013` Data retention phase 2b: notifications (household window) + HomeSend + enable real purge | 15 Privacy, Security & Governance | P1 | Not Started |
 | `15-012` Data retention phase 3: school items (household window) + "recently cleaned" view | 15 Privacy, Security & Governance | P2 | Not Started |
 | `16-011` Test connection for each provider key | 16 Platform Admin & Operations | P1 | Not Started |
@@ -418,7 +405,7 @@ in `docs/progress/`; for the running log of what changed when, `tracking/PROGRES
 
 ### 14 — AI Orchestration & Learning
 
-58 of 67 done `████████░░`
+59 of 67 done `████████░░`
 
 | Story | Priority | Status | Notes |
 |---|---|---|---|
