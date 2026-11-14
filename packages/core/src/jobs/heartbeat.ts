@@ -28,6 +28,8 @@ export const JOB_STEPS = {
   "clock.homesend-archive": { staleAfterMinutes: 30 },
   /** HomeSend's daily tidy, from 04:00 on each household's clock, once a day. */
   "clock.homesend-tidy": { staleAfterMinutes: 30 },
+  /** "Nothing waits" (2026-11-14): due "Needs you" defaults applied, and every waiting HomeSend item ended as something. */
+  "clock.homesend-deadlines": { staleAfterMinutes: 30 },
   /** HomeBrain Sleep, 2–5 am on each household's clock, once a night. */
   "clock.homebrain-sleep": { staleAfterMinutes: 30 },
   /** Kids Trivia's low card pools, refilled a few at a time (08-035). */

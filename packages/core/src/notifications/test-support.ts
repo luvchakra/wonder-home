@@ -12,7 +12,8 @@ function valueOf(row: Row, column: string): unknown {
 const STAMP = "2026-10-20T06:00:00.000Z";
 
 // A small in-memory database: the tables the sweep reads and the notifications it writes.
-export function memoryDatabase(seed: Record<string, Row[]>) {
+// `missing` names tables that aren't there yet (a migration not applied): every read of them fails.
+export function memoryDatabase(seed: Record<string, Row[]>, missing: readonly string[] = []) {
   const tables: Record<string, Row[]> = Object.fromEntries(Object.entries(seed).map(([name, rows]) => [name, rows.map((row) => ({ ...row }))]));
   let counter = 0;
   const from = (table: string) => {
@@ -29,6 +30,7 @@ export function memoryDatabase(seed: Record<string, Row[]>) {
       in: (column: string, values: unknown[]) => (filters.push((row) => values.includes(valueOf(row, column))), builder),
       gte: (column: string, value: string) => (filters.push((row) => String(row[column] ?? "") >= value), builder),
       lte: (column: string, value: string) => (filters.push((row) => String(row[column] ?? "") <= value), builder),
+      lt: (column: string, value: string) => (filters.push((row) => String(row[column] ?? "") < value), builder),
       limit: () => builder,
       order: () => builder,
       update: (values: Row) => ((mode = "update"), (patch = values), builder),
@@ -36,12 +38,18 @@ export function memoryDatabase(seed: Record<string, Row[]>) {
         const added = (Array.isArray(values) ? values : [values]).map((row) => ({ id: `${table}-${(counter += 1)}`, status: "generated", created_at: STAMP, ...row }));
         rows().push(...added);
         const result = { data: added, error: null };
-        const chain: Record<string, unknown> = { select: () => chain, single: () => Promise.resolve({ data: added[0], error: null }), then: (resolve: (value: unknown) => void) => resolve(result) };
+        const chain: Record<string, unknown> = {
+          select: () => chain,
+          single: () => Promise.resolve({ data: added[0], error: null }),
+          maybeSingle: () => Promise.resolve({ data: added[0] ?? null, error: null }),
+          then: (resolve: (value: unknown) => void) => resolve(result),
+        };
         return chain;
       },
       maybeSingle: () => Promise.resolve({ data: matching()[0] ?? null, error: null }),
       single: () => Promise.resolve({ data: matching()[0] ?? null, error: null }),
       then: (resolve: (value: unknown) => void) => {
+        if (missing.includes(table)) return resolve({ data: null, error: { code: "42P01", message: "missing" } });
         const hit = matching();
         if (mode === "update") for (const row of hit) Object.assign(row, patch);
         resolve({ data: hit, error: null, count: hit.length });

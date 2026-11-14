@@ -15,7 +15,7 @@ import { listHouseholdPlaces } from "../homeplaces/repository";
 import { listHomeSendChanges } from "../homesend/changes";
 import { loadHouseholdAddress } from "../household/address";
 import type { HomeSendChange } from "../homesend/items";
-import { listHomeSendItems } from "../homesend/repository";
+import { listHomeSendItems, listHouseholdNotes } from "../homesend/repository";
 import { listResponsibilities } from "../household/configuration-repository";
 import { listChildren } from "../identity/children";
 import { listEnrolments } from "../school/enrolments";
@@ -242,8 +242,11 @@ const DOMAIN_ADAPTERS: readonly ContextAdapter[] = [
     label: "HomeSend",
     permitted: notChild,
     read: async (supabase, scope) => {
-      const [homeSendItems, homeSendChanges] = await Promise.all([listHomeSendItems(supabase, scope.householdId), listHomeSendChanges(supabase, scope.householdId)]);
-      return { homeSendItems: homeSendItems.slice(0, 20), homeSendChanges };
+      const [homeSendItems, homeSendChanges, notes] = await Promise.all([listHomeSendItems(supabase, scope.householdId), listHomeSendChanges(supabase, scope.householdId), listHouseholdNotes(supabase, scope.householdId)]);
+      // Household notes (2026-11-14) are found when asked, however far back they arrived.
+      const recent = homeSendItems.slice(0, 20);
+      const seen = new Set(recent.map((item) => item.id));
+      return { homeSendItems: [...recent, ...notes.filter((note) => !seen.has(note.id))], homeSendChanges };
     },
   },
   { domain: "hometalk", label: "earlier conversation", permitted: anyone, read: async (supabase, scope) => ({ proposals: await listRecentProposals(supabase, scope) }) },

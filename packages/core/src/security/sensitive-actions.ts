@@ -7,6 +7,10 @@ const TIDY_REASON_WORDS: Record<string, string> = {
   superseded: "Replaced by a newer one",
   cancelled: "Called off",
   unreadable: "Still unreadable after every try",
+  not_household: "Not household information (a web page, an ad or a newsletter)",
+  kept_as_note: "Kept as a household note",
+  not_resent: "Couldn't be read and wasn't sent again",
+  removed_by_person: "Set aside by a person",
 };
 
 /**
@@ -306,6 +310,21 @@ export const SENSITIVE_ACTIONS: readonly SensitiveAction[] = [
     event: "homesend.auto_archived",
     because: "The daily tidy set aside something sent in that no longer applies (its day passed, it is already on record, a newer one replaced it, or it could not be read). It is kept and can be restored, so the household should see when and why it moved, and whether a rule or a checked AI verdict decided.",
     recordedIn: "packages/core/src/homesend/tidy-run.ts",
+  },
+  {
+    event: "homesend.kept_checking",
+    because: "A money or health entry HomeSend added stays Checking after its question closed unanswered (2026-11-14, decision 4): its reminders say \"check before paying\", and the household should see that nobody confirmed it.",
+    recordedIn: "packages/core/src/homesend/needs-you.ts",
+  },
+  {
+    event: "needs_you.answered",
+    because: "Someone answered a \"Needs you\" question with one tap, which changed an entry or set an item aside. It is a change to household data made in their name.",
+    recordedIn: "apps/web/app/(auth)/needs-you-actions.ts",
+  },
+  {
+    event: "needs_you.defaulted",
+    because: "Nobody answered a \"Needs you\" question within 24 hours, so its stated default applied by itself (2026-11-14, decision 4). The household should see what WonderHome did without a person, and can undo it.",
+    recordedIn: "packages/core/src/hometalk/needs-you-run.ts",
   },
   {
     event: "homesend.restored",
@@ -780,6 +799,12 @@ export function describeAuditEvent(
       return { title: "A HomeSend item was archived after 30 days", detail: "It is kept and can be restored." };
     case "homesend.auto_archived":
       return { title: "A HomeSend item that no longer applies was tidied away", detail: `${TIDY_REASON_WORDS[stringOr(metadata.reason, "") ?? ""] ?? "No longer applies"}${metadata.by === "ai" ? " · checked AI verdict" : ""}. It is kept and can be restored.` };
+    case "homesend.kept_checking":
+      return { title: "A HomeSend entry stays Checking until someone confirms it", detail: metadata.how === "default" ? "Nobody answered within a day; check it before paying." : null };
+    case "needs_you.answered":
+      return { title: "Someone answered a \"Needs you\" question", detail: stringOr(metadata.answer, null) };
+    case "needs_you.defaulted":
+      return { title: "A \"Needs you\" question's default applied after a day", detail: stringOr(metadata.answer, null) };
     case "homesend.restored":
       return { title: "An archived HomeSend item was restored", detail: null };
     case "homesend.archived_all":

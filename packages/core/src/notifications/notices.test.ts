@@ -287,8 +287,8 @@ const base = (over: Record<string, Row[]> = {}) => ({
 const adapters = CHANNEL_ADAPTERS;
 
 describe("the notice sweep", () => {
-  it("creates the notice with its words in English and as a message, then changes nothing on a second pass", async () => {
-    const { client, tables } = memoryDatabase(base());
+  it("before the Needs you migration: creates the grouped notice with its words in English and as a message, then changes nothing on a second pass", async () => {
+    const { client, tables } = memoryDatabase(base(), ["needs_you_items"]);
     expect(await sweepNotices(client, "h1", NOW, { adapters })).toEqual({ created: 1, updated: 0, resolved: 0 });
     expect(tables.notifications).toHaveLength(1);
     expect(tables.notifications![0]).toMatchObject({ recipient_member_id: "upasana", title: "1 thing sent to HomeSend is waiting", body: "1 bill. Nothing is added until you say yes.", source_type: "homesend_item", category: "system", thread_key: "homesend:waiting" });
@@ -298,7 +298,7 @@ describe("the notice sweep", () => {
   });
 
   it("rewrites the one grouped notice as more arrive, never a second row", async () => {
-    const { client, tables } = memoryDatabase(base());
+    const { client, tables } = memoryDatabase(base(), ["needs_you_items"]);
     await sweepNotices(client, "h1", NOW, { adapters });
     tables.home_send_items!.push({ id: "i2", household_id: "h1", created_by_member_id: "upasana", status: "classified", classified_kind: "school_item", updated_at: NOW.toISOString() });
     expect(await sweepNotices(client, "h1", NOW, { adapters })).toEqual({ created: 0, updated: 1, resolved: 0 });
@@ -309,11 +309,36 @@ describe("the notice sweep", () => {
   });
 
   it("resolves the notice when the item is confirmed", async () => {
-    const { client, tables } = memoryDatabase(base());
+    const { client, tables } = memoryDatabase(base(), ["needs_you_items"]);
     await sweepNotices(client, "h1", NOW, { adapters });
     tables.home_send_items![0]!.status = "routed";
     expect(await sweepNotices(client, "h1", NOW, { adapters })).toEqual({ created: 0, updated: 0, resolved: 1 });
     expect(tables.notifications![0]!.status).toBe("resolved");
+  });
+
+  // "Nothing waits" (2026-11-14): one daily summary replaces the grouped notices, pointing at "Needs you".
+  it("says what needs a word, then what was added today, in one thread per person per day", async () => {
+    const needs = [{ id: "n1", household_id: "h1", recipient_member_id: "upasana", status: "open" }];
+    const { client, tables } = memoryDatabase(base({ needs_you_items: needs, homesend_changes: [] }));
+    expect(await sweepNotices(client, "h1", NOW, { adapters })).toEqual({ created: 1, updated: 0, resolved: 0 });
+    expect(tables.notifications![0]).toMatchObject({ recipient_member_id: "upasana", title: "1 thing needs a word", thread_key: "homesend:summary:2026-10-20", source_type: "homesend_item" });
+    expect(await sweepNotices(client, "h1", NOW, { adapters })).toEqual({ created: 0, updated: 0, resolved: 0 });
+    tables.homesend_changes!.push({ household_id: "h1", created_by_member_id: "upasana", change_type: "created", undone_at: null, created_at: NOW.toISOString() });
+    expect(await sweepNotices(client, "h1", NOW, { adapters })).toEqual({ created: 0, updated: 1, resolved: 0 });
+    expect(tables.notifications![0]).toMatchObject({ title: "WonderHome added 1 thing today", body: "1 needs a word — it's at the top of HomeTalk." });
+    // A child's send is counted for the Admin; nothing waiting says so.
+    tables.needs_you_items![0]!.status = "answered";
+    tables.homesend_changes!.push({ household_id: "h1", created_by_member_id: "asmi", change_type: "created", undone_at: null, created_at: NOW.toISOString() });
+    await sweepNotices(client, "h1", NOW, { adapters });
+    const open = tables.notifications!.filter((row) => row.status !== "resolved");
+    expect(open.map((row) => [row.recipient_member_id, row.title, row.body])).toEqual(
+      expect.arrayContaining([
+        ["upasana", "WonderHome added 1 thing today", "Nothing needs you. Undo any of them in HomeSend for 7 days."],
+        ["kunal", "WonderHome added 1 thing today", "Nothing needs you. Undo any of them in HomeSend for 7 days."],
+      ]),
+    );
+    // Nothing is said about the waiting item itself: the old grouped notice is gone.
+    expect(tables.notifications!.some((row) => row.thread_key === "homesend:waiting")).toBe(false);
   });
 
   it("rewrites one thread as replies come in, and brings it back unread", async () => {

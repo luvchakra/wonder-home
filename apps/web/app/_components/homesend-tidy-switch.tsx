@@ -1,6 +1,6 @@
 "use client";
 
-import { Archive } from "lucide-react";
+import { Archive, BellRing, Clock } from "lucide-react";
 import { startTransition, useActionState, useState } from "react";
 
 import { Alert } from "@wonderhome/core/ui/alert";
@@ -8,7 +8,7 @@ import { IconTile } from "@wonderhome/core/ui/icon-tile";
 import { Switch } from "@wonderhome/core/ui/switch";
 
 import type { ActionState } from "../(auth)/actions";
-import { saveHomeSendTidyAction } from "../(auth)/consent-actions";
+import { saveHomeSendTidyAction, saveNothingWaitsAction } from "../(auth)/consent-actions";
 
 /**
  * "Tidy up items that no longer apply" (the owner, 2026-11-03): whether
@@ -22,19 +22,24 @@ export function HomeSendTidySwitch({
   on,
   manages,
   labels,
+  which,
 }: {
   householdId: string;
   on: boolean;
   manages: boolean;
   labels: { title: string; on: string; off: string; detail: string; adminDecides: string };
+  /** The "Nothing waits" switches (2026-11-14) use the same row; absent, it is the daily tidy's. */
+  which?: "remind_checking" | "apply_defaults";
 }) {
   const [checked, setChecked] = useState(on);
-  const [state, save, saving] = useActionState<ActionState, FormData>(saveHomeSendTidyAction, {});
+  const [state, save, saving] = useActionState<ActionState, FormData>(which ? saveNothingWaitsAction : saveHomeSendTidyAction, {});
+  const Icon = which === "remind_checking" ? BellRing : which === "apply_defaults" ? Clock : Archive;
 
   const flip = (next: boolean) => {
     setChecked(next);
     const data = new FormData();
     data.set("householdId", householdId);
+    if (which) data.set("which", which);
     data.set("on", next ? "on" : "off");
     startTransition(() => save(data));
   };
@@ -42,7 +47,7 @@ export function HomeSendTidySwitch({
   return (
     <div className="space-y-3">
       <div className="flex items-start gap-3">
-        <IconTile icon={Archive} tone="ai" />
+        <IconTile icon={Icon} tone="ai" />
         <div className="min-w-0 flex-1">
           <p className="text-sm font-semibold">{labels.title}</p>
           <p className="mt-0.5 text-sm text-[var(--wh-foreground-muted)]" aria-live="polite">

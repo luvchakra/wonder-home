@@ -9,6 +9,7 @@ import { sleepDueHouseholds } from "@wonderhome/core/homebrain/sleep/run";
 import { archiveStaleHomeSendItems } from "@wonderhome/core/homesend/repository";
 import { drainJobs } from "@wonderhome/core/homesend/retry-queue";
 import { runHomeSendTidy } from "@wonderhome/core/homesend/tidy-run";
+import { runNeedsYouDeadlines } from "@wonderhome/core/hometalk/needs-you-run";
 import { notificationJobHandlers } from "@wonderhome/core/notifications/retry-handler";
 import { sendDueDigests } from "@wonderhome/core/notifications/digest";
 import { householdsWithNoticeChanges, sweepNotices } from "@wonderhome/core/notifications/notices-sweep";
@@ -167,6 +168,13 @@ async function dispatch(request: Request): Promise<Response> {
       if (!onGitHub.has("clock.homesend-tidy")) await runHomeSendTidy(admin, { now, limit: 5 });
     } catch (thrown) {
       log.warn("homesend tidy tick failed", { reason: thrown instanceof Error ? thrown.name : "unknown" });
+    }
+    // "Nothing waits" (2026-11-14): due "Needs you" defaults applied after 24 hours, nothing open past 48,
+    // every waiting HomeSend item ended as something. Bounded and idempotent; only while GitHub's clock is stale.
+    try {
+      if (!onGitHub.has("clock.homesend-deadlines")) await runNeedsYouDeadlines(admin, { now, limit: 10 });
+    } catch (thrown) {
+      log.warn("needs-you deadlines tick failed", { reason: thrown instanceof Error ? thrown.name : "unknown" });
     }
     // Kids Trivia's low card pools (08-035): a couple a tick, only while GitHub's clock is stale.
     try {

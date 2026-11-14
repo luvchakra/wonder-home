@@ -24,7 +24,7 @@ export default async function PlatformAdminPage({ searchParams }: { searchParams
   const staff = await platformStaff("operations.read");
   if (!staff) return null; // the layout has already answered 404
 
-  const [{ period }, { snapshot, advisor }, { totals, storeReady, statuses }] = await Promise.all([
+  const [{ period }, { snapshot, advisor, nothingWaits }, { totals, storeReady, statuses }] = await Promise.all([
     searchParams,
     platformOverview(staff),
     settingTotals(staff),
@@ -39,6 +39,7 @@ export default async function PlatformAdminPage({ searchParams }: { searchParams
     <OverviewView
       snapshot={snapshot}
       advisor={advisor}
+      nothingWaits={nothingWaits}
       settings={{ saved: totals.saved, environment: totals.environment, stillInVercel: totals.stillInVercel, storeReady }}
       services={SERVICES.map((service) => ({ name: service.name, href: service.href, ready: service.needs.every(isOn) }))}
       period={period === "30" ? 30 : 7}

@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
 
+import { confirmByAction } from "@wonderhome/core/homesend/changes";
 import { toErrorBody } from "@wonderhome/core/api/errors";
 import { createClient } from "@wonderhome/core/db/server";
 import { billType } from "@wonderhome/core/finance/bill-catalog";
@@ -155,7 +156,7 @@ export async function updateObligationAction(
 
   try {
     const supabase = await createClient();
-    await requireHouseholdAdmin(supabase, parsed.data.householdId);
+    const admin = await requireHouseholdAdmin(supabase, parsed.data.householdId);
 
     await updateObligation(supabase, {
       id: parsed.data.id,
@@ -171,6 +172,8 @@ export async function updateObligationAction(
       billType: parsed.data.billType || null,
       responsibleMemberId: parsed.data.responsibleMemberId || null,
     });
+    // Editing an entry HomeSend added while Checking confirms it (decision 3, 2026-11-14).
+    await confirmByAction(supabase, parsed.data.householdId, parsed.data.id, admin.memberId);
 
     revalidatePath("/bills");
     return { notice: "Saved." };
@@ -437,7 +440,7 @@ export async function markBillPaidAction(input: z.input<typeof markPaidSchema>):
   if (parsed.data.amount !== null && !parsed.data.currency) return { error: "Add a currency along with the amount." };
   try {
     const supabase = await createClient();
-    await requireHouseholdAdmin(supabase, parsed.data.householdId);
+    const admin = await requireHouseholdAdmin(supabase, parsed.data.householdId);
     const paid = await markObligationPaid(supabase, {
       householdId: parsed.data.householdId,
       obligationId: parsed.data.obligationId,
@@ -445,6 +448,8 @@ export async function markBillPaidAction(input: z.input<typeof markPaidSchema>):
       amountMinor: parsed.data.amount === null ? null : toMinor(parsed.data.amount, parsed.data.currency!),
       currency: parsed.data.currency,
     });
+    // Marking a Checking bill paid is saying it was right (decision 3, 2026-11-14).
+    await confirmByAction(supabase, parsed.data.householdId, parsed.data.obligationId, admin.memberId);
     revalidatePath("/bills");
     revalidatePath("/household/home");
     return { paid };

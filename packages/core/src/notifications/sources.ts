@@ -84,6 +84,23 @@ export function reminderText(title: NotificationMessage, body: NotificationMessa
   return { ...renderCopy(copy, ENGLISH, format), priority, copy };
 }
 
+/**
+ * A HomeSend entry still Checking reminds as usual (decision 3, the owner,
+ * 2026-11-14), its words marked "not yet confirmed"; money ones also say
+ * "check before paying". The title stays the record's own name.
+ */
+export function notYetConfirmed(subject: ReminderSubject | null, money: boolean, format: Formatter): ReminderSubject | null {
+  if (!subject) return null;
+  return {
+    ...subject,
+    text: (stageKey, now) => {
+      const base = subject.text(stageKey, now);
+      const body = msg(money ? "reminder.checking.money" : "reminder.checking.body", { body: { msg: base.copy.body } });
+      return reminderText(base.copy.title, body, base.priority, format);
+    },
+  };
+}
+
 const endOfLocalDay = (dateKey: string, timeZone: string) => atLocal(shiftDate(dateKey, 1), 0, timeZone);
 
 const OPEN_BILL = new Set(["expected", "received", "scheduled", "overdue"]);

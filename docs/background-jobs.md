@@ -21,6 +21,7 @@ Since 2026-11-07, scheduled and batch work runs on **GitHub Actions** where it c
   | Step | Claim |
   |---|---|
   | Tidy | a `homesend_tidy_runs` row per household per local day |
+  | Needs-you deadlines | one open `needs_you_items` row per thing per source (unique index), and every write a compare-and-swap on what was read |
   | Sleep | a `homebrain_runs` row per household per local date |
   | Knowledge drain | a `claim_knowledge_outbox` token |
   | Calendar sync | `claim_due_calendar_subscriptions`, `for update skip locked` |
@@ -46,6 +47,7 @@ Vercel invocations per day are estimated from the schedules. Hobby keeps one hou
 | Knowledge drain (`drainKnowledge`) | dispatch call | 5 min | knowledge outbox and facts | No | (within the 288) | **GitHub** `clock` |
 | HomeSend 30-day archive | dispatch call, after the response | 5 min | `home_send_items` | No | (within the 288) | **GitHub** `clock` |
 | HomeSend daily tidy (from 04:00 household time) | dispatch call, after the response | 5 min, once a day per household | `homesend_tidy_runs`, `home_send_items`, model | No | (within the 288, up to 300 s each) | **GitHub** `clock` (with the AI key) |
+| "Nothing waits" deadlines (`runNeedsYouDeadlines`, 2026-11-14) | GitHub `clock` step `clock.homesend-deadlines`; dispatch call after the response while GitHub is stale | each clock run (50 households; 10 on Vercel), up to 200 due defaults | `needs_you_items`, `home_send_items`, `homesend_changes`, `conversation_actions` (48-hour close), `jobs` (read-again) | No (a default is due 24 h after the thing was sent) | (within the 288) | **GitHub** `clock`, Vercel skips while fresh |
 | HomeBrain Sleep (2–5 am household time) | dispatch call, after the response | 5 min, once a night per household | `homebrain_runs`, memories, certification, links, model | No | (within the 288, up to 300 s each) | **GitHub** `clock` (with the AI key) |
 | Kids Trivia refill (`runTriviaRefill`, 08-035) | GitHub `clock` step `clock.trivia-refill`; dispatch call after the response while GitHub is stale | each clock run, up to 4 pools (2 on Vercel) | `trivia_refill_queue`, `trivia_pool`, `trivia_generation_usage`, model (the asking household's terms, at most 6 batches a day) | No | (within the 288) | **GitHub** `clock`, Vercel skips while fresh |
 | Calendar subscription sync | pg_cron `wonderhome-calendar-subscription-sync` calls `/api/v1/calendar/subscriptions/sync` | 15 min | `calendar_subscriptions`, events, external ICS fetches | No (a feed syncs about every 6 h) | 96 | **GitHub** `clock`. The Vercel call returns at once while fresh |
