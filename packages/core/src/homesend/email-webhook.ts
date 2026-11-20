@@ -213,6 +213,12 @@ export async function handleEmailWebhook(request: Request, deps: EmailWebhookDep
   }
 
   let queuedRetry = false;
+  // The email and its attachments are added one after another, never at once
+  // (the owner, 2026-11-20: a BESCOM bill's email and its PDF were both added
+  // as Checking, ₹2,140 and ₹2,340 due the same day). Run together, each
+  // looked for the bill on record before the other had written it; in turn,
+  // the second finds the first and waits as an update instead.
+  const toAdd: { householdId: string; itemId: string }[] = [];
   for (const householdId of allowedHouseholds) {
     // A household's forwarding address is not a firehose (Wave 5 §15). Past
     // its hourly limit the email is still kept, so nothing is lost, but it
@@ -247,9 +253,7 @@ export async function handleEmailWebhook(request: Request, deps: EmailWebhookDep
         failed = outcome.classifyFailed === true;
         // Read: a trusted sender's email is added now, not when a member next opens HomeSend.
         if (!failed && deps.addTrusted) {
-          const add = deps.addTrusted;
-          const itemId = item.id;
-          deps.defer(() => add({ householdId, itemId }));
+          toAdd.push({ householdId, itemId: item.id });
         }
       } catch (thrown) {
         // Understanding is a convenience, not the point of this request —
@@ -288,9 +292,7 @@ export async function handleEmailWebhook(request: Request, deps: EmailWebhookDep
         // A trusted sender's attachment is added on arrival like a photo a member sent (the owner, 2026-11-20):
         // read from a file, so it is always Checking (`confirmation.ts`). Unread or already kept: it waits as before.
         if (deps.addTrusted && !read.duplicate && !read.classifyFailed && read.state !== "failed") {
-          const add = deps.addTrusted;
-          const attachmentItemId = read.itemId;
-          deps.defer(() => add({ householdId, itemId: attachmentItemId }));
+          toAdd.push({ householdId, itemId: read.itemId });
         }
       } catch (thrown) {
         log.warn("homesend email webhook: attachment failed", { reason: thrown instanceof Error ? thrown.name : "unknown", allow: ["reason"] });
@@ -299,6 +301,18 @@ export async function handleEmailWebhook(request: Request, deps: EmailWebhookDep
       }
     }
     events.push({ kind: "processed", householdId, latencyMs: Date.now() - startedAt });
+  }
+
+  if (toAdd.length > 0 && deps.addTrusted) {
+    const add = deps.addTrusted;
+    deps.defer(async () => {
+      for (const next of toAdd) {
+        // One that fails never stops the next; it waits to be added as before.
+        await add(next).catch((thrown: unknown) =>
+          log.warn("homesend email add failed", { reason: thrown instanceof Error ? thrown.name : "unknown", allow: ["reason"] }),
+        );
+      }
+    });
   }
 
   // Due retries are worked after the response is sent, so a slow provider

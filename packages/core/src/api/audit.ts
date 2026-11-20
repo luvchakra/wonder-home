@@ -88,6 +88,7 @@ export const AUDIT_EVENTS = [
   "homesend.archived_all",
   "homesend.restored_all",
   "homesend.removed",
+  "finance.bill_removed",
   "homesend.deleted",
   "homesend.added_all_anyway",
   "homesend.added_anyway",
