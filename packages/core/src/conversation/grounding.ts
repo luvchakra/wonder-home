@@ -45,7 +45,7 @@ export type Grounding =
     };
 
 /** What a grounding question waits for — read by `answerClarification`. */
-export type Awaiting = "member" | "referent" | "day" | "item" | "quantity";
+export type Awaiting = "member" | "referent" | "day" | "time" | "item" | "quantity";
 
 export type GroundingEnv = {
   /** The household's people, as the resolver's member items. */
@@ -542,9 +542,17 @@ export async function groundIntent(intent: HouseholdIntent, env: GroundingEnv): 
     // The moment it will actually go off, decided here once: a time already
     // gone is one question, never a reminder quietly written for "now" and
     // described as 9am (live, 24 Sep: "today" said at 8:35 pm).
-    const moment = reminderMoment(grounded.parameters.when, typeof grounded.parameters.time === "string" ? grounded.parameters.time : null, { timezone: env.timezone, now: env.now });
-    if (!moment.ok) return clarify(grounded, "day", moment.question, []);
-    grounded.parameters = { ...grounded.parameters, remindAtResolved: { date: moment.date, day: moment.day, time: moment.time, at: moment.at.toISOString() } };
+    const moment = reminderMoment(grounded.parameters.when, typeof grounded.parameters.time === "string" ? grounded.parameters.time : null, {
+      timezone: env.timezone,
+      now: env.now,
+      context: typeof grounded.parameters.what === "string" ? grounded.parameters.what : undefined,
+    });
+    // The question's slot is what it asks for: a time it could not read is asked as a time, with time answers (2026-11-20).
+    if (!moment.ok) return clarify(grounded, moment.slot, moment.question, []);
+    grounded.parameters = {
+      ...grounded.parameters,
+      remindAtResolved: { date: moment.date, day: moment.day, time: moment.time, at: moment.at.toISOString(), ...(moment.assumedFrom ? { assumedFrom: moment.assumedFrom } : {}) },
+    };
     const what = typeof grounded.parameters.what === "string" ? grounded.parameters.what : "";
     const pointer = /\b(them|those|these|it|that|this)\b/i.exec(what);
     if (pointer) {

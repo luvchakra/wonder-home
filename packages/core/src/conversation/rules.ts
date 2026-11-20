@@ -6,7 +6,8 @@ import { readWhyQuestion } from "../homebrain/why";
 import { extractItems } from "./clarify";
 import type { HouseholdIntent, IntentAction } from "./intent";
 import { parsePreference } from "./memory";
-import { CALENDAR_SPAN_PHRASE, splitTrailingWhen } from "./temporal";
+import { CALENDAR_SPAN_PHRASE, splitTrailingWhen, TEMPORAL_PHRASE } from "./temporal";
+import { TIME_PHRASE } from "./time-of-day";
 import { isPlaceQuestion } from "../homeplaces/request";
 import { readLikesQuestion } from "./likes";
 import { readRelationQuestion } from "./relations";
@@ -96,7 +97,7 @@ const APPOINTMENT_TYPE_WORDS: Partial<Record<AppointmentType, readonly string[]>
   doctor: ["doctor", "gp", "physician", "checkup", "check-up"],
 };
 
-function matchAppointmentType(text: string): AppointmentType {
+export function matchAppointmentType(text: string): AppointmentType {
   const lower = text.toLowerCase();
   for (const type of APPOINTMENT_TYPES) {
     const words = APPOINTMENT_TYPE_WORDS[type];
@@ -140,7 +141,10 @@ function item(value: string): string {
 
 const REMIND_WHEN = `(?:${WHEN_WORDS})(?:\\s+(?:morning|afternoon|evening|night|after school|before dinner))?|after school|before dinner|this (?:morning|afternoon|evening)|in the (?:morning|afternoon|evening)`;
 
-const TIME_WORDS = "\\d{1,2}(?::\\d{2})?\\s*(?:am|pm)?|noon|midday";
+const TIME_WORDS = TIME_PHRASE;
+
+const INNER_TIME = new RegExp(`\\s*\\b(?:at|@)\\s+(${TIME_PHRASE})(?![\\w:])`, "i");
+const INNER_DAY = new RegExp(`\\s*\\b(?:for\\s+|on\\s+)?(${TEMPORAL_PHRASE})\\b`, "i");
 
 /** A reminder's parameters: what, and when as the household said it. */
 function reminder(what: string, when: string | undefined, time: string | undefined): Record<string, unknown> {
@@ -151,6 +155,22 @@ function reminder(what: string, when: string | undefined, time: string | undefin
     what = split.what;
     when = split.when;
   }
+  // "for tomorrow doctor appointment at 1 o'clock": the day and time said anywhere in it, taken out of what (2026-11-20).
+  if (!time) {
+    const at = INNER_TIME.exec(what);
+    if (at) {
+      time = at[1];
+      what = `${what.slice(0, at.index)} ${what.slice(at.index + at[0].length)}`;
+    }
+  }
+  if (!when) {
+    const day = INNER_DAY.exec(what);
+    if (day) {
+      when = day[1];
+      what = `${what.slice(0, day.index)} ${what.slice(day.index + day[0].length)}`;
+    }
+  }
+  what = what.replace(/\s{2,}/g, " ").replace(/^(?:on|for)\s+/i, "").trim();
   return {
     what: what.trim().replace(/[.!]+$/, ""),
     ...(when ? { when: when.trim().toLowerCase() } : {}),
@@ -512,7 +532,7 @@ const RULES: readonly Rule[] = [
     // "Set a reminder to call the plumber tomorrow", "create a reminder about
     // the school meeting" — the same reminder, said the way a voice assistant
     // is usually asked for one.
-    pattern: new RegExp(`^(?:set|create|make|add)(?: me)? an? reminder (?:to|about|for|that) (.+?)(?:\\s+(${REMIND_WHEN}))?(?:\\s+at\\s+(${TIME_WORDS}))?$`, "i"),
+    pattern: new RegExp(`^(?:set|create|make|add|put)(?: me)?(?: an?)? reminder (?:to|about|for|that|of) (.+?)(?:\\s+(${REMIND_WHEN}))?(?:\\s+at\\s+(${TIME_WORDS}))?$`, "i"),
     read: (match) => ({ action: "set_reminder", target: { kind: "outcome", reference: "reminders" }, parameters: reminder(match[1]!, match[2], match[3]), confidence: 0.9 }),
   },
 
@@ -769,7 +789,7 @@ const RULES: readonly Rule[] = [
   // otherwise be read as a stated preference rather than a symptom.
   {
     pattern: new RegExp(
-      `^i(?:'ve| have)(?: got)? (?:a |an )?(.+?) appointment(?:\\s+(?:on\\s+|for\\s+)?(${WHEN_WORDS}|\\d{4}-\\d{2}-\\d{2}))?(?:\\s+at\\s+(\\d{1,2}(?::\\d{2})?\\s*(?:am|pm)?))?$`,
+      `^i(?:'ve| have)(?: got)? (?:a |an )?(.+?) appointment(?:\\s+(?:on\\s+|for\\s+)?(${WHEN_WORDS}|\\d{4}-\\d{2}-\\d{2}))?(?:\\s+at\\s+(${TIME_PHRASE}))?$`,
       "i",
     ),
     read: (match) => {
@@ -778,6 +798,20 @@ const RULES: readonly Rule[] = [
       if (match[2]) parameters.when = match[2].trim().toLowerCase();
       if (match[3]) parameters.time = match[3].trim().toLowerCase();
       return { action: "record_health_appointment", target: { kind: "member", reference: "self" }, parameters, confidence: 0.88 };
+    },
+  },
+  {
+    // "Doctor appointment tomorrow at 1", "dentist appt friday 4pm": said as a note, a health kind, a day and a time.
+    pattern: new RegExp(`^(?:my |a |an )?(.{2,30}?) (?:appointment|appt|check-?up)(?:\\s+(?:on\\s+|for\\s+)?(${WHEN_WORDS}|\\d{4}-\\d{2}-\\d{2}))(?:\\s+(?:at\\s+)?(${TIME_PHRASE}))$`, "i"),
+    read: (match) => {
+      const appointmentType = matchAppointmentType(match[1]!);
+      if (appointmentType === "other") return null;
+      return {
+        action: "record_health_appointment",
+        target: { kind: "member", reference: "self" },
+        parameters: { typeText: match[1]!.trim(), appointmentType, when: match[2]!.trim().toLowerCase(), time: match[3]!.trim().toLowerCase() },
+        confidence: 0.86,
+      };
     },
   },
   {
