@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { talkComposerState } from "./talk-composer";
+import { liveFailureWords, TALK_COMPOSER_LABELS, talkComposerState } from "./talk-composer";
 import type { SpeechToTextState } from "./use-speech-to-text";
 
 const off = { active: false, paused: false };
@@ -70,5 +70,19 @@ describe("states that mean the microphone cannot be used", () => {
       expect(state({ speech })).toBe("idle");
       expect(state({ speech, hasText: true })).toBe("typing");
     }
+  });
+});
+
+describe("a talk button that could not start (2026-11-20)", () => {
+  it("says WonderHome's own failures in the viewer's words, one per kind", () => {
+    expect(liveFailureWords({ message: "Microphone access was refused", kind: "denied" }, TALK_COMPOSER_LABELS)).toBe(TALK_COMPOSER_LABELS.voiceDenied);
+    expect(liveFailureWords({ message: "x", kind: "unsupported" }, TALK_COMPOSER_LABELS)).toBe(TALK_COMPOSER_LABELS.voiceUnsupported);
+    expect(liveFailureWords({ message: "Google refused", kind: "setup" }, TALK_COMPOSER_LABELS)).toBe(TALK_COMPOSER_LABELS.voiceSetup);
+    expect(liveFailureWords({ message: "x", kind: "failed" }, TALK_COMPOSER_LABELS)).toBe(TALK_COMPOSER_LABELS.voiceFailed);
+  });
+
+  it("shows Gemini Live's own message as it came, and never an empty line", () => {
+    expect(liveFailureWords({ message: "This browser cannot hold a live conversation." }, TALK_COMPOSER_LABELS)).toBe("This browser cannot hold a live conversation.");
+    expect(liveFailureWords({ message: "" }, TALK_COMPOSER_LABELS)).toBe(TALK_COMPOSER_LABELS.voiceFailed);
   });
 });

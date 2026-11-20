@@ -10,6 +10,7 @@ import { cn } from "../../lib/cn";
 import { setTalkActivity } from "../shell/talk-activity";
 import { FRAME_HEIGHT, FRAME_RATE, FRAME_WIDTH, drawLiveFrame, floatSupport, liveFrame, readFloatEnvironment, readPalette, shouldArmFloat, type FloatMode, type FloatPalette } from "./live-float";
 import type { LiveEngines } from "./live-talk-engines";
+import type { LiveFailureKind } from "../../voice/live-failure";
 import { appPath } from "../../navigation/app-path";
 
 /**
@@ -71,6 +72,14 @@ export type LiveTurnHandler = {
   onTranscript?: (entry: { role: "member" | "assistant"; text: string; id?: string }) => void;
   /** A line already shown, written down properly afterwards (Gemini Live): replace the one with this id. */
   onTranscriptRevised?: (entry: { id: string; text: string }) => void;
+  /**
+   * The conversation could not start, or stopped by itself (a refused
+   * microphone, a browser that cannot listen, the voice route refusing).
+   * The bar shows `notice` on other screens; the page that registered says
+   * it in its own words, so a tap on the talk button never does nothing.
+   * `kind` is absent for Gemini Live, whose message is shown as it is.
+   */
+  onFailure?: (failure: { message: string; kind?: LiveFailureKind }) => void;
 };
 
 type LiveView = {
@@ -429,7 +438,10 @@ export function LiveTalkProvider({ children }: { children: ReactNode }) {
     },
     [paint],
   );
-  const onError = useCallback((message: string) => setNotice(message), []);
+  const onError = useCallback((message: string, kind?: LiveFailureKind) => {
+    setNotice(message);
+    handlerRef.current?.onFailure?.({ message, kind });
+  }, []);
 
   const onChanged = useCallback(() => router.refresh(), [router]);
   const server = useMemo(() => (config?.serverVoice ? { householdId: config.householdId } : null), [config?.serverVoice, config?.householdId]);

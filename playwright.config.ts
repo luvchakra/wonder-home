@@ -66,6 +66,10 @@ const serverEnv = {
   SUPABASE_SERVICE_ROLE_KEY:
     process.env.E2E_SERVER_SERVICE_KEY === "1" && liveAllowed ? (process.env.E2E_SUPABASE_SERVICE_ROLE_KEY ?? "") : "",
   WONDERHOME_AI_KEY: "",
+  // Voice conversation is on in production, so HomeTalk's talk button is
+  // there to test (e2e/hometalk-talk-button.spec.ts). No speech key is set,
+  // so it runs in the browser, which the spec drives with a fake recogniser.
+  WONDERHOME_FLAG_VOICE_CONVERSATION: "1",
 };
 
 function findPinnedChromium(): string | undefined {

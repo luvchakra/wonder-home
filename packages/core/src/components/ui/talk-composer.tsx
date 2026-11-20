@@ -6,6 +6,7 @@ import { useCallback, useEffect, useId, useMemo, useRef, useState, type FormEven
 
 import { cn } from "../../lib/cn";
 import { resolveInitialEngine } from "../../voice/live-engine";
+import type { LiveFailureKind } from "../../voice/live-failure";
 import { setTalkActivity } from "../shell/talk-activity";
 import { BrandMark } from "./brand";
 import { useLiveTalk } from "./live-talk";
@@ -122,6 +123,11 @@ export type TalkComposerLabels = {
   stepListening: string;
   stepTranscribing: string;
   stepReady: string;
+  /** A tap on the talk button that could not start, in one plain sentence with the one thing to do. */
+  voiceDenied: string;
+  voiceUnsupported: string;
+  voiceSetup: string;
+  voiceFailed: string;
 };
 
 export const TALK_COMPOSER_LABELS: TalkComposerLabels = {
@@ -160,6 +166,10 @@ export const TALK_COMPOSER_LABELS: TalkComposerLabels = {
   getReady: "Getting ready… don't speak yet",
   getReadyHint: "{who} is connecting. Start speaking when it says it's listening.",
   speakNow: "Ready — speak now",
+  voiceDenied: "The microphone is blocked for this site. Allow it in your browser's site settings, then tap again.",
+  voiceUnsupported: "This browser can't listen. Open WonderHome in Chrome, or type instead.",
+  voiceSetup: "Voice can't be used for this home right now. An Admin can check Settings → Voice.",
+  voiceFailed: "Voice couldn't start just now. Tap again, or type instead.",
 };
 
 const LabelsContext = createContext<TalkComposerLabels>(TALK_COMPOSER_LABELS);
@@ -324,14 +334,18 @@ export function TalkComposer({
   useEffect(() => {
     talk?.configure({ householdId, lang: voiceLanguage, serverVoice, labels: liveBarLabels });
   }, [talk, householdId, voiceLanguage, serverVoice, liveBarLabels]);
-  const turnHandler = useRef({ onLiveTurn, onLiveTranscript, onLiveTranscriptRevised });
-  turnHandler.current = { onLiveTurn, onLiveTranscript, onLiveTranscriptRevised };
+  // A talk button that could not start says why, here, in the viewer's
+  // language (2026-11-20: on HomeTalk a refused start used to say nothing).
+  const onLiveFailure = (failure: { message: string; kind?: LiveFailureKind }) => onError?.(liveFailureWords(failure, labels));
+  const turnHandler = useRef({ onLiveTurn, onLiveTranscript, onLiveTranscriptRevised, onLiveFailure });
+  turnHandler.current = { onLiveTurn, onLiveTranscript, onLiveTranscriptRevised, onLiveFailure };
   useEffect(
     () =>
       talk?.register({
         onUtterance: (transcript, confidence) => turnHandler.current.onLiveTurn?.(transcript, confidence) ?? Promise.resolve(""),
         onTranscript: (entry) => turnHandler.current.onLiveTranscript?.(entry),
         onTranscriptRevised: (entry) => turnHandler.current.onLiveTranscriptRevised?.(entry),
+        onFailure: (failure) => turnHandler.current.onLiveFailure(failure),
       }),
     [talk],
   );
@@ -567,6 +581,22 @@ export function TalkComposer({
     </form>
     </LabelsContext.Provider>
   );
+}
+
+/** The sentence for a live start that failed: WonderHome's own kinds in the viewer's words, Gemini Live's message as it came. */
+export function liveFailureWords(failure: { message: string; kind?: LiveFailureKind }, labels: Pick<TalkComposerLabels, "voiceDenied" | "voiceUnsupported" | "voiceSetup" | "voiceFailed">): string {
+  switch (failure.kind) {
+    case "denied":
+      return labels.voiceDenied;
+    case "unsupported":
+      return labels.voiceUnsupported;
+    case "setup":
+      return labels.voiceSetup;
+    case "failed":
+      return labels.voiceFailed;
+    default:
+      return failure.message || labels.voiceFailed;
+  }
 }
 
 export type LiveEngineChoice = "wonderhome" | "gemini_live";

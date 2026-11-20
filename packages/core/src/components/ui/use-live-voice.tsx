@@ -4,6 +4,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 
 import { speakable, speechChunks, voiceQuality } from "../../conversation/speech";
 import { captureUtterance, microphoneAvailable, playClip } from "../../voice/capture";
+import { liveFailureKind, VoiceRouteError, type LiveFailureKind } from "../../voice/live-failure";
 import { recognitionConstructor, type RecognitionLike } from "../../voice/recognition";
 
 /**
@@ -77,8 +78,8 @@ export function useLiveVoice(input: {
   server?: { householdId: string } | null;
   /** What was heard, and how sure the recogniser was; resolves with what to say back. */
   onUtterance: (transcript: string, confidence: number) => Promise<string>;
-  /** A fatal problem (denied microphone, unsupported browser) — never thrown. */
-  onError?: (message: string) => void;
+  /** A fatal problem (denied microphone, unsupported browser, a refusal from the voice route) — never thrown. */
+  onError?: (message: string, kind: LiveFailureKind) => void;
 }): {
   state: LiveVoiceState;
   active: boolean;
@@ -128,13 +129,13 @@ export function useLiveVoice(input: {
     return () => window.speechSynthesis.removeEventListener("voiceschanged", load);
   }, []);
 
-  const halt = useCallback((next: LiveVoiceState, message?: string) => {
+  const halt = useCallback((next: LiveVoiceState, message?: string, kind?: LiveFailureKind) => {
     activeRef.current = false;
     pausedRef.current = false;
     setActive(false);
     setPaused(false);
     setState(next);
-    if (message) onErrorRef.current?.(message);
+    if (message) onErrorRef.current?.(message, kind ?? (next === "denied" ? "denied" : next === "unsupported" ? "unsupported" : "failed"));
   }, []);
 
   /** The browser's own voice, used when no provider is configured. */
@@ -179,7 +180,7 @@ export function useLiveVoice(input: {
       // conversation carries on in text and listens again.
       if (!response.ok) {
         if (response.status === 400) return "off";
-        throw new Error(payload?.error?.message ?? "That reply could not be spoken.");
+        throw new VoiceRouteError(payload?.error?.message ?? "That reply could not be spoken.", response.status);
       }
       return { audio: payload.audio, mimeType: payload.mimeType };
     };
@@ -224,8 +225,8 @@ export function useLiveVoice(input: {
         headers: { "content-type": "application/json" },
         body: JSON.stringify({ audio: heard.clip.base64, mimeType: heard.clip.mimeType }),
       });
-      const payload = await response.json();
-      if (!response.ok) throw new Error(payload?.error?.message ?? "That could not be heard.");
+      const payload = await response.json().catch(() => null);
+      if (!response.ok) throw new VoiceRouteError(payload?.error?.message ?? "That could not be heard.", response.status);
       if (!activeRef.current) break;
 
       const transcript = String(payload.transcript ?? "").trim();
@@ -331,9 +332,11 @@ export function useLiveVoice(input: {
         .catch((thrown: unknown) => {
           const message = thrown instanceof Error ? thrown.message : "Live conversation stopped.";
           // A refused microphone reads as a permission problem however the
-          // browser words it, and is worth naming as one.
-          const denied = /permission|denied|notallowed/i.test(message);
-          halt(denied ? "denied" : "idle", message);
+          // browser words it, and is worth naming as one; a refusal from the
+          // voice route is the home's voice setup. Either way the person is
+          // told (the caller shows it), never left with a button that did nothing.
+          const kind = liveFailureKind(thrown);
+          halt(kind === "denied" ? "denied" : kind === "unsupported" ? "unsupported" : "idle", message, kind);
         })
         .then(() => {
           if (!activeRef.current) setState((current) => (current === "denied" || current === "unsupported" ? current : "idle"));
@@ -359,7 +362,8 @@ export function useLiveVoice(input: {
     }
 
     if (!recognitionConstructor() || !("speechSynthesis" in window)) {
-      setState("unsupported");
+      // Said, not just set: a tap that changes nothing on screen reads as a broken button.
+      halt("unsupported", "This browser cannot listen continuously, so live conversation is not available.");
       return;
     }
     activeRef.current = true;
