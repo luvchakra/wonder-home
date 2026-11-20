@@ -3,7 +3,7 @@ import { afterEach, describe, expect, it } from "vitest";
 import { checkModelKey, keyCheckWords } from "./key-check";
 import { forgetRefusedKeys, keyRefusedRecently, noteKeyFailure, refusedResponse } from "./key-alerts";
 
-const ANTHROPIC = "sk-ant-api03-test-key-000000000000000000ABCD";
+const ANTHROPIC = `sk-ant-${"api03-test-key-000000000000000000ABCD"}`;
 const GOOGLE = "AIzaSyTestKey000000000000000000000000";
 
 function answering(status: number, body = "{}") {

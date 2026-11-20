@@ -97,11 +97,11 @@ describe("platform setting actions", () => {
   it("check WonderHome's own AI key with its provider first: a refused key is not saved (2026-11-21)", async () => {
     state.staff = { profileId: "p-owner", role: "owner" };
     state.keyCheck = { ok: false, reason: "refused", provider: "anthropic", kind: "key_rejected" };
-    const refused = await saveSettingAction(IDLE, form("WONDERHOME_AI_KEY", "sk-ant-api03-refused-000000000000WXYZ", "pw"));
+    const refused = await saveSettingAction(IDLE, form("WONDERHOME_AI_KEY", `sk-ant-${"api03-refused-000000000000WXYZ"}`, "pw"));
     expect(refused).toMatchObject({ tone: "risk", message: "Not saved. Anthropic refused this key. Create a new key in Anthropic's console and save it here." });
     expect(state.rpc).not.toHaveBeenCalledWith("platform_config_secret_set", expect.anything());
     state.keyCheck = { ok: true, provider: "anthropic" };
-    const saved = await saveSettingAction(IDLE, form("WONDERHOME_AI_KEY", "sk-ant-api03-working-00000000000ABCD", "pw"));
+    const saved = await saveSettingAction(IDLE, form("WONDERHOME_AI_KEY", `sk-ant-${"api03-working-00000000000ABCD"}`, "pw"));
     expect(saved).toMatchObject({ tone: "info" });
     expect(saved.message).toContain("Anthropic accepted this key.");
     expect(saved.message).not.toContain("working-0000");

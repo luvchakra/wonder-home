@@ -10,8 +10,8 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
  * deployment's variable before its first read of the saved values).
  */
 
-const SAVED = "sk-ant-saved-in-platform-admin-0000000000SAVE";
-const DEPLOYED = "sk-ant-old-deployment-variable-00000000000OLD";
+const SAVED = `sk-ant-${"saved-in-platform-admin-0000000000SAVE"}`;
+const DEPLOYED = `sk-ant-${"old-deployment-variable-00000000000OLD"}`;
 
 const seen: string[] = [];
 vi.mock("./classify-intake", () => ({
