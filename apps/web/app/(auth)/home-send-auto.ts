@@ -8,6 +8,7 @@ import { loadAutomationBar } from "@wonderhome/core/homebrain/kind-bar-repositor
 import { recordHomeSendChange, type RecordHomeSendChangeInput } from "@wonderhome/core/homesend/changes";
 import type { HomeSendExtraction, HomeSendKind } from "@wonderhome/core/homesend/items";
 import { getHomeSendItem, routeHomeSendItem } from "@wonderhome/core/homesend/repository";
+import { keepFilledWhy } from "@wonderhome/core/homesend/sender-history";
 import type { SubjectResolution } from "@wonderhome/core/homesend/resolve";
 import type { HouseholdMembership } from "@wonderhome/core/identity/schemas";
 import { SCHOOL_ITEM_KINDS } from "@wonderhome/core/school/items";
@@ -44,7 +45,16 @@ const WHERE: Partial<Record<HomeSendKind, string>> = {
 export async function autoApplyHomeSendItem(
   supabase: SupabaseClient,
   membership: HouseholdMembership,
-  item: { id: string; kind: HomeSendKind; extracted: HomeSendExtraction | null; subject: SubjectResolution | null },
+  item: {
+    id: string;
+    kind: HomeSendKind;
+    extracted: HomeSendExtraction | null;
+    subject: SubjectResolution | null;
+    /** A school notice placed with every child at its school (`subject-fill.ts`): one entry each, all undone together. */
+    everyone?: readonly { memberId: string }[] | null;
+    /** "Why?" for each gap the household's memory filled (`ReviewPreparation.filled`), kept on the item. */
+    filled?: { why: readonly string[]; fields: readonly string[] } | null;
+  },
   /**
    * `added` when a person said yes to it among several (bulk review, the owner
    * 2026-11-03): the same governed write and the same Undo, recorded as their
@@ -115,6 +125,13 @@ export async function autoApplyHomeSendItem(
   if (options.update) return autoMove(supabase, membership, { ...input, title: options.update.title || input.title }, options.update, where, autoState(options.checking));
   const created = await createNew(supabase, membership, input);
   if ("error" in created) return null;
+  // The same notice for each other child at that school: its own change, so Undo takes them all back.
+  const others = item.kind === "school_item" ? (item.everyone ?? []).filter((person) => person.memberId !== input.childMemberId) : [];
+  const alsoFor: { routedId: string }[] = [];
+  for (const other of others) {
+    const more = await createNew(supabase, membership, { ...input, childMemberId: other.memberId }).catch(() => null);
+    if (more && !("error" in more)) alsoFor.push({ routedId: more.routedId });
+  }
   await routeHomeSendItem(supabase, householdId, item.id, {
     routedTable: created.routedTable,
     routedId: created.routedId,
@@ -133,6 +150,10 @@ export async function autoApplyHomeSendItem(
   for (const also of created.also ?? []) {
     await recordHomeSendChange(supabase, { householdId, intakeId: item.id, domain: also.domain, entityId: also.entityId, createdByMemberId: membership.memberId });
   }
+  for (const also of alsoFor) {
+    await recordHomeSendChange(supabase, { householdId, intakeId: item.id, domain: item.kind, entityId: also.routedId, createdByMemberId: membership.memberId, ...(auto ? { auto } : {}) });
+  }
+  if (item.filled) await keepFilledWhy(supabase, householdId, item.id, item.filled);
   return { changeId: change.id, title, where, ...(created.more ? { more: created.more } : {}) };
 }
 
@@ -239,15 +260,17 @@ export async function addIfAllowed(
   if (!item || item.status !== "classified" || !item.classifiedKind) return null;
   const review = await prepareReview(supabase, membership, { ...item, createdByMemberId: options.createdByMemberId ?? item.createdByMemberId });
   if (review.plan) return null;
-  if (review.confirmation.mode !== "auto_apply") {
-    const title = item.extracted?.title?.trim();
+  const kind = review.kind ?? item.classifiedKind;
+  const extracted = review.extracted ?? item.extracted;
+  if (review.confirmation.mode !== "auto_apply" || !kind) {
+    const title = extracted?.title?.trim();
     return review.confirmation.wait && title ? { waiting: review.confirmation.wait, title } : null;
   }
   const unconfirmed = review.confirmation.unconfirmed === true;
   const applied = await autoApplyHomeSendItem(
     supabase,
     membership,
-    { id: item.id, kind: item.classifiedKind, extracted: item.extracted, subject: review.subject },
+    { id: item.id, kind, extracted, subject: review.subject, everyone: review.everyone, filled: review.filled },
     { checking: { unconfirmed, confidence: review.understanding?.score ?? null, source: options.source ?? item.source }, ...(review.confirmation.update ? { update: review.confirmation.update } : {}) },
   );
   // How sure, and why, goes with every "added on its own" message (design §7).
@@ -255,7 +278,7 @@ export async function addIfAllowed(
   // Added as Checking: HomeTalk's questions about it are planned now, from
   // what the reading holds, for the person who sent it in (14-061).
   if (unconfirmed) {
-    const percent = await loadAutomationBar(supabase, membership.household.id, item.classifiedKind)
+    const percent = await loadAutomationBar(supabase, membership.household.id, kind)
       .then((bar) => bar.percent)
       .catch(() => DEFAULT_AUTO_ADD_PERCENT);
     await beginChecking(supabase, { householdId: membership.household.id, itemId: item.id, recipientMemberId: options.createdByMemberId ?? item.createdByMemberId ?? membership.memberId, score: review.understanding?.score ?? null, percent });
@@ -263,5 +286,5 @@ export async function addIfAllowed(
   const more = review.confirmation.topUp && applied.more ? { more: applied.more } : {};
   const checking = unconfirmed ? { unconfirmed: true as const } : {};
   const moved = applied.moved ? { moved: applied.moved } : {};
-  return { title: applied.title, where: applied.where, kind: item.classifiedKind, percent: scorePercent(review.understanding?.score), why: sureWhy(review.understanding), ...more, ...checking, ...moved };
+  return { title: applied.title, where: applied.where, kind, percent: scorePercent(review.understanding?.score), why: sureWhy(review.understanding), ...more, ...checking, ...moved };
 }

@@ -35,7 +35,14 @@ export type AllowlistKind = (typeof ALLOWLIST_KINDS)[number];
 /** A normalized, canonical allowlist rule: an exact address, or a whole domain. */
 export type AllowlistEntry = { kind: AllowlistKind; value: string };
 
-export type StoredAllowlistEntry = AllowlistEntry & { id: string; createdAt: string };
+/**
+ * Why an entry is there when no person typed it: the household's own records
+ * knew the sender (`sender-pretrust.ts`). Null for one an Admin added or
+ * trusted from "Trust this sender?".
+ */
+export type AllowlistBasis = "contact" | "school" | "payee";
+
+export type StoredAllowlistEntry = AllowlistEntry & { id: string; createdAt: string; basis?: AllowlistBasis | null };
 
 /** The largest an allowlist may grow — generous for a household, a bound on a hot read (CLAUDE.md "every list has a bound"). */
 export const MAX_ALLOWLIST_ENTRIES = 200;
@@ -116,21 +123,22 @@ function fromRow(row: Row): StoredAllowlistEntry {
     kind: row.kind as AllowlistKind,
     value: row.value as string,
     createdAt: row.created_at as string,
+    basis: row.basis === "contact" || row.basis === "school" || row.basis === "payee" ? row.basis : null,
   };
 }
 
 const SELECT_COLUMNS = "id, kind, value, created_at";
+const LIST_COLUMNS = "id, kind, value, created_at, basis";
 
 /** Every approved sender for a household, newest first. Member-readable (RLS). */
 export async function loadEmailAllowlist(supabase: SupabaseClient, householdId: string): Promise<StoredAllowlistEntry[]> {
-  const { data, error } = await supabase
-    .from("homesend_email_allowlist")
-    .select(SELECT_COLUMNS)
-    .eq("household_id", householdId)
-    .order("created_at", { ascending: false })
-    .limit(MAX_ALLOWLIST_ENTRIES);
+  const read = (columns: string) =>
+    supabase.from("homesend_email_allowlist").select(columns).eq("household_id", householdId).order("created_at", { ascending: false }).limit(MAX_ALLOWLIST_ENTRIES);
+  let { data, error } = await read(LIST_COLUMNS);
+  // Before the migration: no `basis` yet, so every entry reads as one a person added.
+  if (error && /column/i.test(error.message ?? "")) ({ data, error } = await read(SELECT_COLUMNS));
   if (error) throw new Error(`loadEmailAllowlist failed: ${error.code ?? "unknown"}`);
-  return ((data as Row[] | null) ?? []).map(fromRow);
+  return ((data as unknown as Row[] | null) ?? []).map(fromRow);
 }
 
 /**
@@ -173,24 +181,24 @@ export async function addEmailAllowlistEntry(
   return fromRow(data as Row);
 }
 
-/** Removes one approved sender by id. Admin-only (RLS 42501). */
+/** Removes one approved sender by id. Admin-only (RLS 42501). Returns what was removed, or null when it was already gone. */
 export async function removeEmailAllowlistEntry(
   supabase: SupabaseClient,
   input: { householdId: string; actorMemberId: string; id: string },
-): Promise<void> {
+): Promise<AllowlistEntry | null> {
   const { data, error } = await supabase
     .from("homesend_email_allowlist")
     .delete()
     .eq("household_id", input.householdId)
     .eq("id", input.id)
-    .select("id")
+    .select("id, kind, value")
     .maybeSingle();
 
   if (error) {
     if (error.code === "42501") throw ApiError.forbidden("Only a household administrator can change the approved email senders.");
     throw new Error(`removeEmailAllowlistEntry failed: ${error.code ?? "unknown"}`);
   }
-  if (!data) return;
+  if (!data) return null;
 
   await auditChange({
     householdId: input.householdId,
@@ -199,6 +207,7 @@ export async function removeEmailAllowlistEntry(
     targetTable: "homesend_email_allowlist",
     targetId: input.id,
   });
+  return { kind: (data as Row).kind as AllowlistKind, value: (data as Row).value as string };
 }
 
 /**

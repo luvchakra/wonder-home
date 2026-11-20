@@ -1,6 +1,6 @@
 import { COMPLETENESS, missingDetails, type CompletenessReading, type DetailField } from "./completeness";
 import type { HomeSendKind } from "./items";
-import { FROM_A_FILE, type ReadingCheck } from "./verify";
+import { FROM_A_FILE, UNSURE_TRANSCRIPT, type ReadingCheck } from "./verify";
 
 /**
  * The questions that raise a "Checking" entry over the household's bar (the
@@ -133,7 +133,8 @@ export function planCheckQuestions(input: {
     if (planned.length < MAX_CHECK_QUESTIONS && !planned.some((entry) => entry.field === question.field)) planned.push(question);
   };
   const held = KEY_DETAILS[kind].filter((field) => readValue(kind, field, input.extracted) !== null);
-  const fromAFile = input.check?.unverified?.includes(FROM_A_FILE) ?? false;
+  // A photo or file, or a voice note not clearly heard: nothing to check word by word.
+  const fromAFile = (input.check?.unverified?.includes(FROM_A_FILE) || input.check?.unverified?.includes(UNSURE_TRANSCRIPT)) ?? false;
 
   // Nothing could be checked word by word: each key detail it holds is confirmed.
   if (fromAFile) for (const field of held) add({ field, mode: "confirm" });

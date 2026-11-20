@@ -10,6 +10,11 @@ import { recordHomeSendChange } from "./changes";
 import type { DocumentRecord } from "./document";
 import type { HomeSendChangeDomain, HomeSendExtraction } from "./items";
 import { billShape } from "./record-types";
+import type { HouseholdContextItem } from "../context/types";
+import { usualBill } from "../homebrain/history-fill";
+import { listPayeeBills } from "../homebrain/household-records";
+import { keepFilledWhy, readSenderHistory } from "./sender-history";
+import { vendorKey } from "../homebrain/rules";
 
 /**
  * "Add this bill?" applied (the owner, 2026-11-20: "record"). A waiting bill,
@@ -20,10 +25,14 @@ import { billShape } from "./record-types";
  * 24-hour default, records it with what is known, marked Checking ("not yet
  * confirmed", money "check before paying"), with Undo:
  *
- *   - a bill through `createObligation`; an amount or due date not given stays
- *     blank (the Bills screen says "amount not in yet" / "no due date"), and a
- *     bill with no due date has no reminder until one is set
- *     (`notifications/sources.ts`); a document with several bills records each;
+ *   - a bill through `createObligation`; a payee not given comes from this
+ *     sender's earlier bills, and an amount or due date not given takes the
+ *     payee's usual (decision 3, 2026-11-20: the median of its bills on
+ *     record, two or more, `homebrain/history-fill.ts`), with "Why?" kept on
+ *     the item; with no history it stays blank (the Bills screen says "amount
+ *     not in yet" / "no due date"), and a bill with no due date has no reminder
+ *     until one is set (`notifications/sources.ts`); a document with several
+ *     bills records each;
  *   - a receipt's lines as purchases, against the tracked item of that name or
  *     a newly tracked one, dated by the receipt or else the day it was sent;
  *   - a health document filed privately for the person who sent it, as a
@@ -77,7 +86,7 @@ export async function addWaitingItem(
 ): Promise<AddResult> {
   const { data: itemRow, error } = await client
     .from("home_send_items")
-    .select("id, status, updated_at, classified_kind, extracted, file_path, created_by_member_id, created_at, records:understanding->document->records")
+    .select("id, status, updated_at, classified_kind, extracted, file_path, created_by_member_id, created_at, sender_address, records:understanding->document->records")
     .eq("household_id", householdId)
     .eq("id", itemId)
     .in("status", ["received", "classified"])
@@ -102,7 +111,13 @@ export async function addWaitingItem(
   try {
     if (kind === "bill") {
       const several = billRecords(records);
-      const bills = several.length > 1 ? several.map((record) => ({ title: record.title, payee: record.payee, amount: record.amount, currency: record.currency, dueOn: record.date })) : [{ title: read?.title ?? several[0]?.title ?? "", payee: read?.payee ?? null, amount: read?.amount ?? null, currency: read?.currency ?? null, dueOn: read?.dueDate ?? null }];
+      let bills = several.length > 1 ? several.map((record) => ({ title: record.title, payee: record.payee, amount: record.amount, currency: record.currency, dueOn: record.date })) : [{ title: read?.title ?? several[0]?.title ?? "", payee: read?.payee ?? null, amount: read?.amount ?? null, currency: read?.currency ?? null, dueOn: read?.dueDate ?? null }];
+      // One bill with blanks: the household's own history fills what it can (decision 3), always Checking.
+      if (bills.length === 1) {
+        const filled = await fillBlanks(client, householdId, itemId, bills[0]!, { sender: (row.sender_address as string | null) ?? null, receivedAt: (row.created_at as string) ?? how.now.toISOString() });
+        bills = [filled.bill];
+        if (filled.why.length > 0) await keepFilledWhy(client, householdId, itemId, { why: filled.why, fields: filled.fields });
+      }
       for (const bill of bills.slice(0, 20)) {
         const title = bill.title.trim().slice(0, 160);
         if (!title) continue;
@@ -232,4 +247,48 @@ async function claim(client: SupabaseClient, householdId: string, row: Row, now:
 
 async function release(client: SupabaseClient, householdId: string, itemId: string): Promise<void> {
   await client.from("home_send_items").update({ review_decision: null, review_subject: null, review_corrected: null, reviewed_at: null }).eq("household_id", householdId).eq("id", itemId).in("status", ["received", "classified"]);
+}
+
+type BlankBill = { title: string; payee: string | null; amount: number | null; currency: string | null; dueOn: string | null };
+
+/**
+ * A waiting bill's blanks from the household's own history (decision 3,
+ * 2026-11-20): its payee from this sender's earlier bills, then that payee's
+ * usual amount and day from its bills on record. Read with the same client
+ * that writes it; anything unreadable leaves the blank as it was.
+ */
+async function fillBlanks(client: SupabaseClient, householdId: string, itemId: string, bill: BlankBill, from: { sender: string | null; receivedAt: string }): Promise<{ bill: BlankBill; why: string[]; fields: string[] }> {
+  const why: string[] = [];
+  const fields: string[] = [];
+  let next = { ...bill };
+  if (!next.payee?.trim() && from.sender) {
+    const history = await readSenderHistory(client, householdId, from.sender, { exceptItemId: itemId });
+    const keys = new Set(history.payees.map((entry) => vendorKey(entry.name)));
+    if (history.payees.length > 0 && keys.size === 1 && !keys.has(null)) {
+      next = { ...next, payee: history.payees[0]!.name };
+      why.push(`${history.payees.length === 1 ? "The last bill" : `All ${history.payees.length} earlier bills`} from ${from.sender} ${history.payees.length === 1 ? "was" : "were"} from ${history.payees[0]!.name}.`);
+      fields.push("payee");
+    }
+  }
+  const missingAmount = typeof next.amount !== "number" || next.amount <= 0;
+  const missingDay = !next.dueOn;
+  if (!next.payee?.trim() || (!missingAmount && !missingDay)) return { bill: next, why, fields };
+  try {
+    const onRecord = await listPayeeBills(client, householdId);
+    const items = onRecord.map((row) => ({ entityType: "bill", entityId: row.id, attributes: { payee: row.payee, amountMinor: row.amountMinor, currency: row.currency, dueOn: row.dueOn, status: row.status } }) as unknown as HouseholdContextItem);
+    const usual = usualBill(next.payee, items, from.receivedAt);
+    if (usual?.amount && missingAmount) {
+      next = { ...next, amount: usual.amount.value, currency: usual.amount.currency };
+      why.push(`The amount is ${usual.payee}'s usual, from its last ${usual.amount.count} bills on record — check it before paying.`);
+      fields.push("amount");
+    }
+    if (usual?.dueOn && missingDay) {
+      next = { ...next, dueOn: usual.dueOn.value };
+      why.push(`The due day is ${usual.payee}'s usual, from its last ${usual.dueOn.count} bills on record.`);
+      fields.push("date");
+    }
+  } catch {
+    // No history readable: blanks stay blank.
+  }
+  return { bill: next, why, fields };
 }

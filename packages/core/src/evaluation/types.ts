@@ -182,7 +182,9 @@ export type HomeSendCase = CaseBase & {
   /** "Who may file health records for others" (the owner, 2026-11-20): the members an Admin put on it. */
   healthFilers?: readonly string[];
   /** Schools on record for the case (14-066), added to the household's records. */
-  enrolments?: { childMemberId: string; schoolName: string }[];
+  enrolments?: { childMemberId: string; schoolName: string; grade?: string | null }[];
+  /** What this sender's earlier items became (`homesend/sender-history.ts`, 2026-11-20). */
+  senderHistory?: import("../homebrain/memory-resolve").SenderHistory;
   autonomy?: "prepare" | "execute";
   /** What HomeSend may record of money and health (`homesend/auto-add.ts`); both "Wait for review" when unset, the 3 Nov behaviour. */
   directAdd?: Partial<import("../homesend/auto-add").DirectAdd>;

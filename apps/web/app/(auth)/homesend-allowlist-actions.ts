@@ -5,7 +5,9 @@ import { z } from "zod";
 
 import { toErrorBody } from "@wonderhome/core/api/errors";
 import { createClient } from "@wonderhome/core/db/server";
+import { adminClientFor, adminGrant } from "@wonderhome/core/db/admin-context";
 import { addEmailAllowlistEntry, removeEmailAllowlistEntry } from "@wonderhome/core/homesend/email-allowlist";
+import { turnOffPreTrust } from "@wonderhome/core/homesend/sender-pretrust";
 import { requireHouseholdAdmin } from "@wonderhome/core/identity/households";
 
 /**
@@ -48,11 +50,17 @@ export async function removeAllowlistSenderAction(_previous: AllowlistActionStat
   try {
     const supabase = await createClient();
     const membership = await requireHouseholdAdmin(supabase, parsed.data.householdId);
-    await removeEmailAllowlistEntry(supabase, {
+    const removed = await removeEmailAllowlistEntry(supabase, {
       householdId: parsed.data.householdId,
       actorMemberId: membership.memberId,
       id: parsed.data.id,
     });
+    // Reversible: an address an Admin took off the list is never trusted again from the household's records,
+    // and its next mail asks "Trust this sender?" (`sender-pretrust.ts`). The senders table is the server's.
+    if (removed?.kind === "address") {
+      const admin = adminClientFor(adminGrant.householdAdmin(membership, "stop trusting a known sender on its own"), parsed.data.householdId);
+      await turnOffPreTrust(admin, { householdId: parsed.data.householdId, address: removed.value, memberId: membership.memberId });
+    }
     revalidatePath("/settings/connections");
     revalidatePath("/home-send");
     return { notice: "Removed. WonderHome will no longer read mail from that sender." };

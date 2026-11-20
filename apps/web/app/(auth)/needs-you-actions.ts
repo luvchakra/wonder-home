@@ -7,6 +7,7 @@ import { auditChange } from "@wonderhome/core/api/audit";
 import { createClient } from "@wonderhome/core/db/server";
 import { isOfferedAnswer } from "@wonderhome/core/hometalk/needs-you";
 import { applyNeedsYouAnswer } from "@wonderhome/core/hometalk/needs-you-answer";
+import { answerTeaches, teachFromEntry } from "@wonderhome/core/homebrain/teach-from-entry";
 import { adminClientFor, adminGrant } from "@wonderhome/core/db/admin-context";
 import { SENDER_TRUST_SOURCE } from "@wonderhome/core/homesend/sender-trust";
 import { closeNeedsYou, getNeedsYou } from "@wonderhome/core/hometalk/needs-you-repository";
@@ -58,6 +59,11 @@ export async function answerNeedsYouAction(_previous: NeedsYouState, formData: F
     const closed = await closeNeedsYou(supabase, id, { status: outcome === "done" ? "answered" : "withdrawn", answer: outcome === "done" ? answer : null, memberId: membership.memberId, now });
     if (closed && outcome === "done") {
       await auditChange({ householdId, actorMemberId: membership.memberId, eventType: "needs_you.answered", targetTable: item.subjectTable, targetId: item.subjectId, metadata: { source: item.source, answer, question: id } });
+    }
+    // Every answer teaches (2026-11-20): a person's tap that keeps the entry as recorded becomes the household's
+    // rules, as a review pick does. Never a default's, never health, never money (`homebrain/teach-from-entry.ts`).
+    if (closed && outcome === "done" && item.subjectTable === "home_send_items" && answerTeaches(item.source, answer, false)) {
+      after(() => teachFromEntry(supabase, { householdId, itemId: item.subjectId, memberId: membership.memberId }).then(() => undefined));
     }
     // A confirmed entry's reminders lose "not yet confirmed" now, not at the next clock pass.
     if (item.source === "homesend_check" || item.source === "homesend_update" || item.source === "homesend_add") after(() => reconcileRemindersNow(householdId, { force: true }));

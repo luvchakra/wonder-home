@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 
 import { decideConfirmation, type ConfirmationInput } from "./confirmation";
-import { FROM_A_FILE } from "./verify";
+import { FROM_A_FILE, UNSURE_TRANSCRIPT } from "./verify";
 
 const CLEAR: ConfirmationInput = {
   kind: "grocery_item",
@@ -131,6 +131,12 @@ describe("the household's bar for adding on its own (the owner, 2026-10-26)", ()
     expect(decide({ understanding: unsure, autoAddPercent: 70 })).toMatchObject({ mode: "auto_apply", unconfirmed: true });
   });
 
+  it("records a voice note heard below the floor as Checking, never confirmed, even under the lowest bar (record first, 2026-11-20)", () => {
+    const heardUnsure = { readable: true, confidence: "medium" as const, score: 0.7, check: { verified: false, unverified: [UNSURE_TRANSCRIPT] }, safety: { instructionsIgnored: false, signals: [] } };
+    expect(decide({ understanding: heardUnsure, autoAddPercent: 60 })).toMatchObject({ mode: "auto_apply", unconfirmed: true });
+    expect(decide({ understanding: heardUnsure })).toMatchObject({ mode: "auto_apply", unconfirmed: true });
+  });
+
   it("names the household's own bar when it is still checking", () => {
     const sureButUnnamed = { ...unchecked, check: { verified: false, unverified: [] } };
     expect(decide({ understanding: sureButUnnamed, autoAddPercent: 90 }).reason).toContain("wasn't more than 90% sure");
@@ -221,6 +227,12 @@ describe("record first (the owner, 2026-11-14; decisions 1, 2 and 5)", () => {
     expect(decide({ ...bill, directAdd: { money: false, health: false } }).mode).toBe("govern");
     // With Wait for Approval on bills and decision 1, still recorded as Checking.
     expect(decide({ ...bill, directAdd: checkingMoney, autonomy: "prepare", approvalScope: "actions" })).toMatchObject({ mode: "auto_apply", unconfirmed: true });
+  });
+
+  it("knowing instead of asking (2026-11-20): anything filled from history is always Checking, even over the bar", () => {
+    // "Record as confirmed above the bar" would confirm this bill; a usual amount or day filled in keeps it Checking.
+    expect(decide({ ...bill, directAdd: { money: true, health: true } }).unconfirmed).toBeUndefined();
+    expect(decide({ ...bill, directAdd: { money: true, health: true }, filledFromHistory: true })).toMatchObject({ mode: "auto_apply", unconfirmed: true });
   });
 
   it("decision 2: a health document needs the person it is for before it is filed", () => {

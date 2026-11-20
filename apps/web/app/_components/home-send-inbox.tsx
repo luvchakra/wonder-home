@@ -844,7 +844,8 @@ export function HomeSendInbox({
                 const checking = itemChanges.some((change) => !change.undoneAt && change.confirmationState === "unconfirmed");
                 const onRecord =
                   status === "updated" ? words.updatedOnRecord : status === "cancelled" ? words.cancelledOnRecord : statusLabel;
-                const reason = checking ? calm.looksRightAsk : primaryChange && primaryChange.changeType !== "created" && !primaryChange.undoneAt ? `${presentation.label} · ${onRecord}` : presentation.label;
+                // Filled from the household's own records, "Why?" says from what (2026-11-20).
+                const reason = checking ? (item.understanding?.filled?.why[0] ?? calm.looksRightAsk) : primaryChange && primaryChange.changeType !== "created" && !primaryChange.undoneAt ? `${presentation.label} · ${onRecord}` : presentation.label;
                 return (
                   <RemovableRow key={item.id} ids={[item.id]} title={title} canRemove={canRemove(item)} className="py-2.5">
                    <div className="space-y-1.5">

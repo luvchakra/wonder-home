@@ -11,13 +11,11 @@ decision that shapes later work each earns a note, written before moving on.
 
 | Date | Note |
 |---|---|
-<<<<<<< Updated upstream
 | 2026-11-20 | [Who may file health records for others: an Admin's list skips "Who is this for?"](2026-11-20-health-filers.md) |
+| 2026-11-20 | [Knowing instead of asking: memory fills every kind, usual bill amounts, every child at a school, known senders trusted, every answer teaches](2026-11-20-knowing-instead-of-asking.md) |
 | 2026-11-20 | [Nothing stuck: a matched bill updates by default, an old waiting bill is recorded](2026-11-20-matched-bill-update.md) |
 | 2026-11-20 | [Set aside: Delete on each row, short names; an unchanged portal page files once](2026-11-20-set-aside-delete.md) |
-=======
 | 2026-11-20 | [Razorpay subscriptions end to end: plans from our prices, checkout in place, receipts, owner setup](2026-11-20-razorpay-subscriptions.md) |
->>>>>>> Stashed changes
 | 2026-11-14 | [Nothing stuck in review: the live NSR run, two email intake fixes, the bill Undo line](2026-11-14-nsr-live-run.md) |
 | 2026-11-14 | [Nothing waits: every item ends as something, defaults after a day, one "Needs you" list (14-067)](2026-11-14-nothing-waits.md) |
 | 2026-11-14 | [Record first: HomeTalk records at once, actions expire, money and health as Checking, new senders trusted once, plain corrections](2026-11-14-record-first.md) |

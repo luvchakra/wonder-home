@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 
 import { DEFAULT_DATA_USE, type DataUsePolicy } from "../ai/privacy";
-import { CONSEQUENTIAL_CONFIDENCE_FLOOR, gateTranscript, GEMINI_TRANSCRIPT_CONFIDENCE, geminiMayTranscribe, isConsequentialInstruction, TRANSCRIPT_CONFIDENCE_FLOOR, uncertainTranscriptPrompt } from "./audio";
+import { belowTranscriptFloor, CONSEQUENTIAL_CONFIDENCE_FLOOR, gateTranscript, recordsWhatWasHeard, GEMINI_TRANSCRIPT_CONFIDENCE, geminiMayTranscribe, isConsequentialInstruction, TRANSCRIPT_CONFIDENCE_FLOOR, uncertainTranscriptPrompt } from "./audio";
 
 describe("voice-note safety (Wave 3 §17)", () => {
   it("reads on from a clean, confident note", () => {
@@ -45,6 +45,29 @@ describe("voice-note safety (Wave 3 §17)", () => {
   it("uses a floor that sits below the consequential one", () => {
     expect(TRANSCRIPT_CONFIDENCE_FLOOR).toBeLessThan(CONSEQUENTIAL_CONFIDENCE_FLOOR);
     expect(gateTranscript({ text: "Match on Saturday", confidence: TRANSCRIPT_CONFIDENCE_FLOOR }).outcome).toBe("confident");
+  });
+});
+
+describe("record first for voice notes (the owner, 2026-11-20)", () => {
+  it("reads on an everyday note heard below the floor, to be recorded as Checking", () => {
+    const gate = gateTranscript({ text: "as me has a signs exhibition on the 29th", confidence: 0.52 });
+    expect(recordsWhatWasHeard(gate)).toBe(true);
+    expect(belowTranscriptFloor(0.52)).toBe(true);
+  });
+
+  it("keeps the higher floor for paying or buying words: shown back, not read on", () => {
+    for (const text of ["Pay the electricity bill of 2400 rupees", "order two packs of milk", "buy a white T-shirt"]) {
+      expect(recordsWhatWasHeard(gateTranscript({ text, confidence: 0.6 }))).toBe(false);
+      expect(recordsWhatWasHeard(gateTranscript({ text, confidence: 0.85 }))).toBe(false);
+    }
+  });
+
+  it("is not below the floor at or above it, or with no transcript", () => {
+    expect(belowTranscriptFloor(TRANSCRIPT_CONFIDENCE_FLOOR)).toBe(false);
+    expect(belowTranscriptFloor(1)).toBe(false);
+    expect(belowTranscriptFloor(null)).toBe(false);
+    expect(recordsWhatWasHeard(gateTranscript({ text: "Match on Saturday", confidence: 0.9 }))).toBe(false);
+    expect(recordsWhatWasHeard(gateTranscript({ text: " ", confidence: 0.2 }))).toBe(false);
   });
 });
 

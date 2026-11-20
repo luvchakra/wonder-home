@@ -4,6 +4,7 @@ import type { IntakeExtraction } from "../ai/classify-intake";
 import { confirmTranscript, ingestEmailAttachment, ingestFile, ingestLink, ingestText, IngestRejected, type IngestDeps } from "./ingest";
 import { MAX_BYTES } from "./normalize";
 import { fakeSupabase } from "./testing";
+import { UNSURE_TRANSCRIPT } from "./verify";
 
 const HOUSEHOLD = "11111111-1111-4111-8111-111111111111";
 const MEMBER = "22222222-2222-4222-8222-222222222222";
@@ -223,6 +224,37 @@ describe("voice notes (Wave 3 §3, §17)", () => {
     expect(confirmed.state).toBe("needs_review");
     expect(seen).toHaveLength(1);
     expect(db.tables.home_send_items?.[0]).toMatchObject({ raw_text: "Pay Asmi's school fee", transcript_confidence: 1 });
+  });
+
+  it("reads on an everyday note heard below the floor: its reading is Checking, never verified (record first, 2026-11-20)", async () => {
+    const db = fakeSupabase();
+    const { classify, seen } = model();
+    const outcome = await ingestFile(db.client, actor, { bytes: WEBM, claimedType: "audio/webm", filename: "unsure.webm" }, {
+      classify,
+      scan,
+      transcribe: async () => ({ status: "transcribed", text: "Asmi has sports day on Saturday", confidence: 0.6 }),
+    });
+    expect(outcome.state).toBe("needs_review");
+    expect(outcome.heard).toBeUndefined();
+    expect(seen).toHaveLength(1);
+    const understanding = outcome.item.understanding!;
+    expect(understanding.check?.verified).toBe(false);
+    expect(understanding.check?.unverified).toContain(UNSURE_TRANSCRIPT);
+    // The score keeps the transcript's doubt, so it is never over a bar on its own.
+    expect(understanding.score).toBeLessThanOrEqual(0.6);
+    expect(understanding.provenance.transcriptConfidence).toBe(0.6);
+  });
+
+  it("still shows back a paying or buying note heard below the higher floor, and reads nothing", async () => {
+    const db = fakeSupabase();
+    const { classify, seen } = model();
+    const outcome = await ingestFile(db.client, actor, { bytes: WEBM, claimedType: "audio/webm", filename: "pay.webm" }, {
+      classify,
+      scan,
+      transcribe: async () => ({ status: "transcribed", text: "order two packs of milk", confidence: 0.6 }),
+    });
+    expect(outcome.state).toBe("check_transcript");
+    expect(seen).toHaveLength(0);
   });
 
   it("fails safely when no speech service is set up, or it cannot hear anything", async () => {

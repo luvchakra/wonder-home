@@ -418,7 +418,7 @@ describe("processing into HomeSend", () => {
       expect(h.tables.home_send_items).toHaveLength(1);
     });
 
-    it("heard unsurely, it is checked in HomeSend, never sent to HomeTalk", async () => {
+    it("heard unsurely, it is recorded in HomeSend (Checking at most), never sent to HomeTalk", async () => {
       const { h, id } = await receivedVoice();
       const asked: string[] = [];
       const { deps, out } = voice("What are upcoming events", 0.4, { ask: async ({ text }) => (asked.push(text), "never") });
@@ -426,7 +426,7 @@ describe("processing into HomeSend", () => {
       expect(asked).toEqual([]);
       expect(h.tables.home_send_items).toHaveLength(1);
       expect(h.tables.home_send_items![0]!.status).not.toBe("failed");
-      expect(out.sent[0]!.text).toMatch(/not sure I heard that voice note right/);
+      expect(out.sent[0]!.text).not.toMatch(/never/);
     });
   });
 

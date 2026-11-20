@@ -17,6 +17,9 @@ import { listRecordedReceipts } from "@wonderhome/core/homesend/repository";
 import { buildDocumentPlan, readPlanContext, type DocumentPlan } from "@wonderhome/core/homesend/plan";
 import { reconcileHomeSend, type HomeSendReconciliation } from "@wonderhome/core/homesend/reconcile";
 import { fillSubject } from "@wonderhome/core/homebrain/subject-fill";
+import { fillFromHistory } from "@wonderhome/core/homebrain/history-fill";
+import { readSenderHistory } from "@wonderhome/core/homesend/sender-history";
+import type { IntakePerson } from "@wonderhome/core/homesend/resolve";
 import { listHouseholdRules } from "@wonderhome/core/homebrain/rules-repository";
 import { adoptMatchedSubject, resolveIntakePeople, type SubjectResolution } from "@wonderhome/core/homesend/resolve";
 import type { DocumentReading } from "@wonderhome/core/homesend/document";
@@ -47,6 +50,17 @@ export type ReviewPreparation = {
    * item, which keeps the one-item confirm form.
    */
   plan?: DocumentPlan | null;
+  /**
+   * The kind and reading after the household's memory filled its gaps
+   * (`homebrain/history-fill.ts`, 2026-11-20): what is recorded. Equal to the
+   * item's own when nothing was filled.
+   */
+  kind?: HomeSendKind | null;
+  extracted?: HomeSendExtraction | null;
+  /** A school notice placed with every child at its school (two or more), each recorded Checking. */
+  everyone?: IntakePerson[] | null;
+  /** "Why?" for each gap memory filled, in the household's words, and which fields. */
+  filled?: { why: string[]; fields: string[] } | null;
 };
 
 /** A document worth a plan: one that proposes more than one record (DDU 2.0 §20). */
@@ -118,6 +132,35 @@ async function householdPeople(supabase: SupabaseClient, membership: HouseholdMe
   return snapshot.items.filter((item) => item.entityType === "member");
 }
 
+/**
+ * Everything the memory resolver reads, in one wave: the household's people,
+ * bills, school (classes, timetables), places and groceries as this member
+ * may see them, its learned rules (every kind), and what this sender's
+ * earlier items became. Any part unreadable is simply missing: nothing is
+ * filled from it, and the item is asked about as before.
+ */
+async function householdMemory(supabase: SupabaseClient, membership: HouseholdMembership, sender: string | null, itemId: string | undefined) {
+  const view = buildPersonalView(membership);
+  const [items, rules, history] = await Promise.all([
+    loadHouseholdContext(
+      supabase,
+      {
+        householdId: membership.household.id,
+        householdName: membership.household.name,
+        timezone: membership.household.timezone,
+        now: new Date(),
+        viewer: { memberId: membership.memberId, permissions: view.permissions, tone: view.tone, guardianOf: [] },
+      },
+      { domains: ["bills", "school", "places", "groceries"] },
+    )
+      .then((snapshot) => snapshot.items)
+      .catch(() => [] as HouseholdContextItem[]),
+    listHouseholdRules(supabase, membership.household.id).catch(() => []),
+    readSenderHistory(supabase, membership.household.id, sender, { exceptItemId: itemId ?? null }),
+  ]);
+  return { items, rules, history, people: items.filter((entry) => entry.entityType === "member") };
+}
+
 export async function prepareReview(
   supabase: SupabaseClient,
   membership: HouseholdMembership,
@@ -136,7 +179,17 @@ export async function prepareReview(
     rawText?: string | null;
   },
 ): Promise<ReviewPreparation> {
-  const kind = item.classifiedKind;
+  // Knowing instead of asking (2026-11-20): every gap the household's own records settle is filled first, for every kind.
+  const sender = item.senderAddress ?? item.understanding?.provenance.sender ?? null;
+  // "Who may file health records for others" (the owner, 2026-11-20) starts in the same wave; only a health document needs it.
+  const filersRead = item.classifiedKind === "health_document" ? loadHealthFilers(supabase, membership.household.id) : Promise.resolve([] as string[]);
+  const [memory, filers] = await Promise.all([householdMemory(supabase, membership, sender, item.id), filersRead]);
+  const text = [item.extracted?.title, item.extracted?.notes, item.extracted?.subject, item.extracted?.summary, item.understanding?.contentSummary, item.rawText].filter((part): part is string => typeof part === "string").join("\n");
+  const filled = fillFromHistory({ kind: item.classifiedKind, extracted: item.extracted, items: memory.items, rules: memory.rules, sender, text, history: memory.history, receivedAt: item.createdAt ?? new Date().toISOString() });
+  const kind = filled.kind;
+  const extracted = filled.extracted;
+  const known = { kind, extracted, filled: filled.why.length > 0 ? { why: filled.why, fields: [...filled.fields] } : null };
+  let fromHistory = filled.checking;
   const confirm = (
     subject: SubjectResolution | null,
     reconciliation: HomeSendReconciliation | null,
@@ -148,7 +201,7 @@ export async function prepareReview(
     duplicate = false,
     recordFirst: { approvalScope: ApprovalScope; trustedSender: boolean } = { approvalScope: CAREFUL_RECORD_FIRST.approvalScope, trustedSender: false },
   ) =>
-    decideConfirmation({ kind, extracted: item.extracted, understanding, reconciliation, subject, memberInitiated: item.createdByMemberId !== null, autonomy, autoAddPercent, onShoppingList, directAdd, duplicate, ...recordFirst });
+    decideConfirmation({ kind, extracted, understanding, reconciliation, subject, memberInitiated: item.createdByMemberId !== null, autonomy, autoAddPercent, onShoppingList, directAdd, duplicate, filledFromHistory: fromHistory, ...recordFirst });
   // Decision 5: an email is kept only from a sender on the household's
   // allowlist (one an Admin added, or one someone answered "Trust" about),
   // so on "Ask once" a kept email flows like a member's own item.
@@ -161,12 +214,12 @@ export async function prepareReview(
   const area = directAddAreaOf(kind);
   // A receipt is matched line by line on its own confirm form (09-009): it is
   // for nobody in particular and never a second copy of a record.
-  if (kind === "receipt" && item.extracted?.title) {
+  if (kind === "receipt" && extracted?.title) {
     const settings = await loadRecordFirst(supabase, membership.household.id);
     const directAdd = settings.directAdd;
-    if (!directAdd.money) return { subject: null, reconciliation: null, understanding: item.understanding, confirmation: confirm(null, null, item.understanding, "prepare") };
+    if (!directAdd.money) return { ...known, subject: null, reconciliation: null, understanding: item.understanding, confirmation: confirm(null, null, item.understanding, "prepare") };
     // The same shop, day and total as one already recorded is a duplicate, by the receipt's own check.
-    const read = item.extracted;
+    const read = extracted;
     const [autonomy, autoAddPercent, duplicate] = await Promise.all([
       autonomyFor(supabase, membership.household.id, kind),
       loadAutomationBar(supabase, membership.household.id, kind).then((bar) => bar.percent),
@@ -175,20 +228,14 @@ export async function prepareReview(
         // What is on record couldn't be read: treated as a duplicate, so a person looks first.
         .catch(() => true),
     ]);
-    return { subject: null, reconciliation: null, understanding: item.understanding, confirmation: confirm(null, null, item.understanding, autonomy, autoAddPercent, false, directAdd, duplicate, recordFirstFor(settings)) };
+    return { ...known, subject: null, reconciliation: null, understanding: item.understanding, confirmation: confirm(null, null, item.understanding, autonomy, autoAddPercent, false, directAdd, duplicate, recordFirstFor(settings)) };
   }
-  if (!kind || kind === "unknown" || kind === "receipt" || !item.extracted?.title) {
-    return { subject: null, reconciliation: null, understanding: item.understanding, confirmation: confirm(null, null, item.understanding, "prepare") };
+  if (!kind || kind === "unknown" || kind === "receipt" || !extracted?.title) {
+    return { ...known, subject: null, reconciliation: null, understanding: item.understanding, confirmation: confirm(null, null, item.understanding, "prepare") };
   }
 
-  // Who it is for may come from what the household told HomeSend before (14-066, 14-069 rules): read in the same wave.
-  const childKind = kind === "school_item" || kind === "activity_item";
-  const [people, rules, filers] = await Promise.all([
-    householdPeople(supabase, membership).catch(() => []),
-    childKind ? listHouseholdRules(supabase, membership.household.id).catch(() => []) : Promise.resolve([]),
-    // "Who may file health records for others" (the owner, 2026-11-20): only a health document needs it.
-    kind === "health_document" ? loadHealthFilers(supabase, membership.household.id) : Promise.resolve([] as string[]),
-  ]);
+  // Who it is for may come from what the household told HomeSend before (14-066, 14-069 rules), read in the wave above.
+  const people = memory.people;
   const healthFiler = mayFileForOthers(filers, { memberId: membership.memberId, memberType: membership.memberType });
   const resolved = item.understanding
     ? resolveIntakePeople(item.understanding, people, { viewerMemberId: membership.memberId })
@@ -197,15 +244,14 @@ export async function prepareReview(
   const resolution = resolved
     ? {
         ...resolved,
-        subject: fillSubject(kind, resolved.subject, {
-          items: people,
-          rules,
-          sender: item.senderAddress ?? item.understanding?.provenance.sender ?? null,
-          text: [item.extracted.title, item.extracted.notes, item.extracted.subject, item.extracted.summary, item.understanding?.contentSummary, item.rawText].filter((part): part is string => typeof part === "string").join("\n"),
-          healthFiler,
-        }),
+        subject: fillSubject(kind, resolved.subject, { items: memory.items, rules: memory.rules, sender, text, history: memory.history, healthFiler }),
       }
     : null;
+  // Placed with every child at its school: recorded for each, Checking.
+  const everyone = resolution && "everyone" in resolution.subject && resolution.subject.everyone ? resolution.subject.everyone : null;
+  if (everyone) fromHistory = true;
+  const subjectWhy = resolution && "why" in resolution.subject && resolution.subject.why ? resolution.subject.why : null;
+  const memoryFilled = subjectWhy ? { why: [...filled.why, subjectWhy], fields: [...filled.fields, "person"] } : known.filled;
   const understanding = item.understanding && resolution ? { ...item.understanding, references: resolution.references } : item.understanding;
   const memberNames = new Map(people.map((person) => [person.entityId, String(person.attributes.displayName)]));
 
@@ -217,13 +263,14 @@ export async function prepareReview(
     membership.household.id,
     {
       kind,
-      title: item.extracted.title,
-      date: item.extracted.dueDate ?? item.extracted.documentDate ?? null,
-      amount: item.extracted.amount,
-      payee: item.extracted.payee,
+      title: extracted.title,
+      // What was read, never what history filled: a usual amount or day must never move or change a record on file.
+      date: item.extracted?.dueDate ?? item.extracted?.documentDate ?? null,
+      amount: item.extracted?.amount ?? null,
+      payee: extracted.payee,
       subjectMemberId: resolution?.subject.selected?.memberId ?? null,
       capturedAt: item.createdAt ?? new Date().toISOString(),
-      change: item.extracted.change ?? item.understanding?.change ?? "new",
+      change: extracted.change ?? item.understanding?.change ?? "new",
     },
     { timezone: membership.household.timezone, memberNames, strict: true },
   ).catch(() => {
@@ -242,7 +289,7 @@ export async function prepareReview(
         autonomyFor(supabase, membership.household.id, kind),
         // Each kind's bar: the Admin's, or the household's own accuracy for this kind (HomeBrain knows).
         AUTO_APPLY_OUTCOMES[kind] ? loadAutomationBar(supabase, membership.household.id, kind).then((bar) => bar.percent) : undefined,
-        listedCheck ? onTheList(supabase, membership.household.id, item.extracted.title) : false,
+        listedCheck ? onTheList(supabase, membership.household.id, extracted.title) : false,
         loadRecordFirst(supabase, membership.household.id),
       ])
     : (["prepare", undefined, false, null] as const);
@@ -253,5 +300,5 @@ export async function prepareReview(
   const confirmation = plan
     ? { mode: "prepare" as const, reason: "A document with several things in it waits for you to check each one.", question: null }
     : confirm(subject, reconciliation, understanding, autonomy, autoAddPercent, onShoppingList, directAdd, false, settings ? recordFirstFor(settings) : undefined);
-  return { subject, reconciliation, understanding, confirmation, plan };
+  return { ...known, filled: memoryFilled, everyone, subject, reconciliation, understanding, confirmation, plan };
 }

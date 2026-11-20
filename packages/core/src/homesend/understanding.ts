@@ -2,7 +2,8 @@ import type { IntakeExtraction } from "../ai/classify-intake";
 import { documentReading, type DocumentReading } from "./document";
 import type { InjectionScan } from "./injection";
 import type { HomeSendKind, HomeSendSource } from "./items";
-import { checkReading, VERIFIED_CONFIDENCE, type ReadingCheck } from "./verify";
+import { belowTranscriptFloor } from "./audio";
+import { checkReading, UNSURE_TRANSCRIPT, VERIFIED_CONFIDENCE, type ReadingCheck } from "./verify";
 
 /**
  * The canonical result every HomeSend input produces (Wave 3 §8) — a photo,
@@ -58,6 +59,12 @@ export type IntakeUnderstanding = {
   score?: number;
   /** What that check could not confirm, in the household's words. */
   check?: ReadingCheck;
+  /**
+   * Gaps the household's own records filled before it was recorded
+   * (`homebrain/history-fill.ts`, 2026-11-20): "Why?" in the household's
+   * words, and which fields. Absent when nothing was filled.
+   */
+  filled?: { why: string[]; fields: string[] };
   entities: UnderstandingEntity[];
   facts: UnderstandingFact[];
   candidateActions: CandidateAction[];
@@ -158,8 +165,13 @@ export function checkedConfidence(extraction: IntakeExtraction, check: ReadingCh
 
 export function buildUnderstanding(extraction: IntakeExtraction, meta: UnderstandingMeta): IntakeUnderstanding {
   const transcriptConfidence = meta.transcriptConfidence ?? null;
-  const check = checkReading(extraction, meta.sourceText ?? null);
+  const read = checkReading(extraction, meta.sourceText ?? null);
+  // A voice note heard below the floor (record first, 2026-11-20): read on, but never verified, so whatever it adds is Checking.
+  const unsureHearing = belowTranscriptFloor(transcriptConfidence);
+  const check: ReadingCheck = unsureHearing && extraction.readable ? { ...read, verified: false, unverified: [...read.unverified, UNSURE_TRANSCRIPT] } : read;
   const confidence = checkedConfidence(extraction, check, transcriptConfidence);
+  // Its words say how sure the reading itself is; the score keeps the transcript's doubt.
+  const word = unsureHearing && extraction.readable ? confidenceWord(checkedConfidence(extraction, check, null)) : confidenceWord(confidence);
   const facts = extraction.facts;
 
   const entities: UnderstandingEntity[] = [];
@@ -217,7 +229,7 @@ export function buildUnderstanding(extraction: IntakeExtraction, meta: Understan
     readable: extraction.readable,
     kind: extraction.kind,
     contentSummary: extraction.summary ?? extraction.title ?? "",
-    confidence: confidenceWord(confidence),
+    confidence: word,
     score: confidence,
     check,
     entities,

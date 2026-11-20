@@ -5,7 +5,7 @@ import type { SubjectResolution } from "./resolve";
 import type { IntakeUnderstanding } from "./understanding";
 import { DEFAULT_AUTO_ADD_PERCENT, directAddAreaOf, NO_DIRECT_ADD, type DirectAdd } from "./auto-add";
 import { listDetails, missingRequired, type CompletenessReading } from "./completeness";
-import { FROM_A_FILE } from "./verify";
+import { FROM_A_FILE, UNSURE_TRANSCRIPT } from "./verify";
 import type { ApprovalScope } from "./record-first";
 
 /**
@@ -160,6 +160,12 @@ export type ConfirmationInput = {
    * member's own item. Its content stays untrusted (`injection.ts`).
    */
   trustedSender?: boolean;
+  /**
+   * Something was filled from the household's history rather than read
+   * (a bill's usual amount or day, a notice placed with every child at its
+   * school; `homebrain/history-fill.ts`, 2026-11-20): recorded, always Checking.
+   */
+  filledFromHistory?: boolean;
 };
 
 export function decideConfirmation(input: ConfirmationInput): ConfirmationDecision {
@@ -237,6 +243,8 @@ export function decideConfirmation(input: ConfirmationInput): ConfirmationDecisi
   // whether it is added at all.
   const unverified = input.understanding?.check?.unverified ?? [];
   const fromAFile = unverified.includes(FROM_A_FILE);
+  // A voice note heard below the floor (record first, 2026-11-20) is recorded, but never confirmed on its own.
+  const unsureHearing = unverified.includes(UNSURE_TRANSCRIPT);
   // A reading that names something the words sent don't contain (a shop, a
   // date, an amount, a name) is never added, not even as Checking (the
   // owner, 2026-11-03, decision 3): it waits in HomeSend for a person. A
@@ -247,7 +255,7 @@ export function decideConfirmation(input: ConfirmationInput): ConfirmationDecisi
   }
   // Decision 2: money and health on "Record as Checking" are always Checking, so a person confirms them with one tap.
   const checkingOnly = directArea !== null && (input.directAdd ?? NO_DIRECT_ADD).checking?.[directArea] === true;
-  const checking = !aboveBar || fromAFile || checkingOnly ? { unconfirmed: true as const } : {};
+  const checking = !aboveBar || fromAFile || unsureHearing || checkingOnly || input.filledFromHistory === true ? { unconfirmed: true as const } : {};
   // A move is never made "Checking": an existing record is changed only when the reading is over the bar and has words of its own.
   if (move && checking.unconfirmed) return { mode: "prepare", reason: input.reconciliation!.message, question: null };
   const onList = listed ? { listed: true as const } : {};
