@@ -33,9 +33,12 @@ counted as new each day. About 25 rows since 27 Oct, per the coordinator.
   instead of the date (`portals/page-extract.ts`, `portals/fetch-connection.ts`). An unchanged page
   files nothing; a changed page is filed again. The worker on Fly has no CI deploy, so this reaches
   live fetches only once the worker is redeployed (`fly deploy`).
-- **Not deleted:** the coordinator ruled the connection and its rows are the owner's. The rows are
-  real household data, not test-made, so none were deleted. The owner can clear them with
-  "Delete all set aside", and remove the connection in Settings if they don't want it.
+- **Cleanup (2026-11-20):** the coordinator then ruled that the rows and the connection are the
+  owner's, so the cleanup SQL was withdrawn. The owner had already run it: **24** Swag Labs items
+  deleted, and the "Secret Sauce" connection set to disconnected, with its session cleared and pending
+  fetch jobs removed. It deleted only items matching that connection's household, member, creation date and
+  page text, with no live entry. **1** Swag Labs item remains (it missed a filter, or an entry still
+  points at it); it is left for the owner's "Delete all set aside".
 
 ## Verified
 - `packages/core/src/portals`: 43 passed (2 new: an unchanged page files once across days; same text, same key).
@@ -49,5 +52,6 @@ counted as new each day. About 25 rows since 27 Oct, per the coordinator.
 
 ## Open
 - Redeploy the portal worker (`fly deploy`) so the dedup fix reaches live fetches.
-- The owner decides whether to keep the "Secret Sauce" connection.
+- The "Secret Sauce" connection is disconnected; the owner decides whether to remove it in Settings.
+- 1 Swag Labs item is left for "Delete all set aside".
 - No QA data was created by this session.
