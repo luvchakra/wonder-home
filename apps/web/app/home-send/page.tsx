@@ -257,7 +257,7 @@ export default async function HomeSendPage({
               <p id="home-send-set-aside" className="text-sm text-[var(--wh-foreground-muted)]">{t("homesend.setAside.lede")}</p>
             </>
           ) : null}
-          <HomeSendArchived householdId={householdId} isAdmin={isAdmin} viewerMemberId={membership.memberId} viewerType={membership.memberType} items={setAside} reasons={Object.fromEntries(setAsideReasons)} labels={labels} compact />
+          <HomeSendArchived householdId={householdId} isAdmin={isAdmin} viewerMemberId={membership.memberId} viewerType={membership.memberType} items={setAside} reasons={Object.fromEntries(setAsideReasons)} labels={labels} compact total={archivedCount} />
           {archivedCount > setAside.length ? (
             <Link href="/home-send?view=archived" className="block text-center text-sm text-[var(--wh-primary)]">
               {t("homesend.setAside.all", { count: archivedCount })}

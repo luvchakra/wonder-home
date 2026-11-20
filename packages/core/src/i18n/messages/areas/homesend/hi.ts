@@ -615,6 +615,11 @@ export const homesendHi: AreaCatalog<typeof homesendEn> = {
   "homesend.setAside.title": "अलग रखा गया",
   "homesend.setAside.lede": "भेजी गई हर चीज़ कुछ न कुछ बनती है: एक एंट्री, एक नोट, या कारण के साथ यहाँ अलग रखी गई। वापस लाएँ से कोई भी लौट आती है।",
   "homesend.setAside.all": "अलग रखी सभी चीज़ें देखें ({count})",
+  "homesend.setAside.delete": "हटाएँ",
+  "homesend.setAside.deleteAria": "{title} हटाएँ",
+  "homesend.setAside.deleteAll": "अलग रखी सब चीज़ें हटाएँ",
+  "homesend.setAside.deleteAllTitle#one": "अलग रखी 1 चीज़ हमेशा के लिए हटाएँ?",
+  "homesend.setAside.deleteAllTitle#other": "अलग रखी {count} चीज़ें हमेशा के लिए हटाएँ?",
   "homesend.lead.needsYou#one": "1 चीज़ पर आपकी एक बात चाहिए — यह HomeTalk में सबसे ऊपर “आपकी ज़रूरत” में है।",
   "homesend.lead.needsYou#other": "{count} चीज़ों पर आपकी एक बात चाहिए — ये HomeTalk में सबसे ऊपर “आपकी ज़रूरत” में हैं।",
 };

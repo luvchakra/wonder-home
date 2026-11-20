@@ -615,6 +615,11 @@ export const homesendFr: AreaCatalog<typeof homesendEn> = {
   "homesend.setAside.title": "Mis de côté",
   "homesend.setAside.lede": "Tout ce qui est envoyé devient quelque chose : une entrée, une note, ou mis de côté ici avec sa raison. Restaurer remet n'importe lequel.",
   "homesend.setAside.all": "Voir tout ce qui est mis de côté ({count})",
+  "homesend.setAside.delete": "Supprimer",
+  "homesend.setAside.deleteAria": "Supprimer {title}",
+  "homesend.setAside.deleteAll": "Supprimer tout ce qui est mis de côté",
+  "homesend.setAside.deleteAllTitle#one": "Supprimer définitivement 1 élément mis de côté ?",
+  "homesend.setAside.deleteAllTitle#other": "Supprimer définitivement {count} éléments mis de côté ?",
   "homesend.lead.needsYou#one": "1 chose attend un mot de vous — dans « Vous attend », en haut de HomeTalk.",
   "homesend.lead.needsYou#other": "{count} choses attendent un mot de vous — dans « Vous attend », en haut de HomeTalk.",
 };

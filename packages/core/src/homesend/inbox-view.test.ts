@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 
 import { NO_DIRECT_ADD } from "./auto-add";
-import { addAnywayCounts, addAnywayVerdict, failedTitleKey, groupIdentical, sameKey, sentenceCase } from "./inbox-view";
+import { addAnywayCounts, addAnywayVerdict, failedTitleKey, groupIdentical, sameKey, sentenceCase, setAsideName } from "./inbox-view";
 
 const item = (id: string, title: string | null, kind: string | null = "unknown") => ({
   id,
@@ -89,5 +89,24 @@ describe("sentenceCase", () => {
   it("capitalises the first letter only", () => {
     expect(sentenceCase("not sure what it is")).toBe("Not sure what it is");
     expect(sentenceCase("")).toBe("");
+  });
+});
+
+describe("setAsideName (a Set aside row's name, never raw text — owner 2026-11-20)", () => {
+  const names = { webPage: "A pasted web page", link: "A link", photo: "A photo", pdf: "A PDF", voiceNote: "A voice note", email: "An email", whatsapp: "A WhatsApp message", message: "A message", file: "A file" };
+  const page = "Open Menu\n\nDate: 2026-11-20\n\nOpen Menu Swag Labs Products Name (A to Z) Sauce Labs Backpack carry.allTheThings() with the sleek, streamlined Sly Pack that melds uncompromising style with unequaled laptop and tablet protection. Add to cart Sauce Labs Bike Light";
+  const base = { source: "pasted_text" as const, contentType: null, sourceUrl: null };
+  it("names a scraped page by what it is, not its text", () => {
+    expect(setAsideName({ ...base, rawText: page }, names)).toBe("A pasted web page");
+  });
+  it("never uses a summary that is just the start of the raw text", () => {
+    const flat = page.replace(/\s+/g, " ");
+    expect(setAsideName({ ...base, rawText: page, understanding: { contentSummary: flat.slice(0, 70) } }, names)).toBe("A pasted web page");
+  });
+  it("keeps a real read name", () => {
+    expect(setAsideName({ ...base, rawText: page, extracted: { title: "Sports day kit list" } }, names)).toBe("Sports day kit list");
+  });
+  it("names a short message as a message", () => {
+    expect(setAsideName({ ...base, rawText: "See you at 5" }, names)).toBe("A message");
   });
 });

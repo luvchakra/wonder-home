@@ -75,6 +75,29 @@ export function failedTitleKey(item: Pick<HomeSendItem, "source" | "contentType"
   return "file";
 }
 
+/** The longest read name a row shows; anything longer is raw text, not a name. */
+const MAX_NAME = 80;
+
+type NamedItem = Pick<HomeSendItem, "source" | "contentType" | "rawText" | "sourceUrl"> & {
+  extracted?: { title?: string | null } | null;
+  understanding?: { contentSummary?: string | null } | null;
+  subject?: string | null;
+};
+
+/**
+ * A set-aside row's name (the owner, 2026-11-20): what was read, else the
+ * short name for what was sent ("A pasted web page"). Never the raw text
+ * itself (#515) — a "name" that is just the start of a long paste is not one.
+ */
+export function setAsideName(item: NamedItem, failedName: Record<FailedTitle, string>): string {
+  const raw = item.rawText?.replace(/\s+/g, " ").trim() ?? "";
+  for (const candidate of [item.extracted?.title, item.understanding?.contentSummary, item.subject]) {
+    const name = candidate?.replace(/\s+/g, " ").trim();
+    if (name && name.length <= MAX_NAME && !(raw.length > name.length * 2 && raw.startsWith(name))) return name;
+  }
+  return failedName[failedTitleKey(item)];
+}
+
 // --- "Add all anyway" --------------------------------------------------------
 
 /** Why "Add all anyway" leaves a waiting item where it is: only the guards no button may pass. */

@@ -629,6 +629,11 @@ export const homesendEn = {
   "homesend.setAside.title": "Set aside",
   "homesend.setAside.lede": "Everything sent ends as something: an entry, a note, or set aside here with its reason. Restore puts any of it back.",
   "homesend.setAside.all": "See everything set aside ({count})",
+  "homesend.setAside.delete": "Delete",
+  "homesend.setAside.deleteAria": "Delete {title}",
+  "homesend.setAside.deleteAll": "Delete all set aside",
+  "homesend.setAside.deleteAllTitle#one": "Delete 1 set-aside item permanently?",
+  "homesend.setAside.deleteAllTitle#other": "Delete {count} set-aside items permanently?",
   "homesend.lead.needsYou#one": "1 thing needs a word — it's in Needs you at the top of HomeTalk.",
   "homesend.lead.needsYou#other": "{count} things need a word — they're in Needs you at the top of HomeTalk.",
 } as const;
