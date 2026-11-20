@@ -22,6 +22,13 @@ export function downloadLabels(t: T): DownloadLabels {
     preparing: t("resetHome.download.preparing"),
     done: t("resetHome.download.done", { time: "{time}" }),
     error: t("resetHome.download.error"),
+    healthLede: t("resetHome.health.lede"),
+    healthPassword: t("resetHome.health.password"),
+    healthRepeat: t("resetHome.health.repeat"),
+    healthHint: t("resetHome.health.hint", { min: 12 }),
+    healthTooShort: t("resetHome.health.tooShort", { min: 12 }),
+    healthTooLong: t("resetHome.health.tooLong"),
+    healthMismatch: t("resetHome.health.mismatch"),
   };
 }
 

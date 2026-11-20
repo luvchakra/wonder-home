@@ -1,6 +1,7 @@
 import { notFound } from "next/navigation";
 import { CheckCircle2, Download, ShieldAlert, Trash2 } from "lucide-react";
 
+import { hasHealthContent } from "@wonderhome/core/household/full-export";
 import { isHouseholdOwner } from "@wonderhome/core/household/reset-policy";
 import { resetPreview } from "@wonderhome/core/household/reset-repository";
 import { AppShell } from "@wonderhome/core/shell/app-shell";
@@ -35,7 +36,11 @@ export default async function ResetHomePage() {
   const householdId = membership.household.id;
   const household = membership.household.name;
   const { t, preferences } = session.locale;
-  const [preview, stepUp] = await Promise.all([resetPreview(supabase, householdId, membership.household.ownerMemberId), staffStepUp()]);
+  const [preview, stepUp, healthPresent] = await Promise.all([
+    resetPreview(supabase, householdId, membership.household.ownerMemberId),
+    staffStepUp(),
+    hasHealthContent(supabase, householdId).catch(() => true),
+  ]);
 
   const goes = [
     preview.otherMembers > 0 ? t("resetHome.goes.members", { count: preview.otherMembers }) : null,
@@ -77,7 +82,7 @@ export default async function ResetHomePage() {
               </div>
             </div>
             <DownloadedNote householdId={householdId} labels={downloadedLabels(t)} language={preferences.language} />
-            <DownloadFullData householdId={householdId} stepUp={stepUp} next="/settings/reset-home" labels={downloadLabels(t)} language={preferences.language} googleConfirmHere={false} />
+            <DownloadFullData householdId={householdId} stepUp={stepUp} next="/settings/reset-home" labels={downloadLabels(t)} language={preferences.language} googleConfirmHere={false} askHealthPassword={healthPresent} />
           </Card>
         </section>
 

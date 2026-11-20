@@ -94,6 +94,8 @@ export const RATE_LIMITS = {
   "instamart.match": { max: 6, windowSeconds: 900 },
   /** Cart reviews and order placements on Instamart, per member: a person shopping, never a loop against Swiggy. */
   "instamart.cart": { max: 30, windowSeconds: 900 },
+  /** "Download my data" / "Download full data", per member (story 15-014): each reads every table and file they can see. */
+  "household.export": { max: 5, windowSeconds: 3600 },
 } as const;
 
 export type RateLimitBucket = keyof typeof RATE_LIMITS;
@@ -128,6 +130,7 @@ export const RATE_LIMIT_SCOPES: Record<RateLimitBucket, Scope> = {
   "weather.search": "member",
   "places.search": "member",
   "event.reply": "ip",
+  "household.export": "member",
   "places.find": "household",
   "auth.attempt": "ip",
   "careers.apply": "ip",

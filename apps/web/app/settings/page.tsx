@@ -3,6 +3,7 @@ import Link from "next/link";
 import type { ComponentType } from "react";
 
 import { credentialStatus } from "@wonderhome/core/ai/credentials";
+import { hasHealthContent } from "@wonderhome/core/household/full-export";
 import { isHouseholdOwner } from "@wonderhome/core/household/reset-policy";
 import { describeKeySource, platformKey, resolveModelKey } from "@wonderhome/core/ai/model-key";
 import { listPlans, loadSubscription } from "@wonderhome/core/billing/repository";
@@ -79,13 +80,15 @@ export default async function SettingsPage() {
   // The Danger zone is the owner's alone (story 15-014): nobody else sees it at all.
   const isOwner = isHouseholdOwner(membership);
 
-  const [credential, voiceSettings, subscription, plans, whatsappLinks, stepUp] = await Promise.all([
+  const [credential, voiceSettings, subscription, plans, whatsappLinks, stepUp, healthPresent] = await Promise.all([
     credentialStatus(supabase, householdId).catch(() => ({ configured: false, provider: null, updatedAt: null })),
     loadVoiceSettings(supabase, householdId),
     loadSubscription(supabase, householdId).catch(() => null),
     listPlans(supabase).catch(() => []),
     whatsappReady ? listWhatsAppLinks(supabase, householdId).catch(() => []) : Promise.resolve([]),
     isOwner ? staffStepUp() : Promise.resolve(null),
+    // Owner only: whether "Download full data" must ask for a health records password.
+    isOwner ? hasHealthContent(supabase, householdId).catch(() => true) : Promise.resolve(false),
   ]);
 
   // Which key actually answers for this household, decided in one place so
@@ -181,7 +184,7 @@ export default async function SettingsPage() {
             <div className="space-y-2 border-t border-[var(--wh-border)] pt-3">
               <p className="text-sm font-medium">{t("resetHome.download.title")}</p>
               <p className="text-xs text-[var(--wh-foreground-subtle)]">{t("resetHome.download.meta")}</p>
-              <DownloadFullData householdId={householdId} stepUp={stepUp} next="/settings#danger-zone" labels={downloadLabels(t)} language={session.locale.preferences.language} />
+              <DownloadFullData householdId={householdId} stepUp={stepUp} next="/settings#danger-zone" labels={downloadLabels(t)} language={session.locale.preferences.language} askHealthPassword={healthPresent} />
             </div>
             <div className="border-t border-[var(--wh-border)] pt-2">
               <SettingsRows rows={[{ icon: RotateCcw, tone: "risk", title: t("resetHome.row.title"), meta: t("resetHome.row.meta"), href: "/settings/reset-home" }]} />

@@ -2,6 +2,8 @@ import Link from "next/link";
 import { Clock, Download, ShieldCheck, Trash2 } from "lucide-react";
 
 import { loadDataUse } from "@wonderhome/core/ai/privacy-repository";
+import { hasHealthContent } from "@wonderhome/core/household/full-export";
+import { mayDownloadOwnData } from "@wonderhome/core/household/reset-policy";
 import { buildPersonalView } from "@wonderhome/core/identity/views";
 import { listPrivacyRequests } from "@wonderhome/core/privacy/repository";
 import { DELETION_GRACE_DAYS } from "@wonderhome/core/privacy/retention";
@@ -24,8 +26,10 @@ import {
   CancelDeletionForm,
   ConfirmItIsYouForm,
   DeletionForm,
-  ExportForm,
 } from "../../_components/privacy-forms";
+import { staffStepUp } from "../../_lib/platform-step-up";
+import { downloadLabels } from "../reset-home/labels";
+import { DownloadFullData } from "../reset-home/reset-forms";
 import { RetentionWindowPicker } from "../../_components/retention-window-picker";
 import { formatDate, requireSession } from "../../_lib/session";
 import { OpenOnHash } from "../../_components/open-on-hash";
@@ -34,8 +38,6 @@ import {
   confirmItIsYouLabels,
   dataUseLines,
   deletionFormLabels,
-  exportFormLabels,
-  exportLines,
   retentionRows,
   retentionWindowLabels,
 } from "../../_lib/settings-labels";
@@ -63,15 +65,17 @@ export default async function PrivacyCentrePage() {
   const view = buildPersonalView(membership);
   const now = new Date();
 
-  const [dataUse, requests, exportProof, deletionProof, retentionWindow] = await Promise.all([
+  // "Download my data" (owner, 2026-11-20: everyone downloads): every adult and helper, never a child.
+  const downloadDecision = mayDownloadOwnData(membership, "app");
+  const [dataUse, requests, deletionProof, retentionWindow, stepUp, healthPresent] = await Promise.all([
     loadDataUse(supabase, householdId),
     listPrivacyRequests(supabase, householdId).catch(() => []),
-    latestVerification(supabase, membership.memberId, "export"),
     latestVerification(supabase, membership.memberId, "deletion"),
     loadRetentionWindow(supabase, householdId),
+    downloadDecision.ok ? staffStepUp() : Promise.resolve(null),
+    downloadDecision.ok ? hasHealthContent(supabase, householdId).catch(() => true) : Promise.resolve(false),
   ]);
 
-  const mayExport = checkStepUp(exportProof, "export", now).ok;
   const mayDelete = checkStepUp(deletionProof, "deletion", now).ok;
   const pendingDeletion = requests.find(
     (request) => request.kind === "deletion" && (request.status === "pending" || request.status === "ready"),
@@ -153,22 +157,24 @@ export default async function PrivacyCentrePage() {
           <Card className="space-y-4">
             <div className="flex items-start gap-3">
               <IconTile icon={Download} tone="care" />
-              <ul className="min-w-0 flex-1 space-y-1.5">
-                {exportLines(t, view.permissions, preferences.language).map((line) => (
-                  <li key={line} className="text-sm text-[var(--wh-foreground-muted)]">{line}</li>
-                ))}
-              </ul>
+              <div className="min-w-0 flex-1 space-y-1.5 text-sm text-[var(--wh-foreground-muted)]">
+                <p>{t("resetHome.mine.meta")}</p>
+                <p>{t("resetHome.mine.private")}</p>
+              </div>
             </div>
 
-            {mayExport ? null : (
-              <ConfirmItIsYouForm
-                action={confirmItIsYouAction}
+            {downloadDecision.ok && stepUp ? (
+              <DownloadFullData
                 householdId={householdId}
-                purpose="export"
-                labels={confirmItIsYouLabels(t, "export")}
+                stepUp={stepUp}
+                next="/settings/privacy#export"
+                labels={{ ...downloadLabels(t), button: t("resetHome.mine.button") }}
+                language={preferences.language}
+                askHealthPassword={healthPresent}
               />
+            ) : (
+              <p className="rounded-[var(--wh-radius-sm)] bg-[var(--wh-surface-muted)] px-3 py-2 text-sm text-[var(--wh-foreground-muted)]">{t("resetHome.mine.child")}</p>
             )}
-            <ExportForm householdId={householdId} confirmed={mayExport} labels={exportFormLabels(t)} />
           </Card>
         </section>
 

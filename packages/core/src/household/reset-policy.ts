@@ -38,7 +38,29 @@ export function mayResetHome(who: Who, channel: ResetChannel, householdId: strin
   return { ok: true };
 }
 
-/** Whether the person is the owner: the Danger zone, and the full download, are shown to them alone. */
+export type DownloadDecision = { ok: true } | { ok: false; code: "child" | "not_in_app" | "other_household" };
+
+/**
+ * Who may download their own copy (owner, 2026-11-20: "everyone should have
+ * similar option to download the data"). Every adult, Admin or not, and a
+ * househelper (who has Settings too); never a child, whose guardian's and
+ * Admins' downloads already hold what they can see of the child. Only in the
+ * app: never by voice, HomeTalk, WhatsApp or an agent. What the file holds is
+ * decided elsewhere, by the person's own session and RLS: exactly what they
+ * can already see.
+ */
+export function mayDownloadOwnData(
+  who: Pick<HouseholdMembership, "memberType"> & { household: Pick<HouseholdMembership["household"], "id"> },
+  channel: ResetChannel,
+  householdId: string = who.household.id,
+): DownloadDecision {
+  if (channel !== "app") return { ok: false, code: "not_in_app" };
+  if (who.household.id !== householdId) return { ok: false, code: "other_household" };
+  if (who.memberType === "child") return { ok: false, code: "child" };
+  return { ok: true };
+}
+
+/** Whether the person is the owner: the Danger zone (with its "Download full data") is shown to them alone. */
 export function isHouseholdOwner(who: Who): boolean {
   return mayResetHome(who, "app").ok;
 }

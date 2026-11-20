@@ -4,7 +4,7 @@ import { TOOLS } from "../ai/tools";
 import { INTENT_ACTIONS } from "../conversation/intent";
 import { GEMINI_LIVE_TOOL_NAMES } from "../voicelink/gemini-live";
 import { VOICE_CAPABILITIES } from "../voicelink/capabilities";
-import { confirmsHomeName, isHouseholdOwner, mayResetHome, RESET_CHANNELS } from "./reset-policy";
+import { confirmsHomeName, isHouseholdOwner, mayDownloadOwnData, mayResetHome, RESET_CHANNELS } from "./reset-policy";
 
 const household = { id: "h-1", ownerMemberId: "m-owner" };
 const owner = { memberId: "m-owner", memberType: "adult" as const, roles: ["head" as const], household };
@@ -48,6 +48,24 @@ describe("mayResetHome (story 15-014)", () => {
     expect(TOOLS.map((tool) => tool.name).filter((name) => destructive.test(name))).toEqual([]);
     expect(GEMINI_LIVE_TOOL_NAMES.filter((name) => destructive.test(name))).toEqual([]);
     expect(VOICE_CAPABILITIES.map((capability) => capability.id).filter((id) => destructive.test(id))).toEqual([]);
+  });
+});
+
+describe("mayDownloadOwnData (owner, 2026-11-20: everyone downloads)", () => {
+  it("lets every adult download, Admin or not, and a helper", () => {
+    for (const who of [owner, otherAdmin, adult, helper]) expect(mayDownloadOwnData(who, "app")).toEqual({ ok: true });
+  });
+
+  it("never a child", () => {
+    expect(mayDownloadOwnData(child, "app")).toEqual({ ok: false, code: "child" });
+  });
+
+  it("never for another household", () => {
+    expect(mayDownloadOwnData(otherOwner, "app", "h-1")).toEqual({ ok: false, code: "other_household" });
+  });
+
+  it("never by voice, HomeTalk, WhatsApp or an agent", () => {
+    for (const channel of RESET_CHANNELS.filter((c) => c !== "app")) expect(mayDownloadOwnData(adult, channel)).toEqual({ ok: false, code: "not_in_app" });
   });
 });
 

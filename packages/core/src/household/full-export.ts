@@ -1,7 +1,7 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 
 import manifest from "./reset-tables.json";
-import type { ZipEntry } from "./zip";
+import { zipStream, type ZipEntry } from "./zip";
 
 /**
  * The full household download (story 15-014): one ZIP, a JSON file per table
@@ -22,6 +22,28 @@ import type { ZipEntry } from "./zip";
  */
 
 export const EXPORT_PAGE_SIZE = 500;
+
+/** The area whose tables, and the bucket whose files, are locked with the owner's health password. */
+export const HEALTH_AREA = "health";
+export const HEALTH_BUCKET = "health-records";
+/** The inner archive that holds them, encrypted entry by entry (WinZip AES-256). */
+export const HEALTH_ARCHIVE = "health-records-protected.zip";
+/**
+ * The shortest health password accepted. Longer than the sign-in minimum (8)
+ * on purpose: the AES-ZIP format fixes its key stretching at 1,000 PBKDF2
+ * rounds, so the password's own length is what keeps the file safe if it is
+ * lost or shared.
+ */
+export const HEALTH_PASSWORD_MIN = 12;
+export const HEALTH_PASSWORD_MAX = 200;
+
+/** Pure: why a health password is not acceptable, or null when it is. */
+export function healthPasswordProblem(password: string, repeat: string): "too_short" | "too_long" | "mismatch" | null {
+  if (password.length < HEALTH_PASSWORD_MIN) return "too_short";
+  if (password.length > HEALTH_PASSWORD_MAX) return "too_long";
+  if (password !== repeat) return "mismatch";
+  return null;
+}
 
 type Manifest = {
   kept: string[];
@@ -55,6 +77,8 @@ export const AREA_LABELS: Record<string, string> = {
 export type ExportProgress = {
   tables: { area: string; table: string; rows: number; error?: string }[];
   files: { bucket: string; path: string; bytes: number; error?: string }[];
+  /** True when the health part was written, locked with the owner's password. */
+  healthLocked?: boolean;
 };
 
 type Input = {
@@ -64,22 +88,59 @@ type Input = {
   householdName: string;
   requestedBy: string;
   now: Date;
+  /**
+   * Locks the health records (the health tables and the uploaded health files)
+   * into `health-records-protected.zip`. Without it they are left out entirely:
+   * the route only omits it when the owner can see no health records at all.
+   * Never stored, logged or audited.
+   */
+  healthPassword?: string;
 };
 
 const encoder = new TextEncoder();
 
 /** Pages of one table as the caller sees it. A missing function surfaces as `ExportUnavailableError`. */
-async function* tableJson(input: Input, table: string, record: ExportProgress["tables"][number]): AsyncIterable<Uint8Array> {
-  yield encoder.encode("[\n");
-  let offset = 0;
-  let first = true;
-  for (;;) {
-    const { data, error } = await input.supabase.rpc("household_export_rows", {
+type Page = { data: unknown; error: { code?: string } | null };
+
+function fetchPage(input: Input, table: string, offset: number): Promise<Page> {
+  return Promise.resolve(
+    input.supabase.rpc("household_export_rows", {
       p_household_id: input.householdId,
       p_table: table,
       p_offset: offset,
       p_limit: EXPORT_PAGE_SIZE,
-    });
+    }),
+  ) as Promise<Page>;
+}
+
+/** How many tables' first pages are read ahead while one is being written: the time a slow link costs drops by this much, and memory stays at this many pages. */
+export const EXPORT_LOOKAHEAD = 8;
+
+/** Starts each table's first page a few tables ahead of the writer, never more than `EXPORT_LOOKAHEAD` at once. */
+function firstPages(input: Input, tables: readonly string[]): (index: number) => Promise<Page> {
+  const started = new Map<number, Promise<Page>>();
+  const start = (index: number) => {
+    if (index < tables.length && !started.has(index)) {
+      const page = fetchPage(input, tables[index]!, 0);
+      // Awaited later by the writer; this only keeps a failure from being reported as unhandled meanwhile.
+      page.catch(() => undefined);
+      started.set(index, page);
+    }
+  };
+  return (index: number) => {
+    for (let ahead = index; ahead < index + EXPORT_LOOKAHEAD; ahead++) start(ahead);
+    const page = started.get(index)!;
+    started.delete(index);
+    return page;
+  };
+}
+
+async function* tableJson(input: Input, table: string, record: ExportProgress["tables"][number], firstPage?: Promise<Page>): AsyncIterable<Uint8Array> {
+  yield encoder.encode("[\n");
+  let offset = 0;
+  let first = true;
+  for (;;) {
+    const { data, error } = offset === 0 && firstPage ? await firstPage : await fetchPage(input, table, offset);
     if (error) {
       if (error.code === "PGRST202") throw new ExportUnavailableError();
       record.error = "could not be read";
@@ -132,18 +193,79 @@ export async function exportAvailable(supabase: SupabaseClient, householdId: str
   return !error || error.code !== "PGRST202";
 }
 
+/**
+ * Whether the owner can see any health record at all: a row in any health
+ * table, or a file in the health store. When there is none, the download does
+ * not ask for a health password.
+ */
+export async function hasHealthContent(supabase: SupabaseClient, householdId: string): Promise<boolean> {
+  const tables = RESET_MANIFEST.areas[HEALTH_AREA] ?? [];
+  const checks = await Promise.all([
+    ...tables.map(async (table) => {
+      const { data, error } = await supabase.rpc("household_export_rows", { p_household_id: householdId, p_table: table, p_offset: 0, p_limit: 1 });
+      return !error && Array.isArray(data) && data.length > 0;
+    }),
+    (async () => {
+      const { data, error } = await supabase.storage.from(HEALTH_BUCKET).list(householdId, { limit: 1 });
+      return !error && Array.isArray(data) && data.length > 0;
+    })(),
+  ]);
+  return checks.some(Boolean);
+}
+
+/** Pure: a health file's name inside the locked archive: a number and its extension, never its stored name. */
+export function lockedFileName(index: number, path: string): string {
+  const ext = path.match(/\.[A-Za-z0-9]{1,5}$/)?.[0]?.toLowerCase() ?? "";
+  return `files/health-records/file-${String(index).padStart(3, "0")}${ext}`;
+}
+
+/** The health tables and files, every entry encrypted with the owner's password. */
+async function* lockedHealthEntries(input: Input & { healthPassword: string }, progress: ExportProgress): AsyncIterable<ZipEntry> {
+  const password = input.healthPassword;
+  const healthTables = [...(RESET_MANIFEST.areas[HEALTH_AREA] ?? [])].sort();
+  const healthPage = firstPages(input, healthTables);
+  for (const [index, table] of healthTables.entries()) {
+    const record = { area: HEALTH_AREA, table, rows: 0 } as ExportProgress["tables"][number];
+    progress.tables.push(record);
+    yield { name: `data/health/${table}.json`, data: tableJson(input, table, record, healthPage(index)), password };
+  }
+  const index: { file: string; stored_as: string; bytes: number }[] = [];
+  const paths = await listFiles(input.supabase, HEALTH_BUCKET, input.householdId);
+  let n = 0;
+  for (const path of paths) {
+    const { data, error } = await input.supabase.storage.from(HEALTH_BUCKET).download(path);
+    if (error || !data) {
+      // Counted, never named: a health file's stored name stays inside the lock.
+      progress.files.push({ bucket: HEALTH_BUCKET, path: "", bytes: 0, error: "could not be read" });
+      continue;
+    }
+    n += 1;
+    const bytes = new Uint8Array(await data.arrayBuffer());
+    const name = lockedFileName(n, path);
+    index.push({ file: name, stored_as: path.slice(input.householdId.length + 1), bytes: bytes.length });
+    progress.files.push({ bucket: HEALTH_BUCKET, path: "", bytes: bytes.length });
+    yield { name, data: bytes, password };
+  }
+  yield { name: "files/health-records/index.json", data: JSON.stringify(index, null, 2) + "\n", password };
+}
+
 /** The archive's entries, produced as they are read. `progress` fills in as it goes; the README comes last. */
 export async function* householdArchiveEntries(input: Input, progress: ExportProgress = { tables: [], files: [] }): AsyncIterable<ZipEntry> {
-  const areas = Object.keys(RESET_MANIFEST.areas).sort();
-  for (const area of areas) {
-    for (const table of [...RESET_MANIFEST.areas[area]!].sort()) {
-      const record = { area, table, rows: 0 } as ExportProgress["tables"][number];
-      progress.tables.push(record);
-      yield { name: `data/${area}/${table}.json`, data: tableJson(input, table, record) };
-    }
+  const areas = Object.keys(RESET_MANIFEST.areas)
+    .filter((area) => area !== HEALTH_AREA)
+    .sort();
+  const ordered = areas.flatMap((area) => [...RESET_MANIFEST.areas[area]!].sort().map((table) => ({ area, table })));
+  const page = firstPages(
+    input,
+    ordered.map((entry) => entry.table),
+  );
+  for (const [index, { area, table }] of ordered.entries()) {
+    const record = { area, table, rows: 0 } as ExportProgress["tables"][number];
+    progress.tables.push(record);
+    yield { name: `data/${area}/${table}.json`, data: tableJson(input, table, record, page(index)) };
   }
 
-  for (const bucket of RESET_MANIFEST.storageBuckets) {
+  for (const bucket of RESET_MANIFEST.storageBuckets.filter((name) => name !== HEALTH_BUCKET)) {
     const paths = await listFiles(input.supabase, bucket, input.householdId);
     for (const path of paths) {
       const { data, error } = await input.supabase.storage.from(bucket).download(path);
@@ -158,6 +280,14 @@ export async function* householdArchiveEntries(input: Input, progress: ExportPro
     }
   }
 
+  // Health is never written in clear: with a password it goes into its own
+  // AES-256 archive (streamed, one table page or one file at a time); without
+  // one it is not read at all.
+  if (input.healthPassword) {
+    progress.healthLocked = true;
+    yield { name: HEALTH_ARCHIVE, data: zipStream(lockedHealthEntries({ ...input, healthPassword: input.healthPassword }, progress), input.now) };
+  }
+
   yield { name: "README.txt", data: readme(input, progress) };
 }
 
@@ -165,10 +295,10 @@ export async function* householdArchiveEntries(input: Input, progress: ExportPro
 export function readme(input: Pick<Input, "householdName" | "requestedBy" | "now">, progress: ExportProgress): string {
   const lines: string[] = [];
   const rows = progress.tables.reduce((sum, table) => sum + table.rows, 0);
-  lines.push(`WonderHome — full data for ${input.householdName}`);
+  lines.push(`WonderHome — your data from ${input.householdName}`);
   lines.push(`Downloaded by ${input.requestedBy} on ${input.now.toISOString()}.`);
   lines.push("");
-  lines.push("This is everything your home holds in WonderHome that you can see yourself:");
+  lines.push("This is everything in this home that you can see in WonderHome yourself, nothing more:");
   lines.push(`${rows} records in ${progress.tables.length} tables, and ${progress.files.filter((file) => !file.error).length} uploaded files.`);
   lines.push("");
   lines.push("HOW IT IS LAID OUT");
@@ -178,10 +308,32 @@ export function readme(input: Pick<Input, "householdName" | "requestedBy" | "now
   lines.push("");
   lines.push("WHAT IS IN EACH AREA");
   for (const area of Object.keys(RESET_MANIFEST.areas).sort()) {
-    lines.push(`  data/${area}/  ${AREA_LABELS[area] ?? area}`);
+    if (area === HEALTH_AREA) {
+      lines.push(
+        progress.healthLocked
+          ? `  ${HEALTH_ARCHIVE} → data/health/  ${AREA_LABELS[area]} (locked with your password, see below)`
+          : `  (health)  ${AREA_LABELS[area]}: not in this download, as there were none you could see when you asked for it.`,
+      );
+    } else {
+      lines.push(`  data/${area}/  ${AREA_LABELS[area] ?? area}`);
+    }
     for (const table of progress.tables.filter((entry) => entry.area === area)) {
       lines.push(`    ${table.table}.json  ${table.rows} ${table.rows === 1 ? "record" : "records"}${table.error ? ` (${table.error})` : ""}`);
     }
+  }
+  if (progress.healthLocked) {
+    const healthFiles = progress.files.filter((file) => file.bucket === HEALTH_BUCKET && !file.error).length;
+    lines.push("");
+    lines.push("HEALTH RECORDS: LOCKED WITH YOUR PASSWORD");
+    lines.push(`  ${HEALTH_ARCHIVE} holds the health tables above and ${healthFiles} uploaded health ${healthFiles === 1 ? "file" : "files"}.`);
+    lines.push("  Every file inside it is encrypted with the password you chose when you downloaded this (AES-256, the");
+    lines.push("  standard password-protected ZIP). WonderHome does not keep that password: without it they cannot be opened.");
+    lines.push("  Inside: data/health/<table>.json, files/health-records/file-NNN (each health file, numbered), and");
+    lines.push("  files/health-records/index.json (which number was which stored file).");
+    lines.push("  To open it:");
+    lines.push("    Windows: 7-Zip (7-zip.org) or WinZip; right-click → 7-Zip → Extract, then type the password.");
+    lines.push("    Mac: Keka or The Unarchiver (the built-in Archive Utility cannot open AES-256 ZIPs).");
+    lines.push("    Android: ZArchiver. iPhone/iPad: an app that opens AES-256 password ZIPs, such as iZip.");
   }
   lines.push("");
   lines.push("WHAT IS NOT IN IT, AND WHY");
@@ -196,7 +348,9 @@ export function readme(input: Pick<Input, "householdName" | "requestedBy" | "now
   if (failed.length > 0) {
     lines.push("");
     lines.push("FILES THAT COULD NOT BE READ");
-    for (const file of failed) lines.push(`  files/${file.bucket}/${file.path}`);
+    for (const file of failed.filter((entry) => entry.bucket !== HEALTH_BUCKET)) lines.push(`  files/${file.bucket}/${file.path}`);
+    const healthFailed = failed.filter((entry) => entry.bucket === HEALTH_BUCKET).length;
+    if (healthFailed > 0) lines.push(`  ${healthFailed} health ${healthFailed === 1 ? "file" : "files"} (not named here, to keep it private)`);
   }
   lines.push("");
   return lines.join("\n");
