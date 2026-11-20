@@ -140,6 +140,32 @@ describe("listening through Google", () => {
     expect((calls[0]!.body!.config as Record<string, unknown>).alternativeLanguageCodes).toEqual(["hi-IN"]);
   });
 
+  it("drops alternatives the model cannot hear, so one language never costs a home its voice (2026-11-20)", async () => {
+    const { impl, calls } = fakeFetch({ results: [] });
+    const provider = googleProvider("key-1234567890123456789", impl);
+
+    // The owner's home: English (India), plus Hindi and Bengali, on latest_short. Bengali has no latest_* model.
+    await provider.listen({
+      clip,
+      settings: settings({ language: "en-IN", alternativeLanguages: ["hi-IN", "bn-IN"], recognitionModel: "latest_short" }),
+    });
+
+    const config = calls[0]!.body!.config as Record<string, unknown>;
+    expect(config.model).toBe("latest_short");
+    expect(config.alternativeLanguageCodes).toEqual(["hi-IN"]);
+  });
+
+  it("listens in a language without the latest models through command_and_search", async () => {
+    const { impl, calls } = fakeFetch({ results: [] });
+    const provider = googleProvider("key-1234567890123456789", impl);
+
+    await provider.listen({ clip, settings: settings({ language: "bn-IN", alternativeLanguages: ["en-IN"], recognitionModel: "latest_short" }) });
+
+    const config = calls[0]!.body!.config as Record<string, unknown>;
+    expect(config.model).toBe("command_and_search");
+    expect(config.alternativeLanguageCodes).toEqual(["en-IN"]);
+  });
+
   it("never asks Chirp for the enhanced models it does not have", async () => {
     const { impl, calls } = fakeFetch({ results: [] });
     const provider = googleProvider("key-1234567890123456789", impl);

@@ -1,3 +1,5 @@
+import { randomBytes } from "node:crypto";
+
 import { createClient, type SupabaseClient } from "@supabase/supabase-js";
 import { expect, test, type BrowserContext, type Page } from "@playwright/test";
 
@@ -69,8 +71,8 @@ test.describe("HomeTalk's talk button always answers a tap", () => {
   let admin: SupabaseClient;
   let userId = "";
   let householdId = "";
-  const email = `talk-${Date.now()}-${Math.random().toString(36).slice(2, 8)}@${E2E_EMAIL_DOMAIN}`;
-  const password = `E2e!${Math.random().toString(36).slice(2, 12)}`;
+  const email = `talk-${Date.now()}-${randomBytes(4).toString("hex")}@${E2E_EMAIL_DOMAIN}`;
+  const password = `E2e!${randomBytes(18).toString("base64url")}`;
   let cookies: Awaited<ReturnType<BrowserContext["cookies"]>> | null = null;
 
   test.beforeAll(async () => {
