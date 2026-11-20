@@ -26,6 +26,19 @@ export type OfficeFieldProps = { label: string; labels: PlaceSearchLabels; initi
 /** A child's school, the same Google Maps picker as Kids & School, typed where this deployment has no place search. */
 export type SchoolFieldProps = OfficeFieldProps & { available: boolean };
 
+/**
+ * How the family reaches them: a contact email and phone (owner, 2026-11-20).
+ * Never the sign-in identity: saving these changes nobody's sign-in, links no
+ * WhatsApp number and trusts no sender. Absent until the database has them.
+ */
+export type ContactFieldProps = {
+  email: string;
+  phone: string;
+  /** Their sign-in email, offered as a one-tap fill when the contact email is blank. */
+  signInEmail?: string | null;
+  labels: { email: string; phone: string; hint: string; useSignIn: string };
+};
+
 /** A househelper's "what they do", ticked rather than typed, in the viewer's language. */
 export type HelperRoleWords = { legend: string; other: string; placeholder: string; roles: Record<string, string> };
 
@@ -79,8 +92,11 @@ export function MemberProfileForm({
   workOptions,
   office,
   schoolPlace,
+  contact,
 }: {
   householdId: string;
+  /** The contact email and phone, when this deployment's database keeps them. */
+  contact?: ContactFieldProps;
   memberId: string;
   initial: MemberProfileInitial;
   /** Where an adult works, as a picked place, so HomeTalk can look near it. */
@@ -94,6 +110,7 @@ export function MemberProfileForm({
 }) {
   const [open, setOpen] = useState(false);
   const [state, formAction, pending] = useActionState<ActionState, FormData>(updateMemberProfileAction, {});
+  const [contactEmail, setContactEmail] = useState(contact?.email ?? "");
 
   return (
     <>
@@ -124,6 +141,37 @@ export function MemberProfileForm({
             Preferred name: call them by their nickname
           </label>
           <Field label="Family calls me" name="relationship" defaultValue={initial.relationship ?? ""} placeholder="Father, Mother, Daughter, Grandmother…" autoComplete="off" />
+          {contact ? (
+            // How the family reaches them — not how they sign in (that stays below, an Admin's).
+            <div className="space-y-3">
+              <input type="hidden" name="contactField" value="1" />
+              <div className="space-y-1.5">
+                <Field
+                  label={contact.labels.email}
+                  name="contactEmail"
+                  type="email"
+                  inputMode="email"
+                  autoComplete="email"
+                  value={contactEmail}
+                  placeholder="name@example.com"
+                  maxLength={254}
+                  onChange={(event) => setContactEmail(event.currentTarget.value)}
+                />
+                {contact.signInEmail && contactEmail.trim() === "" ? (
+                  <Pill
+                    type="button"
+                    tone="quiet"
+                    className="max-w-full [overflow-wrap:anywhere]"
+                    onClick={() => setContactEmail(contact.signInEmail ?? "")}
+                  >
+                    {contact.labels.useSignIn}: {contact.signInEmail}
+                  </Pill>
+                ) : null}
+              </div>
+              <Field label={contact.labels.phone} name="contactPhone" type="tel" inputMode="tel" autoComplete="tel" defaultValue={contact.phone} placeholder="98765 43210" maxLength={40} />
+              <p className="text-xs text-[var(--wh-foreground-subtle)]">{contact.labels.hint}</p>
+            </div>
+          ) : null}
           <Field label="Date of birth" name="dateOfBirth" type="date" defaultValue={initial.dateOfBirth ?? ""} />
           {initial.email !== undefined ? (
             <div className="space-y-1">
@@ -135,7 +183,7 @@ export function MemberProfileForm({
           {initial.phone !== undefined ? (
             <div className="space-y-1">
               <input type="hidden" name="phoneField" value="1" />
-              <Field label="Phone number" name="phone" type="tel" inputMode="tel" defaultValue={initial.phone ?? ""} placeholder="98765 43210" autoComplete="off" />
+              <Field label="Sign-in phone" name="phone" type="tel" inputMode="tel" defaultValue={initial.phone ?? ""} placeholder="98765 43210" autoComplete="off" />
               <p className="text-xs text-[var(--wh-foreground-subtle)]">An Indian number works as it is; add the country code for any other (+44…). They can sign in with a code texted to it — no email needed.</p>
             </div>
           ) : null}
