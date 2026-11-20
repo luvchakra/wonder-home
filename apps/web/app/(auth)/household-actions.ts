@@ -518,10 +518,18 @@ export async function updateMemberProfileAction(
     return { error: OFFICE_TYPED };
   }
 
+  // The contact email and phone (owner, 2026-11-20), when the form carried
+  // them: checked before anything is written. How the family reaches them —
+  // never the sign-in email or phone below, never a WhatsApp link or a trusted sender.
+  const { parseMemberContact, setMemberContact } = await import("@wonderhome/core/identity/member-contact");
+  const contact = formData.get("contactField") === "1" ? parseMemberContact({ email: formData.get("contactEmail"), phone: formData.get("contactPhone") }) : null;
+  if (contact && !contact.ok) return { error: contact.error };
+
   const supabase = await createClient();
 
   try {
     const actor = await requireMembership(supabase, parsed.data.householdId);
+    if (contact?.ok) await setMemberContact(supabase, actor, { memberId: parsed.data.memberId, contact: contact.contact });
     // The sign-in email, when the form carried it (an Admin editing someone
     // else): saved first, so an address another member already has is said
     // before anything else changes.
@@ -576,6 +584,7 @@ export async function updateMemberProfileAction(
   revalidatePath("/househelper");
   revalidatePath("/places");
   revalidatePath("/school");
+  revalidatePath("/settings/profile");
   return {};
 }
 

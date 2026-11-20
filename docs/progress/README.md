@@ -11,6 +11,7 @@ decision that shapes later work each earns a note, written before moving on.
 
 | Date | Note |
 |---|---|
+| 2026-11-20 | [A member's contact email and phone, kept apart from sign-in (01-015)](2026-11-20-member-contact-details.md) |
 | 2026-11-20 | [HomeSend: WhatsApp as an icon, empty card gone, and a clutter-free screen](2026-11-20-homesend-whatsapp-icon.md) |
 | 2026-11-20 | [Bills: Remove, Tidy up, and one email added once](2026-11-20-bills-remove-and-tidy-up.md) |
 | 2026-11-20 | [Health documents: "Who is this for?" instead of filing under the sender](2026-11-20-health-who-is-this-for.md) |

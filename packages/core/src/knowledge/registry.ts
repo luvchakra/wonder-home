@@ -468,6 +468,7 @@ export const KNOWLEDGE_REGISTRY = {
   household_gemini_voice_credentials: { covered: "excluded", reason: "Credentials (the household's Gemini voice key)." },
   household_invitations: { covered: "excluded", reason: "Pending invitations with their tokens: credentials." },
   household_member_emails: { covered: "excluded", reason: "Members' sign-in email addresses: contact details are not facts for an assistant." },
+  household_member_contacts: { covered: "excluded", reason: "Members' contact email and phone (how the family reaches them): contact details are not facts for an assistant." },
   household_member_phones: { covered: "excluded", reason: "Members' sign-in phone numbers: contact details are not facts for an assistant." },
   household_members: { covered: "builder", records: "members" },
   household_onboarding: { covered: "excluded", reason: "How far the household got through first-time setup." },

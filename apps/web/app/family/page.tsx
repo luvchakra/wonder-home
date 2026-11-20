@@ -12,6 +12,7 @@ import { listInvitations } from "@wonderhome/core/identity/invitations";
 import { listGuardianLinks, listRelationships, suggestRelationships } from "@wonderhome/core/identity/relationships";
 import { readMemberEmails } from "@wonderhome/core/identity/member-email";
 import { readMemberPhones } from "@wonderhome/core/identity/member-phone";
+import { readMemberContacts } from "@wonderhome/core/identity/member-contact";
 import { listIntegrations } from "@wonderhome/core/integrations/repository";
 import { agoText, isFresh, loadKnownPlaces, loadLocations, mapLink, placeAt } from "@wonderhome/core/location/sharing";
 import { listEnrolments } from "@wonderhome/core/school/enrolments";
@@ -87,7 +88,7 @@ export default async function FamilyPage() {
   const timezone = membership.household.timezone;
   const now = new Date();
 
-  const [members, entitlement, familyRead, integrations, pets, enrolments, emails, offices, phones, relationships, whereabouts, knownPlaces, responsibilityRows, helperReads] = await Promise.all([
+  const [members, entitlement, familyRead, integrations, pets, enrolments, emails, offices, phones, contacts, relationships, whereabouts, knownPlaces, responsibilityRows, helperReads] = await Promise.all([
     listMembers(supabase, householdId, membership.household.ownerMemberId).catch(() => []),
     may(supabase, householdId, "family.events"),
     // Every upcoming event and what needs a person, read once and alongside
@@ -102,6 +103,8 @@ export default async function FamilyPage() {
     listWorkPlaces(supabase, householdId).catch(() => []),
     // Phone numbers this viewer may read: Admins and adults see everyone's, others their own.
     readMemberPhones(supabase, householdId).catch(() => new Map<string, string>()),
+    // Contact email and phone this viewer may read (RLS); null until the table exists, which hides them.
+    readMemberContacts(supabase, householdId).catch(() => null),
     // How the family is related (Members & roles), for each person's details.
     listRelationships(supabase, householdId).catch(() => []),
     // Who shares where they are, and the positions this viewer may see (adults: everyone sharing; others: their own).
@@ -327,6 +330,7 @@ export default async function FamilyPage() {
                         school={member.memberType === "child" ? schoolOf(member.id) : null}
                         email={emails.get(member.id) ?? null}
                         phone={phones.get(member.id) ?? null}
+                        contact={contacts ? (contacts.get(member.id) ?? null) : undefined}
                         invite={invite}
                         workPlace={member.memberType === "adult" ? officeOf(member.id) : null}
                         relations={relationsLine(t, member.id, relationships, members)}
@@ -533,6 +537,7 @@ export default async function FamilyPage() {
                           statusLabel={statusLabel(member.status)}
                           email={emails.get(member.id) ?? null}
                         phone={phones.get(member.id) ?? null}
+                        contact={contacts ? (contacts.get(member.id) ?? null) : undefined}
                           invite={invite}
                           removeLabels={formLabels}
                         />
