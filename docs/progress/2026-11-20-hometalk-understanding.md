@@ -45,7 +45,22 @@ He typed "add a reminder for tomorrow Dr apartment at 1 o'clock" ("Dr apartment"
 
 **His approved action from 11:26 pm** was left as "approved" by the old code. It was not read or changed here: no database access from this session. From now on, such an action is closed as failed with its reason.
 
-## What was measured
+## The owner's third try, 11:39 pm: "🩺 Which one did you mean?" (fourth PR)
+
+He sent his original sentence again with the picker showing the Gemini Live sparkle. The picker only chooses the **live voice** engine: a typed message goes to the same conversation route and engine whichever icon is shown (`app/ai/assistant.tsx` `send`), so this was the same path as before. The turn ran at 18:09 UTC, before #585 was live (18:10). The model read a health appointment with no target. Grounding's implicit-target list did not include appointments, so `intent.ts` `disposeIntent` fell back to its generic "Which one did you mean?", a question with no candidates and therefore no chips. (A live Gemini run had shown the same bare question for reminders on 23 Sep.)
+
+**Fix:**
+- #585 already sets the speaker as an appointment's default target.
+- This PR gives every action whose subject is the action itself an implicit target: own health entries, the shopping list, plans.
+- `disposeIntent` never asks a bare "which one": a missing subject is asked by name.
+- An appointment already on at the same time is said, not added twice, and Undo leaves it alone.
+- Invariant tests cover every action, typed and spoken.
+
+**Leftovers from his three tries, for him to check in the app:**
+- In Health & Fitness, any doctor's appointment tomorrow at 1pm from the 10:08 pm turn. On the rules path that turn would have been added; on the model path it asked a question. Keep one; remove a duplicate with its own Remove.
+- The approved "book a Dr apartment appointment" action from 11:26 pm never ran and is still marked approved. It is not a waiting proposal, so nothing reminds him about it or acts on it. From now on such an action is closed as failed.
+
+
 
 There is a new **understanding set** of 100 sentences (`evaluation/cases-understanding.ts`, `npm run eval -- --set understanding`). They are typed the way people type: no punctuation, "tmrw", "pls", "kal subah 8 baje", "half kg tomatoes", "milk khatam ho gaya", "6 30 pm", spoken "one o clock", follow-ups such as "no, 1 am" and "at 1 o'clock". They cover reminders, health appointments, calendar plans, dated news, To Buy, meals, bills (recorded, never paid), absences, school, health, repairs, places, questions about the household's own records, preferences and notes, screens, multi-part sentences and corrections. Each case says what a sensible person expects recorded and whether a question is justified.
 

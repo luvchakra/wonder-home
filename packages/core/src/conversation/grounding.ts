@@ -98,6 +98,15 @@ const IMPLICIT_TARGET: Partial<Record<HouseholdIntent["action"], HouseholdIntent
   set_stock: { kind: "outcome", reference: "groceries.stocked" },
   use_stock: { kind: "outcome", reference: "groceries.stocked" },
   mark_bought: { kind: "outcome", reference: "groceries.stocked" },
+  // The owner, 2026-11-20: "🩺 Which one did you mean?" with nothing to pick, for his own doctor's appointment.
+  record_health_appointment: { kind: "member", reference: "self" },
+  log_health_issue: { kind: "member", reference: "self" },
+  resolve_health_issue: { kind: "member", reference: "self" },
+  log_vital: { kind: "member", reference: "self" },
+  set_fitness_goal: { kind: "member", reference: "self" },
+  add_to_list: { kind: "list", reference: "groceries" },
+  remove_from_list: { kind: "list", reference: "groceries" },
+  plan_event: { kind: "event" },
 };
 
 /** Grocery actions whose items may carry an amount ("6 more eggs") and may point back ("6 more"). */

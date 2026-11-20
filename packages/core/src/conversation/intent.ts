@@ -189,7 +189,8 @@ export function disposeIntent(intent: HouseholdIntent): IntentDisposition {
 
   // HomeSend reads the whole sentence itself, so being told about something new names no target here.
   if (intent.target.kind === "unspecified" && intent.action !== "ask_status" && intent.action !== "check_agents" && intent.action !== "find_places" && intent.action !== "open_screen" && intent.action !== "file_with_homesend" && intent.action !== "complete_homesend_item" && intent.action !== "check_homesend_entry" && intent.action !== "fill_homesend_details" && intent.action !== "correct_entry") {
-    return { kind: "clarify", question: "Which one did you mean?" };
+    // Never a bare "which one?" with nothing to pick (the owner, 2026-11-20: "this is bad question"): what is missing, named.
+    return { kind: "clarify", question: missingTargetQuestion(intent) };
   }
 
   return { kind: "proceed" };
@@ -298,4 +299,27 @@ export function resolveShortReply(
   return reply === "affirm"
     ? { kind: "approve", actionId: pending.actionId }
     : { kind: "reject", actionId: pending.actionId };
+}
+
+/** The question for a request whose subject could not be told, naming what kind of thing it needs. */
+export function missingTargetQuestion(intent: HouseholdIntent): string {
+  switch (intent.action) {
+    case "record_absence":
+      return "Who will be away? Say their name.";
+    case "assign_responsibility":
+      return "Who should be responsible? Say their name.";
+    case "make_payment":
+    case "record_bill_payment":
+    case "set_bill_amount":
+    case "add_bill":
+      return "Which bill is it? Say its name, like \"electricity\".";
+    case "complete_school_item":
+      return "Which piece of school work is it? Say the child's name and what it is.";
+    case "adjust_schedule":
+      return "What should move? Say what it is and its new day.";
+    case "order_items":
+      return "What should I order?";
+    default:
+      return "I couldn't tell what this is about. Could you say it once more, naming the thing itself?";
+  }
 }

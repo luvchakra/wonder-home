@@ -213,3 +213,29 @@ describe("someone else's appointment from a model's reading", () => {
     expect(result.proposal.kind).toBe("executed");
   });
 });
+
+describe("the owner's third try, 11:39 pm: \"🩺 Which one did you mean?\" with nothing to pick", () => {
+  it("no action's missing subject is ever asked as a bare \"which one\": the question names what it needs", async () => {
+    const { disposeIntent } = await import("./intent");
+    for (const action of INTENT_ACTIONS) {
+      const disposition = disposeIntent({ action, actorMemberId: "m", target: { kind: "unspecified" }, parameters: {}, confidence: 0.95, channel: "text", utterance: "x" });
+      if (disposition.kind === "clarify") expect(disposition.question, action).not.toMatch(/^which one\b/i);
+    }
+  });
+
+  it("the model's appointment reading with no target is recorded, never asked which one — typed or spoken", async () => {
+    for (const channel of ["text", "voice"] as const) {
+      const result = await converse(turn(OWNER, modelSaid("record_health_appointment", { typeText: "doctor", when: "tomorrow", time: "1 o'clock" }), { executable: canExecute, channel }));
+      if (result.kind !== "reply") throw new Error("expected a reply");
+      expect(result.proposal.kind, channel).toBe("executed");
+      expect(result.text, channel).not.toMatch(/which one/i);
+    }
+  });
+
+  it("every record-first action whose target is the action itself proceeds without a subject named", async () => {
+    for (const action of ["set_reminder", "record_health_appointment", "log_health_issue", "log_vital", "set_fitness_goal", "add_to_list", "plan_event", "plan_meal"] as const) {
+      const grounded = await groundIntent({ action, actorMemberId: "m", target: { kind: "unspecified" }, parameters: {}, confidence: 0.95, channel: "text", utterance: "x" }, { people: [], viewerMemberId: "m", timezone: TZ, now: FRIDAY_NIGHT, references: async () => NO_REFERENCES });
+      expect(grounded.intent.target.kind, action).not.toBe("unspecified");
+    }
+  });
+});

@@ -4,7 +4,7 @@ import { ApiError } from "../api/errors";
 import { runHouseholdAgents, type RunActor } from "../ai/run";
 import { buildContextItems, personItems, type PersonLike } from "../context/builders";
 import { resolveEntity, resolvePerson } from "../context/resolution";
-import { createAppointment, setAppointmentStatus, type AppointmentType } from "../health/appointments";
+import { createAppointment, listAppointments, setAppointmentStatus, type AppointmentType } from "../health/appointments";
 import { createFitnessGoal, FITNESS_ACTIVITY_LABEL, type FitnessActivityType, type FitnessFrequencyPeriod } from "../health/fitness";
 import { createIssue, listIssues, setIssueStatus } from "../health/issues";
 import { addFamilyEvent } from "../calendar/add-event";
@@ -509,6 +509,8 @@ async function undoForCorrection(
     case "record_health_appointment": {
       // Cancelled, as Health's own screen cancels it — never deleted (2026-11-20: "with Undo").
       if (typeof result.appointmentId !== "string") return { ok: false, reason: "I could not find the appointment I added earlier, so I left it as it was." };
+      // One that was already on before this turn was not added by it, so taking this turn back leaves it.
+      if (result.alreadyTracked === true) return { ok: true, text: "" };
       await setAppointmentStatus(context.supabase, { householdId: context.householdId, memberId: context.actorMemberId }, result.appointmentId, "cancelled");
       return { ok: true, text: `Took the ${String(result.appointmentType ?? "health").replace(/_/g, " ")} appointment back off ${linkTo("/health", "Health & Fitness")}.` };
     }
@@ -887,6 +889,17 @@ async function recordHealthAppointment(intent: HouseholdIntent, context: Executi
   if (!member) return { ok: false, reason: "I could not tell who was asking, so I did not book anything." };
 
   const startsAt = zonedTimeToUtcIso(onDate, time.hour, time.minute, context.timezone);
+
+  // Said again (the owner tried this sentence three times, 2026-11-20): the same appointment already on is said, never added twice.
+  const open = await listAppointments(context.supabase, context.householdId, { memberId: context.actorMemberId, statuses: ["proposed", "confirmed"] }).catch(() => []);
+  const same = open.find((entry) => entry.appointmentType === appointmentType && new Date(entry.startsAt).getTime() === new Date(startsAt).getTime());
+  if (same) {
+    return {
+      ok: true,
+      text: `Your ${typeText} appointment ${describeDate(onDate, when, context.timezone)} at ${formatHourMinute(time.hour, time.minute)} is already in ${linkTo("/health", "Health & Fitness")} — nothing added twice.`,
+      result: { appointmentId: same.id, appointmentType, startsAt, alreadyTracked: true },
+    };
+  }
 
   const { appointment, conflicts } = await createAppointment(
     context.supabase,
