@@ -96,7 +96,7 @@ test.describe("the owner downloads, then resets a QA home", () => {
     if (saved) {
       await page.context().addCookies(saved);
       await page.goto(next);
-      if (new RegExp(next.replace(/\//g, "\\/") + "$").test(page.url())) return;
+      if (new URL(page.url()).pathname === next) return;
     }
     await page.goto(next);
     await expect(page).toHaveURL(/\/sign-in\?next=/);
@@ -104,7 +104,7 @@ test.describe("the owner downloads, then resets a QA home", () => {
     await page.locator('input[name="email"]').fill(email);
     await page.locator('input[name="password"]').fill(password);
     await page.getByRole("button", { name: "Sign in", exact: true }).click();
-    await expect(page).toHaveURL(new RegExp(next.replace(/\//g, "\\/") + "$"));
+    await expect(page).toHaveURL((url) => url.pathname === next && url.search === "");
     sessions.set(email, await page.context().cookies());
   }
 
