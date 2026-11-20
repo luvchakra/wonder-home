@@ -153,7 +153,7 @@ const SECTIONS: readonly SectionShape[] = [
   {
     id: "health",
     group: "Everyday use",
-    updated: "2026-11-20",
+    updated: "2026-11-21",
     keywords: ["health", "file health records for others", "who may file", "filed for someone else", "fitness", "vitals", "weight", "blood pressure", "checkup", "appointment", "prescription", "medical record", "routine", "private", "who can see", "people I choose", "share", "sharing", "report", "lab report", "attach report", "read the report", "test results", "reference range", "suggested next steps", "follow-up", "recheck"],
   },
   {
@@ -213,7 +213,7 @@ const SECTIONS: readonly SectionShape[] = [
   {
     id: "ai-key",
     group: "Privacy and trust",
-    updated: "2026-11-14",
+    updated: "2026-11-21",
     keywords: ["api key", "byok", "anthropic", "openai", "gemini", "model", "billing", "own key", "add on its own", "how sure", "money and health entries", "record as checking", "wait for review", "wait for approval", "new sender", "trust this sender", "bills", "receipts", "health documents"],
   },
   {

@@ -26,17 +26,23 @@ export const DEFAULT_APPROVAL_SCOPE: ApprovalScope = "actions";
 
 /**
  * Decision 2: bills, receipts and health documents. Replaces the two
- * "Add money / health entries directly" switches.
- * - `checking` (default): recorded as Checking whatever the score, so a
- *   person confirms with one tap; a bill's reminders say "check before paying".
- * - `confirmed`: recorded confirmed above the bar, Checking below it (the old
- *   switch on).
+ * "Add money / health entries directly" switches. Two choices (the owner,
+ * 2026-11-21: "only auto approved and wait for review should be there"):
+ * - `confirmed` ("Auto approved", default): recorded confirmed when
+ *   WonderHome is more sure than the household's bar, Checking below it or
+ *   when the existing rules say so (a photo or a file, a filled blank, a
+ *   doubtful hearing); a Checking bill's reminders say "check before paying".
  * - `review`: waits for a person in HomeSend (the 3 Nov behaviour).
- * Paying never happens, in any of them.
+ * The old third choice, `checking` (always Checking, the default from 14 to
+ * 21 Nov), is still read from stored rows and means `confirmed`
+ * (`LEGACY_MONEY_HEALTH_ALIASES`); no stored row needs rewriting.
+ * Paying never happens, in either.
  */
-export const MONEY_HEALTH_MODES = ["checking", "confirmed", "review"] as const;
+export const MONEY_HEALTH_MODES = ["confirmed", "review"] as const;
 export type MoneyHealthMode = (typeof MONEY_HEALTH_MODES)[number];
-export const DEFAULT_MONEY_HEALTH_MODE: MoneyHealthMode = "checking";
+export const DEFAULT_MONEY_HEALTH_MODE: MoneyHealthMode = "confirmed";
+/** Stored values from before 2026-11-21, read as the choice that replaced them. */
+export const LEGACY_MONEY_HEALTH_ALIASES: Readonly<Record<string, MoneyHealthMode>> = { checking: "confirmed" };
 
 /**
  * Decision 5: email from outside the household.
@@ -76,7 +82,8 @@ export function asApprovalScope(value: unknown): ApprovalScope {
   return oneOf(APPROVAL_SCOPES, value) ?? DEFAULT_APPROVAL_SCOPE;
 }
 export function asMoneyHealthMode(value: unknown): MoneyHealthMode {
-  return oneOf(MONEY_HEALTH_MODES, value) ?? DEFAULT_MONEY_HEALTH_MODE;
+  const alias = typeof value === "string" && Object.hasOwn(LEGACY_MONEY_HEALTH_ALIASES, value) ? LEGACY_MONEY_HEALTH_ALIASES[value] : undefined;
+  return oneOf(MONEY_HEALTH_MODES, value) ?? alias ?? DEFAULT_MONEY_HEALTH_MODE;
 }
 export function asOutsideSenderMode(value: unknown): OutsideSenderMode {
   return oneOf(OUTSIDE_SENDER_MODES, value) ?? DEFAULT_OUTSIDE_SENDER_MODE;
@@ -84,8 +91,8 @@ export function asOutsideSenderMode(value: unknown): OutsideSenderMode {
 
 /**
  * Each area's mode before anyone picks the new setting, read from the two old
- * switches: a switch on is "confirmed" (what it did); off is the new default,
- * "checking" (decision 2 replaces "off means wait").
+ * switches: a switch on is "confirmed" (what it did); off is the default,
+ * also "confirmed" since 2026-11-21 (decision 2 replaces "off means wait").
  */
 export function moneyHealthFromLegacy(on: boolean): MoneyHealthMode {
   return on ? "confirmed" : DEFAULT_MONEY_HEALTH_MODE;

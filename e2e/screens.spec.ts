@@ -232,9 +232,9 @@ test.describe("every signed-in screen loads", () => {
     const senders = page.getByRole("combobox", { name: "Email from new senders" });
     // Recording first is the default; each option is short enough not to be cut off on a phone.
     await expect(scope).toHaveValue("actions");
-    await expect(money).toHaveValue("checking");
+    await expect(money).toHaveValue("confirmed");
     await expect(senders).toHaveValue("ask_once");
-    await expect(money.locator("option")).toHaveText(["Checking (recommended)", "Confirmed above the bar", "Wait for review"]);
+    await expect(money.locator("option")).toHaveText(["Auto approved (recommended)", "Wait for review"]);
     await expect(page.getByText(/A health document goes to that person’s health record, private to them/)).toBeVisible();
     const stored = (name: string) =>
       expect.poll(async () => {
@@ -254,8 +254,8 @@ test.describe("every signed-in screen loads", () => {
     await expect(page.getByRole("combobox", { name: "What “Wait for Approval” holds" })).toHaveValue("everything");
     await expect(page.getByRole("combobox", { name: "Email from new senders" })).toHaveValue("review");
     // And back: each switched back on its own.
-    await page.getByRole("combobox", { name: "Money and health entries" }).selectOption("checking");
-    await stored("Money and health entries from HomeSend").toBe("checking");
+    await page.getByRole("combobox", { name: "Money and health entries" }).selectOption("confirmed");
+    await stored("Money and health entries from HomeSend").toBe("confirmed");
     expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(360);
   });
   // Principle 20, the owner 2026-10-26: HomeTalk's question offers its answers to pick (story 14-053).

@@ -60,7 +60,7 @@ Doors: paste, share sheet, WhatsApp, forwarded email, photo or file, HomeTalk ty
 ## The five decisions (all going ahead; each can be switched back)
 
 1. **Record first.** "Wait for Approval" applies to actions (paying, ordering, messaging, booking), not to writing information down. *(Part B.)*
-2. **Money and health are recorded as Checking.** Replaces the 2026-11-03 rule that they wait unless an Admin switch is on. Paying never happens. *(Part B.)*
+2. **Money and health are recorded as Checking.** Replaces the 2026-11-03 rule that they wait unless an Admin switch is on. Paying never happens. *(Part B.)* **Changed 2026-11-21 (owner: "only auto approved and wait for review should be there"):** the setting has two choices, "Auto approved" (default: confirmed above the bar, Checking below it) and "Wait for review"; a stored "Checking" is read as "Auto approved".
 3. **Checking keeps its reminders.** A Checking entry reminds as usual, marked "not yet confirmed", instead of holding its reminders until someone confirms it. *(Part A.)* Admin switch: Settings → AI Assistant → "Remind about entries still Checking".
 4. **Every question has a deadline.** A question applies its stated default after 24 hours. Nothing waits more than 48 hours. *(Part A.)* Admin switch: Settings → AI Assistant → "Apply a question's default after a day".
 5. **Outside senders are trusted once.** *(Part B.)*
