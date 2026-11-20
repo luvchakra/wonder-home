@@ -3,7 +3,7 @@ import { describe, expect, it } from "vitest";
 import { resolveGaps } from "../homebrain/memory-resolve";
 import type { HouseholdContextItem } from "../context/types";
 import { endingFor } from "./deadlines";
-import { asHealthFilers, gateHealthSubject, healthFiledFor, mayFileForOthers, namedHealthSubject, type HealthMember } from "./health-filers";
+import { asHealthFilers, gateHealthSubject, healthFiledFor, healthSubjectFor, mayFileForOthers, namedHealthSubject, type HealthMember } from "./health-filers";
 import type { SubjectResolution } from "./resolve";
 
 const KUNAL = "00000000-0000-4000-8000-000000000001";
@@ -66,7 +66,9 @@ describe("Who may file health records for others (owner, 2026-11-20)", () => {
 
     const waiting = { status: "classified" as const, kind: "health_document" as const, readable: true, failureReason: null, rawText: "Blood test", retryCount: 0, retryRequestedAt: null, canReadAgain: true, senderMemberId: KUNAL, asked: new Set<string>(), minutesSinceTouched: 60, match: null, addable: true };
     expect(endingFor({ ...waiting, filedFor: UPASANA })).toEqual({ action: "file_for", memberId: UPASANA });
-    expect(endingFor({ ...waiting, filedFor: null })).toEqual({ action: "ask_add" });
+    expect(endingFor({ ...waiting, filedFor: null, healthSubject: "sender" })).toEqual({ action: "ask_add" });
+    // Not clearly the sender's (2026-11-20): "Who is this for?", never filed under the sender by default.
+    expect(endingFor({ ...waiting, filedFor: null })).toEqual({ action: "ask_health_for" });
     // Matched on record: never filed for anyone; the same one again is set aside as already on record (2026-11-20: no question).
     expect(endingFor({ ...waiting, match: "duplicate", filedFor: UPASANA }).action).toBe("already_recorded");
   });
@@ -81,5 +83,20 @@ describe("Who may file health records for others (owner, 2026-11-20)", () => {
     expect(filled?.basis).toBe("named_in_document");
     expect(resolveGaps({ ...input, text: "Report for Sunita", healthFiler: true }, memory).filled).toEqual([]);
     expect(resolveGaps({ ...input, text: "Reports for Upasana and Asmi", healthFiler: true }, memory).filled).toEqual([]);
+  });
+});
+
+describe("whose a health document is, for a sender not on the list (2026-11-20)", () => {
+  const of = (names: (string | null)[]) => healthSubjectFor({ senderMemberId: KUNAL, names, members: MEMBERS });
+  it("is the sender's only when the one household member it names is the sender", () => {
+    expect(of(["Kunal Mehta"])).toBe("sender");
+    expect(of(["Kunal", "Dr. Rao"])).toBe("sender");
+    expect(of(["Upasana"])).toBe("other");
+    expect(of(["Asmi"])).toBe("other");
+    expect(of(["Ramesh Gupta"])).toBe("other");
+    expect(of(["Kunal", "Upasana"])).toBe("other");
+    expect(of([])).toBe("unclear");
+    expect(of([null, " "])).toBe("unclear");
+    expect(healthSubjectFor({ senderMemberId: null, names: ["Kunal"], members: MEMBERS })).toBe("other");
   });
 });

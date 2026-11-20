@@ -93,6 +93,13 @@ export type EndingInput = {
    */
   filedFor?: string | null;
   /**
+   * Whose a waiting health document is, from its own words, for a sender not
+   * on that list (`health-filers.ts` `healthSubjectFor`): only "sender" is
+   * added on its own; "other" or "unclear" (or not known) asks the sender
+   * "Who is this for?" and is never filed for anyone by default.
+   */
+  healthSubject?: "sender" | "other" | "unclear";
+  /**
    * An Admin set this kind's area (money, or health) to "Wait for review": then
    * "Add this bill?" is asked. Otherwise it is added at once (2026-11-20).
    * Absent: not known, so the careful answer, asking, applies.
@@ -115,7 +122,7 @@ export const READ_AGAIN_GRACE_MINUTES = 60;
 
 export type Ending =
   /** Set aside now, with its reason. */
-  | { action: "set_aside"; reason: "not_household" | "unreadable" }
+  | { action: "set_aside"; reason: "not_household" | "unreadable" | "health_not_claimed" }
   /** Kept as a household note HomeTalk can find ("couldn't tell what it is"). */
   | { action: "note" }
   /** Read once more, another way (the job queue's read-again). */
@@ -130,6 +137,8 @@ export type Ending =
   | { action: "add" }
   /** "Add this bill?" (the owner, 2026-11-20: "record"), only under the Admin's "Wait for review": default Add after 24 h. */
   | { action: "ask_add" }
+  /** "Who is this for?" to its sender only: a health document that isn't clearly theirs (default: set aside, never filed). */
+  | { action: "ask_health_for" }
   /** Filed now for the member it names, marked Checking, with no question (an allowed sender's health document, the owner 2026-11-20). */
   | { action: "file_for"; memberId: string }
   /** "Update the existing bill?" (the owner, 2026-11-20): default Update, marked Checking; a cancellation's default keeps the record Checking. */
@@ -200,6 +209,12 @@ export function endingFor(item: EndingInput): Ending {
     // Checking with what is known. Only under the Admin's "Wait for review" is "Add this bill?" asked.
     // An allowed sender's health document naming another member: filed for them, never asked (the owner, 2026-11-20).
     if (item.kind === "health_document" && item.match === null && item.addable === true && item.filedFor) return { action: "file_for", memberId: item.filedFor };
+    // Anyone else's health document is added on its own only when its own words say it is the sender's: one
+    // naming someone else, or nobody, asks its sender "Who is this for?" and is never filed by default (2026-11-20).
+    if (item.kind === "health_document" && item.match === null && item.addable === true && item.healthSubject !== "sender") {
+      if (item.asked.has(HEALTH_FOR_SOURCE)) return { action: "wait" };
+      return item.senderMemberId ? { action: "ask_health_for" } : { action: "set_aside", reason: "health_not_claimed" };
+    }
     if (item.match === null && item.addable === true) {
       if (item.asked.has(ADD_SOURCE)) return { action: "wait" };
       // Several records, money recorded directly: each added now, as one would be (the 2026-11-20 review).
@@ -226,6 +241,8 @@ function afterReadAgain(item: EndingInput): Ending {
 
 /** The source of "Update the existing bill?" questions. */
 export const UPDATE_SOURCE = "homesend_update";
+/** The source of "Who is this for?" about a waiting health document that isn't clearly its sender's (2026-11-20). */
+export const HEALTH_FOR_SOURCE = "homesend_health_for";
 /** The source of "Add this bill?" questions. */
 export const ADD_SOURCE = "homesend_add";
 /** The source of the one question kept about a Checking entry: a money amount read with doubt (2026-11-20). */
@@ -239,7 +256,7 @@ export const AMOUNT_SOURCE = "homesend_amount";
 export const RETIRED_SOURCES: readonly string[] = ["homesend_waiting"];
 
 export type HomeSendQuestion = {
-  source: "homesend_check" | "homesend_waiting" | "homesend_resend" | typeof UPDATE_SOURCE | typeof ADD_SOURCE | typeof AMOUNT_SOURCE;
+  source: "homesend_check" | "homesend_waiting" | "homesend_resend" | typeof UPDATE_SOURCE | typeof ADD_SOURCE | typeof AMOUNT_SOURCE | typeof HEALTH_FOR_SOURCE;
   prompt: NeedsYouPrompt;
   answers: NeedsYouAnswer[];
   defaultAnswer: string;
@@ -349,6 +366,26 @@ export function addQuestion(input: { kind: HomeSendKind | null; title: string | 
   };
 }
 
+/**
+ * "Who is this for?" — a waiting health document whose own words don't say
+ * it is its sender's (it names someone else, or nobody), from a sender not on
+ * "Who may file health records for others". Asked of the sender only (the
+ * item is private to them). "It's mine" files it privately for them, marked
+ * Checking; Set aside archives it, restorable. If nobody answers in 24 hours
+ * it is set aside ("nobody said who it's for"): a default never fills who a
+ * health document is for, and nothing about it reaches anyone else.
+ */
+export function healthForQuestion(input: { title: string | null; dueOn: string | null; today: string }): HomeSendQuestion {
+  return {
+    source: HEALTH_FOR_SOURCE,
+    prompt: { code: "homesend.health_for", title: input.title, kind: "health_document" },
+    answers: [{ value: "for_me" }, { value: "set_aside" }],
+    defaultAnswer: "set_aside",
+    consequence: consequenceOf("health_document", input.dueOn, input.today),
+    dueOn: input.dueOn,
+  };
+}
+
 /** "Couldn't read what you sent — send it again?" No longer asked since 2026-11-20; kept so an older row still reads. */
 export function resendQuestion(input: { title: string | null }): HomeSendQuestion {
   return {
@@ -366,7 +403,7 @@ export type HomeSendAnswerEffect =
   | { effect: "confirm" }
   | { effect: "keep_checking" }
   | { effect: "undo" }
-  | { effect: "archive"; reason: "kept_as_note" | "removed_by_person" | "already_recorded" | "not_resent" }
+  | { effect: "archive"; reason: "kept_as_note" | "removed_by_person" | "already_recorded" | "not_resent" | "health_not_claimed" }
   /**
    * A matched record changed through its governed service: "update" (the new
    * amount or date), "cancel" (a person's tap only), or "flag" (kept as it is,
@@ -374,8 +411,8 @@ export type HomeSendAnswerEffect =
    * record is marked Checking ("not yet confirmed") — always for a default.
    */
   | { effect: "revise"; mode: "update" | "cancel" | "flag"; checking: boolean }
-  /** Added with what is known, marked Checking (`add-default.ts`). */
-  | { effect: "add" }
+  /** Added with what is known, marked Checking (`add-default.ts`); `forSender`: a health document its sender said is theirs. */
+  | { effect: "add"; forSender?: boolean }
   | { effect: "none" };
 
 /**
@@ -393,6 +430,12 @@ export function effectOf(source: string, answer: string, byDefault: boolean): Ho
   if (source === ADD_SOURCE) {
     if (answer === "add") return { effect: "add" };
     if (answer === "set_aside") return { effect: "archive", reason: "removed_by_person" };
+    return { effect: "none" };
+  }
+  if (source === HEALTH_FOR_SOURCE) {
+    // Only the sender's own tap files it, for them; the default sets it aside, never filed for anyone.
+    if (answer === "for_me") return byDefault ? { effect: "none" } : { effect: "add", forSender: true };
+    if (answer === "set_aside") return { effect: "archive", reason: byDefault ? "health_not_claimed" : "removed_by_person" };
     return { effect: "none" };
   }
   if (source === UPDATE_SOURCE) {

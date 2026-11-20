@@ -10,6 +10,7 @@ const TIDY_REASON_WORDS: Record<string, string> = {
   not_household: "Not household information (a web page, an ad or a newsletter)",
   kept_as_note: "Kept as a household note",
   not_resent: "Couldn't be read and wasn't sent again",
+  health_not_claimed: "A health document nobody said was theirs",
   removed_by_person: "Set aside by a person",
 };
 

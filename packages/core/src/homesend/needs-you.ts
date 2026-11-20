@@ -44,7 +44,7 @@ export async function applyHomeSendAnswer(
   if (effect.effect === "none") return "settled";
 
   // "Add this bill?" (the owner, 2026-11-20: "record"): added with what is known, marked Checking.
-  if (effect.effect === "add") return addWaitingItem(client, householdId, item.subjectId, { byDefault: how.byDefault, memberId: how.byDefault ? null : how.memberId, now: how.now });
+  if (effect.effect === "add") return addWaitingItem(client, householdId, item.subjectId, { byDefault: how.byDefault, memberId: how.byDefault ? null : how.memberId, now: how.now, forSender: effect.forSender === true });
 
   // "Update the existing bill?" (the owner, 2026-11-20): the governed update, cancel, or kept Checking.
   if (effect.effect === "revise") {

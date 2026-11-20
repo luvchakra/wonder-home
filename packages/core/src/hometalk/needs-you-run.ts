@@ -8,10 +8,10 @@ import { loadNothingWaits } from "../household/nothing-waits-repository";
 import { sweepNotices } from "../notifications/notices-sweep";
 import { localMoment } from "../notifications/timing";
 import { log } from "../observability/logger";
-import { addQuestion, ADD_SOURCE, AMOUNT_SOURCE, amountQuestion, checkQuestion, endingFor, resendQuestion, RETIRED_SOURCES, UPDATE_SOURCE, updateQuestion, type Ending, type EndingInput, type HomeSendQuestion } from "../homesend/deadlines";
+import { addQuestion, ADD_SOURCE, HEALTH_FOR_SOURCE, healthForQuestion, AMOUNT_SOURCE, amountQuestion, checkQuestion, endingFor, resendQuestion, RETIRED_SOURCES, UPDATE_SOURCE, updateQuestion, type Ending, type EndingInput, type HomeSendQuestion } from "../homesend/deadlines";
 import type { HomeSendExtraction, HomeSendFailureReason, HomeSendKind, HomeSendStatus } from "../homesend/items";
 import { addWaitingItem, canAdd } from "../homesend/add-default";
-import { healthFiledFor, type HealthMember } from "../homesend/health-filers";
+import { healthFiledFor, healthSubjectFor, type HealthMember } from "../homesend/health-filers";
 import { amountInDoubt, readCheckingState } from "../homesend/checking";
 import { endChecking } from "../homesend/needs-you";
 import type { CompletenessReading } from "../homesend/completeness";
@@ -262,7 +262,7 @@ async function endHouseholdItems(admin: SupabaseClient, householdId: string, now
   // A question whose thing was settled elsewhere (confirmed by an edit or "Mark paid", added, removed) is withdrawn.
   const stillWaiting = new Set(waitingRows.map((row) => row.id as string));
   const stillChecking = new Set(checkRows.map((row) => row.intake_id as string));
-  const { data: openRows } = await admin.from("needs_you_items").select("id, source, subject_id").eq("household_id", householdId).eq("status", "open").in("source", ["homesend_check", AMOUNT_SOURCE, ...RETIRED_SOURCES, UPDATE_SOURCE, ADD_SOURCE]).limit(500);
+  const { data: openRows } = await admin.from("needs_you_items").select("id, source, subject_id").eq("household_id", householdId).eq("status", "open").in("source", ["homesend_check", AMOUNT_SOURCE, ...RETIRED_SOURCES, UPDATE_SOURCE, ADD_SOURCE, HEALTH_FOR_SOURCE]).limit(500);
   // Also withdrawn: questions no longer asked (2026-11-20) — "send it again?", a waiting item's question, and
   // "Looks right?" while the Admin's switch is off. What they asked about ends below as their default would have.
   const retired = (source: string) => RETIRED_SOURCES.includes(source) || (source === "homesend_check" && !askChecking);
@@ -335,12 +335,15 @@ async function endHouseholdItems(admin: SupabaseClient, householdId: string, now
     const filedFor = kind === "health_document" && match === null && senderId
       ? healthFiledFor({ kind, sender: { memberId: senderId, memberType: typeOf(senderId) }, filers: await healthFilers(), names: [extracted?.subjectMemberName, ...(extracted?.people ?? [])], members: healthMembers })
       : null;
+    // A sender not on that list: whose it is, from its own words; only "sender" is added on its own (2026-11-20).
+    const healthSubject = kind === "health_document" && !filedFor ? healthSubjectFor({ senderMemberId: senderId, names: [extracted?.subjectMemberName, ...(extracted?.people ?? [])], members: healthMembers }) : undefined;
     const addable = match === null && canAdd({ kind, senderMemberId: (row.created_by_member_id as string | null) ?? null, extracted, records });
     const sender = askable((row.created_by_member_id as string | null) ?? null);
     const unread = row.status === "failed" || row.readable === false;
     const several = kind === "bill" && match === null && (records ?? []).filter((record) => (record as { domain?: string } | null)?.domain === "bill").length > 1;
     const ending: Ending = endingFor({
       filedFor,
+      healthSubject,
       match,
       ambiguous,
       severalNow: several ? await billsRecorded() : false,
@@ -412,13 +415,15 @@ async function endHouseholdItems(admin: SupabaseClient, householdId: string, now
         result.readAgain += 1;
         changed = true;
       }
-    } else if (ending.action === "ask_resend" || ending.action === "ask_update" || ending.action === "ask_add") {
+    } else if (ending.action === "ask_resend" || ending.action === "ask_update" || ending.action === "ask_add" || ending.action === "ask_health_for") {
       const dueOn = dayOf(row.due ?? row.document_date);
       const question = ending.action === "ask_resend"
         ? resendQuestion({ title })
         : ending.action === "ask_update"
           ? updateQuestion({ kind, title, dueOn, today, cancel: ending.cancel })
-          : addQuestion({ kind, title, dueOn, today });
+          : ending.action === "ask_health_for"
+            ? healthForQuestion({ title, dueOn, today })
+            : addQuestion({ kind, title, dueOn, today });
       const from = (row.created_by_member_id as string | null) ?? null;
       // Only an Admin can add or change a bill; a receipt or health document is its sender's to answer.
       const recipient = ending.action === "ask_update" || (ending.action === "ask_add" && kind === "bill") ? askableAdmin(from) : askable(from);
@@ -514,7 +519,7 @@ async function ask(admin: SupabaseClient, householdId: string, subjectId: string
   }
 }
 
-async function archive(admin: SupabaseClient, householdId: string, row: Row, reason: "not_household" | "unreadable" | "kept_as_note" | "already_recorded", now: Date): Promise<boolean> {
+async function archive(admin: SupabaseClient, householdId: string, row: Row, reason: "not_household" | "unreadable" | "kept_as_note" | "already_recorded" | "health_not_claimed", now: Date): Promise<boolean> {
   const { data, error } = await admin
     .from("home_send_items")
     .update({ status: "archived", archived_from: row.status, archived_at: now.toISOString(), archive_reason: reason, retry_requested_at: null })

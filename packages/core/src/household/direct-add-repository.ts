@@ -1,7 +1,7 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 
 import { savePolicy } from "./configuration-repository";
-import { asHealthFilers, HEALTH_FILERS_POLICY_NAME, pickableFiler } from "../homesend/health-filers";
+import { asHealthFilers, HEALTH_FILERS_POLICY_NAME, pickableFiler, type HealthMember } from "../homesend/health-filers";
 import { directAddFrom, NO_DIRECT_ADD, type DirectAdd, type DirectAddArea } from "../homesend/auto-add";
 import {
   asApprovalScope,
@@ -111,6 +111,13 @@ export async function saveRecordFirst(
  * owner 2026-11-20): the members an Admin picked; nobody when never picked or
  * when it can't be read (the careful answer: today's question stays).
  */
+/** The household's members as "Who is this for?" weighs a health document's names (`health-filers.ts` `healthSubjectFor`); null when unreadable. */
+export async function loadHealthMembers(supabase: SupabaseClient, householdId: string): Promise<HealthMember[] | null> {
+  const { data, error } = await supabase.from("household_members").select("id, display_name, member_type, status").eq("household_id", householdId).limit(200);
+  if (error) return null;
+  return ((data ?? []) as Record<string, unknown>[]).map((row) => ({ id: row.id as string, displayName: String(row.display_name ?? ""), memberType: (row.member_type as string | null) ?? null, status: (row.status as string | null) ?? null }));
+}
+
 export async function loadHealthFilers(supabase: SupabaseClient, householdId: string): Promise<string[]> {
   const { data, error } = await supabase
     .from("policies")

@@ -66,7 +66,7 @@ export async function answerNeedsYouAction(_previous: NeedsYouState, formData: F
       after(() => teachFromEntry(supabase, { householdId, itemId: item.subjectId, memberId: membership.memberId }).then(() => undefined));
     }
     // A confirmed entry's reminders lose "not yet confirmed" now, not at the next clock pass.
-    if (item.source === "homesend_check" || item.source === "homesend_update" || item.source === "homesend_add") after(() => reconcileRemindersNow(householdId, { force: true }));
+    if (item.source === "homesend_check" || item.source === "homesend_update" || item.source === "homesend_add" || item.source === "homesend_health_for") after(() => reconcileRemindersNow(householdId, { force: true }));
     // No revalidatePath: any revalidation in an action re-draws the page the tap came from, which would take the
     // row (and its "Done") away before it is read. The row says the outcome; every page showing the list renders
     // per request, so it is fresh on the next visit.
