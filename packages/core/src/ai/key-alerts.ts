@@ -56,20 +56,19 @@ export function keyFingerprint(apiKey: string): string {
 export const KEY_ORIGINS = ["platform_saved", "household", "household_voice", "tooling", "deployment_variable", "github_secret"] as const;
 export type KeyOrigin = (typeof KEY_ORIGINS)[number];
 
+/** This server's memory only (keys already live in it while a call is made); never stored, logged or sent. */
 const origins = new Map<string, KeyOrigin>();
-let lastNoted: { apiKey: string; origin: KeyOrigin } | null = null;
 
 /** Called by the one resolution (`model-key.ts`, `credentials.ts`) as it hands a key out. Cheap on repeat. */
 export function noteKeyOrigin(apiKey: string, origin: KeyOrigin): void {
-  if (lastNoted && lastNoted.apiKey === apiKey && lastNoted.origin === origin) return;
-  lastNoted = { apiKey, origin };
+  if (origins.get(apiKey) === origin) return;
   if (origins.size > 500) origins.clear();
-  origins.set(keyFingerprint(apiKey), origin);
+  origins.set(apiKey, origin);
 }
 
 /** Where a key came from, if the resolution handed it out on this server. */
 export function originOfKey(apiKey: string): KeyOrigin | null {
-  return origins.get(keyFingerprint(apiKey)) ?? null;
+  return origins.get(apiKey) ?? null;
 }
 
 type Recorder = {
@@ -131,7 +130,7 @@ export async function noteKeyFailure(apiKey: string, provider: ModelProvider, ki
     if (!db) return;
     const fingerprint = keyFingerprint(apiKey);
     lastResolved.delete(fingerprint);
-    const source = origins.get(fingerprint) ?? null;
+    const source = origins.get(apiKey) ?? null;
     const { error } = await db.rpc("record_ai_key_alert", { p_fingerprint: fingerprint, p_provider: provider, p_kind: kind, p_source: source });
     // Before migration 20261121000000 the function takes three arguments: record without the source.
     if (error && ["PGRST202", "42883"].includes((error as { code?: string }).code ?? "")) {
