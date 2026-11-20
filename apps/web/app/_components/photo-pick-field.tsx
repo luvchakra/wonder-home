@@ -10,6 +10,16 @@ import { shrinkPhoto } from "../_lib/shrink-photo";
 
 export type PhotoPickLabels = { add: string; change: string; remove: string; undo: string; tooLarge: string };
 
+/**
+ * Only a local preview (`blob:`, made here from the chosen file) or a signed
+ * storage address (`https:`) is ever put in an image's src; anything else
+ * shows no picture. A chosen file is untrusted and is only ever an image.
+ */
+function imageSource(url: string | null): string | null {
+  if (!url) return null;
+  return url.startsWith("blob:") || url.startsWith("https://") ? url : null;
+}
+
 /** What a photo may still weigh after shrinking (the server refuses more). */
 const MAX_BYTES = 5 * 1024 * 1024;
 
@@ -70,7 +80,7 @@ export function PhotoPickField({
     setRemoved(Boolean(currentUrl));
   }
 
-  const shown = preview ?? (removed ? null : currentUrl);
+  const shown = imageSource(preview ?? (removed ? null : currentUrl));
 
   return (
     <div className="space-y-1">
