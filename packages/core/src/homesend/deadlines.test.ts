@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { checkQuestion, effectOf, endingFor, notHouseholdInformation, resendQuestion, waitingQuestion, type EndingInput } from "./deadlines";
+import { checkQuestion, effectOf, endingFor, notHouseholdInformation, resendQuestion, updateQuestion, waitingQuestion, type EndingInput } from "./deadlines";
 
 const PAGE = `Home | About us | Contact us | Blog
 Accept all cookies to continue. Read our Privacy Policy and Terms of Service.
@@ -70,6 +70,21 @@ describe("every item ends as something", () => {
     for (const kind of ["bill", "receipt", "health_document"] as const) expect(endingFor({ ...base, kind })).toEqual({ action: "wait" });
   });
 
+  it("asks about a waiting bill or health document that matches one on record, once (owner, 2026-11-20)", () => {
+    const bill = { ...base, kind: "bill" as const };
+    expect(endingFor({ ...bill, match: "update" })).toEqual({ action: "ask_update", cancel: false });
+    expect(endingFor({ ...bill, match: "cancellation" })).toEqual({ action: "ask_update", cancel: true });
+    expect(endingFor({ ...bill, match: "update", asked: new Set(["homesend_update"]) })).toEqual({ action: "wait" });
+    expect(endingFor({ ...base, kind: "health_document", match: "duplicate" })).toEqual({ action: "ask", duplicate: true });
+    expect(endingFor({ ...bill, match: "duplicate", asked: new Set(["homesend_waiting"]) })).toEqual({ action: "wait" });
+    // Nothing on record: recorded as Checking where the household records bills directly; else it waits, never a note.
+    expect(endingFor({ ...bill, match: null, recordable: true })).toEqual({ action: "record" });
+    expect(endingFor({ ...bill, match: null, recordable: false })).toEqual({ action: "wait" });
+    // Not looked (or a conflict): never recorded on a guess.
+    expect(endingFor({ ...bill, recordable: true })).toEqual({ action: "wait" });
+    expect(endingFor({ ...base, kind: "health_document", match: null, recordable: true })).toEqual({ action: "wait" });
+  });
+
   it("asks a waiting item's one question once", () => {
     expect(endingFor(base)).toEqual({ action: "ask" });
     expect(endingFor({ ...base, asked: new Set(["homesend_waiting"]) })).toEqual({ action: "wait" });
@@ -94,6 +109,27 @@ describe("questions and their defaults", () => {
     expect(waitingQuestion({ kind: "event", title: "Annual Day", dueOn: null, today, duplicate: false }).defaultAnswer).toBe("note");
     expect(waitingQuestion({ kind: "event", title: "Annual Day", dueOn: null, today, duplicate: true }).defaultAnswer).toBe("keep_existing");
     expect(resendQuestion({ title: null }).defaultAnswer).toBe("set_aside");
+  });
+
+  it("updates a matched bill by default, marked Checking, and never cancels by default", () => {
+    const update = updateQuestion({ kind: "bill", title: "Electricity", dueOn: "2026-11-21", today, cancel: false });
+    expect(update.source).toBe("homesend_update");
+    expect(update.prompt.code).toBe("homesend.update");
+    expect(update.answers.map((answer) => answer.value)).toEqual(["update", "keep_as_is"]);
+    expect(update.defaultAnswer).toBe("update");
+    expect(update.consequence).toBe(3);
+    const cancel = updateQuestion({ kind: "bill", title: "Gym", dueOn: null, today, cancel: true });
+    expect(cancel.answers.map((answer) => answer.value)).toEqual(["cancel_it", "keep_as_is"]);
+    expect(cancel.defaultAnswer).toBe("keep_checking");
+
+    expect(effectOf("homesend_update", "update", true)).toEqual({ effect: "revise", mode: "update", checking: true });
+    expect(effectOf("homesend_update", "update", false)).toEqual({ effect: "revise", mode: "update", checking: false });
+    expect(effectOf("homesend_update", "keep_as_is", true)).toEqual({ effect: "archive", reason: "already_recorded" });
+    expect(effectOf("homesend_update", "keep_checking", true)).toEqual({ effect: "revise", mode: "flag", checking: true });
+    expect(effectOf("homesend_update", "cancel_it", false)).toEqual({ effect: "revise", mode: "cancel", checking: false });
+    // Even handed "cancel" as a default, it only keeps the record Checking.
+    expect(effectOf("homesend_update", "cancel_it", true)).toEqual({ effect: "revise", mode: "flag", checking: true });
+    expect(effectOf("homesend_update", "pay", true)).toEqual({ effect: "none" });
   });
 
   it("maps every answer to what it does, the default never undoing anything", () => {

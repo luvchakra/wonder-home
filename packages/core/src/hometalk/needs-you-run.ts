@@ -8,8 +8,10 @@ import { loadNothingWaits } from "../household/nothing-waits-repository";
 import { sweepNotices } from "../notifications/notices-sweep";
 import { localMoment } from "../notifications/timing";
 import { log } from "../observability/logger";
-import { checkQuestion, endingFor, resendQuestion, waitingQuestion, type Ending, type HomeSendQuestion } from "../homesend/deadlines";
-import type { HomeSendFailureReason, HomeSendKind, HomeSendStatus } from "../homesend/items";
+import { checkQuestion, endingFor, resendQuestion, UPDATE_SOURCE, updateQuestion, waitingQuestion, type Ending, type EndingInput, type HomeSendQuestion } from "../homesend/deadlines";
+import type { HomeSendExtraction, HomeSendFailureReason, HomeSendKind, HomeSendStatus } from "../homesend/items";
+import { matchOnRecord, recordWaitingBill } from "../homesend/matched-update";
+import { loadRecordFirst } from "../household/direct-add-repository";
 import { enqueueClassifyRetry, enqueueReread } from "../homesend/retry-queue";
 
 /**
@@ -29,6 +31,11 @@ import { enqueueClassifyRetry, enqueueReread } from "../homesend/retry-queue";
  *      household note, read again once, or asked about once, with a default;
  *   4. asks one "Looks right?" for every entry still Checking.
  *
+ * A waiting bill or health document that matches one already on record is
+ * asked about too (the owner, 2026-11-20): "Update the existing bill?",
+ * default Update, marked Checking; the same one again, default "already on
+ * record". Record first never adds those, so without this they waited forever.
+ *
  * Idempotent: one open question per thing per source, and every write is a
  * compare-and-swap on what was read. Bounded per call. Never throws for one
  * household. Questions are asked from when the thing was sent, so the first
@@ -42,6 +49,10 @@ type Row = Record<string, unknown>;
 const DEFAULTS_PER_RUN = 200;
 /** Items read per household per call. */
 const ITEMS_PER_HOUSEHOLD = 300;
+/** Waiting bills and health documents checked against what is on record, per household per call. */
+const MATCHES_PER_HOUSEHOLD = 40;
+/** The kinds record first leaves waiting when they match a record on file. */
+const MATCHED_KINDS: ReadonlySet<string> = new Set(["bill", "health_document"]);
 
 export type DeadlinesResult = {
   ready: boolean;
@@ -52,12 +63,14 @@ export type DeadlinesResult = {
   notes: number;
   readAgain: number;
   asked: number;
+  /** Waiting bills recorded as Checking (sent before record first, matching nothing on record). */
+  recorded: number;
   households: number;
 };
 
 export type DeadlinesOptions = { now?: Date; limit?: number; householdIds?: readonly string[]; sweep?: boolean };
 
-const EMPTY: DeadlinesResult = { ready: false, defaulted: 0, expired: 0, proposalsClosed: 0, setAside: 0, notes: 0, readAgain: 0, asked: 0, households: 0 };
+const EMPTY: DeadlinesResult = { ready: false, defaulted: 0, expired: 0, proposalsClosed: 0, setAside: 0, notes: 0, readAgain: 0, asked: 0, recorded: 0, households: 0 };
 
 export async function runNeedsYouDeadlines(admin: SupabaseClient, options: DeadlinesOptions = {}): Promise<DeadlinesResult> {
   const now = options.now ?? new Date();
@@ -178,7 +191,7 @@ async function candidateHouseholds(admin: SupabaseClient): Promise<string[]> {
 }
 
 const ITEM_COLUMNS =
-  "id, status, classified_kind, raw_text, file_path, source_url, failure_reason, retry_count, retry_requested_at, created_by_member_id, created_at, updated_at, title:extracted->>title, due:extracted->>dueDate, document_date:extracted->>documentDate, readable:understanding->readable";
+  "id, status, classified_kind, raw_text, file_path, source_url, failure_reason, retry_count, retry_requested_at, created_by_member_id, created_at, updated_at, title:extracted->>title, due:extracted->>dueDate, document_date:extracted->>documentDate, readable:understanding->readable, extracted, change:understanding->>change";
 
 /** What a domain table's entry is, for its question's words and ranking. */
 const DOMAIN_KIND: Record<string, string> = {
@@ -193,11 +206,12 @@ const DOMAIN_KIND: Record<string, string> = {
 };
 
 async function endHouseholdItems(admin: SupabaseClient, householdId: string, now: Date, result: DeadlinesResult): Promise<boolean> {
-  const [household, members, waiting, unconfirmed] = await Promise.all([
+  const [household, members, waiting, unconfirmed, roles] = await Promise.all([
     admin.from("households").select("timezone").eq("id", householdId).maybeSingle(),
     admin.from("household_members").select("id, member_type, status, profile_id").eq("household_id", householdId).limit(200),
     admin.from("home_send_items").select(ITEM_COLUMNS).eq("household_id", householdId).in("status", ["received", "classified", "failed"]).order("created_at", { ascending: true }).limit(ITEMS_PER_HOUSEHOLD),
     admin.from("homesend_changes").select("intake_id, domain, created_at").eq("household_id", householdId).eq("confirmation_state", "unconfirmed").is("undone_at", null).order("created_at", { ascending: true }).limit(ITEMS_PER_HOUSEHOLD),
+    admin.from("household_roles").select("member_id").eq("household_id", householdId).in("role", ["head", "administrator"]).limit(50),
   ]);
   if (waiting.error) throw new Error(`deadlines read failed: ${waiting.error.code ?? "unknown"}`);
   const timeZone = ((household.data?.timezone as string | null) || "UTC") as string;
@@ -205,6 +219,9 @@ async function endHouseholdItems(admin: SupabaseClient, householdId: string, now
   // Who may be asked by name: an active adult with an account. Anyone else's question goes to the Admins.
   const adults = new Set(((members.data ?? []) as Row[]).filter((row) => row.member_type === "adult" && row.status === "active" && row.profile_id).map((row) => row.id as string));
   const askable = (memberId: string | null) => (memberId && adults.has(memberId) ? memberId : null);
+  // Only an Admin can change a bill (Bills' own rule), so "Update the existing bill?" goes to its sender only when they are one.
+  const admins = new Set(((roles.data ?? []) as Row[]).map((row) => row.member_id as string));
+  const askableAdmin = (memberId: string | null) => (askable(memberId) && admins.has(memberId!) ? memberId : null);
 
   const waitingRows = (waiting.data ?? []) as Row[];
   const checkRows = (unconfirmed.data ?? []) as Row[];
@@ -219,16 +236,38 @@ async function endHouseholdItems(admin: SupabaseClient, householdId: string, now
   // A question whose thing was settled elsewhere (confirmed by an edit or "Mark paid", added, removed) is withdrawn.
   const stillWaiting = new Set(waitingRows.map((row) => row.id as string));
   const stillChecking = new Set(checkRows.map((row) => row.intake_id as string));
-  const { data: openRows } = await admin.from("needs_you_items").select("id, source, subject_id").eq("household_id", householdId).eq("status", "open").in("source", ["homesend_check", "homesend_waiting", "homesend_resend"]).limit(500);
+  const { data: openRows } = await admin.from("needs_you_items").select("id, source, subject_id").eq("household_id", householdId).eq("status", "open").in("source", ["homesend_check", "homesend_waiting", "homesend_resend", UPDATE_SOURCE]).limit(500);
   const settled = ((openRows ?? []) as Row[]).filter((row) => (row.source === "homesend_check" ? !stillChecking.has(row.subject_id as string) : !stillWaiting.has(row.subject_id as string)));
   if (settled.length > 0) {
     const { data: withdrawn } = await admin.from("needs_you_items").update({ status: "withdrawn", resolved_at: now.toISOString() }).in("id", settled.map((row) => row.id as string)).eq("status", "open").select("id");
     if ((withdrawn ?? []).length > 0) changed = true;
   }
 
+  let matched = 0;
+  // Whether this household records bills directly (record first's "Money and health entries"); read once, and only when a bill waits.
+  let recordsBills: Promise<boolean> | null = null;
+  const billsRecorded = () => (recordsBills ??= loadRecordFirst(admin, householdId).then((settings) => settings.directAdd.money).catch(() => false));
   for (const row of waitingRows) {
     const id = row.id as string;
+    const kind = (row.classified_kind as HomeSendKind | null) ?? null;
+    // Undefined: not looked; null: looked, nothing on record.
+    let match: EndingInput["match"] = undefined;
+    // Only what record first leaves waiting, not yet asked about: is it already on record?
+    const alreadyAsked = asked.get(id);
+    if (kind && MATCHED_KINDS.has(kind) && row.status === "classified" && row.readable !== false && !alreadyAsked?.has(UPDATE_SOURCE) && !alreadyAsked?.has("homesend_waiting") && matched < MATCHES_PER_HOUSEHOLD) {
+      matched += 1;
+      try {
+        const found = await matchOnRecord(admin, householdId, { kind, extracted: (row.extracted as Partial<HomeSendExtraction> | null) ?? null, change: (row.change as string | null) ?? null, createdAt: row.created_at as string }, { timezone: timeZone, now });
+        const type = found?.proposal.type;
+        match = type === "update" || type === "cancellation" || type === "duplicate" ? type : null;
+        if (found && !match) match = undefined;
+      } catch {
+        // Not able to check is never "on record": it waits for the next pass.
+      }
+    }
     const ending: Ending = endingFor({
+      match,
+      recordable: kind === "bill" && match === null ? await billsRecorded() : false,
       status: row.status as HomeSendStatus,
       kind: (row.classified_kind as HomeSendKind | null) ?? null,
       readable: typeof row.readable === "boolean" ? row.readable : null,
@@ -249,16 +288,29 @@ async function endHouseholdItems(admin: SupabaseClient, householdId: string, now
         if (ending.action === "note") result.notes += 1;
         else result.setAside += 1;
       }
+    } else if (ending.action === "record") {
+      try {
+        if ((await recordWaitingBill(admin, householdId, id, now)) === "done") {
+          result.recorded += 1;
+          changed = true;
+        }
+      } catch {
+        // Not written: it stays waiting, and the next pass tries again.
+      }
     } else if (ending.action === "read_again") {
       if (await readAgain(admin, householdId, row, now)) {
         result.readAgain += 1;
         changed = true;
       }
-    } else if (ending.action === "ask_resend" || ending.action === "ask") {
+    } else if (ending.action === "ask_resend" || ending.action === "ask" || ending.action === "ask_update") {
+      const dueOn = dayOf(row.due ?? row.document_date);
       const question = ending.action === "ask_resend"
         ? resendQuestion({ title })
-        : waitingQuestion({ kind: (row.classified_kind as HomeSendKind | null) ?? null, title, dueOn: dayOf(row.due ?? row.document_date), today, duplicate: false });
-      const recipient = ending.action === "ask_resend" ? askable((row.created_by_member_id as string | null) ?? null) : askable((row.created_by_member_id as string | null) ?? null);
+        : ending.action === "ask_update"
+          ? updateQuestion({ kind, title, dueOn, today, cancel: ending.cancel })
+          : waitingQuestion({ kind, title, dueOn, today, duplicate: ending.duplicate === true });
+      const sender = (row.created_by_member_id as string | null) ?? null;
+      const recipient = ending.action === "ask_update" ? askableAdmin(sender) : askable(sender);
       if (await ask(admin, householdId, id, "home_send_items", question, recipient, new Date(row.created_at as string))) {
         result.asked += 1;
         changed = true;

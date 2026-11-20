@@ -72,6 +72,18 @@ export type EndingInput = {
   asked: ReadonlySet<string>;
   /** Minutes since it last changed: a read-again gets an hour to finish before the sender is asked. */
   minutesSinceTouched: number;
+  /**
+   * What it matched on record, for a bill, receipt or health document
+   * (`reconcile.ts`): newer details for it ("update"), word it is called off
+   * ("cancellation"), or the same one again ("duplicate"). Absent or null:
+   * nothing on record, or not looked.
+   */
+  match?: "update" | "cancellation" | "duplicate" | null;
+  /**
+   * A bill the household records directly (its "Money and health entries"
+   * setting isn't "Wait for review"), with what it can't be added without.
+   */
+  recordable?: boolean;
 };
 
 /** How long a read-again has before the sender is asked to send it again. */
@@ -86,8 +98,12 @@ export type Ending =
   | { action: "read_again" }
   /** Ask the sender once to send it again; set aside if nobody does in 24 hours. */
   | { action: "ask_resend" }
-  /** Ask its one question, with a default. */
-  | { action: "ask" }
+  /** Recorded now as Checking, as record first would have (a bill sent before 14 Nov that matches nothing). */
+  | { action: "record" }
+  /** Ask its one question, with a default; `duplicate`: it looks like something already on record. */
+  | { action: "ask"; duplicate?: true }
+  /** "Update the existing bill?" (the owner, 2026-11-20): default Update, marked Checking; a cancellation's default keeps the record Checking. */
+  | { action: "ask_update"; cancel: boolean }
   /** Nothing to do yet (a read-again is queued, or its question is open). */
   | { action: "wait" };
 
@@ -126,7 +142,18 @@ export function endingFor(item: EndingInput): Ending {
   if (!item.kind || item.kind === "unknown") return { action: "note" };
   // A bill, receipt or health document waiting on the Admin's switch is never made a note by default (it
   // would lose its reminder): decision 2 (part B, "Record first") records it as Checking instead.
-  if (WAITS_FOR_RECORD_FIRST.has(item.kind)) return { action: "wait" };
+  if (WAITS_FOR_RECORD_FIRST.has(item.kind)) {
+    // Record first never adds one that matches a record already on file, so it is asked about here
+    // (the owner, 2026-11-20: "update"): a newer amount or date updates the record, marked Checking.
+    if (item.match === "update" || item.match === "cancellation") {
+      return item.asked.has(UPDATE_SOURCE) ? { action: "wait" } : { action: "ask_update", cancel: item.match === "cancellation" };
+    }
+    // The same one again: the default keeps what is on record and sets this copy aside as "already on record".
+    if (item.match === "duplicate") return item.asked.has("homesend_waiting") ? { action: "wait" } : { action: "ask", duplicate: true };
+    // Nothing on record and the household records bills directly: what record first would have done (decision 2).
+    if (item.kind === "bill" && item.recordable === true && item.match === null) return { action: "record" };
+    return { action: "wait" };
+  }
   if (item.asked.has("homesend_waiting")) return { action: "wait" };
   return { action: "ask" };
 }
@@ -142,8 +169,11 @@ function afterReadAgain(item: EndingInput): Ending {
 
 // --- 3. The questions and their defaults -----------------------------------
 
+/** The source of "Update the existing bill?" questions. */
+export const UPDATE_SOURCE = "homesend_update";
+
 export type HomeSendQuestion = {
-  source: "homesend_check" | "homesend_waiting" | "homesend_resend";
+  source: "homesend_check" | "homesend_waiting" | "homesend_resend" | typeof UPDATE_SOURCE;
   prompt: NeedsYouPrompt;
   answers: NeedsYouAnswer[];
   defaultAnswer: string;
@@ -190,6 +220,29 @@ export function waitingQuestion(input: { kind: HomeSendKind | null; title: strin
   };
 }
 
+/**
+ * "Update the existing bill?" — a bill, receipt or health document whose
+ * reading matches one already on record with a newer amount or date (the
+ * owner, 2026-11-20: "update"). Update applies the new amount or date through
+ * the governed update a person's "Update" uses, with Undo; Keep as is sets the
+ * new copy aside as "already on record". If nobody answers in 24 hours it is
+ * updated and marked Checking ("check before paying"), its reminders on.
+ *
+ * A cancellation is offered as Cancel it / Keep as is, but its default never
+ * cancels: the record is kept, marked Checking, with a note that a message
+ * said it was called off. Nothing is ever paid or deleted.
+ */
+export function updateQuestion(input: { kind: HomeSendKind | null; title: string | null; dueOn: string | null; today: string; cancel: boolean }): HomeSendQuestion {
+  return {
+    source: UPDATE_SOURCE,
+    prompt: { code: input.cancel ? "homesend.update.cancel" : "homesend.update", title: input.title, kind: input.kind },
+    answers: input.cancel ? [{ value: "cancel_it" }, { value: "keep_as_is" }] : [{ value: "update" }, { value: "keep_as_is" }],
+    defaultAnswer: input.cancel ? "keep_checking" : "update",
+    consequence: consequenceOf(input.kind, input.dueOn, input.today),
+    dueOn: input.dueOn,
+  };
+}
+
 /** "Couldn't read what you sent — send it again?" Asked once, of the sender; the default sets it aside. */
 export function resendQuestion(input: { title: string | null }): HomeSendQuestion {
   return {
@@ -208,6 +261,13 @@ export type HomeSendAnswerEffect =
   | { effect: "keep_checking" }
   | { effect: "undo" }
   | { effect: "archive"; reason: "kept_as_note" | "removed_by_person" | "already_recorded" | "not_resent" }
+  /**
+   * A matched record changed through its governed service: "update" (the new
+   * amount or date), "cancel" (a person's tap only), or "flag" (kept as it is,
+   * marked Checking with a note: a cancellation's default). `checking`: the
+   * record is marked Checking ("not yet confirmed") — always for a default.
+   */
+  | { effect: "revise"; mode: "update" | "cancel" | "flag"; checking: boolean }
   | { effect: "none" };
 
 /**
@@ -220,6 +280,15 @@ export function effectOf(source: string, answer: string, byDefault: boolean): Ho
     if (answer === "looks_right") return { effect: "confirm" };
     if (answer === "keep_checking") return { effect: "keep_checking" };
     if (answer === "not_right") return { effect: "undo" };
+    return { effect: "none" };
+  }
+  if (source === UPDATE_SOURCE) {
+    // A person's Update is theirs and confirmed; the default's is marked Checking.
+    if (answer === "update") return { effect: "revise", mode: "update", checking: byDefault };
+    // A default never cancels or deletes: only a person's own tap does.
+    if (answer === "cancel_it") return byDefault ? { effect: "revise", mode: "flag", checking: true } : { effect: "revise", mode: "cancel", checking: false };
+    if (answer === "keep_checking") return { effect: "revise", mode: "flag", checking: true };
+    if (answer === "keep_as_is") return { effect: "archive", reason: "already_recorded" };
     return { effect: "none" };
   }
   if (source === "homesend_waiting" || source === "homesend_resend") {

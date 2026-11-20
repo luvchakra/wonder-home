@@ -212,6 +212,10 @@ export type HomeSendCase = CaseBase & {
     senderIsMember?: boolean;
     /** The waiting item looks like something already on record. */
     duplicate?: boolean;
+    /** A waiting bill or health document matched on record (`reconcile.ts`): newer details, called off, or the same one. */
+    match?: "update" | "cancellation" | "duplicate" | null;
+    /** The household records bills directly ("Money and health entries" not "Wait for review"). */
+    recordable?: boolean;
   };
   tidy?: {
     today: string;
