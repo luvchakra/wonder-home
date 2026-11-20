@@ -8,6 +8,7 @@ import { log } from "@wonderhome/core/observability/logger";
 import { resultMessage, RUN_ACTIONS, type RunActionId } from "@wonderhome/core/platform/performance-actions";
 
 import { confirmStaffPassword } from "../../_lib/platform-step-up";
+import { stepUpRefusal } from "../../_lib/platform-step-up-rules";
 import { platformStaff } from "../../_lib/platform-staff";
 
 /**
@@ -62,7 +63,7 @@ export async function runPerformanceAction(previous: PerformanceActionState, for
       log.warn("platform performance action refused at step-up", { event: "platform_perf_step_up_refused", action, reason: check, allow: ["event", "action", "reason"] });
       return answer({
         tone: "risk",
-        message: check === "limited" ? "Too many attempts. Wait a moment." : check === "unavailable" ? "We could not check your password just now. Nothing was run." : "That password did not match. Nothing was run.",
+        message: stepUpRefusal(check).replace("Nothing was changed.", "Nothing was run."),
       });
     }
   }

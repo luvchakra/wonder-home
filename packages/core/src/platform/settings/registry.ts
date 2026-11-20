@@ -1,5 +1,7 @@
 import { z } from "zod";
 
+import { cleanRazorpayKeyId, cleanRazorpayKeySecret, type CleanedKey } from "./razorpay-keys";
+
 /**
  * Every setting WonderHome's staff can change without Vercel (owner,
  * 2026-11-07: "Don't have a config in Vercel unless absolutely necessary").
@@ -63,6 +65,14 @@ const onOff = [
   { value: "on", label: "On" },
   { value: "off", label: "Off" },
 ] as const;
+/** A schema from a cleaner: its value on success, its whole sentence on failure. */
+const cleaned = (clean: (raw: string) => CleanedKey) =>
+  z.string().transform((raw, ctx) => {
+    const result = clean(raw);
+    if (result.ok) return result.value;
+    ctx.addIssue({ code: "custom", message: result.message });
+    return z.NEVER;
+  });
 const secret = (min = 8, max = 4096) => z.string().trim().min(min, `must be at least ${min} characters`).max(max).regex(/^\S+$/, "must not contain spaces");
 
 const entries = [
@@ -508,9 +518,9 @@ const entries = [
     group: "billing",
     kind: "config",
     input: { type: "text" },
-    schema: text(60).regex(/^rzp_(live|test)_[A-Za-z0-9]+$/, "starts with rzp_live_ or rzp_test_"),
+    schema: cleaned(cleanRazorpayKeyId),
     defaultValue: null,
-    description: "Razorpay's public key id. The webhook secret stays in Vercel.",
+    description: "Razorpay's \"Key Id\" (\"Test API Key\" in test mode), rzp_test_… or rzp_live_…. The webhook secret stays in Vercel.",
     editableBy: "owner",
   },
   {
@@ -519,9 +529,9 @@ const entries = [
     group: "billing",
     kind: "secret",
     input: { type: "text" },
-    schema: secret(16),
+    schema: cleaned(cleanRazorpayKeySecret),
     defaultValue: null,
-    description: "The secret half of the Razorpay key.",
+    description: "Razorpay's \"Key Secret\" (\"Test Key Secret\" in test mode): 24 letters and numbers.",
     editableBy: "owner",
   },
   {
@@ -623,7 +633,11 @@ export type ValidatedValue = { ok: true; value: string } | { ok: false; message:
  */
 export function validateSetting(entry: SettingDefinition, raw: string): ValidatedValue {
   const parsed = entry.schema.safeParse(raw);
-  if (!parsed.success) return { ok: false, message: `${entry.label} ${parsed.error.issues[0]?.message ?? "is not valid"}.` };
+  if (!parsed.success) {
+    const issue = parsed.error.issues[0]?.message ?? "is not valid";
+    // A cleaner's message is already a whole sentence; a schema's is a phrase after the label.
+    return { ok: false, message: /^[A-Z]/.test(issue) ? issue : `${entry.label} ${issue}.` };
+  }
   return { ok: true, value: parsed.data };
 }
 
