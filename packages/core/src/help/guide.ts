@@ -189,8 +189,8 @@ const SECTIONS: readonly SectionShape[] = [
   {
     id: "plan",
     group: "Your household",
-    updated: "2026-10-17",
-    keywords: ["plan", "subscription", "pro", "max", "free", "price", "upgrade", "downgrade", "billing", "invoice", "trial"],
+    updated: "2026-11-20",
+    keywords: ["plan", "subscription", "pro", "max", "free", "price", "upgrade", "downgrade", "billing", "invoice", "trial", "razorpay", "upi", "receipt", "renewal", "cancel", "payment failed"],
   },
   {
     id: "ai-autonomy",

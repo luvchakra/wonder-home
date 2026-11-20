@@ -151,3 +151,22 @@ describe("saving a plan", () => {
     vi.doUnmock("../lib/platform-cache");
   });
 });
+
+describe("marking a plan paid", () => {
+  it("says what it means for households, in both directions", () => {
+    const [on] = diffPlan(pro, edit({ requiresPayment: true }));
+    expect(on).toMatchObject({ field: "requires_payment", from: false, to: true });
+    expect(on!.line).toMatch(/only after the payment provider confirms a payment/);
+    const [off] = diffPlan({ ...pro, requiresPayment: true }, edit({ requiresPayment: false }));
+    expect(off!.line).toMatch(/Free during early access/);
+    // Left out, it is not a change.
+    expect(diffPlan(pro, edit())).toEqual([]);
+  });
+
+  it("is refused while a price can't be bought through a live provider, and writes nothing", async () => {
+    const { client, writes } = fakeAdmin(pro);
+    await expect(savePlan(client, owner, "pro", edit({ requiresPayment: true }), { liveProviders: [] })).rejects.toThrow(/Link every price/);
+    await expect(savePlan(client, owner, "pro", edit({ requiresPayment: true, monthly: "349" }), { liveProviders: ["razorpay"] })).rejects.toThrow(/Save the new prices/);
+    expect(writes).toEqual([]);
+  });
+});

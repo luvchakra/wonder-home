@@ -383,7 +383,7 @@ export const helpEs: AreaCatalog<typeof helpEn> = {
     "Durante el acceso anticipado, cambiar de plan es gratis y no se cobra nada. Los precios se muestran por mes o por año para que sepas qué esperar más adelante.",
   "help.guide.plan.body.3":
     "Algo que no forma parte de tu plan lo dice allí donde aparecería, en lugar de ofrecer un botón que no hace nada. Si una función forma parte de una prueba, Ajustes te lo indica.",
-  "help.guide.plan.body.4": "Cuando empiecen los planes de pago, pagarás en la propia página del proveedor de pagos —WonderHome nunca ve tu tarjeta— y Ajustes → Tu plan → Facturación guarda cada pago y cada factura. Una cancelación o el paso a un plan menor espera hasta el final del periodo que pagaste.",
+  "help.guide.plan.body.4": "Cuando un plan pase a ser de pago, elegirlo abrirá la ventana de pago de Razorpay dentro de WonderHome — UPI, tarjetas, banca en línea o monederos —, mensual o anual, con renovación automática. WonderHome nunca ve tu tarjeta ni tu PIN de UPI, y el plan cambia solo cuando Razorpay confirma el pago. Si una renovación no se completa, conservas el plan mientras Razorpay lo reintenta y te envía un enlace de pago por correo. En Settings → Your plan → Billing quedan cada pago y cada recibo, y “Cancelar al final del periodo” detiene el próximo cargo: el plan sigue hasta que termine el periodo pagado. Para pasar a otro plan de pago, cancela antes el actual al final del periodo.",
 
   "help.guide.ai-autonomy.title": "Cuánto puede hacer WonderHome por su cuenta",
   "help.guide.ai-autonomy.summary": "Dos niveles, fijados por responsabilidad, y los eliges tú.",

@@ -689,6 +689,21 @@ export function buildOpenApiDocument(): Json {
           },
         },
       },
+      "/platform-admin/prices/{priceId}/link": {
+        parameters: [{ name: "priceId", in: "path", required: true, schema: { type: "string", format: "uuid" } }],
+        post: {
+          summary: "Create or link the payment provider's plan for one of our prices",
+          description:
+            "Body { provider: 'razorpay', ref? }. Without `ref` the provider's plan is created from our price (amount, currency, interval); with `ref` the plan is read back from the provider and linked only when it bills exactly our price. Writes `payment_provider_plans` (service role only) and the platform audit log. Platform owner only (`plans.edit`). Refused while the provider is not configured.",
+          responses: {
+            "200": { description: "The price, the provider, its plan id, and whether it was created" },
+            "400": { $ref: "#/components/responses/BadRequest" },
+            "403": { $ref: "#/components/responses/Forbidden" },
+            "404": { $ref: "#/components/responses/NotFound" },
+            "409": { description: "The provider isn't configured, or the pasted plan bills a different amount, currency or interval" },
+          },
+        },
+      },
       "/platform-admin/plans/{planKey}/policies": {
         parameters: [{ name: "planKey", in: "path", required: true, schema: { type: "string" } }],
         get: {

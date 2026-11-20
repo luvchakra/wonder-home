@@ -117,7 +117,9 @@ export async function POST(request: Request, { params }: Params) {
           returnUrl: new URL("/settings/plan/confirmed", request.url).toString(),
           customerEmail: user.email ?? null,
         });
-        return { checkout: { url: checkout.url, reused: checkout.reused, provider: checkout.provider } };
+        // Razorpay opens in place (Checkout with the subscription id and the
+        // publishable key id); `url` is its hosted page, the fallback.
+        return { checkout: { url: checkout.url, reused: checkout.reused, provider: checkout.provider, client: checkout.client ?? null } };
       }
       const provider = billingProviderFromEnv();
       if (!provider?.live || !provider.sells(body.toPlanKey)) {

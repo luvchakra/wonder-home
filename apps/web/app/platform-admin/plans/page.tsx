@@ -1,12 +1,15 @@
 import { notFound } from "next/navigation";
 
 import { loadPlanSnapshots } from "@wonderhome/core/billing/plan-edit";
+import { listPriceLinks } from "@wonderhome/core/billing/provider-plans";
+import { billingProviderNamed } from "@wonderhome/core/billing/router";
 import { platformCan } from "@wonderhome/core/platform/admin";
 import { translatorFor } from "@wonderhome/core/i18n/translate";
 import { adminClientFor, adminGrant } from "@wonderhome/core/db/admin-context";
 
 import { platformStaff } from "../../_lib/platform-staff";
 import { PlanEditor } from "./plan-editor";
+import { PriceLinks } from "./price-links";
 import { PageBody, PageTitle, Panel } from "../_ui/page-title";
 
 export const dynamic = "force-dynamic";
@@ -22,7 +25,9 @@ export default async function PlatformPlansPage() {
 
   const t = await translatorFor("en");
   const canEdit = platformCan(staff, "plans.edit");
-  const [plans, experiments] = await Promise.all([loadPlanSnapshots(admin), admin.from("entitlement_experiments").select("*").limit(50)]);
+  const [plans, experiments, links] = await Promise.all([loadPlanSnapshots(admin), admin.from("entitlement_experiments").select("*").limit(50), listPriceLinks(admin)]);
+  const razorpayLive = Boolean(billingProviderNamed("razorpay")?.live);
+  const linkRows = links.map((link) => ({ priceId: link.priceId, planName: link.planName, interval: link.interval, currency: link.currency, amount: link.amount, razorpay: link.links.razorpay ?? null }));
   // The member plan list's own words, so the preview reads exactly as they do.
   const words = {
     early: t("settingsPage.plan.earlyAccess"),
@@ -40,9 +45,18 @@ export default async function PlatformPlansPage() {
       <Panel title="Plans" description="The same card members see under Settings → Your plan.">
         <div className="space-y-3">
           {plans.map((plan) => (
-            <PlanEditor key={plan.key} plan={plan} words={words} canEdit={canEdit} />
+            <PlanEditor
+              key={plan.key}
+              plan={plan}
+              words={words}
+              canEdit={canEdit}
+              allLinked={links.filter((link) => link.planKey === plan.key).length > 0 && links.filter((link) => link.planKey === plan.key).every((link) => link.links.razorpay)}
+            />
           ))}
         </div>
+      </Panel>
+      <Panel title="Payment provider plans" description="Razorpay bills each of our prices against its own plan. Create it there from our price in one press, or link one you already made; a plan is linked only when it bills exactly our price.">
+        <PriceLinks rows={linkRows} canEdit={canEdit} razorpayLive={razorpayLive} />
       </Panel>
       <Panel title="Experiments" description="A share of households on a plan trying a feature differently.">
         {((experiments.data ?? []) as Experiment[]).length === 0 ? (

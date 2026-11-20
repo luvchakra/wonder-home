@@ -3,6 +3,7 @@ import { z } from "zod";
 import { ApiError } from "@wonderhome/core/api/errors";
 import { defineRoute } from "@wonderhome/core/api/route";
 import { planEditSchema, savePlan } from "@wonderhome/core/billing/plan-edit";
+import { billingProvidersFromEnv } from "@wonderhome/core/billing/router";
 import { adminClientFor, adminGrant } from "@wonderhome/core/db/admin-context";
 import { createClient } from "@wonderhome/core/db/server";
 import { platformCan, requirePlatformAdmin, type PlatformAdmin } from "@wonderhome/core/platform/admin";
@@ -30,7 +31,7 @@ export async function PATCH(request: Request, { params }: Params) {
 
   return defineRoute({ input: bodySchema, authenticate: requirePlanEditor }, async ({ body, actor, requestId }) => {
     const admin = adminClientFor(adminGrant.platformAdmin(actor, "edit a plan as members see it"));
-    const result = await savePlan(admin, actor, planKey, body.edit, { dryRun: !body.confirm, requestId });
+    const result = await savePlan(admin, actor, planKey, body.edit, { dryRun: !body.confirm, requestId, liveProviders: billingProvidersFromEnv().map((provider) => provider.name) });
     return { planKey, saved: result.changed, lines: result.changes.map((change) => change.line) };
   })(request);
 }

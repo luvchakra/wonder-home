@@ -1,6 +1,9 @@
 import { fromMinorUnits, toMinorUnits } from "./money";
 import type {
   BillingEvent,
+  CheckoutClient,
+  LedgerInvoice,
+  ProviderPlan,
   BillingInterval,
   BillingProvider,
   Checkout,
@@ -23,10 +26,14 @@ import { constantTimeEqual, hmacHex, WebhookSignatureError } from "./signature";
  *
  * How it works:
  *   - A checkout is a Razorpay subscription created on the server against the
- *     Razorpay plan our own price maps to. Razorpay hosts the page that
- *     authorises it (`short_url`): UPI, cards, netbanking and wallets, and
- *     WonderHome never sees a card or a UPI PIN. The key secret never leaves
- *     the server; no browser key is needed at all.
+ *     Razorpay plan our own price maps to. The browser opens Razorpay Checkout
+ *     in place with that subscription id and the publishable key id (UPI,
+ *     cards, netbanking and wallets), falling back to Razorpay's hosted page
+ *     (`short_url`). WonderHome never sees a card or a UPI PIN, and the key
+ *     secret never leaves the server.
+ *   - Razorpay plans are created (or a pasted plan id checked) from our own
+ *     prices in Platform admin → Plans & billing (`provider-plans.ts`), so
+ *     nobody copies an amount or a plan id by hand.
  *   - Everything the subscription does next arrives as a webhook, believed
  *     only once `X-Razorpay-Signature` — an HMAC-SHA256 of the raw body with
  *     the webhook secret — verifies. `x-razorpay-event-id` makes a redelivery a
@@ -53,6 +60,15 @@ export type RazorpayConfig = {
 export function createRazorpayProvider(config: RazorpayConfig): BillingProvider {
   const doFetch = config.fetch ?? fetch;
   const auth = `Basic ${btoa(`${config.keyId}:${config.keySecret}`)}`;
+
+  const client = (subscriptionId: string): CheckoutClient => ({ kind: "razorpay", keyId: config.keyId, subscriptionId });
+
+  async function read(path: string): Promise<Record<string, unknown> | null> {
+    const response = await doFetch(`${API}${path}`, { headers: { authorization: auth }, signal: AbortSignal.timeout(10_000) });
+    if (response.status === 404 || response.status === 400) return null;
+    if (!response.ok) throw new Error(`Razorpay refused the request (${response.status}).`);
+    return (await response.json()) as Record<string, unknown>;
+  }
 
   async function call(path: string, body: Record<string, unknown>): Promise<Record<string, unknown>> {
     const response = await doFetch(`${API}${path}`, {
@@ -98,7 +114,29 @@ export function createRazorpayProvider(config: RazorpayConfig): BillingProvider 
       const id = typeof body.id === "string" ? body.id : null;
       const url = typeof body.short_url === "string" ? body.short_url : null;
       if (!id || !url || !url.startsWith("https://")) throw new Error("Razorpay sent a subscription we could not read.");
-      return { providerSessionId: id, url, expiresAt: null };
+      return { providerSessionId: id, url, expiresAt: null, client: client(id) };
+    },
+
+    checkoutClient(providerSessionId) {
+      return /^sub_[A-Za-z0-9]+$/.test(providerSessionId) ? client(providerSessionId) : null;
+    },
+
+    async createPlan({ priceId, name, interval, amount, currency }) {
+      const body = await call("/plans", {
+        period: interval === "year" ? "yearly" : "monthly",
+        interval: 1,
+        item: { name: name.slice(0, 120), amount: toMinorUnits(amount, currency), currency },
+        notes: { plan_price_id: priceId },
+      });
+      const plan = razorpayPlan(body);
+      if (!plan) throw new Error("Razorpay sent a plan we could not read.");
+      return plan;
+    },
+
+    async fetchPlan(ref) {
+      if (!/^plan_[A-Za-z0-9]+$/.test(ref)) return null;
+      const body = await read(`/plans/${encodeURIComponent(ref)}`);
+      return body ? razorpayPlan(body) : null;
     },
 
     async readWebhook(rawBody: string, headers: Headers): Promise<BillingEvent | null> {
@@ -124,15 +162,20 @@ export function createRazorpayProvider(config: RazorpayConfig): BillingProvider 
     },
 
     async fetchPayment(providerPaymentId) {
-      const response = await doFetch(`${API}/payments/${encodeURIComponent(providerPaymentId)}`, {
-        headers: { authorization: auth },
-        signal: AbortSignal.timeout(10_000),
-      });
-      if (response.status === 404 || response.status === 400) return null;
-      if (!response.ok) throw new Error(`Razorpay refused the request (${response.status}).`);
-      return razorpayRemotePayment((await response.json()) as RzObject);
+      const body = await read(`/payments/${encodeURIComponent(providerPaymentId)}`);
+      return body ? razorpayRemotePayment(body as RzObject) : null;
     },
   };
+}
+
+/** Razorpay's plan entity in our words: monthly or yearly every one period, or nothing we can link. */
+export function razorpayPlan(entity: RzObject): ProviderPlan | null {
+  const item = typeof entity.item === "object" && entity.item !== null ? (entity.item as RzObject) : {};
+  const currency = typeof item.currency === "string" ? item.currency.toUpperCase() : null;
+  const minor = typeof item.amount === "number" ? item.amount : null;
+  const interval = entity.interval === 1 ? (entity.period === "monthly" ? "month" : entity.period === "yearly" ? "year" : null) : null;
+  if (typeof entity.id !== "string" || !currency || minor === null || !interval) return null;
+  return { ref: entity.id, interval, amount: fromMinorUnits(minor, currency), currency };
 }
 
 /** Razorpay's payment entity as a status we compare with the ledger. */
@@ -221,16 +264,34 @@ export function eventFromRazorpay(event: RazorpayEvent, eventId: string | null):
     const currency = text(meta.currency);
     const payment = paymentFrom(paymentEntity, "succeeded");
     const terms = { interval, currency, amount: payment?.amount ?? null } as const;
+    // Razorpay raises an invoice for every subscription charge; the payment
+    // names it. That is the household's receipt line under Billing history.
+    const invoiceId = text(paymentEntity?.invoice_id);
+    const invoice: LedgerInvoice | null =
+      payment && invoiceId
+        ? {
+            providerInvoiceId: invoiceId,
+            number: null,
+            amount: payment.amount,
+            currency: payment.currency,
+            status: "paid",
+            invoiceUrl: null,
+            receiptUrl: null,
+            periodStart,
+            periodEnd,
+            issuedAt: payment.paidAt ?? occurredAt,
+          }
+        : null;
 
     switch (event.event) {
       case "subscription.activated":
-        return { ...base, type: "subscription.activated", householdId, externalRef, planKey: text(meta.plan_key), intentId: text(meta.intent_id), periodStart, periodEnd, terms, payment };
+        return { ...base, type: "subscription.activated", householdId, externalRef, planKey: text(meta.plan_key), intentId: text(meta.intent_id), periodStart, periodEnd, terms, payment, invoice };
       case "subscription.charged": {
         // The first charge is the one that activated it: ledger only.
         const first = typeof subscription.paid_count === "number" && subscription.paid_count <= 1;
         return first
-          ? { ...base, type: "payment.succeeded", householdId, externalRef, payment }
-          : { ...base, type: "subscription.renewed", householdId, externalRef, periodStart, periodEnd, terms, payment };
+          ? { ...base, type: "payment.succeeded", householdId, externalRef, payment, invoice }
+          : { ...base, type: "subscription.renewed", householdId, externalRef, periodStart, periodEnd, terms, payment, invoice };
       }
       case "subscription.pending":
       case "subscription.halted":

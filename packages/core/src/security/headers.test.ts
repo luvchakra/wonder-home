@@ -19,9 +19,9 @@ describe("security headers", () => {
     expect(asMap({ development: true })).not.toHaveProperty("Strict-Transport-Security");
   });
 
-  it("allows the browser to reach the configured Supabase origin and the Gemini Live socket, and nothing else", () => {
+  it("allows the browser to reach the configured Supabase origin, the Gemini Live socket and Razorpay Checkout's hosts, and nothing else", () => {
     const csp = buildContentSecurityPolicy({ development: false, supabaseOrigin: "https://example.supabase.co", nonce: "abc" });
-    expect(csp).toMatch(/connect-src 'self' https:\/\/example\.supabase\.co wss:\/\/generativelanguage\.googleapis\.com;/);
+    expect(csp).toMatch(/connect-src 'self' https:\/\/example\.supabase\.co wss:\/\/generativelanguage\.googleapis\.com https:\/\/api\.razorpay\.com https:\/\/lumberjack\.razorpay\.com;/);
     expect(csp).not.toMatch(/connect-src[^;]* ws:/);
   });
 
@@ -42,13 +42,15 @@ describe("security headers", () => {
       expect(csp).toContain("base-uri 'self'");
       expect(csp).toContain("form-action 'self'");
       expect(csp).toContain("frame-ancestors 'none'");
+      // The only frame a page may open is Razorpay's own checkout.
+      expect(csp).toContain("frame-src https://api.razorpay.com https://checkout.razorpay.com;");
       expect(csp).toContain("upgrade-insecure-requests");
     }
   });
 
   it("strict policy: scripts need the nonce, no 'unsafe-inline' or 'unsafe-eval' in script-src", () => {
     const script = buildContentSecurityPolicy({ development: false, nonce: "abc" }).match(/script-src ([^;]*)/)![1];
-    expect(script).toBe("'self' 'nonce-abc' 'strict-dynamic'");
+    expect(script).toBe("'self' 'nonce-abc' 'strict-dynamic' https://checkout.razorpay.com");
   });
 
   it("report-only mode: the static header enforces the old policy, the middleware only reports the strict one", () => {

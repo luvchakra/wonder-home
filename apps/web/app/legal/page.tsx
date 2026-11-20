@@ -59,8 +59,9 @@ export default function LegalPage() {
                 read from or written to those accounts.
               </li>
               <li>
-                <strong className="font-semibold text-[var(--wh-foreground)]">Nothing spends money.</strong>{" "}
-                No payment provider is configured. Paying a bill prepares an approval and stops.
+                <strong className="font-semibold text-[var(--wh-foreground)]">Nothing spends your money on its own.</strong>{" "}
+                Paying a household bill prepares an approval and stops. The only payment WonderHome takes is
+                for a paid plan, when an Admin chooses one (below).
               </li>
               <li>
                 <strong className="font-semibold text-[var(--wh-foreground)]">You can take your data with you, or have it deleted.</strong>{" "}
@@ -118,8 +119,42 @@ export default function LegalPage() {
             </p>
           </Card>
 
+          <Card id="payments" className="scroll-mt-6 space-y-3 p-5">
+            <h2 className="text-base font-semibold tracking-tight">Paid plans, cancellation and refunds</h2>
+            <ul className="space-y-3 text-sm leading-relaxed text-[var(--wh-foreground-muted)]">
+              <li>
+                <strong className="font-semibold text-[var(--wh-foreground)]">Prices.</strong>{" "}
+                Each plan&apos;s price is shown in rupees on{" "}
+                <Link href="/#pricing" className="font-medium text-[var(--wh-primary)] underline-offset-2 hover:underline">our pricing</Link>{" "}
+                and under Settings → Your plan before anything is paid. While a plan says &ldquo;Free during early access&rdquo;, nothing is charged.
+              </li>
+              <li>
+                <strong className="font-semibold text-[var(--wh-foreground)]">How you pay.</strong>{" "}
+                Only a household Admin can choose a paid plan. Payment is taken by Razorpay (UPI, cards, netbanking or wallets) as a
+                subscription that renews every month or every year, as chosen. WonderHome never sees your card number or UPI PIN.
+                The plan starts only once Razorpay confirms the payment.
+              </li>
+              <li>
+                <strong className="font-semibold text-[var(--wh-foreground)]">Cancelling.</strong>{" "}
+                You can cancel at any time from Settings → Your plan. Nothing more is charged after that; the plan stays until the end of
+                the period already paid for, then the household moves to the free plan and keeps everything it has recorded.
+              </li>
+              <li>
+                <strong className="font-semibold text-[var(--wh-foreground)]">If a payment fails.</strong>{" "}
+                The plan stays while Razorpay retries, and Razorpay emails the Admin who paid a link to pay. Nothing the household
+                recorded is removed.
+              </li>
+              <li>
+                <strong className="font-semibold text-[var(--wh-foreground)]">Refunds.</strong>{" "}
+                A period already started is not refunded when you cancel; the plan simply runs to its end. If you were charged by
+                mistake — twice, or after cancelling — write to us and we will refund that charge to the way you paid. Razorpay
+                usually returns it within 5–7 working days of the refund being made.
+              </li>
+            </ul>
+          </Card>
+
           <Card id="who-we-are" className="scroll-mt-6 space-y-3 p-5">
-            <h2 className="text-base font-semibold tracking-tight">Who runs WonderHome</h2>
+            <h2 id="contact" className="scroll-mt-6 text-base font-semibold tracking-tight">Who runs WonderHome, and how to reach us</h2>
             <p className="text-sm leading-relaxed text-[var(--wh-foreground-muted)]">
               WonderHome is a product of{" "}
               <a href="https://wonderapps.biz" className="font-medium text-[var(--wh-primary)] underline-offset-2 hover:underline">

@@ -120,6 +120,46 @@ everywhere else. The provider is never the source of truth:
   `/settings/plan/billing` and its invoices. `billing/account.ts` holds their
   reads and arithmetic. Cancelling at period end asks the provider first
   (`POST /households/{id}/plan/cancel`).
+- **Razorpay end to end** (2026-11-20, owner: "add razorpay payment for
+  subscription"). Monthly and yearly subscriptions from Settings → Your plan:
+  - *Our prices become Razorpay plans in one press.* Platform admin → Plans &
+    billing → Payment provider plans lists every active price. "Create in
+    Razorpay" creates the plan there from our price (`POST /v1/plans`, paise
+    converted in the adapter, our price id in its notes); "Link an existing
+    plan" reads a pasted `plan_…` back and links it only when it bills exactly
+    our amount, currency and interval (`billing/provider-plans.ts`,
+    `POST /api/v1/platform-admin/prices/{priceId}/link`, owner only, audited
+    as `platform.price_linked`). A changed price is a new price row, so it
+    shows "Not linked" until linked again.
+  - *A plan is marked paid in the plan editor* ("Members pay for this plan"),
+    refused until every active price of that plan is linked to a live
+    provider. Households already on it stay on it, unbilled, until they change.
+  - *Checkout opens in place.* The server creates the subscription; the
+    browser gets only the publishable key id and the subscription id and
+    opens Razorpay Checkout (`checkout-button.tsx`), falling back to the
+    hosted `short_url`. Its success handler only navigates to
+    `/settings/plan/confirmed`, which waits for the webhook. The CSP allows
+    exactly Razorpay's checkout script, its frame (`api.razorpay.com`,
+    `checkout.razorpay.com`) and its two API hosts (`security/headers.ts`).
+  - *Webhooks* (`/api/v1/billing/webhook/razorpay`): `subscription.activated`
+    → the plan (with the first payment and its invoice);
+    `subscription.charged` → a receipt line (`billing_invoices` from the
+    payment's `invoice_id`) and, after the first, a renewal;
+    `subscription.pending` / `subscription.halted` → past-due, plan kept,
+    Razorpay retries and mails the payer a link; a later charge makes it
+    active again; `subscription.cancelled` / `subscription.completed` → Free,
+    records kept; `payment.failed` → a declined attempt in the ledger;
+    `refund.processed` / `refund.failed` → the refund. Everything else is
+    ignored. All through `applyBillingEvent`, once per `x-razorpay-event-id`.
+  - *One subscription at a time.* A household with a paid subscription that
+    still renews can't open a second checkout
+    (`assertNoRenewingSubscription`); it cancels at period end first, and the
+    old subscription's later cancellation is ignored as "about a different
+    subscription".
+  - *Keys.* `RAZORPAY_KEY_ID` and `RAZORPAY_KEY_SECRET` live in Platform
+    admin → Configuration / Secrets; `RAZORPAY_WEBHOOK_SECRET` stays in Vercel
+    (`STAYS_IN_VERCEL`). The owner's click-by-click setup is
+    `docs/billing/razorpay-owner-setup.md`.
 
 A plan marked `plans.requires_payment` can never be written onto a
 subscription from a household session: RLS and `changePlan` both refuse

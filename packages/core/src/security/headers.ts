@@ -21,6 +21,16 @@ export type HeaderTuple = { key: string; value: string };
 /** The Gemini Live API's websocket origin — the one third party the page itself connects to. */
 export const GEMINI_LIVE_ORIGIN = "wss://generativelanguage.googleapis.com";
 
+/**
+ * Razorpay Checkout (story 20-009): its script, the frame it opens and the
+ * hosts that script talks to — Razorpay's documented set, nothing wider. Only
+ * the checkout page ever loads the script, and only when a Razorpay checkout
+ * is about to open.
+ */
+export const RAZORPAY_CHECKOUT_ORIGIN = "https://checkout.razorpay.com";
+export const RAZORPAY_API_ORIGIN = "https://api.razorpay.com";
+export const RAZORPAY_LOG_ORIGIN = "https://lumberjack.razorpay.com";
+
 /** Where browsers post what the policy blocked (a redacted, sampled log line; see api/v1/security/csp-report). */
 export const CSP_REPORT_PATH = "/api/v1/security/csp-report";
 
@@ -46,7 +56,7 @@ export function buildContentSecurityPolicy({ supabaseOrigin, development, nonce 
   // Gemini Voice (voice phase 3): the page talks to Google's Live API over
   // one websocket, with a short-lived single-use token our server minted —
   // never a key. Only that endpoint's origin, never Google at large.
-  const connect = ["'self'", supabaseOrigin, GEMINI_LIVE_ORIGIN, development ? "ws: http://localhost:*" : null]
+  const connect = ["'self'", supabaseOrigin, GEMINI_LIVE_ORIGIN, RAZORPAY_API_ORIGIN, RAZORPAY_LOG_ORIGIN, development ? "ws: http://localhost:*" : null]
     .filter(Boolean)
     .join(" ");
   // A member's photo is served from Supabase Storage as a signed URL on the
@@ -57,7 +67,8 @@ export function buildContentSecurityPolicy({ supabaseOrigin, development, nonce 
 
   const directives: Record<string, string> = {
     "default-src": "'self'",
-    "script-src": nonce ? `'self' 'nonce-${nonce}' 'strict-dynamic'${dev}` : `'self' 'unsafe-inline'${dev}`,
+    // 'strict-dynamic' lets a nonced script add Razorpay's; the host is named for the older policy.
+    "script-src": nonce ? `'self' 'nonce-${nonce}' 'strict-dynamic' ${RAZORPAY_CHECKOUT_ORIGIN}${dev}` : `'self' 'unsafe-inline' ${RAZORPAY_CHECKOUT_ORIGIN}${dev}`,
     // Style attributes (React `style={}`, Radix positioning, Tailwind's runtime values) can't carry a
     // nonce, so styles keep 'unsafe-inline'; an injected style can restyle but not run code.
     "style-src": "'self' 'unsafe-inline'",
@@ -67,8 +78,9 @@ export function buildContentSecurityPolicy({ supabaseOrigin, development, nonce 
     "media-src": "'self'",
     "worker-src": "'self' blob:",
     "manifest-src": "'self'",
-    // Household content is never embeddable, and never embeds anyone else.
-    "frame-src": "'none'",
+    // Household content is never embeddable, and embeds no one but the
+    // payment provider's own checkout frame.
+    "frame-src": `${RAZORPAY_API_ORIGIN} ${RAZORPAY_CHECKOUT_ORIGIN}`,
     "frame-ancestors": "'none'",
     "object-src": "'none'",
     "base-uri": "'self'",

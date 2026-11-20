@@ -262,6 +262,11 @@ export const SENSITIVE_ACTIONS: readonly SensitiveAction[] = [
     recordedIn: "packages/core/src/billing/plan-edit.ts",
   },
   {
+    event: "platform.price_linked",
+    because: "The platform owner created or linked the payment provider's plan for one of our prices. It belongs to no household; the platform audit log reads it.",
+    recordedIn: "packages/core/src/billing/provider-plans.ts",
+  },
+  {
     event: "feature_flag.changed",
     because: "Staff turned an experimental capability on or off for this household. The family can read this row.",
     recordedIn: "packages/core/src/platform/feature-flags.ts",
@@ -793,6 +798,8 @@ export function describeAuditEvent(
       };
     case "platform.plan_updated":
       return { title: "A plan was changed", detail: stringOr(metadata.planKey, null) };
+    case "platform.price_linked":
+      return { title: "A price was linked to a payment provider", detail: stringOr(metadata.planKey, null) };
     case "feature_flag.changed":
       return {
         title: "A feature was turned " + (metadata.enabled ? "on" : "off"),
