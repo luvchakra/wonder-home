@@ -73,6 +73,7 @@ const cleaned = (clean: (raw: string) => CleanedKey) =>
     ctx.addIssue({ code: "custom", message: result.message });
     return z.NEVER;
   });
+const modelId = text(80).regex(/^[A-Za-z0-9.:\-_/]+$/, "a model id, like claude-sonnet-5-5");
 const secret = (min = 8, max = 4096) => z.string().trim().min(min, `must be at least ${min} characters`).max(max).regex(/^\S+$/, "must not contain spaces");
 
 const entries = [
@@ -99,6 +100,72 @@ const entries = [
     description: "Used for households that have not added a key of their own. If it starts failing, platform admins get an email.",
     editableBy: "owner",
   },
+  {
+    key: "WONDERHOME_AI_MODEL",
+    label: "Model for everything",
+    group: "ai",
+    kind: "config",
+    input: { type: "text" },
+    schema: modelId,
+    defaultValue: null,
+    description: "When set, every step below uses this model unless it has its own. Leave unset to use each step's default.",
+    editableBy: "operator",
+  },
+  {
+    key: "WONDERHOME_AI_UNDERSTANDING_MODEL",
+    label: "Understanding model",
+    group: "ai",
+    kind: "config",
+    input: { type: "text" },
+    schema: modelId,
+    defaultValue: "claude-haiku-5-5",
+    description: "Reads what a person said in HomeTalk. Fast tier.",
+    editableBy: "operator",
+  },
+  {
+    key: "WONDERHOME_AI_ANSWER_MODEL",
+    label: "Answer model",
+    group: "ai",
+    kind: "config",
+    input: { type: "text" },
+    schema: modelId,
+    defaultValue: "claude-sonnet-5-5",
+    description: "Writes HomeTalk's answers and translations.",
+    editableBy: "operator",
+  },
+  {
+    key: "WONDERHOME_AI_INTAKE_MODEL",
+    label: "HomeSend reading model",
+    group: "ai",
+    kind: "config",
+    input: { type: "text" },
+    schema: modelId,
+    defaultValue: "claude-sonnet-5-5",
+    description: "Reads messages, photos and files sent to HomeSend.",
+    editableBy: "operator",
+  },
+  {
+    key: "WONDERHOME_AI_SECOND_READ_MODEL",
+    label: "HomeSend second-read model",
+    group: "ai",
+    kind: "config",
+    input: { type: "text" },
+    schema: modelId,
+    defaultValue: null,
+    description: "The stronger model HomeSend tries before setting anything aside as unreadable. Unset: the provider's strongest default.",
+    editableBy: "operator",
+  },
+  {
+    key: "WONDERHOME_GEMINI_TRANSCRIBE_MODEL",
+    label: "Voice transcript model",
+    group: "ai",
+    kind: "config",
+    input: { type: "text" },
+    schema: modelId,
+    defaultValue: "gemini-flash-latest",
+    description: "Writes a Gemini Live turn down word for word for the chat line.",
+    editableBy: "operator",
+  },
   // Voice
   {
     key: "WONDERHOME_SPEECH_KEY",
@@ -108,7 +175,7 @@ const entries = [
     input: { type: "text" },
     schema: secret(20),
     defaultValue: null,
-    description: "WonderHome's own Gemini key for live voice, used when a household has none.",
+    description: "WonderHome's own Google speech key (speech to text and spoken replies), used when a household has none. Gemini Live uses WonderHome's own AI key.",
     editableBy: "owner",
   },
   {

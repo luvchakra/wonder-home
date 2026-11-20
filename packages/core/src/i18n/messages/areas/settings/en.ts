@@ -98,11 +98,17 @@ export const settingsEn = {
   "settingsPage.ai.learned.mixedAny": "Given two different answers, so HomeSend asks each time",
   "settingsPage.ai.learned.corrected": "Learned when {name} corrected it · {date}",
   "settingsPage.ai.keySet": "Set {date}",
+  "settingsPage.aiKey.removeConfirm": "Remove your home's own key? WonderHome's key answers from then on.",
+  "settingsPage.aiKey.removeYes": "Yes, use WonderHome's key",
+  "settingsPage.aiKey.removeNo": "Keep my key",
+  "settingsPage.ai.answeringNow.household": "Answering for this home now: your home's own key, since {date}.",
+  "settingsPage.ai.answeringNow.platform": "Answering for this home now: WonderHome's key.",
+  "settingsPage.ai.answeringNow.none": "Answering for this home now: WonderHome's own rules, with no AI key.",
   "settingsPage.ai.badge.rulesOnly": "Rules only",
   "settingsPage.ai.ownKeyIntro":
     "WonderHome runs the assistant on its own key, so you do not need an account with a model provider. Use your own instead if you would rather the requests were billed to you and covered by your own agreement with them.",
   "settingsPage.ai.noPlatformKey":
-    "This deployment has no key of its own either. An operator sets one with the {variable} environment variable — there is no platform administration screen for it.",
+    "This WonderHome has no AI key of its own either. The platform owner adds one in Platform admin → AI & providers.",
   "settingsPage.ai.source.household.title": "Your household's own key",
   "settingsPage.ai.source.household.detail": "Requests are billed to your provider account and are covered by your agreement with them, not ours.",
   "settingsPage.ai.source.platform.title": "WonderHome's key",
@@ -126,7 +132,7 @@ export const settingsEn = {
   "settingsPage.aiKey.saved": "Key saved",
   "settingsPage.aiKey.newKey": "New key",
   "settingsPage.aiKey.newKeyPlaceholder": "Paste a new key to replace it",
-  "settingsPage.aiKey.remove": "Remove and go back to WonderHome's key",
+  "settingsPage.aiKey.remove": "Use WonderHome's key instead",
 
   // What the assistant may share (AI Assistant and Privacy).
   "settingsPage.dataUse.nothing": "Nothing about your home is sent to a model provider. The assistant answers from its own rules only.",

@@ -14,8 +14,9 @@
 #
 # Repository secrets (Settings → Secrets and variables → Actions): SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY
 # (required; the live project's, the values Vercel has as NEXT_PUBLIC_SUPABASE_URL / SUPABASE_SERVICE_ROLE_KEY).
-# Optional: WONDERHOME_AI_KEY, WONDERHOME_AI_PROVIDER, WONDERHOME_AI_MODEL, WONDERHOME_AI_UNDERSTANDING_MODEL (the
-# Vercel values) — without the key the tidy and Sleep steps stay on Vercel. Until the required two exist every run
+# No AI secrets: the AI key, provider and models are read from Platform admin (platform_config) with the service
+# role, so a job never uses a different key from the site's; without a saved key the tidy and Sleep steps stay on
+# Vercel. Any WONDERHOME_AI_* secret left in the repository is unused and can be deleted. Until the required two exist every run
 # says so and exits green; Vercel keeps doing everything.
 #
 # Only schedule and workflow_dispatch: never a pull request, so no fork ever runs with these secrets.
@@ -78,10 +79,8 @@ jobs:
         env:
           NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
           SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
-          WONDERHOME_AI_KEY: ${{ secrets.WONDERHOME_AI_KEY }}
-          WONDERHOME_AI_PROVIDER: ${{ secrets.WONDERHOME_AI_PROVIDER }}
-          WONDERHOME_AI_MODEL: ${{ secrets.WONDERHOME_AI_MODEL }}
-          WONDERHOME_AI_UNDERSTANDING_MODEL: ${{ secrets.WONDERHOME_AI_UNDERSTANDING_MODEL }}
+          # No AI secrets: the runner reads WonderHome's AI key, provider and models from Platform admin
+          # (platform_config) with the service role above, exactly as the site does (owner, 2026-11-21).
         run: |
           node scripts/jobs.mjs "$JOB" $DRY_RUN
           # The clock run also syncs calendar feeds (every 10 min; each feed is claimed when its sync comes).

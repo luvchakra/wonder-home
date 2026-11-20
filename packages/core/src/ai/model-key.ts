@@ -1,4 +1,5 @@
-import { runtimeEnv, settledRuntimeEnv } from "../platform/settings/runtime-env";
+import { aiSettingsFromEnvironmentAllowed, runtimeEnv, runtimeEnvForAi, savedKeys, settledRuntimeEnv } from "../platform/settings/runtime-env";
+import { noteKeyOrigin, type KeyOrigin } from "./key-alerts";
 /**
  * Which model key answers for a household, and whose it is.
  *
@@ -45,9 +46,11 @@ export function resolveModelKey(household: HouseholdKey, platform: PlatformKey):
 }
 
 /**
- * WonderHome's own key: the one the owner saved in the platform admin
- * (Secrets, 16-010), else the deployment's `WONDERHOME_AI_KEY` variable
- * (`runtimeEnv()` lays the saved value over the environment).
+ * WonderHome's own key: the one saved in Platform admin → AI & providers, and
+ * nowhere else (owner, 2026-11-21). On a deployment `runtimeEnv()` never hands
+ * out a `WONDERHOME_AI_*` deployment variable or GitHub secret, and until the
+ * saved settings are read the key is unset (no key: the rules answer). Only
+ * tooling (local dev, tests, `npm run eval`) may pass one from its environment.
  */
 export function platformKey(
   env: Record<string, string | undefined> = runtimeEnv(),
@@ -58,7 +61,34 @@ export function platformKey(
   const named = env.WONDERHOME_AI_PROVIDER?.trim().toLowerCase() ?? "";
   const provider = PROVIDER_NAMES[named] ?? providerOfKey(key) ?? "anthropic";
 
+  noteKeyOrigin(key, platformKeyOrigin());
   return { provider, key };
+}
+
+/** Where WonderHome's own key in use came from: Platform admin, or (tooling only) the developer's environment. */
+export function platformKeyOrigin(): KeyOrigin {
+  return savedKeys().includes("WONDERHOME_AI_KEY") || !aiSettingsFromEnvironmentAllowed() ? "platform_saved" : "tooling";
+}
+
+export type ServingKey = ModelKey & { origin: KeyOrigin | null };
+
+/**
+ * The one answer to "which key serves this household right now, and where did
+ * it come from": the household's own key if it has one, else WonderHome's
+ * saved key, else none. Waits (bounded) for the saved settings on a server
+ * that has not read them yet, so a cold start never answers with a stale copy.
+ * `readHousehold` is `credentials.ts` `readHouseholdKey` (or the voice one),
+ * passed in so this module stays free of the database.
+ */
+export async function servingModelKey(readHousehold: (() => Promise<HouseholdKey>) | null): Promise<ServingKey> {
+  const [household, env] = await Promise.all([readHousehold ? readHousehold().catch(() => null) : Promise.resolve(null), runtimeEnvForAi()]);
+  const resolved = resolveModelKey(household, platformKey(env));
+  if (resolved.source === "household") {
+    noteKeyOrigin(resolved.key, "household");
+    return { ...resolved, origin: "household" };
+  }
+  if (resolved.source === "platform") return { ...resolved, origin: platformKeyOrigin() };
+  return { ...resolved, origin: null };
 }
 
 /**

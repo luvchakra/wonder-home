@@ -7,7 +7,7 @@ import { adminClientFor, adminGrant } from "@wonderhome/core/db/admin-context";
 import { platformCan } from "@wonderhome/core/platform/admin";
 import { mayEdit, settingDefinition } from "@wonderhome/core/platform/settings/registry";
 import { moveAllFromEnvironment, type MoveReport } from "@wonderhome/core/platform/settings/move";
-import { forgetRuntimeEnv } from "@wonderhome/core/platform/settings/runtime-env";
+import { STORE_ONLY_KEYS, forgetRuntimeEnv } from "@wonderhome/core/platform/settings/runtime-env";
 import { clearSetting, saveSetting } from "@wonderhome/core/platform/settings/store";
 import { checkModelKey, keyCheckWords } from "@wonderhome/core/ai/key-check";
 import { MODEL_PROVIDERS, platformKey, providerOfKey, type ModelProvider } from "@wonderhome/core/ai/model-key";
@@ -145,7 +145,12 @@ export async function clearSettingAction(_previous: SettingActionState, formData
   const result = await clearSetting(adminClientFor(adminGrant.platformAdmin(staff, `clear the ${entry.key} setting`)), staff.profileId, entry.key);
   if (!result.ok) return { tone: "risk", message: result.reason === "limited" ? "That's a lot of changes in a minute. Wait a moment." : "It couldn't be cleared just now. Try again.", key: entry.key };
   done();
-  return { tone: "info", message: "Cleared. WonderHome goes back to the Vercel value, or the default.", key: entry.key };
+  return {
+    tone: "info",
+    // WonderHome's AI settings never fall back to Vercel (one place, 2026-11-21).
+    message: STORE_ONLY_KEYS.includes(entry.key) ? (entry.kind === "secret" ? "Removed. WonderHome has no key of its own now; Vercel's copy is never used." : "Cleared. WonderHome uses the default.") : "Cleared. WonderHome goes back to the Vercel value, or the default.",
+    key: entry.key,
+  };
 }
 
 export type MoveActionState = { tone: "info" | "risk" | null; message: string | null; report: MoveReport | null };

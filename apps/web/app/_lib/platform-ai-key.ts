@@ -20,9 +20,27 @@ export type PlatformKeyHealth = {
   last4: string | null;
   /** The open alert in words, or null when none is open. */
   alertLine: string | null;
+  /** How many homes answer with a key of their own (a count only, never which). */
+  homesOnOwnKey?: number | null;
 };
 
+/** A count of homes on their own assistant key: Platform admin shows only this (2026-11-21). */
+async function homesOnOwnKey(staff: PlatformAdmin): Promise<number | null> {
+  try {
+    const admin = adminClientFor(adminGrant.platformAdmin(staff, "count homes using an AI key of their own"));
+    const { count, error } = await admin.from("household_ai_credentials").select("household_id", { count: "exact", head: true });
+    return error ? null : (count ?? 0);
+  } catch {
+    return null;
+  }
+}
+
 export async function platformKeyHealth(staff: PlatformAdmin): Promise<PlatformKeyHealth> {
+  const [health, own] = await Promise.all([keyHealth(staff), homesOnOwnKey(staff)]);
+  return { ...health, homesOnOwnKey: own };
+}
+
+async function keyHealth(staff: PlatformAdmin): Promise<PlatformKeyHealth> {
   try {
     const env = await freshRuntimeEnv();
     const key = platformKey(env);

@@ -4,6 +4,7 @@ import { Fragment } from "react";
 
 import { credentialStatus, geminiVoiceKeyStatus } from "@wonderhome/core/ai/credentials";
 import { describeKeySource, platformKey, resolveModelKey } from "@wonderhome/core/ai/model-key";
+import { runtimeEnvForAi } from "@wonderhome/core/platform/settings/runtime-env";
 import { loadDataUse } from "@wonderhome/core/ai/privacy-repository";
 import { loadConfirmRequested } from "@wonderhome/core/conversation/consent-repository";
 import { AUTO_ADD_PERCENTS } from "@wonderhome/core/homesend/auto-add";
@@ -63,7 +64,7 @@ export default async function AiAssistantSettingsPage({ searchParams }: { search
   const returnTo = safeReturnTo(query.returnTo);
   const { supabase, membership, view, viewer, secondary } = session;
   const householdId = membership.household.id;
-  const [credential, voiceCredential, dataUse, confirmRequested, chosenPercent, recordFirst, keyAlerts, homesendTidy, nothingWaits, learned, members, kindBars, healthFilers] = await Promise.all([
+  const [credential, voiceCredential, dataUse, confirmRequested, chosenPercent, recordFirst, keyAlerts, homesendTidy, nothingWaits, learned, members, kindBars, healthFilers, aiEnv] = await Promise.all([
     credentialStatus(supabase, householdId).catch(() => ({ configured: false, provider: null, updatedAt: null })),
     geminiVoiceKeyStatus(supabase, householdId).catch(() => ({ configured: false, provider: null, updatedAt: null })),
     loadDataUse(supabase, householdId),
@@ -77,11 +78,13 @@ export default async function AiAssistantSettingsPage({ searchParams }: { search
     listMembers(supabase, householdId, null).catch(() => []),
     listKindBars(supabase, householdId).catch(() => []),
     loadHealthFilers(supabase, householdId),
+    // The saved settings, waited for (bounded) on a server that hasn't read them yet, so "which key answers" is never a guess.
+    runtimeEnvForAi(),
   ]);
 
   // Which key actually answers, decided in one place so the screen can never
   // disagree with the server about it.
-  const key = resolveModelKey(credential.configured && credential.provider ? { provider: credential.provider, key: "set" } : null, platformKey());
+  const key = resolveModelKey(credential.configured && credential.provider ? { provider: credential.provider, key: "set" } : null, platformKey(aiEnv));
   const manages = view.permissions.includes("household.manage");
   // WonderHome's key refused right now: an Admin sees one calm line; members see nothing of it (2026-11-21).
   const modelUnavailable = manages && key.source === "platform" ? await platformModelDown() : false;
@@ -144,7 +147,6 @@ export default async function AiAssistantSettingsPage({ searchParams }: { search
   const healthFilerNames = filerChoices.filter((member) => healthFilers.includes(member.id)).map((member) => member.name);
   const shareLines = dataUseLines(t, dataUse);
   // The environment variable's name keeps its own code styling wherever the sentence puts it.
-  const [noKeyBefore, noKeyAfter] = t("settingsPage.ai.noPlatformKey", { variable: "{variable}" }).split("{variable}");
 
   return (
     <AppShell active="more" viewer={viewer} secondary={secondary} pathname="/settings/ai" back={{ href: "/settings", label: t("settingsPage.backToSettings") }} title={t("settingsPage.ai.title")}>
@@ -334,8 +336,14 @@ export default async function AiAssistantSettingsPage({ searchParams }: { search
                 <p className="text-sm font-semibold">{keyWords.title}</p>
                 <p className="mt-0.5 text-xs text-[var(--wh-foreground-muted)]">{keyWords.detail}</p>
                 {modelUnavailable ? <p className="mt-1 text-xs text-[var(--wh-attention)]">{t("settingsPage.ai.source.platform.unavailable")}</p> : null}
-                {credential.configured && credential.updatedAt ? (
-                  <p className="mt-1 text-[0.6875rem] text-[var(--wh-foreground-subtle)]">{t("settingsPage.ai.keySet", { date: formatDate(membership.household.timezone, credential.updatedAt, "long") })}</p>
+                {key.source !== "household" || credential.updatedAt ? (
+                  <p className="mt-1 text-xs font-medium">
+                    {key.source === "household" && credential.updatedAt
+                      ? t("settingsPage.ai.answeringNow.household", { date: formatDate(membership.household.timezone, credential.updatedAt, "long") })
+                      : key.source === "platform"
+                        ? t("settingsPage.ai.answeringNow.platform")
+                        : t("settingsPage.ai.answeringNow.none")}
+                  </p>
                 ) : null}
               </div>
               <Badge tone={keyNote.tone === "attention" ? "attention" : "handled"}>
@@ -348,11 +356,7 @@ export default async function AiAssistantSettingsPage({ searchParams }: { search
                 <p className="text-xs text-[var(--wh-foreground-muted)]">{t("settingsPage.ai.ownKeyIntro")}</p>
                 <AiKeyForm householdId={householdId} save={saveAiKey} remove={removeAiKey} configured={credential.configured} provider={credential.provider} labels={aiKeyFormLabels(t)} returnTo={returnTo} />
                 {key.source === "none" ? (
-                  <p className="rounded-[var(--wh-radius-sm)] bg-[var(--wh-surface-muted)] px-3 py-2 text-xs text-[var(--wh-foreground-muted)]">
-                    {noKeyBefore}
-                    <code className="rounded bg-[var(--wh-surface)] px-1 py-0.5 text-[0.6875rem]">WONDERHOME_AI_KEY</code>
-                    {noKeyAfter}
-                  </p>
+                  <p className="rounded-[var(--wh-radius-sm)] bg-[var(--wh-surface-muted)] px-3 py-2 text-xs text-[var(--wh-foreground-muted)]">{t("settingsPage.ai.noPlatformKey")}</p>
                 ) : null}
               </>
             ) : (

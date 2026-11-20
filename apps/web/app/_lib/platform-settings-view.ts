@@ -35,6 +35,7 @@ export function rowView(entry: SettingDefinition, status: SettingStatus | undefi
     source,
     shown: entry.kind === "secret" ? (source === "unset" ? null : status?.last4 ? `••••${status.last4}` : "••••") : (status?.value ?? null),
     inEnvironment: status?.inEnvironment ?? false,
+    storeOnly: status?.storeOnly ?? false,
     updatedAt: status?.updatedAt ?? null,
     canEdit: mayEdit(entry, staff.role),
     lockedReason: lockedReason(entry, staff),

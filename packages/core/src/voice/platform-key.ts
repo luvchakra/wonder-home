@@ -32,7 +32,7 @@ export type SpeechKey =
   | { source: "platform"; provider: "google"; key: string }
   | { source: "none"; provider: null; key: null };
 
-/** WonderHome's own speech key, from the deployment's environment. */
+/** WonderHome's own speech key, saved in Platform admin only (`STORE_ONLY_KEYS`: a deployment variable is ignored). */
 export function platformSpeechKey(env: Record<string, string | undefined> = runtimeEnv()): string | null {
   const key = env.WONDERHOME_SPEECH_KEY?.trim();
   return key ? key : null;

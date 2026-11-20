@@ -1,5 +1,6 @@
 import { geminiClient } from "../ai/provider-clients";
 import { LIVE_TRANSCRIBE_MAX_BYTES } from "./live-messages";
+import { runtimeEnv, whenSettingsChange } from "../platform/settings/runtime-env";
 
 /**
  * What the person said in a Gemini Live turn, written down properly (the
@@ -21,7 +22,13 @@ import { LIVE_TRANSCRIBE_MAX_BYTES } from "./live-messages";
 export const LIVE_TRANSCRIBE_RATE = 16_000;
 export { LIVE_TRANSCRIBE_MAX_BYTES } from "./live-messages";
 
-export const LIVE_TRANSCRIBE_MODEL = process.env.WONDERHOME_GEMINI_TRANSCRIBE_MODEL?.trim() || "gemini-flash-latest";
+/** From Platform admin (one place, `STORE_ONLY_KEYS`); re-read when the saved settings change. */
+export let LIVE_TRANSCRIBE_MODEL = "gemini-flash-latest";
+function applyTranscribeModel(): void {
+  LIVE_TRANSCRIBE_MODEL = runtimeEnv().WONDERHOME_GEMINI_TRANSCRIBE_MODEL?.trim() || "gemini-flash-latest";
+}
+applyTranscribeModel();
+whenSettingsChange(applyTranscribeModel);
 
 /** A 44-byte RIFF header in front of raw 16-bit mono PCM, so the model reads it as a WAV file. */
 export function pcmToWav(pcm: Uint8Array, sampleRate = LIVE_TRANSCRIBE_RATE): Uint8Array {

@@ -210,7 +210,8 @@ WonderHome's AI layer is one pipeline with three named, real surfaces —
   - **Meaning.** `homebrain_embeddings` uses pgvector, 768 dimensions, compared
     exactly per household (`match_homebrain_embeddings`, service role). Each
     record is embedded with the household's Google or OpenAI key, else its
-    Gemini key, else the platform key. Only classes the data-use policy
+    Gemini key, else the platform key (saved in Platform admin only;
+    `docs/external-providers.md` "one place"). Only classes the data-use policy
     allows are embedded, and every family name becomes "someone" before
     anything is sent. On a turn, meaning starts alongside the read and gets
     900 ms (`recall.ts`), then the turn answers by words.

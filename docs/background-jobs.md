@@ -33,7 +33,7 @@ Since 2026-11-07, scheduled and batch work runs on **GitHub Actions** where it c
   - A late, skipped or doubled run neither misses nor repeats a day: the first run inside the window does the work, and later runs find the claim.
   - A gap longer than 30 minutes lets the delivery clock do it instead.
   - `packages/core/src/jobs/runner.test.ts` simulates three days of irregular GitHub runs (gaps of 7 to 41 minutes and a two-hour outage) beside the 5-minute Vercel tick, across three time zones.
-- **Steps that need a model.** Tidy and Sleep need the platform AI key. Without `WONDERHOME_AI_KEY` the runner leaves them to Vercel and writes no heartbeat, so they never run worse on GitHub.
+- **Steps that need a model.** Tidy and Sleep need the platform AI key. The runner reads it, with the provider and model names, from Platform admin (`platform_config`, through the service role it already has; `jobs/runner.ts`), the same saved values the site uses, never a GitHub secret (owner, 2026-11-21). With no key saved, or the store unreadable, it leaves them to Vercel and writes no heartbeat, so they never run worse on GitHub or with a different key from the site's.
 
 ## Inventory (2026-11-07)
 
@@ -80,7 +80,7 @@ Vercel invocations per day are estimated from the schedules. Hobby keeps one hou
   - Output is counts only.
 - **Secrets** (repository secrets):
   - Required: `SUPABASE_URL` and `SUPABASE_SERVICE_ROLE_KEY`.
-  - Optional: `WONDERHOME_AI_KEY`, `WONDERHOME_AI_PROVIDER`, `WONDERHOME_AI_MODEL`, `WONDERHOME_AI_UNDERSTANDING_MODEL`.
+  - No AI secrets. `WONDERHOME_AI_*` secrets are no longer passed to the job and can be deleted (`docs/progress/2026-11-21-ai-key-one-place.md`).
   - Without the two required secrets every run warns and exits green.
 - **Permissions:** `contents: read` for the workflow. Only the alert job gets `issues: write`. Actions are pinned to SHAs.
 - **Concurrency:** one group per job, `cancel-in-progress: false`. A step times out after 15 minutes and the job after 20.
