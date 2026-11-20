@@ -420,6 +420,8 @@ export const helpDe: AreaCatalog<typeof helpEn> = {
     "Ein Admin entscheidet unter Einstellungen → KI-Assistent, welche Arten von Informationen der Assistent mit dem KI-Dienst teilen darf – Angaben zu Kindern, Gesundheit, Beträge und Rechnungen, wo Menschen sind, private Nachrichten. Was nicht erlaubt ist, bleibt aus allem heraus, was der Assistent sendet. Angaben zu Kindern sind von Anfang an erlaubt, damit HomeTalk und HomeBrain nutzen können, was Sie über Ihre Kinder erzählen; ein Admin kann sie dort abwählen. Alles andere wartet, bis ein Admin es erlaubt.",
   "help.guide.privacy.body.5":
     "Unter Einstellungen → Privatsphäre & Sicherheit kann ein Admin außerdem festlegen, wie lange vergangene, erledigte Einträge aufbewahrt werden, bevor sie aufgeräumt werden — vergangene freie Tage einer Hilfe, alte Kalender-Änderungseinträge —, damit keine alten Angaben über Personen aufbewahrt werden, die niemand mehr braucht. Gesundheits-, Geld- und Sicherheitsdaten werden nie aufgeräumt, und das Aufräumen lässt sich abschalten.",
+  "help.guide.privacy.body.6":
+    "Zuhause zurücksetzen (Einstellungen → Gefahrenbereich, nur für den Eigentümer des Zuhauses): entfernt alle Mitglieder außer dir und löscht alles, was das Zuhause speichert — Rechnungen, Kalender, Mahlzeiten, Einkäufe, HomeSend-Einträge und Dateien, HomeTalk-Gespräche, Gesundheitsunterlagen, Schule, Orte, Benachrichtigungen, Einstellungen und was WonderHome gelernt hat — und trennt verbundene Dienste. Ihre Anmeldungen werden nicht gelöscht; sie gehören nur nicht mehr zum Zuhause. Dein Konto, dein Tarif und sein Abrechnungsverlauf sowie das Aktivitätsprotokoll bleiben. Es lässt sich nicht rückgängig machen, daher wird zuerst \"Alle Daten herunterladen\" angeboten: ein ZIP mit einer Datei pro Art von Eintrag, jeder hochgeladenen Datei und einer Übersicht — alles, was du selbst sehen kannst; private Gesundheitsunterlagen und private HomeTalk-Gespräche anderer Mitglieder sind nicht dabei. Dafür gibst du den Namen des Zuhauses und dein Passwort ein (oder meldest dich frisch mit Google an). Nichts wird von selbst, per Sprache oder aus HomeTalk zurückgesetzt.",
 
   "help.guide.ai-key.title": "Welches Modell den Assistenten antreibt",
   "help.guide.ai-key.summary": "Standardmäßig unseres; deins, wenn dir das lieber ist.",
@@ -461,7 +463,7 @@ export const helpDe: AreaCatalog<typeof helpEn> = {
   "help.faq.training.a": "Nein, standardmäßig nicht.",
   "help.faq.download-delete.q": "Wie lade ich meine Daten herunter oder lösche sie?",
   "help.faq.download-delete.a":
-    "Einstellungen → Datenschutz & Sicherheit. Lade nach Bestätigung deines Passworts eine Kopie herunter oder verlange die Löschung – das startet einen 30-tägigen Countdown, den du abbrechen kannst.",
+    "Einstellungen → Datenschutz & Sicherheit. Lade nach Bestätigung deines Passworts eine Kopie herunter oder verlange die Löschung – das startet einen 30-tägigen Countdown, den du abbrechen kannst. Der Eigentümer des Zuhauses kann außerdem unter Einstellungen → Gefahrenbereich alle Daten des Zuhauses herunterladen oder das Zuhause zurücksetzen.",
   "help.faq.forgot-password.q": "Ich habe mein Passwort vergessen. Was jetzt?",
   "help.faq.forgot-password.a":
     "Nutze „Passwort vergessen?“ auf dem Anmeldebildschirm. Der Link, der ankommt, funktioniert einmal und läuft nach einer Stunde ab.",

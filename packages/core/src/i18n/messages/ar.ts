@@ -15,6 +15,7 @@ import { eventsAr } from "./areas/events/ar";
 import { calendarAr } from "./areas/calendar/ar";
 import { memberInviteAr } from "./areas/memberinvite/ar";
 import { whatsNewAr } from "./areas/whatsnew/ar";
+import { resetHomeAr } from "./areas/reset/ar";
 import { settingsSearchAr } from "./areas/settings-search/ar";
 import { todayAr } from "./areas/today/ar";
 import { chatAr } from "./areas/chat/ar";
@@ -1200,6 +1201,7 @@ export const ar: Catalog = {
   ...eventsAr,
   ...calendarAr,
   ...whatsNewAr,
+  ...resetHomeAr,
   ...settingsSearchAr,
   ...todayAr,
   ...chatAr,

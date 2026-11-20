@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 
 import { developerApiEnabled } from "@wonderhome/core/developer/keys";
+import { isHouseholdOwner } from "@wonderhome/core/household/reset-policy";
 import { translator } from "@wonderhome/core/i18n/translate";
 import { en } from "@wonderhome/core/i18n/messages/en";
 import { buildSettingsIndex } from "@wonderhome/core/settings-search/build";
@@ -27,6 +28,7 @@ export async function GET() {
       memberType: membership.memberType,
       canManageIntegrations: view.permissions.includes("integrations.manage"),
       developerAccess: developerApiEnabled(),
+      isOwner: isHouseholdOwner(membership),
     },
     locale.t,
     translator("en", en),

@@ -24,6 +24,7 @@ import { eventsEn } from "./areas/events/en";
 import { calendarEn } from "./areas/calendar/en";
 import { memberInviteEn } from "./areas/memberinvite/en";
 import { whatsNewEn } from "./areas/whatsnew/en";
+import { resetHomeEn } from "./areas/reset/en";
 import { settingsSearchEn } from "./areas/settings-search/en";
 import { todayEn } from "./areas/today/en";
 import { chatEn } from "./areas/chat/en";
@@ -1168,6 +1169,7 @@ export const en = {
   ...eventsEn,
   ...calendarEn,
   ...whatsNewEn,
+  ...resetHomeEn,
   ...settingsSearchEn,
   ...todayEn,
   ...chatEn,

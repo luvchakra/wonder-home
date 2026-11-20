@@ -30,7 +30,9 @@ export type Audience =
   /** Those who hold `integrations.manage`. */
   | "integrations"
   /** `integrations.manage` and developer access switched on for the deployment. */
-  | "developer";
+  | "developer"
+  /** The household's owner alone (the Danger zone, story 15-014). */
+  | "owner";
 
 export type RegistryEntry = {
   id: string;
@@ -65,6 +67,11 @@ export const SETTINGS_REGISTRY: RegistryEntry[] = [
   e("teach", "manage", "settingsHome.teach", "/settings#teach", "admin", { kw: true }),
   e("manage-notifications", "manage", "manage.section.notifications", "/settings/notifications#household", "admin", { kw: true }),
   e("activity", "manage", "manage.section.activity", "/settings#activity", "admin", { kw: true }),
+
+  // ── Danger zone (the owner only, story 15-014) ────────────────────────────
+  e("danger-zone", undefined, "resetHome.dangerZone.title", "/settings#danger-zone", "owner", { kw: true }),
+  e("full-download", "danger-zone", "resetHome.download.title", "/settings/reset-home#download", "owner", { kw: true }),
+  e("reset-home", "danger-zone", "resetHome.row.title", "/settings/reset-home", "owner", { kw: true, desc: "resetHome.row.meta" }),
 
   // ── Assistant: AI ─────────────────────────────────────────────────────────
   e("assistant", undefined, "settingsHome.group.assistant", "/settings#assistant", "everyone", { kw: true }),

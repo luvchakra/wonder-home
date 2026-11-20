@@ -48,6 +48,21 @@ export type SensitiveAction = {
 
 export const SENSITIVE_ACTIONS: readonly SensitiveAction[] = [
   {
+    event: "household.reset",
+    because: "Every member but the owner and every record of the home went at once; this entry is what survives it.",
+    recordedIn: "supabase/migrations/20261121010000_household_reset.sql",
+  },
+  {
+    event: "household.reset.files",
+    because: "Uploaded files are removed after the reset commits; any that could not be are listed here, not forgotten.",
+    recordedIn: "packages/core/src/household/reset-repository.ts",
+  },
+  {
+    event: "household.exported",
+    because: "A copy of everything the home holds left WonderHome.",
+    recordedIn: "apps/web/app/api/v1/households/[householdId]/export/full/route.ts",
+  },
+  {
     event: "household.created",
     because: "The beginning of everything else in the trail.",
     recordedIn: "supabase/migrations/20260917005443_identity_rls_and_creation.sql",
@@ -713,6 +728,12 @@ export function describeAuditEvent(
       return { title: "Household created", detail: null };
     case "household.updated":
       return { title: "Household settings changed", detail: null };
+    case "household.reset":
+      return { title: "The home was reset by its owner", detail: typeof metadata.members_removed === "number" ? `${metadata.members_removed} members removed` : null };
+    case "household.reset.files":
+      return { title: "Files from before the reset were removed", detail: typeof metadata.files_left === "number" && metadata.files_left > 0 ? `${metadata.files_left} could not be removed` : null };
+    case "household.exported":
+      return { title: "The owner downloaded all of the home's data", detail: null };
     case "member.added":
       return { title: "Somebody joined the household", detail: stringOr(metadata.role, null) };
     case "member.removed":
