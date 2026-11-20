@@ -10,6 +10,7 @@ import { ingestEmailAttachment, understand, type IngestDeps } from "./ingest";
 import { contentHash, htmlToText, MAX_BYTES, normalizeText } from "./normalize";
 import { createEmailHomeSendItem } from "./repository";
 import { drainJobs, enqueueClassifyRetry } from "./retry-queue";
+import { queueModelRead } from "./model-unavailable";
 import { loadRecordFirst } from "../household/direct-add-repository";
 import { holdFromNewSender, senderStates, senderVerdict } from "./sender-trust";
 import { preTrustSender } from "./sender-pretrust";
@@ -240,6 +241,7 @@ export async function handleEmailWebhook(request: Request, deps: EmailWebhookDep
 
     if (!duplicate && body && withinLimit) {
       let failed = false;
+      let outcomeReason: string | null = null;
       try {
         // The same understanding step every other HomeSend input ends in.
         // The sender and subject are evidence, told to the model as
@@ -251,6 +253,7 @@ export async function handleEmailWebhook(request: Request, deps: EmailWebhookDep
           text: body,
         }, deps.ingest);
         failed = outcome.classifyFailed === true;
+        outcomeReason = outcome.failureReason ?? null;
         // Read: a trusted sender's email is added now, not when a member next opens HomeSend.
         if (!failed && deps.addTrusted) {
           toAdd.push({ householdId, itemId: item.id });
@@ -265,7 +268,7 @@ export async function handleEmailWebhook(request: Request, deps: EmailWebhookDep
         // Persist first, retry where safe (§16): the item is kept and
         // waiting; a job asks for it to be read again once the provider is back.
         events.push({ kind: "classification_failed", householdId });
-        const queued = await enqueueClassifyRetry(supabase, { householdId, itemId: item.id }).catch(() => false);
+        const queued = await (outcomeReason === "model_unavailable" ? queueModelRead(supabase, { householdId, itemId: item.id }) : enqueueClassifyRetry(supabase, { householdId, itemId: item.id })).catch(() => false);
         if (queued) {
           events.push({ kind: "retry_queued", householdId });
           queuedRetry = true;

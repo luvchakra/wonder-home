@@ -14,6 +14,7 @@ import { platformMalwareScanConfig, scanForMalware, type MalwareScanOutcome } fr
 import { paymentTitle, readPaymentProof, type PaymentProof } from "./payment-proof";
 import { asLoneUrl, audioDurationSeconds, contentHash, decodeTextFile, detectIntakeFile, MAX_AUDIO_SECONDS, MAX_BYTES, MAX_PDF_PAGES, normalizeText, pdfPageCount, type IntakeFileType } from "./normalize";
 import { createHomeSendItem, findByExternalId, findPendingByContentHash, markHomeSendFailed, setHomeSendClassification } from "./repository";
+import { recordModelUnavailable } from "./model-unavailable";
 import { buildUnderstanding, unreadableUnderstanding, type IntakeUnderstanding, type UnderstandingMeta } from "./understanding";
 
 /**
@@ -140,10 +141,10 @@ async function householdTimezone(supabase: SupabaseClient, householdId: string):
 
 const defaultClassify: NonNullable<IngestDeps["classify"]> = async (householdId, source, context) => {
   const { readHouseholdKey } = await import("../ai/credentials");
-  const { resolveModelKey, platformKey } = await import("../ai/model-key");
+  const { resolveModelKey, currentPlatformKey } = await import("../ai/model-key");
   const { classifyIntake } = await import("../ai/classify-intake");
   const householdKey = await readHouseholdKey(householdId).catch(() => null);
-  const key = resolveModelKey(householdKey, platformKey());
+  const key = resolveModelKey(householdKey, (await currentPlatformKey()));
   if (key.source === "none" || !key.provider || !key.key) return "no_provider";
   return classifyIntake(key.provider, key.key, source, context);
 };
@@ -157,10 +158,10 @@ const defaultClassify: NonNullable<IngestDeps["classify"]> = async (householdId,
  */
 export const strongerClassify: NonNullable<IngestDeps["classify"]> = async (householdId, source, context) => {
   const { readHouseholdKey } = await import("../ai/credentials");
-  const { resolveModelKey, platformKey } = await import("../ai/model-key");
+  const { resolveModelKey, currentPlatformKey } = await import("../ai/model-key");
   const { classifyIntake } = await import("../ai/classify-intake");
   const householdKey = await readHouseholdKey(householdId).catch(() => null);
-  const key = resolveModelKey(householdKey, platformKey());
+  const key = resolveModelKey(householdKey, (await currentPlatformKey()));
   if (key.source === "none" || !key.provider || !key.key) return "no_provider";
   if ("image" in source || "document" in source) {
     const { readWordsOff } = await import("../ai/read-words");
@@ -207,7 +208,7 @@ async function transcribeWithGemini(
   clip: AudioClip,
   settings: Awaited<ReturnType<typeof import("../voice/repository").loadVoiceSettings>>,
 ): Promise<TranscribeResult> {
-  const [{ readGeminiVoiceKey, readHouseholdKey }, { platformKey, resolveModelKey }, { loadDataUse }, { listMembers }, { listeningLanguage }, live] = await Promise.all([
+  const [{ readGeminiVoiceKey, readHouseholdKey }, { currentPlatformKey, resolveModelKey }, { loadDataUse }, { listMembers }, { listeningLanguage }, live] = await Promise.all([
     import("../ai/credentials"),
     import("../ai/model-key"),
     import("../ai/privacy-repository"),
@@ -221,7 +222,7 @@ async function transcribeWithGemini(
     loadDataUse(supabase, householdId).catch(() => null),
     listMembers(supabase, householdId, null).catch(() => []),
   ]);
-  const key = resolveModelKey(voiceKey ?? householdKey, platformKey());
+  const key = resolveModelKey(voiceKey ?? householdKey, (await currentPlatformKey()));
   if (!policy || !geminiMayTranscribe(key, policy) || !key.key) {
     logNotTranscribed("gemini", clip, !key.key ? "no_gemini_key" : !policy ? "no_data_use_policy" : "data_use_excludes_google");
     return { status: "unavailable" };
@@ -342,11 +343,25 @@ export async function understand(
       return { itemId, duplicate: false, state: "needs_review", notice: "Read as a payment you made. WonderHome records it; it never pays.", item: { id: itemId, classifiedKind: "receipt", extracted, understanding } };
     }
     const understanding = unreadableUnderstanding(meta(inputScan));
+    const rawText = input.text ? input.text.slice(0, MAX_STORED_TEXT) : null;
+    // The provider refused the key or couldn't be reached: that is not "unknown content" (2026-11-21). Kept as
+    // `model_unavailable`, retried until a model reads it, never asked about or set aside meanwhile.
+    if (result === null && (await recordModelUnavailable(supabase, householdId, itemId, { rawText, understanding }))) {
+      return {
+        itemId,
+        duplicate: false,
+        classifyFailed: true,
+        state: "failed",
+        failureReason: "model_unavailable",
+        notice: FAILURE_REASON_COPY.model_unavailable,
+        item: { id: itemId, classifiedKind: "unknown", extracted: null, understanding },
+      };
+    }
     await setHomeSendClassification(supabase, householdId, itemId, {
       classifiedKind: "unknown",
       extracted: emptyExtraction(),
       understanding,
-      rawText: input.text ? input.text.slice(0, MAX_STORED_TEXT) : null,
+      rawText,
       transcriptConfidence: input.transcriptConfidence ?? undefined,
     });
     return {

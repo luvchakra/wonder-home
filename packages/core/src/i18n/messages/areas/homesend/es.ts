@@ -75,6 +75,7 @@ export const homesendEs: AreaCatalog<typeof homesendEn> = {
   "homesend.failure.linkUnreachable": "No se pudo abrir ese enlace.",
   "homesend.failure.transcriptionUnavailable": "Las notas de voz necesitan un servicio de voz, y todavía no hay ninguno configurado.",
   "homesend.failure.transcriptionFailed": "WonderHome no logró entender la nota de voz.",
+  "homesend.failure.modelUnavailable": "Guardado. WonderHome no puede leerlo ahora mismo; lo leerá en cuanto pueda y te dirá qué hizo.",
   "homesend.status.keptExisting": "Se mantuvo el existente",
   "homesend.status.dismissed": "Descartado",
   "homesend.status.undone": "Deshecho",

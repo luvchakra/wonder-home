@@ -13,6 +13,8 @@ export const whatsappMr: AreaCatalog<typeof whatsappEn> = {
   "whatsapp.ack.failed": "⚠️ मी हे ठेवलं. {why} हे HomeSend मध्ये \"सुरक्षितपणे थांबवलेले\" मध्ये आहे.",
   "whatsapp.ack.unreadable": "WonderHome हे वाचू शकलं नाही.",
   "whatsapp.ack.checkTranscript": "मिळालं 👍 तो व्हॉइस नोट मी बरोबर ऐकला याची खात्री नाही — कृपया HomeSend मध्ये त्यात काय आहे ते तपासा. 🎙️",
+  "whatsapp.ack.modelUnavailable": "मिळालं 👍 मी हे ठेवून घेतलं आहे. आत्ता मला ते वाचता येत नाही; वाचता येताच वाचून मी काय केलं ते सांगेन.",
+  "whatsapp.later.lead": "📬 तुम्ही आधी पाठवलेलं मी आता वाचलं आहे.",
   "whatsapp.ack.waiting": "हे HomeSend मध्ये तुमच्या तपासणीची वाट पाहत आहे.",
   "whatsapp.found.school": "मला एक शाळेचं काम सापडलं. 🎒",
   "whatsapp.found.schoolTitled": "मला एक शाळेचं काम सापडलं: *{title}*. 🎒",

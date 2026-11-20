@@ -95,6 +95,7 @@ export const settingsZh: AreaCatalog<typeof settingsEn> = {
   "settingsPage.ai.source.household.detail": "请求费用记入你的服务商账户，并受你与服务商之间的协议约束，而不是我们的。",
   "settingsPage.ai.source.platform.title": "WonderHome 的密钥",
   "settingsPage.ai.source.platform.detail": "已包含在你的套餐中。你家的数据绝不会用于训练模型。",
+  "settingsPage.ai.source.platform.unavailable": "目前 WonderHome 的密钥无法连接到它的模型，所以助手正在按自己的规则工作。不会丢失任何东西：发来的内容都已保存，模型恢复后会马上读取。",
   "settingsPage.ai.source.none.title": "未配置模型",
   "settingsPage.ai.source.none.detail": "助手仍可使用：它依据 WonderHome 自己的规则作答，而不是语言模型，也从不假装理解得比实际更多。",
   "settingsPage.ai.quote": "聪明的帮助，由你做主。",

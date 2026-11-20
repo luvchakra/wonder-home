@@ -75,6 +75,7 @@ export const homesendZh: AreaCatalog<typeof homesendEn> = {
   "homesend.failure.linkUnreachable": "无法打开该链接。",
   "homesend.failure.transcriptionUnavailable": "语音留言需要语音识别服务，目前尚未设置。",
   "homesend.failure.transcriptionFailed": "WonderHome 没能听清这条语音留言。",
+  "homesend.failure.modelUnavailable": "已保存。WonderHome 现在暂时读不了它；能读的时候会马上读，并告诉你做了什么。",
   "homesend.status.keptExisting": "保留原有",
   "homesend.status.dismissed": "已忽略",
   "homesend.status.undone": "已撤销",

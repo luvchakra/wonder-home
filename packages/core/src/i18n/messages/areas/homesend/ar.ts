@@ -75,6 +75,7 @@ export const homesendAr: AreaCatalog<typeof homesendEn> = {
   "homesend.failure.linkUnreachable": "تعذّر فتح هذا الرابط.",
   "homesend.failure.transcriptionUnavailable": "تحتاج الرسائل الصوتية إلى خدمة تحويل الكلام، ولم يتم إعداد أي خدمة بعد.",
   "homesend.failure.transcriptionFailed": "لم يتمكن WonderHome من فهم الرسالة الصوتية.",
+  "homesend.failure.modelUnavailable": "تم الاحتفاظ به. لا يستطيع WonderHome قراءته الآن؛ سيقرؤه بمجرد أن يستطيع ويخبرك بما فعل.",
   "homesend.status.keptExisting": "أُبقي على الموجود",
   "homesend.status.dismissed": "أُخفي",
   "homesend.status.undone": "تم التراجع",

@@ -1,6 +1,6 @@
 import { catThoughts, createThoughtModel, settleThoughts } from "@wonderhome/core/home/cat-thoughts";
 import { CAT_VOICES, catFacts } from "@wonderhome/core/home/cat-facts";
-import { platformKey } from "@wonderhome/core/ai/model-key";
+import { currentPlatformKey } from "@wonderhome/core/ai/model-key";
 import type { LanguageCode } from "@wonderhome/core/i18n/locales";
 import { HeroCat } from "@wonderhome/core/ui/cozy-corner-illustration";
 
@@ -37,7 +37,7 @@ export async function HeroCatThought({ session, now }: { session: Session; now: 
   const language = preferences.language as LanguageCode;
   const today = localDay(timezone, now);
   const dayAfter = new Date(now.getTime() + 48 * 3600 * 1000);
-  const key = platformKey();
+  const key = await currentPlatformKey();
   const model = key ? createThoughtModel(key.provider, key.key) : null;
 
   // The same reads Home's agenda uses, once per request; the cat keeps tonight and the next two days.

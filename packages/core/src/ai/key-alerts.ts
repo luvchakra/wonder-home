@@ -70,7 +70,35 @@ async function getRecorder(): Promise<Recorder | null> {
 const lastResolved = new Map<string, number>();
 const RESOLVE_EVERY_MS = 5 * 60_000;
 
-export async function noteKeyFailure(apiKey: string, provider: ModelProvider, kind: KeyAlertKind): Promise<void> {
+/**
+ * Keys a provider refused on this server, until when they are not sent again.
+ * A refused key fails every call the same way, so one reading's several steps
+ * (OCR, a read, a stronger read) answered one by one only delayed the
+ * household's reply. Out of quota is not held: a per-minute limit passes.
+ */
+const refusedUntil = new Map<string, number>();
+const HOLD_REFUSED_MS = 60_000;
+
+export function keyRefusedRecently(apiKey: string, now = Date.now()): boolean {
+  const until = refusedUntil.get(keyFingerprint(apiKey));
+  return until !== undefined && now < until;
+}
+
+/** What a held key's call answers instead of reaching the provider: a refusal the SDKs never retry. */
+export function refusedResponse(provider: ModelProvider): Response {
+  const body = provider === "anthropic"
+    ? { type: "error", error: { type: "authentication_error", message: "This key was refused a moment ago; not sent again yet." } }
+    : { error: { message: "This key was refused a moment ago; not sent again yet.", type: "invalid_request_error", code: "invalid_api_key" } };
+  return new Response(JSON.stringify(body), { status: 401, headers: { "content-type": "application/json", "x-wonderhome-held": "1" } });
+}
+
+/** For tests: forget every held key. */
+export function forgetRefusedKeys(): void {
+  refusedUntil.clear();
+}
+
+export async function noteKeyFailure(apiKey: string, provider: ModelProvider, kind: KeyAlertKind, now = Date.now()): Promise<void> {
+  if (kind !== "quota_exhausted") refusedUntil.set(keyFingerprint(apiKey), now + HOLD_REFUSED_MS);
   try {
     const db = await getRecorder();
     if (!db) return;
@@ -85,6 +113,7 @@ export async function noteKeyFailure(apiKey: string, provider: ModelProvider, ki
 export async function noteKeyWorking(apiKey: string, now = Date.now()): Promise<void> {
   try {
     const fingerprint = keyFingerprint(apiKey);
+    refusedUntil.delete(fingerprint);
     const last = lastResolved.get(fingerprint);
     if (last !== undefined && now - last < RESOLVE_EVERY_MS) return;
     lastResolved.set(fingerprint, now);

@@ -1,4 +1,4 @@
-import { runtimeEnv } from "../platform/settings/runtime-env";
+import { runtimeEnv, settledRuntimeEnv } from "../platform/settings/runtime-env";
 /**
  * Which model key answers for a household, and whose it is.
  *
@@ -62,6 +62,16 @@ export function platformKey(
 }
 
 /**
+ * WonderHome's own key for a model call: the same as `platformKey()`, after
+ * this server has read the values saved in the platform admin at least once,
+ * so a cold server never sends the deployment's variable in place of the key
+ * the owner saved. Every path that calls a model uses this.
+ */
+export async function currentPlatformKey(): Promise<PlatformKey> {
+  return platformKey(await settledRuntimeEnv());
+}
+
+/**
  * What an operator might reasonably write for each provider. "gemini" is
  * what anyone holding a Gemini key types; reading it as "not a provider"
  * once sent a Google key to Anthropic, which refused it with a 401 and left
@@ -83,7 +93,7 @@ const PROVIDER_NAMES: Record<string, ModelProvider> = {
  * name one we recognise. Only the documented prefixes count; anything else
  * is not guessed at.
  */
-function providerOfKey(key: string): ModelProvider | null {
+export function providerOfKey(key: string): ModelProvider | null {
   if (key.startsWith("sk-ant-")) return "anthropic";
   if (key.startsWith("AIza")) return "google";
   if (key.startsWith("sk-")) return "openai";
@@ -93,7 +103,17 @@ function providerOfKey(key: string): ModelProvider | null {
 /** What a household is told about where its assistant's intelligence comes from. */
 export function describeKeySource(
   source: KeySource,
+  options: { modelUnavailable?: boolean } = {},
 ): { title: string; detail: string; tone: "handled" | "neutral" | "attention" } {
+  // WonderHome's key is being refused (2026-11-21): one calm line for an Admin, never provider details for members.
+  if (source === "platform" && options.modelUnavailable) {
+    return {
+      title: "WonderHome's key",
+      detail:
+        "Right now WonderHome's key isn't reaching its model, so the assistant is working from its own rules. Nothing is lost: anything sent in is kept and read as soon as the model is back.",
+      tone: "attention",
+    };
+  }
   switch (source) {
     case "household":
       return {

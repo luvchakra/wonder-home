@@ -96,6 +96,7 @@ export const settingsHi: AreaCatalog<typeof settingsEn> = {
   "settingsPage.ai.source.household.detail": "अनुरोधों का बिल आपके प्रदाता खाते में जाता है और वे उनके साथ आपके समझौते के अंतर्गत आते हैं, हमारे नहीं।",
   "settingsPage.ai.source.platform.title": "WonderHome की कुंजी",
   "settingsPage.ai.source.platform.detail": "आपके प्लान में शामिल। आपके घर का डेटा कभी मॉडल प्रशिक्षित करने में इस्तेमाल नहीं होता।",
+  "settingsPage.ai.source.platform.unavailable": "अभी WonderHome की key अपने मॉडल तक नहीं पहुँच रही, इसलिए सहायक अपने नियमों से काम कर रहा है। कुछ नहीं खोया: जो भी भेजा गया है वह रखा है और मॉडल लौटते ही पढ़ा जाएगा।",
   "settingsPage.ai.source.none.title": "कोई मॉडल सेट नहीं है",
   "settingsPage.ai.source.none.detail":
     "सहायक फिर भी काम करता है: वह भाषा मॉडल के बजाय WonderHome के अपने नियमों से जवाब देता है, और कभी यह दिखावा नहीं करता कि उसने जितना समझा उससे ज़्यादा समझा।",

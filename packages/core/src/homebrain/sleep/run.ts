@@ -1,7 +1,7 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 
 import { readHouseholdKey } from "../../ai/credentials";
-import { platformKey, resolveModelKey } from "../../ai/model-key";
+import { currentPlatformKey, resolveModelKey } from "../../ai/model-key";
 import { routeToProvider, type DataUsePolicy } from "../../ai/privacy";
 import { loadDataUse } from "../../ai/privacy-repository";
 import { isoDateIn } from "../../context/format";
@@ -310,7 +310,7 @@ export async function sleepHousehold(
     // The model, where the household's key and policy allow it.
     let model: SleepModel | null = options.model ?? null;
     if (options.model === undefined) {
-      const key = resolveModelKey(await readHouseholdKey(householdId).catch(() => null), platformKey());
+      const key = resolveModelKey(await readHouseholdKey(householdId).catch(() => null), (await currentPlatformKey()));
       const route = routeToProvider({ provider: key.provider, keySource: key.source, policy, hasContent: true });
       model = route.ok && key.provider && key.key ? createSleepModel(key.provider, key.key) : null;
     }

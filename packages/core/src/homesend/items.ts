@@ -24,6 +24,8 @@ export const HOME_SEND_FAILURE_REASONS = [
   "link_unreachable",
   "transcription_unavailable",
   "transcription_failed",
+  /** The provider refused the key or could not be reached: kept, read again until a model reads it (2026-11-21). */
+  "model_unavailable",
 ] as const;
 export type HomeSendFailureReason = (typeof HOME_SEND_FAILURE_REASONS)[number];
 
@@ -37,6 +39,7 @@ export const FAILURE_REASON_COPY: Record<HomeSendFailureReason, string> = {
   link_unreachable: "That link couldn't be opened.",
   transcription_unavailable: "Voice notes need a speech service, and none is set up yet.",
   transcription_failed: "WonderHome couldn't make out the voice note.",
+  model_unavailable: "Kept. WonderHome can't read it right now; it will read it as soon as it can and tell you what it did.",
 };
 
 export const HOME_SEND_KINDS = ["bill", "school_item", "activity_item", "event", "grocery_item", "health_document", "receipt", "unknown"] as const;

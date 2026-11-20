@@ -75,6 +75,7 @@ export const homesendFr: AreaCatalog<typeof homesendEn> = {
   "homesend.failure.linkUnreachable": "Ce lien n’a pas pu être ouvert.",
   "homesend.failure.transcriptionUnavailable": "Les messages vocaux nécessitent un service de reconnaissance vocale, et aucun n’est encore configuré.",
   "homesend.failure.transcriptionFailed": "WonderHome n’a pas réussi à comprendre le message vocal.",
+  "homesend.failure.modelUnavailable": "Gardé. WonderHome ne peut pas le lire pour l’instant ; il le lira dès que possible et te dira ce qu’il a fait.",
   "homesend.status.keptExisting": "Existant conservé",
   "homesend.status.dismissed": "Ignoré",
   "homesend.status.undone": "Retiré",

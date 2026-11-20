@@ -10,6 +10,7 @@ import { openCheckQuestion } from "../hometalk/checking-questions";
 import { openIntakeQuestion } from "../hometalk/intake-questions";
 import { lastQuestionStartedAt, mayStartQuestion } from "../hometalk/question-cadence";
 import { enqueueClassifyRetry, type ClaimedJob, type JobHandler } from "../homesend/retry-queue";
+import { queueModelRead } from "../homesend/model-unavailable";
 import { gateTranscript, TRANSCRIPT_CONFIDENCE_FLOOR, type TranscriptGate } from "../homesend/audio";
 import { amountWords, sureClause, type AddedOnItsOwn, type WaitingInHomeSend } from "../homesend/auto-add";
 import { hearWhatsAppVoiceNote, ingestWhatsAppMedia, ingestWhatsAppText, IngestRejected, type IngestDeps, type IngestOutcome, type TranscribeResult } from "../homesend/ingest";
@@ -531,7 +532,9 @@ async function readMessage(admin: SupabaseClient, messageId: string, deps: Whats
     return "failed";
   }
 
-  if (outcome.classifyFailed) await enqueueClassifyRetry(admin, { householdId: row.household_id, itemId: outcome.itemId, now }).catch(() => false);
+  // Not read for want of a model (2026-11-21): queued to be read as soon as one answers; the sender is told then.
+  if (outcome.failureReason === "model_unavailable") await queueModelRead(admin, { householdId: row.household_id, itemId: outcome.itemId, now }).catch(() => false);
+  else if (outcome.classifyFailed) await enqueueClassifyRetry(admin, { householdId: row.household_id, itemId: outcome.itemId, now }).catch(() => false);
   await settle({ processing_status: "processed", failure_reason: null, homesend_item_id: outcome.itemId });
   // The rest of the burst is part of this item, answered by this one reply.
   await settleBurst({ processing_status: "processed", failure_reason: null, homesend_item_id: outcome.itemId, acknowledged_at: now.toISOString() });
@@ -1150,6 +1153,8 @@ export function acknowledgementFor(
 ): { text: string; asks: boolean } {
   const t = options.t ?? ENGLISH;
   if (outcome.duplicate) return { text: t("whatsapp.ack.duplicate"), asks: false };
+  // The model couldn't be reached: the truth, and a promise the retry keeps (`homesend/model-unavailable.ts`).
+  if (outcome.failureReason === "model_unavailable") return { text: t("whatsapp.ack.modelUnavailable"), asks: false };
   if (outcome.state === "failed") {
     const reason = outcome.failureReason;
     const why = reason ? t(`homesend.failure.${reason.replace(/_(\w)/g, (_, letter: string) => letter.toUpperCase())}` as TranslationKey) || FAILURE_REASON_COPY[reason] : t("whatsapp.ack.unreadable");
@@ -1204,6 +1209,37 @@ export function acknowledgementFor(
   if (wait?.reason === "untraced") return { text: `${t("whatsapp.ack.gotIt")} ${found} ${t("whatsapp.wait.untraced")}`, asks: false };
   if (wait?.reason === "below_bar") return { text: `${t("whatsapp.ack.gotIt")} ${found} ${t("whatsapp.wait.belowBar", { percent: wait.percent ?? 95 })}`, asks: false };
   return { text: `${t("whatsapp.ack.gotIt")} ${found} ${t("whatsapp.ack.waiting")}`, asks: false };
+}
+
+/**
+ * An item kept until a model could read it has now been read and handled
+ * (`homesend/model-unavailable.ts`): its sender is told what was done, once, on
+ * the verified WhatsApp link it came from. The words are the ones a reply on
+ * arrival would have used, after one line saying this is about something sent
+ * earlier. WhatsApp may refuse a free-form message outside its 24-hour window;
+ * then the evening summary in the app is the report. Returns whether it went.
+ */
+export async function tellSenderAfterModelRead(
+  admin: SupabaseClient,
+  input: { config: WhatsAppIntakeDeps["config"]; fetch?: WhatsAppIntakeDeps["fetch"]; householdId: string; itemId: string; outcome: IngestOutcome; decided: AddedOnItsOwn | WaitingInHomeSend | null },
+): Promise<boolean> {
+  const { data } = await admin
+    .from("whatsapp_messages")
+    .select("member_id, identity:whatsapp_identities!whatsapp_messages_identity_id_fkey(phone_number, status)")
+    .eq("household_id", input.householdId)
+    .eq("homesend_item_id", input.itemId)
+    .order("received_at", { ascending: true })
+    .limit(1)
+    .maybeSingle();
+  const row = data as { member_id: string; identity: { phone_number: string | null; status: string | null } | null } | null;
+  // Only on a link still active: a disconnected number hears nothing more.
+  const to = row?.identity?.status === "active" ? row.identity.phone_number : null;
+  if (!row || !to) return false;
+  const t = await memberWords(admin, input.householdId, row.member_id);
+  const decided = input.decided;
+  const body = decided && !("waiting" in decided) ? addedReply(decided, undefined, t) : acknowledgementFor(input.outcome, { t, wait: decided && "waiting" in decided ? decided : null }).text;
+  const sent = await sendWhatsAppText(input.config, to, `${t("whatsapp.later.lead")}\n${body}`, input.fetch).catch(() => ({ ok: false as const }));
+  return sent.ok;
 }
 
 /** A title with no digits or currency signs left in it, for a money entry's reply. */

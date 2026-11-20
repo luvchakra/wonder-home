@@ -934,6 +934,7 @@ export function homesendPageLabels(t: Translate, language: string): HomeSendPage
         link_unreachable: t("homesend.failure.linkUnreachable"),
         transcription_unavailable: t("homesend.failure.transcriptionUnavailable"),
         transcription_failed: t("homesend.failure.transcriptionFailed"),
+        model_unavailable: t("homesend.failure.modelUnavailable"),
       },
       status: {
         keptExisting: t("homesend.status.keptExisting"),

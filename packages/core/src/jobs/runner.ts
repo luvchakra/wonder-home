@@ -1,11 +1,13 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 
 import { platformKey } from "../ai/model-key";
+import { runtimeEnv } from "../platform/settings/runtime-env";
 import { syncDueSubscriptions } from "../calendar/subscriptions/sync";
 import { keepStoresWarm } from "../homebrain/context-store";
 import { sleepDueHouseholds } from "../homebrain/sleep/run";
 import { archiveStaleHomeSendItems } from "../homesend/repository";
 import { runNeedsYouDeadlines } from "../hometalk/needs-you-run";
+import { queueModelReads } from "../homesend/model-unavailable";
 import { runHomeSendTidy } from "../homesend/tidy-run";
 import { runTriviaRefill } from "../school/trivia-refill";
 import { CLOCK_DRAIN_LIMIT, drainKnowledge } from "../knowledge/facts";
@@ -69,7 +71,9 @@ export const STEP_RUNNERS: Record<JobStep, StepRunner> = {
   },
   "clock.homesend-deadlines": async (admin, now) => {
     const result = await runNeedsYouDeadlines(admin, { now, limit: 50 });
-    return { ready: result.ready, defaulted: result.defaulted, expired: result.expired, asked: result.asked, notes: result.notes, setAside: result.setAside, readAgain: result.readAgain, proposalsClosed: result.proposalsClosed };
+    // Kept for want of a model (2026-11-21): each queued to be read again, the last 14 days' rules-only readings too.
+    const model = await queueModelReads(admin, { now, limit: 100 });
+    return { modelMarked: model.marked, modelQueued: model.queued, modelExpired: model.expired, ready: result.ready, defaulted: result.defaulted, expired: result.expired, asked: result.asked, notes: result.notes, setAside: result.setAside, readAgain: result.readAgain, proposalsClosed: result.proposalsClosed };
   },
   "clock.homebrain-sleep": async (admin, now) => ({ slept: (await sleepDueHouseholds(admin, now, 6)).length }),
   // Each refill uses the asking household's own model terms, not the runner's key: not a NEEDS_MODEL step.
@@ -118,12 +122,13 @@ export type RunOptions = {
 
 /** Runs one job's steps in order; one step failing never stops the next. */
 export async function runJob(admin: SupabaseClient, job: JobName, options: RunOptions = {}): Promise<{ ok: boolean; steps: StepReport[] }> {
-  const env = options.env ?? process.env;
+  // The saved platform settings over the runner's secrets (`scripts/jobs.mjs` loads them first), as every model call sees them.
+  const env = options.env ?? runtimeEnv();
   const hasModel = platformKey(env) !== null;
   const reports: StepReport[] = [];
   for (const step of JOBS[job]) {
     if (NEEDS_MODEL.has(step) && !hasModel) {
-      reports.push({ step, state: "left-to-vercel", reason: "no WONDERHOME_AI_KEY on the runner" });
+      reports.push({ step, state: "left-to-vercel", reason: "no WonderHome AI key saved or on the runner" });
       continue;
     }
     if (options.dryRun) {

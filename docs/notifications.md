@@ -157,9 +157,12 @@ reminders about real records, never lines of text fired and forgotten.
   the same words. No provider reports a balance in advance, so this tells at
   the first refusal, not before.
   WonderHome's own key (`WONDERHOME_AI_KEY`) belongs to no household: the
-  delivery clock emails the platform's owners and operators once per alert
-  (`ai/platform-key-alert.ts`, stamped `platform_notified_at`), and the
-  platform-admin AI operations read shows it while it is open (14-048).
+  delivery clock emails the platform's owners and operators when it opens and
+  again every day it stays open (14-073, 2026-11-21; `ai/platform-key-alert.ts`,
+  `platform_notified_at` is the last day told, claimed before sending), and the
+  platform-admin AI card and Overview show it while it is open (14-048). An
+  alert for a key nobody uses any more is closed as superseded. Not yet pushed
+  to a platform admin's member account: email only.
 - **A second way, a summary, a fit** (stories 27-007, 27-008, 27-015). A bill,
   school or pet reminder unanswered past the policy's wait (`channelEscalation`,
   always shorter than the backup's) is also sent once by email or WhatsApp,

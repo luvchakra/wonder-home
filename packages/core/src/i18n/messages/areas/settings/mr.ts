@@ -96,6 +96,7 @@ export const settingsMr: AreaCatalog<typeof settingsEn> = {
   "settingsPage.ai.source.household.detail": "विनंत्यांचे बिल तुमच्या प्रदाता खात्यावर जाते आणि त्या त्यांच्याशी असलेल्या तुमच्या करारात येतात, आमच्या नाही.",
   "settingsPage.ai.source.platform.title": "WonderHome ची की",
   "settingsPage.ai.source.platform.detail": "तुमच्या प्लॅनमध्ये समाविष्ट. तुमच्या घराचा डेटा कधीही मॉडेल प्रशिक्षित करण्यासाठी वापरला जात नाही.",
+  "settingsPage.ai.source.platform.unavailable": "सध्या WonderHome ची key त्याच्या मॉडेलपर्यंत पोहोचत नाही, म्हणून सहाय्यक स्वतःच्या नियमांवर काम करत आहे. काहीही हरवलेलं नाही: पाठवलेलं सर्व ठेवलं आहे आणि मॉडेल परत येताच वाचलं जाईल.",
   "settingsPage.ai.source.none.title": "कोणतेही मॉडेल सेट केलेले नाही",
   "settingsPage.ai.source.none.detail":
     "सहाय्यक तरीही काम करतो: तो भाषा मॉडेलऐवजी WonderHome च्या स्वतःच्या नियमांतून उत्तर देतो, आणि जितके समजले त्यापेक्षा जास्त समजल्याचा आव कधीच आणत नाही.",

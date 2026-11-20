@@ -11,6 +11,8 @@ export const whatsappEn = {
   "whatsapp.ack.failed": "⚠️ I kept that. {why} It's in HomeSend under Failed safely.",
   "whatsapp.ack.unreadable": "WonderHome couldn't read it.",
   "whatsapp.ack.checkTranscript": "Got it 👍 I'm not sure I heard that voice note right — please check what it says in HomeSend. 🎙️",
+  "whatsapp.ack.modelUnavailable": "Got it 👍 I've kept it. I can't read it right now, and I'll read it as soon as I can and tell you what I did.",
+  "whatsapp.later.lead": "📬 I've now read what you sent earlier.",
   "whatsapp.ack.waiting": "It's waiting in HomeSend for you to check.",
   "whatsapp.found.school": "I found a school item. 🎒",
   "whatsapp.found.schoolTitled": "I found a school item: *{title}*. 🎒",

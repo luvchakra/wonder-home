@@ -96,6 +96,7 @@ export const settingsAr: AreaCatalog<typeof settingsEn> = {
   "settingsPage.ai.source.household.detail": "تُحتسب الطلبات على حسابك لدى المزوّد وتخضع لاتفاقك معهم، لا لاتفاقنا.",
   "settingsPage.ai.source.platform.title": "مفتاح WonderHome",
   "settingsPage.ai.source.platform.detail": "مشمول في خطتك. لا تُستخدم بيانات أسرتك أبدًا لتدريب النماذج.",
+  "settingsPage.ai.source.platform.unavailable": "حاليًا لا يصل مفتاح WonderHome إلى نموذجه، لذا يعمل المساعد بقواعده الخاصة. لن يضيع شيء: كل ما يُرسَل محفوظ وسيُقرأ فور عودة النموذج.",
   "settingsPage.ai.source.none.title": "لم يُهيّأ أي نموذج",
   "settingsPage.ai.source.none.detail":
     "يظل المساعد يعمل: يجيب وفق قواعد WonderHome الخاصة بدلًا من نموذج لغوي، ولا يدّعي أبدًا أنه فهم أكثر مما فهم.",

@@ -96,6 +96,7 @@ export const settingsDe: AreaCatalog<typeof settingsEn> = {
   "settingsPage.ai.source.household.detail": "Anfragen werden Ihrem Anbieterkonto berechnet und fallen unter Ihre Vereinbarung mit dem Anbieter, nicht unter unsere.",
   "settingsPage.ai.source.platform.title": "Der Schlüssel von WonderHome",
   "settingsPage.ai.source.platform.detail": "In Ihrem Tarif enthalten. Die Daten Ihres Haushalts werden nie zum Trainieren von Modellen verwendet.",
+  "settingsPage.ai.source.platform.unavailable": "Gerade erreicht WonderHomes Schlüssel sein Modell nicht, deshalb arbeitet der Assistent mit seinen eigenen Regeln. Nichts geht verloren: Alles Gesendete wird aufbewahrt und gelesen, sobald das Modell wieder da ist.",
   "settingsPage.ai.source.none.title": "Kein Modell eingerichtet",
   "settingsPage.ai.source.none.detail":
     "Der Assistent funktioniert trotzdem: Er antwortet nach den eigenen Regeln von WonderHome statt mit einem Sprachmodell und tut nie so, als hätte er mehr verstanden, als er verstanden hat.",
