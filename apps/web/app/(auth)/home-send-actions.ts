@@ -13,6 +13,7 @@ import { createAdminClient } from "@wonderhome/core/db/admin";
 import { createClient } from "@wonderhome/core/db/server";
 import { homesendCorrectionEvidence, recordCorrectionEvidence } from "@wonderhome/core/evaluation/evidence";
 import { archiveRecord } from "@wonderhome/core/health/records";
+import { adminClientFor, adminGrant } from "@wonderhome/core/db/admin-context";
 import { scorePercent, sureClause, sureWhy } from "@wonderhome/core/homesend/auto-add";
 import { confirmHomeSendEntry, getHomeSendChange, hasActiveHomeSendChanges, listHomeSendChanges, recordHomeSendChange, undoHomeSendChange } from "@wonderhome/core/homesend/changes";
 import type { ConfirmationDecision } from "@wonderhome/core/homesend/confirmation";
@@ -605,7 +606,8 @@ export async function dismissHomeSendItemAction(_previous: RouteHomeItemState, f
  * edit or remove would use: removes what it created, or puts back what it
  * updated or cancelled (rule 12, Wave 3 §10, DDU 2.0 §26).
  */
-async function reverseChange(supabase: Awaited<ReturnType<typeof createClient>>, householdId: string, memberId: string, change: HomeSendChange): Promise<void> {
+async function reverseChange(supabase: Awaited<ReturnType<typeof createClient>>, householdId: string, membership: { memberId: string } & Parameters<typeof adminGrant.member>[0], change: HomeSendChange): Promise<void> {
+  const memberId = membership.memberId;
   const previous = change.previous ?? {};
 
   if (change.changeType === "updated") {
@@ -653,7 +655,13 @@ async function reverseChange(supabase: Awaited<ReturnType<typeof createClient>>,
     await reverseReceiptLine(supabase, householdId, change.entityId);
     await removePurchase(supabase, { householdId, purchaseId: change.entityId });
   } else if (change.domain === "health_document") {
-    await archiveRecord(supabase, { householdId, memberId: memberId }, change.entityId);
+    // Filed for someone else by a sender on "Who may file health records for others" (the owner, 2026-11-20):
+    // its subject or their guardian takes it back as always; the person who filed it may too, through the server.
+    const own = await archiveRecord(supabase, { householdId, memberId: memberId }, change.entityId).then(() => true, (thrown: unknown) => {
+      if (change.createdByMemberId !== memberId) throw thrown;
+      return false;
+    });
+    if (!own) await archiveRecord(adminClientFor(adminGrant.member(membership, "undo a health record this member filed for someone else"), householdId), { householdId, memberId }, change.entityId);
   } else {
     await retireConsumable(supabase, { id: change.entityId, householdId });
   }
@@ -704,7 +712,7 @@ export async function undoHomeSendChangeAction(_previous: RouteHomeItemState, fo
     const change = await getHomeSendChange(supabase, householdId, parsed.data.changeId);
     if (!change) return { error: "That is not part of this household." };
     if (change.undoneAt) return { error: "Already undone." };
-    await reverseChange(supabase, householdId, membership.memberId, change);
+    await reverseChange(supabase, householdId, membership, change);
 
     await undoHomeSendChange(supabase, householdId, change.id, membership.memberId);
 
@@ -763,7 +771,7 @@ export async function undoHomeSendDocumentAction(_previous: RouteHomeItemState, 
     let undone = 0;
     for (const change of live) {
       try {
-        await reverseChange(supabase, householdId, membership.memberId, change);
+        await reverseChange(supabase, householdId, membership, change);
         await undoHomeSendChange(supabase, householdId, change.id, membership.memberId);
         undone += 1;
       } catch (thrown) {

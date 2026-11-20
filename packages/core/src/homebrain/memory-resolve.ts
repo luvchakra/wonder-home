@@ -20,7 +20,13 @@ import { isMixed, normalizeWords, phraseKey, placeKey, ruleFor, vendorKey, type 
  *
  * It never fills who a health document is for (a wrong guess shows one
  * person's health to another), never an amount, a date or an approval, and
- * never overrides what the content itself said.
+ * never overrides what the content itself said. The one exception is the
+ * owner's (2026-11-20, "for health record make it configurable on admin
+ * level, so the check can be bypassed for allowed users"): for a sender an
+ * Admin put on "Who may file health records for others"
+ * (`homesend/health-filers.ts`), it may fill who a health document is for
+ * from the one household member the document itself names; never from a
+ * learned rule, and never for anyone else.
  */
 
 export const GAP_FIELDS = ["person", "school", "payee", "category", "place", "area", "item"] as const;
@@ -35,7 +41,8 @@ export type ResolveBasis =
   | "payee_on_record"
   | "category_on_record"
   | "place_on_record"
-  | "item_on_record";
+  | "item_on_record"
+  | "named_in_document";
 
 /** One line of "Why?", and the record or rule it came from. */
 export type Evidence = { text: string; sourceId: string };
@@ -65,6 +72,8 @@ export type GapInput = {
   vendor?: string | null;
   /** The words used for a grocery or a place ("atta", "nani's"). */
   phrase?: string | null;
+  /** The sender is on "Who may file health records for others" (an Admin's choice): a health document's person may be filled from its own words. */
+  healthFiler?: boolean;
 };
 
 export type HouseholdMemory = { items: readonly HouseholdContextItem[]; rules: readonly HouseholdRule[] };
@@ -124,7 +133,31 @@ function learnedConfidence(rule: HouseholdRule): number {
   return Math.min(0.97, 0.88 + 0.03 * (rule.times - 1));
 }
 
+/**
+ * A health document from an allowed sender (the owner, 2026-11-20): the one
+ * adult or child its own words name, by full or first name. Two names, or a
+ * helper, or nobody: nothing filled, and it is asked as before.
+ */
+function resolveHealthPerson(input: GapInput, members: Map<string, HouseholdContextItem>): Filled | null {
+  const text = input.text ?? "";
+  if (!text.trim()) return null;
+  const pool = [...members.values()].map(toPerson).filter((person) => person.memberType !== "helper" && person.displayName.length > 0);
+  const allowed = input.candidates && input.candidates.length > 0 ? pool.filter((person) => input.candidates!.some((candidate) => candidate.memberId === person.memberId)) : pool;
+  const named = allowed.filter((person) => namesWords(text, person.displayName) || namesWords(text, person.displayName.split(/\s+/)[0]!));
+  if (named.length !== 1) return null;
+  const person = named[0]!;
+  return {
+    field: "person",
+    value: { memberId: person.memberId, text: person.displayName },
+    basis: "named_in_document",
+    evidence: [{ text: `It names ${person.displayName}, and the person who sent it may file health records for others (an Admin's choice).`, sourceId: members.get(person.memberId)!.id }],
+    confidence: 0.9,
+  };
+}
+
 function resolvePerson(input: GapInput, memory: HouseholdMemory, members: Map<string, HouseholdContextItem>, mixed: GapField[]): Filled | null {
+  // Health: only for an allowed sender, only from the document's own words, never from a rule.
+  if (input.kind === "health_document") return input.healthFiler ? resolveHealthPerson(input, members) : null;
   if (!PERSON_KINDS.has(input.kind)) return null;
   const childOnly = CHILD_KINDS.has(input.kind);
   const candidates = (input.candidates ?? []).filter((person) => members.has(person.memberId) && (!childOnly || person.memberType === "child"));

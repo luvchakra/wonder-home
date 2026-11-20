@@ -1,6 +1,7 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 
 import { savePolicy } from "./configuration-repository";
+import { asHealthFilers, HEALTH_FILERS_POLICY_NAME, pickableFiler } from "../homesend/health-filers";
 import { directAddFrom, NO_DIRECT_ADD, type DirectAdd, type DirectAddArea } from "../homesend/auto-add";
 import {
   asApprovalScope,
@@ -103,4 +104,45 @@ export async function saveRecordFirst(
     name: RECORD_FIRST_POLICY_NAMES[input.setting],
     rule: { value: input.value },
   });
+}
+
+/**
+ * "Who may file health records for others" (`homesend/health-filers.ts`, the
+ * owner 2026-11-20): the members an Admin picked; nobody when never picked or
+ * when it can't be read (the careful answer: today's question stays).
+ */
+export async function loadHealthFilers(supabase: SupabaseClient, householdId: string): Promise<string[]> {
+  const { data, error } = await supabase
+    .from("policies")
+    .select("rule")
+    .eq("household_id", householdId)
+    .eq("category", "ai_autonomy")
+    .eq("name", HEALTH_FILERS_POLICY_NAME)
+    .eq("active", true)
+    .limit(1)
+    .maybeSingle();
+  if (error || !data) return [];
+  return asHealthFilers((data as { rule: unknown }).rule);
+}
+
+/** Saved as a new policy version (Admins only, by RLS; audited by `savePolicy`). Only adults and helpers of this household are kept. */
+export async function saveHealthFilers(
+  supabase: SupabaseClient,
+  input: { householdId: string; actorMemberId: string; memberIds: readonly string[] },
+): Promise<{ id: string; downstream: string[]; members: string[] }> {
+  const wanted = asHealthFilers({ members: input.memberIds });
+  let members: string[] = [];
+  if (wanted.length > 0) {
+    const { data, error } = await supabase.from("household_members").select("id, member_type, status").eq("household_id", input.householdId).in("id", wanted);
+    if (error) throw new Error(`health filers read failed: ${error.code ?? "unknown"}`);
+    members = ((data ?? []) as { id: string; member_type: string; status: string }[]).filter((row) => row.status === "active" && pickableFiler(row.member_type)).map((row) => row.id);
+  }
+  const saved = await savePolicy(supabase, {
+    householdId: input.householdId,
+    actorMemberId: input.actorMemberId,
+    category: "ai_autonomy",
+    name: HEALTH_FILERS_POLICY_NAME,
+    rule: { members },
+  });
+  return { ...saved, members };
 }

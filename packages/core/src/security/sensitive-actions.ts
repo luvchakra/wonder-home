@@ -332,6 +332,11 @@ export const SENSITIVE_ACTIONS: readonly SensitiveAction[] = [
     recordedIn: "packages/core/src/homesend/add-default.ts",
   },
   {
+    event: "homesend.health_filed_for",
+    because: "A health document from someone an Admin put on \"Who may file health records for others\" named another household member, and was filed for that member, marked Checking, with no question (owner 2026-11-20). It writes one person's health record from another person's upload, so the household should see who did it.",
+    recordedIn: "packages/core/src/homesend/add-default.ts",
+  },
+  {
     event: "needs_you.answered",
     because: "Someone answered a \"Needs you\" question with one tap, which changed an entry or set an item aside. It is a change to household data made in their name.",
     recordedIn: "apps/web/app/(auth)/needs-you-actions.ts",
@@ -835,6 +840,8 @@ export function describeAuditEvent(
       return { title: "A HomeSend entry stays Checking until someone confirms it", detail: metadata.how === "default" ? "Nobody answered within a day; check it before paying." : null };
     case "homesend.added_checking":
       return { title: "Something sent in was added, marked Checking", detail: metadata.by === "default" ? "Nobody answered within a day; check it before paying." : null };
+    case "homesend.health_filed_for":
+      return { title: "A health document was filed for the person it names, marked Checking", detail: "Sent by someone an Admin allowed to file health records for others." };
     case "homesend.matched_update":
       return {
         title: metadata.mode === "cancel" ? "A bill on record was cancelled from a newer message" : metadata.mode === "flag" ? "A bill a message said was called off was kept, marked Checking" : "A bill on record was updated from a newer copy",

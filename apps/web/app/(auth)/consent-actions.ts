@@ -9,7 +9,7 @@ import { forgetLearnedDefaults } from "@wonderhome/core/homesend/learned-reposit
 import { saveConfirmRequested } from "@wonderhome/core/conversation/consent-repository";
 import { asAutoAddPercent, AUTO_ADD_PERCENTS } from "@wonderhome/core/homesend/auto-add";
 import { saveAutoAddPercent } from "@wonderhome/core/household/auto-add-repository";
-import { saveRecordFirst } from "@wonderhome/core/household/direct-add-repository";
+import { saveHealthFilers, saveRecordFirst } from "@wonderhome/core/household/direct-add-repository";
 import { APPROVAL_SCOPES, MONEY_HEALTH_MODES, OUTSIDE_SENDER_MODES } from "@wonderhome/core/homesend/record-first";
 import { saveHomeSendTidy } from "@wonderhome/core/household/homesend-tidy-repository";
 import { saveNothingWaits } from "@wonderhome/core/household/nothing-waits-repository";
@@ -105,6 +105,28 @@ export async function saveRecordFirstAction(_previous: ActionState, formData: Fo
     const supabase = await createClient();
     const membership = await requireHouseholdAdmin(supabase, parsed.data.householdId);
     await saveRecordFirst(supabase, { ...parsed.data, actorMemberId: membership.memberId });
+  } catch (thrown) {
+    return { error: toErrorBody(thrown, "privacy").body.error.message };
+  }
+  revalidatePath("/settings/ai");
+  return { notice: "saved" };
+}
+
+/**
+ * "Who may file health records for others" (the owner, 2026-11-20): an Admin
+ * picks the adults (or, explicitly, a helper) whose health documents naming
+ * another household member are filed for that person at once, as Checking.
+ * Never a child; nobody by default. Saved as a new audited policy version.
+ */
+const healthFilersSchema = z.object({ householdId: z.uuid(), members: z.array(z.uuid()).max(20) });
+
+export async function saveHealthFilersAction(_previous: ActionState, formData: FormData): Promise<ActionState> {
+  const parsed = healthFilersSchema.safeParse({ householdId: formData.get("householdId"), members: formData.getAll("members") });
+  if (!parsed.success) return { error: "Please try again." };
+  try {
+    const supabase = await createClient();
+    const membership = await requireHouseholdAdmin(supabase, parsed.data.householdId);
+    await saveHealthFilers(supabase, { householdId: parsed.data.householdId, actorMemberId: membership.memberId, memberIds: parsed.data.members });
   } catch (thrown) {
     return { error: toErrorBody(thrown, "privacy").body.error.message };
   }
