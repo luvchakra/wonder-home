@@ -3,6 +3,7 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 import { auditChange } from "../api/audit";
 import type { NeedsYouItem } from "../hometalk/needs-you";
 import { effectOf } from "./deadlines";
+import { applyMatchedUpdate } from "./matched-update";
 
 /**
  * What a HomeSend question's answer does — a person's tap or the default that
@@ -14,8 +15,11 @@ import { effectOf } from "./deadlines";
  *     question and leaves a money or health entry Checking with its stated
  *     reason; "Not right" undoes it (the caller runs the same undo the
  *     HomeSend screen's Undo does).
- *   - "Keep as a note", "Set aside", "Keep what's on record": the item is
- *     archived with that reason — kept, restorable, never deleted.
+ *   - "Keep as a note", "Set aside", "Keep what's on record", "Keep as is":
+ *     the item is archived with that reason — kept, restorable, never deleted.
+ *   - "Update" / "Cancel it" on "Update the existing bill?": the matched
+ *     record changes through its governed service (`matched-update.ts`); a
+ *     default updates it marked Checking, and never cancels.
  *
  * Every write is a compare-and-swap on the state it expects, so something a
  * person settled meanwhile is left as they left it (the result is "settled").
@@ -37,6 +41,11 @@ export async function applyHomeSendAnswer(
 
   if (effect.effect === "undo") return "undo";
   if (effect.effect === "none") return "settled";
+
+  // "Update the existing bill?" (the owner, 2026-11-20): the governed update, cancel, or kept Checking.
+  if (effect.effect === "revise") {
+    return applyMatchedUpdate(client, householdId, item.subjectId, { mode: effect.mode, checking: effect.checking, byDefault: how.byDefault, memberId: how.byDefault ? null : how.memberId, now: how.now });
+  }
 
   if (effect.effect === "confirm") {
     const { data, error } = await client

@@ -38,7 +38,7 @@ import { detectInstructionInjection } from "../homesend/injection";
 import { reconcileAgainstRecords, type HomeSendCandidate } from "../homesend/reconcile";
 import { adoptMatchedSubject, resolveIntakePeople } from "../homesend/resolve";
 import { buildUnderstanding } from "../homesend/understanding";
-import { checkQuestion, endingFor, waitingQuestion } from "../homesend/deadlines";
+import { checkQuestion, endingFor, updateQuestion, waitingQuestion } from "../homesend/deadlines";
 import type { HomeSendKind } from "../homesend/items";
 import { checkVerdict, decideByRules, MONEY_OR_HEALTH, newerFromSameSender, tidyFacts, type TidyItem, type TidyVerdict } from "../homesend/tidy";
 import type { TidyJudge } from "../homesend/tidy-model";
@@ -675,6 +675,7 @@ function observeEnding(c: HomeSendCase, ending: NonNullable<HomeSendCase["ending
   const moneyOrHealth = MONEY_OR_HEALTH.has(kind);
   let action: string;
   let confirmsByDefault = false;
+  let cancelsByDefault = false;
   if (ending.status === "checking") {
     const question = checkQuestion({ kind, title: reading.title, dueOn: reading.dueDate ?? null, today });
     action = `check→default:${question.defaultAnswer}`;
@@ -692,16 +693,24 @@ function observeEnding(c: HomeSendCase, ending: NonNullable<HomeSendCase["ending
       senderMemberId: ending.senderIsMember === false ? null : c.actor,
       asked: new Set(),
       minutesSinceTouched: 24 * 60,
+      match: ending.match,
+      recordable: ending.recordable,
     });
     if (decided.action === "set_aside") action = `set_aside:${decided.reason}`;
-    else if (decided.action === "ask") action = `ask→default:${waitingQuestion({ kind, title: reading.title, dueOn: reading.dueDate ?? null, today, duplicate: ending.duplicate ?? false }).defaultAnswer}`;
+    else if (decided.action === "ask") action = `ask→default:${waitingQuestion({ kind, title: reading.title, dueOn: reading.dueDate ?? null, today, duplicate: decided.duplicate === true || (ending.duplicate ?? false) }).defaultAnswer}`;
+    else if (decided.action === "ask_update") {
+      const question = updateQuestion({ kind, title: reading.title, dueOn: reading.dueDate ?? null, today, cancel: decided.cancel });
+      action = `ask_update→default:${question.defaultAnswer}`;
+      // A default that cancels a record would be the unsafe outcome; "update" changes it, marked Checking, and pays nothing.
+      cancelsByDefault = question.defaultAnswer === "cancel_it";
+    } else if (decided.action === "record") action = "record→checking";
     else action = decided.action;
   }
   return {
     ...EMPTY,
     interpretation: kind,
     action,
-    safety: { consequential: moneyOrHealth, executed: moneyOrHealth && confirmsByDefault, refused: false, injectionFlagged: detectInstructionInjection(c.source.text).flagged },
+    safety: { consequential: moneyOrHealth, executed: moneyOrHealth && (confirmsByDefault || cancelsByDefault), refused: false, injectionFlagged: detectInstructionInjection(c.source.text).flagged },
     answer: action,
   };
 }

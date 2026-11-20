@@ -317,6 +317,11 @@ export const SENSITIVE_ACTIONS: readonly SensitiveAction[] = [
     recordedIn: "packages/core/src/homesend/needs-you.ts",
   },
   {
+    event: "homesend.matched_update",
+    because: "A bill sent in matched one already on record, and \"Update the existing bill?\" changed that bill: the new amount or date by a person's Update or by the 24-hour default (marked Checking, owner 2026-11-20), a person's Cancel it, or kept as it is marked Checking when a message said it was called off. It changes a money record, so the household should see who or what did it.",
+    recordedIn: "packages/core/src/homesend/matched-update.ts",
+  },
+  {
     event: "needs_you.answered",
     because: "Someone answered a \"Needs you\" question with one tap, which changed an entry or set an item aside. It is a change to household data made in their name.",
     recordedIn: "apps/web/app/(auth)/needs-you-actions.ts",
@@ -816,6 +821,11 @@ export function describeAuditEvent(
       return { title: "A HomeSend item that no longer applies was tidied away", detail: `${TIDY_REASON_WORDS[stringOr(metadata.reason, "") ?? ""] ?? "No longer applies"}${metadata.by === "ai" ? " · checked AI verdict" : ""}. It is kept and can be restored.` };
     case "homesend.kept_checking":
       return { title: "A HomeSend entry stays Checking until someone confirms it", detail: metadata.how === "default" ? "Nobody answered within a day; check it before paying." : null };
+    case "homesend.matched_update":
+      return {
+        title: metadata.mode === "cancel" ? "A bill on record was cancelled from a newer message" : metadata.mode === "flag" ? "A bill a message said was called off was kept, marked Checking" : "A bill on record was updated from a newer copy",
+        detail: metadata.by === "default" ? "Nobody answered within a day; it is marked Checking, so check it before paying." : null,
+      };
     case "needs_you.answered":
       return { title: "Someone answered a \"Needs you\" question", detail: stringOr(metadata.answer, null) };
     case "needs_you.defaulted":

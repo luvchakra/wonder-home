@@ -94,4 +94,60 @@ describe("the deadlines step", () => {
     expect(tables.home_send_items!.find((row) => row.id === "notice")!.status).toBe("classified");
     expect(tables.needs_you_items!.find((row) => row.subject_id === "notice")).toMatchObject({ status: "expired" });
   });
+
+  it("updates a matched bill by default, marked Checking, and keeps a called-off one (owner, 2026-11-20)", async () => {
+    const { client, tables } = memoryDatabase({
+      households: [{ id: "h1", timezone: "Asia/Kolkata", owner_member_id: "m1" }],
+      household_members: [{ id: "m1", household_id: "h1", member_type: "adult", status: "active", profile_id: "u1" }],
+      household_roles: [{ household_id: "h1", member_id: "m1", role: "head" }],
+      policies: [],
+      needs_you_items: [],
+      conversation_actions: [],
+      jobs: [],
+      obligations: [
+        { id: "b1", household_id: "h1", name: "Electricity bill", kind: "bill", payee: "BESCOM", amount_minor: 214000, currency: "INR", due_on: "2026-11-20", recurrence: null, bill_type: null, responsible_member_id: null, status: "active", requires_review: false, updated_at: OLD },
+      ],
+      home_send_items: [
+        { id: "newer", household_id: "h1", status: "classified", classified_kind: "bill", raw_text: "Electricity bill revised ₹2,380", title: "Electricity bill", due: "2026-11-20", readable: true, extracted: { title: "Electricity bill", amount: 2380, currency: "INR", dueDate: "2026-11-20", payee: "BESCOM" }, change: "update", retry_count: 0, created_by_member_id: "m1", created_at: OLD, updated_at: OLD },
+      ],
+      homesend_changes: [],
+      audit_events: [],
+    });
+    await runNeedsYouDeadlines(client, { now: NOW, householdIds: ["h1"], sweep: false });
+    const question = tables.needs_you_items!.find((row) => row.subject_id === "newer");
+    expect(question).toMatchObject({ source: "homesend_update", default_answer: "update", recipient_member_id: "m1", status: "defaulted", answer: "update" });
+    // The new amount is on the bill on record — not a second bill, nothing paid — marked Checking with what it replaced, for Undo.
+    expect(tables.obligations).toHaveLength(1);
+    expect(tables.obligations![0]).toMatchObject({ amount_minor: 238000, status: "active" });
+    expect(tables.homesend_changes![0]).toMatchObject({ intake_id: "newer", entity_id: "b1", change_type: "updated", confirmation_state: "unconfirmed", previous: { amountMinor: 214000 } });
+    expect(tables.home_send_items![0]).toMatchObject({ status: "routed", routed_id: "b1", review_decision: "updated" });
+  });
+
+  it("records a waiting bill that matches nothing as Checking where bills are recorded directly", async () => {
+    const { client, tables } = memoryDatabase({
+      households: [{ id: "h1", timezone: "Asia/Kolkata", owner_member_id: "m1" }],
+      household_members: [{ id: "m1", household_id: "h1", member_type: "adult", status: "active", profile_id: "u1" }],
+      household_roles: [{ household_id: "h1", member_id: "m1", role: "head" }],
+      policies: [],
+      needs_you_items: [],
+      conversation_actions: [],
+      jobs: [],
+      obligations: [],
+      home_send_items: [
+        { id: "water", household_id: "h1", status: "classified", classified_kind: "bill", raw_text: "Water bill ₹640", title: "Water bill", due: "2026-11-09", readable: true, extracted: { title: "Water bill", amount: 640, currency: "INR", dueDate: "2026-11-09", payee: "BWSSB" }, change: "new", retry_count: 0, created_by_member_id: "m1", created_at: OLD, updated_at: OLD },
+      ],
+      homesend_changes: [],
+      audit_events: [],
+    });
+    const result = await runNeedsYouDeadlines(client, { now: NOW, householdIds: ["h1"], sweep: false });
+    expect(result.recorded).toBe(1);
+    expect(tables.obligations).toHaveLength(1);
+    expect(tables.obligations![0]).toMatchObject({ name: "Water bill", amount_minor: 64000, due_on: "2026-11-09" });
+    expect(tables.homesend_changes![0]).toMatchObject({ intake_id: "water", domain: "bill", confirmation_state: "unconfirmed" });
+    expect(tables.home_send_items![0]).toMatchObject({ status: "routed", routed_table: "obligations", review_decision: "auto_added" });
+    // The next pass asks "Looks right?", whose default keeps money Checking.
+    await runNeedsYouDeadlines(client, { now: NOW, householdIds: ["h1"], sweep: false });
+    expect(tables.needs_you_items!.find((row) => row.subject_id === "water")).toMatchObject({ source: "homesend_check", default_answer: "keep_checking" });
+    expect(tables.obligations).toHaveLength(1);
+  });
 });

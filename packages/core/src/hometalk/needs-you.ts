@@ -30,7 +30,7 @@ export const SOON_DAYS = 7;
  * still shown (worded by its `prompt.code`), so a part can add one without
  * this file changing first.
  */
-export const NEEDS_YOU_SOURCES = ["homesend_check", "homesend_waiting", "homesend_resend", "hometalk_proposal", "approval", "sender_trust", "conflict"] as const;
+export const NEEDS_YOU_SOURCES = ["homesend_check", "homesend_waiting", "homesend_resend", "homesend_update", "hometalk_proposal", "approval", "sender_trust", "conflict"] as const;
 export type NeedsYouSource = (typeof NEEDS_YOU_SOURCES)[number];
 
 /** 3 money due soon, 2 a school deadline, 1 a dated thing, 0 the rest. */
