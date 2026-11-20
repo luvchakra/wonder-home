@@ -67,7 +67,7 @@ export async function addSelectedHomeSendItemsAction(_previous: BulkAddState, fo
           results.push({ id, title, added: false });
           continue;
         }
-        const applied = await autoApplyHomeSendItem(supabase, membership, { id: item.id, kind: item.classifiedKind ?? "unknown", extracted: item.extracted, subject: review.subject }, { decision: "added" });
+        const applied = await autoApplyHomeSendItem(supabase, membership, { id: item.id, kind: review.kind ?? item.classifiedKind ?? "unknown", extracted: review.extracted ?? item.extracted, subject: review.subject, everyone: review.everyone, filled: review.filled }, { decision: "added" });
         results.push({ id, title: applied?.title ?? title, added: Boolean(applied) });
       } catch (thrown) {
         log.warn("homesend bulk add: one item not added", { reason: thrown instanceof Error ? thrown.name : "unknown", allow: ["reason"] });

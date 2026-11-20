@@ -161,7 +161,7 @@ export async function addAllAnywayHomeSendAction(_previous: ClearState, formData
         const applied = await autoApplyHomeSendItem(
           supabase,
           membership,
-          { id: item.id, kind: item.classifiedKind, extracted: item.extracted, subject: review.subject },
+          { id: item.id, kind: review.kind ?? item.classifiedKind, extracted: review.extracted ?? item.extracted, subject: review.subject, everyone: review.everyone, filled: review.filled },
           { decision: "added", checking: { unconfirmed: true, confidence, source: item.source } },
         );
         if (!applied) {

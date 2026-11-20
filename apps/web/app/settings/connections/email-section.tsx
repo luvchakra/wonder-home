@@ -39,6 +39,11 @@ function emailConnectionLabels(t: Translate): EmailConnectionLabels {
       removeAria: t("connectionsPage.email.allow.removeAria"),
       addressBadge: t("connectionsPage.email.allow.addressBadge"),
       domainBadge: t("connectionsPage.email.allow.domainBadge"),
+      basis: {
+        contact: t("connectionsPage.email.allow.basis.contact"),
+        school: t("connectionsPage.email.allow.basis.school"),
+        payee: t("connectionsPage.email.allow.basis.payee"),
+      },
     },
     rules: {
       heading: t("connectionsPage.email.rules.heading"),

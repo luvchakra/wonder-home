@@ -6,13 +6,18 @@ import { routeToProvider, type DataUsePolicy } from "../ai/privacy";
  * Voice notes in HomeSend (Wave 3 §3, §17).
  *
  * A voice note becomes text through the household's speech service, and
- * that text is only ever as trustworthy as the service says it is. The
- * rule is simple: an uncertain transcript is shown, never acted on. The
- * household sees what WonderHome heard and either confirms it or types what
- * was really said — only then does it go on to be understood.
+ * that text is only ever as trustworthy as the service says it is.
+ *
+ * Record first (the owner, 2026-11-20: "as autonomous as possible"): an
+ * everyday voice note heard below the floor is read on anyway and whatever
+ * it adds is recorded as Checking, never confirmed on its own, with Undo
+ * (`recordsWhatWasHeard`, `verify.ts` `UNSURE_TRANSCRIPT`). Only one that
+ * asks to pay for or buy something keeps the higher floor: below it, it is
+ * shown, never acted on, until the household confirms what was heard or
+ * types what was really said.
  */
 
-/** Below this, WonderHome says what it heard and asks, rather than reading on. */
+/** Below this a transcript is unsure: an everyday note is still read on and recorded as Checking; a paying or buying one is shown back. */
 export const TRANSCRIPT_CONFIDENCE_FLOOR = 0.75;
 
 /** Money or buying — a voice note that asks for either needs a clearer transcript than one that mentions a match on Saturday. */
@@ -55,6 +60,20 @@ export function gateTranscript(transcript: Pick<Transcript, "text" | "confidence
   const floor = consequential ? CONSEQUENTIAL_CONFIDENCE_FLOOR : TRANSCRIPT_CONFIDENCE_FLOOR;
   if (transcript.confidence >= floor) return { outcome: "confident", text, confidence: transcript.confidence };
   return { outcome: "uncertain", text, confidence: transcript.confidence, consequential };
+}
+
+/**
+ * Whether an uncertain transcript is still read on, its entry recorded as
+ * Checking: every one but a payment or buying instruction, which keeps the
+ * higher floor and waits for the household to check what was heard.
+ */
+export function recordsWhatWasHeard(gate: TranscriptGate): boolean {
+  return gate.outcome === "uncertain" && !gate.consequential;
+}
+
+/** Whether a transcript was heard less surely than the everyday floor: whatever it adds is Checking. */
+export function belowTranscriptFloor(confidence: number | null | undefined): boolean {
+  return typeof confidence === "number" && Number.isFinite(confidence) && confidence < TRANSCRIPT_CONFIDENCE_FLOOR;
 }
 
 /** The line the review step shows for an uncertain transcript. */

@@ -12,6 +12,7 @@ import { createEmailHomeSendItem } from "./repository";
 import { drainJobs, enqueueClassifyRetry } from "./retry-queue";
 import { loadRecordFirst } from "../household/direct-add-repository";
 import { holdFromNewSender, senderStates, senderVerdict } from "./sender-trust";
+import { preTrustSender } from "./sender-pretrust";
 import type { TrustedEmailAdd } from "./trusted-arrival";
 
 /**
@@ -151,6 +152,18 @@ export async function handleEmailWebhook(request: Request, deps: EmailWebhookDep
   // forged, so this match is the gate, not proof — the kept item still waits
   // for a person's confirmation downstream.
   const allowed = await allowedHouseholdsForSender(supabase, households, email.from);
+
+  // Decision 4 (the owner, 2026-11-20): on "Ask once", a sender the
+  // household's own records know (a contact, a child's school, a payee on
+  // record) is trusted without asking, and shown as such on its approved
+  // senders (`sender-pretrust.ts`). A blocked sender, or one an Admin took off
+  // the list, is never; everyone else is still asked below.
+  for (const householdId of households) {
+    if (allowed.has(householdId)) continue;
+    const settings = await loadRecordFirst(supabase, householdId).catch(() => null);
+    if (settings?.outsideSenders !== "ask_once") continue;
+    if (await preTrustSender(supabase, { householdId, from: email.from, now: deps.now?.() })) allowed.add(householdId);
+  }
   for (const householdId of households) {
     if (!allowed.has(householdId)) events.push({ kind: "dropped_not_allowlisted", householdId });
   }
@@ -262,7 +275,7 @@ export async function handleEmailWebhook(request: Request, deps: EmailWebhookDep
     // email's text above is already kept either way.
     for (const attachment of withinLimit ? attachments : []) {
       try {
-        await ingestEmailAttachment(supabase, {
+        const read = await ingestEmailAttachment(supabase, {
           householdId,
           parentItemId: item.id,
           externalId: `${email.externalId}:${attachment.id}`,
@@ -272,6 +285,13 @@ export async function handleEmailWebhook(request: Request, deps: EmailWebhookDep
           subject: email.subject,
           sender: email.from,
         }, deps.ingest);
+        // A trusted sender's attachment is added on arrival like a photo a member sent (the owner, 2026-11-20):
+        // read from a file, so it is always Checking (`confirmation.ts`). Unread or already kept: it waits as before.
+        if (deps.addTrusted && !read.duplicate && !read.classifyFailed && read.state !== "failed") {
+          const add = deps.addTrusted;
+          const attachmentItemId = read.itemId;
+          deps.defer(() => add({ householdId, itemId: attachmentItemId }));
+        }
       } catch (thrown) {
         log.warn("homesend email webhook: attachment failed", { reason: thrown instanceof Error ? thrown.name : "unknown", allow: ["reason"] });
         retryAttachments = true;

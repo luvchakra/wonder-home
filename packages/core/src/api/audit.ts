@@ -99,6 +99,7 @@ export const AUDIT_EVENTS = [
   "homesend.allowlist_removed",
   "homesend.sender_held",
   "homesend.sender_trusted",
+  "homesend.sender_pre_trusted",
   "homesend.sender_blocked",
   "webhook.subscription_created",
   "webhook.secret_rotated",

@@ -1,6 +1,8 @@
 import type { HouseholdContextItem } from "../context/types";
 import { barFromHistory, effectiveBar, type BarKind } from "../homebrain/kind-bar";
-import { resolveGaps, usable, whyFilled, type GapField } from "../homebrain/memory-resolve";
+import { childrenAtSchool, resolveGaps, usable, whyFilled, type GapField, type SenderHistory } from "../homebrain/memory-resolve";
+import { fillFromHistory } from "../homebrain/history-fill";
+import type { HomeSendExtraction } from "../homesend/items";
 import { lessonsFrom, type HouseholdRule, type RuleField, type RuleKind } from "../homebrain/rules";
 import { planVerification, type SourceItem, type VerifyEntry } from "../homebrain/verify-night";
 import type { HomeSendKind } from "../homesend/items";
@@ -20,7 +22,12 @@ import type { HomeBrainCase } from "./types";
  *            answer = each filled value and its "Why?" from evidence;
  *   learn    interpretation = the rule kinds learned ("none"), action "learn" / "learn_nothing";
  *   verify   action = "raise:<reason>" and "confirm:<basis>" joined ("none"), conflict = any raised;
- *   bar      action = "bar:<percent>", interpretation = its basis.
+ *   bar      action = "bar:<percent>", interpretation = its basis;
+ *   history  action = "fill_checking" (something filled that must be checked), "fill" or "blank",
+ *            interpretation = the fields filled ("none"), answer = the "Why?" lines.
+ *   A resolve case for "person" that no single child settles reports, as
+ *   the review does, every child at the notice's school: action "fill_all",
+ *   entity the ids joined with "+".
  * Nothing here executes: a memory case never pays, orders or approves.
  */
 
@@ -43,10 +50,12 @@ export type MemorySpec =
       personId?: string;
       vendor?: string;
       phrase?: string;
-      enrolments?: { childMemberId: string; schoolName: string }[];
+      enrolments?: { childMemberId: string; schoolName: string; grade?: string | null }[];
       rules?: RuleSpec[];
       extraItems?: ExtraItem[];
+      history?: SenderHistory;
     }
+  | { check: "history"; kind: HomeSendKind; reading: Partial<HomeSendExtraction>; bills: { payee: string; amount: number; dueOn: string }[]; sender?: string; history?: SenderHistory; receivedAt: string }
   | { check: "learn"; kind: HomeSendKind | null; field: RuleField; sender?: string; vendor?: string; phrase?: string; to: { memberId?: string; memberType?: string; text?: string } }
   | { check: "verify"; entries: (Partial<VerifyEntry> & { changeId: string })[]; sources?: SourceItem[]; rules?: RuleSpec[]; now: string }
   | { check: "bar"; kind: BarKind; added: number; undone: number; corrected: number; adminPercent?: number | null };
@@ -128,8 +137,22 @@ export function observeMemory(c: HomeBrainCase, spec: MemorySpec, empty: Observa
     };
   }
 
+  if (spec.check === "history") {
+    const base = contextItemsFor(household, c.actor);
+    const bills = spec.bills.map((bill, index) => ({ ...base[0]!, id: `bill:h${index}`, entityType: "bill", entityId: `h${index}`, attributes: { title: bill.payee, payee: bill.payee, amountMinor: Math.round(bill.amount * 100), currency: "INR", dueOn: bill.dueOn, status: "paid" }, aliases: [bill.payee], subjectMemberIds: [] }));
+    const reading = { title: null, notes: null, billKind: null, payee: null, amount: null, currency: null, dueDate: null, schoolKind: null, subject: null, quantity: null, unit: null, category: null, healthRecordType: null, documentDate: null, subjectMemberName: null, secondary: null, ...spec.reading } as HomeSendExtraction;
+    const filled = fillFromHistory({ kind: spec.kind, extracted: reading, items: [...base, ...bills], rules: [], sender: spec.sender ?? null, history: spec.history ?? null, receivedAt: spec.receivedAt });
+    return {
+      ...empty,
+      interpretation: filled.fields.length > 0 ? filled.fields.join("+") : "none",
+      action: filled.checking ? "fill_checking" : filled.fields.length > 0 ? "fill" : "blank",
+      safety: safe,
+      answer: filled.why.join("\n"),
+    };
+  }
+
   const withSchools = spec.enrolments
-    ? { ...household, records: { ...household.records, enrolments: [...(household.records.enrolments ?? []), ...spec.enrolments.map((row) => ({ ...row, grade: null }))] } }
+    ? { ...household, records: { ...household.records, enrolments: [...(household.records.enrolments ?? []), ...spec.enrolments.map((row) => ({ grade: null, ...row }))] } }
     : household;
   const base = contextItemsFor(withSchools as typeof household, c.actor);
   const items = [...base, ...(spec.extraItems ?? []).map((extra) => extraItem(base[0]!, extra))];
@@ -139,9 +162,14 @@ export function observeMemory(c: HomeBrainCase, spec: MemorySpec, empty: Observa
     .filter((item): item is HouseholdContextItem => item !== undefined)
     .map((item) => ({ memberId: item.entityId, displayName: String(item.attributes.displayName ?? ""), memberType: item.attributes.memberType === "child" ? "child" : item.attributes.memberType === "helper" ? "helper" : "adult" }));
   const resolution = resolveGaps(
-    { kind: spec.kind, fields: spec.fields, sender: spec.sender ?? null, text: spec.text ?? null, candidates, personId: spec.personId ?? null, vendor: spec.vendor ?? null, phrase: spec.phrase ?? null },
+    { kind: spec.kind, fields: spec.fields, sender: spec.sender ?? null, text: spec.text ?? null, candidates, personId: spec.personId ?? null, vendor: spec.vendor ?? null, phrase: spec.phrase ?? null, history: spec.history ?? null },
     { items, rules: toRules(spec.rules, c.actor, at) },
   );
+  // Nobody settled and no rule taught two: every child at the notice's school, as the review records it.
+  if (spec.fields.includes("person") && !usable(resolution, "person") && resolution.mixed.length === 0) {
+    const all = childrenAtSchool({ kind: spec.kind, text: spec.text ?? null, candidates, history: spec.history ?? null }, { items, rules: toRules(spec.rules, c.actor, at) });
+    if (all) return { ...empty, interpretation: "every_child_at_school", entity: all.people.map((p) => p.memberId).join("+"), action: "fill_all", safety: safe, answer: all.evidence.map((line) => line.text).join("\n") };
+  }
   const filled = spec.fields.map((field) => usable(resolution, field)).filter((entry): entry is NonNullable<typeof entry> => entry !== null);
   const person = usable(resolution, "person");
   return {

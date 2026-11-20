@@ -245,7 +245,9 @@ describe("14-068 — a trusted sender's email is added on arrival, after the res
     expect(added).toEqual([]);
     for (const work of deferred) await work();
     const email = items().find((row) => row.source === "email")!;
-    expect(added).toEqual([{ householdId: HOUSEHOLD, itemId: email.id }]);
+    // Its attachment too, through the same step as a photo (the owner, 2026-11-20): read from a file, so Checking.
+    const attachment = items().find((row) => row.source === "email_attachment")!;
+    expect(added).toEqual([{ householdId: HOUSEHOLD, itemId: email.id }, { householdId: HOUSEHOLD, itemId: attachment.id }]);
 
     const held = harness({ allowlist: [] });
     const heldAdded: unknown[] = [];
@@ -256,3 +258,50 @@ describe("14-068 — a trusted sender's email is added on arrival, after the res
   });
 });
 
+
+describe("decision 4 — a sender the household's records know is trusted without asking (the owner, 2026-11-20)", () => {
+  it("a teacher's contact at the school: read, its attachment fetched, added to the approved senders as “a child's school”'s contact, nobody asked", async () => {
+    const { db, deps, calls, items } = harness({ allowlist: [] });
+    db.tables.school_teachers = [{ household_id: HOUSEHOLD, child_member_id: "c-1", active: true, contact: "office@greenvalley.example.org" }];
+    const added: unknown[] = [];
+    const deferred: (() => Promise<void>)[] = [];
+    await handleEmailWebhook(delivery(RECEIVED), { ...deps, defer: (work) => void deferred.push(work), addTrusted: async (input) => void added.push(input) });
+    for (const work of deferred) await work();
+    expect(items().find((row) => row.source === "email")).toMatchObject({ status: "classified" });
+    expect(calls.fetchAttachment).toBe(1);
+    expect(db.tables.homesend_email_allowlist).toEqual([expect.objectContaining({ household_id: HOUSEHOLD, kind: "address", value: "office@greenvalley.example.org", basis: "contact" })]);
+    expect(db.tables.needs_you_items).toEqual([]);
+    expect(added).toHaveLength(2);
+  });
+
+  it("the school's own domain, by the school's name: trusted as “a child's school”", async () => {
+    const { db, deps, items } = harness({ allowlist: [] });
+    db.tables.school_enrolments = [{ household_id: HOUSEHOLD, child_member_id: "c-1", active: true, school_name: "Green Valley School" }];
+    await handleEmailWebhook(delivery(RECEIVED), { ...deps, fetchEmail: async () => ({ ...EMAIL, from: "Green Valley School <office@greenvalley.edu.in>" }) });
+    expect(items().find((row) => row.source === "email")?.status).not.toBe("archived");
+    expect(db.tables.homesend_email_allowlist).toEqual([expect.objectContaining({ value: "office@greenvalley.edu.in", basis: "school" })]);
+  });
+
+  it("on “Read only senders an Admin added”, a known sender is dropped as before", async () => {
+    const { db, deps, items } = harness({ allowlist: [], outsideSenders: "review" });
+    db.tables.school_teachers = [{ household_id: HOUSEHOLD, child_member_id: "c-1", active: true, contact: "office@greenvalley.example.org" }];
+    await handleEmailWebhook(delivery(RECEIVED), deps);
+    expect(items()).toHaveLength(0);
+    expect(db.tables.homesend_email_allowlist).toEqual([]);
+  });
+
+  it("an address an Admin removed from the list, or one marked “Not ours”, is asked about or dropped, never pre-trusted", async () => {
+    const removed = harness({ allowlist: [] });
+    removed.db.tables.school_teachers = [{ household_id: HOUSEHOLD, child_member_id: "c-1", active: true, contact: "office@greenvalley.example.org" }];
+    removed.db.tables.homesend_email_senders = [{ id: "s-1", household_id: HOUSEHOLD, address: "office@greenvalley.example.org", state: "not_answered", held_count: 0, pre_trust_off: true }];
+    await handleEmailWebhook(delivery(RECEIVED), removed.deps);
+    expect(removed.items()[0]).toMatchObject({ status: "archived", archive_reason: "new_sender" });
+    expect(removed.db.tables.homesend_email_allowlist).toEqual([]);
+
+    const blocked = harness({ allowlist: [] });
+    blocked.db.tables.school_teachers = removed.db.tables.school_teachers;
+    blocked.db.tables.homesend_email_senders = [{ id: "s-2", household_id: HOUSEHOLD, address: "office@greenvalley.example.org", state: "blocked" }];
+    await handleEmailWebhook(delivery(RECEIVED), blocked.deps);
+    expect(blocked.items()).toHaveLength(0);
+  });
+});

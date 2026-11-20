@@ -22,7 +22,8 @@ export function trustedEmailAutoAdd(admin: SupabaseClient): TrustedEmailAdd {
   return async ({ householdId, itemId }) => {
     try {
       const item = await getHomeSendItem(admin, householdId, itemId);
-      if (!item || item.source !== "email" || item.createdByMemberId !== null || item.status !== "classified") return;
+      // An email's attachments come as their own items (`email_attachment`), with the email's sender.
+      if (!item || (item.source !== "email" && item.source !== "email_attachment") || item.createdByMemberId !== null || item.status !== "classified") return;
       const voucher = await trustedSenderVoucher(admin, householdId, item.senderAddress);
       if (!voucher) return;
       await withMemberSession(admin, voucher.profileId, async (supabase) =>

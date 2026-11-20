@@ -422,6 +422,11 @@ export const SENSITIVE_ACTIONS: readonly SensitiveAction[] = [
     recordedIn: "packages/core/src/homesend/sender-trust.ts",
   },
   {
+    event: "homesend.sender_pre_trusted",
+    because: "A sender the household's own records know (a contact, a child's school, a payee on record) is added to the approved senders without asking, widening what WonderHome reads (decision 4, 2026-11-20).",
+    recordedIn: "packages/core/src/homesend/sender-pretrust.ts",
+  },
+  {
     event: "homesend.sender_blocked",
     because: "Answering “Not ours” about a sender sets its mail aside and drops what it sends later.",
     recordedIn: "packages/core/src/homesend/sender-trust.ts",
@@ -882,6 +887,8 @@ export function describeAuditEvent(
       return { title: "Mail from a new sender was set aside", detail: "Nothing in it is read until someone trusts the sender." };
     case "homesend.sender_trusted":
       return { title: "A new email sender was trusted", detail: "WonderHome will read mail from this sender." };
+    case "homesend.sender_pre_trusted":
+      return { title: "A known email sender was trusted", detail: "It is in your contacts, a child's school or a payee on record. Remove it from the approved senders to be asked instead." };
     case "homesend.sender_blocked":
       return { title: "An email sender was marked “Not ours”", detail: "Its mail is set aside." };
     case "homesend.allowlist_added":

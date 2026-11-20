@@ -36,9 +36,14 @@ export type ResolveBasis =
   | "school_named"
   | "learned"
   | "only_at_school"
+  | "class_named"
+  | "teacher_named"
+  | "timetable_subject"
+  | "sender_history"
   | "only_school_on_record"
   | "payee_responsible"
   | "payee_on_record"
+  | "payee_from_sender"
   | "category_on_record"
   | "place_on_record"
   | "item_on_record"
@@ -74,6 +79,19 @@ export type GapInput = {
   phrase?: string | null;
   /** The sender is on "Who may file health records for others" (an Admin's choice): a health document's person may be filled from its own words. */
   healthFiler?: boolean;
+  /** What this sender's earlier items became, when the caller read it (`senderHistory`). */
+  history?: SenderHistory | null;
+};
+
+/**
+ * What an outside sender's earlier items became in this household, newest
+ * first: the child each school or class notice was filed for, and the payee
+ * each bill was recorded with. Read by `homesend/sender-history.ts`; a
+ * person's pick or correction at the time is what these records hold.
+ */
+export type SenderHistory = {
+  children: readonly { memberId: string; itemId: string }[];
+  payees: readonly { name: string; itemId: string }[];
 };
 
 export type HouseholdMemory = { items: readonly HouseholdContextItem[]; rules: readonly HouseholdRule[] };
@@ -115,6 +133,56 @@ function firstName(item: HouseholdContextItem | undefined): string {
 function schoolsOf(item: HouseholdContextItem | undefined): string[] {
   const names = item?.attributes.schoolNames;
   return Array.isArray(names) ? names.map(str).filter((name): name is string => name !== null && name.length >= 3) : [];
+}
+
+function gradesOf(item: HouseholdContextItem | undefined): string[] {
+  const grades = item?.attributes.schoolGrades;
+  return Array.isArray(grades) ? grades.map(str).filter((grade): grade is string => grade !== null) : [];
+}
+
+/** "5", "Class 5", "Grade 5B", "V-A" → the class words a notice would use ("5", "5b"). */
+function gradeKeys(grade: string): string[] {
+  const bare = grade.toLowerCase().replace(/\b(class|grade|std|standard|year|form)\b\.?/g, " ").replace(/[\s-]+/g, "").trim();
+  return bare.length > 0 && bare.length <= 4 ? [bare] : [];
+}
+
+/** Whether the words name this class: "Class 5", "Grade 5B", "Std 5-B", "class V". */
+function namesGrade(text: string, grade: string): boolean {
+  const hay = text.slice(0, 4000).toLowerCase();
+  return gradeKeys(grade).some((key) => {
+    const parts = key.match(/^(\d+|[ivx]+)([a-z]?)$/);
+    if (!parts) return false;
+    const section = parts[2] ? `\\s*-?\\s*${parts[2]}` : "";
+    return new RegExp(`\\b(class|grade|std|standard|year)\\.?\\s*${parts[1]}${section}\\b`, "u").test(hay);
+  });
+}
+
+/** The teachers a child has on record: timetable periods and classes outside school. */
+function teachersOf(memberId: string, items: readonly HouseholdContextItem[]): { name: string; sourceId: string }[] {
+  const found: { name: string; sourceId: string }[] = [];
+  for (const item of items) {
+    if (item.entityType === "timetable_day" && item.subjectMemberIds.includes(memberId) && Array.isArray(item.attributes.teachers)) {
+      for (const name of item.attributes.teachers) if (str(name)) found.push({ name: str(name)!, sourceId: item.id });
+    }
+    if (item.entityType === "activity" && item.attributes.childMemberId === memberId && str(item.attributes.teacher)) found.push({ name: str(item.attributes.teacher)!, sourceId: item.id });
+  }
+  return found;
+}
+
+/** Subjects on a child's timetable. */
+function subjectsOf(memberId: string, items: readonly HouseholdContextItem[]): { name: string; sourceId: string }[] {
+  const found: { name: string; sourceId: string }[] = [];
+  for (const item of items) {
+    if (item.entityType !== "timetable_day" || !item.subjectMemberIds.includes(memberId) || !Array.isArray(item.attributes.subjects)) continue;
+    for (const name of item.attributes.subjects) if (str(name) && !found.some((seen) => seen.name.toLowerCase() === str(name)!.toLowerCase())) found.push({ name: str(name)!, sourceId: item.id });
+  }
+  return found;
+}
+
+/** A teacher's name as notices write it: "Mrs. Rao" matches "Rao"; a single short word never does. */
+function namesTeacher(text: string, teacher: string): boolean {
+  const surname = teacher.replace(/\b(mr|mrs|ms|miss|dr|sir|madam|ma'am)\b\.?/gi, " ").trim().split(/\s+/).pop() ?? "";
+  return namesWords(text, teacher) || (surname.length >= 4 && namesWords(text, surname) && /\b(mr|mrs|ms|miss|dr|sir|madam|teacher|ma'am)\b/i.test(text));
 }
 
 function dateWords(iso: string): string {
@@ -182,6 +250,39 @@ function resolvePerson(input: GapInput, memory: HouseholdMemory, members: Map<st
     }
   }
 
+  // 1b. The content names the class (grade) exactly one candidate child is in.
+  if (childOnly) {
+    const byGrade = candidates.flatMap((person) => {
+      const grade = gradesOf(members.get(person.memberId)).find((value) => namesGrade(text, value));
+      return grade ? [{ person, grade }] : [];
+    });
+    if (byGrade.length === 1) {
+      const { person, grade } = byGrade[0]!;
+      return fill(person, "class_named", [{ text: `It names class ${grade}, and ${firstName(members.get(person.memberId))} is the one in class ${grade} on record.`, sourceId: members.get(person.memberId)!.id }], 0.9);
+    }
+    // 1c. A teacher only one candidate child has (timetable or a class outside school).
+    const byTeacher = candidates.flatMap((person) => {
+      const teacher = teachersOf(person.memberId, memory.items).find((entry) => namesTeacher(text, entry.name));
+      return teacher ? [{ person, teacher }] : [];
+    });
+    if (byTeacher.length === 1) {
+      const { person, teacher } = byTeacher[0]!;
+      return fill(person, "teacher_named", [{ text: `It names ${teacher.name}, ${firstName(members.get(person.memberId))}'s teacher on record.`, sourceId: teacher.sourceId }], 0.88);
+    }
+    // 1d. A subject on only one candidate child's timetable ("Sanskrit test").
+    if (input.kind === "school_item") {
+      const bySubject = candidates.flatMap((person) => {
+        const subject = subjectsOf(person.memberId, memory.items).find((entry) => namesWords(text, entry.name));
+        return subject ? [{ person, subject }] : [];
+      });
+      const named = new Set(bySubject.map((entry) => entry.subject.name.toLowerCase()));
+      if (bySubject.length === 1 && named.size === 1) {
+        const { person, subject } = bySubject[0]!;
+        return fill(person, "timetable_subject", [{ text: `It is about ${subject.name}, which only ${firstName(members.get(person.memberId))} has on their timetable.`, sourceId: subject.sourceId }], 0.82);
+      }
+    }
+  }
+
   // 2. A rule: this sender's items were for this person before.
   const key = senderKey(input.sender);
   const ruleKind = childOnly ? "sender_child" : "sender_person";
@@ -190,6 +291,16 @@ function resolvePerson(input: GapInput, memory: HouseholdMemory, members: Map<st
   const person = rule?.valueMemberId ? candidates.find((candidate) => candidate.memberId === rule.valueMemberId) ?? (candidates.length === 0 && members.has(rule.valueMemberId) ? toPerson(members.get(rule.valueMemberId)!) : undefined) : undefined;
   if (rule && person && (!childOnly || person.memberType === "child")) {
     return fill(person, "learned", [{ text: `Items from ${key!.replace(/^sender:/, "")} were for ${person.displayName.split(/\s+/)[0]} before: ${taughtBy(rule, members)}.`, sourceId: `rule:${rule.id}` }], learnedConfidence(rule));
+  }
+
+  // 2b. Every earlier notice from this sender was filed for one child.
+  if (childOnly && input.history && input.history.children.length > 0 && !isMixed(memory.rules, "sender_child", key)) {
+    const past = [...new Set(input.history.children.map((entry) => entry.memberId))];
+    const only = past.length === 1 ? candidates.find((candidate) => candidate.memberId === past[0]) : undefined;
+    if (only) {
+      const times = input.history.children.length;
+      return fill(only, "sender_history", [{ text: `${times === 1 ? "The last notice" : `All ${times} earlier notices`} from ${key?.replace(/^sender:/, "") ?? "this sender"} ${times === 1 ? "was" : "were"} for ${only.displayName.split(/\s+/)[0]}.`, sourceId: input.history.children[0]!.itemId }], times >= 2 ? 0.9 : 0.85);
+    }
   }
 
   // 3. A school notice, and exactly one candidate child has a school on record.
@@ -246,9 +357,18 @@ function payeesOnRecord(items: readonly HouseholdContextItem[]): Map<string, { n
 function resolvePayee(input: GapInput, memory: HouseholdMemory): Filled | null {
   const text = input.text ?? "";
   const named = [...payeesOnRecord(memory.items).values()].filter((payee) => namesWords(text, payee.name));
-  if (named.length !== 1) return null;
-  const { name, item } = named[0]!;
-  return { field: "payee", value: { text: name }, basis: "payee_on_record", evidence: [{ text: `It names ${name}, a payee on your ${str(item.attributes.title) ?? "bills"}.`, sourceId: item.id }], confidence: 0.9 };
+  if (named.length === 1) {
+    const { name, item } = named[0]!;
+    return { field: "payee", value: { text: name }, basis: "payee_on_record", evidence: [{ text: `It names ${name}, a payee on your ${str(item.attributes.title) ?? "bills"}.`, sourceId: item.id }], confidence: 0.9 };
+  }
+  // Nothing named (or two): every earlier bill from this sender had one payee.
+  const past = input.history?.payees ?? [];
+  const keys = new Set(past.map((entry) => vendorKey(entry.name)).filter((key): key is string => key !== null));
+  if (named.length === 0 && past.length > 0 && keys.size === 1) {
+    const sender = senderKey(input.sender)?.replace(/^sender:/, "") ?? "this sender";
+    return { field: "payee", value: { text: past[0]!.name }, basis: "payee_from_sender", evidence: [{ text: `${past.length === 1 ? "The last bill" : `All ${past.length} earlier bills`} from ${sender} ${past.length === 1 ? "was" : "were"} from ${past[0]!.name}.`, sourceId: past[0]!.itemId }], confidence: past.length >= 2 ? 0.9 : 0.85 };
+  }
+  return null;
 }
 
 function resolveCategory(input: GapInput, memory: HouseholdMemory, members: Map<string, HouseholdContextItem>, mixed: GapField[]): Filled | null {
@@ -335,6 +455,33 @@ export function resolveGaps(input: GapInput, memory: HouseholdMemory): Resolutio
     if (result) filled.push(result);
   }
   return { filled, mixed: [...new Set(mixed)] };
+}
+
+/**
+ * Still unsure which child a school notice is for: the children it could be
+ * for at the one school it can be placed at — the school it names, or the
+ * school of the children this sender's notices were for. Two or more: the
+ * caller records it for each of them, marked Checking, instead of asking (a
+ * notice on two children's calendars beats one on none; the owner,
+ * 2026-11-20). Fewer than two, or no one school: empty, and it is asked.
+ */
+export function childrenAtSchool(input: Pick<GapInput, "kind" | "text" | "candidates" | "history">, memory: HouseholdMemory): { people: IntakePerson[]; school: string; evidence: Evidence[] } | null {
+  if (input.kind !== "school_item") return null;
+  const members = new Map(memory.items.filter((item) => item.entityType === "member").map((item) => [item.entityId, item]));
+  const children = (input.candidates ?? []).filter((person) => person.memberType === "child" && members.has(person.memberId));
+  const schoolsNamed = [...new Set(children.flatMap((person) => schoolsOf(members.get(person.memberId)).filter((school) => namesSchool(input.text ?? "", school)).map((school) => school.toLowerCase())))];
+  const fromSender = [...new Set((input.history?.children ?? []).flatMap((entry) => schoolsOf(members.get(entry.memberId)).map((school) => school.toLowerCase())))];
+  const school = schoolsNamed.length === 1 ? schoolsNamed[0]! : schoolsNamed.length === 0 && fromSender.length === 1 ? fromSender[0]! : null;
+  if (!school) return null;
+  const people = children.filter((person) => schoolsOf(members.get(person.memberId)).some((name) => name.toLowerCase() === school));
+  if (people.length < 2) return null;
+  const display = schoolsOf(members.get(people[0]!.memberId)).find((name) => name.toLowerCase() === school) ?? school;
+  const names = people.map((person) => person.displayName.split(/\s+/)[0]).join(" and ");
+  return {
+    people,
+    school: display,
+    evidence: [{ text: `${schoolsNamed.length === 1 ? `It names ${display}` : `This sender's notices were for ${display}`}, where ${names} are on record, and nothing says which of them: it is on each of their calendars until someone says.`, sourceId: members.get(people[0]!.memberId)!.id }],
+  };
 }
 
 /** The filled value for a field, when it is strong enough to use instead of a question. */

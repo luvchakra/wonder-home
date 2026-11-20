@@ -16,6 +16,11 @@ import type { IntakeExtraction } from "../ai/classify-intake";
 
 /** What a photo or a file leaves unchecked: there are no words of its own to check the reading against. */
 export const FROM_A_FILE = "the original, which can't be checked word by word";
+/**
+ * A voice note heard less surely than the everyday floor (`audio.ts`): read
+ * on and recorded, but whatever it adds is Checking, never confirmed on its own.
+ */
+export const UNSURE_TRANSCRIPT = "what was said, which wasn't clearly heard";
 
 /** The default bar for adding an entry on its own: strictly above 95%. An Admin may pick another (`auto-add.ts`). */
 export const AUTO_APPLY_FLOOR = 0.95;

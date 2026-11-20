@@ -49,6 +49,8 @@ export type EmailConnectionLabels = {
     removeAria: string;
     addressBadge: string;
     domainBadge: string;
+    /** "Trusted: in your contacts" … for a sender the household's records knew (`sender-pretrust.ts`). */
+    basis: { contact: string; school: string; payee: string };
   };
   rules: {
     heading: string;
@@ -223,7 +225,9 @@ function AllowlistPanel({
                     {shown}
                   </p>
                 </div>
-                <Badge tone="neutral">{entry.kind === "domain" ? labels.allow.domainBadge : labels.allow.addressBadge}</Badge>
+                <Badge tone="neutral">
+                  {entry.basis ? labels.allow.basis[entry.basis] : entry.kind === "domain" ? labels.allow.domainBadge : labels.allow.addressBadge}
+                </Badge>
                 <form action={removeAction}>
                   <input type="hidden" name="householdId" value={householdId} />
                   <input type="hidden" name="id" value={entry.id} />

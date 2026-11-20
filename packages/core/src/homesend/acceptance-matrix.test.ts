@@ -17,6 +17,7 @@ import { proposalFor, type HomeSendCandidate } from "./reconcile";
 import { createEmailHomeSendItem } from "./repository";
 import { resolveIntakePeople } from "./resolve";
 import { fakeSupabase } from "./testing";
+import { UNSURE_TRANSCRIPT } from "./verify";
 
 /**
  * The Wave 3 §20 acceptance test matrix — one test per row, each driving
@@ -267,11 +268,13 @@ describe("§20 acceptance matrix — Audio", () => {
   });
 
   it("noise/accent", async () => {
+    // Record first (the owner, 2026-11-20): an everyday note heard unsurely is read on, its reading never verified.
     const { run, seen } = voice("ad fie kilo rise", 0.62);
     const outcome = await run();
-    expect(outcome.state).toBe("check_transcript");
-    expect(outcome.heard?.text).toBe("ad fie kilo rise");
-    expect(seen).toHaveLength(0);
+    expect(outcome.state).toBe("needs_review");
+    expect(outcome.heard).toBeUndefined();
+    expect(seen).toHaveLength(1);
+    expect(outcome.item.understanding?.check?.unverified).toContain(UNSURE_TRANSCRIPT);
   });
 
   it("ambiguous name", async () => {
@@ -282,11 +285,17 @@ describe("§20 acceptance matrix — Audio", () => {
   });
 
   it("low transcript confidence", async () => {
-    const { run, seen, db, classify } = voice("something about the school", 0.3);
+    // Everyday words: read on and recorded as Checking at most (record first, 2026-11-20).
+    const everyday = voice("something about the school", 0.3);
+    const read = await everyday.run();
+    expect(read.state).toBe("needs_review");
+    expect(everyday.seen).toHaveLength(1);
+    expect(read.item.understanding?.score ?? 1).toBeLessThanOrEqual(0.3);
+    // Buying words keep the higher floor: only what the person confirms or types is read on.
+    const { run, seen, db, classify } = voice("buy something for the school", 0.3);
     const outcome = await run();
     expect(outcome.state).toBe("check_transcript");
     expect(seen).toHaveLength(0);
-    // Only what the person confirms or types is read on.
     const confirmed = await confirmTranscript(db.client, actor, { itemId: outcome.itemId, text: "Science worksheet due Monday" }, { classify });
     expect(confirmed.state).toBe("needs_review");
   });

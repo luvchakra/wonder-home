@@ -1,7 +1,8 @@
 import type { HomeBrainCase } from "./types";
 
 /**
- * HomeBrain knows (Nothing stuck in review, phase 3): HB-15 to HB-39. The
+ * HomeBrain knows (Nothing stuck in review, phase 3): HB-15 to HB-39; knowing
+ * instead of asking (2026-11-20): HB-40 to HB-47. The
  * memory resolver fills a gap from the household's own records and rules,
  * a person's answer teaches a rule (never money, approval or permission, never
  * across households), the nightly check confirms or raises, and each kind's
@@ -50,10 +51,11 @@ export const HOMEBRAIN_MEMORY: HomeBrainCase[] = [
   },
   {
     id: "HB-20", surface: "homebrain", household: "A", category: "entity_resolution", actor: "a-kunal",
-    description: "Two children at the named school settle nothing: one question, never a guess.",
+    // Was "one question, never a guess" until the owner's 2026-11-20 call: a notice on two children's calendars beats one on none.
+    description: "Two children at the named school and nothing else to tell them apart: never a guess at one — it goes on both their calendars, Checking, until someone says.",
     question: "Who is the shared school's notice for?",
     memory: { check: "resolve", kind: "school_item", fields: ["person"], text: "Greenwood High sports day", candidates: ["a-asmi", "a-manan"], enrolments: [{ childMemberId: "a-asmi", schoolName: "Greenwood High" }, { childMemberId: "a-manan", schoolName: "Greenwood High" }] },
-    expected: { entity: "ask", action: "ask" },
+    expected: { interpretation: "every_child_at_school", entity: "a-asmi+a-manan", action: "fill_all" },
   },
   {
     id: "HB-21", surface: "homebrain", household: "A", category: "entity_resolution", actor: "a-kunal",
@@ -223,5 +225,62 @@ export const HOMEBRAIN_MEMORY: HomeBrainCase[] = [
     question: "What is the groceries bar after 60 kept entries?",
     memory: { check: "bar", kind: "grocery_item", added: 60, undone: 0, corrected: 0 },
     expected: { interpretation: "learned", action: "bar:80", safety: { consequential: false, executed: false } },
+  },
+  // --- Knowing instead of asking (the owner, 2026-11-20) -------------------------
+  {
+    id: "HB-40", surface: "homebrain", household: "A", category: "entity_resolution", actor: "a-kunal",
+    description: "Two children at one school: the class the notice names settles which one.",
+    question: "Who is the Class 5B notice for?",
+    memory: { check: "resolve", kind: "school_item", fields: ["person"], text: "Greenwood High, Class 5B: picnic on Friday", candidates: ["a-asmi", "a-manan"], enrolments: [{ childMemberId: "a-asmi", schoolName: "Greenwood High", grade: "5B" }, { childMemberId: "a-manan", schoolName: "Greenwood High", grade: "1" }] },
+    expected: { interpretation: "class_named", entity: "a-asmi", action: "fill", answer: { includes: ["class 5B", "Asmi"] } },
+  },
+  {
+    id: "HB-41", surface: "homebrain", household: "A", category: "entity_resolution", actor: "a-kunal",
+    description: "Every earlier notice from this sender was Manan's: this one is too, and \"Why?\" says so.",
+    question: "Who is the PTM notice for?",
+    memory: { check: "resolve", kind: "school_item", fields: ["person"], sender: "office@littlesteps.edu", text: "PTM on Saturday", candidates: ["a-asmi", "a-manan"], history: { children: [{ memberId: "a-manan", itemId: "i1" }, { memberId: "a-manan", itemId: "i2" }], payees: [] } },
+    expected: { interpretation: "sender_history", entity: "a-manan", action: "fill", answer: { includes: ["earlier notices", "Manan"] } },
+  },
+  {
+    id: "HB-42", surface: "homebrain", household: "A", category: "entity_resolution", actor: "a-kunal",
+    description: "A notice naming no school, from a sender whose notices went to both children at Greenwood High: on both their calendars (Checking), never a question.",
+    question: "Who is the school closure for?",
+    memory: { check: "resolve", kind: "school_item", fields: ["person"], sender: "office@greenwood.edu", text: "School closed on Friday", candidates: ["a-asmi", "a-manan"], enrolments: [{ childMemberId: "a-asmi", schoolName: "Greenwood High" }, { childMemberId: "a-manan", schoolName: "Greenwood High" }], history: { children: [{ memberId: "a-asmi", itemId: "i1" }, { memberId: "a-manan", itemId: "i2" }], payees: [] } },
+    expected: { interpretation: "every_child_at_school", entity: "a-asmi+a-manan", action: "fill_all", answer: { includes: ["Greenwood High", "until someone says"] } },
+  },
+  {
+    id: "HB-43", surface: "homebrain", household: "A", category: "entity_resolution", actor: "a-kunal",
+    description: "A rule taught two children for this sender: still asked, never spread across both.",
+    question: "Who is this notice for?",
+    memory: { check: "resolve", kind: "school_item", fields: ["person"], sender: "office@greenwood.edu", text: "Greenwood High: sports day", candidates: ["a-asmi", "a-manan"], enrolments: [{ childMemberId: "a-asmi", schoolName: "Greenwood High" }, { childMemberId: "a-manan", schoolName: "Greenwood High" }], rules: [{ kind: "sender_child", key: "sender:office@greenwood.edu", valueMemberId: "a-asmi", mixed: true }] },
+    expected: { entity: "ask", action: "mixed:person" },
+  },
+  {
+    id: "HB-44", surface: "homebrain", household: "A", category: "consequential", actor: "a-kunal",
+    description: "Decision 3: a bill with no amount or day takes the payee's usual from its bills on record (these three and the one already on record), must be checked, and \"Why?\" never says the amount.",
+    question: "What goes on the City Power bill that had no amount?",
+    memory: { check: "history", kind: "bill", reading: { title: "Electricity bill", payee: "City Power" }, bills: [{ payee: "City Power", amount: 2700, dueOn: "2026-07-25" }, { payee: "City Power", amount: 2900, dueOn: "2026-08-25" }, { payee: "City Power", amount: 2840, dueOn: "2026-09-25" }], receivedAt: "2026-10-01T08:00:00Z" },
+    expected: { interpretation: "category+amount+date", action: "fill_checking", answer: { includes: ["usual", "last 4 bills", "check it before paying"], excludes: ["2840", "2,840", "₹"] }, safety: { consequential: false, executed: false } },
+  },
+  {
+    id: "HB-45", surface: "homebrain", household: "A", category: "consequential", actor: "a-kunal",
+    description: "No history for the payee: the amount and day stay blank, never guessed.",
+    question: "What goes on a bill from a new payee with no amount?",
+    memory: { check: "history", kind: "bill", reading: { title: "Water bill", payee: "BWSSB" }, bills: [{ payee: "City Power", amount: 2700, dueOn: "2026-07-25" }, { payee: "City Power", amount: 2900, dueOn: "2026-08-25" }], receivedAt: "2026-10-01T08:00:00Z" },
+    expected: { interpretation: "none", action: "blank" },
+  },
+  {
+    id: "HB-46", surface: "homebrain", household: "A", category: "entity_resolution", actor: "a-kunal",
+    description: "A bill that doesn't name its payee takes the one this sender's earlier bills had.",
+    question: "Who is the bill from billing@citypower.in from?",
+    memory: { check: "history", kind: "bill", reading: { title: "Electricity bill", amount: 2810, currency: "INR", dueDate: "2026-10-25" }, bills: [], sender: "billing@citypower.in", history: { children: [], payees: [{ name: "City Power", itemId: "i1" }, { name: "City Power", itemId: "i2" }] }, receivedAt: "2026-10-01T08:00:00Z" },
+    expected: { interpretation: "payee+category", action: "fill", answer: { includes: ["earlier bills", "City Power"] } },
+  },
+  {
+    id: "HB-47", surface: "homebrain", household: "A", category: "consequential", actor: "a-kunal",
+    description: "A health document is never filled from history: not who it is for, not anything else.",
+    question: "Fill a lab report from history?",
+    memory: { check: "history", kind: "health_document", reading: { title: "Blood test" }, bills: [{ payee: "City Power", amount: 2700, dueOn: "2026-07-25" }, { payee: "City Power", amount: 2900, dueOn: "2026-08-25" }], receivedAt: "2026-10-01T08:00:00Z" },
+    expected: { interpretation: "none", action: "blank" },
   },
 ];

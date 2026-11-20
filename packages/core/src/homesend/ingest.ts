@@ -5,7 +5,7 @@ import { fillFromEvidence } from "./completeness";
 import { recoverWhen } from "./when";
 import type { IntakeContext, IntakeExtraction, IntakeSource } from "../ai/classify-intake";
 import type { AudioClip } from "../voice/provider";
-import { gateTranscript, GEMINI_TRANSCRIPT_CONFIDENCE, geminiMayTranscribe, uncertainTranscriptPrompt } from "./audio";
+import { gateTranscript, GEMINI_TRANSCRIPT_CONFIDENCE, geminiMayTranscribe, recordsWhatWasHeard, uncertainTranscriptPrompt } from "./audio";
 import { detectInstructionInjection, type InjectionScan } from "./injection";
 import type { HomeSendExtraction, HomeSendFailureReason, HomeSendKind, HomeSendSource } from "./items";
 import { FAILURE_REASON_COPY } from "./items";
@@ -666,9 +666,20 @@ async function hearVoiceNote(supabase: SupabaseClient, actor: IngestActor, itemI
     await markHomeSendFailed(supabase, actor.householdId, itemId, "transcription_failed");
     return failedOutcome(itemId, "transcription_failed", "WonderHome couldn't hear any words in that voice note.");
   }
+  // Record first (the owner, 2026-11-20): an everyday note heard below the floor is read on; whatever
+  // it adds is Checking, never confirmed on its own (`understanding.ts`, `verify.ts` UNSURE_TRANSCRIPT).
+  if (recordsWhatWasHeard(gate)) {
+    return understand(
+      supabase,
+      actor.householdId,
+      itemId,
+      { source: { text: gate.text }, channel: "audio_note", context: { channel: "a voice note, transcribed, not clearly heard" }, text: gate.text, transcriptConfidence: gate.confidence },
+      deps,
+    );
+  }
   if (gate.outcome === "uncertain") {
-    // Shown, never acted on (§17): the transcript waits for the household
-    // to confirm it or type what was said, and nothing reads it until then.
+    // Paying or buying words keep the higher floor (§17): shown, never acted on; the transcript waits for
+    // the household to confirm it or type what was said, and nothing reads it until then.
     const understanding = unreadableUnderstanding({ channel: "audio_note", transcriptConfidence: gate.confidence, injection: detectInstructionInjection(gate.text) });
     await setHomeSendClassification(supabase, actor.householdId, itemId, {
       classifiedKind: "unknown",

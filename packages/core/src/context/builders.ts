@@ -392,6 +392,8 @@ export function buildContextItems(records: ContextRecords, options: BuildOptions
           ...(schoolsOf(member.id).length > 0 ? { school: schoolsOf(member.id).join(", ") } : {}),
           // The schools' own names, for HomeSend to match a notice to a child (14-066).
           ...(schoolsOf(member.id).length > 0 ? { schoolNames: (records.enrolments ?? []).filter((enrolment) => enrolment.childMemberId === member.id).map((enrolment) => enrolment.schoolName) } : {}),
+          // Their class, for HomeSend to tell two children at one school apart ("Class 5B").
+          ...((records.enrolments ?? []).some((enrolment) => enrolment.childMemberId === member.id && enrolment.grade) ? { schoolGrades: (records.enrolments ?? []).filter((enrolment) => enrolment.childMemberId === member.id && enrolment.grade).map((enrolment) => enrolment.grade) } : {}),
           ...(member.nicknamePreferred && member.nickname ? { goesBy: member.nickname } : {}),
           ...((records.languages?.get(member.id)?.length ?? 0) > 0 ? { speaks: spokenSummary(records.languages!.get(member.id)!) } : {}),
         },
@@ -828,7 +830,7 @@ export function buildContextItems(records: ContextRecords, options: BuildOptions
         need: "what a child has at school on a day",
         privacyClass: "child",
         subjectMemberIds: [childMemberId!],
-        attributes: { title: `${dayName} timetable`, weekday: Number(weekday), subjects: sorted.map((period) => period.subject) },
+        attributes: { title: `${dayName} timetable`, weekday: Number(weekday), subjects: sorted.map((period) => period.subject), teachers: [...new Set(sorted.map((period) => period.teacherName).filter((teacher): teacher is string => Boolean(teacher)))] },
         source: { type: "school_timetable_periods", sourceId: null },
         tier: 3,
         aliases: [`${dayName} timetable`, "timetable", ...sorted.map((period) => period.subject)],

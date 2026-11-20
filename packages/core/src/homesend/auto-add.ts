@@ -16,7 +16,7 @@
 import { formatAmount, type Amount } from "../commerce/units";
 import type { Translate } from "../i18n/translate";
 import type { WaitingFor } from "./confirmation";
-import { FROM_A_FILE, VERIFIED_CONFIDENCE } from "./verify";
+import { FROM_A_FILE, UNSURE_TRANSCRIPT, VERIFIED_CONFIDENCE } from "./verify";
 import type { HomeSendKind } from "./items";
 import type { MoneyHealthMode } from "./record-first";
 
@@ -55,6 +55,8 @@ export function sureWhy(
   const inTopBand = typeof score === "number" && Number.isFinite(score) ? score >= VERIFIED_CONFIDENCE : understanding?.confidence === "high";
   if (understanding?.check?.verified) return inTopBand ? "verified" : "unsure";
   if (unverified.includes(FROM_A_FILE)) return "file";
+  // A voice note not clearly heard: the AI itself is unsure, nothing is missing.
+  if (unverified.includes(UNSURE_TRANSCRIPT)) return "unsure";
   if (unverified.length > 0) return "missing";
   return understanding?.confidence !== "high" ? "unsure" : null;
 }

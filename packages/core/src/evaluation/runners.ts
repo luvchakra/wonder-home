@@ -1,5 +1,6 @@
 import { observeMemory } from "./memory-runner";
 import { fillSubject } from "../homebrain/subject-fill";
+import { fillFromHistory } from "../homebrain/history-fill";
 import { looksLikeInstruction, normaliseTopic } from "../school/trivia";
 import { validateGeneratedCard } from "../school/trivia-generate";
 import { decideTopic, type TriviaTopicJudge } from "../school/trivia-safety";
@@ -502,8 +503,13 @@ export async function observeHomeSend(c: HomeSendCase, models: Models = {}): Pro
     injection,
   });
 
-  const withSchools = c.enrolments ? { ...household, records: { ...household.records, enrolments: [...(household.records.enrolments ?? []), ...c.enrolments.map((row) => ({ ...row, grade: null }))] } } : household;
+  const withSchools = c.enrolments ? { ...household, records: { ...household.records, enrolments: [...(household.records.enrolments ?? []), ...c.enrolments.map((row) => ({ grade: null, ...row }))] } } : household;
   const items = contextItemsFor(withSchools as typeof household, c.actor);
+  const rules = (c.learned ?? []).map((row, n) => ({ id: `learned-${n}`, kind: "sender_child" as const, key: row.key, valueMemberId: row.valueMemberId, valueText: null, learnedByMemberId: c.actor, learnedFromItemId: null, learnedAt: household.now.toISOString(), mixed: row.mixed === true, source: "answer" as const, times: 1 }));
+  const words = [c.source.subject, c.source.text, read.title, read.summary].filter((part): part is string => typeof part === "string").join("\n");
+  // As the review does (2026-11-20): every gap the household's records settle, filled before deciding.
+  const known = fillFromHistory({ kind: read.kind, extracted: reading, items, rules, sender: c.source.from ?? null, text: words, history: c.senderHistory ?? null, receivedAt: c.source.capturedAt ?? household.now.toISOString() });
+  const filledReading = { ...reading, ...known.extracted, kind: known.kind ?? reading.kind } as typeof reading;
   const resolved = resolveIntakePeople(understanding, items, { viewerMemberId: c.actor });
   // As the review does (the owner, 2026-11-20): a sender on "Who may file health records for others" keeps the person a health document names.
   const sender = household.members.find((m) => m.id === c.actor) ?? null;
@@ -512,29 +518,25 @@ export async function observeHomeSend(c: HomeSendCase, models: Models = {}): Pro
   const resolution = {
     ...resolved,
     // As the review does (14-069): the 14-066 inference, then HomeBrain's memory over the household's rules.
-    subject: fillSubject(reading.kind, resolved.subject, {
-      items,
-      rules: (c.learned ?? []).map((row, n) => ({ id: `learned-${n}`, kind: "sender_child" as const, key: row.key, valueMemberId: row.valueMemberId, valueText: null, learnedByMemberId: c.actor, learnedFromItemId: null, learnedAt: household.now.toISOString(), mixed: row.mixed === true, source: "answer" as const, times: 1 })),
-      sender: c.source.from ?? null,
-      text: [c.source.subject, c.source.text, reading.title, reading.summary].filter((part): part is string => typeof part === "string").join("\n"),
-      healthFiler,
-    }),
+    subject: fillSubject(filledReading.kind, resolved.subject, { items, rules, sender: c.source.from ?? null, text: words, history: c.senderHistory ?? null, healthFiler }),
   };
-  const kind = reading.kind;
+  const everyone = "everyone" in resolution.subject && resolution.subject.everyone ? resolution.subject.everyone : null;
+  const kind = filledReading.kind;
+  // What was read, never what history filled: a usual amount or day must never move or change a record on file.
   const date = reading.dueDate ?? reading.documentDate ?? null;
   const reconciliation =
-    kind !== "unknown" && kind !== "receipt" && reading.title
+    kind !== "unknown" && kind !== "receipt" && filledReading.title
       ? reconcileAgainstRecords(
           household.records,
           household.id,
           {
             kind: CHANGE_DOMAIN[kind],
-            title: reading.title,
+            title: filledReading.title,
             date,
             amount: reading.amount,
-            payee: reading.payee,
+            payee: filledReading.payee,
             subjectMemberId: resolution.subject.selected?.memberId ?? null,
-            change: reading.change,
+            change: filledReading.change,
             // When the content was captured — an older message against a
             // record changed since is a conflict, not an update (§10).
             capturedAt: c.source.capturedAt ?? household.now.toISOString(),
@@ -549,7 +551,7 @@ export async function observeHomeSend(c: HomeSendCase, models: Models = {}): Pro
   const directAdd = { ...NO_DIRECT_ADD, ...c.directAdd };
   const decision = decideConfirmation({
     kind,
-    extracted: reading,
+    extracted: filledReading,
     understanding,
     reconciliation,
     subject,
@@ -558,6 +560,7 @@ export async function observeHomeSend(c: HomeSendCase, models: Models = {}): Pro
     directAdd,
     ...(c.approvalScope ? { approvalScope: c.approvalScope } : {}),
     ...(c.trustedSender ? { trustedSender: true } : {}),
+    ...(known.checking || everyone ? { filledFromHistory: true } : {}),
   });
 
   const proposal = reconciliation?.proposal.type ?? "new";
@@ -578,7 +581,7 @@ export async function observeHomeSend(c: HomeSendCase, models: Models = {}): Pro
     ...EMPTY,
     interpretation: kind,
     date,
-    time: reading.dueTime ? `${reading.dueTime}${reading.endTime ? `–${reading.endTime}` : ""}` : null,
+    time: filledReading.dueTime ? `${filledReading.dueTime}${filledReading.endTime ? `–${filledReading.endTime}` : ""}` : null,
     entity: subject.question ? "ask" : (subject.selected?.memberId ?? null),
     match: { outcome: proposal, recordId: reconciliation?.existingId ?? null },
     conflict: proposal === "conflict",

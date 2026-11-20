@@ -112,7 +112,7 @@ async function withReview(
     const applied = await autoApplyHomeSendItem(
       supabase,
       membership,
-      { id: item.id, kind: item.classifiedKind, extracted: item.extracted, subject: review.subject },
+      { id: item.id, kind: review.kind ?? item.classifiedKind, extracted: review.extracted ?? item.extracted, subject: review.subject, everyone: review.everyone, filled: review.filled },
       { checking: { unconfirmed, confidence: review.understanding?.score ?? null, source }, ...(review.confirmation.update ? { update: review.confirmation.update } : {}) },
     ).catch(() => null);
     // A record on file moved to its new day, not a second copy (14-066, part 3).
@@ -567,6 +567,10 @@ export async function routeHomeSendItemAction(_previous: RouteHomeItemState, for
       const teach = { householdId: input.householdId, memberId: membership.memberId, kind: input.kind, sender, itemId: input.itemId, source: "pick" as const };
       if (intake.classifiedKind && intake.classifiedKind !== input.kind) await learnFromAnswer(supabase, { ...teach, field: "area", to: { text: input.kind } }).catch(() => 0);
       if (input.kind === "bill" && input.payee && input.billKind) await learnFromAnswer(supabase, { ...teach, field: "category", vendor: input.payee, to: { text: input.billKind } }).catch(() => 0);
+      // Who an event or bill was for, when a person picked someone: the sender's person (never health's).
+      if ((input.kind === "event" || input.kind === "bill") && input.subjectMemberId) {
+        await learnFromAnswer(supabase, { ...teach, field: "person", to: { memberId: input.subjectMemberId } }).catch(() => 0);
+      }
     }
 
     revalidateDomains();
