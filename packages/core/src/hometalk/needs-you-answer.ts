@@ -1,6 +1,6 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 
-import { ADD_SOURCE, UPDATE_SOURCE } from "../homesend/deadlines";
+import { ADD_SOURCE, AMOUNT_SOURCE, UPDATE_SOURCE } from "../homesend/deadlines";
 import { applyHomeSendAnswer } from "../homesend/needs-you";
 import { applySenderTrustAnswer, SENDER_TRUST_SOURCE } from "../homesend/sender-trust";
 import type { NeedsYouItem } from "./needs-you";
@@ -27,7 +27,7 @@ export async function applyNeedsYouAnswer(
   answer: string,
   how: { byDefault: boolean; actor: NeedsYouActor; now: Date },
 ): Promise<"done" | "settled" | "undo" | "unhandled"> {
-  if (item.source === "homesend_check" || item.source === "homesend_waiting" || item.source === "homesend_resend" || item.source === UPDATE_SOURCE || item.source === ADD_SOURCE) {
+  if (item.source === "homesend_check" || item.source === AMOUNT_SOURCE || item.source === "homesend_waiting" || item.source === "homesend_resend" || item.source === UPDATE_SOURCE || item.source === ADD_SOURCE) {
     const result = await applyHomeSendAnswer(client, item, answer, { byDefault: how.byDefault, memberId: how.actor.memberId, now: how.now });
     // A default never undoes anything.
     return how.byDefault && result === "undo" ? "settled" : result;

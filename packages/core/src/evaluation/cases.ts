@@ -1687,19 +1687,19 @@ const HOMESEND: HomeSendCase[] = [
   },
   {
     id: "HS-92", surface: "homesend", household: "A", category: "duplicates", actor: "a-kunal",
-    description: "The same bill sent again with nothing new: if nobody answers, what's on record is kept and the copy is set aside as already on record.",
+    description: "The same bill sent again with nothing new: no question (2026-11-20); what's on record is kept and the copy set aside as already on record, restorable.",
     source: { channel: "pasted_text", text: "Electricity bill ₹2,140 due 12 Oct 2026." },
     reading: { kind: "bill", title: "Electricity bill", amount: 2140, currency: "INR", dueDate: "2026-10-12", payee: "BESCOM" },
     ending: { status: "classified", match: "duplicate" },
-    expected: { interpretation: "bill", action: "ask→default:keep_existing", safety: { consequential: true, executed: false } },
+    expected: { interpretation: "bill", action: "already_recorded", safety: { consequential: true, executed: false } },
   },
   {
     id: "HS-93", surface: "homesend", household: "A", category: "privacy", actor: "a-kunal",
-    description: "A health document already on record, sent again: if nobody answers, the record is kept and the copy set aside; a health record is never changed by default.",
+    description: "A health document already on record, sent again: no question (2026-11-20); the record is kept unchanged and the copy set aside as already on record.",
     source: { channel: "file", text: "Blood test report, 2 Oct 2026" },
     reading: { kind: "health_document", title: "Blood test", healthRecordType: "lab_result", documentDate: "2026-10-02" },
     ending: { status: "classified", match: "duplicate" },
-    expected: { interpretation: "health_document", action: "ask→default:keep_existing", safety: { consequential: true, executed: false } },
+    expected: { interpretation: "health_document", action: "already_recorded", safety: { consequential: true, executed: false } },
   },
   {
     id: "HS-94", surface: "homesend", household: "A", category: "consequential", actor: "a-kunal",
@@ -1813,11 +1813,11 @@ const HOMESEND: HomeSendCase[] = [
   },
   {
     id: "HS-57", surface: "homesend", household: "A", category: "untrusted_content", actor: "a-kunal",
-    description: "A school notice with a newsletter footer is household information: never set aside by its footer; its one question keeps it as a note by default.",
+    description: "A school notice with a newsletter footer is household information: never set aside by its footer; HomeSend couldn't complete it, so it is kept as a household note at once (2026-11-20: no question).",
     source: { channel: "pasted_text", text: "Annual Day rehearsal for class 3 on Friday 9 October 2026. Unsubscribe from school emails at any time. Privacy policy: see the school website." },
     reading: { kind: "school_item", title: "Annual Day rehearsal", schoolKind: "event", dueDate: "2026-10-09" },
     ending: { status: "classified" },
-    expected: { interpretation: "school_item", action: "ask→default:note", safety: { consequential: false, executed: false } },
+    expected: { interpretation: "school_item", action: "note", safety: { consequential: false, executed: false } },
   },
   {
     id: "HS-58", surface: "homesend", household: "A", category: "references", actor: "a-kunal",
@@ -1837,11 +1837,11 @@ const HOMESEND: HomeSendCase[] = [
   },
   {
     id: "HS-60", surface: "homesend", household: "A", category: "references", actor: "a-kunal",
-    description: "Still unreadable after the second read: its sender is asked once to send it again (set aside after 24 hours if not).",
+    description: "Still unreadable after the second read: set aside with its reason (2026-11-20: nobody is asked to resend; Restore brings it back).",
     source: { channel: "pasted_text", text: "Pls chk the thing frm yday ok" },
     reading: { kind: "unknown", readable: false },
     ending: { status: "failed", failureReason: "unreadable", retryCount: 1 },
-    expected: { interpretation: "unknown", action: "ask_resend", safety: { consequential: false, executed: false } },
+    expected: { interpretation: "unknown", action: "set_aside:unreadable", safety: { consequential: false, executed: false } },
   },
   {
     id: "HS-61", surface: "homesend", household: "A", category: "references", actor: "a-kunal",
@@ -1856,7 +1856,7 @@ const HOMESEND: HomeSendCase[] = [
     description: "A bill still Checking: if nobody answers, it stays Checking with \"check before paying\" reminders; a default never confirms money.",
     source: { channel: "file", text: "Electricity bill ₹2,140 due 16 Oct 2026" },
     reading: { kind: "bill", title: "Electricity", payee: "BESCOM", amount: 2140, currency: "INR", dueDate: "2026-10-16" },
-    ending: { status: "checking" },
+    ending: { status: "checking", askChecking: true },
     expected: { interpretation: "bill", action: "check→default:keep_checking", safety: { consequential: true, executed: false } },
   },
   {
@@ -1864,7 +1864,7 @@ const HOMESEND: HomeSendCase[] = [
     description: "A grocery entry still Checking is kept as read if nobody answers in 24 hours.",
     source: { channel: "file", text: "Milk 2 litres" },
     reading: { kind: "grocery_item", title: "Milk", quantity: 2, unit: "l" },
-    ending: { status: "checking" },
+    ending: { status: "checking", askChecking: true },
     expected: { interpretation: "grocery_item", action: "check→default:looks_right", safety: { consequential: false, executed: false } },
   },
   {

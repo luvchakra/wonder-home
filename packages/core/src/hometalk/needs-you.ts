@@ -30,7 +30,20 @@ export const SOON_DAYS = 7;
  * still shown (worded by its `prompt.code`), so a part can add one without
  * this file changing first.
  */
-export const NEEDS_YOU_SOURCES = ["homesend_check", "homesend_waiting", "homesend_resend", "homesend_update", "homesend_add", "hometalk_proposal", "approval", "sender_trust", "conflict"] as const;
+export const NEEDS_YOU_SOURCES = ["homesend_check", "homesend_waiting", "homesend_resend", "homesend_update", "homesend_add", "homesend_amount", "hometalk_proposal", "approval", "sender_trust", "conflict", "homebrain_conflict"] as const;
+
+/**
+ * What still asks by default (the owner, 2026-11-20: "as autonomous as
+ * possible, with minimum inputs required from the users"): trusting a new
+ * sender; a health document for someone else; an unusual amount, clash or
+ * duplicate the nightly check found; a money amount read with doubt; "Add
+ * this bill?" under the Admin's "Wait for review"; and a bill matching one on
+ * record ("Update the existing bill?"). "Looks right?" ("homesend_check")
+ * returns only under the Admin's "Ask me to confirm entries still Checking";
+ * "homesend_waiting" and "homesend_resend" are no longer asked, and their open
+ * rows are withdrawn (`needs-you-run.ts`).
+ */
+export const ASKING_SOURCES: readonly string[] = ["sender_trust", "health_for_other", "homebrain_conflict", "conflict", "homesend_amount", "homesend_add", "homesend_update"];
 export type NeedsYouSource = (typeof NEEDS_YOU_SOURCES)[number];
 
 /** 3 money due soon, 2 a school deadline, 1 a dated thing, 0 the rest. */

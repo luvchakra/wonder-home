@@ -30,6 +30,7 @@ import { en } from "../i18n/messages/en";
 import { translator, type Translate, type TranslationKey } from "../i18n/translate";
 import { updateSchoolItem } from "../school/repository";
 import { schoolWhen } from "../school/times";
+import { loadNothingWaits } from "../household/nothing-waits-repository";
 import { choicesFor } from "./choices";
 import { readDetailAnswer } from "./detail-answers";
 import { DETAIL_QUESTIONS, questionIn, secondAsk } from "./intake-questions";
@@ -91,8 +92,11 @@ async function saveState(client: SupabaseClient, item: ItemRow, householdId: str
 
 /**
  * Plans the questions for an entry just added as Checking and keeps them on
- * the item. Null when there is nothing to ask (it then waits on "Looks
- * right" or Undo, as before). Never throws: a failure here never undoes the add.
+ * the item. By default that is one question at most, about a money amount read
+ * with doubt (2026-11-20); every detail only under the Admin's "Ask me to
+ * confirm entries still Checking". Null when there is nothing to ask (it is
+ * then confirmed by evidence or by a person acting on it, and is in the daily
+ * summary with Undo). Never throws: a failure here never undoes the add.
  */
 export async function beginChecking(
   client: SupabaseClient,
@@ -103,7 +107,10 @@ export async function beginChecking(
     if (!item?.classified_kind) return null;
     const already = readCheckingState(item.understanding?.checking);
     if (already) return already;
+    // By default only a doubtful money amount is asked (2026-11-20); every detail only when an Admin asked for it.
+    const all = await loadNothingWaits(client, input.householdId).then((value) => value.askChecking === true).catch(() => false);
     const state = startChecking({
+      all,
       kind: item.classified_kind,
       extracted: (item.extracted ?? null) as CompletenessReading,
       check: (item.understanding?.check ?? null) as ReadingCheck | null,

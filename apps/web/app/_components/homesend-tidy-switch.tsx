@@ -1,6 +1,6 @@
 "use client";
 
-import { Archive, BellRing, Clock } from "lucide-react";
+import { Archive, BellRing, Clock, MessageCircleQuestion } from "lucide-react";
 import { startTransition, useActionState, useState } from "react";
 
 import { Alert } from "@wonderhome/core/ui/alert";
@@ -29,11 +29,11 @@ export function HomeSendTidySwitch({
   manages: boolean;
   labels: { title: string; on: string; off: string; detail: string; adminDecides: string };
   /** The "Nothing waits" switches (2026-11-14) use the same row; absent, it is the daily tidy's. */
-  which?: "remind_checking" | "apply_defaults";
+  which?: "remind_checking" | "apply_defaults" | "ask_checking";
 }) {
   const [checked, setChecked] = useState(on);
   const [state, save, saving] = useActionState<ActionState, FormData>(which ? saveNothingWaitsAction : saveHomeSendTidyAction, {});
-  const Icon = which === "remind_checking" ? BellRing : which === "apply_defaults" ? Clock : Archive;
+  const Icon = which === "remind_checking" ? BellRing : which === "apply_defaults" ? Clock : which === "ask_checking" ? MessageCircleQuestion : Archive;
 
   const flip = (next: boolean) => {
     setChecked(next);

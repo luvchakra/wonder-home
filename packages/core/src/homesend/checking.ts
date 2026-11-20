@@ -26,6 +26,15 @@ import { FROM_A_FILE, UNSURE_TRANSCRIPT, type ReadingCheck } from "./verify";
  * 100%, over any bar an Admin can pick. A skipped one leaves the entry
  * Checking, with one "please check" at the end, never a fourth question.
  *
+ * Since 2026-11-20 (the owner: "as autonomous as possible, with minimum inputs
+ * required from the users") this is the exception, not the rule. By default
+ * an entry gets at most one question, and only about a money amount read with
+ * doubt (`amountInDoubt`): a blank date is harmless, a wrong amount is not.
+ * Details it couldn't read stay blank and labelled. The full plan above
+ * returns only when an Admin turns on "Ask me to confirm entries still
+ * Checking" (`all`). Plain corrections ("No, it's on the 12th") still fix the
+ * entry in place, whatever this asks.
+ *
  * Pure: the same reading always gives the same questions, and the same answer
  * the same reading of it. Nothing here writes or reaches a model.
  */
@@ -117,17 +126,37 @@ export function readValue(kind: HomeSendKind, field: DetailField, reading: Compl
   }
 }
 
+/** Kinds whose amount is money a person may pay or has paid. */
+const MONEY_AMOUNT: ReadonlySet<HomeSendKind> = new Set(["bill", "receipt"]);
+
 /**
- * The questions for an entry added as Checking, most telling first, at most
+ * Whether a money amount was read with doubt: a bill or receipt that holds an
+ * amount, read from a photo or a file (nothing to check it against word by
+ * word), or whose amount isn't in the words sent. The one thing still asked
+ * about by default (2026-11-20).
+ */
+export function amountInDoubt(kind: HomeSendKind | string | null, extracted: CompletenessReading, check: Pick<ReadingCheck, "unverified"> | null | undefined): boolean {
+  if (!kind || !MONEY_AMOUNT.has(kind as HomeSendKind)) return false;
+  if (readValue(kind as HomeSendKind, "amount", extracted) === null) return false;
+  const unverified = check?.unverified ?? [];
+  return unverified.includes(FROM_A_FILE) || unverified.includes("the amount");
+}
+
+/**
+ * The questions for an entry added as Checking. By default only the doubtful
+ * amount (`amountInDoubt`), or none. With `all` (the Admin's "Ask me to confirm
+ * entries still Checking"), the 2026-11-14 plan: most telling first, at most
  * three. Empty for an unknown kind (nothing it could have been added as).
  */
 export function planCheckQuestions(input: {
   kind: HomeSendKind | null;
   extracted: CompletenessReading;
   check: Pick<ReadingCheck, "unverified"> | null | undefined;
+  all?: boolean;
 }): CheckQuestion[] {
   const kind = input.kind;
   if (!kind || kind === "unknown") return [];
+  if (input.all !== true) return amountInDoubt(kind, input.extracted, input.check) ? [{ field: "amount", mode: "confirm" }] : [];
   const planned: CheckQuestion[] = [];
   const add = (question: CheckQuestion) => {
     if (planned.length < MAX_CHECK_QUESTIONS && !planned.some((entry) => entry.field === question.field)) planned.push(question);
@@ -155,6 +184,7 @@ export function startChecking(input: {
   recipientMemberId: string;
   score: number | null;
   percent: number;
+  all?: boolean;
 }): CheckingState | null {
   const planned = planCheckQuestions(input);
   if (planned.length === 0) return null;

@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { afterAnswer, askCorrection, checkedScore, MAX_CHECK_QUESTIONS, overTheBar, planCheckQuestions, questionsLeft, readCheckingState, splitCheckAnswer, startChecking, type CheckingState } from "./checking";
+import { afterAnswer, amountInDoubt, askCorrection, checkedScore, MAX_CHECK_QUESTIONS, overTheBar, planCheckQuestions, questionsLeft, readCheckingState, splitCheckAnswer, startChecking, type CheckingState } from "./checking";
 import { FROM_A_FILE } from "./verify";
 
 const NOW = new Date("2026-11-03T10:00:00Z");
@@ -10,12 +10,12 @@ const TEXT = { unverified: [] };
 describe("the questions that raise a Checking entry over the bar (14-061, the owner 2026-11-03)", () => {
   it("asks one Looks right over a photo or file's whole reading, its details behind it only after a no — three questions at most (14-066, part 3)", () => {
     const bill = { title: "Electricity", payee: "BESCOM", amount: 2140, dueDate: "2026-11-10" };
-    expect(planCheckQuestions({ kind: "bill", extracted: bill, check: FILE })).toEqual([
+    expect(planCheckQuestions({ all: true, kind: "bill", extracted: bill, check: FILE })).toEqual([
       { field: "payee", mode: "confirm_all" },
       { field: "payee", mode: "confirm" },
       { field: "amount", mode: "confirm" },
     ]);
-    expect(planCheckQuestions({ kind: "health_document", extracted: { title: "Blood test", healthRecordType: "lab_result", documentDate: "2026-11-01" }, check: FILE })).toEqual([
+    expect(planCheckQuestions({ all: true, kind: "health_document", extracted: { title: "Blood test", healthRecordType: "lab_result", documentDate: "2026-11-01" }, check: FILE })).toEqual([
       { field: "recordType", mode: "confirm_all" },
       { field: "recordType", mode: "confirm" },
       { field: "date", mode: "confirm" },
@@ -23,23 +23,23 @@ describe("the questions that raise a Checking entry over the bar (14-061, the ow
   });
 
   it("confirms the entry by its name when the words were checked but it was heard or read unsurely, then asks a useful detail it lacks", () => {
-    expect(planCheckQuestions({ kind: "grocery_item", extracted: { title: "Paneer" }, check: TEXT })).toEqual([
+    expect(planCheckQuestions({ all: true, kind: "grocery_item", extracted: { title: "Paneer" }, check: TEXT })).toEqual([
       { field: "name", mode: "confirm" },
       { field: "quantity", mode: "fill" },
     ]);
     // A detail already there is never asked again.
-    expect(planCheckQuestions({ kind: "grocery_item", extracted: { title: "Paneer", quantity: 1, unit: "packet" }, check: TEXT })).toEqual([{ field: "name", mode: "confirm" }]);
+    expect(planCheckQuestions({ all: true, kind: "grocery_item", extracted: { title: "Paneer", quantity: 1, unit: "packet" }, check: TEXT })).toEqual([{ field: "name", mode: "confirm" }]);
   });
 
   it("asks nothing about an unknown kind, and never more than three", () => {
-    expect(planCheckQuestions({ kind: "unknown", extracted: { title: "x" }, check: FILE })).toEqual([]);
-    const many = planCheckQuestions({ kind: "event", extracted: { title: "Diwali dinner", dueDate: "2026-11-08" }, check: FILE });
+    expect(planCheckQuestions({ all: true, kind: "unknown", extracted: { title: "x" }, check: FILE })).toEqual([]);
+    const many = planCheckQuestions({ all: true, kind: "event", extracted: { title: "Diwali dinner", dueDate: "2026-11-08" }, check: FILE });
     expect(many.length).toBeLessThanOrEqual(MAX_CHECK_QUESTIONS);
   });
 });
 
 describe("one tap for a photo or file (14-066, part 3)", () => {
-  const state = startChecking({ kind: "bill", extracted: { title: "Electricity", payee: "BESCOM", amount: 2140, dueDate: "2026-11-10" }, check: FILE, recipientMemberId: "m1", score: 0.82, percent: 95 })!;
+  const state = startChecking({ all: true, kind: "bill", extracted: { title: "Electricity", payee: "BESCOM", amount: 2140, dueDate: "2026-11-10" }, check: FILE, recipientMemberId: "m1", score: 0.82, percent: 95 })!;
 
   it("opens on Looks right, counted as one question waiting", () => {
     expect(state.open).toEqual({ field: "payee", mode: "confirm_all", ordinal: 1 });
@@ -74,7 +74,7 @@ describe("one tap for a photo or file (14-066, part 3)", () => {
 });
 
 describe("how sure it is after each answer: arithmetic someone can explain (principle 9)", () => {
-  const started = startChecking({ kind: "bill", extracted: { title: "Electricity", payee: "BESCOM", amount: 2140, dueDate: "2026-11-10" }, check: TEXT, recipientMemberId: "m1", score: 0.9, percent: 95 })!;
+  const started = startChecking({ all: true, kind: "bill", extracted: { title: "Electricity", payee: "BESCOM", amount: 2140, dueDate: "2026-11-10" }, check: TEXT, recipientMemberId: "m1", score: 0.9, percent: 95 })!;
   // Three detail questions, as a reading heard unsurely can have.
   const state: CheckingState = {
     ...started,
@@ -157,3 +157,27 @@ describe("splitting an answer: yes, no, skip or a value, never a guess", () => {
     expect(splitCheckAnswer("confirm", "x".repeat(200)).kind).toBe("unread");
   });
 });
+
+describe("since 2026-11-20: one question at most, about a money amount read with doubt", () => {
+  const bill = { title: "Electricity", payee: "BESCOM", amount: 2140, dueDate: "2026-11-10" };
+  it("asks only the amount of a bill or receipt read from a file", () => {
+    expect(planCheckQuestions({ kind: "bill", extracted: bill, check: FILE })).toEqual([{ field: "amount", mode: "confirm" }]);
+    expect(planCheckQuestions({ kind: "receipt", extracted: { title: "FreshMart", merchant: "FreshMart", amount: 1240 }, check: FILE })).toEqual([{ field: "amount", mode: "confirm" }]);
+  });
+  it("asks nothing when the amount was found in the words sent, or there is no amount, or it isn't money", () => {
+    expect(planCheckQuestions({ kind: "bill", extracted: bill, check: TEXT })).toEqual([]);
+    expect(planCheckQuestions({ kind: "bill", extracted: { title: "Electricity", dueDate: "2026-11-10" }, check: FILE })).toEqual([]);
+    expect(planCheckQuestions({ kind: "health_document", extracted: { title: "Blood test", healthRecordType: "lab_result", documentDate: "2026-11-01" }, check: FILE })).toEqual([]);
+    expect(planCheckQuestions({ kind: "event", extracted: { title: "Diwali dinner", dueDate: "2026-11-08" }, check: FILE })).toEqual([]);
+  });
+  it("asks the amount when it isn't in the words sent", () => {
+    expect(amountInDoubt("bill", bill, { unverified: ["the amount"] })).toBe(true);
+    expect(amountInDoubt("bill", bill, { unverified: ["the date"] })).toBe(false);
+  });
+  it("one yes confirms it", () => {
+    const state = startChecking({ kind: "bill", extracted: bill, check: FILE, recipientMemberId: "m1", score: 0.82, percent: 95 })!;
+    expect(state.planned).toHaveLength(1);
+    expect(afterAnswer(state, "yes", "hometalk", new Date("2026-11-20T10:00:00Z")).done).toBe("confirmed");
+  });
+});
+

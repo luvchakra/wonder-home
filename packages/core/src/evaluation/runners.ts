@@ -39,8 +39,11 @@ import { detectInstructionInjection } from "../homesend/injection";
 import { reconcileAgainstRecords, type HomeSendCandidate } from "../homesend/reconcile";
 import { adoptMatchedSubject, resolveIntakePeople } from "../homesend/resolve";
 import { buildUnderstanding } from "../homesend/understanding";
-import { addQuestion, checkQuestion, endingFor, updateQuestion, waitingQuestion } from "../homesend/deadlines";
+import { addQuestion, amountQuestion, checkQuestion, endingFor, updateQuestion } from "../homesend/deadlines";
 import { gateHealthSubject, healthFiledFor, mayFileForOthers } from "../homesend/health-filers";
+import { amountInDoubt } from "../homesend/checking";
+import type { CompletenessReading } from "../homesend/completeness";
+import { FROM_A_FILE } from "../homesend/verify";
 import type { HomeSendKind } from "../homesend/items";
 import { checkVerdict, decideByRules, MONEY_OR_HEALTH, newerFromSameSender, tidyFacts, type TidyItem, type TidyVerdict } from "../homesend/tidy";
 import type { TidyJudge } from "../homesend/tidy-model";
@@ -685,9 +688,16 @@ function observeEnding(c: HomeSendCase, ending: NonNullable<HomeSendCase["ending
   let confirmsByDefault = false;
   let cancelsByDefault = false;
   if (ending.status === "checking") {
-    const question = checkQuestion({ kind, title: reading.title, dueOn: reading.dueDate ?? null, today });
-    action = `check→default:${question.defaultAnswer}`;
-    confirmsByDefault = question.defaultAnswer === "looks_right";
+    if (ending.askChecking) {
+      const question = checkQuestion({ kind, title: reading.title, dueOn: reading.dueDate ?? null, today });
+      action = `check→default:${question.defaultAnswer}`;
+      confirmsByDefault = question.defaultAnswer === "looks_right";
+    } else if (amountInDoubt(kind, reading as CompletenessReading, { unverified: ending.fromAFile ? [FROM_A_FILE] : [] })) {
+      // The one question kept by default (2026-11-20): a money amount read with doubt; its default keeps it Checking.
+      const question = amountQuestion({ kind, title: reading.title, amount: null, dueOn: reading.dueDate ?? null, today });
+      action = `amount→default:${question.defaultAnswer}`;
+      confirmsByDefault = question.defaultAnswer === "looks_right";
+    } else action = "checking:no_question";
   } else {
     const decided = endingFor({
       status: ending.status,
@@ -717,9 +727,9 @@ function observeEnding(c: HomeSendCase, ending: NonNullable<HomeSendCase["ending
             members: GOLDEN_HOUSEHOLDS[c.household].members.map((m) => ({ id: m.id, displayName: m.displayName, memberType: m.memberType, status: m.status })),
           })
         : null,
+      waitForReview: ending.waitForReview,
     });
     if (decided.action === "set_aside") action = `set_aside:${decided.reason}`;
-    else if (decided.action === "ask") action = `ask→default:${waitingQuestion({ kind, title: reading.title, dueOn: reading.dueDate ?? null, today, duplicate: decided.duplicate === true || (ending.duplicate ?? false) }).defaultAnswer}`;
     else if (decided.action === "ask_update") {
       const question = updateQuestion({ kind, title: reading.title, dueOn: reading.dueDate ?? null, today, cancel: decided.cancel });
       action = `ask_update→default:${question.defaultAnswer}`;
@@ -727,6 +737,7 @@ function observeEnding(c: HomeSendCase, ending: NonNullable<HomeSendCase["ending
       cancelsByDefault = question.defaultAnswer === "cancel_it";
     } else if (decided.action === "record") action = "record→checking";
     else if (decided.action === "file_for") action = `file_for:${decided.memberId}→checking`;
+    else if (decided.action === "add") action = "add→checking";
     else if (decided.action === "ask_add") action = `ask_add→default:${addQuestion({ kind, title: reading.title, dueOn: reading.dueDate ?? null, today }).defaultAnswer}`;
     else action = decided.action;
   }

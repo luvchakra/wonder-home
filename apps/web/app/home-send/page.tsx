@@ -8,6 +8,7 @@ import { consumableNames, purchaseLabels } from "@wonderhome/core/commerce/repos
 import { createAdminClient } from "@wonderhome/core/db/admin";
 import { getHomeSendAddress, platformHomeSendEmailDomain } from "@wonderhome/core/homesend/addresses";
 import { listHomeSendChanges } from "@wonderhome/core/homesend/changes";
+import { listSetAsideLastDay, todayCounts } from "@wonderhome/core/homesend/daily-summary";
 import { ingestFile, ingestText } from "@wonderhome/core/homesend/ingest";
 import { countArchivedHomeSendItems, listArchiveReasons, listArchivedHomeSendItems, listHomeSendItems } from "@wonderhome/core/homesend/repository";
 import { loadNeedsYou } from "@wonderhome/core/hometalk/needs-you-repository";
@@ -18,6 +19,7 @@ import { childrenWithClasses, listActivities } from "@wonderhome/core/school/act
 import { whatsappConfigFromEnv } from "@wonderhome/core/notifications/whatsapp";
 import { AppShell } from "@wonderhome/core/shell/app-shell";
 import { Alert } from "@wonderhome/core/ui/alert";
+import { Card } from "@wonderhome/core/ui/card";
 import { QuoteCard } from "@wonderhome/core/ui/quote-card";
 import { SectionHeader } from "@wonderhome/core/ui/section-header";
 import { EmptyState } from "@wonderhome/core/ui/states";
@@ -144,7 +146,7 @@ export default async function HomeSendPage({
   const whatsappNumber = whatsappConfigFromEnv() ? whatsappBusinessNumber() : null;
   const emailConfigured = platformHomeSendEmailDomain() !== null;
   const isAdmin = isHouseholdAdmin(membership);
-  const [allItems, members, changes, address, whatsappLinks, activities, archivedCount, setAside, needsYou] = await Promise.all([
+  const [allItems, members, changes, address, whatsappLinks, activities, archivedCount, setAside, needsYou, setAsideToday] = await Promise.all([
     listHomeSendItems(supabase, householdId).catch(() => []),
     listMembers(supabase, householdId, membership.household.ownerMemberId).catch(() => []),
     listHomeSendChanges(supabase, householdId).catch(() => []),
@@ -157,6 +159,8 @@ export default async function HomeSendPage({
     listArchivedHomeSendItems(supabase, householdId, SET_ASIDE_SHOWN).catch(() => []),
     // How many things need a word from this person, for the opening sentence.
     loadNeedsYou(supabase, householdId).catch(() => ({ shown: [], total: 0 })),
+    // What HomeSend set aside on its own in the last day, for today's report (2026-11-20).
+    listSetAsideLastDay(supabase, householdId).catch(() => []),
   ]);
   const setAsideReasons = await listArchiveReasons(supabase, householdId, setAside.map((item) => item.id)).catch(() => new Map());
 
@@ -208,6 +212,13 @@ export default async function HomeSendPage({
   const purchaseNames = await purchaseLabels(supabase, householdId, purchaseIds).catch(() => ({}));
 
   const labels = homesendPageLabels(t, locale.preferences.language);
+  // Today's report (2026-11-20: the daily summary replaces "Looks right?"): what was added, how many are
+  // still Checking, what was set aside. The lines, each with Undo or Restore, are the lists below.
+  const today = todayCounts({ changes, setAside: setAsideToday, timeZone: timezone, now });
+  const todayParts = [
+    ...(today.checking > 0 ? [t("homesend.today.checking", { count: today.checking })] : []),
+    ...(today.setAside > 0 ? [t("homesend.today.setAside", { count: today.setAside })] : []),
+  ];
 
   return (
     <AppShell {...shell}>
@@ -218,6 +229,12 @@ export default async function HomeSendPage({
         </header>
 
         {isShareError(shareError) ? <Alert>{t(SHARE_ERROR_KEYS[shareError])}</Alert> : null}
+        {today.added + today.setAside > 0 ? (
+          <Card id="today" className="scroll-mt-20 p-4">
+            <p className="text-sm font-semibold">{today.added > 0 ? t("homesend.today.added", { count: today.added }) : t("homesend.today.nothingAdded")}</p>
+            <p className="mt-0.5 text-sm text-[var(--wh-foreground-muted)]">{[...todayParts, t("homesend.today.undo")].join(" ")}</p>
+          </Card>
+        ) : null}
         {sharedNote ? <Alert tone="info">{sharedNote}</Alert> : null}
 
         <HomeSendInbox

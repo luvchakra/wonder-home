@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { addQuestion, checkQuestion, effectOf, endingFor, notHouseholdInformation, resendQuestion, updateQuestion, waitingQuestion, type EndingInput } from "./deadlines";
+import { addQuestion, amountQuestion, checkQuestion, effectOf, endingFor, notHouseholdInformation, resendQuestion, updateQuestion, waitingQuestion, type EndingInput } from "./deadlines";
 
 const PAGE = `Home | About us | Contact us | Blog
 Accept all cookies to continue. Read our Privacy Policy and Terms of Service.
@@ -40,20 +40,19 @@ describe("every item ends as something", () => {
   });
 
   it("never sets aside a reading that found something, whatever its footer", () => {
-    expect(endingFor({ ...base, rawText: PAGE })).toEqual({ action: "ask" });
+    expect(endingFor({ ...base, rawText: PAGE })).toEqual({ action: "note" });
   });
 
   it("keeps something it couldn't tell the kind of as a household note", () => {
     expect(endingFor({ ...base, kind: "unknown" })).toEqual({ action: "note" });
   });
 
-  it("reads an unreadable item once more, then asks its sender once, then waits for that answer", () => {
+  it("reads an unreadable item once more, then sets it aside — nobody is asked to resend (2026-11-20)", () => {
     const unreadable: EndingInput = { ...base, status: "failed", failureReason: "unreadable", kind: null };
     expect(endingFor(unreadable)).toEqual({ action: "read_again" });
     expect(endingFor({ ...unreadable, retryRequestedAt: "2026-11-14T10:00:00Z", retryCount: 1 })).toEqual({ action: "wait" });
     expect(endingFor({ ...unreadable, retryCount: 1, minutesSinceTouched: 10 })).toEqual({ action: "wait" });
-    expect(endingFor({ ...unreadable, retryCount: 1 })).toEqual({ action: "ask_resend" });
-    expect(endingFor({ ...unreadable, retryCount: 1, asked: new Set(["homesend_resend"]) })).toEqual({ action: "wait" });
+    expect(endingFor({ ...unreadable, retryCount: 1 })).toEqual({ action: "set_aside", reason: "unreadable" });
   });
 
   it("sets aside an unreadable email with nobody to ask, and a failure a second read can't help", () => {
@@ -63,7 +62,7 @@ describe("every item ends as something", () => {
 
   it("does the same for a paste whose reading failed", () => {
     expect(endingFor({ ...base, kind: "unknown", readable: false })).toEqual({ action: "read_again" });
-    expect(endingFor({ ...base, kind: "unknown", readable: false, retryCount: 1 })).toEqual({ action: "ask_resend" });
+    expect(endingFor({ ...base, kind: "unknown", readable: false, retryCount: 1 })).toEqual({ action: "set_aside", reason: "unreadable" });
   });
 
   it("never makes a waiting bill, receipt or health document a note: part B records it as Checking", () => {
@@ -75,8 +74,9 @@ describe("every item ends as something", () => {
     expect(endingFor({ ...bill, match: "update" })).toEqual({ action: "ask_update", cancel: false });
     expect(endingFor({ ...bill, match: "cancellation" })).toEqual({ action: "ask_update", cancel: true });
     expect(endingFor({ ...bill, match: "update", asked: new Set(["homesend_update"]) })).toEqual({ action: "wait" });
-    expect(endingFor({ ...base, kind: "health_document", match: "duplicate" })).toEqual({ action: "ask", duplicate: true });
-    expect(endingFor({ ...bill, match: "duplicate", asked: new Set(["homesend_waiting"]) })).toEqual({ action: "wait" });
+    // The same one again: set aside as already on record, no question (2026-11-20).
+    expect(endingFor({ ...base, kind: "health_document", match: "duplicate" })).toEqual({ action: "already_recorded" });
+    expect(endingFor({ ...bill, match: "duplicate" })).toEqual({ action: "already_recorded" });
     // Nothing on record: recorded as Checking where the household records bills directly; else it waits, never a note.
     expect(endingFor({ ...bill, match: null, recordable: true })).toEqual({ action: "record" });
     expect(endingFor({ ...bill, match: null, recordable: false })).toEqual({ action: "wait" });
@@ -97,9 +97,15 @@ describe("every item ends as something", () => {
     expect(endingFor({ ...bill, match: "update", addable: true })).toEqual({ action: "ask_update", cancel: false });
   });
 
-  it("asks a waiting item's one question once", () => {
-    expect(endingFor(base)).toEqual({ action: "ask" });
-    expect(endingFor({ ...base, asked: new Set(["homesend_waiting"]) })).toEqual({ action: "wait" });
+  it("asks only under the Admin's \"Wait for review\"; otherwise adds at once as Checking (2026-11-20)", () => {
+    const bill = { ...base, kind: "bill" as const, match: null, recordable: false, addable: true };
+    expect(endingFor({ ...bill, waitForReview: false })).toEqual({ action: "add" });
+    expect(endingFor({ ...bill, waitForReview: true })).toEqual({ action: "ask_add" });
+    expect(endingFor({ ...base, kind: "health_document", match: null, addable: true, waitForReview: false })).toEqual({ action: "add" });
+  });
+
+  it("keeps a waiting item as a note at once, with no question (2026-11-20)", () => {
+    expect(endingFor(base)).toEqual({ action: "note" });
     expect(endingFor({ ...base, status: "routed" })).toEqual({ action: "wait" });
   });
 });
@@ -121,6 +127,15 @@ describe("questions and their defaults", () => {
     expect(waitingQuestion({ kind: "event", title: "Annual Day", dueOn: null, today, duplicate: false }).defaultAnswer).toBe("note");
     expect(waitingQuestion({ kind: "event", title: "Annual Day", dueOn: null, today, duplicate: true }).defaultAnswer).toBe("keep_existing");
     expect(resendQuestion({ title: null }).defaultAnswer).toBe("set_aside");
+  });
+
+  it("asks the doubtful amount with the default of keeping it Checking, never confirming money", () => {
+    const question = amountQuestion({ kind: "bill", title: "Electricity", amount: "₹2,140", dueOn: "2026-11-15", today });
+    expect(question.source).toBe("homesend_amount");
+    expect(question.prompt.title).toBe("Electricity · ₹2,140");
+    expect(question.defaultAnswer).toBe("keep_checking");
+    expect(effectOf("homesend_amount", "keep_checking", true)).toEqual({ effect: "keep_checking" });
+    expect(effectOf("homesend_amount", "looks_right", false)).toEqual({ effect: "confirm" });
   });
 
   it("updates a matched bill by default, marked Checking, and never cancels by default", () => {
