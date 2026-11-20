@@ -21,6 +21,15 @@ describe("extractGenericItems", () => {
     expect(items[0]!.detail).toContain("Maths: worksheet 3");
   });
 
+  it("keys an unchanged page the same on any day, and a changed page differently", () => {
+    const text = "This week's homework\n\nMaths: worksheet 3, due Friday.\nScience: read chapter 4.";
+    const today = extractGenericItems(text, target, NOW)[0]!;
+    const tomorrow = extractGenericItems(text, target, new Date("2026-10-28T18:00:00Z"))[0]!;
+    expect(today.contentKey).toBeTruthy();
+    expect(tomorrow.contentKey).toBe(today.contentKey);
+    expect(extractGenericItems(`${text}\nArt: bring crayons.`, target, NOW)[0]!.contentKey).not.toBe(today.contentKey);
+  });
+
   it("files nothing for a blank or too-short page", () => {
     expect(extractGenericItems("", target, NOW)).toEqual([]);
     expect(extractGenericItems("   \n  \n ", target, NOW)).toEqual([]);

@@ -146,6 +146,15 @@ describe("fetchConnection", () => {
     expect(second.ok && second.targets[0]).toEqual({ url: HOMEWORK, finalUrl: HOMEWORK, chars: 1, read: 1, fresh: 0 });
   });
 
+  it("files an unchanged whole page once, even when each day's fetch carries a new date", async () => {
+    const cursors = memCursors();
+    const page = (day: string, words = "Swag Labs products") => item({ title: "Open Menu", dueOn: day, detail: words, contentKey: `page:${words}` });
+    const run = (day: string, words?: string) => harness({ targets: [targets[0]!], itemsByUrl: { [HOMEWORK]: [page(day, words)] }, cursors, page: new FakePage({ [HOMEWORK]: "x" }) }).run();
+    expect(await run("2026-11-18")).toMatchObject({ filed: 1 });
+    expect(await run("2026-11-19")).toMatchObject({ filed: 0 });
+    expect(await run("2026-11-20", "A new notice")).toMatchObject({ filed: 1 });
+  });
+
   it("collapses duplicates within one page", async () => {
     const h = harness({
       page: new FakePage({ [HOMEWORK]: "x" }),
