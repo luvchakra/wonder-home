@@ -87,6 +87,9 @@ test.describe("HomeTalk's talk button always answers a tap", () => {
       .single();
     if (household.error) throw household.error;
     householdId = (household.data as { household_id: string }).household_id;
+    // Voice is a Pro feature (conversation.voice); the talk button is offered only where the plan has it.
+    const plan = await admin.from("household_subscriptions").upsert({ household_id: householdId, plan_key: "pro", status: "active" }, { onConflict: "household_id" });
+    if (plan.error) throw plan.error;
   });
 
   test.afterAll(async () => {
@@ -135,6 +138,7 @@ test.describe("HomeTalk's talk button always answers a tap", () => {
     await openHomeTalk(page);
     await page.getByRole("button", { name: TALK }).click();
     await expect(page.getByRole("button", { name: "End voice conversation" })).toBeVisible();
-    await expect(page.getByRole("alert")).toHaveCount(0);
+    // None of the "couldn't start" sentences (Next's route announcer is an alert too, so filter by words).
+    await expect(page.getByRole("alert").filter({ hasText: /microphone is blocked|can't listen|Voice can't be used|Voice couldn't start/ })).toHaveCount(0);
   });
 });
