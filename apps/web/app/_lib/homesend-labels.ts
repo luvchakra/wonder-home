@@ -311,6 +311,8 @@ export type HomeSendReviewLabels = {
 /** The `/home-send` screen's own words, around the shared review step. */
 export type HomeSendPageLabels = {
   review: HomeSendReviewLabels;
+  /** Delete on the HomeSend page's "Set aside" rows (the owner, 2026-11-20). */
+  setAside: { delete: string; deleteAria: string; deleteAll: string; deleteAllTitle: CountedWords };
   inbox: {
     /** The calm page (the owner, 2026-11-03): sections by what the reader decides, one action per row, two one-tap clears. */
     calm: {
@@ -818,6 +820,12 @@ export function homesendReviewLabels(t: Translate, language: string): HomeSendRe
 export function homesendPageLabels(t: Translate, language: string): HomeSendPageLabels {
   return {
     review: homesendReviewLabels(t, language),
+    setAside: {
+      delete: t("homesend.setAside.delete"),
+      deleteAria: t("homesend.setAside.deleteAria", keep("title")),
+      deleteAll: t("homesend.setAside.deleteAll"),
+      deleteAllTitle: counted(t, "homesend.setAside.deleteAllTitle", {}, language),
+    },
     inbox: {
       calm: {
         needsTitle: t("homesend.section.needs"),

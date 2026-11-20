@@ -615,6 +615,11 @@ export const homesendZh: AreaCatalog<typeof homesendEn> = {
   "homesend.setAside.title": "已放到一边",
   "homesend.setAside.lede": "发来的每样东西都会有个去处：一条记录、一条笔记，或带着原因放在这里。恢复可以放回任何一项。",
   "homesend.setAside.all": "查看所有放到一边的（{count}）",
+  "homesend.setAside.delete": "删除",
+  "homesend.setAside.deleteAria": "删除 {title}",
+  "homesend.setAside.deleteAll": "删除所有放到一边的",
+  "homesend.setAside.deleteAllTitle#one": "永久删除 1 个放到一边的项？",
+  "homesend.setAside.deleteAllTitle#other": "永久删除 {count} 个放到一边的项？",
   "homesend.lead.needsYou#one": "1 项需要你说一句——在 HomeTalk 顶部的“需要你”里。",
   "homesend.lead.needsYou#other": "{count} 项需要你说一句——在 HomeTalk 顶部的“需要你”里。",
 };

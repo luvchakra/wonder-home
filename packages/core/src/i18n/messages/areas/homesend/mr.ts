@@ -615,6 +615,11 @@ export const homesendMr: AreaCatalog<typeof homesendEn> = {
   "homesend.setAside.title": "बाजूला ठेवलेले",
   "homesend.setAside.lede": "पाठवलेली प्रत्येक गोष्ट काहीतरी बनते: एक नोंद, एक टीप, किंवा कारणासह इथे बाजूला ठेवलेली. परत आणा ने कोणतीही परत येते.",
   "homesend.setAside.all": "बाजूला ठेवलेले सर्व पाहा ({count})",
+  "homesend.setAside.delete": "हटवा",
+  "homesend.setAside.deleteAria": "{title} हटवा",
+  "homesend.setAside.deleteAll": "बाजूला ठेवलेले सर्व हटवा",
+  "homesend.setAside.deleteAllTitle#one": "बाजूला ठेवलेली 1 गोष्ट कायमची हटवायची?",
+  "homesend.setAside.deleteAllTitle#other": "बाजूला ठेवलेल्या {count} गोष्टी कायमच्या हटवायच्या?",
   "homesend.lead.needsYou#one": "1 गोष्टीसाठी तुमचा एक शब्द हवा — ती HomeTalk मध्ये सर्वात वर “तुमची गरज” मध्ये आहे.",
   "homesend.lead.needsYou#other": "{count} गोष्टींसाठी तुमचा एक शब्द हवा — त्या HomeTalk मध्ये सर्वात वर “तुमची गरज” मध्ये आहेत.",
 };

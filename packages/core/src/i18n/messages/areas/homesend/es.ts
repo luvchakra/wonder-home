@@ -615,6 +615,11 @@ export const homesendEs: AreaCatalog<typeof homesendEn> = {
   "homesend.setAside.title": "Apartado",
   "homesend.setAside.lede": "Todo lo enviado acaba en algo: una entrada, una nota o apartado aquí con su motivo. Restaurar devuelve cualquiera.",
   "homesend.setAside.all": "Ver todo lo apartado ({count})",
+  "homesend.setAside.delete": "Eliminar",
+  "homesend.setAside.deleteAria": "Eliminar {title}",
+  "homesend.setAside.deleteAll": "Eliminar todo lo apartado",
+  "homesend.setAside.deleteAllTitle#one": "¿Eliminar 1 elemento apartado para siempre?",
+  "homesend.setAside.deleteAllTitle#other": "¿Eliminar {count} elementos apartados para siempre?",
   "homesend.lead.needsYou#one": "1 cosa necesita una palabra tuya: está en «Te necesita», arriba en HomeTalk.",
   "homesend.lead.needsYou#other": "{count} cosas necesitan una palabra tuya: están en «Te necesita», arriba en HomeTalk.",
 };

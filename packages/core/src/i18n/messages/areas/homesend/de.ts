@@ -615,6 +615,11 @@ export const homesendDe: AreaCatalog<typeof homesendEn> = {
   "homesend.setAside.title": "Beiseitegelegt",
   "homesend.setAside.lede": "Alles Gesendete wird zu etwas: einem Eintrag, einer Notiz oder hier beiseitegelegt, mit Grund. Wiederherstellen holt alles zurück.",
   "homesend.setAside.all": "Alles Beiseitegelegte ansehen ({count})",
+  "homesend.setAside.delete": "Löschen",
+  "homesend.setAside.deleteAria": "{title} löschen",
+  "homesend.setAside.deleteAll": "Alles Beiseitegelegte löschen",
+  "homesend.setAside.deleteAllTitle#one": "1 beiseitegelegtes Element endgültig löschen?",
+  "homesend.setAside.deleteAllTitle#other": "{count} beiseitegelegte Elemente endgültig löschen?",
   "homesend.lead.needsYou#one": "1 Sache braucht ein Wort von dir — unter „Braucht dich“ ganz oben in HomeTalk.",
   "homesend.lead.needsYou#other": "{count} Sachen brauchen ein Wort von dir — unter „Braucht dich“ ganz oben in HomeTalk.",
 };
