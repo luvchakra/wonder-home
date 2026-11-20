@@ -389,7 +389,7 @@ describe("correcting one of several things (§9)", () => {
     expect(commerce.retireConsumable).toHaveBeenCalledWith(expect.anything(), { id: "c-milk", householdId: "hh-1" });
     expect(commerce.createConsumable).toHaveBeenCalledTimes(1);
     expect(commerce.createConsumable).toHaveBeenCalledWith(expect.anything(), expect.objectContaining({ name: "Almond milk" }));
-    expect(done.ok && done.text).toBe("Took **Milk** back off the [shopping list](/groceries?view=to-buy). Added **Almond milk** (1 pc) to the [shopping list](/groceries?view=to-buy).");
+    expect(done.ok && done.text).toBe("Took **Milk** back off the [shopping list](/groceries?view=to-buy). Added **Almond milk** (1 pc) to the [shopping list](/groceries?view=to-buy).\n💡 Not the amount you wanted? Say \"make it 2 litres\" or \"make it 6\".");
   });
 });
 

@@ -80,9 +80,13 @@ The 91 passing sentences now gate releases as part of the golden set: 462/462 pa
 - Multi-part sentences: the conversation route splits them (`decompose.ts` splits both test sentences correctly), but the evaluation runner does not, so they score as weak.
 - Not checked in this session: the **model's** own reading of the 100 sentences (no key), a **browser check on a QA household** (no service-role key or `.env.local` in this container, so `qa-test-user.mjs` can't run; no QA data was created), and **latency**. The owner's timestamps (10:08 → 10:09) are minute-rounded, so they bound the turn only to 0–119 s. Measuring model time against our time needs a key on the production build. The structural fix for a slow turn is already queued as 14-056 (one structured answer-or-intent call).
 
-## Open decision for the owner
+## The owner's decision: a grocery with no amount is added at once (25-051)
 
-A grocery with no amount ("add milk") still asks "How much?". That follows the owner's rule of 2026-10-26. Today's brief asked for "quantity missing → 1 or the usual from history". The two rules conflict, so the owner has to choose; the question was sent to the coordinator.
+The 2026-10-26 rule was "ask how much first", and tonight's goal was "take the action automatically", so the two conflicted. Asked through the coordinator, the owner chose **"Add it at once"**: "add milk" adds the household's own usual step for the item, else its catalog pack, else one of the unit's own step (`grocery-actions.ts` `amountFor`). The reply says the amount and adds 💡 'Say "make it 2 litres"', with Undo. Something already on the list is left as it is, and the reply says what is there. Grounding no longer asks.
+
+This is a changed owner rule, not a lowered gate. Eval cases HT-07, HT-151 to HT-154, HT-158 and HT-162, and the unit tests that encoded the old question, are rewritten to the new rule, each marked with the decision. The WhatsApp tests keep checking that a short reply answers an open amount question ("How many bottles?" still exists). Help "Meals & shopping" and "Connections" are updated in all eight languages.
+
+Still open: a "usual" learned from purchase history. Today it is the household's own step for the item.
 
 ## Where the code lives
 

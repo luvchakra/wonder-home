@@ -106,9 +106,9 @@ describe("reference grounding (Wave 4 §4, §8): \"put that on the list\"", () =
 
   it("resolves to the thing a school notice just asked for", async () => {
     const grounded = await groundIntent(listIntent("that"), env({ homesend: [{ entityType: "thing", entityId: null, label: "white T-shirt", source: "homesend", at: minutesAgo(2), origin: "the school notice" }] }));
-    // Resolved, then asked how much before anything is added (the owner, 2026-10-26).
-    expect(grounded.intent.parameters).toMatchObject({ item: "white T-shirt", referred: "that" });
-    expect(grounded.kind === "clarify" && grounded.awaiting).toBe("quantity");
+    // Resolved, then added at once with its usual amount (the owner, 2026-11-20, replacing 2026-10-26's question).
+    expect(grounded.intent.parameters).toMatchObject({ item: "white T-shirt", referred: "that", amountChosenFor: ["white T-shirt"] });
+    expect(grounded.kind).not.toBe("clarify");
   });
 
   it("asks when a notice and the conversation both put something in play", async () => {
@@ -131,7 +131,7 @@ describe("reference grounding (Wave 4 §4, §8): \"put that on the list\"", () =
     let read = false;
     const grounded = await groundIntent(listIntent("milk"), { ...env(), references: async () => ((read = true), NO_REFERENCES) });
     expect(grounded.intent.parameters.item).toBe("milk");
-    expect(grounded.kind === "clarify" && grounded.question).toBe("How much milk should I add? For example 1 litre, 1 kg or 2 packets.");
+    expect(grounded.kind).not.toBe("clarify");
     expect(read).toBe(false);
   });
 });
@@ -229,7 +229,7 @@ describe("the whole turn: grounding sits between understanding and any proposal"
       ground: (understood) => groundIntent(understood, env({ homesend: [{ entityType: "thing", entityId: null, label: "white T-shirt", source: "homesend", at: minutesAgo(2), origin: "the school notice" }] })),
     });
     expect(turn.kind === "reply" && turn.intent).toMatchObject({ action: "add_to_list", parameters: expect.objectContaining({ item: "white T-shirt" }) });
-    expect(turn.kind === "reply" && turn.clarification?.parameters).toMatchObject({ awaiting: "quantity", quantityFor: ["white T-shirt"] });
+    expect(turn.kind === "reply" && turn.proposal.kind).not.toBe("clarify");
   });
 });
 

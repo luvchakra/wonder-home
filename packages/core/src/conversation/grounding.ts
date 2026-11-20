@@ -3,7 +3,7 @@ import type { HouseholdRule } from "../homebrain/rules";
 import { matchBill } from "./bill-talk";
 import { readBareNumber, sayAmount } from "../commerce/bare-amount";
 import { readAcrossUnits } from "../commerce/pack-amount";
-import { bareItemOf, findGrocery, groceryCandidates, quantityQuestion } from "./grocery-actions";
+import { bareItemOf, findGrocery, groceryCandidates } from "./grocery-actions";
 import { readItemAmount } from "./quantity";
 import type { GroceryItem } from "../commerce/inventory";
 import { matchCatalogRecipe } from "../meals/recipe-catalog";
@@ -514,17 +514,16 @@ export async function groundIntent(intent: HouseholdIntent, env: GroundingEnv): 
     focus.push({ entityType: "meal", entityId: subject.mealId, label: subject.label, source: "mention", at });
   }
 
-  // --- How much (the owner, 2026-10-26): "add coconut oil" names no amount,
-  // so HomeTalk asks before it writes — how much, or how much more when it is
-  // already on the list — one question for every bare item. An amount said
-  // adds straight away; a meal's ingredients keep their own at-home check.
+  // --- How much: never asked (the owner, 2026-11-20, replacing 2026-10-26's
+  // "ask how much first"): "add milk" is added at once with the household's
+  // own usual step for it, else the catalog pack, else one of the unit's own
+  // step (`grocery-actions.ts` `amountFor`); the reply says the amount, with
+  // Undo, and "make it 2 litres" changes it. Something already on the list is
+  // said with its amount and left as it is.
   if (grounded.action === "add_to_list" && typeof grounded.parameters.forMeal !== "string" && grounded.parameters.keepAsIs !== true && !Array.isArray(grounded.parameters.lines)) {
     const names = typeof grounded.parameters.item === "string" ? [grounded.parameters.item] : Array.isArray(grounded.parameters.items) ? (grounded.parameters.items as unknown[]).filter((name): name is string => typeof name === "string") : [];
     const bare = names.filter((name) => name.trim() && !readItemAmount(name).amount);
-    if (bare.length > 0) {
-      const known = env.groceries ? await env.groceries().catch(() => []) : [];
-      return clarify({ ...grounded, parameters: { ...grounded.parameters, quantityFor: bare } }, "quantity", quantityQuestion(bare, known), []);
-    }
+    if (bare.length > 0) grounded = { ...grounded, parameters: { ...grounded.parameters, amountChosenFor: bare } };
   }
 
   // --- A reminder (§10): when, and what "them" was --------------------------

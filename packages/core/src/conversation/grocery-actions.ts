@@ -20,10 +20,10 @@ import { readItemAmount, type SpokenAmount } from "./quantity";
  *    the shopping list; "we have", "used" and "bought" change what is at
  *    home — and nothing else.
  *  - "Add 6 more" adds six to what is already on the list; it never
- *    replaces it. With no amount, HomeTalk asks how much first
- *    (`quantityQuestion`, the owner, 2026-10-26); only a request that
- *    reaches here unasked (a meal's ingredients) gets one of the item's own
- *    steps.
+ *    replaces it. With no amount, it is added at once with the household's
+ *    usual step, else the catalog pack, else the unit's own step, and the
+ *    reply says so (the owner, 2026-11-20, replacing 2026-10-26's "ask how
+ *    much first").
  *  - Amounts are read by rules (`quantity.ts`), never by a model.
  *  - Every reply says the result in the item's own units, from what the
  *    database returned — never what was intended.
@@ -327,6 +327,9 @@ export async function addToShoppingList(intent: HouseholdIntent, context: Contex
     text = `${forMeal ? `For ${forMeal.toLowerCase()}, I checked what is at home and on the list.\n` : ""}${added}${rest ? `\n${rest[0]!.toUpperCase()}${rest.slice(1)}.` : ""}`;
   }
   if (switched) text = `${switched}\n${text}`;
+  // An amount HomeTalk chose rather than heard (2026-11-20): one line on changing it.
+  const chosen = !forMeal && !keepAsIs ? changed.filter((entry) => !lines.find((line) => sameName(line.item, entry.name))?.amount) : [];
+  if (chosen.length > 0) text = `${text}\n💡 Not the amount you wanted? Say "make it 2 litres" or "make it 6".`;
   return {
     text,
     result: {
@@ -339,6 +342,12 @@ export async function addToShoppingList(intent: HouseholdIntent, context: Contex
       alreadyTracked: changed.length === 0,
     },
   };
+}
+
+function sameName(said: string, name: string): boolean {
+  const a = (readItemAmount(said).item || said).trim().toLowerCase().replace(/s$/, "");
+  const b = name.trim().toLowerCase().replace(/s$/, "");
+  return a === b || a.includes(b) || b.includes(a);
 }
 
 /** "milk", "milk and bananas", "milk, eggs and bread". */
