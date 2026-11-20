@@ -1,18 +1,15 @@
 "use client";
 
-import { Check, Contact, Copy, Download, Mail, MessageCircle, Send } from "lucide-react";
+import { Check, Contact, Copy, Mail, MessageCircle, Send } from "lucide-react";
 import Link from "next/link";
 import { useActionState, useState } from "react";
 
 import type { HomeSendAddress } from "@wonderhome/core/homesend/items";
-import { useInstallPrompt } from "@wonderhome/core/pwa/use-install-prompt";
 import { Alert } from "@wonderhome/core/ui/alert";
 import { Card } from "@wonderhome/core/ui/card";
 import { IconTile } from "@wonderhome/core/ui/icon-tile";
 import { Pill } from "@wonderhome/core/ui/pill";
 import { CollapsibleSection } from "@wonderhome/core/ui/collapsible-section";
-import { Sheet } from "@wonderhome/core/ui/sheet";
-import { Button } from "@wonderhome/core/ui/button";
 
 import {
   createHomeSendAddressAction,
@@ -25,11 +22,9 @@ import type { HomeSendPageLabels } from "../_lib/homesend-labels";
 type ChannelLabels = HomeSendPageLabels["channels"];
 
 /**
- * Other ways to send things in (Phase 5): forward email to the household's
- * own HomeSend address, or install the app so the phone's own share sheet
- * reaches HomeSend directly. Both are setup, done once and rarely touched
- * again — so this sits below the primary drop zone and the review queue,
- * not competing with them (CLAUDE.md rule 17).
+ * Other ways to send things in (Phase 5): forward email to the household's own HomeSend address.
+ * Installing the app is offered by the phone banner and the account menu, not here (owner, 2026-11-20),
+ * so with no email forwarding the section is gone.
  */
 export function HomeSendChannels({
   householdId,
@@ -45,19 +40,14 @@ export function HomeSendChannels({
   emailConfigured: boolean;
   address: HomeSendAddress | null;
 }) {
-  const install = useInstallPrompt();
-
   // WhatsApp is the icon beside the opening sentence (owner, 2026-11-20), not a row here (rule 14).
-  if (!emailConfigured && install.installed) return null;
+  if (!emailConfigured) return null;
 
   // Set up once and rarely touched again, so folded away below everything else (owner, 2026-11-20: "clutter free").
   return (
     <CollapsibleSection icon={Send} tone="primary" title={labels.title} as="h2">
       <div className="space-y-3">
-        {emailConfigured ? (
-          <EmailChannel householdId={householdId} isAdmin={isAdmin} address={address} labels={labels} />
-        ) : null}
-        {!install.installed ? <InstallChannel labels={labels} /> : null}
+        <EmailChannel householdId={householdId} isAdmin={isAdmin} address={address} labels={labels} />
       </div>
     </CollapsibleSection>
   );
@@ -194,45 +184,3 @@ function EmailChannel({
   );
 }
 
-function InstallChannel({ labels }: { labels: ChannelLabels }) {
-  const install = useInstallPrompt();
-  const [guide, setGuide] = useState(false);
-
-  return (
-    <>
-      <Card className="flex items-center gap-3 p-4">
-        <IconTile icon={Download} tone="primary" />
-        <div className="min-w-0 flex-1">
-          <p className="text-sm font-semibold">{labels.installTitle}</p>
-          <p className="mt-0.5 text-xs text-[var(--wh-foreground-muted)]">{labels.installBody}</p>
-        </div>
-        <Pill
-          type="button"
-          tone="quiet"
-          onClick={() => {
-            if (install.canPrompt) void install.prompt();
-            else setGuide(true);
-          }}
-        >
-          {labels.install}
-        </Pill>
-      </Card>
-
-      <Sheet
-        open={guide}
-        onOpenChange={setGuide}
-        title={labels.installTitle}
-        description={labels.installDescription}
-      >
-        <ol className="list-decimal space-y-2 pl-5 text-sm text-[var(--wh-foreground-muted)]">
-          {(labels.installSteps[install.platform] ?? labels.installSteps.unknown).map((step) => (
-            <li key={step}>{step}</li>
-          ))}
-        </ol>
-        <Button type="button" className="mt-5 w-full" onClick={() => setGuide(false)}>
-          {labels.gotIt}
-        </Button>
-      </Sheet>
-    </>
-  );
-}

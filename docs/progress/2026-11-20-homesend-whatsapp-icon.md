@@ -43,13 +43,16 @@ Before (full): today's card *above* the opening sentence; the sentence and Whats
 - No safety rule touched: `conversation/consent.ts`, the defaults, Checking for money and health, and health visibility are unchanged.
 
 ### Where each thing lives now
-Send: on the page. Today's report: under the sentence. Undo: in "Added recently" (one tap to open) and on the "Got it" notice. Restore/Delete/Delete all: inside "Set aside". Email forwarding, Add to contacts, Install: inside "Other ways to send things in". WhatsApp: the icon beside the sentence. Sender trust and every Admin switch: Settings → Connections → Email and Settings → AI Assistant (unchanged).
+Send: on the page. Today's report: under the sentence. Undo: in "Added recently" (one tap to open) and on the "Got it" notice. Restore/Delete/Delete all: inside "Set aside". Email forwarding and Add to contacts: inside "Other ways to send things in". WhatsApp: the icon beside the sentence. Sender trust and every Admin switch: Settings → Connections → Email and Settings → AI Assistant (unchanged).
 
 ### Help
 `help.guide.home-send.body.12` rewritten for the new layout, and the welcome-card sentence removed from `body.14`, in all eight languages (section `updated` 2026-11-20).
 
 ### Verified
 tsc, ESLint on touched files, vitest (channels, help, i18n: 107 passed), `lint:help-links`, production build. E2E `screens.spec.ts` "HomeSend is the send box…" was updated for the two buttons and the fold, and passes on mobile and desktop locally. The first run caught the fold dropping "Restored", which `SetAsideFold` fixes.
+
+### Part 3: "Install WonderHome" card removed (owner, 2026-11-20: "remove crossed out section")
+The card is gone from HomeSend in every state. Installing stays offered by the banner at the top of the screen on a phone and in the account menu (`install-banner.tsx`, `viewer-menu-content.tsx`), and the share target is untouched. "Other ways to send things in" now holds only email forwarding, so it disappears where the household has none. The not-connected WhatsApp row ("Connect your number…") was covered by part 1: the icon opens `/settings/connections#whatsapp`, where the number is connected, and that line is its description. Help `body.2` no longer says install from the HomeSend screen, and `body.12` no longer lists the share sheet or counts three folds, in all eight languages.
 
 ### For the owner
 - The first-time welcome card is gone. Say if new households should get it back as a one-time note.
