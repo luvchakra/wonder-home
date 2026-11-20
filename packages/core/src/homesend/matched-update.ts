@@ -211,8 +211,9 @@ async function setAsideAsRecorded(client: SupabaseClient, householdId: string, r
  * person's Add uses, recorded as a HomeSend change (Undo), audited
  * `homesend.auto_added`, its reminders on and saying "check before paying".
  * Never paid. A bill missing its amount or due date, or a document with
- * several records, is left to a person. Claimed first, so a person's own
- * confirm meanwhile wins.
+ * several records, is left to a person. Claimed first (by its review
+ * columns: a routed item needs its table and id together), so a person's
+ * own confirm meanwhile wins.
  */
 export async function recordWaitingBill(client: SupabaseClient, householdId: string, itemId: string, now: Date): Promise<MatchedUpdateResult> {
   const { data: itemRow, error } = await client
@@ -235,14 +236,16 @@ export async function recordWaitingBill(client: SupabaseClient, householdId: str
   const actor = (row.created_by_member_id as string | null) ?? ((household?.owner_member_id as string | null) ?? null);
   if (!actor) return "settled";
 
+  // Claimed by its review columns alone (it stays "classified"): a routed item needs its table and id together
+  // (`home_send_items_routed_together`), and the bill doesn't exist yet. A person who settled it meanwhile wins.
   const { data: claimed, error: claimError } = await client
     .from("home_send_items")
-    .update({ status: "routed", routed_table: "obligations", routed_at: now.toISOString(), review_decision: "auto_added", review_subject: "not_needed", review_corrected: false, reviewed_at: now.toISOString() })
+    .update({ review_decision: "auto_added", review_subject: "not_needed", review_corrected: false, reviewed_at: now.toISOString() })
     .eq("household_id", householdId)
     .eq("id", itemId)
     .eq("status", "classified")
     .eq("updated_at", row.updated_at as string)
-    .select("id");
+    .select("id, updated_at");
   if (claimError) throw new Error(`waiting-bill claim failed: ${claimError.code ?? "unknown"}`);
   if ((claimed ?? []).length === 0) return "settled";
 
@@ -263,12 +266,24 @@ export async function recordWaitingBill(client: SupabaseClient, householdId: str
   } catch (thrown) {
     await client
       .from("home_send_items")
-      .update({ status: "classified", routed_table: null, routed_at: null, review_decision: null, review_subject: null, review_corrected: null, reviewed_at: null })
+      .update({ review_decision: null, review_subject: null, review_corrected: null, reviewed_at: null })
       .eq("household_id", householdId)
       .eq("id", itemId);
     throw thrown;
   }
-  await client.from("home_send_items").update({ routed_id: created.id }).eq("household_id", householdId).eq("id", itemId);
+  // Routed, its table and id together, only on the claim we hold.
+  const { error: routeError } = await client
+    .from("home_send_items")
+    .update({ status: "routed", routed_table: "obligations", routed_id: created.id, routed_at: now.toISOString() })
+    .eq("household_id", householdId)
+    .eq("id", itemId)
+    .eq("status", "classified");
+  if (routeError) {
+    // Never left as a bill nobody can see came from here: stood down (a status, never a delete), and it waits again.
+    await cancelObligation(client, { id: created.id, householdId }).catch(() => undefined);
+    await client.from("home_send_items").update({ review_decision: null, review_subject: null, review_corrected: null, reviewed_at: null }).eq("household_id", householdId).eq("id", itemId);
+    throw new Error(`waiting-bill route failed: ${routeError.code ?? "unknown"}`);
+  }
   await recordHomeSendChange(client, {
     householdId,
     intakeId: itemId,

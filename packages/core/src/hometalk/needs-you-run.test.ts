@@ -10,6 +10,10 @@ import { runNeedsYouDeadlines } from "./needs-you-run";
  */
 const NOW = new Date("2026-11-14T12:00:00Z");
 const OLD = "2026-11-01T05:00:00Z";
+/** `home_send_items`' own CHECKs a step could break: a routed item has its table and id together, and only a routed one has them. */
+const HOME_SEND_CHECKS = {
+  home_send_items: (row: Record<string, unknown>) => (row.routed_table == null) === (row.routed_id == null) && (row.routed_table == null || row.status === "routed"),
+};
 const PAGE = "Home | About us | Contact us\nAccept all cookies. Privacy Policy. © 2026 Example. All rights reserved.";
 
 function seed() {
@@ -112,7 +116,7 @@ describe("the deadlines step", () => {
       ],
       homesend_changes: [],
       audit_events: [],
-    });
+    }, [], HOME_SEND_CHECKS);
     await runNeedsYouDeadlines(client, { now: NOW, householdIds: ["h1"], sweep: false });
     const question = tables.needs_you_items!.find((row) => row.subject_id === "newer");
     expect(question).toMatchObject({ source: "homesend_update", default_answer: "update", recipient_member_id: "m1", status: "defaulted", answer: "update" });
@@ -138,7 +142,7 @@ describe("the deadlines step", () => {
       ],
       homesend_changes: [],
       audit_events: [],
-    });
+    }, [], HOME_SEND_CHECKS);
     const result = await runNeedsYouDeadlines(client, { now: NOW, householdIds: ["h1"], sweep: false });
     expect(result.recorded).toBe(1);
     expect(tables.obligations).toHaveLength(1);
