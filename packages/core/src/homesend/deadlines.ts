@@ -86,6 +86,12 @@ export type EndingInput = {
   recordable?: boolean;
   /** A bill, receipt or health document "Add this bill?" can add with what is known (`add-default.ts` `canAdd`). */
   addable?: boolean;
+  /**
+   * A health document from a sender on "Who may file health records for
+   * others" that names one other household member (`health-filers.ts`
+   * `healthFiledFor`, the owner 2026-11-20): filed for them now, as Checking.
+   */
+  filedFor?: string | null;
 };
 
 /** How long a read-again has before the sender is asked to send it again. */
@@ -106,6 +112,8 @@ export type Ending =
   | { action: "ask"; duplicate?: true }
   /** "Add this bill?" (the owner, 2026-11-20: "record"): default Add after 24 h, recorded as Checking with what is known. */
   | { action: "ask_add" }
+  /** Filed now for the member it names, marked Checking, with no question (an allowed sender's health document, the owner 2026-11-20). */
+  | { action: "file_for"; memberId: string }
   /** "Update the existing bill?" (the owner, 2026-11-20): default Update, marked Checking; a cancellation's default keeps the record Checking. */
   | { action: "ask_update"; cancel: boolean }
   /** Nothing to do yet (a read-again is queued, or its question is open). */
@@ -158,6 +166,8 @@ export function endingFor(item: EndingInput): Ending {
     if (item.kind === "bill" && item.recordable === true && item.match === null) return { action: "record" };
     // Nothing on record, but not recorded on its own (money or health set to "Wait for review", a detail
     // missing, several records): asked "Add this bill?", and added as Checking by default (owner, 2026-11-20).
+    // An allowed sender's health document naming another member: filed for them, never asked (the owner, 2026-11-20).
+    if (item.kind === "health_document" && item.match === null && item.addable === true && item.filedFor) return { action: "file_for", memberId: item.filedFor };
     if (item.match === null && item.addable === true) return item.asked.has(ADD_SOURCE) ? { action: "wait" } : { action: "ask_add" };
     return { action: "wait" };
   }

@@ -10,9 +10,10 @@ import { localMoment } from "../notifications/timing";
 import { log } from "../observability/logger";
 import { addQuestion, ADD_SOURCE, checkQuestion, endingFor, resendQuestion, UPDATE_SOURCE, updateQuestion, waitingQuestion, type Ending, type EndingInput, type HomeSendQuestion } from "../homesend/deadlines";
 import type { HomeSendExtraction, HomeSendFailureReason, HomeSendKind, HomeSendStatus } from "../homesend/items";
-import { canAdd } from "../homesend/add-default";
+import { addWaitingItem, canAdd } from "../homesend/add-default";
+import { healthFiledFor, type HealthMember } from "../homesend/health-filers";
 import { canRecordBill, matchOnRecord, recordWaitingBill } from "../homesend/matched-update";
-import { loadRecordFirst } from "../household/direct-add-repository";
+import { loadHealthFilers, loadRecordFirst } from "../household/direct-add-repository";
 import { enqueueClassifyRetry, enqueueReread } from "../homesend/retry-queue";
 
 /**
@@ -209,7 +210,7 @@ const DOMAIN_KIND: Record<string, string> = {
 async function endHouseholdItems(admin: SupabaseClient, householdId: string, now: Date, result: DeadlinesResult): Promise<boolean> {
   const [household, members, waiting, unconfirmed, roles] = await Promise.all([
     admin.from("households").select("timezone").eq("id", householdId).maybeSingle(),
-    admin.from("household_members").select("id, member_type, status, profile_id").eq("household_id", householdId).limit(200),
+    admin.from("household_members").select("id, member_type, status, profile_id, display_name").eq("household_id", householdId).limit(200),
     admin.from("home_send_items").select(ITEM_COLUMNS).eq("household_id", householdId).in("status", ["received", "classified", "failed"]).order("created_at", { ascending: true }).limit(ITEMS_PER_HOUSEHOLD),
     admin.from("homesend_changes").select("intake_id, domain, created_at").eq("household_id", householdId).eq("confirmation_state", "unconfirmed").is("undone_at", null).order("created_at", { ascending: true }).limit(ITEMS_PER_HOUSEHOLD),
     admin.from("household_roles").select("member_id").eq("household_id", householdId).in("role", ["head", "administrator"]).limit(50),
@@ -248,6 +249,12 @@ async function endHouseholdItems(admin: SupabaseClient, householdId: string, now
   // Whether this household records bills directly (record first's "Money and health entries"); read once, and only when a bill waits.
   let recordsBills: Promise<boolean> | null = null;
   const billsRecorded = () => (recordsBills ??= loadRecordFirst(admin, householdId).then((settings) => settings.directAdd.money).catch(() => false));
+  // "Who may file health records for others" (the owner, 2026-11-20): read once, and only when a health document waits.
+  let filersRead: Promise<string[]> | null = null;
+  const healthFilers = () => (filersRead ??= loadHealthFilers(admin, householdId).catch(() => []));
+  const memberRows = ((members.data ?? []) as Row[]);
+  const healthMembers: HealthMember[] = memberRows.map((row) => ({ id: row.id as string, displayName: String(row.display_name ?? ""), memberType: (row.member_type as string | null) ?? null, status: (row.status as string | null) ?? null }));
+  const typeOf = (memberId: string | null) => (memberId ? ((memberRows.find((row) => row.id === memberId)?.member_type as string | undefined) ?? null) : null);
   for (const row of waitingRows) {
     const id = row.id as string;
     const kind = (row.classified_kind as HomeSendKind | null) ?? null;
@@ -270,7 +277,12 @@ async function endHouseholdItems(admin: SupabaseClient, householdId: string, now
     if (kind === "receipt" && row.status === "classified" && row.readable !== false) match = null;
     const extracted = (row.extracted as Partial<HomeSendExtraction> | null) ?? null;
     const records = Array.isArray(row.records) ? (row.records as unknown[]) : null;
+    const senderId = (row.created_by_member_id as string | null) ?? null;
+    const filedFor = kind === "health_document" && match === null && senderId
+      ? healthFiledFor({ kind, sender: { memberId: senderId, memberType: typeOf(senderId) }, filers: await healthFilers(), names: [extracted?.subjectMemberName, ...(extracted?.people ?? [])], members: healthMembers })
+      : null;
     const ending: Ending = endingFor({
+      filedFor,
       match,
       recordable: kind === "bill" && match === null && canRecordBill(extracted, records) ? await billsRecorded() : false,
       addable: match === null && canAdd({ kind, senderMemberId: (row.created_by_member_id as string | null) ?? null, extracted, records }),
@@ -297,6 +309,15 @@ async function endHouseholdItems(admin: SupabaseClient, householdId: string, now
     } else if (ending.action === "record") {
       try {
         if ((await recordWaitingBill(admin, householdId, id, now)) === "done") {
+          result.recorded += 1;
+          changed = true;
+        }
+      } catch {
+        // Not written: it stays waiting, and the next pass tries again.
+      }
+    } else if (ending.action === "file_for") {
+      try {
+        if ((await addWaitingItem(admin, householdId, id, { byDefault: false, memberId: senderId, now, healthFor: ending.memberId })) === "done") {
           result.recorded += 1;
           changed = true;
         }

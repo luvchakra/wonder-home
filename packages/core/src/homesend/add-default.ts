@@ -27,7 +27,9 @@ import { billShape } from "./record-types";
  *   - a receipt's lines as purchases, against the tracked item of that name or
  *     a newly tracked one, dated by the receipt or else the day it was sent;
  *   - a health document filed privately for the person who sent it, as a
- *     person's own Add files it, with its file copied to health records.
+ *     person's own Add files it, with its file copied to health records; or,
+ *     from a sender on "Who may file health records for others", for the
+ *     member it names (`health-filers.ts`, the owner 2026-11-20).
  *
  * Every entry is an `unconfirmed` HomeSend change, so it shows Checking and
  * is asked "Looks right?" next. Nothing is ever paid. The item is claimed
@@ -61,7 +63,17 @@ export async function addWaitingItem(
   client: SupabaseClient,
   householdId: string,
   itemId: string,
-  how: { byDefault: boolean; memberId: string | null; now: Date },
+  how: {
+    byDefault: boolean;
+    memberId: string | null;
+    now: Date;
+    /**
+     * A health document from a sender on "Who may file health records for
+     * others" that names another member (`health-filers.ts`): filed for that
+     * member instead of the sender. The caller checked the list.
+     */
+    healthFor?: string | null;
+  },
 ): Promise<AddResult> {
   const { data: itemRow, error } = await client
     .from("home_send_items")
@@ -149,8 +161,9 @@ export async function addWaitingItem(
       }
       const recordType = (RECORD_TYPES as readonly string[]).includes(read?.healthRecordType ?? "") ? (read!.healthRecordType as RecordType) : "other";
       const created = await createRecord(client, { householdId, memberId: actor }, {
-        // Filed for the person who sent it, privately: the same as a person's own Add with nobody else picked.
-        memberId: sender!,
+        // Filed for the person who sent it, privately: the same as a person's own Add with nobody else picked;
+        // for the member it names when its sender may file health records for others (the owner, 2026-11-20).
+        memberId: how.healthFor ?? sender!,
         label: (read?.title ?? "").trim().slice(0, 160),
         recordType,
         documentDate: read?.documentDate?.slice(0, 10) || null,
@@ -181,6 +194,7 @@ export async function addWaitingItem(
     .eq("id", itemId)
     .in("status", ["received", "classified"]);
   if (routeError) throw new Error(`add route failed: ${routeError.code ?? "unknown"}`);
+  const filedForOther = kind === "health_document" && Boolean(how.healthFor) && how.healthFor !== sender;
   for (const entry of written) {
     await recordHomeSendChange(client, {
       householdId,
@@ -188,16 +202,16 @@ export async function addWaitingItem(
       domain: entry.domain,
       entityId: entry.entityId,
       createdByMemberId: actor,
-      auto: { state: "unconfirmed", confidence: null, source: how.byDefault ? "needs_you_default" : "needs_you" },
+      auto: { state: "unconfirmed", confidence: null, source: filedForOther ? "health_filer" : how.byDefault ? "needs_you_default" : "needs_you" },
     });
   }
   await auditChange({
     householdId,
     actorMemberId: how.byDefault ? undefined : (how.memberId ?? undefined),
-    eventType: "homesend.added_checking",
+    eventType: filedForOther ? "homesend.health_filed_for" : "homesend.added_checking",
     targetTable: first.table,
     targetId: first.entityId,
-    metadata: { intakeId: itemId, kind, entries: written.length, by: how.byDefault ? "default" : "person" },
+    metadata: { intakeId: itemId, kind, entries: written.length, by: how.byDefault ? "default" : "person", ...(filedForOther ? { filedFor: how.healthFor, sender, by: "allowed_filer" } : {}) },
   });
   return "done";
 }

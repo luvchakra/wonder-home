@@ -6,7 +6,7 @@ import { describeKeySource, platformKey, resolveModelKey } from "@wonderhome/cor
 import { loadDataUse } from "@wonderhome/core/ai/privacy-repository";
 import { loadConfirmRequested } from "@wonderhome/core/conversation/consent-repository";
 import { AUTO_ADD_PERCENTS } from "@wonderhome/core/homesend/auto-add";
-import { loadRecordFirst } from "@wonderhome/core/household/direct-add-repository";
+import { loadHealthFilers, loadRecordFirst } from "@wonderhome/core/household/direct-add-repository";
 import { APPROVAL_SCOPES, MONEY_HEALTH_MODES, OUTSIDE_SENDER_MODES } from "@wonderhome/core/homesend/record-first";
 import { loadHomeSendTidy } from "@wonderhome/core/household/homesend-tidy-repository";
 import { loadNothingWaits } from "@wonderhome/core/household/nothing-waits-repository";
@@ -29,6 +29,7 @@ import { ReturnLink, returnLabelKey } from "../../_components/return-link";
 import { safeReturnTo } from "../../_lib/return-to";
 import { openKeyAlerts } from "@wonderhome/core/ai/key-alert-status";
 import { AutoAddPercentPicker } from "../../_components/auto-add-percent-picker";
+import { HealthFilersPicker } from "../../_components/health-filers-picker";
 import { RecordFirstPicker } from "../../_components/record-first-picker";
 import { HomeSendLearned } from "../../_components/homesend-learned";
 import { HomeSendTidySwitch } from "../../_components/homesend-tidy-switch";
@@ -54,7 +55,7 @@ export default async function AiAssistantSettingsPage({ searchParams }: { search
   const returnTo = safeReturnTo(query.returnTo);
   const { supabase, membership, view, viewer, secondary } = session;
   const householdId = membership.household.id;
-  const [credential, voiceCredential, dataUse, confirmRequested, chosenPercent, recordFirst, keyAlerts, homesendTidy, nothingWaits, learned, members, kindBars] = await Promise.all([
+  const [credential, voiceCredential, dataUse, confirmRequested, chosenPercent, recordFirst, keyAlerts, homesendTidy, nothingWaits, learned, members, kindBars, healthFilers] = await Promise.all([
     credentialStatus(supabase, householdId).catch(() => ({ configured: false, provider: null, updatedAt: null })),
     geminiVoiceKeyStatus(supabase, householdId).catch(() => ({ configured: false, provider: null, updatedAt: null })),
     loadDataUse(supabase, householdId),
@@ -67,6 +68,7 @@ export default async function AiAssistantSettingsPage({ searchParams }: { search
     listHouseholdRules(supabase, householdId).catch(() => []),
     listMembers(supabase, householdId, null).catch(() => []),
     listKindBars(supabase, householdId).catch(() => []),
+    loadHealthFilers(supabase, householdId),
   ]);
 
   // Which key actually answers, decided in one place so the screen can never
@@ -212,6 +214,24 @@ export default async function AiAssistantSettingsPage({ searchParams }: { search
                   adminDecides: t("settingsPage.adminDecides"),
                 }}
               />
+              {setting === "moneyHealth" ? (
+                // Who may file health records for others (the owner, 2026-11-20): in "Money and health entries", never a child.
+                <div id="health-filers" className="mt-4 scroll-mt-20 border-t border-[var(--wh-border)] pt-4">
+                  <HealthFilersPicker
+                    householdId={householdId}
+                    members={members.filter((member) => member.status === "active" && (member.memberType === "adult" || member.memberType === "helper")).map((member) => ({ id: member.id, name: member.displayName, helper: member.memberType === "helper" }))}
+                    selected={healthFilers}
+                    manages={manages}
+                    labels={{
+                      title: t("settingsPage.ai.healthFilers.title"),
+                      detail: t("settingsPage.ai.healthFilers.detail"),
+                      nobody: t("settingsPage.ai.healthFilers.nobody"),
+                      helper: t("settingsPage.ai.healthFilers.helper"),
+                      adminDecides: t("settingsPage.adminDecides"),
+                    }}
+                  />
+                </div>
+              ) : null}
             </Card>
           ))}
           {/* HomeSend's daily tidy (the owner, 2026-11-03): beside the other HomeSend choices. */}

@@ -39,6 +39,7 @@ import { reconcileAgainstRecords, type HomeSendCandidate } from "../homesend/rec
 import { adoptMatchedSubject, resolveIntakePeople } from "../homesend/resolve";
 import { buildUnderstanding } from "../homesend/understanding";
 import { addQuestion, checkQuestion, endingFor, updateQuestion, waitingQuestion } from "../homesend/deadlines";
+import { gateHealthSubject, healthFiledFor, mayFileForOthers } from "../homesend/health-filers";
 import type { HomeSendKind } from "../homesend/items";
 import { checkVerdict, decideByRules, MONEY_OR_HEALTH, newerFromSameSender, tidyFacts, type TidyItem, type TidyVerdict } from "../homesend/tidy";
 import type { TidyJudge } from "../homesend/tidy-model";
@@ -504,6 +505,9 @@ export async function observeHomeSend(c: HomeSendCase, models: Models = {}): Pro
   const withSchools = c.enrolments ? { ...household, records: { ...household.records, enrolments: [...(household.records.enrolments ?? []), ...c.enrolments.map((row) => ({ ...row, grade: null }))] } } : household;
   const items = contextItemsFor(withSchools as typeof household, c.actor);
   const resolved = resolveIntakePeople(understanding, items, { viewerMemberId: c.actor });
+  // As the review does (the owner, 2026-11-20): a sender on "Who may file health records for others" keeps the person a health document names.
+  const sender = household.members.find((m) => m.id === c.actor) ?? null;
+  const healthFiler = mayFileForOthers(c.healthFilers ?? [], sender ? { memberId: sender.id, memberType: sender.memberType } : null);
   // As the review does (14-066): the content's school, the sender's history, or the one child at school.
   const resolution = {
     ...resolved,
@@ -513,6 +517,7 @@ export async function observeHomeSend(c: HomeSendCase, models: Models = {}): Pro
       rules: (c.learned ?? []).map((row, n) => ({ id: `learned-${n}`, kind: "sender_child" as const, key: row.key, valueMemberId: row.valueMemberId, valueText: null, learnedByMemberId: c.actor, learnedFromItemId: null, learnedAt: household.now.toISOString(), mixed: row.mixed === true, source: "answer" as const, times: 1 })),
       sender: c.source.from ?? null,
       text: [c.source.subject, c.source.text, reading.title, reading.summary].filter((part): part is string => typeof part === "string").join("\n"),
+      healthFiler,
     }),
   };
   const kind = reading.kind;
@@ -539,7 +544,7 @@ export async function observeHomeSend(c: HomeSendCase, models: Models = {}): Pro
       : null;
 
   // Who it is for: what the content said, or else whose record it matched.
-  const subject = adoptMatchedSubject(kind, resolution.subject, reconciliation?.existingId ? reconciliation.existing.subjectMemberId : null, items);
+  const subject = gateHealthSubject(kind, adoptMatchedSubject(kind, resolution.subject, reconciliation?.existingId ? reconciliation.existing.subjectMemberId : null, items), sender ? { memberId: sender.id, memberType: sender.memberType } : null, healthFiler);
 
   const directAdd = { ...NO_DIRECT_ADD, ...c.directAdd };
   const decision = decideConfirmation({
@@ -696,6 +701,19 @@ function observeEnding(c: HomeSendCase, ending: NonNullable<HomeSendCase["ending
       match: ending.match,
       recordable: ending.recordable,
       addable: ending.addable,
+      // An allowed sender's health document naming another member (the owner, 2026-11-20): as the deadlines step works it out.
+      filedFor: c.healthFilers
+        ? healthFiledFor({
+            kind,
+            sender: (() => {
+              const who = GOLDEN_HOUSEHOLDS[c.household].members.find((m) => m.id === c.actor);
+              return who ? { memberId: who.id, memberType: who.memberType } : null;
+            })(),
+            filers: c.healthFilers,
+            names: [reading.subjectMemberName, ...(reading.people ?? [])],
+            members: GOLDEN_HOUSEHOLDS[c.household].members.map((m) => ({ id: m.id, displayName: m.displayName, memberType: m.memberType, status: m.status })),
+          })
+        : null,
     });
     if (decided.action === "set_aside") action = `set_aside:${decided.reason}`;
     else if (decided.action === "ask") action = `ask→default:${waitingQuestion({ kind, title: reading.title, dueOn: reading.dueDate ?? null, today, duplicate: decided.duplicate === true || (ending.duplicate ?? false) }).defaultAnswer}`;
@@ -705,6 +723,7 @@ function observeEnding(c: HomeSendCase, ending: NonNullable<HomeSendCase["ending
       // A default that cancels a record would be the unsafe outcome; "update" changes it, marked Checking, and pays nothing.
       cancelsByDefault = question.defaultAnswer === "cancel_it";
     } else if (decided.action === "record") action = "record→checking";
+    else if (decided.action === "file_for") action = `file_for:${decided.memberId}→checking`;
     else if (decided.action === "ask_add") action = `ask_add→default:${addQuestion({ kind, title: reading.title, dueOn: reading.dueDate ?? null, today }).defaultAnswer}`;
     else action = decided.action;
   }

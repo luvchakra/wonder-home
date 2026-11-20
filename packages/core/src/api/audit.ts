@@ -80,6 +80,7 @@ export const AUDIT_EVENTS = [
   "homesend.kept_checking",
   "homesend.matched_update",
   "homesend.added_checking",
+  "homesend.health_filed_for",
   "needs_you.answered",
   "needs_you.defaulted",
   "homesend.restored",

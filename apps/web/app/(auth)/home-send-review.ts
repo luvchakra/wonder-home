@@ -5,7 +5,8 @@ import { loadHouseholdContext } from "@wonderhome/core/context/repository";
 import { listResponsibilities } from "@wonderhome/core/household/configuration-repository";
 import type { AutonomyMode } from "@wonderhome/core/household/autonomy";
 import { loadAutomationBar } from "@wonderhome/core/homebrain/kind-bar-repository";
-import { loadRecordFirst } from "@wonderhome/core/household/direct-add-repository";
+import { loadHealthFilers, loadRecordFirst } from "@wonderhome/core/household/direct-add-repository";
+import { gateHealthSubject, mayFileForOthers } from "@wonderhome/core/homesend/health-filers";
 import { CAREFUL_RECORD_FIRST, type ApprovalScope } from "@wonderhome/core/homesend/record-first";
 import { duplicateReceipt } from "@wonderhome/core/commerce/receipt-stock";
 import { directAddAreaOf, NO_DIRECT_ADD, type DirectAdd } from "@wonderhome/core/homesend/auto-add";
@@ -182,10 +183,13 @@ export async function prepareReview(
 
   // Who it is for may come from what the household told HomeSend before (14-066, 14-069 rules): read in the same wave.
   const childKind = kind === "school_item" || kind === "activity_item";
-  const [people, rules] = await Promise.all([
+  const [people, rules, filers] = await Promise.all([
     householdPeople(supabase, membership).catch(() => []),
     childKind ? listHouseholdRules(supabase, membership.household.id).catch(() => []) : Promise.resolve([]),
+    // "Who may file health records for others" (the owner, 2026-11-20): only a health document needs it.
+    kind === "health_document" ? loadHealthFilers(supabase, membership.household.id) : Promise.resolve([] as string[]),
   ]);
+  const healthFiler = mayFileForOthers(filers, { memberId: membership.memberId, memberType: membership.memberType });
   const resolved = item.understanding
     ? resolveIntakePeople(item.understanding, people, { viewerMemberId: membership.memberId })
     : null;
@@ -198,6 +202,7 @@ export async function prepareReview(
           rules,
           sender: item.senderAddress ?? item.understanding?.provenance.sender ?? null,
           text: [item.extracted.title, item.extracted.notes, item.extracted.subject, item.extracted.summary, item.understanding?.contentSummary, item.rawText].filter((part): part is string => typeof part === "string").join("\n"),
+          healthFiler,
         }),
       }
     : null;
@@ -227,7 +232,8 @@ export async function prepareReview(
   });
 
   // Who it is for: what the content said, or else whose record it matched.
-  const subject = resolution ? adoptMatchedSubject(kind, resolution.subject, reconciliation?.existing.subjectMemberId, people) : null;
+  // A health document for someone other than its sender or a child: filed on its own only for a sender an Admin allowed (the owner, 2026-11-20).
+  const subject = resolution ? gateHealthSubject(kind, adoptMatchedSubject(kind, resolution.subject, reconciliation?.existing.subjectMemberId, people), { memberId: membership.memberId, memberType: membership.memberType }, healthFiler) : null;
   // The outcome's autonomy, the household's bar and its "add directly" settings (`auto-add.ts`), read together.
   // A grocery it matched may be on the shopping list now: with an amount, that is a top-up, not a duplicate (I-27).
   const listedCheck = kind === "grocery_item" && reconciliation?.proposal.type === "duplicate";

@@ -1750,6 +1750,50 @@ const HOMESEND: HomeSendCase[] = [
     ending: { status: "classified", match: null, addable: true },
     expected: { interpretation: "health_document", action: "ask_add→default:add", safety: { consequential: true, executed: false } },
   },
+  // "Who may file health records for others" (the owner, 2026-11-20): an Admin's list lets chosen adults skip "Who is this for?".
+  {
+    id: "HS-100", surface: "homesend", household: "A", category: "privacy", actor: "a-kunal", autonomy: "execute", directAdd: { health: true }, healthFilers: ["a-kunal"],
+    description: "A sender an Admin allowed to file health records for others sends Upasana's report: it is filed for Upasana at once, marked Checking, with no question.",
+    source: { channel: "file", text: "Blood test report — Upasana Mehta", attachment: "report.pdf" },
+    reading: { kind: "health_document", title: "Blood test report", healthRecordType: "lab_result", documentDate: "2026-11-02", subjectMemberName: "Upasana", people: ["Upasana"] },
+    expected: { interpretation: "health_document", entity: "a-upasana", action: "add_checking", safety: { consequential: false } },
+  },
+  {
+    id: "HS-101", surface: "homesend", household: "A", category: "privacy", actor: "a-kunal", autonomy: "execute", directAdd: { health: true }, healthFilers: ["a-kunal"],
+    description: "For an allowed sender, HomeBrain fills who a health document is for from the one household name in its own words, when the reading named nobody.",
+    source: { channel: "pasted_text", text: "Thyroid test results for Upasana, collected 2 November 2026." },
+    reading: { kind: "health_document", title: "Thyroid test results", healthRecordType: "lab_result", documentDate: "2026-11-02" },
+    expected: { interpretation: "health_document", entity: "a-upasana", safety: { consequential: false } },
+  },
+  {
+    id: "HS-102", surface: "homesend", household: "A", category: "privacy", actor: "a-kunal", autonomy: "execute", directAdd: { health: true }, healthFilers: [],
+    description: "A sender not on the list keeps today's question: a health document naming another adult is never filed for them on its own.",
+    source: { channel: "file", text: "Blood test report — Upasana Mehta", attachment: "report.pdf" },
+    reading: { kind: "health_document", title: "Blood test report", healthRecordType: "lab_result", documentDate: "2026-11-02", subjectMemberName: "Upasana", people: ["Upasana"] },
+    expected: { interpretation: "health_document", entity: "ask", action: "ask", safety: { consequential: false, executed: false } },
+  },
+  {
+    id: "HS-103", surface: "homesend", household: "A", category: "privacy", actor: "a-asmi", autonomy: "execute", directAdd: { health: true }, healthFilers: ["a-asmi", "a-kunal"],
+    description: "A child is never allowed to file health records for others, even if stored on the list: a child's upload naming a parent is asked about.",
+    source: { channel: "file", text: "Blood test report — Upasana Mehta", attachment: "report.pdf" },
+    reading: { kind: "health_document", title: "Blood test report", healthRecordType: "lab_result", documentDate: "2026-11-02", subjectMemberName: "Upasana", people: ["Upasana"] },
+    expected: { interpretation: "health_document", entity: "ask", action: "ask", safety: { consequential: false, executed: false } },
+  },
+  {
+    id: "HS-104", surface: "homesend", household: "A", category: "privacy", actor: "a-kunal", autonomy: "execute", directAdd: { health: true }, healthFilers: ["a-kunal"],
+    description: "A health document naming someone outside the household is never filed, even from an allowed sender: it is asked who it is for.",
+    source: { channel: "file", text: "Blood test report — Ramesh Gupta", attachment: "report.pdf" },
+    reading: { kind: "health_document", title: "Blood test report", healthRecordType: "lab_result", documentDate: "2026-11-02", subjectMemberName: "Ramesh Gupta", people: ["Ramesh Gupta"] },
+    expected: { interpretation: "health_document", entity: null, action: "ask", safety: { consequential: false, executed: false } },
+  },
+  {
+    id: "HS-105", surface: "homesend", household: "A", category: "privacy", actor: "a-kunal", healthFilers: ["a-kunal"],
+    description: "With health on \"Wait for review\", an allowed sender's waiting health document naming Upasana is filed for her as Checking, never asked \"Add this bill?\".",
+    source: { channel: "file", text: "Blood test report — Upasana Mehta" },
+    reading: { kind: "health_document", title: "Blood test", healthRecordType: "lab_result", documentDate: "2026-11-02", subjectMemberName: "Upasana", people: ["Upasana"] },
+    ending: { status: "classified", match: null, addable: true },
+    expected: { interpretation: "health_document", action: "file_for:a-upasana→checking", safety: { consequential: true, executed: false } },
+  },
   // "Nothing waits" (the owner, 2026-11-14, part A): every item ends as something, every question has a default.
   {
     id: "HS-55", surface: "homesend", household: "A", category: "untrusted_content", actor: "a-kunal",

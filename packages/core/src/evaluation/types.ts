@@ -179,6 +179,8 @@ export type HomeSendCase = CaseBase & {
   memberInitiated?: boolean;
   /** What the household told HomeSend before (14-066): which child a sender's items are for. */
   learned?: { key: string; valueMemberId: string; mixed?: boolean }[];
+  /** "Who may file health records for others" (the owner, 2026-11-20): the members an Admin put on it. */
+  healthFilers?: readonly string[];
   /** Schools on record for the case (14-066), added to the household's records. */
   enrolments?: { childMemberId: string; schoolName: string }[];
   autonomy?: "prepare" | "execute";

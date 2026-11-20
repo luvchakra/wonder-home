@@ -12,6 +12,7 @@ decision that shapes later work each earns a note, written before moving on.
 | Date | Note |
 |---|---|
 <<<<<<< Updated upstream
+| 2026-11-20 | [Who may file health records for others: an Admin's list skips "Who is this for?"](2026-11-20-health-filers.md) |
 | 2026-11-20 | [Nothing stuck: a matched bill updates by default, an old waiting bill is recorded](2026-11-20-matched-bill-update.md) |
 | 2026-11-20 | [Set aside: Delete on each row, short names; an unchanged portal page files once](2026-11-20-set-aside-delete.md) |
 =======

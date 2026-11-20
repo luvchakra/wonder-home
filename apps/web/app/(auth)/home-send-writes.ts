@@ -18,6 +18,10 @@ import type { createClient } from "@wonderhome/core/db/server";
 import { OBLIGATION_KINDS } from "@wonderhome/core/finance/payments";
 import { cancelObligation, createObligation, listObligations, updateObligation } from "@wonderhome/core/finance/repository";
 import { createRecord, RECORD_TYPES } from "@wonderhome/core/health/records";
+import { auditChange } from "@wonderhome/core/api/audit";
+import { adminClientFor, adminGrant } from "@wonderhome/core/db/admin-context";
+import { loadHealthFilers } from "@wonderhome/core/household/direct-add-repository";
+import { mayFileForOthers } from "@wonderhome/core/homesend/health-filers";
 import { listDetails, missingRequired } from "@wonderhome/core/homesend/completeness";
 import { HOME_SEND_REVIEW_PROPOSALS, HOME_SEND_REVIEW_SUBJECTS } from "@wonderhome/core/homesend/items";
 import { getHomeSendItem } from "@wonderhome/core/homesend/repository";
@@ -385,16 +389,31 @@ export async function createNew(supabase: Supabase, membership: Membership, inpu
       filePath = newPath;
     }
 
-    const created = await createRecord(supabase, { householdId, memberId: membership.memberId }, {
+    const record = {
       memberId: subjectMemberId,
       label: input.title,
       recordType: input.healthRecordType ?? "other",
       documentDate: input.documentDate || null,
       filePath,
       notes: input.notes || null,
-      privacyScope: "private",
-      sourceType: "home_send_document",
-    });
+      privacyScope: "private" as const,
+      sourceType: "home_send_document" as const,
+    };
+    // For someone other than themselves or a child they guard, the database refuses the member's own write.
+    // A sender an Admin put on "Who may file health records for others" (the owner, 2026-11-20) files it through
+    // the server, after this check, for an adult or child of this household; its visibility is unchanged.
+    const forOther = subjectMemberId !== membership.memberId ? await healthFilerWrite(supabase, membership, subjectMemberId) : null;
+    const created = await createRecord(forOther ?? supabase, { householdId, memberId: membership.memberId }, record);
+    if (forOther) {
+      await auditChange({
+        householdId,
+        actorMemberId: membership.memberId,
+        eventType: "homesend.health_filed_for",
+        targetTable: "health_records",
+        targetId: created.id,
+        metadata: { intakeId: input.itemId, filedFor: subjectMemberId, by: "allowed_filer" },
+      });
+    }
     return { routedTable: "health_records", routedId: created.id };
   }
   return addGrocery(supabase, householdId, { title: input.title, quantity: input.quantity, unit: input.unit, category: input.category }, input.itemId);
@@ -500,4 +519,21 @@ export async function recordReceipt(
   }
   if (!firstPurchase) return { error: "Choose at least one line to record, or dismiss the receipt." };
   return { firstPurchase, started, stocked, cleared };
+}
+
+/**
+ * The service client for filing a health record for another member, only when
+ * the household's Admins put this member on "Who may file health records for
+ * others" and the subject is an active adult or child of the same household.
+ * Null for anyone else: their own write stays with the database's rule (self,
+ * or a child they guard), which refuses the rest as it always has.
+ */
+async function healthFilerWrite(supabase: Supabase, membership: Membership, subjectMemberId: string): Promise<Supabase | null> {
+  const householdId = membership.household.id;
+  const filers = await loadHealthFilers(supabase, householdId);
+  if (!mayFileForOthers(filers, { memberId: membership.memberId, memberType: membership.memberType })) return null;
+  const { data } = await supabase.from("household_members").select("id, member_type, status").eq("household_id", householdId).eq("id", subjectMemberId).maybeSingle();
+  const subject = data as { member_type: string; status: string } | null;
+  if (!subject || subject.status !== "active" || (subject.member_type !== "adult" && subject.member_type !== "child")) return null;
+  return adminClientFor(adminGrant.member(membership, "file a health record for another member (Who may file health records for others)"), householdId);
 }
