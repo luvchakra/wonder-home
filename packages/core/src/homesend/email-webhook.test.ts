@@ -256,6 +256,27 @@ describe("14-068 — a trusted sender's email is added on arrival, after the res
     for (const work of heldDeferred) await work();
     expect(heldAdded).toEqual([]);
   });
+
+  it("adds the email and its attachment one after the other, in one deferred step, never at once (the owner, 2026-11-20: one BESCOM bill added twice)", async () => {
+    const { deps } = harness();
+    const deferred: (() => Promise<void>)[] = [];
+    const log: string[] = [];
+    await handleEmailWebhook(delivery(RECEIVED), {
+      ...deps,
+      defer: (work) => void deferred.push(work),
+      addTrusted: async (input) => {
+        log.push(`start ${input.itemId}`);
+        await new Promise((resolve) => setTimeout(resolve, 5));
+        log.push(`end ${input.itemId}`);
+      },
+    });
+    expect(deferred).toHaveLength(1);
+    await Promise.all(deferred.map((work) => work()));
+    expect(log).toHaveLength(4);
+    // Each add finishes before the next starts, so the second sees the bill the first wrote.
+    expect(log[1]!.startsWith("end")).toBe(true);
+    expect(log[2]!.startsWith("start")).toBe(true);
+  });
 });
 
 

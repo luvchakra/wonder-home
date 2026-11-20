@@ -1,6 +1,6 @@
 "use client";
 
-import { Ban, Pencil, Plus, Trash2 } from "lucide-react";
+import { Pencil, Plus, Trash2 } from "lucide-react";
 import { startTransition, useActionState, useState } from "react";
 import { useFormStatus } from "react-dom";
 
@@ -14,10 +14,10 @@ import { ConfirmationSheet, Sheet } from "@wonderhome/core/ui/sheet";
 
 import type { ActionState } from "../(auth)/actions";
 import {
-  cancelObligationAction,
   createObligationAction,
   fillBillPeriodAction,
   recordAmountAction,
+  removeBillsAction,
   removeTransactionAction,
   retireBudgetAction,
   saveBudgetAction,
@@ -61,7 +61,9 @@ export type BillFormLabels = {
   editDescription: string;
   saveChanges: string;
   saving: string;
-  cancel: string;
+  removeBill: string;
+  removeBillDescription: string;
+  removePaymentsKept: string;
   payeeChoose: string;
   notRecorded: string;
   addPayee: string;
@@ -387,19 +389,26 @@ export function ObligationRowControls({
   bill,
   labels,
   choices,
+  removeDetail,
+  paymentsKept,
 }: {
   householdId: string;
   bill: ObligationInitial;
   labels: BillFormLabels;
   choices: BillChoices;
+  /** "₹2,140 · due Thu, 5 Nov": what the confirm names, so the person knows which bill goes. */
+  removeDetail: string;
+  /** Whether payments are on record for it; the confirm says they stay. */
+  paymentsKept: boolean;
 }) {
   const [open, setOpen] = useState(false);
+  const [removing, setRemoving] = useState(false);
   const [editState, editAction] = useActionState<ActionState, FormData>(
     updateObligationAction,
     {},
   );
-  const [cancelState, cancelAction] = useActionState<ActionState, FormData>(
-    cancelObligationAction,
+  const [removeState, removeAction, removePending] = useActionState<ActionState, FormData>(
+    removeBillsAction,
     {},
   );
   const editLabel = fill(labels.edit, { name: bill.name });
@@ -415,14 +424,35 @@ export function ObligationRowControls({
       >
         <Pencil aria-hidden className="size-3.5" />
       </Pill>
-      <form action={cancelAction}>
-        <input type="hidden" name="id" value={bill.id} />
-        <input type="hidden" name="householdId" value={householdId} />
-        <CancelSubmit label={fill(labels.cancel, { name: bill.name })} />
-      </form>
-      {cancelState.error ? (
-        <p className="text-xs text-[var(--wh-risk)]">{cancelState.error}</p>
-      ) : null}
+      <Pill
+        type="button"
+        tone="quiet"
+        onClick={() => setRemoving(true)}
+        aria-label={fill(labels.removeNamed, { name: bill.name })}
+        className="gap-1.5 text-[var(--wh-risk)]"
+      >
+        <Trash2 aria-hidden className="size-3.5" /> {labels.remove}
+      </Pill>
+
+      {/* Removing is an action: one yes, naming the bill, its amount and its day (conversation/consent.ts). */}
+      <ConfirmationSheet
+        open={removing}
+        onOpenChange={setRemoving}
+        title={fill(labels.removeBill, { name: bill.name })}
+        description={fill(labels.removeBillDescription, { detail: removeDetail })}
+        confirmLabel={labels.remove}
+        destructive
+        pending={removePending}
+        onConfirm={() => {
+          const formData = new FormData();
+          formData.set("householdId", householdId);
+          formData.append("id", bill.id);
+          startTransition(() => removeAction(formData));
+        }}
+      >
+        {paymentsKept ? <p className="text-sm text-[var(--wh-foreground-muted)]">{labels.removePaymentsKept}</p> : null}
+        {removeState.error ? <p className="text-sm text-[var(--wh-risk)]">{removeState.error}</p> : null}
+      </ConfirmationSheet>
 
       <Sheet
         open={open}
@@ -442,21 +472,6 @@ export function ObligationRowControls({
         </form>
       </Sheet>
     </div>
-  );
-}
-
-function CancelSubmit({ label }: { label: string }) {
-  const { pending } = useFormStatus();
-  return (
-    <Pill
-      type="submit"
-      tone="quiet"
-      disabled={pending}
-      aria-label={label}
-      title={label}
-    >
-      {pending ? "…" : <Ban aria-hidden className="size-3.5" />}
-    </Pill>
   );
 }
 

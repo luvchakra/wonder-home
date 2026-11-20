@@ -91,6 +91,23 @@ export async function unconfirmedEntityIds(client: SupabaseClient, householdId: 
   return new Set((data as Row[]).map((row) => row.entity_id as string));
 }
 
+/**
+ * Bills HomeSend added or updated from something sent in, live ones only:
+ * "Tidy up" suggests keeping one of these over a hand-typed twin (the owner,
+ * 2026-11-20). Empty when it cannot be read; it only shapes a suggestion.
+ */
+export async function sourcedBillIds(client: SupabaseClient, householdId: string): Promise<Set<string>> {
+  const { data, error } = await client
+    .from("homesend_changes")
+    .select("entity_id")
+    .eq("household_id", householdId)
+    .eq("domain", "bill")
+    .is("undone_at", null)
+    .limit(500);
+  if (error || !data) return new Set();
+  return new Set((data as Row[]).map((row) => row.entity_id as string));
+}
+
 /** How an unconfirmed entry became confirmed: a person said it is right, or answers raised it over the bar. */
 export type ConfirmedBy = { memberId: string; how: "person" } | { memberId: string; how: "answers"; confidence: number };
 
