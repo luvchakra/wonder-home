@@ -39,6 +39,11 @@ export type AppShellProps = {
    * A screen that fills the viewport down to the tab bar and scrolls inside
    * itself (HomeTalk): it stops just clear of the raised button rather than
    * the full clearance a scrolling page keeps, so no empty band is left.
+   * On desktop it is a height chain: the shell is exactly the window's
+   * height and the main column passes the rest down as a flex column, so
+   * whatever sits above the screen's own scroller (a "Needs you" list, an
+   * alert) takes room from it and the page itself never scrolls (owner,
+   * 2026-11-20: HomeTalk's composer must stay at the bottom).
    */
   fill?: boolean;
   className?: string;
@@ -67,7 +72,7 @@ export function AppShell({
   const activeItem = PRIMARY_NAVIGATION.find((item) => item.key === active);
 
   return (
-    <div data-audience={viewer?.audience} className={cn("min-h-dvh text-[var(--wh-foreground)]", className)}>
+    <div data-audience={viewer?.audience} className={cn("min-h-dvh text-[var(--wh-foreground)]", fill && "lg:flex lg:h-dvh lg:flex-col", className)}>
       <a
         href="#wh-main"
         className="sr-only focus:not-sr-only focus:absolute focus:top-3 focus:left-3 focus:z-50 focus:rounded-[var(--wh-radius-sm)] focus:bg-[var(--wh-surface)] focus:px-4 focus:py-2 focus:shadow-[var(--wh-shadow-card)]"
@@ -79,21 +84,21 @@ export function AppShell({
       <InstallBanner labels={viewer?.labels?.install ?? englishInstallBannerLabels()} />
 
       <NavDrawerProvider viewer={viewer} secondary={secondary} pathname={pathname}>
-        <div className="lg:flex">
+        <div className={cn("lg:flex", fill && "lg:min-h-0 lg:flex-1")}>
           <PrimaryNav active={active} variant="sidebar" secondary={secondary} pathname={pathname} labels={viewer?.labels} viewer={viewer} />
 
-          <div className="min-w-0 flex-1">
+          <div className={cn("min-w-0 flex-1", fill && "lg:flex lg:min-h-0 lg:flex-col")}>
             <MobileHeader viewer={viewer} back={back ? { ...back, href: backTarget({ pathname, explicit: back.href }) } : undefined} title={title} search={headerSearch} />
 
-            <div className="lg:flex lg:justify-center">
+            <div className={cn("lg:flex lg:justify-center", fill && "lg:min-h-0 lg:flex-1")}>
               <SwipeMain
                 active={active}
                 ariaLabel={activeItem?.purpose}
                 className={cn(
-                  "mx-auto w-full px-4 pt-4 lg:px-8 lg:pt-6 lg:pb-[calc(3rem+var(--wh-live-bar-clearance))]",
+                  "mx-auto w-full px-4 pt-4 lg:px-8 lg:pt-6",
                   fill
-                    ? "pb-[calc(var(--wh-tabbar-height)+var(--wh-tabbar-raised-overhang))]"
-                    : "pb-[calc(var(--wh-tabbar-height)+var(--wh-tabbar-raised-clearance)+var(--wh-live-bar-clearance))]",
+                    ? "pb-[calc(var(--wh-tabbar-height)+var(--wh-tabbar-raised-overhang))] lg:flex lg:min-h-0 lg:flex-col lg:pb-[calc(1.5rem+var(--wh-live-bar-clearance))]"
+                    : "pb-[calc(var(--wh-tabbar-height)+var(--wh-tabbar-raised-clearance)+var(--wh-live-bar-clearance))] lg:pb-[calc(3rem+var(--wh-live-bar-clearance))]",
                   wide ? "max-w-[var(--wh-content-wide)]" : "max-w-[var(--wh-content-max)]",
                 )}
               >

@@ -162,7 +162,7 @@ export default async function AiPage({ searchParams }: { searchParams: Promise<{
       {/* The one "Needs you" list at the top of HomeTalk (2026-11-14): HomeSend's questions, proposals and approvals together, three at most. */}
       {entitlement.allowed ? (
         <Suspense fallback={null}>
-          <NeedsYou supabase={supabase} householdId={householdId} timeZone={membership.household.timezone} language={locale.preferences.language} t={locale.t} className="mx-4 mt-2 sm:mx-0" />
+          <NeedsYou supabase={supabase} householdId={householdId} timeZone={membership.household.timezone} language={locale.preferences.language} t={locale.t} className="mx-4 mt-2 sm:mx-0 lg:max-h-[40dvh] lg:shrink-0 lg:overflow-y-auto" />
         </Suspense>
       ) : null}
       {welcomeWords ? (

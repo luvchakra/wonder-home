@@ -533,7 +533,7 @@ export function Assistant({
     // Exactly the space between the header and main's own bottom padding (which
     // already clears the tab bar and its raised button), so the page itself
     // never scrolls: the conversation does, inside.
-    <div className="flex h-[calc(100dvh-var(--wh-header-height)-env(safe-area-inset-top)-var(--wh-tabbar-height)-var(--wh-tabbar-raised-overhang)-1rem)] min-h-0 flex-col lg:h-[calc(100dvh-var(--wh-header-height)-4.5rem)]">
+    <div className="flex h-[calc(100dvh-var(--wh-header-height)-env(safe-area-inset-top)-var(--wh-tabbar-height)-var(--wh-tabbar-raised-overhang)-1rem)] min-h-0 flex-col lg:h-auto lg:flex-1">
       {quiet ? (
         // Scrolls inside itself when a short phone cannot fit it all, so the
         // composer below keeps its place above the tab bar; `m-auto` centres
@@ -715,7 +715,7 @@ export function Assistant({
       ) : null}
 
       {/* A plain flex child below the scroller — nothing is stacked over anything, so nothing can show through it. */}
-      <div ref={composerRef} className="relative shrink-0 pt-1">
+      <div ref={composerRef} data-hometalk-composer className="relative shrink-0 pt-1">
         {/* Only while the reader is actually back up the conversation —
             otherwise it is a button that does nothing, over the one thing
             on this screen somebody came to use. */}
