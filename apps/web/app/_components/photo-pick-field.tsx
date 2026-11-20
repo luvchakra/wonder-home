@@ -10,16 +10,6 @@ import { shrinkPhoto } from "../_lib/shrink-photo";
 
 export type PhotoPickLabels = { add: string; change: string; remove: string; undo: string; tooLarge: string };
 
-/**
- * Only a local preview (`blob:`, made here from the chosen file) or a signed
- * storage address (`https:`) is ever put in an image's src; anything else
- * shows no picture. A chosen file is untrusted and is only ever an image.
- */
-function imageSource(url: string | null): string | null {
-  if (!url) return null;
-  return url.startsWith("blob:") || url.startsWith("https://") ? url : null;
-}
-
 /** What a photo may still weigh after shrinking (the server refuses more). */
 const MAX_BYTES = 5 * 1024 * 1024;
 
@@ -50,6 +40,8 @@ export function PhotoPickField({
 }) {
   const inputRef = useRef<HTMLInputElement>(null);
   const [preview, setPreview] = useState<string | null>(null);
+  // A dish's chosen photo is drawn from the file itself, never put in an image's address (25-050).
+  const [chosen, setChosen] = useState<Blob | null>(null);
   const [removed, setRemoved] = useState(false);
   const [problem, setProblem] = useState<string | null>(null);
 
@@ -71,23 +63,27 @@ export function PhotoPickField({
       input.files = swap.files;
     }
     setRemoved(false);
-    setPreview(URL.createObjectURL(small));
+    if (wide) setChosen(small);
+    else setPreview(URL.createObjectURL(small));
   }
 
   function clear() {
     if (inputRef.current) inputRef.current.value = "";
     setPreview(null);
+    setChosen(null);
     setRemoved(Boolean(currentUrl));
   }
 
-  const shown = imageSource(preview ?? (removed ? null : currentUrl));
+  const shown = wide ? (chosen ? "chosen" : removed ? null : currentUrl) : (preview ?? (removed ? null : currentUrl));
 
   return (
     <div className="space-y-1">
       <div className="flex flex-wrap items-center gap-3">
         {wide ? (
-          shown ? (
-            // eslint-disable-next-line @next/next/no-img-element -- a local preview or a short-lived signed URL; only ever shown as an image
+          chosen ? (
+            <ChosenPreview photo={chosen} />
+          ) : shown ? (
+            // eslint-disable-next-line @next/next/no-img-element -- the saved picture's short-lived signed URL, from the server
             <img src={shown} alt="" className="h-24 w-full rounded-[var(--wh-radius-sm)] object-cover" />
           ) : null
         ) : (
@@ -124,4 +120,36 @@ export function PhotoPickField({
       {problem ? <p className="text-xs text-[var(--wh-risk)]">{problem}</p> : null}
     </div>
   );
+}
+
+/**
+ * A chosen photo, drawn onto a canvas from the file itself: what the person
+ * picked is decoded as an image and painted, never turned into an address
+ * for the page to load. Cropped to fill like the recipe cards do.
+ */
+function ChosenPreview({ photo }: { photo: Blob }) {
+  const canvasRef = useRef<HTMLCanvasElement>(null);
+  useEffect(() => {
+    let cancelled = false;
+    void createImageBitmap(photo)
+      .then((bitmap) => {
+        const canvas = canvasRef.current;
+        if (cancelled || !canvas) return bitmap.close();
+        const width = canvas.clientWidth || 320;
+        const height = canvas.clientHeight || 96;
+        const ratio = window.devicePixelRatio || 1;
+        canvas.width = Math.round(width * ratio);
+        canvas.height = Math.round(height * ratio);
+        const scale = Math.max(canvas.width / bitmap.width, canvas.height / bitmap.height);
+        const drawWidth = bitmap.width * scale;
+        const drawHeight = bitmap.height * scale;
+        canvas.getContext("2d")?.drawImage(bitmap, (canvas.width - drawWidth) / 2, (canvas.height - drawHeight) / 2, drawWidth, drawHeight);
+        bitmap.close();
+      })
+      .catch(() => undefined);
+    return () => {
+      cancelled = true;
+    };
+  }, [photo]);
+  return <canvas ref={canvasRef} aria-hidden className="h-24 w-full rounded-[var(--wh-radius-sm)] bg-[var(--wh-surface-muted)]" />;
 }
