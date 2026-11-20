@@ -12,7 +12,7 @@ decision that shapes later work each earns a note, written before moving on.
 | Date | Note |
 |---|---|
 | 2026-11-21 | [HomeSend understanding: never without the model, then complex messages (14-073, 14-074)](2026-11-21-homesend-understanding.md) |
-| 2026-11-21 | [Money and health entries: two choices, Auto approved by default](2026-11-21-money-health-two-choices.md) |
+| 2026-11-21 | [Money and health entries: two choices, Auto approved by default; AI Assistant cards fold](2026-11-21-money-health-two-choices.md) |
 | 2026-11-20 | [HomeTalk understanding: take what was said, ask only what must be asked](2026-11-20-hometalk-understanding.md) |
 | 2026-11-20 | [HomeTalk's talk button never does nothing](2026-11-20-talk-button-silent.md) |
 | 2026-11-20 | [Download full data: health records locked with a password (AES-256 ZIP)](2026-11-20-reset-home-health-password.md) |

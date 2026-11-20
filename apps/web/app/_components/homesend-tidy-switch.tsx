@@ -23,6 +23,7 @@ export function HomeSendTidySwitch({
   manages,
   labels,
   which,
+  folded = false,
 }: {
   householdId: string;
   on: boolean;
@@ -30,6 +31,8 @@ export function HomeSendTidySwitch({
   labels: { title: string; on: string; off: string; detail: string; adminDecides: string };
   /** The "Nothing waits" switches (2026-11-14) use the same row; absent, it is the daily tidy's. */
   which?: "remind_checking" | "apply_defaults" | "ask_checking";
+  /** Inside a folding card (`CollapsibleSection`), which shows the tile and title itself. */
+  folded?: boolean;
 }) {
   const [checked, setChecked] = useState(on);
   const [state, save, saving] = useActionState<ActionState, FormData>(which ? saveNothingWaitsAction : saveHomeSendTidyAction, {});
@@ -47,9 +50,9 @@ export function HomeSendTidySwitch({
   return (
     <div className="space-y-3">
       <div className="flex items-start gap-3">
-        <IconTile icon={Icon} tone="ai" />
+        {folded ? null : <IconTile icon={Icon} tone="ai" />}
         <div className="min-w-0 flex-1">
-          <p className="text-sm font-semibold">{labels.title}</p>
+          <p className={folded ? "sr-only" : "text-sm font-semibold"}>{labels.title}</p>
           <p className="mt-0.5 text-sm text-[var(--wh-foreground-muted)]" aria-live="polite">
             {checked ? labels.on : labels.off}
           </p>

@@ -24,12 +24,15 @@ export function HealthFilersPicker({
   selected,
   manages,
   labels,
+  folded = false,
 }: {
   householdId: string;
   members: readonly { id: string; name: string; helper: boolean }[];
   selected: readonly string[];
   manages: boolean;
   labels: { title: string; detail: string; nobody: string; helper: string; adminDecides: string };
+  /** Inside a folding card (`CollapsibleSection`), which shows the tile and title itself. */
+  folded?: boolean;
 }) {
   const [chosen, setChosen] = useState<string[]>(() => selected.filter((id) => members.some((member) => member.id === id)));
   const [state, save, saving] = useActionState<ActionState, FormData>(saveHealthFilersAction, {});
@@ -49,9 +52,9 @@ export function HealthFilersPicker({
   return (
     <div className="space-y-3">
       <div className="flex items-start gap-3">
-        <IconTile icon={HeartPulse} tone="health" />
+        {folded ? null : <IconTile icon={HeartPulse} tone="health" />}
         <div className="min-w-0 flex-1">
-          <p id={titleId} className="text-sm font-semibold">
+          <p id={titleId} className={folded ? "sr-only" : "text-sm font-semibold"}>
             {labels.title}
           </p>
           <p className="mt-0.5 text-sm text-[var(--wh-foreground-muted)]">{labels.detail}</p>

@@ -56,6 +56,11 @@ const SCREENS = [
 ];
 
 const ERROR_SCREEN = "Something went wrong";
+/** Opens a folding settings card (Settings → AI Assistant, the owner 2026-11-21) by its summary, as a person taps it. */
+async function openCard(page: Page, title: string) {
+  const card = page.locator("details").filter({ has: page.getByRole("heading", { name: title, exact: true }) });
+  if (!(await card.evaluate((node) => (node as HTMLDetailsElement).open))) await card.locator("summary").click();
+}
 
 test.describe("every signed-in screen loads", () => {
   test.skip(!url || !anonKey || !serviceKey, "needs a real Supabase project: E2E_SUPABASE_URL, _PUBLISHABLE_KEY, _SERVICE_ROLE_KEY");
@@ -194,7 +199,8 @@ test.describe("every signed-in screen loads", () => {
   test("Settings → AI Assistant: an Admin picks how sure HomeSend must be to add on its own", async ({ page }) => {
     await signIn(page);
     await page.setViewportSize({ width: 360, height: 800 });
-    await page.goto("/settings/ai");
+    // A link to the setting opens its folded card on arrival.
+    await page.goto("/settings/ai#auto-add");
     await expect(page.getByText(ERROR_SCREEN)).toHaveCount(0);
     const picker = page.getByRole("combobox", { name: "How sure HomeSend must be to add on its own" });
     // Until an Admin picks one bar, each kind's bar follows the household's own accuracy (HomeBrain knows, 14-069).
@@ -208,6 +214,9 @@ test.describe("every signed-in screen loads", () => {
       return (data?.rule as { percent?: number } | undefined)?.percent ?? null;
     }).toBe(85);
     await page.reload();
+    await openCard(page, "How sure HomeSend must be to add on its own");
+    // The folded card says what is set, in words.
+    await expect(page.locator("details#auto-add, details:has(#auto-add)").locator("summary")).toContainText("More than 85%");
     await expect(page.getByRole("combobox", { name: "How sure HomeSend must be to add on its own" })).toHaveValue("85");
     // The Admin's bar applies to every kind: the per-kind rows give way to one line saying so.
     await expect(page.getByText(/Your bar of more than 85% applies to every kind/)).toBeVisible();
@@ -227,6 +236,10 @@ test.describe("every signed-in screen loads", () => {
     await page.setViewportSize({ width: 360, height: 800 });
     await page.goto("/settings/ai");
     await expect(page.getByText(ERROR_SCREEN)).toHaveCount(0);
+    // Every card starts folded, saying what is set; tapping its header opens it.
+    await expect(page.locator("details#money-health")).not.toHaveAttribute("open");
+    await expect(page.locator("details#money-health summary")).toContainText("Auto approved");
+    for (const title of ["What “Wait for Approval” holds", "Money and health entries", "Email from new senders"]) await openCard(page, title);
     const scope = page.getByRole("combobox", { name: "What “Wait for Approval” holds" });
     const money = page.getByRole("combobox", { name: "Money and health entries" });
     const senders = page.getByRole("combobox", { name: "Email from new senders" });
@@ -250,6 +263,8 @@ test.describe("every signed-in screen loads", () => {
     await senders.selectOption("review");
     await stored("Email from new senders").toBe("review");
     await page.reload();
+    await expect(page.locator("details#money-health summary")).toContainText("Wait for review");
+    for (const title of ["What “Wait for Approval” holds", "Money and health entries", "Email from new senders"]) await openCard(page, title);
     await expect(page.getByRole("combobox", { name: "Money and health entries" })).toHaveValue("review");
     await expect(page.getByRole("combobox", { name: "What “Wait for Approval” holds" })).toHaveValue("everything");
     await expect(page.getByRole("combobox", { name: "Email from new senders" })).toHaveValue("review");
