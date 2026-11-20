@@ -108,9 +108,9 @@ function whenFormatter(language: string, timeZone: string): (iso: string) => str
   return (iso) => format.format(new Date(iso));
 }
 
-const PROMPTS = new Set(["homesend.check", "homesend.check.careful", "homesend.waiting", "homesend.waiting.duplicate", "homesend.update", "homesend.update.cancel", "homesend.resend", "hometalk.proposal", "approval"]);
-const ANSWERS = new Set(["looks_right", "not_right", "note", "set_aside", "keep_existing", "update", "keep_as_is", "cancel_it", "open"]);
-const DEFAULTS = new Set(["looks_right", "keep_checking", "note", "keep_existing", "update", "set_aside", "not_done"]);
+const PROMPTS = new Set(["homesend.check", "homesend.check.careful", "homesend.waiting", "homesend.waiting.duplicate", "homesend.update", "homesend.update.cancel", "homesend.add", "homesend.add.receipt", "homesend.add.health", "homesend.resend", "hometalk.proposal", "approval"]);
+const ANSWERS = new Set(["looks_right", "not_right", "note", "set_aside", "keep_existing", "update", "keep_as_is", "cancel_it", "add", "open"]);
+const DEFAULTS = new Set(["looks_right", "keep_checking", "note", "keep_existing", "update", "add", "set_aside", "not_done"]);
 
 /** A part's own words (B, C) live under the same keys; anything not yet worded falls back to plain words, never a raw key. */
 function wordsOr(t: Translate, key: string, params: Record<string, string>, fallback: string): string {

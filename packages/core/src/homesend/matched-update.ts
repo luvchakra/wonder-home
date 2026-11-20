@@ -203,6 +203,15 @@ async function setAsideAsRecorded(client: SupabaseClient, householdId: string, r
   return "done";
 }
 
+/** A bill record first would have added on its own: one record, nothing it can't be added without. */
+export function canRecordBill(read: Partial<HomeSendExtraction> | null, records: readonly unknown[] | null): boolean {
+  if (records && records.length > 1) return false;
+  const title = read?.title?.trim();
+  if (!title) return false;
+  const amount = typeof read?.amount === "number" && read.amount > 0 ? read.amount : null;
+  return missingRequired("bill", { title, dueDate: read?.dueDate ?? null, payee: read?.payee ?? null, amount }).length === 0;
+}
+
 /**
  * A waiting bill that matches nothing on record, in a household that records
  * money entries directly ("Money and health entries": Checking or confirmed):
@@ -226,12 +235,10 @@ export async function recordWaitingBill(client: SupabaseClient, householdId: str
   if (error) throw new Error(`waiting-bill read failed: ${error.code ?? "unknown"}`);
   const row = itemRow as Row | null;
   if (!row || row.classified_kind !== "bill") return "settled";
-  if (Array.isArray(row.records) && row.records.length > 1) return "settled";
   const read = (row.extracted as Partial<HomeSendExtraction> | null) ?? null;
-  const title = read?.title?.trim();
-  if (!title || !read) return "settled";
+  if (!canRecordBill(read, Array.isArray(row.records) ? row.records : null) || !read) return "settled";
+  const title = read.title!.trim();
   const amount = typeof read.amount === "number" && read.amount > 0 ? read.amount : null;
-  if (missingRequired("bill", { title, dueDate: read.dueDate ?? null, payee: read.payee ?? null, amount }).length > 0) return "settled";
   const { data: household } = await client.from("households").select("owner_member_id").eq("id", householdId).maybeSingle();
   const actor = (row.created_by_member_id as string | null) ?? ((household?.owner_member_id as string | null) ?? null);
   if (!actor) return "settled";

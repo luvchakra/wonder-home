@@ -154,4 +154,60 @@ describe("the deadlines step", () => {
     expect(tables.needs_you_items!.find((row) => row.subject_id === "water")).toMatchObject({ source: "homesend_check", default_answer: "keep_checking" });
     expect(tables.obligations).toHaveLength(1);
   });
+
+  it("asks \"Add this bill?\" and adds it as Checking by default, with what's known (owner, 2026-11-20: \"record\")", async () => {
+    const { client, tables } = memoryDatabase({
+      households: [{ id: "h1", timezone: "Asia/Kolkata", owner_member_id: "m1" }],
+      household_members: [{ id: "m1", household_id: "h1", member_type: "adult", status: "active", profile_id: "u1" }],
+      household_roles: [{ household_id: "h1", member_id: "m1", role: "head" }],
+      policies: [],
+      needs_you_items: [],
+      conversation_actions: [],
+      jobs: [],
+      obligations: [],
+      home_send_items: [
+        // No amount: record first couldn't add it; the default adds it with the amount left blank.
+        { id: "gas", household_id: "h1", status: "classified", classified_kind: "bill", raw_text: "Gas bill due 30 Nov", title: "Gas bill", due: "2026-11-30", readable: true, extracted: { title: "Gas bill", dueDate: "2026-11-30", payee: "Indane" }, change: "new", retry_count: 0, created_by_member_id: "m1", created_at: OLD, updated_at: OLD },
+        // A document with two bills: each is added.
+        { id: "doc", household_id: "h1", status: "classified", classified_kind: "bill", raw_text: "Two bills", title: "Society dues", readable: true, extracted: { title: "Society dues" }, records: [{ key: "r1", domain: "bill", title: "Maintenance", date: "2026-12-01", amount: 2500, currency: "INR", payee: "Society" }, { key: "r2", domain: "bill", title: "Parking", date: null, amount: null, currency: null, payee: "Society" }], change: "new", retry_count: 0, created_by_member_id: "m1", created_at: OLD, updated_at: OLD },
+      ],
+      homesend_changes: [],
+      audit_events: [],
+    }, [], HOME_SEND_CHECKS);
+    await runNeedsYouDeadlines(client, { now: NOW, householdIds: ["h1"], sweep: false });
+    expect(tables.needs_you_items!.filter((row) => row.source === "homesend_add").map((row) => [row.subject_id, row.status, row.answer])).toEqual([["gas", "defaulted", "add"], ["doc", "defaulted", "add"]]);
+    const bills = tables.obligations!.map((row) => [row.name, row.amount_minor ?? null, row.due_on ?? null]);
+    expect(bills).toEqual([["Gas bill", null, "2026-11-30"], ["Maintenance", 250000, "2026-12-01"], ["Parking", null, null]]);
+    expect(tables.homesend_changes!.every((row) => row.confirmation_state === "unconfirmed")).toBe(true);
+    expect(tables.homesend_changes!).toHaveLength(3);
+    expect(tables.home_send_items!.map((row) => row.status)).toEqual(["routed", "routed"]);
+  });
+
+  it("adds a waiting receipt's lines and files a health document privately for its sender, both Checking", async () => {
+    const { client, tables } = memoryDatabase({
+      households: [{ id: "h1", timezone: "Asia/Kolkata", owner_member_id: "m1" }],
+      household_members: [{ id: "m1", household_id: "h1", member_type: "adult", status: "active", profile_id: "u1" }],
+      household_roles: [{ household_id: "h1", member_id: "m1", role: "head" }],
+      policies: [],
+      needs_you_items: [],
+      conversation_actions: [],
+      jobs: [],
+      consumables: [],
+      consumable_purchases: [],
+      health_provenance: [],
+      health_records: [],
+      home_send_items: [
+        { id: "rcpt", household_id: "h1", status: "classified", classified_kind: "receipt", raw_text: "FreshMart", title: "FreshMart", readable: true, extracted: { title: "FreshMart", merchant: "FreshMart", currency: "INR", documentDate: "2026-11-02", lines: [{ name: "Milk", quantity: 2, unit: "L", lineTotal: 120 }] }, change: "new", retry_count: 0, created_by_member_id: "m1", created_at: OLD, updated_at: OLD },
+        { id: "lab", household_id: "h1", status: "classified", classified_kind: "health_document", raw_text: "Blood test", title: "Blood test", readable: true, extracted: { title: "Blood test", healthRecordType: "lab_result", documentDate: "2026-11-02" }, change: "new", retry_count: 0, created_by_member_id: "m1", created_at: OLD, updated_at: OLD },
+      ],
+      homesend_changes: [],
+      audit_events: [],
+    }, [], HOME_SEND_CHECKS);
+    await runNeedsYouDeadlines(client, { now: NOW, householdIds: ["h1"], sweep: false });
+    expect(tables.needs_you_items!.filter((row) => row.source === "homesend_add").map((row) => [row.subject_id, row.answer])).toEqual([["rcpt", "add"], ["lab", "add"]]);
+    expect(tables.consumable_purchases).toHaveLength(1);
+    expect(tables.health_records![0]).toMatchObject({ member_id: "m1", privacy_scope: "private" });
+    expect(tables.homesend_changes!.map((row) => [row.domain, row.confirmation_state])).toEqual([["grocery_item", "unconfirmed"], ["purchase", "unconfirmed"], ["health_document", "unconfirmed"]]);
+    expect(tables.home_send_items!.map((row) => row.status)).toEqual(["routed", "routed"]);
+  });
 });

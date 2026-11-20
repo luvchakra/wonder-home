@@ -3,6 +3,7 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 import { auditChange } from "../api/audit";
 import type { NeedsYouItem } from "../hometalk/needs-you";
 import { effectOf } from "./deadlines";
+import { addWaitingItem } from "./add-default";
 import { applyMatchedUpdate } from "./matched-update";
 
 /**
@@ -41,6 +42,9 @@ export async function applyHomeSendAnswer(
 
   if (effect.effect === "undo") return "undo";
   if (effect.effect === "none") return "settled";
+
+  // "Add this bill?" (the owner, 2026-11-20: "record"): added with what is known, marked Checking.
+  if (effect.effect === "add") return addWaitingItem(client, householdId, item.subjectId, { byDefault: how.byDefault, memberId: how.byDefault ? null : how.memberId, now: how.now });
 
   // "Update the existing bill?" (the owner, 2026-11-20): the governed update, cancel, or kept Checking.
   if (effect.effect === "revise") {

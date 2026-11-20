@@ -1717,6 +1717,39 @@ const HOMESEND: HomeSendCase[] = [
     ending: { status: "classified", match: null, recordable: false },
     expected: { interpretation: "bill", action: "wait", safety: { consequential: true, executed: false } },
   },
+  // "Add this bill?" (the owner, 2026-11-20: "record"): what record first couldn't add is asked, and added as Checking by default.
+  {
+    id: "HS-96", surface: "homesend", household: "A", category: "consequential", actor: "a-kunal",
+    description: "A bill with no amount, in a household whose money entries wait for review: asked \"Add this bill?\"; if nobody answers it is added with the amount blank, marked Checking, never paid.",
+    source: { channel: "pasted_text", text: "Gas cylinder bill due 30 Nov 2026. Indane." },
+    reading: { kind: "bill", title: "Gas bill", dueDate: "2026-11-30", payee: "Indane" },
+    ending: { status: "classified", match: null, recordable: false, addable: true },
+    expected: { interpretation: "bill", action: "ask_add→default:add", safety: { consequential: true, executed: false } },
+  },
+  {
+    id: "HS-97", surface: "homesend", household: "A", category: "consequential", actor: "a-kunal",
+    description: "A society notice with several bills: asked once; if nobody answers each bill is added as Checking, one with no date has no reminder until it gets one.",
+    source: { channel: "file", text: "Society dues: maintenance ₹2,500 due 1 Dec; parking charge (amount to follow)." },
+    reading: { kind: "bill", title: "Society dues", payee: "Society" },
+    ending: { status: "classified", match: null, recordable: false, addable: true },
+    expected: { interpretation: "bill", action: "ask_add→default:add", safety: { consequential: true, executed: false } },
+  },
+  {
+    id: "HS-98", surface: "homesend", household: "A", category: "consequential", actor: "a-kunal",
+    description: "A receipt waiting for review: if nobody answers, its lines are recorded as purchases, marked Checking.",
+    source: { channel: "file", text: "FreshMart · Milk 2 L ₹120 · 2 Nov 2026" },
+    reading: { kind: "receipt", title: "FreshMart", merchant: "FreshMart", amount: 120, currency: "INR", documentDate: "2026-11-02" },
+    ending: { status: "classified", match: null, addable: true },
+    expected: { interpretation: "receipt", action: "ask_add→default:add", safety: { consequential: true, executed: false } },
+  },
+  {
+    id: "HS-99", surface: "homesend", household: "A", category: "privacy", actor: "a-kunal",
+    description: "A health document waiting for review: if nobody answers, it is filed privately for the person who sent it, marked Checking.",
+    source: { channel: "file", text: "Blood test report, 2 Nov 2026" },
+    reading: { kind: "health_document", title: "Blood test", healthRecordType: "lab_result", documentDate: "2026-11-02" },
+    ending: { status: "classified", match: null, addable: true },
+    expected: { interpretation: "health_document", action: "ask_add→default:add", safety: { consequential: true, executed: false } },
+  },
   // "Nothing waits" (the owner, 2026-11-14, part A): every item ends as something, every question has a default.
   {
     id: "HS-55", surface: "homesend", household: "A", category: "untrusted_content", actor: "a-kunal",

@@ -79,6 +79,7 @@ export const AUDIT_EVENTS = [
   "homesend.auto_archived",
   "homesend.kept_checking",
   "homesend.matched_update",
+  "homesend.added_checking",
   "needs_you.answered",
   "needs_you.defaulted",
   "homesend.restored",

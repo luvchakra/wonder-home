@@ -216,6 +216,8 @@ export type HomeSendCase = CaseBase & {
     match?: "update" | "cancellation" | "duplicate" | null;
     /** The household records bills directly ("Money and health entries" not "Wait for review"). */
     recordable?: boolean;
+    /** "Add this bill?" can add it with what is known (`add-default.ts` `canAdd`). */
+    addable?: boolean;
   };
   tidy?: {
     today: string;

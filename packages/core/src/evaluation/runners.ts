@@ -38,7 +38,7 @@ import { detectInstructionInjection } from "../homesend/injection";
 import { reconcileAgainstRecords, type HomeSendCandidate } from "../homesend/reconcile";
 import { adoptMatchedSubject, resolveIntakePeople } from "../homesend/resolve";
 import { buildUnderstanding } from "../homesend/understanding";
-import { checkQuestion, endingFor, updateQuestion, waitingQuestion } from "../homesend/deadlines";
+import { addQuestion, checkQuestion, endingFor, updateQuestion, waitingQuestion } from "../homesend/deadlines";
 import type { HomeSendKind } from "../homesend/items";
 import { checkVerdict, decideByRules, MONEY_OR_HEALTH, newerFromSameSender, tidyFacts, type TidyItem, type TidyVerdict } from "../homesend/tidy";
 import type { TidyJudge } from "../homesend/tidy-model";
@@ -695,6 +695,7 @@ function observeEnding(c: HomeSendCase, ending: NonNullable<HomeSendCase["ending
       minutesSinceTouched: 24 * 60,
       match: ending.match,
       recordable: ending.recordable,
+      addable: ending.addable,
     });
     if (decided.action === "set_aside") action = `set_aside:${decided.reason}`;
     else if (decided.action === "ask") action = `ask→default:${waitingQuestion({ kind, title: reading.title, dueOn: reading.dueDate ?? null, today, duplicate: decided.duplicate === true || (ending.duplicate ?? false) }).defaultAnswer}`;
@@ -704,6 +705,7 @@ function observeEnding(c: HomeSendCase, ending: NonNullable<HomeSendCase["ending
       // A default that cancels a record would be the unsafe outcome; "update" changes it, marked Checking, and pays nothing.
       cancelsByDefault = question.defaultAnswer === "cancel_it";
     } else if (decided.action === "record") action = "record→checking";
+    else if (decided.action === "ask_add") action = `ask_add→default:${addQuestion({ kind, title: reading.title, dueOn: reading.dueDate ?? null, today }).defaultAnswer}`;
     else action = decided.action;
   }
   return {

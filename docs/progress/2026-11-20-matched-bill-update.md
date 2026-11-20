@@ -30,3 +30,13 @@ The first clock pass after #556 (run 44706942758, 09:00 UTC) recorded neither bi
 The fix: claim through the review columns only (the item stays `classified`), create the bill, then route with table and id together, on the claim held. If routing fails, the bill is stood down and the item waits again. `memoryDatabase` now takes a table's CHECKs, and `needs-you-run.test.ts` gives it `home_send_items`' two routed constraints. The test fails on the old code and passes on the fix.
 
 Open, for the owner: a waiting bill that can't be recorded (money set to "Wait for review", a missing amount or due date, or a document with several records) still gets no Needs-you question. Rule 2 says it is never defaulted into a note, and nobody has chosen a default for it yet.
+
+## Follow-up: "Add this bill?" (owner, 2026-11-20: "record")
+The open case above is now decided. A waiting bill, receipt or health document that matches nothing and that record first couldn't add on its own gets one Needs-you question, "Add this bill?" (`homesend_add`). That covers money or health set to "Wait for review", a missing amount or due date, or a document with several records. The answers are Add and Set aside, and the default after 24 h is Add.
+
+`homesend/add-default.ts` records it with what is known, as Checking, with Undo:
+- **Bill:** a missing amount or date stays blank, and there is no reminder until a date exists. A document with several bills adds each one.
+- **Receipt:** each line is recorded as a purchase.
+- **Health document:** filed privately for its sender.
+
+A receipt with no lines, or a health document nobody in the household sent, waits for a person. Eval HS-96 to HS-99. The in-memory end-to-end tests run with `home_send_items`' routed CHECKs on.
