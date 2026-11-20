@@ -32,6 +32,8 @@ export type ShellViewer = {
   avatarUrl?: string | null;
   roleLabel: string;
   householdName: string;
+  /** The account's own sign-in email, shown under the name in the avatar menu; absent for a phone-only sign-in. */
+  email?: string;
   /** Unread notifications, shown as a dot rather than a count — sparse, never a tally. */
   unread?: number;
   /** The language the shell speaks in, and its direction (story 22-004). */

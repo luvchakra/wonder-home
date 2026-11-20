@@ -77,7 +77,7 @@ export default function ViewerMenuContent({
             event.preventDefault();
             trigger.current?.focus();
           }}
-          className="z-50 min-w-56 rounded-[var(--wh-radius)] border border-[var(--wh-border)] bg-[var(--wh-surface)] p-1.5 shadow-[var(--wh-shadow-float)]"
+          className="z-50 min-w-56 max-w-[min(20rem,calc(100vw-1rem))] rounded-[var(--wh-radius)] border border-[var(--wh-border)] bg-[var(--wh-surface)] p-1.5 shadow-[var(--wh-shadow-float)]"
         >
           <div className="flex items-center gap-2.5 px-2 py-2">
             <Avatar name={viewer.displayName} size="sm" imageUrl={viewer.avatarUrl ?? undefined} />
@@ -86,6 +86,9 @@ export default function ViewerMenuContent({
               <p className="text-xs text-[var(--wh-foreground-subtle)]">
                 {viewer.roleLabel} · {viewer.householdName}
               </p>
+              {viewer.email ? (
+                <p className="break-all text-xs text-[var(--wh-foreground-subtle)] [overflow-wrap:anywhere]">{viewer.email}</p>
+              ) : null}
             </div>
           </div>
 

@@ -96,7 +96,7 @@ export async function buildSession(
   // missing photo leaves the initials.
   const preferences = preferencesOf(membership.locale, membership.household.timezone);
   const isChild = membership.memberType === "child";
-  const [unread, , t, avatarUrl, stars, chatOn, staff] = await Promise.all([
+  const [unread, , t, avatarUrl, stars, chatOn, staff, signedIn] = await Promise.all([
     countUnread(supabase, membership.memberId).catch(() => 0),
     markFirstSeen(supabase, membership),
     translatorFor(preferences.language),
@@ -107,6 +107,8 @@ export async function buildSession(
     chatReady(supabase).catch(() => false),
     // Platform staff get one more row in the avatar menu; everyone else gets nothing about it.
     isPlatformStaff().catch(() => false),
+    // The sign-in email, for the avatar menu's header; cached per request, so no extra call.
+    getVerifiedUser().catch(() => null),
   ]);
 
   const view = buildPersonalView(membership, ageBandFor(parseDateOfBirth(membership.dateOfBirth)));
@@ -138,6 +140,7 @@ export async function buildSession(
       avatarUrl,
       roleLabel: roleWords(view.roleLabel, t),
       householdName: view.householdName,
+      ...(signedIn?.email ? { email: signedIn.email } : {}),
       unread,
       language: preferences.language,
       dir: preferences.dir,
