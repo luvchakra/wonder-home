@@ -420,6 +420,8 @@ export const helpFr: AreaCatalog<typeof helpEn> = {
     "Un Admin décide dans Paramètres → Assistant IA quels types d’informations l’assistant peut partager avec le service d’IA — les détails des enfants, la santé, les montants et les factures, où se trouvent les gens, les messages privés. Ce qui n’est pas autorisé est exclu de tout ce que l’assistant envoie. Les détails des enfants sont autorisés dès le départ, pour que HomeTalk et HomeBrain puissent utiliser ce que vous leur dites de vos enfants ; un Admin peut les décocher au même endroit. Le reste attend qu’un Admin l’autorise.",
   "help.guide.privacy.body.5":
     "Dans Réglages → Confidentialité et sécurité, un Admin peut aussi choisir combien de temps les entrées passées et traitées sont conservées avant d'être nettoyées — les jours d'absence passés d'un intervenant, d'anciens enregistrements de modifications du calendrier — afin de ne pas conserver d'anciennes informations sur les personnes dont plus personne n'a besoin. Les données de santé, d'argent et de sécurité ne sont jamais nettoyées, et le nettoyage peut être désactivé.",
+  "help.guide.privacy.body.6":
+    "Réinitialiser le foyer (Réglages → Zone de danger, pour le propriétaire du foyer uniquement) : retire tous les membres sauf vous et supprime tout ce que le foyer conserve — factures, agenda, repas, courses, éléments HomeSend et fichiers, conversations HomeTalk, dossiers de santé, école, lieux, notifications, réglages et ce que WonderHome a appris — et déconnecte les services connectés. Leurs connexions ne sont pas supprimées ; ils ne font simplement plus partie du foyer. Votre compte, votre forfait et son historique de facturation, et le journal d'activité restent. C'est irréversible, donc « Télécharger toutes les données » est proposé d'abord : un ZIP avec un fichier par type d'enregistrement, chaque fichier envoyé et un guide de chacun — tout ce que vous pouvez voir vous-même ; les dossiers de santé privés et les conversations HomeTalk privées des autres membres n'y sont pas. Il faut saisir le nom du foyer et votre mot de passe (ou une connexion Google récente). Rien ne se réinitialise tout seul, par la voix ou depuis HomeTalk.",
 
   "help.guide.ai-key.title": "Quel modèle fait fonctionner l’assistant",
   "help.guide.ai-key.summary": "Le nôtre par défaut ; le vôtre si vous préférez.",
@@ -461,7 +463,7 @@ export const helpFr: AreaCatalog<typeof helpEn> = {
   "help.faq.training.a": "Non, pas par défaut.",
   "help.faq.download-delete.q": "Comment télécharger ou supprimer mes données ?",
   "help.faq.download-delete.a":
-    "Paramètres → Confidentialité et sécurité. Téléchargez une copie après avoir confirmé votre mot de passe, ou demandez la suppression — cela lance un compte à rebours de 30 jours que vous pouvez annuler.",
+    "Paramètres → Confidentialité et sécurité. Téléchargez une copie après avoir confirmé votre mot de passe, ou demandez la suppression — cela lance un compte à rebours de 30 jours que vous pouvez annuler. Le propriétaire du foyer peut aussi télécharger tout ce que le foyer conserve, ou le réinitialiser, depuis Réglages → Zone de danger.",
   "help.faq.forgot-password.q": "J’ai oublié mon mot de passe. Que faire ?",
   "help.faq.forgot-password.a":
     "Utilisez « Mot de passe oublié ? » sur l’écran de connexion. Le lien reçu ne fonctionne qu’une fois et expire au bout d’une heure.",

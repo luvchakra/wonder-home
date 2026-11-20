@@ -8,6 +8,8 @@ export type SettingsViewer = {
   memberType: "adult" | "child" | "helper" | string;
   canManageIntegrations: boolean;
   developerAccess: boolean;
+  /** The household's owner (the one Admin who always stays): only they see the Danger zone. */
+  isOwner?: boolean;
 };
 
 export function mayShow(who: Audience, viewer: SettingsViewer): boolean {
@@ -24,6 +26,8 @@ export function mayShow(who: Audience, viewer: SettingsViewer): boolean {
       return viewer.canManageIntegrations;
     case "developer":
       return viewer.canManageIntegrations && viewer.developerAccess;
+    case "owner":
+      return viewer.isOwner === true;
   }
 }
 

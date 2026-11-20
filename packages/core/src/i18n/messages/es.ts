@@ -15,6 +15,7 @@ import { eventsEs } from "./areas/events/es";
 import { calendarEs } from "./areas/calendar/es";
 import { memberInviteEs } from "./areas/memberinvite/es";
 import { whatsNewEs } from "./areas/whatsnew/es";
+import { resetHomeEs } from "./areas/reset/es";
 import { settingsSearchEs } from "./areas/settings-search/es";
 import { todayEs } from "./areas/today/es";
 import { chatEs } from "./areas/chat/es";
@@ -1158,6 +1159,7 @@ export const es: Catalog = {
   ...eventsEs,
   ...calendarEs,
   ...whatsNewEs,
+  ...resetHomeEs,
   ...settingsSearchEs,
   ...todayEs,
   ...chatEs,

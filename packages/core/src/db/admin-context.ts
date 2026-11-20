@@ -27,6 +27,8 @@ export type AdminGrantKind =
   | "household-member"
   /** An Admin of `householdId`, from `requireHouseholdAdmin`. */
   | "household-admin"
+  /** The owner of `householdId` (`households.owner_member_id`), for Reset home (story 15-014). */
+  | "household-owner"
   /** Active WonderHome staff, from `requirePlatformAdmin`. */
   | "platform-admin"
   /** An inbound request whose sender signature or shared secret verified. */
@@ -63,6 +65,13 @@ export const adminGrant = {
   householdAdmin(membership: HouseholdMembership, purpose: string): AdminGrant {
     if (!isAdminMembership(membership)) throw new Error("adminGrant.householdAdmin: membership is not an Admin");
     return mint("household-admin", membership.household.id, membership.memberId, purpose);
+  },
+  /** Only the household's owner: the one Admin who always stays (Reset home, story 15-014). */
+  householdOwner(membership: HouseholdMembership, purpose: string): AdminGrant {
+    if (membership.memberType !== "adult" || !membership.household.ownerMemberId || membership.household.ownerMemberId !== membership.memberId) {
+      throw new Error("adminGrant.householdOwner: membership is not the household's owner");
+    }
+    return mint("household-owner", membership.household.id, membership.memberId, purpose);
   },
   platformAdmin(admin: PlatformAdmin, purpose: string): AdminGrant {
     return mint("platform-admin", null, admin.profileId, purpose);

@@ -207,8 +207,8 @@ const SECTIONS: readonly SectionShape[] = [
   {
     id: "privacy",
     group: "Privacy and trust",
-    updated: "2026-10-28",
-    keywords: ["privacy", "data", "security", "training", "delete", "export", "download", "gdpr", "consent", "retention", "cleanup"],
+    updated: "2026-11-20",
+    keywords: ["privacy", "data", "security", "training", "delete", "export", "download", "gdpr", "consent", "retention", "cleanup", "reset home", "danger zone", "download full data", "start over", "wipe", "remove all members", "zip"],
   },
   {
     id: "ai-key",

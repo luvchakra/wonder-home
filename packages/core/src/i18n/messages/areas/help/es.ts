@@ -420,6 +420,8 @@ export const helpEs: AreaCatalog<typeof helpEn> = {
     "Un Admin decide en Ajustes → Asistente de IA qué tipos de información puede compartir el asistente con el servicio de IA: datos de los niños, salud, importes y facturas, dónde está la gente, mensajes privados. Lo que no está permitido queda fuera de todo lo que envía el asistente. Los datos de los niños están permitidos desde el principio, para que HomeTalk y HomeBrain puedan usar lo que les cuentas de tus hijos; un Admin puede desmarcarlos allí. Lo demás espera a que un Admin lo permita.",
   "help.guide.privacy.body.5":
     "En Ajustes → Privacidad y seguridad, un Admin también puede elegir cuánto tiempo se conservan las entradas ya pasadas y resueltas antes de limpiarlas — los días libres pasados de un ayudante, registros antiguos de cambios del calendario —, para no guardar datos antiguos sobre las personas que ya nadie necesita. Los registros de salud, dinero y seguridad nunca se limpian, y la limpieza se puede desactivar.",
+  "help.guide.privacy.body.6":
+    "Restablecer hogar (Ajustes → Zona de peligro, solo para el propietario del hogar): quita a todos los miembros excepto a ti y borra todo lo que guarda el hogar — facturas, calendario, comidas, compras, elementos de HomeSend y archivos, conversaciones de HomeTalk, registros de salud, colegio, lugares, notificaciones, ajustes y lo que WonderHome aprendió — y desconecta los servicios conectados. Sus accesos no se borran; simplemente dejan de pertenecer al hogar. Tu cuenta, tu plan y su historial de facturación, y el registro de actividad se quedan. No se puede deshacer, así que primero ofrece \"Descargar todos los datos\": un ZIP con un archivo por tipo de registro, cada archivo subido y una guía de cada uno — todo lo que puedes ver tú; los registros de salud privados y las conversaciones privadas de HomeTalk de otros miembros no se incluyen. Pide escribir el nombre del hogar y tu contraseña (o un inicio de sesión reciente con Google). Nada se restablece solo, por voz ni desde HomeTalk.",
 
   "help.guide.ai-key.title": "Qué modelo mueve al asistente",
   "help.guide.ai-key.summary": "El nuestro por defecto; el tuyo si lo prefieres.",
@@ -461,7 +463,7 @@ export const helpEs: AreaCatalog<typeof helpEn> = {
   "help.faq.training.a": "No, por defecto no.",
   "help.faq.download-delete.q": "¿Cómo descargo o elimino mis datos?",
   "help.faq.download-delete.a":
-    "Ajustes → Privacidad y seguridad. Descarga una copia tras confirmar tu contraseña, o pide que se borren: empieza una cuenta atrás de 30 días que puedes cancelar.",
+    "Ajustes → Privacidad y seguridad. Descarga una copia tras confirmar tu contraseña, o pide que se borren: empieza una cuenta atrás de 30 días que puedes cancelar. El propietario del hogar también puede descargar todo lo que guarda el hogar, o restablecerlo, en Ajustes → Zona de peligro.",
   "help.faq.forgot-password.q": "He olvidado mi contraseña. ¿Y ahora qué?",
   "help.faq.forgot-password.a":
     "Usa “¿Has olvidado tu contraseña?” en la pantalla de inicio de sesión. El enlace que llega funciona una sola vez y caduca en una hora.",

@@ -1,8 +1,9 @@
-import { Bot, ChevronRight, CreditCard, FileClock, House, Link2, MapPin, MicVocal } from "lucide-react";
+import { Bot, ChevronRight, CreditCard, FileClock, House, Link2, MapPin, MicVocal, RotateCcw, TriangleAlert } from "lucide-react";
 import Link from "next/link";
 import type { ComponentType } from "react";
 
 import { credentialStatus } from "@wonderhome/core/ai/credentials";
+import { isHouseholdOwner } from "@wonderhome/core/household/reset-policy";
 import { describeKeySource, platformKey, resolveModelKey } from "@wonderhome/core/ai/model-key";
 import { listPlans, loadSubscription } from "@wonderhome/core/billing/repository";
 import { whatsappConfigFromEnv } from "@wonderhome/core/notifications/whatsapp";
@@ -16,11 +17,14 @@ import { whatsappBusinessNumber } from "@wonderhome/core/whatsapp/linking";
 import { listWhatsAppLinks } from "@wonderhome/core/whatsapp/repository";
 
 import { OpenOnHash } from "../_components/open-on-hash";
+import { staffStepUp } from "../_lib/platform-step-up";
 import { requireSession } from "../_lib/session";
 import { ActivitySection } from "./_household/activity-section";
 import { AddressSection } from "./_household/address-section";
 import { ManageSection } from "./_household/manage-section";
 import { SettingsSearch } from "./_components/settings-search";
+import { downloadLabels } from "./reset-home/labels";
+import { DownloadFullData } from "./reset-home/reset-forms";
 
 export const metadata = { title: "Settings" };
 export const dynamic = "force-dynamic";
@@ -72,13 +76,16 @@ export default async function SettingsPage() {
   const isAdmin = view.permissions.includes("household.manage");
   const householdId = membership.household.id;
   const whatsappReady = whatsappConfigFromEnv() !== null && whatsappBusinessNumber() !== null;
+  // The Danger zone is the owner's alone (story 15-014): nobody else sees it at all.
+  const isOwner = isHouseholdOwner(membership);
 
-  const [credential, voiceSettings, subscription, plans, whatsappLinks] = await Promise.all([
+  const [credential, voiceSettings, subscription, plans, whatsappLinks, stepUp] = await Promise.all([
     credentialStatus(supabase, householdId).catch(() => ({ configured: false, provider: null, updatedAt: null })),
     loadVoiceSettings(supabase, householdId),
     loadSubscription(supabase, householdId).catch(() => null),
     listPlans(supabase).catch(() => []),
     whatsappReady ? listWhatsAppLinks(supabase, householdId).catch(() => []) : Promise.resolve([]),
+    isOwner ? staffStepUp() : Promise.resolve(null),
   ]);
 
   // Which key actually answers for this household, decided in one place so
@@ -161,6 +168,26 @@ export default async function SettingsPage() {
           </CollapsibleSection>
           </div>
         </SettingsSearch>
+
+        {isOwner && stepUp ? (
+          <section id="danger-zone" aria-labelledby="danger-zone-title" className="scroll-mt-20 space-y-3 rounded-[var(--wh-radius)] border-2 border-[var(--wh-risk)] bg-[var(--wh-surface)] p-4">
+            <div className="flex items-start gap-3">
+              <IconTile icon={TriangleAlert} tone="risk" />
+              <div className="min-w-0 flex-1">
+                <h2 id="danger-zone-title" className="text-base font-bold text-[var(--wh-risk)]">{t("resetHome.dangerZone.title")}</h2>
+                <p className="text-sm text-[var(--wh-foreground-muted)]">{t("resetHome.dangerZone.lede")}</p>
+              </div>
+            </div>
+            <div className="space-y-2 border-t border-[var(--wh-border)] pt-3">
+              <p className="text-sm font-medium">{t("resetHome.download.title")}</p>
+              <p className="text-xs text-[var(--wh-foreground-subtle)]">{t("resetHome.download.meta")}</p>
+              <DownloadFullData householdId={householdId} stepUp={stepUp} next="/settings#danger-zone" labels={downloadLabels(t)} language={session.locale.preferences.language} />
+            </div>
+            <div className="border-t border-[var(--wh-border)] pt-2">
+              <SettingsRows rows={[{ icon: RotateCcw, tone: "risk", title: t("resetHome.row.title"), meta: t("resetHome.row.meta"), href: "/settings/reset-home" }]} />
+            </div>
+          </section>
+        ) : null}
 
         <QuoteCard>{t("settingsHome.quote")}</QuoteCard>
       </div>
