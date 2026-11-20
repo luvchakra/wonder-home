@@ -5,6 +5,17 @@ import { rereadFailedItem, secondReadDeps, understand, type IngestDeps } from ".
 import { clearHomeSendRetryRequested, getHomeSendItem, markHomeSendFailed } from "./repository";
 import { notificationJobHandlers } from "../notifications/retry-handler";
 import type { TrustedEmailAdd } from "./trusted-arrival";
+import type { IngestOutcome } from "./ingest";
+import type { HomeSendItem } from "./items";
+
+/**
+ * What happens once an item kept for want of a model is finally read
+ * (`model-unavailable.ts`): the normal record-first add, and the sender told
+ * what was done, once, on the channel it came from. Built by the app (it
+ * adds through the member's own governed write); a drain without it leaves
+ * such an item for the next drain that has it.
+ */
+export type AfterModelRead = (admin: SupabaseClient, item: HomeSendItem, outcome: IngestOutcome) => Promise<void>;
 
 /**
  * Persist first, retry where safe (Wave 5 §15 async processing, §16
@@ -89,6 +100,8 @@ export async function drainJobs(
     handlers?: Record<string, JobHandler>;
     /** Adds an email read here on its own when its sender is trusted (`trusted-arrival.ts`), e.g. mail held until "Trust". */
     addTrusted?: TrustedEmailAdd;
+    /** Adds and tells, for an item kept until a model could read it (the delivery clock passes it). */
+    afterModelRead?: AfterModelRead;
   } = {},
 ): Promise<DrainOutcome> {
   const { data, error } = await admin.rpc("claim_jobs", { p_worker_id: options.workerId ?? "wonderhome", p_limit: options.limit ?? 10, p_lease_seconds: LEASE_SECONDS });
@@ -101,7 +114,7 @@ export async function drainJobs(
     try {
       const handler =
         job.kind === CLASSIFY_RETRY_KIND
-          ? (a: SupabaseClient, j: ClaimedJob) => retryClassification(a, j, options.deps, options.addTrusted)
+          ? (a: SupabaseClient, j: ClaimedJob) => retryClassification(a, j, options.deps, options.addTrusted, options.afterModelRead)
           : job.kind === REREAD_KIND
             ? (a: SupabaseClient, j: ClaimedJob) => rereadJob(a, j, options.deps)
             : options.handlers?.[job.kind] ?? notificationJobHandlers()[job.kind];
@@ -123,10 +136,26 @@ export async function drainJobs(
   return outcome;
 }
 
-async function retryClassification(admin: SupabaseClient, job: ClaimedJob, deps?: IngestDeps, addTrusted?: TrustedEmailAdd): Promise<"read" | "skipped" | "failed"> {
+async function retryClassification(admin: SupabaseClient, job: ClaimedJob, deps?: IngestDeps, addTrusted?: TrustedEmailAdd, afterModelRead?: AfterModelRead): Promise<"read" | "skipped" | "failed"> {
   const itemId = typeof job.payload?.itemId === "string" ? job.payload.itemId : null;
   if (!itemId || !job.household_id) return "skipped";
   const item = await getHomeSendItem(admin, job.household_id, itemId);
+  // Kept for want of a model (2026-11-21): read the way it was sent (a photo as a photo), then added and told.
+  if (item && item.status === "failed" && item.failureReason === "model_unavailable") {
+    // Only a drain that can add and tell reads it, so the sender is never left untold; this one passes it on.
+    if (!afterModelRead) return "failed";
+    const outcome = await rereadFailedItem(admin, item, deps ?? {});
+    if (outcome.classifyFailed) return "failed";
+    if (!outcome.duplicate && outcome.state !== "failed") {
+      await afterModelRead(admin, item, outcome).catch((thrown: unknown) =>
+        log.warn("homesend: after-read step failed", { reason: thrown instanceof Error ? thrown.name : "unknown", allow: ["reason"] }),
+      );
+    } else if (outcome.state === "failed") {
+      // A working model truly couldn't read it: the sender is told why, once, the same way.
+      await afterModelRead(admin, item, outcome).catch(() => undefined);
+    }
+    return "read";
+  }
   // Gone, already acted on, or already read: nothing to retry.
   if (!item || (item.status !== "received" && item.status !== "classified")) return "skipped";
   if (item.classifiedKind && item.classifiedKind !== "unknown") return "skipped";

@@ -13,6 +13,8 @@ export const whatsappZh: AreaCatalog<typeof whatsappEn> = {
   "whatsapp.ack.failed": "⚠️ 我先收好了。{why} 它在 HomeSend 的“已安全拦下”里。",
   "whatsapp.ack.unreadable": "WonderHome 读不出来。",
   "whatsapp.ack.checkTranscript": "收到 👍 我不确定那条语音听对了——请到 HomeSend 看看它说了什么。 🎙️",
+  "whatsapp.ack.modelUnavailable": "收到 👍 我已经保存了。现在暂时读不了，等能读的时候我会马上读，并告诉你我做了什么。",
+  "whatsapp.later.lead": "📬 你之前发来的内容我现在已经读完了。",
   "whatsapp.ack.waiting": "它在 HomeSend 里等你确认。",
   "whatsapp.found.school": "我找到一项学校事项。 🎒",
   "whatsapp.found.schoolTitled": "我找到一项学校事项：*{title}*。 🎒",

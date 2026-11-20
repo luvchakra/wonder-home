@@ -1,3 +1,4 @@
+import { platformKeyHealth } from "../_lib/platform-ai-key";
 import { platformOverview } from "../_lib/platform-overview";
 import { settingTotals } from "../_lib/platform-settings-view";
 import { platformStaff } from "../_lib/platform-staff";
@@ -24,10 +25,11 @@ export default async function PlatformAdminPage({ searchParams }: { searchParams
   const staff = await platformStaff("operations.read");
   if (!staff) return null; // the layout has already answered 404
 
-  const [{ period }, { snapshot, advisor, nothingWaits }, { totals, storeReady, statuses }] = await Promise.all([
+  const [{ period }, { snapshot, advisor, nothingWaits }, { totals, storeReady, statuses }, aiKey] = await Promise.all([
     searchParams,
     platformOverview(staff),
     settingTotals(staff),
+    platformKeyHealth(staff),
   ]);
   const isOn = (key: string) => {
     const status = statuses.get(key);
@@ -44,6 +46,7 @@ export default async function PlatformAdminPage({ searchParams }: { searchParams
       services={SERVICES.map((service) => ({ name: service.name, href: service.href, ready: service.needs.every(isOn) }))}
       period={period === "30" ? 30 : 7}
       role={staff.role}
+      aiKeyAlert={aiKey.alertLine}
     />
   );
 }

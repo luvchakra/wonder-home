@@ -149,11 +149,11 @@ export async function extractSchoolItemFromPhotoAction(
     await requireMembership(supabase, householdId);
 
     const { readHouseholdKey } = await import("@wonderhome/core/ai/credentials");
-    const { resolveModelKey, platformKey } = await import("@wonderhome/core/ai/model-key");
+    const { resolveModelKey, currentPlatformKey } = await import("@wonderhome/core/ai/model-key");
     const { extractSchoolItemFromImage } = await import("@wonderhome/core/ai/vision-extract");
 
     const householdKey = await readHouseholdKey(householdId).catch(() => null);
-    const key = resolveModelKey(householdKey, platformKey());
+    const key = resolveModelKey(householdKey, (await currentPlatformKey()));
     if (key.source === "none" || !key.provider || !key.key) {
       return { error: "No AI provider is set up for this household yet. Fill in the details below by hand, or set one up in Settings." };
     }

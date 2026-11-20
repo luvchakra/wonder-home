@@ -37,6 +37,7 @@ import { KeyAlertBanner } from "../../_components/key-alert-banner";
 import { ConfirmRequestedSwitch } from "../../_components/confirm-requested-switch";
 import { DataUseForm } from "../../_components/data-use-form";
 import { formatDate, requireSession } from "../../_lib/session";
+import { platformModelDown } from "../../_lib/platform-ai-key";
 import { aiKeyFormLabels, dataUseFormLabels, dataUseLines, keySourceWords } from "../../_lib/settings-labels";
 import { OpenOnHash } from "../../_components/open-on-hash";
 
@@ -77,8 +78,10 @@ export default async function AiAssistantSettingsPage({ searchParams }: { search
   // Which key actually answers, decided in one place so the screen can never
   // disagree with the server about it.
   const key = resolveModelKey(credential.configured && credential.provider ? { provider: credential.provider, key: "set" } : null, platformKey());
-  const keyNote = describeKeySource(key.source);
   const manages = view.permissions.includes("household.manage");
+  // WonderHome's key refused right now: an Admin sees one calm line; members see nothing of it (2026-11-21).
+  const modelUnavailable = manages && key.source === "platform" ? await platformModelDown() : false;
+  const keyNote = describeKeySource(key.source, { modelUnavailable });
   const { t } = session.locale;
   const keyWords = keySourceWords(t, key.source);
   // What HomeSend learned (14-066, and HomeBrain's household rules): "class2@lakeside.edu → Tara", what kind of rule, who taught it when.
@@ -302,6 +305,7 @@ export default async function AiAssistantSettingsPage({ searchParams }: { search
               <div className="min-w-0 flex-1">
                 <p className="text-sm font-semibold">{keyWords.title}</p>
                 <p className="mt-0.5 text-xs text-[var(--wh-foreground-muted)]">{keyWords.detail}</p>
+                {modelUnavailable ? <p className="mt-1 text-xs text-[var(--wh-attention)]">{t("settingsPage.ai.source.platform.unavailable")}</p> : null}
                 {credential.configured && credential.updatedAt ? (
                   <p className="mt-1 text-[0.6875rem] text-[var(--wh-foreground-subtle)]">{t("settingsPage.ai.keySet", { date: formatDate(membership.household.timezone, credential.updatedAt, "long") })}</p>
                 ) : null}

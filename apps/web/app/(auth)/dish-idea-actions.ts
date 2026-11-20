@@ -6,7 +6,7 @@ import { z } from "zod";
 import { toErrorBody } from "@wonderhome/core/api/errors";
 import { readHouseholdKey } from "@wonderhome/core/ai/credentials";
 import { createDishIdeaModel } from "@wonderhome/core/ai/dish-idea-model";
-import { platformKey, resolveModelKey } from "@wonderhome/core/ai/model-key";
+import { currentPlatformKey, resolveModelKey } from "@wonderhome/core/ai/model-key";
 import { routeToProvider } from "@wonderhome/core/ai/privacy";
 import { loadDataUse } from "@wonderhome/core/ai/privacy-repository";
 import { consume, may } from "@wonderhome/core/billing/repository";
@@ -46,7 +46,7 @@ export async function suggestDishIdeasAction(input: { householdId: string; slot:
     const planning = await may(supabase, householdId, "meals.planning");
     if (!planning.allowed) return { ok: false, reason: "not_allowed", message: planning.reason };
 
-    const key = resolveModelKey(await readHouseholdKey(householdId).catch(() => null), platformKey());
+    const key = resolveModelKey(await readHouseholdKey(householdId).catch(() => null), (await currentPlatformKey()));
     const policy = await loadDataUse(supabase, householdId);
     // What is at home is ordinary household content; the gate decides whether any of it may leave.
     const route = routeToProvider({ provider: key.provider, keySource: key.source, policy, hasContent: true });

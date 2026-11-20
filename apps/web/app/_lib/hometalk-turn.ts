@@ -5,7 +5,7 @@ import { z } from "zod";
 
 import { readHouseholdKey } from "@wonderhome/core/ai/credentials";
 import { createAnswerComposer, createClaudeUnderstanding, createGeminiUnderstanding, createOpenAIUnderstanding, createReplyTranslator, type AnswerComposer } from "@wonderhome/core/ai/model-client";
-import { platformKey, resolveModelKey } from "@wonderhome/core/ai/model-key";
+import { currentPlatformKey, resolveModelKey } from "@wonderhome/core/ai/model-key";
 import { minimiseContext, reidentifyIntent, routeToProvider, type ContentClass, type ContextCandidate, type DataUsePolicy, type Person } from "@wonderhome/core/ai/privacy";
 import { loadDataUse } from "@wonderhome/core/ai/privacy-repository";
 import { ApiError } from "@wonderhome/core/api/errors";
@@ -1858,7 +1858,7 @@ async function decideProviderRouting(
     readHouseholdKey(householdId).catch(() => null),
   ]);
 
-  const key = resolveModelKey(householdKey, platformKey());
+  const key = resolveModelKey(householdKey, (await currentPlatformKey()));
 
   const candidates: ContextCandidate[] = [
     { id: "utterance", contentClass: "general", need: "what was asked", text: utterance, relevant: true },
@@ -2122,7 +2122,7 @@ async function translationConsent(
     loadDataUse(input.supabase, input.householdId),
     readHouseholdKey(input.householdId).catch(() => null),
   ]);
-  const key = resolveModelKey(householdKey, platformKey());
+  const key = resolveModelKey(householdKey, (await currentPlatformKey()));
   const route = routeToProvider({ provider: key.provider, keySource: key.source, policy, hasContent: true });
   if (!route.ok) return { permitted: false, refused: route.code === "no_provider_configured" ? "no_model" : "not_permitted" };
   if (!mayTranslate(policy, carried)) return { permitted: false, refused: "not_permitted" };

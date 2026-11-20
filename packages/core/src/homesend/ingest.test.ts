@@ -170,13 +170,14 @@ describe("HomeSend's one pipeline (Wave 3 §1, §21)", () => {
     expect((error as Error).message).toBe("That text file is too large — please paste the part that matters.");
   });
 
-  it("leaves an item for a person to fill in when no model is set up, or the model fails", async () => {
+  it("leaves an item for a person to fill in when no model is set up; keeps it to be read again when the model fails", async () => {
     const db = fakeSupabase();
     const none = await ingestText(db.client, actor, { text: "Electricity bill due 5 Oct" }, { classify: model("no_provider").classify });
     expect(none).toMatchObject({ state: "needs_review", item: { classifiedKind: "unknown" } });
     expect(none.notice).toMatch(/No AI provider/);
     const outage = await ingestText(db.client, actor, { text: "Water bill due 7 Oct" }, { classify: async () => { throw new Error("503"); } });
-    expect(outage).toMatchObject({ state: "needs_review", item: { classifiedKind: "unknown" } });
+    // Not "unknown content": kept until a model can read it (2026-11-21, `model-unavailable.ts`).
+    expect(outage).toMatchObject({ state: "failed", failureReason: "model_unavailable", classifyFailed: true });
   });
 
   it("ignores instructions aimed at WonderHome and says so (§16)", async () => {

@@ -13,6 +13,8 @@ export const whatsappEs: AreaCatalog<typeof whatsappEn> = {
   "whatsapp.ack.failed": "⚠️ Lo guardé. {why} Está en HomeSend, en Detenido con seguridad.",
   "whatsapp.ack.unreadable": "WonderHome no pudo leerlo.",
   "whatsapp.ack.checkTranscript": "Recibido 👍 No estoy seguro de haber entendido bien esa nota de voz; revisa lo que dice en HomeSend, por favor. 🎙️",
+  "whatsapp.ack.modelUnavailable": "Recibido 👍 Lo he guardado. Ahora mismo no puedo leerlo; lo leeré en cuanto pueda y te diré qué hice.",
+  "whatsapp.later.lead": "📬 Ya he leído lo que enviaste antes.",
   "whatsapp.ack.waiting": "Está esperando en HomeSend a que lo revises.",
   "whatsapp.found.school": "Encontré una tarea escolar. 🎒",
   "whatsapp.found.schoolTitled": "Encontré una tarea escolar: *{title}*. 🎒",

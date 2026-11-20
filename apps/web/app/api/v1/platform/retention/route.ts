@@ -12,6 +12,7 @@ import { whatsappConfigFromEnv } from "@wonderhome/core/notifications/whatsapp";
 import { WHATSAPP_PROCESS_KIND, whatsappJobHandler } from "@wonderhome/core/whatsapp/intake";
 import { log } from "@wonderhome/core/observability/logger";
 
+import { homesendAfterModelRead } from "@/app/_lib/homesend-after-model-read";
 import { trustedEmailAutoAdd } from "@/app/_lib/homesend-trusted-email";
 import { whatsappAsk, whatsappAutoAdd } from "@/app/_lib/whatsapp-hometalk";
 
@@ -116,6 +117,8 @@ export async function POST(request: Request) {
         handlers: { ...notificationJobHandlers(), ...(whatsapp ? { [WHATSAPP_PROCESS_KIND]: whatsappJobHandler({ config: whatsapp.adapter, ask: whatsappAsk(createAdminClient()), addOnItsOwn: whatsappAutoAdd(createAdminClient()) }) } : {}) },
         // An email read on the queue (held until "Trust this sender?") is added on its own when its sender is trusted.
         addTrusted: trustedEmailAutoAdd(admin),
+        // Something kept until a model could read it: added and told once it is read (2026-11-21).
+        afterModelRead: homesendAfterModelRead(admin),
       });
     } catch (thrown) {
       jobsError = thrown instanceof Error ? thrown.message : "unknown";

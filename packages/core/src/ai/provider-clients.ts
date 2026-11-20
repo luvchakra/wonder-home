@@ -2,7 +2,7 @@ import Anthropic from "@anthropic-ai/sdk";
 import { GoogleGenAI } from "@google/genai";
 import OpenAI from "openai";
 
-import { classifyKeyFailure, failureOf, noteKeyFailure, noteKeyWorking } from "./key-alerts";
+import { classifyKeyFailure, failureOf, keyRefusedRecently, noteKeyFailure, noteKeyWorking, refusedResponse } from "./key-alerts";
 
 /**
  * Every model client WonderHome makes, with a time limit (Wave 5 §15, §16).
@@ -71,6 +71,9 @@ export function openaiClient(apiKey: string, kind: ModelCallKind): OpenAI {
  */
 function watchedFetch(apiKey: string, provider: "anthropic" | "openai"): typeof fetch {
   return async (input, init) => {
+    // A key the provider refused a moment ago is not sent again for a minute: the call fails at once, as a refusal
+    // (never retried), instead of each step of a reading waiting on the same answer (2026-11-21).
+    if (keyRefusedRecently(apiKey)) return refusedResponse(provider);
     const response = await fetch(input, init);
     if (response.ok) void noteKeyWorking(apiKey);
     else if (response.status === 400 || response.status === 401 || response.status === 402 || response.status === 403 || response.status === 429) {
@@ -86,6 +89,7 @@ function watchedFetch(apiKey: string, provider: "anthropic" | "openai"): typeof 
 function watchGemini(client: GoogleGenAI, apiKey: string): GoogleGenAI {
   const watch = <A extends unknown[], R>(call: (...args: A) => Promise<R>, clears: boolean) =>
     async (...args: A): Promise<R> => {
+      if (keyRefusedRecently(apiKey)) throw Object.assign(new Error("The provider refused this key a moment ago; not sent again yet."), { status: 401 });
       try {
         const result = await call(...args);
         if (clears) void noteKeyWorking(apiKey);

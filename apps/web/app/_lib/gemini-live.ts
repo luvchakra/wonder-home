@@ -1,5 +1,5 @@
 import { readHouseholdKey, readGeminiVoiceKey } from "@wonderhome/core/ai/credentials";
-import { platformKey, resolveModelKey, type ModelKey } from "@wonderhome/core/ai/model-key";
+import { currentPlatformKey, resolveModelKey, type ModelKey } from "@wonderhome/core/ai/model-key";
 import type { DataUsePolicy } from "@wonderhome/core/ai/privacy";
 import { loadDataUse } from "@wonderhome/core/ai/privacy-repository";
 import { may } from "@wonderhome/core/billing/repository";
@@ -26,7 +26,7 @@ export async function geminiLiveGate(supabase: Supabase, householdId: string): P
   // The household's Gemini voice key first (voice only, always Google), so an
   // assistant on Anthropic or OpenAI can still talk through Gemini; otherwise
   // the assistant's own key, which works for voice only when it is Google's.
-  const key = resolveModelKey(voiceKey ?? householdKey, platformKey());
+  const key = resolveModelKey(voiceKey ?? householdKey, (await currentPlatformKey()));
   const availability = geminiLiveAvailability({ voiceEnabled: flags().voice_conversation, entitled: entitlement.allowed, key, policy });
   return { availability, key, policy };
 }

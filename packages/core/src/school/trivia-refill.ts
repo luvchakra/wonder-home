@@ -1,7 +1,7 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 
 import { readHouseholdKey } from "../ai/credentials";
-import { platformKey, resolveModelKey } from "../ai/model-key";
+import { currentPlatformKey, resolveModelKey } from "../ai/model-key";
 import { routeToProvider } from "../ai/privacy";
 import { loadDataUse } from "../ai/privacy-repository";
 import { isLanguage, type LanguageCode } from "../i18n/locales";
@@ -46,7 +46,7 @@ type QueueRow = { topic_key: string; age_band: string; language: string; label: 
 export async function refillModelsFor(admin: SupabaseClient, householdId: string): Promise<RefillModels | null> {
   try {
     const [policy, householdKey] = await Promise.all([loadDataUse(admin, householdId), readHouseholdKey(householdId).catch(() => null)]);
-    const key = resolveModelKey(householdKey, platformKey());
+    const key = resolveModelKey(householdKey, (await currentPlatformKey()));
     const route = routeToProvider({ provider: key.provider, keySource: key.source, policy, hasContent: true });
     if (!route.ok || !key.provider || !key.key) return null;
     if (!(await hitRateLimit(admin, "ai.model", householdId))) return null;

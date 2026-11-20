@@ -75,6 +75,7 @@ export const homesendDe: AreaCatalog<typeof homesendEn> = {
   "homesend.failure.linkUnreachable": "Dieser Link konnte nicht geöffnet werden.",
   "homesend.failure.transcriptionUnavailable": "Für Sprachnachrichten braucht es einen Sprachdienst, und es ist noch keiner eingerichtet.",
   "homesend.failure.transcriptionFailed": "WonderHome konnte die Sprachnachricht nicht verstehen.",
+  "homesend.failure.modelUnavailable": "Aufbewahrt. WonderHome kann es gerade nicht lesen; sobald es geht, liest es es und sagt dir, was es gemacht hat.",
   "homesend.status.keptExisting": "Vorhandenes behalten",
   "homesend.status.dismissed": "Ausgeblendet",
   "homesend.status.undone": "Rückgängig gemacht",

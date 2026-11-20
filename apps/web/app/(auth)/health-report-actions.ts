@@ -4,7 +4,7 @@ import { revalidatePath } from "next/cache";
 import { z } from "zod";
 
 import { readHouseholdKey } from "@wonderhome/core/ai/credentials";
-import { platformKey, resolveModelKey } from "@wonderhome/core/ai/model-key";
+import { currentPlatformKey, resolveModelKey } from "@wonderhome/core/ai/model-key";
 import { routeToProvider } from "@wonderhome/core/ai/privacy";
 import { loadDataUse } from "@wonderhome/core/ai/privacy-repository";
 import { consume, may } from "@wonderhome/core/billing/repository";
@@ -74,7 +74,7 @@ export async function readReportAction(input: { householdId: string; recordId: s
     const profile = await getHealthProfile(supabase, householdId, record.memberId).catch(() => null);
     if (profile && !profile.aiAssistanceEnabled) return { ok: false, reason: "person_off" };
 
-    const key = resolveModelKey(householdKey, platformKey());
+    const key = resolveModelKey(householdKey, (await currentPlatformKey()));
     const route = routeToProvider({ provider: key.provider, keySource: key.source, policy, hasContent: true });
     if (!route.ok) return { ok: false, reason: route.code === "no_provider_configured" ? "no_provider" : "provider_off" };
     if (!key.provider || !key.key) return { ok: false, reason: "no_provider" };

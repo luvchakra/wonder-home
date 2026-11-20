@@ -9,6 +9,10 @@ import { mayEdit, settingDefinition } from "@wonderhome/core/platform/settings/r
 import { moveAllFromEnvironment, type MoveReport } from "@wonderhome/core/platform/settings/move";
 import { forgetRuntimeEnv } from "@wonderhome/core/platform/settings/runtime-env";
 import { clearSetting, saveSetting } from "@wonderhome/core/platform/settings/store";
+import { checkModelKey, keyCheckWords } from "@wonderhome/core/ai/key-check";
+import { MODEL_PROVIDERS, platformKey, providerOfKey, type ModelProvider } from "@wonderhome/core/ai/model-key";
+import { resolvePlatformKeyAlert, supersedeStaleKeyAlerts } from "@wonderhome/core/ai/platform-key-alert";
+import { freshRuntimeEnv } from "@wonderhome/core/platform/settings/runtime-env";
 
 import { confirmStaffPassword } from "../_lib/platform-step-up";
 import { stepUpRefusal } from "../_lib/platform-step-up-rules";
@@ -63,6 +67,22 @@ export async function saveSettingAction(_previous: SettingActionState, formData:
   const checked = await authorise(formData);
   if ("error" in checked) return { tone: "risk", message: checked.error ?? null, key };
   const { staff, entry, value } = checked;
+  // WonderHome's own model key is checked with its provider before it is kept (2026-11-21): a refused key is never
+  // stored as working. A provider that can't be reached is no verdict, so the key is saved and the card says so.
+  let checkedNote = "";
+  let accepted = false;
+  if (entry.key === "WONDERHOME_AI_KEY" && value.trim()) {
+    const provider = chosenProvider(await freshRuntimeEnv());
+    const check = await checkModelKey(provider, value);
+    if (!check.ok && check.reason !== "unreachable") return { tone: "risk", message: `Not saved. ${keyCheckWords(check).message}`, key: entry.key };
+    accepted = check.ok;
+    checkedNote = ` ${keyCheckWords(check).message}`;
+  }
+  if (entry.key === "WONDERHOME_AI_PROVIDER") {
+    const key = platformKey(await freshRuntimeEnv())?.key;
+    const looksLike = key ? providerOfKey(key) : null;
+    if (looksLike && looksLike !== value) checkedNote = ` The saved key looks like a ${PROVIDER_NAME[looksLike]} key, so it won't work with ${PROVIDER_NAME[value as ModelProvider] ?? value}: save a matching key next.`;
+  }
   const result = await saveSetting(adminClientFor(adminGrant.platformAdmin(staff, `save the ${entry.key} setting`)), staff.profileId, entry.key, value);
   if (!result.ok) {
     const message =
@@ -74,11 +94,47 @@ export async function saveSettingAction(_previous: SettingActionState, formData:
     return { tone: "risk", message, key: entry.key };
   }
   done();
+  if (accepted) {
+    const admin = adminClientFor(adminGrant.platformAdmin(staff, "close alerts on a replaced AI key"));
+    await resolvePlatformKeyAlert(admin, value.trim());
+    await supersedeStaleKeyAlerts(admin, await freshRuntimeEnv());
+  }
   return {
-    tone: "info",
-    message: entry.kind === "secret" ? `Saved${result.last4 ? ` · ends in ${result.last4}` : ""}. WonderHome uses it within a minute, no redeploy.` : "Saved. WonderHome uses it within a minute, no redeploy.",
+    tone: checkedNote && !accepted && entry.key === "WONDERHOME_AI_KEY" ? "risk" : "info",
+    message: (entry.kind === "secret" ? `Saved${result.last4 ? ` · ends in ${result.last4}` : ""}. WonderHome uses it within a minute, no redeploy.` : "Saved. WonderHome uses it within a minute, no redeploy.") + checkedNote,
     key: entry.key,
   };
+}
+
+const PROVIDER_NAME: Record<ModelProvider, string> = { anthropic: "Anthropic", google: "Google", openai: "OpenAI" };
+
+function chosenProvider(env: Record<string, string | undefined>): ModelProvider {
+  const named = env.WONDERHOME_AI_PROVIDER?.trim().toLowerCase();
+  return (MODEL_PROVIDERS as readonly string[]).includes(named ?? "") ? (named as ModelProvider) : "anthropic";
+}
+
+export type KeyTestState = { tone: "info" | "risk" | null; message: string | null };
+
+/**
+ * "Test key": the key in use now, checked with its provider (2026-11-21). Staff who can manage settings only; the
+ * key never leaves the server. A pass closes the open alert at once and any for keys no longer used.
+ */
+export async function testPlatformKeyAction(): Promise<KeyTestState> {
+  const staff = await platformStaff("settings.manage");
+  if (!staff) return { tone: "risk", message: "Your role can't test the key." };
+  forgetRuntimeEnv();
+  const env = await freshRuntimeEnv();
+  const key = platformKey(env);
+  if (!key) return { tone: "risk", message: "No key is saved yet. Save WonderHome's own AI key above, then test it." };
+  const check = await checkModelKey(chosenProvider(env), key.key);
+  const words = keyCheckWords(check);
+  if (check.ok) {
+    const admin = adminClientFor(adminGrant.platformAdmin(staff, "close alerts after a key test passed"));
+    await resolvePlatformKeyAlert(admin, key.key);
+    await supersedeStaleKeyAlerts(admin, env);
+    for (const page of PAGES) revalidatePath(page);
+  }
+  return { tone: words.tone, message: `${words.message}${key.key.length >= 12 ? ` (the key ending in ${key.key.slice(-4)})` : ""}` };
 }
 
 export async function clearSettingAction(_previous: SettingActionState, formData: FormData): Promise<SettingActionState> {

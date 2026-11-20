@@ -21,10 +21,12 @@ import { runTriviaRefill } from "@wonderhome/core/school/trivia-refill";
 import { JOBS } from "@wonderhome/core/jobs/runner";
 import { platformMailer } from "@wonderhome/core/email/mailer";
 import { advanceDueStages, deliverDueNotifications } from "@wonderhome/core/notifications/reconcile";
+import { queueModelReads } from "@wonderhome/core/homesend/model-unavailable";
 import { whatsappConfigFromEnv } from "@wonderhome/core/notifications/whatsapp";
 import { WHATSAPP_PROCESS_KIND, whatsappJobHandler } from "@wonderhome/core/whatsapp/intake";
 import { log } from "@wonderhome/core/observability/logger";
 
+import { homesendAfterModelRead } from "@/app/_lib/homesend-after-model-read";
 import { trustedEmailAutoAdd } from "@/app/_lib/homesend-trusted-email";
 import { whatsappAsk, whatsappAutoAdd } from "@/app/_lib/whatsapp-hometalk";
 
@@ -158,6 +160,8 @@ async function dispatch(request: Request): Promise<Response> {
         handlers: { ...notificationJobHandlers(), ...(whatsapp ? { [WHATSAPP_PROCESS_KIND]: whatsappJobHandler({ config: whatsapp.adapter, ask: whatsappAsk(createAdminClient()), addOnItsOwn: whatsappAutoAdd(createAdminClient()) }) } : {}) },
         // An email read on the queue (held until "Trust this sender?") is added on its own when its sender is trusted.
         addTrusted: trustedEmailAutoAdd(admin),
+        // Something kept until a model could read it: added and told once it is read (2026-11-21).
+        afterModelRead: homesendAfterModelRead(admin),
       });
     } catch (thrown) {
       log.warn("notification retry drain failed", { reason: thrown instanceof Error ? thrown.name : "unknown" });
@@ -181,7 +185,10 @@ async function dispatch(request: Request): Promise<Response> {
     // "Nothing waits" (2026-11-14): due "Needs you" defaults applied after 24 hours, nothing open past 48,
     // every waiting HomeSend item ended as something. Bounded and idempotent; only while GitHub's clock is stale.
     try {
-      if (!onGitHub.has("clock.homesend-deadlines")) await runNeedsYouDeadlines(admin, { now, limit: 10 });
+      if (!onGitHub.has("clock.homesend-deadlines")) {
+        await runNeedsYouDeadlines(admin, { now, limit: 10 });
+        await queueModelReads(admin, { now, limit: 25 });
+      }
     } catch (thrown) {
       log.warn("needs-you deadlines tick failed", { reason: thrown instanceof Error ? thrown.name : "unknown" });
     }

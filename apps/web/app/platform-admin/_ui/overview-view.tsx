@@ -39,6 +39,7 @@ import {
   type AdvisorSignal,
 } from "@wonderhome/core/platform/overview";
 import { nothingWaitsOnTarget, questionsPerTen, type NothingWaitsMetrics } from "@wonderhome/core/homesend/metrics";
+import { Alert } from "@wonderhome/core/ui/alert";
 import { ButtonLink } from "@wonderhome/core/ui/button";
 import type { IconTone } from "@wonderhome/core/ui/icon-tile";
 import { IconTile } from "@wonderhome/core/ui/icon-tile";
@@ -107,13 +108,15 @@ export type OverviewViewProps = {
   services: readonly ServiceState[];
   period: Period;
   role: string;
+  /** The open alert on WonderHome's own model key, in words; null when none is open. */
+  aiKeyAlert?: string | null;
 };
 
 /**
  * The Overview, drawn from figures already read (the page does the reading):
  * what needs the admin first, then growth and use, then health (rule 17).
  */
-export function OverviewView({ snapshot, advisor, nothingWaits = null, settings, services, period, role }: OverviewViewProps) {
+export function OverviewView({ snapshot, advisor, nothingWaits = null, settings, services, period, role, aiKeyAlert = null }: OverviewViewProps) {
   // Every age on the page is measured from when the figures were read, so they agree with each other.
   const nowMs = snapshot ? Date.parse(snapshot.takenAt) : 0;
   const now = new Date(nowMs);
@@ -130,6 +133,16 @@ export function OverviewView({ snapshot, advisor, nothingWaits = null, settings,
   return (
     <PageBody>
       <PageTitle title="Platform admin" subtitle={lede} />
+
+      {/* WonderHome's own model key refused: above everything, since every family without a key is affected (2026-11-21). */}
+      {aiKeyAlert ? (
+        <Alert tone="risk">
+          {aiKeyAlert}{" "}
+          <Link href="/platform-admin/ai#ai-key-health" className="font-semibold underline">
+            Open AI & providers
+          </Link>
+        </Alert>
+      ) : null}
 
       {/* 1. What needs the reader, most urgent first. */}
       <Panel title="Needs you" description={snapshot ? "Raised only from real signals, most urgent first." : undefined}>

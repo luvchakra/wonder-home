@@ -29,6 +29,8 @@ let overlay: (rows: StoredSettings) => StoredSettings = () => ({});
 let stored: StoredSettings = {};
 let merged: Env | null = null;
 let loadedAt = Number.NEGATIVE_INFINITY;
+/** Whether this server has read the saved values at least once (a cold server has not). */
+let everLoaded = false;
 let refreshing: Promise<void> | null = null;
 
 const TTL_MS = 60_000;
@@ -40,6 +42,7 @@ export function useSettingsLoader(load: (() => Promise<StoredSettings>) | null, 
   stored = {};
   merged = null;
   loadedAt = Number.NEGATIVE_INFINITY;
+  everLoaded = false;
   refreshing = null;
 }
 
@@ -54,6 +57,7 @@ export function refreshRuntimeEnv(now = Date.now()): Promise<void> {
         stored = overlay(rows);
         merged = null;
         loadedAt = now;
+        everLoaded = true;
       },
       () => {
         // The store could not be read: keep the last values (or the plain
@@ -78,6 +82,22 @@ export function runtimeEnv(now = Date.now()): Env {
 /** The same, after waiting for a refresh if the copy is stale: for a request that must see a save just made. */
 export async function freshRuntimeEnv(now = Date.now()): Promise<Env> {
   if (loader && now - loadedAt >= TTL_MS) await refreshRuntimeEnv(now);
+  return runtimeEnv(now);
+}
+
+/**
+ * The same, but a server that has never read the saved values waits for that
+ * first read (at most `waitMs`) instead of answering with the deployment's
+ * variables. Every model call resolves its key through this
+ * (`model-key.ts` `currentPlatformKey`): a cold server whose start-up read was
+ * slower than instrumentation's three seconds once sent the deployment's old
+ * key while the owner's saved one sat unread (2026-11-21). Once read, it never
+ * waits again; a stale copy refreshes behind itself as before.
+ */
+export async function settledRuntimeEnv(waitMs = 5_000, now = Date.now()): Promise<Env> {
+  if (loader && !everLoaded) {
+    await Promise.race([refreshRuntimeEnv(now), new Promise<void>((resolve) => setTimeout(resolve, waitMs).unref?.())]);
+  }
   return runtimeEnv(now);
 }
 

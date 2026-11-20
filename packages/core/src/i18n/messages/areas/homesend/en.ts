@@ -77,6 +77,7 @@ export const homesendEn = {
   "homesend.failure.linkUnreachable": "That link couldn't be opened.",
   "homesend.failure.transcriptionUnavailable": "Voice notes need a speech service, and none is set up yet.",
   "homesend.failure.transcriptionFailed": "WonderHome couldn't make out the voice note.",
+  "homesend.failure.modelUnavailable": "Kept. WonderHome can't read it right now; it will read it as soon as it can and tell you what it did.",
   "homesend.status.keptExisting": "Kept existing",
   "homesend.status.dismissed": "Dismissed",
   "homesend.status.undone": "Undone",

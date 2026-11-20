@@ -97,6 +97,7 @@ export const settingsEn = {
   "settingsPage.ai.source.household.detail": "Requests are billed to your provider account and are covered by your agreement with them, not ours.",
   "settingsPage.ai.source.platform.title": "WonderHome's key",
   "settingsPage.ai.source.platform.detail": "Included with your plan. Your household's data is never used to train models.",
+  "settingsPage.ai.source.platform.unavailable": "Right now WonderHome's key isn't reaching its model, so the assistant is working from its own rules. Nothing is lost: anything sent in is kept and read as soon as the model is back.",
   "settingsPage.ai.source.none.title": "No model configured",
   "settingsPage.ai.source.none.detail":
     "The assistant still works: it answers from WonderHome's own rules rather than a language model, and never pretends to have understood more than it did.",

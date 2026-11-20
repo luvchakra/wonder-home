@@ -75,6 +75,7 @@ export const homesendMr: AreaCatalog<typeof homesendEn> = {
   "homesend.failure.linkUnreachable": "ही लिंक उघडता आली नाही.",
   "homesend.failure.transcriptionUnavailable": "व्हॉइस नोटसाठी स्पीच सेवा लागते, आणि अजून कोणतीही सेट केलेली नाही.",
   "homesend.failure.transcriptionFailed": "WonderHome ला व्हॉइस नोट समजली नाही.",
+  "homesend.failure.modelUnavailable": "ठेवून घेतलं. WonderHome ला आत्ता हे वाचता येत नाही; वाचता येताच वाचून काय केलं ते सांगेल.",
   "homesend.status.keptExisting": "आहे तेच ठेवले",
   "homesend.status.dismissed": "काढले",
   "homesend.status.undone": "पूर्ववत केले",
