@@ -16,7 +16,7 @@ The owner, 2026-11-20, on tomorrow's Idli: "contradicting messages, check and fi
 - The card (`apps/web/app/meals/page.tsx`): "2 to buy"; strip "To buy: Batter, Idli · Sunflower oil"; under it "All on the To Buy list." or "Not on the To Buy list yet: …" (attention tone only then).
 - The sheet (`meal-ingredients-sheet.tsx`): "Nothing to add: everything still to buy is already on the To Buy list." (or "… everything this meal needs is In Kitchen."), then "Already on To Buy: …" and "In Kitchen: …".
 - The agenda: `mealAgenda` reads open To Buy entries in the same wave as the meals (bounded, `.limit(500)`), and `assessMeal` doesn't call an ingredient on the list missing. Its reason names only what is not on the list: "… needs X, not on the To Buy list yet."
-- HomeTalk's context line (`context/builders.ts`) now says "ingredients not yet marked in (the To Buy list may already have them)". It no longer claims "missing".
+- HomeTalk's context line (`context/builders.ts`) keeps its "missing …" wording, which the HomeBrain golden tests pin and its noticed links read; only the names are now joined without commas. Reading live To Buy state there is 25-049.
 - Words are in all eight languages. Help "Meals and shopping" ¶7 is updated, and so is its `updated` date.
 
 ## Verified
