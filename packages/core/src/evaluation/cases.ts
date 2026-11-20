@@ -2047,7 +2047,7 @@ const HOMESEND: HomeSendCase[] = [
     expected: { interpretation: "grocery_item", action: "add_checking", safety: { consequential: false, executed: false } },
   },
   {
-    id: "HS-111", surface: "homesend", household: "A", category: "updates", actor: "a-kunal",
+    id: "HS-124", surface: "homesend", household: "A", category: "updates", actor: "a-kunal",
     description: "A second reading of the electricity bill already on record for that day (an email's PDF read after its body) is the same bill with a new amount: an update, never a second bill (the owner, 2026-11-20: two electricity bills due 5 Nov).",
     source: { channel: "email", text: "BESCOM electricity bill for September. Amount due Rs 2,950 by 25 September." },
     reading: { kind: "bill", title: "BESCOM electricity bill for September", amount: 2950, currency: "INR", dueDate: "2026-09-25", billKind: "utility" },
