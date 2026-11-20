@@ -92,6 +92,16 @@ export type EndingInput = {
    * `healthFiledFor`, the owner 2026-11-20): filed for them now, as Checking.
    */
   filedFor?: string | null;
+  /** The match on record has a second candidate (two bills): asked, never applied at once. */
+  ambiguous?: boolean;
+  /** A document with several records, in a household that records money directly: each added as Checking at once. */
+  severalNow?: boolean;
+  /**
+   * The sender is in HomeTalk right now (a turn in the last few minutes):
+   * only then is "send it again" asked; anyone else's unreadable item is set
+   * aside with its reason (the owner, 2026-11-20 review).
+   */
+  senderActive?: boolean;
 };
 
 /** How long a read-again has before the sender is asked to send it again. */
@@ -116,6 +126,10 @@ export type Ending =
   | { action: "file_for"; memberId: string }
   /** "Update the existing bill?" (the owner, 2026-11-20): default Update, marked Checking; a cancellation's default keeps the record Checking. */
   | { action: "ask_update"; cancel: boolean }
+  /** One clear bill on record with a newer amount or date: updated now, marked Checking, with Undo (2026-11-20 review). */
+  | { action: "update_now" }
+  /** A document with several bills, where money is recorded directly: each added now as Checking (2026-11-20 review). */
+  | { action: "add_now" }
   /** Nothing to do yet (a read-again is queued, or its question is open). */
   | { action: "wait" };
 
@@ -158,7 +172,10 @@ export function endingFor(item: EndingInput): Ending {
     // Record first never adds one that matches a record already on file, so it is asked about here
     // (the owner, 2026-11-20: "update"): a newer amount or date updates the record, marked Checking.
     if (item.match === "update" || item.match === "cancellation") {
-      return item.asked.has(UPDATE_SOURCE) ? { action: "wait" } : { action: "ask_update", cancel: item.match === "cancellation" };
+      if (item.asked.has(UPDATE_SOURCE)) return { action: "wait" };
+      // A newer amount or date for one clear bill is applied now (the 2026-11-20 review); a cancellation never cancels, and two candidates are asked.
+      if (item.match === "update" && item.kind === "bill" && item.ambiguous !== true) return { action: "update_now" };
+      return { action: "ask_update", cancel: item.match === "cancellation" };
     }
     // The same one again: the default keeps what is on record and sets this copy aside as "already on record".
     if (item.match === "duplicate") return item.asked.has("homesend_waiting") ? { action: "wait" } : { action: "ask", duplicate: true };
@@ -168,7 +185,11 @@ export function endingFor(item: EndingInput): Ending {
     // missing, several records): asked "Add this bill?", and added as Checking by default (owner, 2026-11-20).
     // An allowed sender's health document naming another member: filed for them, never asked (the owner, 2026-11-20).
     if (item.kind === "health_document" && item.match === null && item.addable === true && item.filedFor) return { action: "file_for", memberId: item.filedFor };
-    if (item.match === null && item.addable === true) return item.asked.has(ADD_SOURCE) ? { action: "wait" } : { action: "ask_add" };
+    if (item.match === null && item.addable === true) {
+      if (item.asked.has(ADD_SOURCE)) return { action: "wait" };
+      // Several records, money recorded directly: each added now, as one would be (the 2026-11-20 review).
+      return item.severalNow === true ? { action: "add_now" } : { action: "ask_add" };
+    }
     return { action: "wait" };
   }
   if (item.asked.has("homesend_waiting")) return { action: "wait" };
@@ -181,7 +202,8 @@ function afterReadAgain(item: EndingInput): Ending {
   if (item.retryCount === 0 && item.canReadAgain) return { action: "read_again" };
   if (item.retryCount > 0 && item.minutesSinceTouched < READ_AGAIN_GRACE_MINUTES) return { action: "wait" };
   if (item.asked.has("homesend_resend")) return { action: "wait" };
-  return item.senderMemberId ? { action: "ask_resend" } : { action: "set_aside", reason: "unreadable" };
+  // Asked only of a sender in HomeTalk right now: asking someone who isn't there is a 48-hour delay with no gain.
+  return item.senderMemberId && item.senderActive === true ? { action: "ask_resend" } : { action: "set_aside", reason: "unreadable" };
 }
 
 // --- 3. The questions and their defaults -----------------------------------

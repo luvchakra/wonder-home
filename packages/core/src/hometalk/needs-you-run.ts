@@ -12,7 +12,8 @@ import { addQuestion, ADD_SOURCE, checkQuestion, endingFor, resendQuestion, UPDA
 import type { HomeSendExtraction, HomeSendFailureReason, HomeSendKind, HomeSendStatus } from "../homesend/items";
 import { addWaitingItem, canAdd } from "../homesend/add-default";
 import { healthFiledFor, type HealthMember } from "../homesend/health-filers";
-import { canRecordBill, matchOnRecord, recordWaitingBill } from "../homesend/matched-update";
+import { applyMatchedUpdate, AT_ONCE_SOURCE, canRecordBill, matchOnRecord, recordWaitingBill } from "../homesend/matched-update";
+import { settlePaymentProof } from "../homesend/payment-apply";
 import { loadHealthFilers, loadRecordFirst } from "../household/direct-add-repository";
 import { enqueueClassifyRetry, enqueueReread } from "../homesend/retry-queue";
 
@@ -67,12 +68,16 @@ export type DeadlinesResult = {
   asked: number;
   /** Waiting bills recorded as Checking (sent before record first, matching nothing on record). */
   recorded: number;
+  /** Payment proofs settled: a bill marked paid, or the payment recorded on its own (2026-11-20 review). */
+  payments: number;
+  /** Matched bills updated at once, and documents' several bills added at once (2026-11-20 review). */
+  appliedNow: number;
   households: number;
 };
 
 export type DeadlinesOptions = { now?: Date; limit?: number; householdIds?: readonly string[]; sweep?: boolean };
 
-const EMPTY: DeadlinesResult = { ready: false, defaulted: 0, expired: 0, proposalsClosed: 0, setAside: 0, notes: 0, readAgain: 0, asked: 0, recorded: 0, households: 0 };
+const EMPTY: DeadlinesResult = { ready: false, defaulted: 0, expired: 0, proposalsClosed: 0, setAside: 0, notes: 0, readAgain: 0, asked: 0, recorded: 0, payments: 0, appliedNow: 0, households: 0 };
 
 export async function runNeedsYouDeadlines(admin: SupabaseClient, options: DeadlinesOptions = {}): Promise<DeadlinesResult> {
   const now = options.now ?? new Date();
@@ -193,7 +198,7 @@ async function candidateHouseholds(admin: SupabaseClient): Promise<string[]> {
 }
 
 const ITEM_COLUMNS =
-  "id, status, classified_kind, raw_text, file_path, source_url, failure_reason, retry_count, retry_requested_at, created_by_member_id, created_at, updated_at, title:extracted->>title, due:extracted->>dueDate, document_date:extracted->>documentDate, readable:understanding->readable, extracted, change:understanding->>change, records:understanding->document->records";
+  "id, status, classified_kind, raw_text, file_path, source_url, failure_reason, retry_count, retry_requested_at, created_by_member_id, created_at, updated_at, title:extracted->>title, due:extracted->>dueDate, document_date:extracted->>documentDate, readable:understanding->readable, extracted, change:understanding->>change, records:understanding->document->records, payment:understanding->payment";
 
 /** What a domain table's entry is, for its question's words and ranking. */
 const DOMAIN_KIND: Record<string, string> = {
@@ -255,11 +260,27 @@ async function endHouseholdItems(admin: SupabaseClient, householdId: string, now
   const memberRows = ((members.data ?? []) as Row[]);
   const healthMembers: HealthMember[] = memberRows.map((row) => ({ id: row.id as string, displayName: String(row.display_name ?? ""), memberType: (row.member_type as string | null) ?? null, status: (row.status as string | null) ?? null }));
   const typeOf = (memberId: string | null) => (memberId ? ((memberRows.find((row) => row.id === memberId)?.member_type as string | undefined) ?? null) : null);
+  // Who is in HomeTalk right now (a turn in the last few minutes): only they are asked to send something again. Read once, when needed.
+  let activeNow: Promise<Set<string>> | null = null;
+  const inHomeTalk = (memberId: string | null) => (memberId ? (activeNow ??= membersInHomeTalk(admin, householdId, now)).then((active) => active.has(memberId)) : Promise.resolve(false));
   for (const row of waitingRows) {
     const id = row.id as string;
     const kind = (row.classified_kind as HomeSendKind | null) ?? null;
+    // A bank, card or UPI payment message (2026-11-20 review): the bill it paid is marked paid, else it is recorded on its own.
+    if (row.status === "classified" && row.payment && typeof row.payment === "object") {
+      try {
+        if ((await settlePaymentProof(admin, householdId, id, now)) !== "settled") {
+          result.payments += 1;
+          changed = true;
+        }
+      } catch {
+        // Not written: it stays waiting, and the next pass tries again.
+      }
+      continue;
+    }
     // Undefined: not looked; null: looked, nothing on record.
     let match: EndingInput["match"] = undefined;
+    let ambiguous = false;
     // Only what record first leaves waiting, not yet asked about: is it already on record?
     const alreadyAsked = asked.get(id);
     if (kind && MATCHED_KINDS.has(kind) && row.status === "classified" && row.readable !== false && !alreadyAsked?.has(UPDATE_SOURCE) && !alreadyAsked?.has(ADD_SOURCE) && !alreadyAsked?.has("homesend_waiting") && matched < MATCHES_PER_HOUSEHOLD) {
@@ -268,6 +289,7 @@ async function endHouseholdItems(admin: SupabaseClient, householdId: string, now
         const found = await matchOnRecord(admin, householdId, { kind, extracted: (row.extracted as Partial<HomeSendExtraction> | null) ?? null, change: (row.change as string | null) ?? null, createdAt: row.created_at as string }, { timezone: timeZone, now });
         const type = found?.proposal.type;
         match = type === "update" || type === "cancellation" || type === "duplicate" ? type : null;
+        ambiguous = found?.ambiguous === true;
         if (found && !match) match = undefined;
       } catch {
         // Not able to check is never "on record": it waits for the next pass.
@@ -281,9 +303,15 @@ async function endHouseholdItems(admin: SupabaseClient, householdId: string, now
     const filedFor = kind === "health_document" && match === null && senderId
       ? healthFiledFor({ kind, sender: { memberId: senderId, memberType: typeOf(senderId) }, filers: await healthFilers(), names: [extracted?.subjectMemberName, ...(extracted?.people ?? [])], members: healthMembers })
       : null;
+    const sender = askable((row.created_by_member_id as string | null) ?? null);
+    const unread = row.status === "failed" || row.readable === false;
+    const several = kind === "bill" && match === null && (records ?? []).filter((record) => (record as { domain?: string } | null)?.domain === "bill").length > 1;
     const ending: Ending = endingFor({
       filedFor,
       match,
+      ambiguous,
+      severalNow: several ? await billsRecorded() : false,
+      senderActive: unread && Number(row.retry_count ?? 0) > 0 ? await inHomeTalk(sender).catch(() => false) : false,
       recordable: kind === "bill" && match === null && canRecordBill(extracted, records) ? await billsRecorded() : false,
       addable: match === null && canAdd({ kind, senderMemberId: (row.created_by_member_id as string | null) ?? null, extracted, records }),
       status: row.status as HomeSendStatus,
@@ -294,7 +322,7 @@ async function endHouseholdItems(admin: SupabaseClient, householdId: string, now
       retryCount: Number(row.retry_count ?? 0) || 0,
       retryRequestedAt: (row.retry_requested_at as string | null) ?? null,
       canReadAgain: Boolean(row.raw_text || row.file_path || row.source_url),
-      senderMemberId: askable((row.created_by_member_id as string | null) ?? null),
+      senderMemberId: sender,
       asked: asked.get(id) ?? new Set(),
       minutesSinceTouched: Math.floor((now.getTime() - Date.parse(row.updated_at as string)) / 60_000),
     });
@@ -324,6 +352,18 @@ async function endHouseholdItems(admin: SupabaseClient, householdId: string, now
       } catch {
         // Not written: it stays waiting, and the next pass tries again.
       }
+    } else if (ending.action === "update_now" || ending.action === "add_now") {
+      try {
+        const done = ending.action === "update_now"
+          ? await applyMatchedUpdate(admin, householdId, id, { mode: "update", checking: true, byDefault: true, memberId: null, now, source: AT_ONCE_SOURCE })
+          : await addWaitingItem(admin, householdId, id, { byDefault: true, memberId: null, now });
+        if (done === "done") {
+          result.appliedNow += 1;
+          changed = true;
+        }
+      } catch {
+        // Not written: it stays waiting, and the next pass tries again.
+      }
     } else if (ending.action === "read_again") {
       if (await readAgain(admin, householdId, row, now)) {
         result.readAgain += 1;
@@ -338,9 +378,9 @@ async function endHouseholdItems(admin: SupabaseClient, householdId: string, now
           : ending.action === "ask_add"
             ? addQuestion({ kind, title, dueOn, today })
           : waitingQuestion({ kind, title, dueOn, today, duplicate: ending.duplicate === true });
-      const sender = (row.created_by_member_id as string | null) ?? null;
+      const from = (row.created_by_member_id as string | null) ?? null;
       // Only an Admin can add or change a bill; a receipt or health document is its sender's to answer.
-      const recipient = ending.action === "ask_update" || (ending.action === "ask_add" && kind === "bill") ? askableAdmin(sender) : askable(sender);
+      const recipient = ending.action === "ask_update" || (ending.action === "ask_add" && kind === "bill") ? askableAdmin(from) : askable(from);
       if (await ask(admin, householdId, id, "home_send_items", question, recipient, new Date(row.created_at as string))) {
         result.asked += 1;
         changed = true;
@@ -364,6 +404,19 @@ async function endHouseholdItems(admin: SupabaseClient, householdId: string, now
     }
   }
   return changed;
+}
+
+/** How recently a turn counts as "in HomeTalk right now". */
+const ACTIVE_MINUTES = 10;
+
+/** Members who said something in HomeTalk (app or WhatsApp) in the last few minutes. */
+async function membersInHomeTalk(admin: SupabaseClient, householdId: string, now: Date): Promise<Set<string>> {
+  const since = new Date(now.getTime() - ACTIVE_MINUTES * 60_000).toISOString();
+  const { data: turns } = await admin.from("conversation_messages").select("session_id").eq("household_id", householdId).eq("role", "member").gte("created_at", since).limit(100);
+  const sessions = [...new Set(((turns ?? []) as Row[]).map((row) => row.session_id as string))];
+  if (sessions.length === 0) return new Set();
+  const { data } = await admin.from("conversation_sessions").select("member_id").eq("household_id", householdId).in("id", sessions.slice(0, 100));
+  return new Set(((data ?? []) as Row[]).map((row) => row.member_id as string));
 }
 
 function dayOf(value: unknown): string | null {

@@ -51,8 +51,27 @@ export function memoryDatabase(seed: Record<string, Row[]>, missing: readonly st
         };
         return chain;
       },
-      maybeSingle: () => Promise.resolve({ data: matching()[0] ?? null, error: null }),
-      single: () => Promise.resolve({ data: matching()[0] ?? null, error: null }),
+      upsert: (values: Row | Row[], options: { onConflict?: string } = {}) => {
+        const keys = (options.onConflict ?? "id").split(",").map((key) => key.trim());
+        const written = (Array.isArray(values) ? values : [values]).map((value) => {
+          const existing = rows().find((row) => keys.every((key) => row[key] === value[key]));
+          if (existing) return Object.assign(existing, value);
+          const added = { id: `${table}-${(counter += 1)}`, created_at: STAMP, ...value };
+          rows().push(added);
+          return added;
+        });
+        const result = { data: written, error: null };
+        const chain: Record<string, unknown> = {
+          select: () => chain,
+          single: () => Promise.resolve({ data: written[0], error: null }),
+          maybeSingle: () => Promise.resolve({ data: written[0] ?? null, error: null }),
+          then: (resolve: (value: unknown) => void) => resolve(result),
+        };
+        return chain;
+      },
+      // Reads hand back copies, as a real database does: a later write never changes what was read.
+      maybeSingle: () => Promise.resolve({ data: matching()[0] ? { ...matching()[0] } : null, error: null }),
+      single: () => Promise.resolve({ data: matching()[0] ? { ...matching()[0] } : null, error: null }),
       then: (resolve: (value: unknown) => void) => {
         if (missing.includes(table)) return resolve({ data: null, error: { code: "42P01", message: "missing" } });
         const hit = matching();

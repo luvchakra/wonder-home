@@ -8,6 +8,7 @@ import {
   undoBillPayment,
   type PaidBill,
 } from "../finance/repository";
+import { confirmByAction } from "../homesend/changes";
 import type { HouseholdIntent } from "./intent";
 import { linkTo } from "./reply-format";
 
@@ -164,6 +165,8 @@ type Context = {
   householdId: string;
   timezone: string;
   now?: Date;
+  /** Who said it, so a Checking bill they say was paid is confirmed in their name. */
+  actorMemberId?: string;
 };
 
 type Result = { ok: true; text: string; result: Record<string, unknown> } | { ok: false; reason: string };
@@ -238,6 +241,8 @@ export async function recordBillPaymentFromTalk(intent: HouseholdIntent, context
     amountMinor: amount === null ? null : Math.round(amount * 100),
     currency,
   });
+  // Saying it was paid confirms a Checking bill (confirmed_basis "marked_paid").
+  if (context.actorMemberId) await confirmByAction(context.supabase, context.householdId, id, context.actorMemberId, "marked_paid");
   const sum = amount !== null && currency ? ` — ${formatMoney(Math.round(amount * 100), currency)}` : "";
   const next = paid.nextDueOn ? ` It's next due ${describeDay(paid.nextDueOn)}.` : "";
   const unknown = !paid.recorded ? " I didn't have its amount, so tell me what it came to and I'll keep it in its history." : "";

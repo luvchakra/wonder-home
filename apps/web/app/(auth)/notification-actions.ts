@@ -7,6 +7,7 @@ import { z } from "zod";
 import { toErrorBody } from "@wonderhome/core/api/errors";
 import { createClient } from "@wonderhome/core/db/server";
 import { markObligationPaid } from "@wonderhome/core/finance/repository";
+import { confirmByAction } from "@wonderhome/core/homesend/changes";
 import { markPetCareDone } from "@wonderhome/core/home/repository";
 import { requireMembership } from "@wonderhome/core/identity/households";
 import {
@@ -130,6 +131,8 @@ export async function completeReminderSourceAction(_previous: ActionState, formD
     switch (row.source_type) {
       case "obligation": {
         const { nextDueOn } = await markObligationPaid(supabase, { householdId: parsed.data.householdId, obligationId: row.source_id, paidOn: today });
+        // Marking a Checking bill paid confirms it (confirmed_basis "marked_paid").
+        await confirmByAction(supabase, parsed.data.householdId, row.source_id, membership.memberId, "marked_paid");
         done = nextDueOn ? `paid&next=${nextDueOn}` : "paid";
         break;
       }
