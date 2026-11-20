@@ -11,7 +11,7 @@ decision that shapes later work each earns a note, written before moving on.
 
 | Date | Note |
 |---|---|
-| 2026-11-20 | [HomeSend: WhatsApp as an icon beside the opening sentence, empty card gone](2026-11-20-homesend-whatsapp-icon.md) |
+| 2026-11-20 | [HomeSend: WhatsApp as an icon, empty card gone, and a clutter-free screen](2026-11-20-homesend-whatsapp-icon.md) |
 | 2026-11-20 | [Desktop sidebar: the WonderWorks layout in WonderHome's own look](2026-11-20-desktop-sidebar.md) |
 | 2026-11-20 | [HomeSend stops asking: "Looks right?" gone by default, the evening summary as the report](2026-11-20-homesend-stop-asking.md) |
 | 2026-11-20 | [HomeSend confirms by evidence and action: payment proof, updates at once, a stronger second read](2026-11-20-homesend-confirm-by-evidence.md) |

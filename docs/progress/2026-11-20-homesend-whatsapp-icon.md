@@ -18,3 +18,42 @@
 
 ## Cleanup
 The QA user and household made for the check were deleted (count 0, user gone); the local server was stopped.
+
+## Part 2: a clutter-free HomeSend (owner, 2026-11-20: "make HomeSend a really clutter free and intuitive interface with minimum human input required")
+
+Same PR (#569). The behaviour side shipped in #562–#564; this pass is the screen.
+
+### Audit (production build, QA household, `ui-check` + main's visible text and controls)
+States measured: **empty** (nothing ever sent) and **full** (2 added today, one of them Checking, 2 set aside, a Needs-you question open). Needs-you questions live at the top of HomeTalk, so here they show only as the opening sentence's count. Trusted senders are under Settings → Connections → Email, not on this page. The Admin controls on this page are "Delete all set aside" and the email-address setup.
+
+| State, 360 px | Text lines before → after | Controls before → after | Page height |
+|---|---|---|---|
+| Empty | 15 → 7 | 5 → 3 | 987 → 900 |
+| Full | 26 → 13 | 8 → 3 | 1206 → 968 |
+
+At 1280 px: empty 18 → 9 lines, full 29 → 15 lines, controls as at 360. No horizontal overflow in any state.
+
+Before (full): today's card *above* the opening sentence; the sentence and WhatsApp icon; "Send something / photo · file · paste · link", a row to open before anything could be picked; "Added recently" with an intro line; "Set aside" heading, an explanatory paragraph, "Delete all set aside" and every row with Restore/Delete; "Other ways to send things in" open with Install; the closing line. Empty added a three-line welcome card whose "Connect WhatsApp" and "Add to share sheet" repeated the WhatsApp icon and Install (rule 14).
+
+### What changed
+- **The opening sentence opens** (rule 7): today's card moved under it (`summary` slot on `HomeSendInbox`).
+- **Sending is one tap**: "Choose a file" and "Paste a message or link" sit on the card. There's no row to open first and no Close; the "photo · file · paste · link" hint repeated the buttons and is gone. On a computer one line still says drop a file or paste anywhere. There's still no form, required field or kind picker.
+- **Folded away, nothing lost** (rules 12, 17): "Set aside" is one closed row with its count (`SetAsideFold`). Restore, Delete and "Delete all set aside" are one tap inside, with "See all" to the full list at `/home-send?view=archived`. The fold stays mounted after the last item is restored, so "Restored" still shows. "Other ways to send things in" (email address, Add to contacts, Install) is one closed row too.
+- **Explanations removed**: the desktop lede, "Added recently"'s intro line, Set aside's paragraph, and the first-time welcome card (`HomeSendWelcome`), whose buttons repeated the WhatsApp icon and Install.
+- No safety rule touched: `conversation/consent.ts`, the defaults, Checking for money and health, and health visibility are unchanged.
+
+### Where each thing lives now
+Send: on the page. Today's report: under the sentence. Undo: in "Added recently" (one tap to open) and on the "Got it" notice. Restore/Delete/Delete all: inside "Set aside". Email forwarding, Add to contacts, Install: inside "Other ways to send things in". WhatsApp: the icon beside the sentence. Sender trust and every Admin switch: Settings → Connections → Email and Settings → AI Assistant (unchanged).
+
+### Help
+`help.guide.home-send.body.12` rewritten for the new layout, and the welcome-card sentence removed from `body.14`, in all eight languages (section `updated` 2026-11-20).
+
+### Verified
+tsc, ESLint on touched files, vitest (channels, help, i18n: 107 passed), `lint:help-links`, production build. E2E `screens.spec.ts` "HomeSend is the send box…" was updated for the two buttons and the fold, and passes on mobile and desktop locally. The first run caught the fold dropping "Restored", which `SetAsideFold` fixes.
+
+### For the owner
+- The first-time welcome card is gone. Say if new households should get it back as a one-time note.
+- "Added recently" is folded by default, so its Undo is one tap away rather than on the page; today's card says what was added.
+
+### Cleanup
+Both QA households and users made for the audit were deleted (count 0, users gone); scratch scripts removed; the local server stopped.

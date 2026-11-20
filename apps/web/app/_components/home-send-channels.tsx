@@ -10,7 +10,7 @@ import { Alert } from "@wonderhome/core/ui/alert";
 import { Card } from "@wonderhome/core/ui/card";
 import { IconTile } from "@wonderhome/core/ui/icon-tile";
 import { Pill } from "@wonderhome/core/ui/pill";
-import { SectionHeader } from "@wonderhome/core/ui/section-header";
+import { CollapsibleSection } from "@wonderhome/core/ui/collapsible-section";
 import { Sheet } from "@wonderhome/core/ui/sheet";
 import { Button } from "@wonderhome/core/ui/button";
 
@@ -50,16 +50,16 @@ export function HomeSendChannels({
   // WhatsApp is the icon beside the opening sentence (owner, 2026-11-20), not a row here (rule 14).
   if (!emailConfigured && install.installed) return null;
 
+  // Set up once and rarely touched again, so folded away below everything else (owner, 2026-11-20: "clutter free").
   return (
-    <section>
-      <SectionHeader title={labels.title} />
+    <CollapsibleSection icon={Send} tone="primary" title={labels.title} as="h2">
       <div className="space-y-3">
         {emailConfigured ? (
           <EmailChannel householdId={householdId} isAdmin={isAdmin} address={address} labels={labels} />
         ) : null}
         {!install.installed ? <InstallChannel labels={labels} /> : null}
       </div>
-    </section>
+    </CollapsibleSection>
   );
 }
 
@@ -234,48 +234,5 @@ function InstallChannel({ labels }: { labels: ChannelLabels }) {
         </Button>
       </Sheet>
     </>
-  );
-}
-
-/**
- * The first-time explainer (14-066): three lines and the two one-tap setups,
- * shown only while the household has never sent HomeSend anything — so it is
- * seen once, with nothing stored to remember it.
- */
-export function HomeSendWelcome({ whatsapp, labels }: { whatsapp: { connected: boolean } | null; labels: ChannelLabels }) {
-  const install = useInstallPrompt();
-  const [guide, setGuide] = useState(false);
-  const showWhatsApp = Boolean(whatsapp && !whatsapp.connected);
-  return (
-    <Card className="space-y-3 p-4">
-      <div className="flex items-start gap-3">
-        <IconTile icon={Send} tone="primary" />
-        <div className="min-w-0 flex-1 space-y-1 text-sm">
-          <p className="font-semibold">{labels.welcomeTitle}</p>
-          <p className="text-[var(--wh-foreground-muted)]">{labels.welcome1}</p>
-          <p className="text-[var(--wh-foreground-muted)]">{labels.welcome2}</p>
-          <p className="text-[var(--wh-foreground-muted)]">{labels.welcome3}</p>
-        </div>
-      </div>
-      {showWhatsApp || !install.installed ? (
-        <div className="flex flex-wrap gap-2">
-          {showWhatsApp ? (
-            <Link href="/settings/connections#whatsapp" className="inline-flex items-center gap-1.5 rounded-full bg-[var(--wh-primary)] px-3 py-1.5 text-sm font-medium text-[var(--wh-primary-foreground)]">
-              <MessageCircle aria-hidden className="size-4" />
-              {labels.welcomeWhatsApp}
-            </Link>
-          ) : null}
-          {!install.installed ? (
-            <Pill type="button" tone="quiet" onClick={() => (install.canPrompt ? void install.prompt() : setGuide(true))}>
-              <Download aria-hidden className="size-3.5" />
-              {labels.welcomeShare}
-            </Pill>
-          ) : null}
-        </div>
-      ) : null}
-      <Sheet open={guide} onOpenChange={setGuide} title={labels.installTitle} description={labels.installDescription}>
-        <p className="text-sm text-[var(--wh-foreground-muted)]">{labels.installBody}</p>
-      </Sheet>
-    </Card>
   );
 }

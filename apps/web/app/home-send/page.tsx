@@ -21,14 +21,13 @@ import { AppShell } from "@wonderhome/core/shell/app-shell";
 import { Alert } from "@wonderhome/core/ui/alert";
 import { Card } from "@wonderhome/core/ui/card";
 import { QuoteCard } from "@wonderhome/core/ui/quote-card";
-import { SectionHeader } from "@wonderhome/core/ui/section-header";
 import { EmptyState } from "@wonderhome/core/ui/states";
 import { formatWhatsAppNumber, whatsappBusinessNumber } from "@wonderhome/core/whatsapp/linking";
 import { listWhatsAppLinks } from "@wonderhome/core/whatsapp/repository";
 
-import { HomeSendChannels, HomeSendWelcome, HomeSendWhatsAppButton } from "../_components/home-send-channels";
+import { HomeSendChannels, HomeSendWhatsAppButton } from "../_components/home-send-channels";
 import { HomeSendInbox } from "../_components/home-send-inbox";
-import { HomeSendArchived } from "../_components/home-send-archived";
+import { HomeSendArchived, SetAsideFold } from "../_components/home-send-archived";
 import { homesendPageLabels } from "../_lib/homesend-labels";
 import { requireSession } from "../_lib/session";
 import { addIfAllowed } from "../(auth)/home-send-auto";
@@ -225,16 +224,9 @@ export default async function HomeSendPage({
       <div className="space-y-5">
         <header className="wh-rise hidden lg:block">
           <h1 className="text-[1.625rem] font-bold tracking-tight sm:text-3xl">{t("nav.item.homesend")}</h1>
-          <p className="text-sm text-[var(--wh-foreground-muted)]">{t("homesend.lede")}</p>
         </header>
 
         {isShareError(shareError) ? <Alert>{t(SHARE_ERROR_KEYS[shareError])}</Alert> : null}
-        {today.added + today.setAside > 0 ? (
-          <Card id="today" className="scroll-mt-20 p-4">
-            <p className="text-sm font-semibold">{today.added > 0 ? t("homesend.today.added", { count: today.added }) : t("homesend.today.nothingAdded")}</p>
-            <p className="mt-0.5 text-sm text-[var(--wh-foreground-muted)]">{[...todayParts, t("homesend.today.undo")].join(" ")}</p>
-          </Card>
-        ) : null}
         {sharedNote ? <Alert tone="info">{sharedNote}</Alert> : null}
 
         <HomeSendInbox
@@ -264,28 +256,29 @@ export default async function HomeSendPage({
           purchaseNames={purchaseNames}
           labels={labels}
           shared={shared}
-          welcome={
-            allItems.length === 0 && archivedCount === 0 ? (
-              <HomeSendWelcome whatsapp={whatsappNumber && membership.memberType === "adult" ? { connected: myWhatsApp !== null } : null} labels={labels.channels} />
+          summary={
+            // Today's report, right under the opening sentence (rules 7, 17): what WonderHome did with what was sent.
+            today.added + today.setAside > 0 ? (
+              <Card id="today" className="scroll-mt-20 p-4">
+                <p className="text-sm font-semibold">{today.added > 0 ? t("homesend.today.added", { count: today.added }) : t("homesend.today.nothingAdded")}</p>
+                <p className="mt-0.5 text-sm text-[var(--wh-foreground-muted)]">{[...todayParts, t("homesend.today.undo")].join(" ")}</p>
+              </Card>
             ) : null
           }
         />
 
-        {/* Always mounted, so Restore's own confirmation survives the list emptying; headed only when something is set aside. */}
-        <section className="space-y-2" aria-labelledby={setAside.length > 0 ? "home-send-set-aside" : undefined}>
-          {setAside.length > 0 ? (
-            <>
-              <SectionHeader title={t("homesend.setAside.title")} count={archivedCount} />
-              <p id="home-send-set-aside" className="text-sm text-[var(--wh-foreground-muted)]">{t("homesend.setAside.lede")}</p>
-            </>
-          ) : null}
-          <HomeSendArchived householdId={householdId} isAdmin={isAdmin} viewerMemberId={membership.memberId} viewerType={membership.memberType} items={setAside} reasons={Object.fromEntries(setAsideReasons)} labels={labels} compact total={archivedCount} />
-          {archivedCount > setAside.length ? (
-            <Link href="/home-send?view=archived" className="block text-center text-sm text-[var(--wh-primary)]">
-              {t("homesend.setAside.all", { count: archivedCount })}
-            </Link>
-          ) : null}
-        </section>
+        {/* Set aside, folded away (owner, 2026-11-20: "clutter free"): one quiet row with its count; Restore,
+            Delete and "Delete all set aside" are one tap inside, and the whole list a link beyond. */}
+        <SetAsideFold title={t("homesend.setAside.title")} count={archivedCount}>
+            <div className="space-y-2">
+              <HomeSendArchived householdId={householdId} isAdmin={isAdmin} viewerMemberId={membership.memberId} viewerType={membership.memberType} items={setAside} reasons={Object.fromEntries(setAsideReasons)} labels={labels} compact total={archivedCount} />
+              {archivedCount > setAside.length ? (
+                <Link href="/home-send?view=archived" className="block text-center text-sm text-[var(--wh-primary)]">
+                  {t("homesend.setAside.all", { count: archivedCount })}
+                </Link>
+              ) : null}
+            </div>
+        </SetAsideFold>
 
         <HomeSendChannels
           householdId={householdId}
