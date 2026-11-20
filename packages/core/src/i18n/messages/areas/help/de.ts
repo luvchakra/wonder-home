@@ -383,7 +383,7 @@ export const helpDe: AreaCatalog<typeof helpEn> = {
     "Während des Early Access ist ein Tarifwechsel kostenlos, und es wird nichts berechnet. Preise werden monatlich oder jährlich angezeigt, damit du weißt, was dich später erwartet.",
   "help.guide.plan.body.3":
     "Was nicht zu deinem Tarif gehört, sagt das dort, wo es erscheinen würde, statt eine Schaltfläche anzubieten, die nichts tut. Wenn eine Funktion Teil eines Tests ist, sagen dir das die Einstellungen.",
-  "help.guide.plan.body.4": "Wenn kostenpflichtige Tarife starten, bezahlst du auf der Seite des Zahlungsanbieters – WonderHome sieht deine Karte nie – und Einstellungen → Ihr Tarif → Abrechnung bewahrt jede Zahlung und jede Rechnung auf. Eine Kündigung oder der Wechsel zu einem kleineren Tarif gilt erst zum Ende des bezahlten Zeitraums.",
+  "help.guide.plan.body.4": "Wird ein Tarif kostenpflichtig, öffnet seine Wahl das Zahlungsfenster von Razorpay direkt in WonderHome — UPI, Karte, Netbanking oder Wallet — monatlich oder jährlich, mit automatischer Verlängerung. WonderHome sieht nie deine Karte oder UPI-PIN, und der Tarif wechselt erst, wenn Razorpay die Zahlung bestätigt. Klappt eine Verlängerung nicht, behältst du den Tarif, während Razorpay es erneut versucht und dir einen Zahlungslink mailt. Unter Settings → Your plan → Billing stehen jede Zahlung und jeder Beleg, und “Zum Ende des Zeitraums kündigen” stoppt die nächste Abbuchung: Der Tarif bleibt bis zum Ende des bezahlten Zeitraums. Für einen anderen kostenpflichtigen Tarif kündige zuerst den aktuellen zum Periodenende.",
 
   "help.guide.ai-autonomy.title": "Wie viel WonderHome selbst tun darf",
   "help.guide.ai-autonomy.summary": "Zwei Stufen, je Zuständigkeit festgelegt, und du wählst sie.",

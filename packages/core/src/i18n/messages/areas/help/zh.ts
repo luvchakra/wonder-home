@@ -353,7 +353,7 @@ export const helpZh: AreaCatalog<typeof helpEn> = {
     "设置 → 你的套餐会显示各个套餐、每个包含什么及其每月限额，以及你家这一周期的使用情况。Free 涵盖家庭的基本功能：目标、提醒、家居维护、买菜和文字对话。Pro 增加学校、餐食、账单、家庭时光、健康与健身、语音和天气。Max 增加无需事先询问即可执行、更深入的连接，并且没有每月限额。",
   "help.guide.plan.body.2": "抢先体验期间，切换套餐免费，不收取任何费用。价格按月或按年显示，让你知道以后大概要付多少。",
   "help.guide.plan.body.3": "不在你套餐内的功能，会在它原本出现的地方直接说明，而不是给你一个没有作用的按钮。如果某个功能属于试用，设置里会告诉你。",
-  "help.guide.plan.body.4": "付费套餐开始后，你将在支付服务商自己的页面上付款——WonderHome 从不会看到你的卡——“设置 → 你的套餐 → 账单”会保存每一笔付款和发票。取消或换成更小的套餐，会等到你已付费周期结束时才生效。",
+  "help.guide.plan.body.4": "套餐改为付费后，选择它会直接在 WonderHome 内打开 Razorpay 的付款窗口——UPI、银行卡、网银或钱包——按月或按年，自动续费。WonderHome 从不会看到你的银行卡或 UPI PIN，只有 Razorpay 确认付款后套餐才会变更。如果续费没有成功，你仍保留该套餐，Razorpay 会重试并通过邮件发给你付款链接。Settings → Your plan → Billing 会保存每笔付款和收据，“在周期结束时取消” 会停止下一次扣款：套餐保留到已付费期间结束。要换成另一个付费套餐，请先把当前套餐设为在期末取消。",
 
   "help.guide.ai-autonomy.title": "WonderHome 可以自己做多少",
   "help.guide.ai-autonomy.summary": "两个级别，按每项职责设定，由你来选。",

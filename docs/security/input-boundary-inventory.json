@@ -2,19 +2,19 @@
  "generatedBy": "scripts/lint-input-boundaries.mjs --inventory",
  "totals": {
   "route": {
-   "total": 144,
-   "validated": 70,
+   "total": 147,
+   "validated": 72,
    "partial": 11,
    "not-validated": 1,
    "no-input": 55,
-   "delegated": 7
+   "delegated": 8
   },
   "action": {
-   "total": 311,
-   "validated": 287,
+   "total": 339,
+   "validated": 314,
    "partial": 0,
    "not-validated": 19,
-   "no-input": 5,
+   "no-input": 6,
    "delegated": 0
   }
  },
@@ -492,6 +492,16 @@
   {
    "kind": "action",
    "file": "apps/web/app/(auth)/consent-actions.ts",
+   "id": "apps/web/app/(auth)/consent-actions.ts#forgetLearnedAction",
+   "method": "forgetLearnedAction",
+   "reads": [
+    "arguments"
+   ],
+   "status": "validated"
+  },
+  {
+   "kind": "action",
+   "file": "apps/web/app/(auth)/consent-actions.ts",
    "id": "apps/web/app/(auth)/consent-actions.ts#saveAutoAddPercentAction",
    "method": "saveAutoAddPercentAction",
    "reads": [
@@ -512,8 +522,28 @@
   {
    "kind": "action",
    "file": "apps/web/app/(auth)/consent-actions.ts",
-   "id": "apps/web/app/(auth)/consent-actions.ts#saveDirectAddAction",
-   "method": "saveDirectAddAction",
+   "id": "apps/web/app/(auth)/consent-actions.ts#saveHomeSendTidyAction",
+   "method": "saveHomeSendTidyAction",
+   "reads": [
+    "arguments"
+   ],
+   "status": "validated"
+  },
+  {
+   "kind": "action",
+   "file": "apps/web/app/(auth)/consent-actions.ts",
+   "id": "apps/web/app/(auth)/consent-actions.ts#saveNothingWaitsAction",
+   "method": "saveNothingWaitsAction",
+   "reads": [
+    "arguments"
+   ],
+   "status": "validated"
+  },
+  {
+   "kind": "action",
+   "file": "apps/web/app/(auth)/consent-actions.ts",
+   "id": "apps/web/app/(auth)/consent-actions.ts#saveRecordFirstAction",
+   "method": "saveRecordFirstAction",
    "reads": [
     "arguments"
    ],
@@ -752,6 +782,16 @@
   {
    "kind": "action",
    "file": "apps/web/app/(auth)/finance-actions.ts",
+   "id": "apps/web/app/(auth)/finance-actions.ts#markBillPaidAction",
+   "method": "markBillPaidAction",
+   "reads": [
+    "arguments"
+   ],
+   "status": "validated"
+  },
+  {
+   "kind": "action",
+   "file": "apps/web/app/(auth)/finance-actions.ts",
    "id": "apps/web/app/(auth)/finance-actions.ts#recordAmountAction",
    "method": "recordAmountAction",
    "reads": [
@@ -784,6 +824,16 @@
    "file": "apps/web/app/(auth)/finance-actions.ts",
    "id": "apps/web/app/(auth)/finance-actions.ts#saveBudgetAction",
    "method": "saveBudgetAction",
+   "reads": [
+    "arguments"
+   ],
+   "status": "validated"
+  },
+  {
+   "kind": "action",
+   "file": "apps/web/app/(auth)/finance-actions.ts",
+   "id": "apps/web/app/(auth)/finance-actions.ts#undoBillPaidAction",
+   "method": "undoBillPaidAction",
    "reads": [
     "arguments"
    ],
@@ -1562,6 +1612,16 @@
   {
    "kind": "action",
    "file": "apps/web/app/(auth)/home-send-actions.ts",
+   "id": "apps/web/app/(auth)/home-send-actions.ts#confirmHomeSendEntryAction",
+   "method": "confirmHomeSendEntryAction",
+   "reads": [
+    "arguments"
+   ],
+   "status": "validated"
+  },
+  {
+   "kind": "action",
+   "file": "apps/web/app/(auth)/home-send-actions.ts",
    "id": "apps/web/app/(auth)/home-send-actions.ts#confirmTranscriptAction",
    "method": "confirmTranscriptAction",
    "reads": [
@@ -1641,9 +1701,99 @@
   },
   {
    "kind": "action",
+   "file": "apps/web/app/(auth)/home-send-bulk-actions.ts",
+   "id": "apps/web/app/(auth)/home-send-bulk-actions.ts#addSelectedHomeSendItemsAction",
+   "method": "addSelectedHomeSendItemsAction",
+   "reads": [
+    "arguments"
+   ],
+   "status": "validated"
+  },
+  {
+   "kind": "action",
+   "file": "apps/web/app/(auth)/home-send-bulk-actions.ts",
+   "id": "apps/web/app/(auth)/home-send-bulk-actions.ts#restoreHomeSendItemAction",
+   "method": "restoreHomeSendItemAction",
+   "reads": [
+    "arguments"
+   ],
+   "status": "validated"
+  },
+  {
+   "kind": "action",
+   "file": "apps/web/app/(auth)/home-send-bulk-actions.ts",
+   "id": "apps/web/app/(auth)/home-send-bulk-actions.ts#retryHomeSendItemAction",
+   "method": "retryHomeSendItemAction",
+   "reads": [
+    "arguments"
+   ],
+   "status": "validated"
+  },
+  {
+   "kind": "action",
+   "file": "apps/web/app/(auth)/home-send-clear-actions.ts",
+   "id": "apps/web/app/(auth)/home-send-clear-actions.ts#addAllAnywayHomeSendAction",
+   "method": "addAllAnywayHomeSendAction",
+   "reads": [
+    "arguments"
+   ],
+   "status": "validated"
+  },
+  {
+   "kind": "action",
+   "file": "apps/web/app/(auth)/home-send-clear-actions.ts",
+   "id": "apps/web/app/(auth)/home-send-clear-actions.ts#archiveAllHomeSendAction",
+   "method": "archiveAllHomeSendAction",
+   "reads": [
+    "arguments"
+   ],
+   "status": "validated"
+  },
+  {
+   "kind": "action",
+   "file": "apps/web/app/(auth)/home-send-clear-actions.ts",
+   "id": "apps/web/app/(auth)/home-send-clear-actions.ts#archiveSelectedHomeSendAction",
+   "method": "archiveSelectedHomeSendAction",
+   "reads": [
+    "arguments"
+   ],
+   "status": "validated"
+  },
+  {
+   "kind": "action",
+   "file": "apps/web/app/(auth)/home-send-clear-actions.ts",
+   "id": "apps/web/app/(auth)/home-send-clear-actions.ts#restoreArchivedHomeSendAction",
+   "method": "restoreArchivedHomeSendAction",
+   "reads": [
+    "arguments"
+   ],
+   "status": "validated"
+  },
+  {
+   "kind": "action",
    "file": "apps/web/app/(auth)/home-send-plan-actions.ts",
    "id": "apps/web/app/(auth)/home-send-plan-actions.ts#applyDocumentPlanAction",
    "method": "applyDocumentPlanAction",
+   "reads": [
+    "arguments"
+   ],
+   "status": "validated"
+  },
+  {
+   "kind": "action",
+   "file": "apps/web/app/(auth)/home-send-remove-actions.ts",
+   "id": "apps/web/app/(auth)/home-send-remove-actions.ts#deleteArchivedHomeSendAction",
+   "method": "deleteArchivedHomeSendAction",
+   "reads": [
+    "arguments"
+   ],
+   "status": "validated"
+  },
+  {
+   "kind": "action",
+   "file": "apps/web/app/(auth)/home-send-remove-actions.ts",
+   "id": "apps/web/app/(auth)/home-send-remove-actions.ts#removeHomeSendItemsAction",
+   "method": "removeHomeSendItemsAction",
    "reads": [
     "arguments"
    ],
@@ -2130,6 +2280,16 @@
    "file": "apps/web/app/(auth)/meal-template-actions.ts",
    "id": "apps/web/app/(auth)/meal-template-actions.ts#updateTemplateOptionAction",
    "method": "updateTemplateOptionAction",
+   "reads": [
+    "arguments"
+   ],
+   "status": "validated"
+  },
+  {
+   "kind": "action",
+   "file": "apps/web/app/(auth)/needs-you-actions.ts",
+   "id": "apps/web/app/(auth)/needs-you-actions.ts#answerNeedsYouAction",
+   "method": "answerNeedsYouAction",
    "reads": [
     "arguments"
    ],
@@ -2748,6 +2908,76 @@
    "file": "apps/web/app/(auth)/school-actions.ts",
    "id": "apps/web/app/(auth)/school-actions.ts#updateSchoolPortalCredentialsAction",
    "method": "updateSchoolPortalCredentialsAction",
+   "reads": [
+    "arguments"
+   ],
+   "status": "validated"
+  },
+  {
+   "kind": "action",
+   "file": "apps/web/app/(auth)/trivia-actions.ts",
+   "id": "apps/web/app/(auth)/trivia-actions.ts#addTriviaTopicAction",
+   "method": "addTriviaTopicAction",
+   "reads": [
+    "arguments"
+   ],
+   "status": "validated"
+  },
+  {
+   "kind": "action",
+   "file": "apps/web/app/(auth)/trivia-actions.ts",
+   "id": "apps/web/app/(auth)/trivia-actions.ts#removeTriviaTopicAction",
+   "method": "removeTriviaTopicAction",
+   "reads": [
+    "arguments"
+   ],
+   "status": "validated"
+  },
+  {
+   "kind": "action",
+   "file": "apps/web/app/(auth)/trivia-actions.ts",
+   "id": "apps/web/app/(auth)/trivia-actions.ts#triviaAnswerAction",
+   "method": "triviaAnswerAction",
+   "reads": [
+    "arguments"
+   ],
+   "status": "validated"
+  },
+  {
+   "kind": "action",
+   "file": "apps/web/app/(auth)/trivia-actions.ts",
+   "id": "apps/web/app/(auth)/trivia-actions.ts#triviaEnabledAction",
+   "method": "triviaEnabledAction",
+   "reads": [
+    "arguments"
+   ],
+   "status": "validated"
+  },
+  {
+   "kind": "action",
+   "file": "apps/web/app/(auth)/trivia-actions.ts",
+   "id": "apps/web/app/(auth)/trivia-actions.ts#triviaLevelAction",
+   "method": "triviaLevelAction",
+   "reads": [
+    "arguments"
+   ],
+   "status": "validated"
+  },
+  {
+   "kind": "action",
+   "file": "apps/web/app/(auth)/trivia-actions.ts",
+   "id": "apps/web/app/(auth)/trivia-actions.ts#triviaNextAction",
+   "method": "triviaNextAction",
+   "reads": [
+    "arguments"
+   ],
+   "status": "validated"
+  },
+  {
+   "kind": "action",
+   "file": "apps/web/app/(auth)/trivia-actions.ts",
+   "id": "apps/web/app/(auth)/trivia-actions.ts#triviaShownAction",
+   "method": "triviaShownAction",
    "reads": [
     "arguments"
    ],
@@ -4058,6 +4288,26 @@
   },
   {
    "kind": "route",
+   "file": "apps/web/app/api/v1/platform-admin/plans/[planKey]/route.ts",
+   "id": "apps/web/app/api/v1/platform-admin/plans/[planKey]/route.ts#PATCH",
+   "method": "PATCH",
+   "reads": [
+    "body"
+   ],
+   "status": "validated"
+  },
+  {
+   "kind": "route",
+   "file": "apps/web/app/api/v1/platform-admin/prices/[priceId]/link/route.ts",
+   "id": "apps/web/app/api/v1/platform-admin/prices/[priceId]/link/route.ts#POST",
+   "method": "POST",
+   "reads": [
+    "body"
+   ],
+   "status": "validated"
+  },
+  {
+   "kind": "route",
    "file": "apps/web/app/api/v1/platform-admin/privacy-requests/[requestId]/route.ts",
    "id": "apps/web/app/api/v1/platform-admin/privacy-requests/[requestId]/route.ts#PATCH",
    "method": "PATCH",
@@ -4131,6 +4381,16 @@
    "method": "POST",
    "reads": [],
    "status": "no-input"
+  },
+  {
+   "kind": "route",
+   "file": "apps/web/app/api/v1/platform/homesend-tidy/route.ts",
+   "id": "apps/web/app/api/v1/platform/homesend-tidy/route.ts#POST",
+   "method": "POST",
+   "reads": [
+    "header"
+   ],
+   "status": "delegated"
   },
   {
    "kind": "route",
@@ -4431,6 +4691,54 @@
    "method": "testCareersConnectionAction",
    "reads": [],
    "status": "no-input"
+  },
+  {
+   "kind": "action",
+   "file": "apps/web/app/platform-admin/landing/actions.ts",
+   "id": "apps/web/app/platform-admin/landing/actions.ts#saveLandingVariantAction",
+   "method": "saveLandingVariantAction",
+   "reads": [
+    "arguments"
+   ],
+   "status": "validated"
+  },
+  {
+   "kind": "action",
+   "file": "apps/web/app/platform-admin/performance/actions.ts",
+   "id": "apps/web/app/platform-admin/performance/actions.ts#runPerformanceAction",
+   "method": "runPerformanceAction",
+   "reads": [
+    "arguments"
+   ],
+   "status": "validated"
+  },
+  {
+   "kind": "action",
+   "file": "apps/web/app/platform-admin/settings-actions.ts",
+   "id": "apps/web/app/platform-admin/settings-actions.ts#clearSettingAction",
+   "method": "clearSettingAction",
+   "reads": [
+    "arguments"
+   ],
+   "status": "validated"
+  },
+  {
+   "kind": "action",
+   "file": "apps/web/app/platform-admin/settings-actions.ts",
+   "id": "apps/web/app/platform-admin/settings-actions.ts#moveAllFromVercelAction",
+   "method": "moveAllFromVercelAction",
+   "reads": [],
+   "status": "no-input"
+  },
+  {
+   "kind": "action",
+   "file": "apps/web/app/platform-admin/settings-actions.ts",
+   "id": "apps/web/app/platform-admin/settings-actions.ts#saveSettingAction",
+   "method": "saveSettingAction",
+   "reads": [
+    "arguments"
+   ],
+   "status": "validated"
   },
   {
    "kind": "action",

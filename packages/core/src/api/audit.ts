@@ -66,6 +66,7 @@ export const AUDIT_EVENTS = [
   "developer_key.revoked",
   "support.access_granted",
   "platform.plan_updated",
+  "platform.price_linked",
   "feature_flag.changed",
   "homesend.intake_received",
   "homesend.security_rejected",

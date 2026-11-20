@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { createRazorpayProvider, eventFromRazorpay, razorpayFromEnv, verifyRazorpaySignature } from "./razorpay";
+import { createRazorpayProvider, eventFromRazorpay, razorpayFromEnv, razorpayPlan, verifyRazorpaySignature } from "./razorpay";
 import { hmacHex, WebhookSignatureError } from "./signature";
 
 /** Story 20-009: Razorpay behind the same billing port as Stripe. */
@@ -124,6 +124,9 @@ describe("the server makes every call, in Razorpay's own units", () => {
     });
     const checkout = await provider.createCheckout({ intentId: "i-1", householdId: HOUSEHOLD, planKey: "pro", successUrl: "a", cancelUrl: "b", providerPlanRef: "plan_pro_inr_year", interval: "year", currency: "INR" });
     expect(checkout).toMatchObject({ providerSessionId: "sub_N", url: "https://rzp.io/i/abc" });
+    // The browser opens Razorpay Checkout in place with the publishable key id only.
+    expect(checkout.client).toEqual({ kind: "razorpay", keyId: "rzp_test_key", subscriptionId: "sub_N" });
+    expect(JSON.stringify(checkout.client)).not.toContain("secret");
     const sent = JSON.parse(calls[0]!.init.body as string);
     expect(sent).toMatchObject({ plan_id: "plan_pro_inr_year", total_count: 10, notes: { household_id: HOUSEHOLD, plan_key: "pro", intent_id: "i-1", interval: "year" } });
     // The secret is only ever in the server's Authorization header.
@@ -155,5 +158,60 @@ describe("the server makes every call, in Razorpay's own units", () => {
     expect(razorpayFromEnv(full)?.live).toBe(true);
     expect(razorpayFromEnv({ ...full, RAZORPAY_WEBHOOK_SECRET: "" })).toBeNull();
     expect(razorpayFromEnv({ ...full, RAZORPAY_KEY_SECRET: undefined })).toBeNull();
+  });
+});
+
+describe("each charge leaves a receipt line", () => {
+  it("a charge names Razorpay's invoice, which becomes the household's paid invoice for that period", () => {
+    for (const paid_count of [1, 3]) {
+      const read = eventFromRazorpay(event("subscription.charged", { subscription: { entity: subscription({ paid_count }) }, payment: { entity: payment({ invoice_id: "inv_I1" }) } }), `evt_c${paid_count}`);
+      expect(read?.invoice).toMatchObject({ providerInvoiceId: "inv_I1", amount: 299, currency: "INR", status: "paid" });
+      expect(read?.invoice?.periodEnd).toEqual(new Date((CREATED + 30 * 86400) * 1000));
+    }
+    // No invoice id, no invented one.
+    expect(eventFromRazorpay(event("subscription.charged", { subscription: { entity: subscription() }, payment: { entity: payment() } }), "evt_c")?.invoice).toBeNull();
+  });
+});
+
+describe("Razorpay plans are made from our prices", () => {
+  const plansApi = (reply: Record<string, unknown>, status = 200) => {
+    const calls: { url: string; init?: RequestInit }[] = [];
+    const provider = createRazorpayProvider({
+      keyId: "rzp_test_key",
+      keySecret: "secret",
+      webhookSecret: SECRET,
+      fetch: (async (url: string, init?: RequestInit) => {
+        calls.push({ url, init });
+        return new Response(JSON.stringify(reply), { status });
+      }) as unknown as typeof fetch,
+    });
+    return { provider, calls };
+  };
+
+  it("creates a monthly or yearly plan in paise from our rupee price, with our price id in its notes", async () => {
+    const { provider, calls } = plansApi({ id: "plan_N1", period: "yearly", interval: 1, item: { amount: 287000, currency: "INR" } });
+    const plan = await provider.createPlan!({ priceId: "price-1", name: "WonderHome Pro (yearly)", interval: "year", amount: 2870, currency: "INR" });
+    expect(plan).toEqual({ ref: "plan_N1", interval: "year", amount: 2870, currency: "INR" });
+    expect(calls[0]!.url).toMatch(/\/v1\/plans$/);
+    expect(JSON.parse(calls[0]!.init!.body as string)).toEqual({ period: "yearly", interval: 1, item: { name: "WonderHome Pro (yearly)", amount: 287000, currency: "INR" }, notes: { plan_price_id: "price-1" } });
+  });
+
+  it("reads a pasted plan back, and refuses an id that isn't a Razorpay plan without asking", async () => {
+    const { provider, calls } = plansApi({ id: "plan_X", period: "monthly", interval: 1, item: { amount: 29950, currency: "INR" } });
+    expect(await provider.fetchPlan!("plan_X")).toEqual({ ref: "plan_X", interval: "month", amount: 299.5, currency: "INR" });
+    expect(await provider.fetchPlan!("../payments")).toBeNull();
+    expect(calls).toHaveLength(1);
+    expect(await plansApi({}, 400).provider.fetchPlan!("plan_gone")).toBeNull();
+  });
+
+  it("a plan that bills every two months, or weekly, is not one we can link", () => {
+    expect(razorpayPlan({ id: "plan_A", period: "monthly", interval: 2, item: { amount: 100, currency: "INR" } })).toBeNull();
+    expect(razorpayPlan({ id: "plan_B", period: "weekly", interval: 1, item: { amount: 100, currency: "INR" } })).toBeNull();
+  });
+
+  it("reopens an open checkout in place only for a Razorpay subscription id", () => {
+    const { provider } = plansApi({});
+    expect(provider.checkoutClient!("sub_Q1")).toEqual({ kind: "razorpay", keyId: "rzp_test_key", subscriptionId: "sub_Q1" });
+    expect(provider.checkoutClient!("cs_test_stripe")).toBeNull();
   });
 });

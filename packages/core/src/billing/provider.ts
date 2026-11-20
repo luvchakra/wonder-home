@@ -145,7 +145,17 @@ export type CheckoutRequest = {
   customerEmail?: string | null;
 };
 
-export type Checkout = { providerSessionId: string; url: string; expiresAt: Date | null };
+/**
+ * What the browser needs to open the provider's own checkout in place
+ * (Razorpay Checkout with a subscription id). Public values only: Razorpay's
+ * key id is publishable by design; the secret never leaves the server.
+ */
+export type CheckoutClient = { kind: "razorpay"; keyId: string; subscriptionId: string };
+
+export type Checkout = { providerSessionId: string; url: string; expiresAt: Date | null; client?: CheckoutClient | null };
+
+/** A provider's own plan, read back so we can check it matches one of our prices before linking it. */
+export type ProviderPlan = { ref: string; interval: BillingInterval; amount: number; currency: string };
 
 export type BillingProvider = {
   readonly name: string;
@@ -180,6 +190,16 @@ export type BillingProvider = {
    * anything; the ledger still moves only on a verified event.
    */
   fetchPayment?(providerPaymentId: string): Promise<RemotePayment | null>;
+  /**
+   * Creates the provider's plan for one of our prices (Platform admin → Plans
+   * & billing). The amount is ours, converted at the adapter; the provider's
+   * plan is configuration, never the source of truth.
+   */
+  createPlan?(input: { priceId: string; name: string; interval: BillingInterval; amount: number; currency: string }): Promise<ProviderPlan>;
+  /** Reads one of the provider's plans back, so a pasted id is linked only when it bills exactly our price. */
+  fetchPlan?(ref: string): Promise<ProviderPlan | null>;
+  /** What the browser needs to reopen an existing checkout in place, if this provider has one. */
+  checkoutClient?(providerSessionId: string): CheckoutClient | null;
 };
 
 /** A payment as the provider reports it, in major units — what reconciliation compares the ledger with. */

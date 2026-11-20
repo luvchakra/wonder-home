@@ -22,7 +22,7 @@ export type PlanEditorWords = { early: string; perMonth: string; perYear: string
 const fieldClass =
   "w-full min-w-0 rounded-[var(--wh-radius-sm)] border border-[var(--wh-border)] bg-[var(--wh-surface)] px-2 py-1 text-sm";
 
-export function PlanEditor({ plan, words, canEdit }: { plan: PlanSnapshot; words: PlanEditorWords; canEdit: boolean }) {
+export function PlanEditor({ plan, words, canEdit, allLinked = false }: { plan: PlanSnapshot; words: PlanEditorWords; canEdit: boolean; allLinked?: boolean }) {
   const router = useRouter();
   const [editing, setEditing] = useState(false);
   const [previewing, setPreviewing] = useState(false);
@@ -30,6 +30,7 @@ export function PlanEditor({ plan, words, canEdit }: { plan: PlanSnapshot; words
   const [description, setDescription] = useState(plan.description ?? "");
   const [monthly, setMonthly] = useState(plan.monthly === null ? "" : String(plan.monthly));
   const [yearly, setYearly] = useState(plan.yearly === null ? "" : String(plan.yearly));
+  const [paid, setPaid] = useState(plan.requiresPayment);
   const [features, setFeatures] = useState(plan.features.map((row) => ({ ...row, limitText: row.limit === null ? "" : String(row.limit) })));
   const [lines, setLines] = useState<string[] | null>(null);
   const [busy, setBusy] = useState(false);
@@ -45,7 +46,7 @@ export function PlanEditor({ plan, words, canEdit }: { plan: PlanSnapshot; words
 
   // The same fields the member card reads, from what is typed.
   const shown = editing ? { monthly: monthlyAmount, yearly: yearlyAmount } : { monthly: plan.monthly, yearly: plan.yearly };
-  const badge = planBadge({ requiresPayment: plan.requiresPayment, ...shown });
+  const badge = planBadge({ requiresPayment: editing ? paid : plan.requiresPayment, ...shown });
   const priceOf = (amount: number | null, template: string) => (amount === null ? null : template.replace("{price}", formatPlanPrice(amount)));
   const priceText = priceOf(shown.monthly, words.perMonth);
   const yearlyText = priceOf(shown.yearly, words.perYear);
@@ -59,6 +60,7 @@ export function PlanEditor({ plan, words, canEdit }: { plan: PlanSnapshot; words
       monthly: monthlyAmount,
       yearly: yearlyAmount,
       features: features.map((row) => ({ featureKey: row.featureKey, enabled: row.enabled, limit: row.limitText.trim() === "" ? null : Number(row.limitText) })),
+      requiresPayment: paid,
   };
   const memberFeatures: FeatureLine[] = featureLines(
     features.map((row) => ({ featureKey: row.featureKey, enabled: row.enabled, limit: row.limitText.trim() === "" ? null : Number(row.limitText) || null, period: row.period === "forever" && row.limitText.trim() !== "" ? "month" : row.limitText.trim() === "" ? "forever" : row.period })),
@@ -172,6 +174,22 @@ export function PlanEditor({ plan, words, canEdit }: { plan: PlanSnapshot; words
               }
         }
       />
+
+      {editing && !previewing ? (
+        <div className="space-y-1 rounded-[var(--wh-radius-sm)] bg-[var(--wh-surface-muted)] p-3 text-sm">
+          <label className="flex items-start gap-2">
+            <input type="checkbox" className="mt-1" checked={paid} disabled={!plan.requiresPayment && !allLinked} onChange={(event) => setPaid(event.target.checked)} />
+            <span className="min-w-0">
+              <span className="block font-semibold">Members pay for this plan</span>
+              <span className="block text-xs text-[var(--wh-foreground-muted)]">
+                {plan.requiresPayment || allLinked
+                  ? "Turned on, choosing this plan opens the payment page, and a household moves to it only after the payment is confirmed. Turned off, it is free during early access."
+                  : "Link every price of this plan under Payment provider plans first."}
+              </span>
+            </span>
+          </label>
+        </div>
+      ) : null}
 
       {error ? <Alert>{error}</Alert> : null}
       {saved ? (

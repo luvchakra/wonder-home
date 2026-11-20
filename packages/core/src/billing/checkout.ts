@@ -4,7 +4,7 @@ import { auditChange } from "../api/audit";
 import { ApiError } from "../api/errors";
 import { paymentNoticeFor, sendPaymentNotices, type PaymentNotice } from "./notices";
 import { findPlanPrice, providerPlansFor, type PlanPrice } from "./prices";
-import { applyBillingEvent, type BillingEvent, type BillingProvider, type PaymentProviderName, type PaymentStatus, type SubscriptionState } from "./provider";
+import { applyBillingEvent, type BillingEvent, type BillingProvider, type CheckoutClient, type PaymentProviderName, type PaymentStatus, type SubscriptionState } from "./provider";
 import { billingProvidersFromEnv, routingConfigFromEnv, selectPaymentProvider } from "./router";
 import { nextPaymentStatus, statusAfterRefunds } from "./states";
 import { runtimeEnv } from "../platform/settings/runtime-env";
@@ -32,7 +32,7 @@ export function billingProviderFromEnv(env: Record<string, string | undefined> =
   return billingProvidersFromEnv(env).find((provider) => provider.name === "stripe") ?? null;
 }
 
-export type CheckoutStart = { intentId: string; url: string; reused: boolean };
+export type CheckoutStart = { intentId: string; url: string; reused: boolean; client?: CheckoutClient | null };
 
 /**
  * Opens (or reopens) the checkout for moving to a paid plan.
@@ -72,7 +72,8 @@ export async function startCheckout(
   }
   // A link with no expiry (Razorpay's) is reused while the intent stays open.
   if (intent && intent.url && (!intent.expiresAt || intent.expiresAt.getTime() > now.getTime() + 60_000)) {
-    return { intentId: intent.id, url: intent.url, reused: true };
+    const client = intent.sessionId && input.provider.checkoutClient ? input.provider.checkoutClient(intent.sessionId) : null;
+    return { intentId: intent.id, url: intent.url, reused: true, client };
   }
   if (intent && intent.expiresAt && intent.expiresAt.getTime() <= now.getTime()) {
     // An expired checkout is closed, and the next attempt is a new intent.
@@ -100,7 +101,7 @@ export async function startCheckout(
       if (error.code === "23505") intent = await openIntent(supabase, input.householdId, input.toPlanKey);
       else throw new Error(`startCheckout failed: ${error.code ?? "unknown"}`);
     } else {
-      intent = { id: (data as Row).id as string, url: null, expiresAt: null, provider: input.provider.name, priceId: input.price?.id ?? null };
+      intent = { id: (data as Row).id as string, url: null, expiresAt: null, provider: input.provider.name, priceId: input.price?.id ?? null, sessionId: null };
     }
   }
   if (!intent) throw new Error("startCheckout failed: no intent");
@@ -124,7 +125,7 @@ export async function startCheckout(
     .eq("id", intent.id);
   if (updateError) throw new Error(`startCheckout failed: ${updateError.code ?? "unknown"}`);
 
-  return { intentId: intent.id, url: checkout.url, reused: false };
+  return { intentId: intent.id, url: checkout.url, reused: false, client: checkout.client ?? null };
 }
 
 export type PricedCheckoutStart = CheckoutStart & { provider: PaymentProviderName };
@@ -157,6 +158,7 @@ export async function startPricedCheckout(
 ): Promise<PricedCheckoutStart> {
   const price = await findPlanPrice(supabase, input.priceId, input.toPlanKey);
   if (!price) throw ApiError.conflict("That price isn't available. Nothing has changed.");
+  await assertNoRenewingSubscription(admin, input.householdId);
   const refs = await providerPlansFor(admin, price.id);
   const live = billingProvidersFromEnv(input.env);
   const eligible = live.filter((provider) => refs[provider.name as PaymentProviderName]).map((provider) => provider.name as PaymentProviderName);
@@ -186,7 +188,7 @@ export async function startPricedCheckout(
 async function openIntent(supabase: SupabaseClient, householdId: string, planKey: string) {
   const { data, error } = await supabase
     .from("billing_intents")
-    .select("id, checkout_url, expires_at, provider, plan_price_id")
+    .select("id, checkout_url, expires_at, provider, plan_price_id, provider_session_id")
     .eq("household_id", householdId)
     .eq("plan_key", planKey)
     .eq("status", "open")
@@ -200,7 +202,27 @@ async function openIntent(supabase: SupabaseClient, householdId: string, planKey
     expiresAt: row.expires_at ? new Date(row.expires_at as string) : null,
     provider: (row.provider as string | undefined) ?? null,
     priceId: (row.plan_price_id as string | null | undefined) ?? null,
+    sessionId: (row.provider_session_id as string | null | undefined) ?? null,
   };
+}
+
+/**
+ * A household already paying a subscription that will renew cannot open a
+ * second one: two live subscriptions would both charge. It ends the current
+ * one at the period's end first (Settings → Your plan), and can
+ * then choose the new plan, which replaces it.
+ */
+export async function assertNoRenewingSubscription(admin: SupabaseClient, householdId: string): Promise<void> {
+  const { data, error } = await admin
+    .from("household_subscriptions")
+    .select("plan_key, external_ref, provider, cancel_at_period_end, status")
+    .eq("household_id", householdId)
+    .maybeSingle();
+  if (error) throw new Error(`assertNoRenewingSubscription failed: ${error.code ?? "unknown"}`);
+  const row = data as Row | null;
+  if (row?.external_ref && row.provider && row.cancel_at_period_end !== true) {
+    throw ApiError.conflict("Your current paid plan is still renewing. Choose “Cancel at the end of the period” on Your plan first, then choose the new plan. Nothing has changed.");
+  }
 }
 
 export type BillingEventResult =

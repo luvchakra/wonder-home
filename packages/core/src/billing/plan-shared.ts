@@ -43,6 +43,8 @@ export type PlanEdit = {
   monthly: number | null;
   yearly: number | null;
   features: { featureKey: string; enabled: boolean; limit: number | null }[];
+  /** Whether members pay for this plan through a checkout. Left out, it stays as it is. */
+  requiresPayment?: boolean;
 };
 
 export type PlanBadge = "free" | "earlyAccess" | "paid";

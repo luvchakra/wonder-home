@@ -42,6 +42,17 @@ export function diffPlan(before: PlanSnapshot, edit: PlanEdit): PlanChange[] {
   if (edit.monthly !== before.monthly) changes.push({ field: "price.month", from: before.monthly, to: edit.monthly, line: priceLine("month", before.monthly, edit.monthly) });
   if (edit.yearly !== before.yearly) changes.push({ field: "price.year", from: before.yearly, to: edit.yearly, line: priceLine("year", before.yearly, edit.yearly) });
 
+  if (edit.requiresPayment !== undefined && edit.requiresPayment !== before.requiresPayment) {
+    changes.push({
+      field: "requires_payment",
+      from: before.requiresPayment,
+      to: edit.requiresPayment,
+      line: edit.requiresPayment
+        ? `${plan} becomes a paid plan: a household moves to it only after the payment provider confirms a payment. Households already on ${plan} stay on it, unbilled, until they change plan.`
+        : `${plan} is free to switch to again ("Free during early access"). Households already paying keep paying until they cancel; nobody new is charged.`,
+    });
+  }
+
   for (const wanted of edit.features) {
     const current = before.features.find((row) => row.featureKey === wanted.featureKey);
     if (!current) continue;
@@ -74,6 +85,7 @@ export const planEditSchema = z.object({
   features: z
     .array(z.object({ featureKey: z.string().regex(/^[a-z][a-z0-9_.]{1,60}$/), enabled: z.boolean(), limit: z.number().int().min(1).max(1_000_000_000).nullable() }))
     .max(60),
+  requiresPayment: z.boolean().optional(),
 });
 
 export type { PlanEdit, PlanSnapshot } from "./plan-shared";
@@ -121,7 +133,7 @@ export async function savePlan(
   actor: PlatformAdmin,
   planKey: string,
   edit: PlanEdit,
-  options: { dryRun?: boolean; requestId?: string } = {},
+  options: { dryRun?: boolean; requestId?: string; liveProviders?: readonly string[] } = {},
 ): Promise<{ changed: boolean; changes: PlanChange[] }> {
   if (actor.role !== "owner") throw ApiError.forbidden("Only the platform owner can edit a plan.");
   const before = (await loadPlanSnapshots(admin)).find((plan) => plan.key === planKey);
@@ -131,8 +143,24 @@ export async function savePlan(
   const changes = diffPlan(before, edit);
   if (changes.length === 0 || options.dryRun) return { changed: false, changes };
 
+  // A plan is marked paid only once every one of its prices can be bought:
+  // otherwise members would see a plan they can neither pay for nor switch to.
+  const paidChange = changes.find((change) => change.field === "requires_payment");
+  if (paidChange?.to === true) {
+    const live = options.liveProviders ?? [];
+    const priced = changes.some((change) => change.field.startsWith("price.")) ? null : await unlinkedPrices(admin, planKey, live);
+    if (priced === null) throw ApiError.conflict("Save the new prices and link them to the payment provider first, then mark the plan paid. Nothing has changed.");
+    if (priced.total === 0) throw ApiError.conflict("A paid plan needs a price. Nothing has changed.");
+    if (priced.unlinked > 0) throw ApiError.conflict("Link every price of this plan to a live payment provider first (Payment provider plans, below). Nothing has changed.");
+  }
+
   if (changes.some((change) => change.field === "name" || change.field === "description")) {
     const { error } = await admin.from("plans").update({ name: edit.name, description: edit.description }).eq("key", planKey);
+    if (error) throw new Error(`savePlan failed: ${error.code ?? "unknown"}`);
+  }
+
+  if (paidChange) {
+    const { error } = await admin.from("plans").update({ requires_payment: paidChange.to }).eq("key", planKey);
     if (error) throw new Error(`savePlan failed: ${error.code ?? "unknown"}`);
   }
 
@@ -177,3 +205,15 @@ export async function savePlan(
   return { changed: true, changes };
 }
 
+
+/** How many of a plan's active prices no live provider has mapped. */
+async function unlinkedPrices(admin: SupabaseClient, planKey: string, liveProviders: readonly string[]): Promise<{ total: number; unlinked: number }> {
+  const prices = await admin.from("plan_prices").select("id").eq("plan_key", planKey).eq("active", true).limit(20);
+  if (prices.error) throw new Error(`savePlan failed: ${prices.error.code ?? "unknown"}`);
+  const ids = ((prices.data ?? []) as { id: string }[]).map((row) => row.id);
+  if (ids.length === 0 || liveProviders.length === 0) return { total: ids.length, unlinked: ids.length };
+  const maps = await admin.from("payment_provider_plans").select("plan_price_id").eq("active", true).in("provider", [...liveProviders]).in("plan_price_id", ids);
+  if (maps.error) throw new Error(`savePlan failed: ${maps.error.code ?? "unknown"}`);
+  const linked = new Set(((maps.data ?? []) as { plan_price_id: string }[]).map((row) => row.plan_price_id));
+  return { total: ids.length, unlinked: ids.filter((id) => !linked.has(id)).length };
+}

@@ -415,7 +415,7 @@ export const helpEn = {
     "During early access, switching plans is free and nothing is charged. Prices are shown monthly or yearly so you know what to expect later.",
   "help.guide.plan.body.3":
     "Something that is not part of your plan says so where it would appear, rather than offering a button that does nothing. If a feature is part of a trial, Settings tells you.",
-  "help.guide.plan.body.4": "When paid plans begin, you will pay on the payment provider's own page — WonderHome never sees your card — and Settings → Your plan → Billing keeps each payment and invoice. A cancellation or a move to a smaller plan waits until the end of the period you paid for.",
+  "help.guide.plan.body.4": "When a plan becomes paid, choosing it opens Razorpay's payment window right inside WonderHome — UPI, cards, netbanking or wallets — monthly or yearly, renewing on its own. WonderHome never sees your card or UPI PIN, and the plan changes only once Razorpay confirms the payment. If a renewal doesn't go through, you keep the plan while Razorpay retries and emails you a link to pay. Settings → Your plan → Billing keeps each payment and receipt, and “Cancel at the end of the period” stops the next charge: the plan stays until the period you paid for ends. To move to another paid plan, cancel the current one at period end first.",
 
   // How much WonderHome may do on its own
   "help.guide.ai-autonomy.title": "How much WonderHome may do on its own",
