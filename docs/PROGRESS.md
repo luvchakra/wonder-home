@@ -11,11 +11,11 @@ in `docs/progress/`; for the running log of what changed when, `tracking/PROGRES
 
 ## The whole picture
 
-**436 of 481 stories done — 90.6%**
+**437 of 482 stories done — 90.7%**
 
 | Status | Stories |
 |---|---:|
-| Done | 436 |
+| Done | 437 |
 | In Progress | 14 |
 | Blocked | 1 |
 | Not Started | 26 |
@@ -29,7 +29,7 @@ in `docs/progress/`; for the running log of what changed when, `tracking/PROGRES
 | 01 Identity & Family Accounts | `█████████░` | 14 | 15 | 1 in progress |
 | 02 Household Configuration & Playbook | `██████████` | 9 | 9 | — |
 | 03 Outcome & Routine Engine | `██████████` | 8 | 8 | — |
-| 04 Conversation, Voice & Text | `█████████░` | 29 | 31 | 1 in progress, 1 not started |
+| 04 Conversation, Voice & Text | `█████████░` | 30 | 32 | 1 in progress, 1 not started |
 | 05 Household Certification & Understanding | `██████████` | 12 | 12 | — |
 | 06 Actionable Notification Engine | `██████████` | 8 | 8 | — |
 | 07 Househelper & Home Operations | `██████████` | 10 | 10 | — |
@@ -184,7 +184,7 @@ in `docs/progress/`; for the running log of what changed when, `tracking/PROGRES
 
 ### 04 — Conversation, Voice & Text
 
-29 of 31 done `█████████░`
+30 of 32 done `█████████░`
 
 | Story | Priority | Status | Notes |
 |---|---|---|---|
@@ -219,6 +219,7 @@ in `docs/progress/`; for the running log of what changed when, `tracking/PROGRES
 | `04-029` "Tomorrow" just after midnight is the day you wake up to | P0 | Done | The owner, 2026-10-21 ("tomorrow should be 21st, why it's showing 22" — asked at 12:02 am). `conversation/temporal.ts`'s `tomorrowIn`: before 4 am (`SMALL_HOURS_END_MINUTE`) "tomorrow" is the calendar day just begun, used by `resolveTemporal` (actions), `homebrain/question.ts`'s `timeWindow` (questions, label names the date taken) and `context/resolution.ts`. Tests: temporal small hours 2, executor timezone test moved to 4:30 am to keep its intent; 3,896 unit tests pass. |
 | `04-030` Ask me about family (AMAF) | P1 | Done | The owner, 2026-10-20. "Ask me about my family" (or the HomeTalk chip) starts a rules-only interview, one question at a time, about what the household does not have yet: allergies, birthdays and anniversaries, school, class and hours, diet, address, work, relationships, phones, activities, duty owners, helper days, pets and vets, likes and dislikes, bills (`packages/core/src/amaf/`). Each answer is written through its module's own service under the person's session (`apps/web/app/_lib/hometalk-amaf.ts`), and recorded in `amaf_answers` for undo and provenance. A disagreement with the record is said back with its source and changes nothing until the person decides. An answer it cannot place is kept as a note, including a name that is nobody in the family (fixed 2026-10-21: it was read as a food). Adults only, app only. Skip, stop and undo are supported. Tests: amaf 26. Checked live on the database: birthday and address saved, a twice-unclear diet kept as a note, Stop counted 3. Help (Talk to WonderHome) in all eight languages. |
 | `04-031` Ask me about family saves what is said about someone else, and every note | P0 | Done | The owner, 2026-10-22: "Upasana birthday is 24 June 1986", said while Manan's school hours were asked, got "I couldn't save that just now". Causes: the sentence was read only against the waiting question, so on its second try it became a note on Manan's school hours; and that note was refused because `amafMemoryKey` put the member's full uuid in the key, which `memories.key` (`^[a-z][a-z0-9_.]{1,60}$`) cannot hold, so no note about a person had ever been kept. Now facts carry a `cue` (birthday, anniversary, phone, school hours): a sentence naming another household member is read against those for that person, saved for them, and the waiting question asked again; a sentence naming someone else is never saved to the question's subject ("Manan's birthday is…" while Upasana's was asked), nor kept as a note on it; the note key keeps 12 hex characters of the member id, and a test holds every fact's key to the constraint; "put it back" re-applies what the last undo took back, through the same service, within the hour and only if nothing was saved since. Help ¶17 in eight languages |
+| `04-032` HomeTalk takes what was said, and asks only what it must | P0 | Done | The owner, 2026-11-20: "add a reminder for tomorrow doctor appointment at 1 o'clock" asked "What time should I remind you?" with day chips. PR #583 fixed that sentence (time reader, slot-matched chips, appointment said as a reminder); the follow-up PR adds a 100-sentence understanding set (`npm run eval -- --set understanding`), rules path 45 → 91/100 understood in one go, 48 → 10 needless questions. Note `docs/progress/2026-11-20-hometalk-understanding.md`. Open: the nine sentences in `evaluation/cases-understanding.ts` `STILL_WEAK`; a provider run of the set. |
 
 ### 05 — Household Certification & Understanding
 

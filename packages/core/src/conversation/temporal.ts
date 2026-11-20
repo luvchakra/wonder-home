@@ -65,6 +65,17 @@ export const TEMPORAL_PHRASE =
   "this (?:morning|afternoon|evening)|after school|before dinner))";
 
 /**
+ * The phrases a spoken or typed request names a day with (2026-11-20): every
+ * TEMPORAL_PHRASE, plus "the 25th", "2 oct", "day after tmrw", "in 2 hours".
+ * For HomeTalk's rules only; HomeSend keeps TEMPORAL_PHRASE, whose written
+ * dates are read by its own nearest-date rules.
+ */
+export const SPOKEN_DAY_PHRASE =
+  "(?:(?:on |this |next |coming |by )?(?:today|tonight|(?:the )?day after (?:tomorrow|tmrw)|(?:tomorrow|tmrw|tmr)(?: morning| afternoon| evening| night| after school| before dinner)?|yesterday|(?:the )?\\d{1,2}(?:st|nd|rd|th)(?: (?:of )?(?:jan|feb|mar|apr|may|jun|jul|aug|sep|sept|oct|nov|dec)[a-z]*)?|\\d{1,2} (?:jan|feb|mar|apr|may|jun|jul|aug|sep|sept|oct|nov|dec)[a-z]*|in (?:an?|one|two|three|\\d{1,3}|half an?) (?:minutes?|mins?|hours?|hrs?)|later today|(?:this |next )?(?:week|weekend)|" +
+  "(?:mon|tues?|wed(?:nes)?|thu(?:rs)?|fri|sat(?:ur)?|sun)(?:day)?(?: morning| afternoon| evening| night| after school| before dinner)?|" +
+  "this (?:morning|afternoon|evening)|after school|before dinner))";
+
+/**
  * Resolves `phrase` against `now` in `timezone`. Pure: the same arguments
  * always give the same answer.
  */
@@ -275,6 +286,23 @@ function dayFrom(text: string, today: string, smallHours = false): Day | null {
   const explicit = explicitDate(text, today);
   if (explicit) return single(explicit, short(explicit));
 
+  // A day of the month alone, "25th", "the 2nd": the next one to come (2026-11-20).
+  const ordinal = /^(\d{1,2})(st|nd|rd|th)$/.exec(text);
+  if (ordinal) {
+    const dayOfMonth = Number(ordinal[1]);
+    let year = Number(today.slice(0, 4));
+    let month = Number(today.slice(5, 7)) - 1;
+    for (let tries = 0; tries < 13; tries += 1) {
+      const candidate = validIso(isoOf(year, month, dayOfMonth));
+      if (candidate && candidate >= today) return single(candidate, short(candidate));
+      month += 1;
+      if (month > 11) {
+        month = 0;
+        year += 1;
+      }
+    }
+  }
+
   return null;
 }
 
@@ -316,6 +344,12 @@ function normalise(phrase: string): string {
     .trim()
     .replace(/^(?:on|by|for|at|from|in) /, "")
     .replace(/^the coming /, "coming ")
+    // Short and Hinglish day words (2026-11-20): "tmrw", "day after tmrw", "kal", "parso", "aaj".
+    .replace(/\b(?:tmrw|tmr|tomorow|tommorow|tommorrow)\b/g, "tomorrow")
+    .replace(/^(?:parso|parson)$/, "day after tomorrow")
+    .replace(/^kal$/, "tomorrow")
+    .replace(/^aaj$/, "today")
+    .replace(/^the (\d)/, "$1")
     // "Friday this week" is "this friday", the order a real model (Anthropic,
     // 21 Oct 2026) named the day in and nothing here read.
     .replace(/^(\w+day) this week\b/, "this $1")

@@ -73,6 +73,10 @@ const LEAD_INS = [
   "home talk",
   "hey wonderhome",
   "hey wonder home",
+  "pls",
+  "plz",
+  "kindly",
+  "do the needful and",
   "hey hometalk",
 ];
 
@@ -154,6 +158,7 @@ export function normaliseUtterance(utterance: string): Normalised {
     text = `${text.replace(/[?.!]+$/, "").slice(0, tail.index)}${ending}`;
   }
 
+  text = everyday(text);
   text = text.replace(/\s{2,}/g, " ").trim();
   // Nothing left but what was stripped: it was a short reply ("okay"), kept as said.
   if (!/[a-z0-9]/i.test(text)) return { canonical: original, stripped: [], deeper: false };
@@ -192,4 +197,43 @@ function startsQuestion(text: string): boolean {
 
 function capitalise(text: string): string {
   return text.charAt(0).toUpperCase() + text.slice(1);
+}
+
+/** Words about the past: "kal" then means yesterday, and is left for the reader. */
+const PAST = /\b(?:paid|tha|thi|gaya|gayi|gaye|kiya|kiye|liya|diya|was|were|did|went|bought|yesterday|ago|last)\b/i;
+
+/**
+ * Everyday shorthand and Hinglish said the plain way (2026-11-20, the owner's
+ * "understanding human language"): "kal subah 8 baje" is "tomorrow morning 8
+ * o'clock", "milk khatam ho gaya" is "we're out of milk", "tmrw" is
+ * "tomorrow". Only words with one meaning in a request; "kal" with a word
+ * about the past is left alone (it is yesterday then).
+ */
+function everyday(text: string): string {
+  let said = text
+    .replace(/\b(?:tmrw|tmr|tomorow|tommorow|tommorrow)\b/gi, "tomorrow")
+    .replace(/\babt\b/gi, "about")
+    .replace(/\b(\d{1,2}(?:[:.]\d{2})?)\s*baje\b/gi, "$1 o'clock")
+    .replace(/\bsaade (\d{1,2})\b/gi, "half past $1")
+    .replace(/\bparso\b/gi, "day after tomorrow")
+    .replace(/\baaj raat\b/gi, "tonight")
+    .replace(/\baaj (?:shaam|sham)\b/gi, "this evening")
+    .replace(/\baaj subah\b/gi, "this morning")
+    .replace(/\baaj\b/gi, "today");
+  if (!PAST.test(said)) {
+    said = said
+      .replace(/\bkal subah\b/gi, "tomorrow morning")
+      .replace(/\bkal (?:shaam|sham)\b/gi, "tomorrow evening")
+      .replace(/\bkal raat\b/gi, "tomorrow night")
+      .replace(/\bkal (?:dopahar|dopehar)\b/gi, "tomorrow afternoon")
+      .replace(/\bkal\b/gi, "tomorrow");
+  }
+  said = said.replace(/\bek (packet|kg|kilo|litre|liter|bottle|dozen|box|bunch|pack)\b/gi, "1 $1");
+  const out = /^(.+?)\s+(?:khatam|khattam|khtm|over)\s+(?:ho\s+)?(?:gaya|gayi|gaye|gya|hai|ho gaya|ho gayi)$/i.exec(said.replace(/[.!]+$/, ""));
+  if (out) return `We're out of ${out[1]}`;
+  const add = /^(.+?)\s+(?:add|daal|dal)\s*(?:karo|kar do|kardo|do|dena|kar dena)$/i.exec(said.replace(/[.!]+$/, ""));
+  if (add) return `Add ${add[1]}`;
+  const broken = /^(?:the\s+|my\s+|our\s+)?(.+?)\s+(?:kharab (?:hai|ho gaya|ho gayi)|kaam nahi kar raha(?: hai)?|nahi chal raha(?: hai)?)$/i.exec(said.replace(/[.!]+$/, ""));
+  if (broken) return `The ${broken[1]} is not working`;
+  return said;
 }

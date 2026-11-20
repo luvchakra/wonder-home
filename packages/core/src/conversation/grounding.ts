@@ -537,12 +537,18 @@ export async function groundIntent(intent: HouseholdIntent, env: GroundingEnv): 
       if (split) grounded.parameters = { ...grounded.parameters, what: split.what, ...(hasWhen ? {} : { when: split.when }) };
     }
     if (typeof grounded.parameters.when !== "string" || !grounded.parameters.when.trim()) {
-      return clarify(grounded, "day", "When should I remind you — later today, tomorrow, or another day?", []);
+      // A time with no day is the next one to come: today, or tomorrow once it has gone (2026-11-20).
+      if (typeof grounded.parameters.time === "string" && grounded.parameters.time.trim()) {
+        const today = reminderMoment("today", String(grounded.parameters.time), { timezone: env.timezone, now: env.now, context: typeof grounded.parameters.what === "string" ? grounded.parameters.what : undefined });
+        grounded.parameters = { ...grounded.parameters, when: today.ok || today.slot === "time" ? "today" : "tomorrow" };
+      } else {
+        return clarify(grounded, "day", "When should I remind you — later today, tomorrow, or another day?", []);
+      }
     }
     // The moment it will actually go off, decided here once: a time already
     // gone is one question, never a reminder quietly written for "now" and
     // described as 9am (live, 24 Sep: "today" said at 8:35 pm).
-    const moment = reminderMoment(grounded.parameters.when, typeof grounded.parameters.time === "string" ? grounded.parameters.time : null, {
+    const moment = reminderMoment(String(grounded.parameters.when), typeof grounded.parameters.time === "string" ? grounded.parameters.time : null, {
       timezone: env.timezone,
       now: env.now,
       context: typeof grounded.parameters.what === "string" ? grounded.parameters.what : undefined,

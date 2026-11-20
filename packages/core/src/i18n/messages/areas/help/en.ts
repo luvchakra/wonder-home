@@ -118,7 +118,7 @@ export const helpEn = {
   "help.guide.talk-to-wonderhome.body.4":
     "Several requests in one sentence are handled one by one. A later part that leans on an earlier one (\"…and remind me to buy them\") only goes ahead if the earlier part actually happened.",
   "help.guide.talk-to-wonderhome.body.5":
-    "\"Remind me to call the plumber tomorrow at 5\" sets a reminder for you alone, delivered when it is due. When someone is mentioned and two people could fit, HomeTalk asks which one rather than guessing.",
+    "\"Remind me to call the plumber tomorrow at 5\" sets a reminder for you alone, delivered when it is due. When someone is mentioned and two people could fit, HomeTalk asks which one rather than guessing. Say the day and time however you like — \"tomorrow at 1 o'clock\", \"half past 6\", \"kal subah 8 baje\": when you don't say am or pm, HomeTalk picks the likely one and tells you, and \"No, 1 am\" changes it. A doctor's or other health appointment of your own said as a reminder (\"add a reminder for tomorrow doctor appointment at 1 o'clock\") is added to Health & Fitness, privately, with its usual reminders.",
   "help.guide.talk-to-wonderhome.body.6":
     "Edit your last message to rephrase it, and search your past conversations from the search box at the top. It never says it did something unless it actually did; where it only prepared something, it says prepared, and where nothing needed changing, it says so.",
   "help.guide.talk-to-wonderhome.body.7":

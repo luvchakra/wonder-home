@@ -6,7 +6,7 @@ import { readWhyQuestion } from "../homebrain/why";
 import { extractItems } from "./clarify";
 import type { HouseholdIntent, IntentAction } from "./intent";
 import { parsePreference } from "./memory";
-import { CALENDAR_SPAN_PHRASE, splitTrailingWhen, TEMPORAL_PHRASE } from "./temporal";
+import { CALENDAR_SPAN_PHRASE, splitTrailingWhen, SPOKEN_DAY_PHRASE } from "./temporal";
 import { TIME_PHRASE } from "./time-of-day";
 import { isPlaceQuestion } from "../homeplaces/request";
 import { readLikesQuestion } from "./likes";
@@ -41,7 +41,7 @@ type Rule = {
   read: (match: RegExpMatchArray, utterance: string) => Omit<HouseholdIntent, "actorMemberId" | "channel" | "utterance" | "understanding"> | null;
 };
 
-const WHEN_WORDS = "today|tonight|tomorrow|this (?:week|weekend|month|morning|afternoon|evening)|next (?:week|weekend|month|\\w+day)|on \\w+day|\\w+day";
+const WHEN_WORDS = "(?:the )?day after tomorrow|today|tonight|tomorrow|this (?:week|weekend|month|morning|afternoon|evening)|next (?:week|weekend|month|\\w+day)|on \\w+day|\\w+day";
 
 const LIST_WORDS = "(?:grocery|groceries|shopping)(?: list)?|list";
 
@@ -144,7 +144,10 @@ const REMIND_WHEN = `(?:${WHEN_WORDS})(?:\\s+(?:morning|afternoon|evening|night|
 const TIME_WORDS = TIME_PHRASE;
 
 const INNER_TIME = new RegExp(`\\s*\\b(?:at|@)\\s+(${TIME_PHRASE})(?![\\w:])`, "i");
-const INNER_DAY = new RegExp(`\\s*\\b(?:for\\s+|on\\s+)?(${TEMPORAL_PHRASE})\\b`, "i");
+const BARE_TIME = new RegExp(`\\s*\\b(\\d{1,2}(?:[:.]\\d{2}|\\s\\d{2}(?=\\s*[ap]\\.?m))?\\s*(?:'?\\s?o'?\\s?clock|[ap]\\.?m\\.?)|noon|midday)(?![\\w:])`, "i");
+const NOT_A_GROCERY = /\b(?:hours?|hrs?|minutes?|mins?|days?|weeks?|months?|years?|times?|pm|am|o'?clock|people|persons?|kids|children|members|guests|rupees|rs|inr|steps|km|kms|miles|reps|sets|pages|marks|points|calls?|meetings?|emails?)\b/i;
+const DATED_THING = /\b(?:party|birthday|bday|anniversary|match|recital|ptm|parents?[- ]teacher|meeting|class|classes|coaching|practice|tuition|exam|test|function|ceremony|wedding|show|concert|game|tournament|trip|outing|picnic|competition|annual day|sports day|project|homework|assignment|worksheet|plumber|electrician|carpenter|visit|comes|coming)\b/i;
+const INNER_DAY = new RegExp(`\\s*\\b(?:for\\s+|on\\s+)?(${SPOKEN_DAY_PHRASE})\\b`, "i");
 
 /** A reminder's parameters: what, and when as the household said it. */
 function reminder(what: string, when: string | undefined, time: string | undefined): Record<string, unknown> {
@@ -157,7 +160,7 @@ function reminder(what: string, when: string | undefined, time: string | undefin
   }
   // "for tomorrow doctor appointment at 1 o'clock": the day and time said anywhere in it, taken out of what (2026-11-20).
   if (!time) {
-    const at = INNER_TIME.exec(what);
+    const at = INNER_TIME.exec(what) ?? BARE_TIME.exec(what);
     if (at) {
       time = at[1];
       what = `${what.slice(0, at.index)} ${what.slice(at.index + at[0].length)}`;
@@ -223,6 +226,42 @@ function stockLines(said: string): string[] | null {
 const SAYS_A_DAY = /\b(?:mon|tues?|wed(?:nes)?|thu(?:rs)?|fri|sat(?:ur)?|sun)(?:day)?\b|\b(?:jan(?:uary)?|feb(?:ruary)?|mar(?:ch)?|apr(?:il)?|may|june?|july?|aug(?:ust)?|sep(?:t(?:ember)?)?|oct(?:ober)?|nov(?:ember)?|dec(?:ember)?)\b|\b(?:today|tomorrow|tonight|next week)\b|\b\d{1,2}(?:st|nd|rd|th)\b|\b\d{1,2}\/\d{1,2}\b/i;
 
 const RULES: readonly Rule[] = [
+  {
+    // Being told about a dated thing without "is on" (2026-11-20): "Riya's birthday party on Saturday at 4",
+    // "tomorrow 5pm cricket coaching for Manan", "tomorrow Manan ki school mein PTM hai 11 o'clock",
+    // "Manan's science project is due next monday", "note that the plumber comes on monday".
+    pattern: /^(?!(?:what|when|where|who|whom|which|how|why|is|are|am|was|were|do|does|did|can|could|will|would|should|any|move|shift|reschedule|change|push|remind|plan|add|set|track|show|tell|give|list|open|log|record|mark|pay|paid|book|cancel|order|buy|get|need)\b)(.+)$/i,
+    read: (_match, utterance) =>
+      !/\?\s*$/.test(utterance) &&
+      SAYS_A_DAY.test(utterance) &&
+      (DATED_THING.test(utterance) || /^(?:note|note down|make a note|fyi)\b/i.test(utterance)) &&
+      !/\b(?:moved|postponed|cancel(?:led|ed)?|rescheduled|instead)\b/i.test(utterance)
+        ? { action: "file_with_homesend", target: { kind: "unspecified" }, parameters: {}, confidence: 0.84 }
+        : null,
+  },
+  {
+    // Said as news, not asked: "family movie night sunday evening", "we're going to Lonavala this weekend" → a plan;
+    // "dinner tonight is pasta", "make poha for breakfast on sunday" → the meal plan (2026-11-20).
+    pattern: new RegExp(`^(?:we(?:'re| are) going (?:to|for) (.+?)|(family .+?|movie night|game night|picnic|outing)) (${WHEN_WORDS}(?: (?:morning|afternoon|evening|night))?)$`, "i"),
+    read: (match) => ({ action: "plan_event", target: { kind: "event", reference: slug(match[1] ?? match[2]!) }, parameters: { what: (match[1] ?? match[2]!).trim().toLowerCase(), window: match[3]!.toLowerCase() }, confidence: 0.84 }),
+  },
+  {
+    pattern: new RegExp(`^(breakfast|lunch|dinner|supper|snack) (${WHEN_WORDS}) (?:is|will be) (.+)$|^(?:make|cook|have|let'?s have) (.+? for (?:breakfast|lunch|dinner|supper|snack)(?: .+)?)$`, "i"),
+    read: (match) => {
+      const plan = readPlan(match[4] ?? `${match[3]} for ${match[1]} ${match[2]}`);
+      if (!plan.what || !plan.window) return null;
+      return { action: "plan_event", target: { kind: "event", reference: slug(plan.what) }, parameters: { what: plan.what, window: plan.window }, confidence: 0.84 };
+    },
+  },
+  {
+    // "My physio is at 5 tomorrow", "my dentist is on friday at 4".
+    pattern: new RegExp(`^(?:my )(.{2,30}?)(?: appointment| appt| session)? is (?:(?:on )?(${WHEN_WORDS}) at (${TIME_PHRASE})|at (${TIME_PHRASE}) (?:on )?(${WHEN_WORDS}))$`, "i"),
+    read: (match) => {
+      const appointmentType = matchAppointmentType(match[1]!);
+      if (appointmentType === "other") return null;
+      return { action: "record_health_appointment", target: { kind: "member", reference: "self" }, parameters: { typeText: match[1]!.trim(), appointmentType, when: (match[2] ?? match[5])!.toLowerCase(), time: (match[3] ?? match[4])!.toLowerCase() }, confidence: 0.86 };
+    },
+  },
   // --- "Why?" — answered from what was recorded (HomeBrain 2.0, Wave 2 §10) --
   {
     // "Why are you asking for approval?", "Where did this date come from?",
@@ -536,6 +575,35 @@ const RULES: readonly Rule[] = [
     read: (match) => ({ action: "set_reminder", target: { kind: "outcome", reference: "reminders" }, parameters: reminder(match[1]!, match[2], match[3]), confidence: 0.9 }),
   },
 
+  {
+    // Any other reminder, the day and time said anywhere in it (2026-11-20):
+    // "remind me day after tomorrow to renew car insurance", "remind me friday
+    // 6 30 pm to collect the cake", "reminder tomorrow morning 8 o'clock gas
+    // cylinder book karna", "remind me at quarter to 8 tomorrow to leave".
+    pattern: /^(?:remind me|reminder|set (?:me )?(?:a )?reminder|add (?:a )?reminder)\b[,:]?\s+(.{3,})$/i,
+    read: (match) => {
+      const parameters = reminder(match[1]!, undefined, undefined);
+      const what = String(parameters.what ?? "").replace(/^(?:to|about|that|of|for)\s+/i, "").replace(/\s+(?:karna|karna hai|karne ka)$/i, "").trim();
+      if (!what || (!parameters.when && !parameters.time)) return null;
+      return { action: "set_reminder", target: { kind: "outcome", reference: "reminders" }, parameters: { ...parameters, what }, confidence: 0.86 };
+    },
+  },
+
+  {
+    // An amount and a thing, and nothing else: "half kg tomatoes", "get 3 bottles
+    // of coke for the party", "need 2 packets of bread" (2026-11-20).
+    pattern: /^(?:(?:please\s+)?(?:get|buy|bring|need|we need|i need|also)\s+)?(.+?)(?:\s+for\s+(?:the\s+)?(?:party|guests|tonight|tomorrow|the week|dinner|lunch|breakfast|[a-z]+'s [a-z]+))?$/i,
+    read: (match) => {
+      const said = match[1]!.trim();
+      const parts = extractItems(said);
+      const lines = parts.length > 1 ? parts : [said];
+      const amounts = lines.map((line) => readItemAmount(line));
+      const plausible = amounts.every((read) => read.amount && read.item && read.item.split(/\s+/).length <= 4 && !/\d/.test(read.item) && !NOT_A_GROCERY.test(read.item) && !/\b(?:my|our|his|her|as|is|was|log|weight|bp|temperature|sugar|pulse)\b/i.test(read.item));
+      if (!plausible) return null;
+      return { action: "add_to_list", target: { kind: "list", reference: "groceries" }, parameters: lines.length > 1 ? { items: lines } : { item: said }, confidence: 0.86 };
+    },
+  },
+
   // --- What is at home (Groceries Phase 2) ------------------------------------
   // First, so "I have 10 eggs" is a count and never a symptom or a preference.
   {
@@ -620,7 +688,7 @@ const RULES: readonly Rule[] = [
   // --- Absence ------------------------------------------------------------------
   {
     pattern: new RegExp(
-      `^((?:the |my |our )?(?:[A-Za-z]+)(?: one| kid| child| boy| girl)?)\\s+(?:won'?t be (?:here|in|around|coming|available|home|at home|back)|isn'?t (?:here|coming|available|in|home)|is (?:off sick|out sick|home sick|away|off|out|unavailable|on leave|not (?:coming|available|here|in|around|home)|sick|unwell|ill|travelling|traveling)|will be (?:away|off|out|unavailable)|can'?t (?:come|make it)|has (?:the day )?off|is taking (?:the day |a day |leave )?off)(?:\\s+(${WHEN_WORDS}))?$`,
+      `^((?:the |my |our )?(?:[A-Za-z]+)(?: one| kid| child| boy| girl)?)\\s+(?:won'?t be (?:here|in|around|coming|available|home|at home|back)|won'?t come|will not (?:come|be coming)|not coming|isn'?t (?:here|coming|available|in|home)|is (?:off sick|out sick|home sick|away|off|out|unavailable|on leave|not (?:coming|available|here|in|around|home)|sick|unwell|ill|travelling|traveling)|will be (?:away|off|out|unavailable)|can'?t (?:come|make it)|has (?:the day )?off|is taking (?:the day |a day |leave )?off)(?:\\s+(${WHEN_WORDS}))?$`,
       "i",
     ),
     read: (match) => ({
@@ -629,6 +697,11 @@ const RULES: readonly Rule[] = [
       parameters: withWhen({}, match[2] ?? "today"),
       confidence: 0.92,
     }),
+  },
+  {
+    // "I'm travelling to Delhi from friday to sunday", "we're away in Goa tomorrow": the speaker away, from its first day (2026-11-20).
+    pattern: new RegExp(`^i(?:'m| am| will be|'ll be)\\s+(?:travelling|traveling|away|out of (?:town|station)|going out of (?:town|station)|on leave|off)(?:\\s+(?:to|in|at)\\s+[A-Za-z ]{2,30}?)?\\s+(?:from\\s+)?(${WHEN_WORDS})(?:\\s+(?:to|till|until)\\s+(?:${WHEN_WORDS}))?$`, "i"),
+    read: (match) => ({ action: "record_absence", target: { kind: "member", reference: "self" }, parameters: withWhen({}, match[1]!), confidence: 0.88 }),
   },
   {
     pattern: new RegExp(`^(?:record|mark|note)(?: that)?\\s+([A-Za-z]+)(?:'s| is| as)?\\s+(?:away|off|absent|on leave|unavailable|leave)(?:\\s+(${WHEN_WORDS}))?$`, "i"),
@@ -745,7 +818,7 @@ const RULES: readonly Rule[] = [
     read: (match) => ({ action: "raise_service_request", target: { kind: "outcome", reference: "home" }, parameters: match[1] ? { asset: match[1].trim() } : { asset: "it" }, confidence: 0.9 }),
   },
   {
-    pattern: /^(?:the\s+|our\s+|my\s+)?([a-z][a-z ]{2,40}?)\s+((?:is|keeps)\s+making\s+(?:a|that|the|some|this|an?\s+\w+)?\s*(?:noise|sound)|is\s+(?:broken|leaking|not working|acting up|dripping)|isn'?t working|stopped working|won'?t\s+(?:start|turn on|work|drain|spin|cool)|keeps\s+\w+ing)(?:\s+again)?$/i,
+    pattern: /^(?:the\s+|our\s+|my\s+)?([a-z][a-z ]{2,40}?)\s+((?:is|keeps)\s+making\s+(?:a|that|the|some|this|an?\s+\w+)?\s*(?:noise|sound)|is\s+(?:broken|leaking|not working|acting up|dripping)|isn'?t (?:working|cooling|heating|draining)|(?:is\s+)?not\s+(?:working|cooling|heating|draining|starting|spinning|turning on)|stopped working|won'?t\s+(?:start|turn on|work|drain|spin|cool)|keeps\s+\w+ing)(?:\s+again)?(?:\s+(?:in|at)\s+(?:the\s+|our\s+|my\s+)?[a-z ]{2,20})?$/i,
     read: (match) => ({ action: "raise_service_request", target: { kind: "outcome", reference: "home" }, parameters: { asset: match[1]!.trim(), symptom: match[2]!.trim().toLowerCase() }, confidence: 0.8 }),
   },
 
@@ -960,9 +1033,18 @@ export function readPlan(text: string): { what: string; window: string | null; g
     guests.push(...invite[1]!.split(/\s*(?:,|\band\b)\s*/i).map((name) => name.trim()).filter(Boolean));
     rest = rest.slice(0, invite.index);
   }
+  // "…with the Sharmas", "…with friends": people coming, not what is eaten (2026-11-20).
+  const company = rest.match(/\s+with\s+((?:the\s+)?(?:[A-Z][\w'-]+(?:\s+(?:and|&)\s+[A-Z][\w'-]+)*|friends|family|neighbours|neighbors|cousins|grandparents|in-?laws))(?=\s|$)/);
+  if (company && company.index !== undefined) {
+    guests.push(...company[1]!.replace(/^the\s+/i, "").split(/\s*(?:,|\band\b|&)\s*/i).map((name) => name.trim()).filter(Boolean));
+    rest = `${rest.slice(0, company.index)}${rest.slice(company.index + company[0].length)}`;
+  }
   const WEEKDAY = "(?:mon|tues|wednes|thurs|fri|satur|sun)day";
   rest = ` ${rest}`;
-  const when = rest.match(new RegExp(`(?:\\s+(?:for|on|this|next))?\\s+((?:this |next )?${WEEKDAY}(?: (?:this|next) week)?(?: (?:morning|afternoon|evening|night))?|today|tonight|tomorrow(?: (?:morning|afternoon|evening|night))?|this (?:week|weekend|month|morning|afternoon|evening)|next (?:week|weekend|month))$`, "i"));
+  // A time said at the end ("on Saturday at 8") belongs to the window.
+  const clock = rest.match(new RegExp(`\\s+(?:at|@)\\s+(${TIME_PHRASE})$`, "i"));
+  if (clock && clock.index !== undefined) rest = rest.slice(0, clock.index);
+  const when = rest.match(new RegExp(`(?:\\s+(?:for|on|this|next))?\\s+((?:this |next )?${WEEKDAY}(?: (?:this|next) week)?(?: (?:morning|afternoon|evening|night))?|today|tonight|(?:the )?day after tomorrow|(?:the )?\\d{1,2}(?:st|nd|rd|th)|tomorrow(?: (?:morning|afternoon|evening|night))?|this (?:week|weekend|month|morning|afternoon|evening)|next (?:week|weekend|month))$`, "i"));
   let window: string | null = null;
   if (when && when.index !== undefined) {
     window = when[1]!.toLowerCase();

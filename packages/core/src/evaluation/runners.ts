@@ -885,5 +885,6 @@ export async function runCase(c: EvalCase, models: Models = {}): Promise<CaseRes
     consequential: turns.some(({ expected, observed }) => expected.safety?.consequential ?? observed.safety.consequential),
     latencyMs: Math.round(performance.now() - started),
     tokens: null,
+    ...(c.surface === "hometalk" ? { turns: turns.map(({ observed }) => ({ interpretation: observed.interpretation, action: observed.action, answer: observed.answer })) } : {}),
   };
 }

@@ -1,6 +1,6 @@
 import type { HouseholdIntent } from "./intent";
 import { matchAppointmentType } from "./rules";
-import { TEMPORAL_PHRASE } from "./temporal";
+import { SPOKEN_DAY_PHRASE } from "./temporal";
 import { TIME_PHRASE } from "./time-of-day";
 
 /**
@@ -28,7 +28,7 @@ const ABOUT_IT = /^(?:to\s+)?(?:book|call|ring|phone|schedule|reschedule|cancel|
 /** Someone other than the speaker named. */
 const SOMEONE_ELSE = /\b(?!(?:doctor|dentist|dr|gp)'s\b)[a-z]+'s\b|\bfor\s+(?!me\b|myself\b|tomorrow\b|today\b|tonight\b|the\b|an?\b|my\s+(?:doctor|dentist|own)\b|(?:mon|tues|wednes|thurs|fri|satur|sun)day\b|next\b|this\b|\d)\w+|\b(?:his|her|their)\b/i;
 
-const SAID_DAY = new RegExp(`\\b(${TEMPORAL_PHRASE})\\b`, "i");
+const SAID_DAY = new RegExp(`\\b(${SPOKEN_DAY_PHRASE})\\b`, "i");
 const SAID_TIME = new RegExp(`\\b(?:at|@|by)\\s+(${TIME_PHRASE})(?![\\w:])`, "i");
 const BARE_TIME = new RegExp(`\\b(\\d{1,2}(?:[:.]\\d{2})?\\s*(?:o'?\\s?clock|a\\.?m\\.?|p\\.?m\\.?)|noon)(?![\\w:])`, "i");
 

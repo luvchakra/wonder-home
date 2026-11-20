@@ -130,4 +130,4 @@ function numberOf(text: string): number | null {
 
 /** The pattern the rules use to find a time in a sentence: digits, spoken hours, o'clock, half past, noon. */
 export const TIME_PHRASE =
-  "(?:(?:half|quarter)\\s+(?:past|to)\\s+(?:\\d{1,2}|one|two|three|four|five|six|seven|eight|nine|ten|eleven|twelve)|\\d{1,2}(?:[:.]\\d{2})?\\s*(?:o'?\\s?clock|baje)?\\s*(?:a\\.?m\\.?|p\\.?m\\.?)?|(?:one|two|three|four|five|six|seven|eight|nine|ten|eleven|twelve)(?:\\s+(?:thirty|fifteen|forty[- ]five))?\\s*(?:o'?\\s?clock)?\\s*(?:a\\.?m\\.?|p\\.?m\\.?)?|noon|midday|midnight)(?:\\s+(?:in the )?(?:morning|afternoon|evening|at night))?";
+  "(?:(?:half|quarter)\\s+(?:past|to)\\s+(?:\\d{1,2}|one|two|three|four|five|six|seven|eight|nine|ten|eleven|twelve)|\\d{1,2}(?:[:.]\\d{2}|\\s\\d{2}(?=\\s*[ap]\\.?m))?\\s*(?:'?\\s?o'?\\s?clock|baje)?\\s*(?:a\\.?m\\.?|p\\.?m\\.?)?|(?:one|two|three|four|five|six|seven|eight|nine|ten|eleven|twelve)(?:\\s+(?:thirty|fifteen|forty[- ]five))?\\s*(?:o'?\\s?clock)?\\s*(?:a\\.?m\\.?|p\\.?m\\.?)?|noon|midday|midnight)(?:\\s+(?:in the )?(?:morning|afternoon|evening|at night))?";
