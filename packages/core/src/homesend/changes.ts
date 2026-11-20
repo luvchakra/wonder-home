@@ -273,20 +273,87 @@ export async function undoHomeSendChange(
  * already succeeded, and a missing confirm only leaves the "not yet
  * confirmed" mark on.
  */
-export async function confirmByAction(supabase: SupabaseClient, householdId: string, entityId: string, memberId: string): Promise<number> {
+export async function confirmByAction(supabase: SupabaseClient, householdId: string, entityId: string, memberId: string, basis: "person" | "marked_paid" = "person"): Promise<number> {
   try {
-    const { data, error } = await supabase
-      .from("homesend_changes")
-      .update({ confirmation_state: "confirmed", confirmed_at: new Date().toISOString(), confirmed_by_member_id: memberId, confirmed_basis: "person" })
-      .eq("household_id", householdId)
-      .eq("entity_id", entityId)
-      .eq("confirmation_state", "unconfirmed")
-      .is("undone_at", null)
-      .select("id, domain, entity_id, intake_id");
+    const confirm = (why: ConfirmedBasis | null) =>
+      supabase
+        .from("homesend_changes")
+        .update({ confirmation_state: "confirmed", confirmed_at: new Date().toISOString(), confirmed_by_member_id: memberId, confirmed_basis: why })
+        .eq("household_id", householdId)
+        .eq("entity_id", entityId)
+        .eq("confirmation_state", "unconfirmed")
+        .is("undone_at", null)
+        .select("id, domain, entity_id, intake_id");
+    let { data, error } = await confirm(basis);
+    // Before the migration allowing "marked_paid" is live: confirmed by a person, as before.
+    if (error && basisRefused(error)) ({ data, error } = await confirm("person"));
     if (error) return 0;
     const rows = (data as Row[] | null) ?? [];
     for (const row of rows) {
-      await auditChange({ householdId, actorMemberId: memberId, eventType: "homesend.confirmed", targetTable: row.domain as string, targetId: row.entity_id as string, metadata: { intakeId: row.intake_id, how: "acted" } });
+      await auditChange({ householdId, actorMemberId: memberId, eventType: "homesend.confirmed", targetTable: row.domain as string, targetId: row.entity_id as string, metadata: { intakeId: row.intake_id, how: "acted", basis } });
+    }
+    return rows.length;
+  } catch {
+    return 0;
+  }
+}
+
+/**
+ * Why an entry is confirmed (`homesend_changes.confirmed_basis`). Beyond a
+ * person, an answer, the bar and the nightly evidence, the owner's
+ * 2026-11-20 review adds confirmation by action and evidence: a payment
+ * proof, a matching receipt from the payee, marking it paid, and its due date
+ * passing with no correction and no conflict (never for health).
+ */
+export const CONFIRMED_BASES = ["person", "answer", "bar", "second_source", "recurring", "payment_proof", "receipt", "marked_paid", "due_passed"] as const;
+export type ConfirmedBasis = (typeof CONFIRMED_BASES)[number];
+/** The bases the 2026-11-20 migration adds; until it is live the check refuses them. */
+const NEW_BASES: ReadonlySet<ConfirmedBasis> = new Set(["payment_proof", "receipt", "marked_paid", "due_passed"]);
+
+/** A check constraint refused the value (the basis migration isn't live yet). */
+function basisRefused(error: { code?: string } | null): boolean {
+  return error?.code === "23514";
+}
+
+/** Whether a basis needs the 2026-11-20 migration. */
+export function isNewBasis(basis: ConfirmedBasis): boolean {
+  return NEW_BASES.has(basis);
+}
+
+/**
+ * Confirms every live Checking entry of one record by evidence, not by a tap:
+ * a payment proof or a receipt from the payee (decision 2). Never a health
+ * record. Through the caller's client (the deadlines pass's service role),
+ * audited `homesend.confirmed` with the basis. Before the migration is live
+ * the entry is still confirmed, its basis left blank. Never throws.
+ */
+export async function confirmByEvidence(
+  client: SupabaseClient,
+  householdId: string,
+  entityId: string,
+  basis: Exclude<ConfirmedBasis, "person" | "answer">,
+  options: { intakeId?: string; now?: Date } = {},
+): Promise<number> {
+  try {
+    const at = (options.now ?? new Date()).toISOString();
+    const confirm = (why: ConfirmedBasis | null) => {
+      let query = client
+        .from("homesend_changes")
+        .update({ confirmation_state: "confirmed", confirmed_at: at, confirmed_basis: why })
+        .eq("household_id", householdId)
+        .eq("entity_id", entityId)
+        .neq("domain", "health_document")
+        .eq("confirmation_state", "unconfirmed")
+        .is("undone_at", null);
+      if (options.intakeId) query = query.neq("intake_id", options.intakeId);
+      return query.select("id, domain, entity_id, intake_id");
+    };
+    let { data, error } = await confirm(basis);
+    if (error && basisRefused(error)) ({ data, error } = await confirm(null));
+    if (error) return 0;
+    const rows = (data as Row[] | null) ?? [];
+    for (const row of rows) {
+      await auditChange({ householdId, eventType: "homesend.confirmed", targetTable: row.domain as string, targetId: row.entity_id as string, metadata: { intakeId: row.intake_id, how: "evidence", basis, ...(options.intakeId ? { evidenceIntakeId: options.intakeId } : {}) } });
     }
     return rows.length;
   } catch {

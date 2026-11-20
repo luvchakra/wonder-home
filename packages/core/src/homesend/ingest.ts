@@ -11,6 +11,7 @@ import type { HomeSendExtraction, HomeSendFailureReason, HomeSendKind, HomeSendS
 import { FAILURE_REASON_COPY } from "./items";
 import { fetchLinkSafely, LINK_FAILURE_COPY, type LinkContent } from "./link-fetch";
 import { platformMalwareScanConfig, scanForMalware, type MalwareScanOutcome } from "./malware-scan";
+import { paymentTitle, readPaymentProof, type PaymentProof } from "./payment-proof";
 import { asLoneUrl, audioDurationSeconds, contentHash, decodeTextFile, detectIntakeFile, MAX_AUDIO_SECONDS, MAX_BYTES, MAX_PDF_PAGES, normalizeText, pdfPageCount, type IntakeFileType } from "./normalize";
 import { createHomeSendItem, findByExternalId, findPendingByContentHash, markHomeSendFailed, setHomeSendClassification } from "./repository";
 import { buildUnderstanding, unreadableUnderstanding, type IntakeUnderstanding, type UnderstandingMeta } from "./understanding";
@@ -146,6 +147,36 @@ const defaultClassify: NonNullable<IngestDeps["classify"]> = async (householdId,
   if (key.source === "none" || !key.provider || !key.key) return "no_provider";
   return classifyIntake(key.provider, key.key, source, context);
 };
+
+/**
+ * The stronger reader a second read uses before anything is set aside as
+ * unreadable (the owner's 2026-11-20 review): a photo or PDF has its words
+ * written down first (OCR), then read as text by the provider's most capable
+ * model; text is read by that model directly. Through `ai/provider-clients.ts`
+ * only, on the household's own key or WonderHome's.
+ */
+export const strongerClassify: NonNullable<IngestDeps["classify"]> = async (householdId, source, context) => {
+  const { readHouseholdKey } = await import("../ai/credentials");
+  const { resolveModelKey, platformKey } = await import("../ai/model-key");
+  const { classifyIntake } = await import("../ai/classify-intake");
+  const householdKey = await readHouseholdKey(householdId).catch(() => null);
+  const key = resolveModelKey(householdKey, platformKey());
+  if (key.source === "none" || !key.provider || !key.key) return "no_provider";
+  if ("image" in source || "document" in source) {
+    const { readWordsOff } = await import("../ai/read-words");
+    const words = await readWordsOff(key.provider, key.key, source);
+    if (words) {
+      const read = await classifyIntake(key.provider, key.key, { text: words }, { ...context, channel: `${context.channel ?? "a file sent to HomeSend"}, its words written down from the page first` }, { stronger: true });
+      if (read?.readable) return read;
+    }
+  }
+  return classifyIntake(key.provider, key.key, source, context, { stronger: true });
+};
+
+/** What a second read runs with: the stronger reader, unless a caller (a test) gave its own. */
+export function secondReadDeps(deps: IngestDeps = {}): IngestDeps {
+  return { ...deps, classify: deps.classify ?? strongerClassify };
+}
 
 const defaultTranscribe: NonNullable<IngestDeps["transcribe"]> = async (supabase, householdId, clip) => {
   const { loadVoiceSettings, resolveProvider } = await import("../voice/repository");
@@ -300,7 +331,16 @@ export async function understand(
     result = null;
   }
 
+  const sentText = "text" in input.source ? input.source.text : null;
   if (result === "no_provider" || result === null) {
+    // A bank, card or UPI message needs no model: read on its own words (decision 2).
+    const paidText = inputScan.flagged ? null : readPaymentProof(input.context?.subject, sentText).proof;
+    if (paidText) {
+      const understanding: IntakeUnderstanding = { ...unreadableUnderstanding(meta(inputScan)), readable: true, kind: "receipt", contentSummary: paymentTitle(paidText), payment: paidText };
+      const extracted = asPayment(emptyExtraction(), paidText);
+      await setHomeSendClassification(supabase, householdId, itemId, { classifiedKind: "receipt", extracted, understanding, rawText: input.text ? input.text.slice(0, MAX_STORED_TEXT) : null, transcriptConfidence: input.transcriptConfidence ?? undefined });
+      return { itemId, duplicate: false, state: "needs_review", notice: "Read as a payment you made. WonderHome records it; it never pays.", item: { id: itemId, classifiedKind: "receipt", extracted, understanding } };
+    }
     const understanding = unreadableUnderstanding(meta(inputScan));
     await setHomeSendClassification(supabase, householdId, itemId, {
       classifiedKind: "unknown",
@@ -338,12 +378,20 @@ export async function understand(
   }
 
   // A detail the text sent states and the reading lost ("Add 2 litres of oil") is taken from it before anything is asked (`completeness.ts`).
-  const reading = fillFromEvidence(result.kind, result, "text" in input.source ? input.source.text : null);
-  const understanding = buildUnderstanding(reading, meta(injection));
+  const reading = fillFromEvidence(result.kind, result, sentText);
+  // A bank, card or UPI message saying it was paid (decision 2): read from what was sent, or what the reading quoted off a
+  // screenshot. Never from content that tried to instruct WonderHome, and never from one asking for a payment.
+  const paid = injection.flagged || (result.kind !== "receipt" && result.kind !== "bill" && result.kind !== "unknown")
+    ? null
+    : readPaymentProof(input.context?.subject, sentText, reading.title, reading.summary, reading.notes, ...reading.facts.map((fact) => fact.evidence)).proof;
+  const kind = paid ? "receipt" : result.kind;
+  const built = buildUnderstanding(reading, meta(injection));
+  const understanding: IntakeUnderstanding = paid ? { ...built, kind: "receipt", contentSummary: paymentTitle(paid), payment: paid } : built;
   // Its day and time, from its own words, whatever kind it was read as — so moving it to an event at review keeps them.
-  const extracted = recoverWhen(toStoredExtraction(reading), { timezone: context.timezone ?? null, now: context.now ?? new Date() });
+  const recovered = recoverWhen(toStoredExtraction(reading), { timezone: context.timezone ?? null, now: context.now ?? new Date() });
+  const extracted = paid ? asPayment(recovered, paid) : recovered;
   await setHomeSendClassification(supabase, householdId, itemId, {
-    classifiedKind: result.kind,
+    classifiedKind: kind,
     extracted,
     understanding,
     rawText: input.text ? input.text.slice(0, MAX_STORED_TEXT) : null,
@@ -356,8 +404,13 @@ export async function understand(
     notice: injection.flagged
       ? "Filled in from what you sent. It also contained instructions aimed at WonderHome — those were ignored. Check it over before adding."
       : "Filled in from what you sent — check it over before adding.",
-    item: { id: itemId, classifiedKind: result.kind, extracted, understanding },
+    item: { id: itemId, classifiedKind: kind, extracted, understanding },
   };
+}
+
+/** A payment proof's reading: who was paid, how much and when; no lines, so nothing is ever added to Groceries. */
+function asPayment(base: HomeSendExtraction, proof: PaymentProof): HomeSendExtraction {
+  return { ...base, title: paymentTitle(proof), payee: proof.payee, merchant: proof.payee, amount: proof.amount, currency: proof.currency, documentDate: proof.paidOn, dueDate: null, dueTime: null, endTime: null, lines: [], secondary: null, needs: [], change: "new" };
 }
 
 // ---- entry points ----------------------------------------------------------

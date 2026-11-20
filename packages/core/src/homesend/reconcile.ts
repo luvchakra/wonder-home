@@ -53,6 +53,8 @@ export type HomeSendReconciliation = {
   existingId: string;
   existing: { title: string; date: string | null; status: string | null; subjectMemberId: string | null; subjectName: string | null; amountMinor: number | null };
   proposal: HomeSendProposal;
+  /** A second record on file would also need a decision (two candidate bills): never applied on its own, only asked. */
+  ambiguous?: true;
 };
 
 /**
@@ -316,7 +318,8 @@ export function reconcileAgainstRecords(
   if (best) {
     // A record is "alone" when no second one would also need a decision: two Annual Days on file are never guessed between.
     const alone = matches.filter(needsReconciliation).length === 1;
-    return proposalFor(best, candidate, options.memberNames, { alone });
+    const found = proposalFor(best, candidate, options.memberNames, { alone });
+    return found && !alone ? { ...found, ambiguous: true } : found;
   }
 
   // A school notice for something already on the family calendar ("School

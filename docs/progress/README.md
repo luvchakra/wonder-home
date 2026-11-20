@@ -11,6 +11,7 @@ decision that shapes later work each earns a note, written before moving on.
 
 | Date | Note |
 |---|---|
+| 2026-11-20 | [HomeSend confirms by evidence and action: payment proof, updates at once, a stronger second read](2026-11-20-homesend-confirm-by-evidence.md) |
 | 2026-11-20 | [Who may file health records for others: an Admin's list skips "Who is this for?"](2026-11-20-health-filers.md) |
 | 2026-11-20 | [Knowing instead of asking: memory fills every kind, usual bill amounts, every child at a school, known senders trusted, every answer teaches](2026-11-20-knowing-instead-of-asking.md) |
 | 2026-11-20 | [Nothing stuck: a matched bill updates by default, an old waiting bill is recorded](2026-11-20-matched-bill-update.md) |

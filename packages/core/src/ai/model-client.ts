@@ -322,6 +322,17 @@ export const CLAUDE_ANSWER_MODEL = process.env.WONDERHOME_AI_ANSWER_MODEL?.trim(
  */
 export const CLAUDE_INTAKE_MODEL = process.env.WONDERHOME_AI_INTAKE_MODEL?.trim() || process.env.WONDERHOME_AI_MODEL?.trim() || "claude-sonnet-5-5";
 
+/**
+ * The stronger reader HomeSend tries before it sets anything aside as
+ * unreadable (the owner's 2026-11-20 review): the most capable tier of the
+ * same provider, used only on a second read, never on arrival.
+ */
+export const SECOND_READ_MODEL = {
+  anthropic: process.env.WONDERHOME_AI_SECOND_READ_MODEL?.trim() || "claude-opus-5-5",
+  google: process.env.WONDERHOME_AI_SECOND_READ_MODEL?.trim() || "gemini-pro-latest",
+  openai: process.env.WONDERHOME_AI_SECOND_READ_MODEL?.trim() || process.env.WONDERHOME_AI_MODEL?.trim() || "gpt-5.6",
+} as const;
+
 /** Same override, for a deployment whose configured provider is Google instead. */
 export const GEMINI_MODEL = process.env.WONDERHOME_AI_MODEL?.trim() || "gemini-flash-latest";
 
