@@ -109,13 +109,14 @@ export function PrimaryNav({ active, variant, secondary = [], pathname, labels }
     const domains = secondary.filter((item) => item.key !== "settings");
     const settings = secondary.find((item) => item.key === "settings");
     const currentHref = currentNavHref(pathname, secondary);
+    // The sidebar scrolls on its own when the window is shorter than the list, so every area stays reachable (rule 6).
 
     return (
       <nav
         aria-label="Primary"
-        className="sticky top-0 hidden h-dvh w-[var(--wh-sidebar-width)] shrink-0 flex-col border-r border-[var(--wh-border)] bg-[var(--wh-surface)]/60 px-4 py-5 lg:flex"
+        className="sticky top-0 hidden h-dvh w-[var(--wh-sidebar-width)] shrink-0 flex-col overflow-y-auto overscroll-contain border-r border-[var(--wh-border)] bg-[var(--wh-surface)]/60 px-4 py-5 lg:flex"
       >
-        <Link href="/" className="mb-6 block px-2">
+        <Link href="/" className="mb-6 block shrink-0 px-2">
           {/* The tagline wraps under the name rather than running past the sidebar edge (rule 15). */}
           <Wordmark tagline taglineClassName="whitespace-normal" />
         </Link>
