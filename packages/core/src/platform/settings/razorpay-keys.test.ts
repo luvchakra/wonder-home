@@ -3,7 +3,7 @@ import { describe, expect, it } from "vitest";
 import { cleanRazorpayKeyId, cleanRazorpayKeySecret } from "./razorpay-keys";
 import { settingDefinition, validateSetting } from "./registry";
 
-const SECRET = "Ab3dEf6hIj9kLm2nOp5qRs8t"; // 24 letters and numbers, the shape Razorpay issues
+const SECRET = "TestOnlyRazorpaySecret24"; // 24 letters and numbers, the shape Razorpay issues
 
 describe("Razorpay keys as pasted", () => {
   it("take a test or live key id, with pasted spaces and line breaks dropped", () => {

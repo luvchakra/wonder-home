@@ -8,6 +8,9 @@ description = "Placeholders and fixtures that are not secrets"
 regexes = [
   '''sb_publishable_ci_placeholder_key''',
   '''https://ci\.placeholder\.supabase\.co''',
+  # Fake 24-character Razorpay key-secret fixtures (razorpay-keys / razorpay-actions tests).
+  '''TestOnlyRazorpaySecret24''',
+  '''Ab3dEf6hIj9kLm2nOp5qRs8t''',
 ]
 paths = [
   '''package-lock\.json$''',

@@ -21,7 +21,7 @@ vi.mock("../_lib/platform-step-up", () => ({ confirmStaffPassword: vi.fn(async (
 const { saveRazorpayAction } = await import("./razorpay-actions");
 
 const IDLE = { tone: null, message: null, field: null };
-const SECRET = "Ab3dEf6hIj9kLm2nOp5qRs8t";
+const SECRET = "TestOnlyRazorpaySecret24";
 const form = (id?: string, secret?: string, password?: string) => {
   const data = new FormData();
   if (id !== undefined) data.set("razorpay_key_id", id);
@@ -41,7 +41,7 @@ describe("the Razorpay card's one Save", () => {
     const result = await saveRazorpayAction(IDLE, form(" rzp_test_AbC123xyz987Q ", `${SECRET}\n`, "pw"));
     expect(result).toMatchObject({ tone: "info" });
     expect(result.message).toContain("Key id rzp_test_AbC123xyz987Q saved.");
-    expect(result.message).toContain("Key secret saved · ends in Rs8t.");
+    expect(result.message).toContain("Key secret saved · ends in et24.");
     expect(state.rpc).toHaveBeenCalledWith("platform_config_set", { p_key: "RAZORPAY_KEY_ID", p_value: "rzp_test_AbC123xyz987Q", p_actor: "p-owner" });
     expect(state.rpc).toHaveBeenCalledWith("platform_config_secret_set", { p_key: "RAZORPAY_KEY_SECRET", p_value: SECRET, p_actor: "p-owner" });
   });
