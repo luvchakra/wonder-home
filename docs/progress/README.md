@@ -13,6 +13,7 @@ decision that shapes later work each earns a note, written before moving on.
 |---|---|
 | 2026-11-20 | [HomeSend stops asking: "Looks right?" gone by default, the evening summary as the report](2026-11-20-homesend-stop-asking.md) |
 | 2026-11-20 | [HomeSend confirms by evidence and action: payment proof, updates at once, a stronger second read](2026-11-20-homesend-confirm-by-evidence.md) |
+| 2026-11-20 | [Next.js 16.4.3 → 16.4.5: seven security advisories cleared](2026-11-20-nextjs-16-4-5-security.md) |
 | 2026-11-20 | [Who may file health records for others: an Admin's list skips "Who is this for?"](2026-11-20-health-filers.md) |
 | 2026-11-20 | [Knowing instead of asking: memory fills every kind, usual bill amounts, every child at a school, known senders trusted, every answer teaches](2026-11-20-knowing-instead-of-asking.md) |
 | 2026-11-20 | [Razorpay keys: one card, and a step-up a Google-only owner can pass](2026-11-20-razorpay-one-card.md) |
