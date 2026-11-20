@@ -47,8 +47,8 @@ describe("every item ends as something", () => {
     expect(endingFor({ ...base, kind: "unknown" })).toEqual({ action: "note" });
   });
 
-  it("reads an unreadable item once more, then asks its sender once, then waits for that answer", () => {
-    const unreadable: EndingInput = { ...base, status: "failed", failureReason: "unreadable", kind: null };
+  it("reads an unreadable item once more, then asks its sender once (only while they're in HomeTalk), then waits for that answer", () => {
+    const unreadable: EndingInput = { ...base, status: "failed", failureReason: "unreadable", kind: null, senderActive: true };
     expect(endingFor(unreadable)).toEqual({ action: "read_again" });
     expect(endingFor({ ...unreadable, retryRequestedAt: "2026-11-14T10:00:00Z", retryCount: 1 })).toEqual({ action: "wait" });
     expect(endingFor({ ...unreadable, retryCount: 1, minutesSinceTouched: 10 })).toEqual({ action: "wait" });
@@ -63,7 +63,15 @@ describe("every item ends as something", () => {
 
   it("does the same for a paste whose reading failed", () => {
     expect(endingFor({ ...base, kind: "unknown", readable: false })).toEqual({ action: "read_again" });
-    expect(endingFor({ ...base, kind: "unknown", readable: false, retryCount: 1 })).toEqual({ action: "ask_resend" });
+    expect(endingFor({ ...base, kind: "unknown", readable: false, retryCount: 1, senderActive: true })).toEqual({ action: "ask_resend" });
+  });
+
+  it("sets an unreadable item aside with its reason when its sender isn't in HomeTalk right now (2026-11-20 review)", () => {
+    const unreadable: EndingInput = { ...base, status: "failed", failureReason: "unreadable", kind: null, retryCount: 1 };
+    expect(endingFor(unreadable)).toEqual({ action: "set_aside", reason: "unreadable" });
+    expect(endingFor({ ...unreadable, senderActive: false })).toEqual({ action: "set_aside", reason: "unreadable" });
+    // Still read again first, whoever is around.
+    expect(endingFor({ ...unreadable, retryCount: 0 })).toEqual({ action: "read_again" });
   });
 
   it("never makes a waiting bill, receipt or health document a note: part B records it as Checking", () => {
@@ -72,7 +80,10 @@ describe("every item ends as something", () => {
 
   it("asks about a waiting bill or health document that matches one on record, once (owner, 2026-11-20)", () => {
     const bill = { ...base, kind: "bill" as const };
-    expect(endingFor({ ...bill, match: "update" })).toEqual({ action: "ask_update", cancel: false });
+    // One clear bill with a newer amount or date is updated at once (2026-11-20 review); two candidates are still asked.
+    expect(endingFor({ ...bill, match: "update" })).toEqual({ action: "update_now" });
+    expect(endingFor({ ...bill, match: "update", ambiguous: true })).toEqual({ action: "ask_update", cancel: false });
+    // A cancellation never cancels on its own: still asked.
     expect(endingFor({ ...bill, match: "cancellation" })).toEqual({ action: "ask_update", cancel: true });
     expect(endingFor({ ...bill, match: "update", asked: new Set(["homesend_update"]) })).toEqual({ action: "wait" });
     expect(endingFor({ ...base, kind: "health_document", match: "duplicate" })).toEqual({ action: "ask", duplicate: true });
@@ -94,7 +105,15 @@ describe("every item ends as something", () => {
     // Nothing it could be added with (a receipt with no lines, a health document nobody sent): it waits, never a note.
     expect(endingFor({ ...base, kind: "receipt", match: null, addable: false })).toEqual({ action: "wait" });
     // A match on record is asked about as a match, never added twice.
-    expect(endingFor({ ...bill, match: "update", addable: true })).toEqual({ action: "ask_update", cancel: false });
+    expect(endingFor({ ...bill, match: "update", addable: true })).toEqual({ action: "update_now" });
+  });
+
+  it("adds a document's several bills at once where money is recorded directly (2026-11-20 review)", () => {
+    const bill = { ...base, kind: "bill" as const, match: null, addable: true };
+    expect(endingFor({ ...bill, severalNow: true })).toEqual({ action: "add_now" });
+    // "Wait for review" chosen by an Admin: still asked.
+    expect(endingFor({ ...bill, severalNow: false })).toEqual({ action: "ask_add" });
+    expect(endingFor({ ...bill, severalNow: true, asked: new Set(["homesend_add"]) })).toEqual({ action: "wait" });
   });
 
   it("asks a waiting item's one question once", () => {

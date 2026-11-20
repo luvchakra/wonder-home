@@ -37,6 +37,15 @@ const REVISABLE_KINDS: Partial<Record<HomeSendKind, ReconcilableDomain>> = { bil
 
 export type MatchedUpdateResult = "done" | "settled";
 
+/**
+ * Where an update applied at once comes from (the owner, 2026-11-20 review,
+ * part 2): a matched bill with a newer amount or date is updated as soon as
+ * the deadlines pass sees it, marked Checking with Undo, without waiting for
+ * the question or its 24-hour default. Only a match with two candidate bills
+ * (`reconcile.ts` `ambiguous`) is still asked; a cancellation never cancels.
+ */
+export const AT_ONCE_SOURCE = "matched_at_once";
+
 /** What the item matches on record now, or null (not one of these kinds, not readable, or nothing on record). */
 export async function matchOnRecord(
   client: SupabaseClient,
@@ -71,7 +80,7 @@ export async function applyMatchedUpdate(
   client: SupabaseClient,
   householdId: string,
   itemId: string,
-  how: { mode: "update" | "cancel" | "flag"; checking: boolean; byDefault: boolean; memberId: string | null; now: Date },
+  how: { mode: "update" | "cancel" | "flag"; checking: boolean; byDefault: boolean; memberId: string | null; now: Date; source?: string },
 ): Promise<MatchedUpdateResult> {
   const { data: itemRow, error } = await client
     .from("home_send_items")
@@ -93,6 +102,8 @@ export async function applyMatchedUpdate(
   // Updated meanwhile (by hand, or by another copy): what it says is already on record.
   if (match && proposal === "duplicate") return setAsideAsRecorded(client, householdId, row, how);
   if (!match || (proposal !== "update" && proposal !== "cancellation")) return "settled";
+  // At once only for one clear bill and a real update: two candidates, or a cancellation, wait for the question.
+  if (how.source === AT_ONCE_SOURCE && (match.ambiguous || proposal !== "update" || how.mode !== "update")) return "settled";
 
   const existing = (await listObligations(client, householdId, { id: match.existingId }))[0];
   if (!existing || existing.status === "cancelled") return "settled";
@@ -161,7 +172,7 @@ export async function applyMatchedUpdate(
     createdByMemberId: actor,
     changeType: mode === "cancel" ? "cancelled" : "updated",
     previous,
-    ...(checking ? { auto: { state: "unconfirmed" as const, confidence: null, source: how.byDefault ? "needs_you_default" : "needs_you" } } : {}),
+    ...(checking ? { auto: { state: "unconfirmed" as const, confidence: null, source: how.source ?? (how.byDefault ? "needs_you_default" : "needs_you") } } : {}),
   });
   await auditChange({
     householdId,
@@ -172,7 +183,7 @@ export async function applyMatchedUpdate(
     metadata: {
       intakeId: itemId,
       mode,
-      by: how.byDefault ? "default" : "person",
+      by: how.source === AT_ONCE_SOURCE ? "at_once" : how.byDefault ? "default" : "person",
       checking,
       // The note a flagged record carries: a message said it was called off, and it was kept.
       ...(mode === "flag" ? { note: "said_cancelled_kept" } : {}),

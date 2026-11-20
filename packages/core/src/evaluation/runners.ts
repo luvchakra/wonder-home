@@ -41,6 +41,7 @@ import { adoptMatchedSubject, resolveIntakePeople } from "../homesend/resolve";
 import { buildUnderstanding } from "../homesend/understanding";
 import { addQuestion, checkQuestion, endingFor, updateQuestion, waitingQuestion } from "../homesend/deadlines";
 import { gateHealthSubject, healthFiledFor, mayFileForOthers } from "../homesend/health-filers";
+import { matchPaymentToBill, readPaymentProof } from "../homesend/payment-proof";
 import type { HomeSendKind } from "../homesend/items";
 import { checkVerdict, decideByRules, MONEY_OR_HEALTH, newerFromSameSender, tidyFacts, type TidyItem, type TidyVerdict } from "../homesend/tidy";
 import type { TidyJudge } from "../homesend/tidy-model";
@@ -480,6 +481,7 @@ const CHANGE_DOMAIN = { bill: "bill", school_item: "school_item", activity_item:
 
 export async function observeHomeSend(c: HomeSendCase, models: Models = {}): Promise<Observation> {
   if (c.tidy) return observeTidy(c, c.tidy, models);
+  if (c.payment) return observePayment(c, c.payment);
   if (c.ending) return observeEnding(c, c.ending);
   const household = GOLDEN_HOUSEHOLDS[c.household];
   // A date phrase is resolved against when the content was written, in the household's timezone.
@@ -717,6 +719,9 @@ function observeEnding(c: HomeSendCase, ending: NonNullable<HomeSendCase["ending
             members: GOLDEN_HOUSEHOLDS[c.household].members.map((m) => ({ id: m.id, displayName: m.displayName, memberType: m.memberType, status: m.status })),
           })
         : null,
+      ambiguous: ending.ambiguous,
+      severalNow: ending.severalNow,
+      senderActive: ending.senderActive,
     });
     if (decided.action === "set_aside") action = `set_aside:${decided.reason}`;
     else if (decided.action === "ask") action = `ask→default:${waitingQuestion({ kind, title: reading.title, dueOn: reading.dueDate ?? null, today, duplicate: decided.duplicate === true || (ending.duplicate ?? false) }).defaultAnswer}`;
@@ -727,6 +732,8 @@ function observeEnding(c: HomeSendCase, ending: NonNullable<HomeSendCase["ending
       cancelsByDefault = question.defaultAnswer === "cancel_it";
     } else if (decided.action === "record") action = "record→checking";
     else if (decided.action === "file_for") action = `file_for:${decided.memberId}→checking`;
+    else if (decided.action === "update_now") action = "update_now→checking";
+    else if (decided.action === "add_now") action = "add_now→checking";
     else if (decided.action === "ask_add") action = `ask_add→default:${addQuestion({ kind, title: reading.title, dueOn: reading.dueDate ?? null, today }).defaultAnswer}`;
     else action = decided.action;
   }
@@ -735,6 +742,32 @@ function observeEnding(c: HomeSendCase, ending: NonNullable<HomeSendCase["ending
     interpretation: kind,
     action,
     safety: { consequential: moneyOrHealth, executed: moneyOrHealth && (confirmsByDefault || cancelsByDefault), refused: false, injectionFlagged: detectInstructionInjection(c.source.text).flagged },
+    answer: action,
+  };
+}
+
+/**
+ * A payment message (2026-11-20 review, decision 2), read and matched by the
+ * same pure rules the deadlines pass uses (`payment-proof.ts`). The only
+ * outcomes are records of what the household paid, as Checking: a bill marked
+ * paid, or the payment recorded on its own. Anything that asks for a payment,
+ * an approval, a PIN or a click, or tries to instruct WonderHome, is never
+ * proof. Nothing is ever paid, so `executed` is always false.
+ */
+function observePayment(c: HomeSendCase, payment: NonNullable<HomeSendCase["payment"]>): Observation {
+  const injection = detectInstructionInjection(c.source.text);
+  const read = injection.flagged ? { proof: null, reason: "injection" as const } : readPaymentProof(c.source.text);
+  let action: string;
+  if (!read.proof) action = `not_payment:${read.reason}`;
+  else {
+    const match = matchPaymentToBill(read.proof, payment.bills, payment.today);
+    action = match.type === "paid" ? "payment:paid→checking" : match.type === "amount_conflict" ? "payment:conflict→ask_unusual_amount" : "payment:recorded→checking";
+  }
+  return {
+    ...EMPTY,
+    interpretation: read.proof ? "receipt" : ((c.reading?.kind as string | undefined) ?? "unknown"),
+    action,
+    safety: { consequential: true, executed: false, refused: !read.proof, injectionFlagged: injection.flagged },
     answer: action,
   };
 }

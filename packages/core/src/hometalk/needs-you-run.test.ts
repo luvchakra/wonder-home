@@ -58,8 +58,9 @@ describe("the deadlines step", () => {
     // Read once more another way, before anyone is asked.
     expect(item("garbled")).toMatchObject({ status: "failed", retry_count: 1 });
     expect(tables.jobs!.some((job) => (job.payload as { itemId?: string }).itemId === "garbled")).toBe(true);
-    // Read again already: its sender was asked to resend, and that default (set aside) applied.
-    expect(item("garbled2")).toMatchObject({ status: "archived", archive_reason: "not_resent" });
+    // Read again already, its sender not in HomeTalk right now: set aside with its reason, nobody asked (2026-11-20 review).
+    expect(item("garbled2")).toMatchObject({ status: "archived", archive_reason: "unreadable" });
+    expect(tables.needs_you_items!.some((row) => row.subject_id === "garbled2")).toBe(false);
     // A child's notice: asked of the Admins, kept as a note by default.
     expect(item("notice")).toMatchObject({ status: "archived", archive_reason: "kept_as_note" });
     expect(tables.needs_you_items!.find((row) => row.subject_id === "notice")).toMatchObject({ recipient_member_id: null, status: "defaulted", answer: "note" });
@@ -74,12 +75,20 @@ describe("the deadlines step", () => {
 
     // HomeTalk proposals: the one 48 hours old closes as not done; the fresh one stays.
     expect(tables.conversation_actions!.map((row) => row.approval_status)).toEqual(["expired", "proposed"]);
-    expect(result).toMatchObject({ ready: true, notes: 1, setAside: 1, readAgain: 1, proposalsClosed: 1, defaulted: 4 });
+    expect(result).toMatchObject({ ready: true, notes: 1, setAside: 2, readAgain: 1, proposalsClosed: 1, defaulted: 3 });
     expect(tables.needs_you_items!.filter((row) => row.status === "open")).toEqual([]);
 
     // A second pass changes nothing.
     const again = await runNeedsYouDeadlines(client, { now: NOW, householdIds: ["h1"], sweep: false });
     expect(again).toMatchObject({ defaulted: 0, asked: 0, notes: 0, setAside: 0, readAgain: 0 });
+  });
+
+  it("asks a sender to send it again only while they are in HomeTalk", async () => {
+    const { client, tables } = seed();
+    tables.conversation_sessions = [{ id: "s1", household_id: "h1", member_id: "m1" }];
+    tables.conversation_messages = [{ id: "t1", household_id: "h1", session_id: "s1", role: "member", created_at: "2026-11-14T11:55:00Z" }];
+    await runNeedsYouDeadlines(client, { now: NOW, householdIds: ["h1"], sweep: false });
+    expect(tables.needs_you_items!.find((row) => row.subject_id === "garbled2")).toMatchObject({ source: "homesend_resend", recipient_member_id: "m1" });
   });
 
   it("withdraws a question whose entry was confirmed elsewhere (Mark paid, an edit)", async () => {
@@ -99,7 +108,7 @@ describe("the deadlines step", () => {
     expect(tables.needs_you_items!.find((row) => row.subject_id === "notice")).toMatchObject({ status: "expired" });
   });
 
-  it("updates a matched bill by default, marked Checking, and keeps a called-off one (owner, 2026-11-20)", async () => {
+  it("updates a matched bill at once, marked Checking with Undo, asking nothing (2026-11-20 review)", async () => {
     const { client, tables } = memoryDatabase({
       households: [{ id: "h1", timezone: "Asia/Kolkata", owner_member_id: "m1" }],
       household_members: [{ id: "m1", household_id: "h1", member_type: "adult", status: "active", profile_id: "u1" }],
@@ -118,8 +127,8 @@ describe("the deadlines step", () => {
       audit_events: [],
     }, [], HOME_SEND_CHECKS);
     await runNeedsYouDeadlines(client, { now: NOW, householdIds: ["h1"], sweep: false });
-    const question = tables.needs_you_items!.find((row) => row.subject_id === "newer");
-    expect(question).toMatchObject({ source: "homesend_update", default_answer: "update", recipient_member_id: "m1", status: "defaulted", answer: "update" });
+    // No question and no 24-hour wait: one clear bill on record.
+    expect(tables.needs_you_items!.some((row) => row.subject_id === "newer")).toBe(false);
     // The new amount is on the bill on record — not a second bill, nothing paid — marked Checking with what it replaced, for Undo.
     expect(tables.obligations).toHaveLength(1);
     expect(tables.obligations![0]).toMatchObject({ amount_minor: 238000, status: "active" });
@@ -175,9 +184,10 @@ describe("the deadlines step", () => {
       audit_events: [],
     }, [], HOME_SEND_CHECKS);
     await runNeedsYouDeadlines(client, { now: NOW, householdIds: ["h1"], sweep: false });
-    expect(tables.needs_you_items!.filter((row) => row.source === "homesend_add").map((row) => [row.subject_id, row.status, row.answer])).toEqual([["gas", "defaulted", "add"], ["doc", "defaulted", "add"]]);
+    // The document's two bills are added at once (2026-11-20 review); only the gas bill was asked.
+    expect(tables.needs_you_items!.filter((row) => row.source === "homesend_add").map((row) => [row.subject_id, row.status, row.answer])).toEqual([["gas", "defaulted", "add"]]);
     const bills = tables.obligations!.map((row) => [row.name, row.amount_minor ?? null, row.due_on ?? null]);
-    expect(bills).toEqual([["Gas bill", null, "2026-11-30"], ["Maintenance", 250000, "2026-12-01"], ["Parking", null, null]]);
+    expect(bills).toEqual([["Maintenance", 250000, "2026-12-01"], ["Parking", null, null], ["Gas bill", null, "2026-11-30"]]);
     expect(tables.homesend_changes!.every((row) => row.confirmation_state === "unconfirmed")).toBe(true);
     expect(tables.homesend_changes!).toHaveLength(3);
     expect(tables.home_send_items!.map((row) => row.status)).toEqual(["routed", "routed"]);
@@ -209,5 +219,48 @@ describe("the deadlines step", () => {
     expect(tables.health_records![0]).toMatchObject({ member_id: "m1", privacy_scope: "private" });
     expect(tables.homesend_changes!.map((row) => [row.domain, row.confirmation_state])).toEqual([["grocery_item", "unconfirmed"], ["purchase", "unconfirmed"], ["health_document", "unconfirmed"]]);
     expect(tables.home_send_items!.map((row) => row.status)).toEqual(["routed", "routed"]);
+  });
+
+  it("marks the bill a payment message paid, as Checking, and records one with no bill on its own (2026-11-20 review)", async () => {
+    const payment = (id: string, payee: string, amount: number) => ({
+      id, household_id: "h1", status: "classified", classified_kind: "receipt", raw_text: `Rs ${amount} debited to ${payee} via UPI`, title: `Paid to ${payee}`, readable: true,
+      extracted: { title: `Paid to ${payee}`, payee, amount, currency: "INR", documentDate: "2026-11-13" },
+      understanding: { kind: "receipt", safety: { instructionsIgnored: false }, payment: { amount, currency: "INR", payee, paidOn: "2026-11-13", method: "upi" } },
+      payment: { amount, currency: "INR", payee, paidOn: "2026-11-13", method: "upi" },
+      change: "new", retry_count: 0, created_by_member_id: "m1", created_at: "2026-11-14T11:00:00Z", updated_at: "2026-11-14T11:00:00Z",
+    });
+    const { client, tables } = memoryDatabase({
+      households: [{ id: "h1", timezone: "Asia/Kolkata", owner_member_id: "m1" }],
+      household_members: [{ id: "m1", household_id: "h1", member_type: "adult", status: "active", profile_id: "u1" }],
+      household_roles: [{ household_id: "h1", member_id: "m1", role: "head" }],
+      policies: [],
+      needs_you_items: [],
+      conversation_actions: [],
+      jobs: [],
+      obligations: [
+        { id: "b1", household_id: "h1", name: "Electricity", kind: "utility", payee: "BESCOM", amount_minor: 124000, currency: "INR", due_on: "2026-11-20", recurrence: "one_off", status: "expected" },
+        { id: "b2", household_id: "h1", name: "Broadband", kind: "utility", payee: "Airtel", amount_minor: 99900, currency: "INR", due_on: "2026-11-18", recurrence: "one_off", status: "expected" },
+      ],
+      obligation_history: [],
+      home_send_items: [payment("pay-bescom", "BESCOM", 1240), payment("pay-airtel", "Airtel", 4500), payment("pay-ravi", "Ravi Dairy", 300)],
+      homesend_changes: [{ id: "c-b1", household_id: "h1", intake_id: "elec-sent", domain: "bill", entity_id: "b1", change_type: "created", confirmation_state: "unconfirmed", undone_at: null, created_at: OLD }],
+      audit_events: [],
+    }, [], HOME_SEND_CHECKS);
+    const result = await runNeedsYouDeadlines(client, { now: NOW, householdIds: ["h1"], sweep: false });
+    expect(result.payments).toBe(3);
+    // Paid: the bill is marked paid, Undo keeps what it replaced, and the bill's own Checking entry is confirmed by the payment.
+    expect(tables.obligations!.find((row) => row.id === "b1")!.status).toBe("paid");
+    expect(tables.homesend_changes!.find((row) => row.intake_id === "pay-bescom")).toMatchObject({ entity_id: "b1", change_type: "updated", confirmation_state: "unconfirmed", previous: { payment: expect.objectContaining({ previous: expect.objectContaining({ status: "expected" }) }) } });
+    expect(tables.homesend_changes!.find((row) => row.id === "c-b1")).toMatchObject({ confirmation_state: "confirmed", confirmed_basis: "payment_proof" });
+    // A different amount never marks the bill paid: recorded on its own and flagged for the nightly question.
+    expect(tables.obligations!.find((row) => row.id === "b2")!.status).toBe("expected");
+    const airtel = tables.home_send_items!.find((row) => row.id === "pay-airtel")!;
+    expect(airtel).toMatchObject({ status: "routed", routed_table: "obligations" });
+    expect((airtel.understanding as { payment: { outcome: string; billId: string } }).payment).toMatchObject({ outcome: "conflict", billId: "b2" });
+    // No bill: a paid one-off, Checking.
+    expect(tables.obligations!.find((row) => row.name === "Paid to Ravi Dairy")).toMatchObject({ status: "paid", amount_minor: 30000, recurrence: "one_off" });
+    expect(tables.homesend_changes!.filter((row) => row.intake_id !== "elec-sent").every((row) => row.confirmation_state === "unconfirmed")).toBe(true);
+    // Nothing asked, nothing paid by WonderHome: only records of what the household paid.
+    expect(tables.needs_you_items).toEqual([]);
   });
 });

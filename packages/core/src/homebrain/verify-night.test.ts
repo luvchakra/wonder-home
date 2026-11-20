@@ -107,3 +107,39 @@ describe("nightly verification: confirming Checking entries", () => {
     expect(plan([checking], { sources: [{ itemId: "other", kind: "health_document", title: "Blood report", date: "2026-11-20", amount: null, payee: null, contentHash: null }] }).confirm).toEqual([]);
   });
 });
+
+describe("nightly verification: confirmed by evidence and action (2026-11-20 review)", () => {
+  it("confirms a Checking bill its payee sent a matching receipt for", () => {
+    const bill = entry({ unconfirmed: true, payee: "Airtel", title: "broadband", label: "Broadband", amount: 999, date: "2026-11-25" });
+    const { confirm } = plan([bill], { sources: [{ itemId: "r1", kind: "receipt", title: "Airtel receipt", date: "2026-11-21", amount: 999, payee: "Airtel Ltd", contentHash: null }] });
+    expect(confirm).toEqual([expect.objectContaining({ changeId: bill.changeId, basis: "receipt" })]);
+  });
+
+  it("never takes a receipt for a different amount or payee as proof", () => {
+    const bill = entry({ unconfirmed: true, payee: "Airtel", title: "broadband", label: "Broadband", amount: 999, date: "2026-11-25" });
+    expect(plan([bill], { sources: [{ itemId: "r1", kind: "receipt", title: "x", date: "2026-11-21", amount: 1499, payee: "Airtel", contentHash: null }] }).confirm).toEqual([]);
+    expect(plan([bill], { sources: [{ itemId: "r2", kind: "receipt", title: "x", date: "2026-11-21", amount: 999, payee: "Jio", contentHash: null }] }).confirm).toEqual([]);
+  });
+
+  it("confirms a non-health Checking entry once its day has passed with no correction and no conflict", () => {
+    const school = entry({ kind: "school_item", unconfirmed: true, title: "sports day", label: "Sports Day", amount: null, payee: null, date: "2026-11-10" });
+    expect(plan([school]).confirm).toEqual([expect.objectContaining({ changeId: school.changeId, basis: "due_passed" })]);
+    // Not yet passed, corrected, or with a conflict raised about it: left Checking.
+    expect(plan([{ ...school, date: "2026-11-20" }]).confirm).toEqual([]);
+    expect(plan([{ ...school, corrected: true }]).confirm).toEqual([]);
+    expect(plan([school], { alreadyRaised: new Set([school.changeId]) }).confirm).toEqual([]);
+  });
+
+  it("never confirms a health document by its day passing", () => {
+    const health = entry({ kind: "health_document", unconfirmed: true, title: "blood test", label: "Blood test", amount: null, payee: null, date: "2026-11-01" });
+    expect(plan([health]).confirm).toEqual([]);
+  });
+
+  it("asks the unusual-amount question about a payment that disagrees with its bill, without saying an amount", () => {
+    const payment = entry({ unconfirmed: true, title: "paid to bescom", label: "Paid to BESCOM", amount: 4500, date: "2026-11-14", paymentConflictWith: "Electricity" });
+    const { conflicts, confirm } = plan([payment]);
+    expect(conflicts).toEqual([expect.objectContaining({ reason: "unusual_amount", changeId: payment.changeId, defaultAnswerId: "keep" })]);
+    expect(conflicts[0]!.question).not.toMatch(/\d{3,}/);
+    expect(confirm).toEqual([]);
+  });
+});
