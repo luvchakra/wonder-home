@@ -19,7 +19,6 @@ import { IconTile, type IconTone } from "@wonderhome/core/ui/icon-tile";
 import { CollapsibleSection } from "@wonderhome/core/ui/collapsible-section";
 import { Badge, Pill, PillLink } from "@wonderhome/core/ui/pill";
 import { SectionHeader } from "@wonderhome/core/ui/section-header";
-import { EmptyState } from "@wonderhome/core/ui/states";
 
 import {
   confirmHomeSendEntryAction,
@@ -169,7 +168,10 @@ export function HomeSendInbox({
   labels,
   shared = null,
   welcome = null,
+  leadAction = null,
 }: {
+  /** A small icon button kept at the right of the opening sentence (the WhatsApp door, owner 2026-11-20). */
+  leadAction?: React.ReactNode;
   /** The first-time explainer, while the household has never sent anything (14-066). */
   welcome?: React.ReactNode;
   /** "Got it — X is added" after a share from the phone, with its Undo (14-066). */
@@ -399,7 +401,16 @@ export function HomeSendInbox({
   const openItemFull = openItem ? [...pending, ...failed, ...history].find((entry) => entry.id === openItem.id) : undefined;
   const canRemove = (item: HomeSendItem) => mayRemoveHomeSendItem({ memberId: viewerMemberId, memberType: viewerType, isAdmin }, item);
   const canRemoveOpen = Boolean(openItemFull && canRemove(openItemFull));
-  const leadLine = <p className="text-base font-medium text-[var(--wh-foreground)]">{lead}</p>;
+  const leadText = <p className="min-w-0 flex-1 text-base font-medium text-[var(--wh-foreground)]">{lead}</p>;
+  // The opening sentence wraps beside the icon; the icon never pushes it into a truncation (rules 7, 11).
+  const leadLine = leadAction ? (
+    <div className="flex items-start gap-2">
+      {leadText}
+      <div className="-my-2.5 -me-1.5 shrink-0">{leadAction}</div>
+    </div>
+  ) : (
+    leadText
+  );
 
   return (
     <RemoveProvider householdId={householdId} labels={words.remove} undoLabel={words.undo} cancelLabel={calm.clear.cancel}>
@@ -962,9 +973,6 @@ export function HomeSendInbox({
         </Link>
       ) : null}
 
-      {pending.length === 0 && failed.length === 0 && history.length === 0 && !openItem && !welcome ? (
-        <EmptyState icon={UploadCloud} tone="ai" title={words.emptyTitle} description={words.emptyDescription} />
-      ) : null}
     </div>
     </RemoveProvider>
   );

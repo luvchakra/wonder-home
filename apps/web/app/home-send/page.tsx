@@ -26,7 +26,7 @@ import { EmptyState } from "@wonderhome/core/ui/states";
 import { formatWhatsAppNumber, whatsappBusinessNumber } from "@wonderhome/core/whatsapp/linking";
 import { listWhatsAppLinks } from "@wonderhome/core/whatsapp/repository";
 
-import { HomeSendChannels, HomeSendWelcome } from "../_components/home-send-channels";
+import { HomeSendChannels, HomeSendWelcome, HomeSendWhatsAppButton } from "../_components/home-send-channels";
 import { HomeSendInbox } from "../_components/home-send-inbox";
 import { HomeSendArchived } from "../_components/home-send-archived";
 import { homesendPageLabels } from "../_lib/homesend-labels";
@@ -242,6 +242,11 @@ export default async function HomeSendPage({
           kids={kids}
           canAddChild={isAdmin}
           lead={lead}
+          leadAction={
+            whatsappNumber && membership.memberType === "adult" ? (
+              <HomeSendWhatsAppButton number={formatWhatsAppNumber(whatsappNumber)} connected={myWhatsApp !== null} labels={labels.channels} />
+            ) : null
+          }
           isAdmin={isAdmin}
           viewerMemberId={membership.memberId}
           viewerType={membership.memberType}
@@ -287,11 +292,6 @@ export default async function HomeSendPage({
           isAdmin={isAdmin}
           emailConfigured={emailConfigured}
           address={address}
-          whatsapp={
-            whatsappNumber && membership.memberType === "adult"
-              ? { number: formatWhatsAppNumber(whatsappNumber), connected: myWhatsApp !== null }
-              : null
-          }
           labels={labels.channels}
         />
 
