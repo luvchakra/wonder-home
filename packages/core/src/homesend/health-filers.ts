@@ -110,3 +110,20 @@ export function healthFiledFor(input: {
 export function asIntakePerson(member: HealthMember): IntakePerson {
   return { memberId: member.id, displayName: member.displayName, memberType: member.memberType === "child" ? "child" : member.memberType === "helper" ? "helper" : "adult" };
 }
+
+/**
+ * Whose a waiting health document is, from its own words, for a sender not
+ * on "Who may file health records for others" (the owner, 2026-11-20: a
+ * default never fills who a health document is for). "sender": the one
+ * household member it names is the sender. "other": it names someone else,
+ * or names that match nobody or several people. "unclear": it names nobody.
+ * Only "sender" is ever filed without a person saying so; the others ask the
+ * sender "Who is this for?" (`deadlines.ts` `healthForQuestion`).
+ */
+export type HealthSubjectFor = "sender" | "other" | "unclear";
+
+export function healthSubjectFor(input: { senderMemberId: string | null; names: readonly (string | null | undefined)[]; members: readonly HealthMember[] }): HealthSubjectFor {
+  const named = namedHealthSubject(input.names, input.members);
+  if (named) return input.senderMemberId && named.id === input.senderMemberId ? "sender" : "other";
+  return input.names.some((name) => typeof name === "string" && words(name).length >= 2) ? "other" : "unclear";
+}

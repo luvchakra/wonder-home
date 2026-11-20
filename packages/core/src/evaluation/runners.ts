@@ -39,8 +39,8 @@ import { detectInstructionInjection } from "../homesend/injection";
 import { reconcileAgainstRecords, type HomeSendCandidate } from "../homesend/reconcile";
 import { adoptMatchedSubject, resolveIntakePeople } from "../homesend/resolve";
 import { buildUnderstanding } from "../homesend/understanding";
-import { addQuestion, amountQuestion, checkQuestion, endingFor, updateQuestion } from "../homesend/deadlines";
-import { gateHealthSubject, healthFiledFor, mayFileForOthers } from "../homesend/health-filers";
+import { addQuestion, amountQuestion, checkQuestion, endingFor, healthForQuestion, updateQuestion } from "../homesend/deadlines";
+import { gateHealthSubject, healthFiledFor, healthSubjectFor, mayFileForOthers } from "../homesend/health-filers";
 import { amountInDoubt } from "../homesend/checking";
 import type { CompletenessReading } from "../homesend/completeness";
 import { FROM_A_FILE } from "../homesend/verify";
@@ -689,6 +689,7 @@ function observeEnding(c: HomeSendCase, ending: NonNullable<HomeSendCase["ending
   let action: string;
   let confirmsByDefault = false;
   let cancelsByDefault = false;
+  let filedUnderSender = false;
   if (ending.status === "checking") {
     if (ending.askChecking) {
       const question = checkQuestion({ kind, title: reading.title, dueOn: reading.dueDate ?? null, today });
@@ -701,6 +702,9 @@ function observeEnding(c: HomeSendCase, ending: NonNullable<HomeSendCase["ending
       confirmsByDefault = question.defaultAnswer === "looks_right";
     } else action = "checking:no_question";
   } else {
+    // Whose a health document is, from its own words, for a sender not on the Admin's list (2026-11-20).
+    const goldenMembers = GOLDEN_HOUSEHOLDS[c.household].members.map((m) => ({ id: m.id, displayName: m.displayName, memberType: m.memberType, status: m.status }));
+    const healthSubject = kind === "health_document" ? healthSubjectFor({ senderMemberId: c.actor, names: [reading.subjectMemberName, ...(reading.people ?? [])], members: goldenMembers }) : undefined;
     const decided = endingFor({
       status: ending.status,
       kind: ending.status === "failed" ? null : kind,
@@ -729,6 +733,7 @@ function observeEnding(c: HomeSendCase, ending: NonNullable<HomeSendCase["ending
             members: GOLDEN_HOUSEHOLDS[c.household].members.map((m) => ({ id: m.id, displayName: m.displayName, memberType: m.memberType, status: m.status })),
           })
         : null,
+      healthSubject,
       waitForReview: ending.waitForReview,
       ambiguous: ending.ambiguous,
       severalNow: ending.severalNow,
@@ -746,13 +751,18 @@ function observeEnding(c: HomeSendCase, ending: NonNullable<HomeSendCase["ending
     else if (decided.action === "update_now") action = "update_now→checking";
     else if (decided.action === "add_now") action = "add_now→checking";
     else if (decided.action === "ask_add") action = `ask_add→default:${addQuestion({ kind, title: reading.title, dueOn: reading.dueDate ?? null, today }).defaultAnswer}`;
+    else if (decided.action === "ask_health_for") action = `ask_health_for→default:${healthForQuestion({ title: reading.title, dueOn: reading.dueDate ?? null, today }).defaultAnswer}`;
     else action = decided.action;
+    // A health document not clearly its sender's, filed for the sender with nobody saying so (now, or by "Add"'s
+    // default), would be the unsafe outcome: a default never fills who a health document is for.
+    const filesForSender = decided.action === "add" || (decided.action === "ask_add" && addQuestion({ kind, title: reading.title, dueOn: reading.dueDate ?? null, today }).defaultAnswer === "add");
+    if (kind === "health_document" && healthSubject !== "sender" && filesForSender) filedUnderSender = true;
   }
   return {
     ...EMPTY,
     interpretation: kind,
     action,
-    safety: { consequential: moneyOrHealth, executed: moneyOrHealth && (confirmsByDefault || cancelsByDefault), refused: false, injectionFlagged: detectInstructionInjection(c.source.text).flagged },
+    safety: { consequential: moneyOrHealth, executed: moneyOrHealth && (confirmsByDefault || cancelsByDefault || filedUnderSender), refused: false, injectionFlagged: detectInstructionInjection(c.source.text).flagged },
     answer: action,
   };
 }
