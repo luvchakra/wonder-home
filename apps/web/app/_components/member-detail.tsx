@@ -2,6 +2,7 @@ import { completedYears, parseDateOfBirth } from "@wonderhome/core/identity/age"
 import { siblingOrder } from "@wonderhome/core/identity/households";
 import type { HouseholdMember } from "@wonderhome/core/identity/households";
 import { formatPhone } from "@wonderhome/core/identity/member-phone";
+import { contactLinks, phoneForEditing, type MemberContact } from "@wonderhome/core/identity/member-contact";
 
 import { hoursLabel, type DayHours } from "@wonderhome/core/household/day-hours";
 import { WORK_ARRANGEMENTS } from "@wonderhome/core/identity/households";
@@ -23,12 +24,21 @@ import { RemoveMemberControl } from "./remove-member-control";
 
 /** One label/value pair, skipped entirely when there is nothing to say (design principle 9: never a placeholder for what is not known). */
 /** One fact. A long one (an email, an address-like place) takes the row; any value wraps rather than running off the card (rule 15). */
-function Fact({ label, value, wide = false }: { label: string; value: string | null; wide?: boolean }) {
+function Fact({ label, value, wide = false, href }: { label: string; value: string | null; wide?: boolean; href?: string | null }) {
   if (!value) return null;
   return (
     <div className={wide ? "col-span-2" : undefined}>
       <dt className="text-xs font-medium tracking-wide text-[var(--wh-foreground-subtle)] uppercase">{label}</dt>
-      <dd className="text-sm [overflow-wrap:anywhere]">{value}</dd>
+      <dd className="text-sm [overflow-wrap:anywhere]">
+        {/* Tap to call or mail: a real link, tall enough for a thumb. */}
+        {href ? (
+          <a href={href} className="inline-flex min-h-11 items-center text-[var(--wh-primary)] underline-offset-2 hover:underline">
+            {value}
+          </a>
+        ) : (
+          value
+        )}
+      </dd>
     </div>
   );
 }
@@ -53,6 +63,7 @@ export function MemberDetail({
   school,
   email,
   phone,
+  contact,
   invite,
   workPlace,
   relations,
@@ -86,6 +97,12 @@ export function MemberDetail({
    * it was not read.
    */
   phone?: string | null;
+  /**
+   * Their contact email and phone — how the family reaches them, never how
+   * they sign in — when this viewer may read them (RLS). Undefined when the
+   * database does not keep them yet: the sheet then hides the two fields.
+   */
+  contact?: MemberContact | null;
   /** Who is inviting, into which household: the Invite control's message. Set for Admins. */
   invite?: { householdName: string; inviterName: string; canEmail: boolean } | null;
   /** An adult's picked office, when this viewer may see it (adults and Admins, and the person). */
@@ -105,6 +122,7 @@ export function MemberDetail({
       ? `${member.specialOccasionLabel} — ${formatDate(timezone, new Date(member.specialOccasionDate), "long")}`
       : member.specialOccasionLabel;
   const siblings = siblingOrder(member, allMembers, relationshipRows);
+  const links = contactLinks(contact);
   // Your own profile has one editor, in Settings (the Settings consolidation):
   // here it is read, with a way there. An Admin editing someone else is
   // managing the household's people, and that stays here.
@@ -137,6 +155,21 @@ export function MemberDetail({
               ...(email !== undefined ? { email } : {}),
               ...(phone !== undefined ? { phone } : {}),
             }}
+            contact={
+              contact === undefined
+                ? undefined
+                : {
+                    email: contact?.email ?? "",
+                    phone: phoneForEditing(contact),
+                    signInEmail: email ?? null,
+                    labels: {
+                      email: t("memberInvite.contact.email"),
+                      phone: t("memberInvite.contact.phone"),
+                      hint: t("memberInvite.contact.hint"),
+                      useSignIn: t("memberInvite.contact.useSignIn"),
+                    },
+                  }
+            }
             workOptions={member.memberType === "adult" ? WORK_ARRANGEMENTS.map((value) => ({ value, label: t(`setupWizard.work.${value}`) })) : undefined}
             office={member.memberType === "adult" ? officeField(workPlace ?? null) : undefined}
             schoolPlace={member.memberType === "child" ? schoolField(school ?? null) : undefined}
@@ -200,8 +233,11 @@ export function MemberDetail({
         <Fact label={t("family.fact.gender")} value={member.gender} />
         <Fact label={member.memberType === "helper" ? t("setupWizard.helpers.role") : t("family.fact.occupation")} value={member.occupation} />
         {/* How to reach them: whole rows, since an email or a number is long. */}
-        <Fact wide label={t("memberInvite.factEmail")} value={email ?? null} />
-        <Fact wide label={t("memberInvite.factPhone")} value={phone ? formatPhone(phone) : null} />
+        <Fact wide label={t("memberInvite.factContactEmail")} value={contact?.email ?? null} href={links.mail} />
+        <Fact wide label={t("memberInvite.factContactPhone")} value={contact?.phone ? formatPhone(contact.phone) : null} href={links.call} />
+        {/* The sign-in identity, said once: not repeated when it is the same as the contact. */}
+        <Fact wide label={t("memberInvite.factEmail")} value={email && email.toLowerCase() !== contact?.email ? email : null} />
+        <Fact wide label={t("memberInvite.factPhone")} value={phone && phone !== contact?.phone ? formatPhone(phone) : null} />
         {/* Their day. */}
         <Fact label={t("family.fact.schoolOrWork")} value={member.memberType === "child" && school ? school.schoolName : member.memberType === "adult" && workPlace ? null : member.schoolOrWorkLocation} />
         <Fact label={t("family.fact.schoolHours")} value={member.memberType === "child" && school?.hours ? hoursLabel(school.hours, clockTime) : null} />

@@ -11,12 +11,12 @@ in `docs/progress/`; for the running log of what changed when, `tracking/PROGRES
 
 ## The whole picture
 
-**433 of 476 stories done — 91%**
+**433 of 477 stories done — 90.8%**
 
 | Status | Stories |
 |---|---:|
 | Done | 433 |
-| In Progress | 13 |
+| In Progress | 14 |
 | Blocked | 1 |
 | Not Started | 25 |
 | Deferred | 4 |
@@ -26,7 +26,7 @@ in `docs/progress/`; for the running log of what changed when, `tracking/PROGRES
 | Module | Progress | Done | Total | Left |
 |---|---|---:|---:|---|
 | 00 Project Bootstrap & Architecture | `██████████` | 16 | 16 | — |
-| 01 Identity & Family Accounts | `██████████` | 14 | 14 | — |
+| 01 Identity & Family Accounts | `█████████░` | 14 | 15 | 1 in progress |
 | 02 Household Configuration & Playbook | `██████████` | 9 | 9 | — |
 | 03 Outcome & Routine Engine | `██████████` | 8 | 8 | — |
 | 04 Conversation, Voice & Text | `█████████░` | 29 | 31 | 1 in progress, 1 not started |
@@ -58,6 +58,7 @@ in `docs/progress/`; for the running log of what changed when, `tracking/PROGRES
 
 | Story | Module | Priority | Status |
 |---|---|---|---|
+| `01-015` A member's contact email and phone | 01 Identity & Family Accounts | P1 | In Progress |
 | `04-017` Voice evaluation, metrics and release gates | 04 Conversation, Voice & Text | P0 | In Progress |
 | `04-025` Leaving the app floats Gemini's voice on a real phone | 04 Conversation, Voice & Text | P1 | Not Started |
 | `08-016` A child's timetable and exams in their details in Family, and the day's lessons in Calendar's day view | 08 Kids & School Intelligence | P2 | Not Started |
@@ -129,7 +130,7 @@ in `docs/progress/`; for the running log of what changed when, `tracking/PROGRES
 
 ### 01 — Identity & Family Accounts
 
-14 of 14 done `██████████`
+14 of 15 done `█████████░`
 
 | Story | Priority | Status | Notes |
 |---|---|---|---|
@@ -147,6 +148,7 @@ in `docs/progress/`; for the running log of what changed when, `tracking/PROGRES
 | `01-012` A person's details read in order, and nothing runs off the card | P1 | Done | The owner's report, 2026-10-18 (PR #234): a long sign-in email ran off a child's details. Facts are grouped by what they are about (who they are, how to reach them, their day, family), email and phone take a whole row, and every value wraps rather than overflowing (rule 15). Checked at 360px with a 60-character email: no overflow |
 | `01-013` How the family is related | P1 | Done | The owner, 2026-10-19 (screenshot of Members & roles). Relationships on Members & roles: rows "Kunal is father of Asmi", each a person, a relation and a person, all picked (32 kinds, or the household's own words, rule 20), one row per pair. `member_relationships` (migration `20261019140000`, live, set-based RLS: members read, Admins write; a trigger keeps both people this household's active family). The other way round is said, never stored, from gender where recorded (`identity/relationships.ts` `inverseOf`); a row is refused when it relates someone to themselves, repeats a pair, or makes a parent younger than the child (`checkRelationship`, named reasons in eight languages). Suggestions from guardians and children, added with one tap, never automatically. Each person's details in Family show their line. HomeTalk answers "Who is Asmi's father?", "How is Upasana related to Manan?", "How is the family related?" by rules from the rows (`conversation/relations.ts`, goldens HT-114 to HT-116), and HomeBrain gets one fact per row. Help: Members, roles ¶6 in 8 languages |
 | `01-014` Where each member is, by consent | P1 | Done | The owner, 2026-10-20 ("show current location of each member … consent based, located in setting of that user, for child, adult controls it"). Off until turned on: an adult or helper turns their own on in Settings → Location sharing (`/settings/location`); a child's is set by their guardian or an Admin under the child in Family, and the child sees it. The device reports only while WonderHome is open (`LocationReporter`, every 5 min while visible), rounded to ~11 m, latest only; turning it off deletes it (trigger). Adults read positions, children and helpers only their own; never given to a model. Family shows At Home / At school / Out · how long ago with Open in Maps (`location/sharing.ts`: `placeAt` within 150 m of home, schools, offices, the place book). RLS test 4/4, unit 5. Waits on migration `20261020233000_member_locations.sql` reaching the live project. Live 2026-10-21: migration on the live project; checked end to end there (an adult and a guardian turned sharing on, both phones reported, Family read Out · this minute, the child had no Stop, Stop deleted the position). That run found the Permissions-Policy header denying geolocation; it is now `geolocation=(self)`. |
+| `01-015` A member's contact email and phone | P1 | In Progress | The owner, 2026-11-20: "add email, phone as attributes in profile". `household_member_contacts` (migration `20261121003000`): an optional contact email and phone (E.164, with what was typed kept beside it), how the family reaches a person — never the sign-in identity (`household_member_emails`/`household_member_phones` stay the only sign-in records), never a WhatsApp link or sender trust, never given to a model (knowledge registry: excluded). Edited in the details sheet after the name fields, saved by "Save details" (`member-contact.ts`, Zod at the boundary); the member and Admins write; Admins and the member read, adults read adults' and helpers', a child's are read by guardians and Admins. Shown on the Family card and Profile with tap-to-call/mail. The Admin's sign-in fields are now labelled "Sign-in email" / "Sign-in phone". Unit-tested (`member-contact.test.ts`) and DB-tested (`scripts/test-member-contacts-rls.mjs`). Until the migration runs the two fields are hidden and nothing breaks. **Done once the migration is applied to the live project** (SQL given to the owner) |
 
 ### 02 — Household Configuration & Playbook
 

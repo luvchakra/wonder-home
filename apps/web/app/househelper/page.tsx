@@ -46,6 +46,7 @@ import { platformMailConfig } from "@wonderhome/core/email/mailer";
 import { listPlaybookOutcomes } from "@wonderhome/core/household/configuration-repository";
 import { readMemberEmails } from "@wonderhome/core/identity/member-email";
 import { readMemberPhones } from "@wonderhome/core/identity/member-phone";
+import { readMemberContacts } from "@wonderhome/core/identity/member-contact";
 
 import { MemberDetail } from "../_components/member-detail";
 import { HelperLooksAfter } from "../_components/responsibility-controls";
@@ -189,9 +190,10 @@ export default async function HousehelperPage({
   const admin = isHouseholdAdmin(membership);
   // Admins invite a helper the household keeps without an account to sign in as themselves.
   const invite = admin ? { householdName: membership.household.name, inviterName: membership.displayName, canEmail: platformMailConfig() !== null } : null;
-  const [emails, phones] = await Promise.all([
+  const [emails, phones, contacts] = await Promise.all([
     readMemberEmails(supabase, membership.household.id).catch(() => new Map<string, string>()),
     readMemberPhones(supabase, membership.household.id).catch(() => new Map<string, string>()),
+    readMemberContacts(supabase, membership.household.id).catch(() => null),
   ]);
   const helperOptions = helpers.map((helper) => ({
     id: helper.id,
@@ -494,6 +496,7 @@ export default async function HousehelperPage({
                         }
                         email={emails.get(helper.id) ?? null}
                         phone={phones.get(helper.id) ?? null}
+                        contact={contacts ? (contacts.get(helper.id) ?? null) : undefined}
                         invite={invite}
                       />
 

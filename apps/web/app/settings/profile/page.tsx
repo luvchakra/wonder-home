@@ -7,6 +7,8 @@ import { languageInfo } from "@wonderhome/core/i18n/locales";
 import { regionName } from "@wonderhome/core/i18n/options";
 import { listMembers, WORK_ARRANGEMENTS } from "@wonderhome/core/identity/households";
 import { loadWorkPlace } from "@wonderhome/core/household/work-place";
+import { contactLinks, phoneForEditing, readMemberContacts } from "@wonderhome/core/identity/member-contact";
+import { formatPhone } from "@wonderhome/core/identity/member-phone";
 import { AppShell } from "@wonderhome/core/shell/app-shell";
 import { Avatar } from "@wonderhome/core/ui/avatar";
 import { Button } from "@wonderhome/core/ui/button";
@@ -68,7 +70,7 @@ export default async function ProfilePage() {
   const session = await requireSession("/settings/profile");
   const { supabase, membership, view, viewer, secondary } = session;
   const householdId = membership.household.id;
-  const [user, { data: preferenceRows }, members, myOffice, mySharing] = await Promise.all([
+  const [user, { data: preferenceRows }, members, myOffice, mySharing, contacts] = await Promise.all([
     getVerifiedUser(),
     supabase.from("notification_preferences").select("channel, enabled, quiet_from, quiet_until").eq("member_id", membership.memberId),
     listMembers(supabase, householdId, membership.household.ownerMemberId).catch(() => []),
@@ -76,7 +78,11 @@ export default async function ProfilePage() {
     loadWorkPlace(supabase, householdId, membership.memberId).catch(() => null),
     // Whether they share where they are (their own row; RLS lets every member read who shares).
     supabase.from("member_location_sharing").select("enabled").eq("member_id", membership.memberId).maybeSingle().then((result) => Boolean((result.data as { enabled?: boolean } | null)?.enabled), () => false),
+    // Their contact email and phone (how the family reaches them); null until the database keeps them, which hides the fields.
+    readMemberContacts(supabase, householdId).catch(() => null),
   ]);
+  const myContact = contacts ? (contacts.get(membership.memberId) ?? null) : undefined;
+  const myLinks = contactLinks(myContact);
   const me = members.find((member) => member.id === membership.memberId) ?? null;
   const preferences = (preferenceRows as PreferenceRow[] | null) ?? [];
   const inApp = preferences.find((p) => p.channel === "in_app");
@@ -123,6 +129,26 @@ export default async function ProfilePage() {
               <p className="text-lg font-semibold tracking-tight">{view.displayName}</p>
               <p className="text-sm text-[var(--wh-foreground-muted)]">{roleWords(view.roleLabel, t)} · {view.householdName}</p>
               <p className="text-xs break-all text-[var(--wh-foreground-subtle)]">{user?.email}</p>
+              {myContact?.email || myContact?.phone ? (
+                <dl className="mt-2 space-y-0.5 text-sm">
+                  {myContact.email && myLinks.mail ? (
+                    <div className="flex flex-wrap items-baseline gap-x-2">
+                      <dt className="text-xs font-medium tracking-wide text-[var(--wh-foreground-subtle)] uppercase">{t("memberInvite.factContactEmail")}</dt>
+                      <dd className="min-w-0 [overflow-wrap:anywhere]">
+                        <a href={myLinks.mail} className="inline-flex min-h-11 items-center text-[var(--wh-primary)] underline-offset-2 hover:underline">{myContact.email}</a>
+                      </dd>
+                    </div>
+                  ) : null}
+                  {myContact.phone && myLinks.call ? (
+                    <div className="flex flex-wrap items-baseline gap-x-2">
+                      <dt className="text-xs font-medium tracking-wide text-[var(--wh-foreground-subtle)] uppercase">{t("memberInvite.factContactPhone")}</dt>
+                      <dd className="min-w-0 [overflow-wrap:anywhere]">
+                        <a href={myLinks.call} className="inline-flex min-h-11 items-center text-[var(--wh-primary)] underline-offset-2 hover:underline">{formatPhone(myContact.phone)}</a>
+                      </dd>
+                    </div>
+                  ) : null}
+                </dl>
+              ) : null}
             </div>
             {me ? (
               <MemberProfileForm
@@ -146,6 +172,21 @@ export default async function ProfilePage() {
                 }}
                 workOptions={me.memberType === "adult" ? WORK_ARRANGEMENTS.map((value) => ({ value, label: t(`setupWizard.work.${value}`) })) : undefined}
                 office={me.memberType === "adult" ? officeField(myOffice) : undefined}
+                contact={
+                  myContact === undefined
+                    ? undefined
+                    : {
+                        email: myContact?.email ?? "",
+                        phone: phoneForEditing(myContact),
+                        signInEmail: user?.email ?? null,
+                        labels: {
+                          email: t("memberInvite.contact.email"),
+                          phone: t("memberInvite.contact.phone"),
+                          hint: t("memberInvite.contact.hint"),
+                          useSignIn: t("memberInvite.contact.useSignIn"),
+                        },
+                      }
+                }
               />
             ) : (
               <UserRound aria-hidden className="size-5 shrink-0 text-[var(--wh-foreground-subtle)]" />
