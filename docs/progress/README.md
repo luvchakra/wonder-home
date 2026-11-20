@@ -11,6 +11,7 @@ decision that shapes later work each earns a note, written before moving on.
 
 | Date | Note |
 |---|---|
+| 2026-11-20 | [Desktop sidebar: the WonderWorks layout in WonderHome's own look](2026-11-20-desktop-sidebar.md) |
 | 2026-11-20 | [HomeSend stops asking: "Looks right?" gone by default, the evening summary as the report](2026-11-20-homesend-stop-asking.md) |
 | 2026-11-20 | [HomeSend confirms by evidence and action: payment proof, updates at once, a stronger second read](2026-11-20-homesend-confirm-by-evidence.md) |
 | 2026-11-20 | [Next.js 16.4.3 → 16.4.5: seven security advisories cleared](2026-11-20-nextjs-16-4-5-security.md) |

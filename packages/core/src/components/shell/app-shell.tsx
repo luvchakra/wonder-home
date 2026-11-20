@@ -80,7 +80,7 @@ export function AppShell({
 
       <NavDrawerProvider viewer={viewer} secondary={secondary} pathname={pathname}>
         <div className="lg:flex">
-          <PrimaryNav active={active} variant="sidebar" secondary={secondary} pathname={pathname} labels={viewer?.labels} />
+          <PrimaryNav active={active} variant="sidebar" secondary={secondary} pathname={pathname} labels={viewer?.labels} viewer={viewer} />
 
           <div className="min-w-0 flex-1">
             <MobileHeader viewer={viewer} back={back ? { ...back, href: backTarget({ pathname, explicit: back.href }) } : undefined} title={title} search={headerSearch} />

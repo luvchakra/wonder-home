@@ -12,7 +12,8 @@ import { Avatar } from "../ui/avatar";
 import { Button } from "../ui/button";
 import { Sheet } from "../ui/sheet";
 import type { ShellViewer } from "./mobile-header";
-import { VIEWER_TRIGGER_CLASS, viewerMenuLabel } from "./viewer-menu-trigger";
+import { ViewerTriggerFace, viewerTriggerClass, type ViewerMenuVariant } from "./viewer-menu-face";
+import { viewerMenuLabel } from "./viewer-menu-trigger";
 
 /**
  * The avatar menu, loaded after the page (performance audit B3): `ViewerMenu`
@@ -44,7 +45,15 @@ const ITEMS = [
 const ITEM_CLASS =
   "flex min-h-10 w-full cursor-pointer items-center gap-2.5 rounded-[var(--wh-radius-sm)] px-2 text-left text-sm outline-none data-[highlighted]:bg-[var(--wh-surface-muted)]";
 
-export default function ViewerMenuContent({ viewer, defaultOpen }: { viewer: ShellViewer; defaultOpen: boolean }) {
+export default function ViewerMenuContent({
+  viewer,
+  defaultOpen,
+  variant = "avatar",
+}: {
+  viewer: ShellViewer;
+  defaultOpen: boolean;
+  variant?: ViewerMenuVariant;
+}) {
   const install = useInstallPrompt();
   const [guide, setGuide] = useState(false);
   // Back to the avatar on close, also when the menu first opened by itself
@@ -54,13 +63,15 @@ export default function ViewerMenuContent({ viewer, defaultOpen }: { viewer: She
   return (
     <>
     <DropdownMenu.Root defaultOpen={defaultOpen}>
-      <DropdownMenu.Trigger ref={trigger} aria-label={viewerMenuLabel(viewer)} className={VIEWER_TRIGGER_CLASS}>
-        <Avatar name={viewer.displayName} size="sm" imageUrl={viewer.avatarUrl ?? undefined} />
+      <DropdownMenu.Trigger ref={trigger} aria-label={viewerMenuLabel(viewer)} className={viewerTriggerClass(variant)}>
+        <ViewerTriggerFace viewer={viewer} variant={variant} />
       </DropdownMenu.Trigger>
 
       <DropdownMenu.Portal>
         <DropdownMenu.Content
-          align="end"
+          // From the sidebar's foot it opens upward, lined up with the card.
+          side={variant === "card" ? "top" : "bottom"}
+          align={variant === "card" ? "start" : "end"}
           sideOffset={8}
           onCloseAutoFocus={(event) => {
             event.preventDefault();
