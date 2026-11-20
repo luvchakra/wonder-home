@@ -63,6 +63,8 @@ export type ShellLabels = {
   install?: InstallBannerLabels;
 };
 
+export const notificationsLabel = (viewer: ShellViewer) => (viewer.unread ? `Notifications, ${viewer.unread} unread` : "Notifications");
+
 export function MobileHeader({
   viewer,
   back,
@@ -146,18 +148,21 @@ export function MobileHeader({
                   {viewer.stars.count}
                 </Link>
               ) : null}
-              <NotificationsBell unread={viewer.unread ?? 0} label={viewer.unread ? `Notifications, ${viewer.unread} unread` : "Notifications"} />
-              {viewer.stars ? (
-                // On a phone the count rides on the avatar, so the wordmark keeps its room (rule 15).
-                <span className="relative">
-                  <ViewerMenu viewer={viewer} />
-                  <span aria-hidden className="wh-kid-stars pointer-events-none absolute -end-1 -bottom-1 rounded-full px-1.5 text-[0.625rem] leading-4 font-bold sm:hidden">
-                    ⭐{viewer.stars.count}
+              {/* On desktop the bell and the person live in the sidebar (its header and pinned card), not here too (rule 14). */}
+              <span className="contents lg:hidden">
+                <NotificationsBell unread={viewer.unread ?? 0} label={notificationsLabel(viewer)} />
+                {viewer.stars ? (
+                  // On a phone the count rides on the avatar, so the wordmark keeps its room (rule 15).
+                  <span className="relative">
+                    <ViewerMenu viewer={viewer} />
+                    <span aria-hidden className="wh-kid-stars pointer-events-none absolute -end-1 -bottom-1 rounded-full px-1.5 text-[0.625rem] leading-4 font-bold sm:hidden">
+                      ⭐{viewer.stars.count}
+                    </span>
                   </span>
-                </span>
-              ) : (
-                <ViewerMenu viewer={viewer} />
-              )}
+                ) : (
+                  <ViewerMenu viewer={viewer} />
+                )}
+              </span>
             </>
           ) : null}
         </div>

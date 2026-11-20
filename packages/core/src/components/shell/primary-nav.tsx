@@ -33,9 +33,11 @@ import { currentNavHref } from "../../navigation/current-nav";
 import type { SecondaryNavItem } from "../../navigation/secondary-navigation";
 import { Wordmark } from "../ui/brand";
 import { IconTile, type IconTone } from "../ui/icon-tile";
-import type { ShellLabels } from "./mobile-header";
+import { notificationsLabel, type ShellLabels, type ShellViewer } from "./mobile-header";
 import { MoreTabButton } from "./nav-drawer";
+import { NotificationsBell } from "./notifications-bell";
 import { TalkButtonDisc } from "./talk-activity";
+import { ViewerMenu } from "./viewer-menu";
 
 /**
  * Today: a calendar in whatever colour the tab itself is (grey resting, blue
@@ -101,68 +103,83 @@ export type PrimaryNavProps = {
   pathname?: string;
   /** The navigation's words in the viewer's language (story 22-004). */
   labels?: ShellLabels;
+  /** Who is looking: the sidebar's bell and pinned card. Absent signed out. */
+  viewer?: ShellViewer;
 };
 
-export function PrimaryNav({ active, variant, secondary = [], pathname, labels }: PrimaryNavProps) {
+export function PrimaryNav({ active, variant, secondary = [], pathname, labels, viewer }: PrimaryNavProps) {
   const labelOf = (item: (typeof PRIMARY_NAVIGATION)[number]) => labels?.nav?.[item.key] ?? item.label;
   if (variant === "sidebar") {
     const domains = secondary.filter((item) => item.key !== "settings");
     const settings = secondary.find((item) => item.key === "settings");
     const currentHref = currentNavHref(pathname, secondary);
-    // The sidebar scrolls on its own when the window is shorter than the list, so every area stays reachable (rule 6).
 
+    // The mark and bell, the five areas, then the household list, which
+    // scrolls on its own between them and the pinned card at the foot when the
+    // window is shorter than the list, so every area stays reachable (rule 6).
     return (
       <nav
         aria-label="Primary"
-        className="sticky top-0 hidden h-dvh w-[var(--wh-sidebar-width)] shrink-0 flex-col overflow-y-auto overscroll-contain border-r border-[var(--wh-border)] bg-[var(--wh-surface)]/60 px-4 py-5 lg:flex"
+        className="sticky top-0 hidden h-dvh w-[var(--wh-sidebar-width)] shrink-0 flex-col border-r border-[var(--wh-border)] bg-[var(--wh-surface)] lg:flex"
       >
-        <Link href="/" className="mb-6 block shrink-0 px-2">
-          {/* The tagline wraps under the name rather than running past the sidebar edge (rule 15). */}
-          <Wordmark tagline taglineClassName="whitespace-normal" />
-        </Link>
+        <div className="flex shrink-0 items-center gap-2 px-4 pt-4 pb-3">
+          <Link href="/" className="min-w-0 flex-1 px-1">
+            {/* The tagline wraps under the name rather than running past the sidebar edge (rule 15). */}
+            <Wordmark tagline taglineClassName="whitespace-normal" />
+          </Link>
+          {viewer ? <NotificationsBell unread={viewer.unread ?? 0} label={notificationsLabel(viewer)} /> : null}
+        </div>
 
-        <ul className="space-y-0.5">
+        <ul className="shrink-0 space-y-0.5 px-3">
           {PRIMARY_NAVIGATION.map((item) => {
             const Icon = ICONS[item.icon];
             const isActive = item.key === active && !(item.key === "more" && pathname && pathname !== "/more");
             return (
               <li key={item.key}>
-                <SidebarLink href={item.href} icon={Icon} label={labelOf(item)} active={isActive} />
+                <SidebarAreaLink href={item.href} icon={Icon} label={labelOf(item)} active={isActive} />
               </li>
             );
           })}
         </ul>
 
-        {domains.length > 0 ? (
-          <>
-            <p className="mt-6 mb-1.5 px-3 text-[0.625rem] font-semibold tracking-[0.12em] text-[var(--wh-foreground-subtle)] uppercase">
-              {labels?.household ?? "Household"}
-            </p>
-            <ul className="space-y-0.5">
-              {domains.map((item) => (
-                <li key={item.key}>
-                  <SidebarLink
-                    href={item.href}
-                    icon={SECONDARY_ICONS[item.icon]}
-                    label={item.label}
-                    tone={item.tone}
-                    badge={item.badge}
-                    active={item.href === currentHref}
-                  />
-                </li>
-              ))}
-            </ul>
-          </>
-        ) : null}
+        <div aria-hidden className="mx-5 mt-3 h-px shrink-0 bg-[var(--wh-border)]" />
 
-        {settings ? (
-          <div className="mt-auto pt-4">
-            <SidebarLink
-              href={settings.href}
-              icon={SECONDARY_ICONS[settings.icon]}
-              label={labels?.settings ?? "Settings"}
-              active={settings.href === currentHref}
-            />
+        <div data-testid="sidebar-modules" className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-3 pt-3 pb-2">
+          {domains.length > 0 ? (
+            <>
+              <p className="mb-1 px-2 text-[0.625rem] font-semibold tracking-[0.12em] text-[var(--wh-foreground-subtle)] uppercase">
+                {labels?.household ?? "Household"}
+              </p>
+              <ul className="space-y-px">
+                {domains.map((item) => (
+                  <li key={item.key}>
+                    <SidebarModuleLink
+                      href={item.href}
+                      icon={SECONDARY_ICONS[item.icon]}
+                      label={item.label}
+                      tone={item.tone}
+                      badge={item.badge}
+                      active={item.href === currentHref}
+                    />
+                  </li>
+                ))}
+              </ul>
+            </>
+          ) : null}
+        </div>
+
+        {settings || viewer ? (
+          <div className="shrink-0 space-y-1 border-t border-[var(--wh-border)] px-3 pt-2 pb-3">
+            {settings ? (
+              <SidebarModuleLink
+                href={settings.href}
+                icon={SECONDARY_ICONS[settings.icon]}
+                label={labels?.settings ?? "Settings"}
+                tone="neutral"
+                active={settings.href === currentHref}
+              />
+            ) : null}
+            {viewer ? <ViewerMenu viewer={viewer} variant="card" /> : null}
           </div>
         ) : null}
       </nav>
@@ -233,6 +250,74 @@ export function PrimaryNav({ active, variant, secondary = [], pathname, labels }
   );
 }
 
+/** One of the five areas in the desktop sidebar: an outline icon and its label, a soft pill when current. */
+function SidebarAreaLink({ href, icon: Icon, label, active }: { href: string; icon: ComponentType<{ className?: string }>; label: string; active: boolean }) {
+  return (
+    <Link
+      href={href}
+      aria-current={active ? "page" : undefined}
+      className={cn(
+        "flex min-h-9 items-center gap-3 rounded-[var(--wh-radius)] px-3 text-sm font-medium transition-colors",
+        active
+          ? "bg-[var(--wh-primary-soft)] text-[var(--wh-primary)]"
+          : "text-[var(--wh-foreground-muted)] hover:bg-[var(--wh-surface-muted)] hover:text-[var(--wh-foreground)]",
+      )}
+    >
+      <Icon className="size-5 shrink-0" />
+      <span className="min-w-0 flex-1">{label}</span>
+    </Link>
+  );
+}
+
+/**
+ * A household row in the desktop sidebar: a small tinted tile in the domain's
+ * own colour (rule 3) and its name, compact, a soft pill when current. A long
+ * name wraps to a second line rather than ellipsising (rule 11).
+ */
+function SidebarModuleLink({
+  href,
+  icon: Icon,
+  label,
+  active,
+  tone,
+  badge,
+}: {
+  href: string;
+  icon: ComponentType<{ className?: string }>;
+  label: string;
+  active: boolean;
+  tone?: IconTone;
+  badge?: number;
+}) {
+  return (
+    <Link
+      href={href}
+      aria-current={active ? "page" : undefined}
+      className={cn(
+        "flex min-h-8 items-center gap-2.5 rounded-[var(--wh-radius-sm)] px-2 py-0.5 text-[0.8125rem] leading-snug font-medium transition-colors",
+        active
+          ? "bg-[var(--wh-primary-soft)] text-[var(--wh-primary)]"
+          : "text-[var(--wh-foreground-muted)] hover:bg-[var(--wh-surface-muted)] hover:text-[var(--wh-foreground)]",
+      )}
+    >
+      <IconTile icon={Icon} tone={tone ?? "neutral"} size="sm" className="size-7 [&>svg]:size-3.5" />
+      <span className="min-w-0 flex-1 break-words">{label}</span>
+      {badge ? <NewBadge count={badge} /> : null}
+    </Link>
+  );
+}
+
+function NewBadge({ count }: { count: number }) {
+  return (
+    <span
+      aria-label={`${count} new`}
+      className="ms-auto grid h-5 min-w-5 shrink-0 place-items-center rounded-full bg-[var(--wh-primary)] px-1.5 text-[0.6875rem] font-semibold text-white"
+    >
+      {count > 99 ? "99+" : count}
+    </span>
+  );
+}
+
 export function SidebarLink({
   href,
   icon: Icon,
@@ -278,14 +363,7 @@ export function SidebarLink({
     >
       {tone ? <IconTile icon={Icon} tone={tone} size="sm" /> : <Icon className="size-[1.125rem] shrink-0" />}
       <span className="min-w-0 flex-1">{label}</span>
-      {badge ? (
-        <span
-          aria-label={`${badge} new`}
-          className="ms-auto grid h-5 min-w-5 shrink-0 place-items-center rounded-full bg-[var(--wh-primary)] px-1.5 text-[0.6875rem] font-semibold text-white"
-        >
-          {badge > 99 ? "99+" : badge}
-        </span>
-      ) : null}
+      {badge ? <NewBadge count={badge} /> : null}
     </Link>
   );
 }
