@@ -66,8 +66,6 @@ export const groceryEn = {
   "grocery.toBuy.emptyTitle": "Nothing to buy",
   "grocery.toBuy.emptyLede": "Tap + on any item to put it on the list.",
   "grocery.summary.toBuy": "To buy",
-  "grocery.summary.atHome": "At home",
-  "grocery.summary.notCounted": "Not counted yet",
   "grocery.markBought": "Mark as bought",
   "grocery.bought.title": "What did you buy?",
   "grocery.bought.description": "Check each amount. What you bought goes onto what's at home, and the rest stays on the list.",

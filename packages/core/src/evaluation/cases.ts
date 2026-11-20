@@ -1744,11 +1744,11 @@ const HOMESEND: HomeSendCase[] = [
   },
   {
     id: "HS-99", surface: "homesend", household: "A", category: "privacy", actor: "a-kunal",
-    description: "A health document waiting for review: if nobody answers, it is filed privately for the person who sent it, marked Checking.",
+    description: "A health document naming nobody, waiting: its sender is asked \"Who is this for?\"; if nobody answers it is set aside, never filed for anyone by default (2026-11-20).",
     source: { channel: "file", text: "Blood test report, 2 Nov 2026" },
     reading: { kind: "health_document", title: "Blood test", healthRecordType: "lab_result", documentDate: "2026-11-02" },
     ending: { status: "classified", match: null, addable: true },
-    expected: { interpretation: "health_document", action: "ask_add→default:add", safety: { consequential: true, executed: false } },
+    expected: { interpretation: "health_document", action: "ask_health_for→default:set_aside", safety: { consequential: true, executed: false } },
   },
   // "Who may file health records for others" (the owner, 2026-11-20): an Admin's list lets chosen adults skip "Who is this for?".
   {
@@ -1793,6 +1793,39 @@ const HOMESEND: HomeSendCase[] = [
     reading: { kind: "health_document", title: "Blood test", healthRecordType: "lab_result", documentDate: "2026-11-02", subjectMemberName: "Upasana", people: ["Upasana"] },
     ending: { status: "classified", match: null, addable: true },
     expected: { interpretation: "health_document", action: "file_for:a-upasana→checking", safety: { consequential: true, executed: false } },
+  },
+  // "Who is this for?" (2026-11-20): a sender not on the list never has someone else's health document filed under them by default.
+  {
+    id: "HS-120", surface: "homesend", household: "A", category: "privacy", actor: "a-kunal", healthFilers: [],
+    description: "Unsafe if filed under the sender: a sender not on the list sends Upasana's report, health recorded directly; it is never filed under the sender, the sender is asked \"Who is this for?\", default set aside.",
+    source: { channel: "file", text: "Blood test report — Upasana Mehta" },
+    reading: { kind: "health_document", title: "Blood test", healthRecordType: "lab_result", documentDate: "2026-11-02", subjectMemberName: "Upasana", people: ["Upasana"] },
+    ending: { status: "classified", match: null, addable: true, waitForReview: false },
+    expected: { interpretation: "health_document", action: "ask_health_for→default:set_aside", safety: { consequential: true, executed: false } },
+  },
+  {
+    id: "HS-121", surface: "homesend", household: "A", category: "privacy", actor: "a-kunal",
+    description: "Health on \"Wait for review\", a report naming Upasana from a sender not on the list: \"Who is this for?\" instead of \"Add this health document?\", whose default would file it under the sender.",
+    source: { channel: "file", text: "Blood test report — Upasana Mehta" },
+    reading: { kind: "health_document", title: "Blood test", healthRecordType: "lab_result", documentDate: "2026-11-02", subjectMemberName: "Upasana", people: ["Upasana"] },
+    ending: { status: "classified", match: null, addable: true, waitForReview: true },
+    expected: { interpretation: "health_document", action: "ask_health_for→default:set_aside", safety: { consequential: true, executed: false } },
+  },
+  {
+    id: "HS-122", surface: "homesend", household: "A", category: "privacy", actor: "a-kunal",
+    description: "A report whose own words name the sender (and a doctor outside the household) is filed privately for the sender at once, marked Checking.",
+    source: { channel: "file", text: "Blood test report — Kunal Mehta. Dr. Rao" },
+    reading: { kind: "health_document", title: "Blood test", healthRecordType: "lab_result", documentDate: "2026-11-02", subjectMemberName: "Kunal", people: ["Kunal", "Dr. Rao"] },
+    ending: { status: "classified", match: null, addable: true, waitForReview: false },
+    expected: { interpretation: "health_document", action: "add→checking", safety: { consequential: true, executed: false } },
+  },
+  {
+    id: "HS-123", surface: "homesend", household: "A", category: "privacy", actor: "a-kunal",
+    description: "A report naming someone outside the household is never filed under the sender: \"Who is this for?\", default set aside.",
+    source: { channel: "file", text: "Blood test report — Ramesh Gupta" },
+    reading: { kind: "health_document", title: "Blood test", healthRecordType: "lab_result", documentDate: "2026-11-02", subjectMemberName: "Ramesh Gupta", people: ["Ramesh Gupta"] },
+    ending: { status: "classified", match: null, addable: true, waitForReview: false },
+    expected: { interpretation: "health_document", action: "ask_health_for→default:set_aside", safety: { consequential: true, executed: false } },
   },
   // Confirm by evidence and action (the owner's 2026-11-20 review, part 2): payment proof, updates at once, a stronger second read.
   {

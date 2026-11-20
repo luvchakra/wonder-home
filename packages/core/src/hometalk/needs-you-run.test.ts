@@ -235,10 +235,10 @@ describe("the deadlines step", () => {
     expect(tables.home_send_items!.map((row) => row.status)).toEqual(["routed", "routed"]);
   });
 
-  it("under \"Wait for review\", adds a waiting receipt's lines and files a health document privately for its sender, both Checking", async () => {
+  it("under \"Wait for review\", adds a waiting receipt's lines and files a health document naming its sender privately for them, both Checking", async () => {
     const { client, tables } = memoryDatabase({
       households: [{ id: "h1", timezone: "Asia/Kolkata", owner_member_id: "m1" }],
-      household_members: [{ id: "m1", household_id: "h1", member_type: "adult", status: "active", profile_id: "u1" }],
+      household_members: [{ id: "m1", household_id: "h1", member_type: "adult", status: "active", profile_id: "u1", display_name: "Kunal Mehta" }],
       household_roles: [{ household_id: "h1", member_id: "m1", role: "head" }],
       policies: [{ household_id: "h1", category: "ai_autonomy", name: "Money and health entries from HomeSend", active: true, rule: { value: "review" } }],
       needs_you_items: [],
@@ -250,7 +250,7 @@ describe("the deadlines step", () => {
       health_records: [],
       home_send_items: [
         { id: "rcpt", household_id: "h1", status: "classified", classified_kind: "receipt", raw_text: "FreshMart", title: "FreshMart", readable: true, extracted: { title: "FreshMart", merchant: "FreshMart", currency: "INR", documentDate: "2026-11-02", lines: [{ name: "Milk", quantity: 2, unit: "L", lineTotal: 120 }] }, change: "new", retry_count: 0, created_by_member_id: "m1", created_at: OLD, updated_at: OLD },
-        { id: "lab", household_id: "h1", status: "classified", classified_kind: "health_document", raw_text: "Blood test", title: "Blood test", readable: true, extracted: { title: "Blood test", healthRecordType: "lab_result", documentDate: "2026-11-02" }, change: "new", retry_count: 0, created_by_member_id: "m1", created_at: OLD, updated_at: OLD },
+        { id: "lab", household_id: "h1", status: "classified", classified_kind: "health_document", raw_text: "Blood test", title: "Blood test", readable: true, extracted: { title: "Blood test", healthRecordType: "lab_result", documentDate: "2026-11-02", subjectMemberName: "Kunal" }, change: "new", retry_count: 0, created_by_member_id: "m1", created_at: OLD, updated_at: OLD },
       ],
       homesend_changes: [],
       audit_events: [],
@@ -261,6 +261,38 @@ describe("the deadlines step", () => {
     expect(tables.health_records![0]).toMatchObject({ member_id: "m1", privacy_scope: "private" });
     expect(tables.homesend_changes!.map((row) => [row.domain, row.confirmation_state])).toEqual([["grocery_item", "unconfirmed"], ["purchase", "unconfirmed"], ["health_document", "unconfirmed"]]);
     expect(tables.home_send_items!.map((row) => row.status)).toEqual(["routed", "routed"]);
+  });
+
+  it("never files a health document naming someone else, or nobody, under its sender: asks the sender, and sets it aside by default (2026-11-20)", async () => {
+    for (const review of ["review", "direct"]) {
+      const lab = (id: string, extracted: Record<string, unknown>) => ({ id, household_id: "h1", status: "classified", classified_kind: "health_document", raw_text: "Blood test", title: "Blood test", readable: true, extracted: { title: "Blood test", healthRecordType: "lab_result", documentDate: "2026-11-02", ...extracted }, change: "new", retry_count: 0, created_by_member_id: "m1", created_at: OLD, updated_at: OLD });
+      const { client, tables } = memoryDatabase({
+        households: [{ id: "h1", timezone: "Asia/Kolkata", owner_member_id: "m1" }],
+        household_members: [
+          { id: "m1", household_id: "h1", member_type: "adult", status: "active", profile_id: "u1", display_name: "Kunal Mehta" },
+          { id: "m2", household_id: "h1", member_type: "adult", status: "active", profile_id: "u2", display_name: "Upasana Mehta" },
+        ],
+        household_roles: [{ household_id: "h1", member_id: "m1", role: "head" }],
+        policies: [{ household_id: "h1", category: "ai_autonomy", name: "Money and health entries from HomeSend", active: true, rule: { value: review } }],
+        needs_you_items: [],
+        conversation_actions: [],
+        jobs: [],
+        health_provenance: [],
+        health_records: [],
+        home_send_items: [lab("other", { subjectMemberName: "Upasana", people: ["Upasana"] }), lab("nobody", {})],
+        homesend_changes: [],
+        audit_events: [],
+      }, [], HOME_SEND_CHECKS);
+      await runNeedsYouDeadlines(client, { now: NOW, householdIds: ["h1"], sweep: false });
+      // One "Who is this for?" each, to the sender only; its 24-hour default sets it aside. Never "Add", never filed.
+      expect(tables.needs_you_items!.map((row) => [row.source, row.subject_id, row.recipient_member_id, row.default_answer, row.status])).toEqual([
+        ["homesend_health_for", "other", "m1", "set_aside", "defaulted"],
+        ["homesend_health_for", "nobody", "m1", "set_aside", "defaulted"],
+      ]);
+      expect(tables.health_records).toEqual([]);
+      expect(tables.homesend_changes).toEqual([]);
+      expect(tables.home_send_items!.map((row) => [row.status, row.archive_reason])).toEqual([["archived", "health_not_claimed"], ["archived", "health_not_claimed"]]);
+    }
   });
 
   it("marks the bill a payment message paid, as Checking, and records one with no bill on its own (2026-11-20 review)", async () => {

@@ -14,6 +14,8 @@ import type { HouseholdContextItem } from "../context/types";
 import { usualBill } from "../homebrain/history-fill";
 import { listPayeeBills } from "../homebrain/household-records";
 import { keepFilledWhy, readSenderHistory } from "./sender-history";
+import { healthSubjectFor } from "./health-filers";
+import { loadHealthMembers } from "../household/direct-add-repository";
 import { vendorKey } from "../homebrain/rules";
 
 /**
@@ -35,10 +37,11 @@ import { vendorKey } from "../homebrain/rules";
  *     bills records each;
  *   - a receipt's lines as purchases, against the tracked item of that name or
  *     a newly tracked one, dated by the receipt or else the day it was sent;
- *   - a health document filed privately for the person who sent it, as a
- *     person's own Add files it, with its file copied to health records; or,
- *     from a sender on "Who may file health records for others", for the
- *     member it names (`health-filers.ts`, the owner 2026-11-20).
+ *   - a health document filed privately for the person who sent it, only
+ *     when its own words name the sender or the sender tapped "It's mine" on
+ *     "Who is this for?" (never by a default: 2026-11-20), with its file
+ *     copied to health records; or, from a sender on "Who may file health
+ *     records for others", for the member it names (`health-filers.ts`).
  *
  * Since 2026-11-20 ("as autonomous as possible") the question is asked only
  * when an Admin set money or health to "Wait for review"; otherwise the
@@ -85,6 +88,11 @@ export async function addWaitingItem(
      * member instead of the sender. The caller checked the list.
      */
     healthFor?: string | null;
+    /**
+     * A health document its sender said is theirs ("Who is this for?" → "It's
+     * mine"): a person's own tap, by the sender, never a default.
+     */
+    forSender?: boolean;
     /** Added by the deadlines step's own rule, not a question's default (2026-11-20: "Add this bill?" only under "Wait for review"). */
     byRule?: boolean;
   },
@@ -108,6 +116,11 @@ export async function addWaitingItem(
   // Whose name the change rows carry: the person who tapped, else the sender, else the owner (always an Admin); the audit says "default".
   const actor = how.memberId ?? sender ?? ((household?.owner_member_id as string | null) ?? null);
   if (!actor) return "settled";
+  // Who a health document is for is never filled by a rule or a default (2026-11-20): filed for its sender only when
+  // its own words say it is theirs, or the sender said so with their own tap; else it waits for "Who is this for?".
+  if (kind === "health_document" && !how.healthFor && !(how.forSender === true && !how.byDefault && how.memberId === sender)) {
+    if ((await healthSubjectOf(client, householdId, sender, read)) !== "sender") return "settled";
+  }
 
   const claimed = await claim(client, householdId, row, how.now);
   if (!claimed) return "settled";
@@ -234,6 +247,13 @@ export async function addWaitingItem(
     metadata: { intakeId: itemId, kind, entries: written.length, by: how.byRule ? "rule" : how.byDefault ? "default" : "person", ...(filedForOther ? { filedFor: how.healthFor, sender, by: "allowed_filer" } : {}) },
   });
   return "done";
+}
+
+/** Whose a health document is, from its own words and the household's members; unreadable members: "unclear". */
+async function healthSubjectOf(client: SupabaseClient, householdId: string, sender: string | null, read: Partial<HomeSendExtraction> | null) {
+  const members = await loadHealthMembers(client, householdId);
+  if (!members) return "unclear" as const;
+  return healthSubjectFor({ senderMemberId: sender, names: [read?.subjectMemberName, ...(read?.people ?? [])], members });
 }
 
 /** Claimed by its review columns alone: it stays where it waits until what it becomes exists. */

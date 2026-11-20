@@ -11,11 +11,11 @@ in `docs/progress/`; for the running log of what changed when, `tracking/PROGRES
 
 ## The whole picture
 
-**431 of 473 stories done — 91.1%**
+**432 of 474 stories done — 91.1%**
 
 | Status | Stories |
 |---|---:|
-| Done | 431 |
+| Done | 432 |
 | In Progress | 13 |
 | Blocked | 1 |
 | Not Started | 24 |
@@ -50,7 +50,7 @@ in `docs/progress/`; for the running log of what changed when, `tracking/PROGRES
 | 22 Internationalization and Localization | `████████░░` | 7 | 8 | 1 deferred |
 | 23 Smart Notifications | `██████████` | 13 | 13 | — |
 | 24 HomePlaces | `██████████` | 15 | 15 | — |
-| 25 HomeFood | `████████░░` | 37 | 44 | 7 not started |
+| 25 HomeFood | `████████░░` | 38 | 45 | 7 not started |
 | 26 HomeEvents | `███████░░░` | 15 | 20 | 2 in progress, 3 not started |
 | 27 Notification Channels and Events | `█████████░` | 24 | 25 | 1 blocked |
 
@@ -664,7 +664,7 @@ in `docs/progress/`; for the running log of what changed when, `tracking/PROGRES
 
 ### 25 — HomeFood
 
-37 of 44 done `████████░░`
+38 of 45 done `████████░░`
 
 | Story | Priority | Status | Notes |
 |---|---|---|---|
@@ -712,6 +712,7 @@ in `docs/progress/`; for the running log of what changed when, `tracking/PROGRES
 | `25-043` A recipe card in Meals → Recipes opens its own page | P1 | Done | The owner, 2026-10-29 (rule 21). The title on each of "Your recipes" is a stretched link to `/meals/recipes/mine/[id]` (picture, time, serves, nutrients per serving, what it needs, steps); the pencil, share and like/dislike stay separate controls above the link and do not navigate. Not browser-checked here (no `.env.local` in the cloud container): typecheck, ESLint and the production build pass. |
 | `25-044` Vertically compact grocery cards (second pass) | P1 | Done | The owner, 2026-10-29: cards still too tall. `ui/grocery-row.tsx`: In stock / To buy labels sit inline beside their stepper (wrapping under it only when the cell is too narrow), category and nutrition meta on one line with an ellipsis (the name still wraps, rule 11), 36→32 px stepper buttons with an invisible 44 px hit area (`before:-inset-1.5`), 36 px photo, tighter row padding. Layout only, no data or logic change. Verified: types, lint, unit tests, `npm run build -w apps/web`; not browser-measured (no signed-in session in the cloud container). PR #451. |
 | `25-045` Swipe to remove, no Remove button on the grocery card | P1 | Done | The owner, 2026-10-29: the "× Remove" row is gone from the list card (it stays on the item's detail stepper, and "Remove" in the amount sheet reached by tapping the amount, so keyboard and screen-reader users keep a way). A deliberate swipe (past a third of the row, either way) takes the item off the list under To buy and All, using the same `adjustListAction` remove; under All the row springs back, now off the list. Rows tightened again (padding, no row gap). Layout and wiring only, no data change. Verified: types, lint, `npm run build -w apps/web`. |
+| `25-047` Groceries: no summary cards; Order on Instamart only on To Buy | P1 | Done | The owner, 2026-11-20 (marked-up screenshot: "remove crossed out section. show order from Instamart only if to buy tab is clicked"). The row of three cards on To Buy is gone at every width: At home (a filter, the same items as the In Kitchen tab) and Not counted yet (a filter; each row still says "Not counted yet" in its own status) go with nothing in their place; Mark as bought had no other door, so it stays as one quiet outline button at the top of To Buy (adults, when something is on the list) opening the same "What did you buy?" sheet. Order on Instamart is rendered only on the To Buy tab; what it does is unchanged. `grocery.summary.atHome`/`notCounted` removed in eight languages; help (meals-and-shopping ¶2, ¶21) and its `updated` date in eight languages. Verified signed-in at 360 px and 1280 px on all three tabs (no overflow; Instamart and Mark as bought only on To Buy; the sheet opens). PR #570. Note: `docs/progress/2026-11-20-groceries-no-summary-cards.md`. |
 
 ### 26 — HomeEvents
 

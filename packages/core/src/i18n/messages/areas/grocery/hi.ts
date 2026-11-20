@@ -62,8 +62,6 @@ export const groceryHi: AreaCatalog<typeof groceryEn> = {
   "grocery.toBuy.emptyTitle": "कुछ खरीदना नहीं है",
   "grocery.toBuy.emptyLede": "किसी भी चीज़ पर + दबाएँ और वह सूची में आ जाएगी।",
   "grocery.summary.toBuy": "खरीदना है",
-  "grocery.summary.atHome": "घर में",
-  "grocery.summary.notCounted": "अभी गिना नहीं गया",
   "grocery.markBought": "खरीदा हुआ मानें",
   "grocery.bought.title": "आपने क्या खरीदा?",
   "grocery.bought.description": "हर मात्रा जाँच लें। जो खरीदा वह घर के सामान में जुड़ जाएगा, और बाकी सूची में रहेगा।",

@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { addQuestion, amountQuestion, checkQuestion, effectOf, endingFor, notHouseholdInformation, resendQuestion, updateQuestion, waitingQuestion, type EndingInput } from "./deadlines";
+import { addQuestion, amountQuestion, HEALTH_FOR_SOURCE, healthForQuestion, checkQuestion, effectOf, endingFor, notHouseholdInformation, resendQuestion, updateQuestion, waitingQuestion, type EndingInput } from "./deadlines";
 
 const PAGE = `Home | About us | Contact us | Blog
 Accept all cookies to continue. Read our Privacy Policy and Terms of Service.
@@ -102,7 +102,8 @@ describe("every item ends as something", () => {
     expect(endingFor({ ...bill, recordable: false, addable: true })).toEqual({ action: "ask_add" });
     expect(endingFor({ ...bill, recordable: true, addable: true })).toEqual({ action: "record" });
     expect(endingFor({ ...bill, addable: true, asked: new Set(["homesend_add"]) })).toEqual({ action: "wait" });
-    for (const kind of ["receipt", "health_document"] as const) expect(endingFor({ ...base, kind, match: null, addable: true })).toEqual({ action: "ask_add" });
+    expect(endingFor({ ...base, kind: "receipt", match: null, addable: true })).toEqual({ action: "ask_add" });
+    expect(endingFor({ ...base, kind: "health_document", match: null, addable: true, healthSubject: "sender" })).toEqual({ action: "ask_add" });
     // Nothing it could be added with (a receipt with no lines, a health document nobody sent): it waits, never a note.
     expect(endingFor({ ...base, kind: "receipt", match: null, addable: false })).toEqual({ action: "wait" });
     // A match on record is asked about as a match, never added twice.
@@ -121,7 +122,22 @@ describe("every item ends as something", () => {
     const bill = { ...base, kind: "bill" as const, match: null, recordable: false, addable: true };
     expect(endingFor({ ...bill, waitForReview: false })).toEqual({ action: "add" });
     expect(endingFor({ ...bill, waitForReview: true })).toEqual({ action: "ask_add" });
-    expect(endingFor({ ...base, kind: "health_document", match: null, addable: true, waitForReview: false })).toEqual({ action: "add" });
+    expect(endingFor({ ...base, kind: "health_document", match: null, addable: true, waitForReview: false, healthSubject: "sender" })).toEqual({ action: "add" });
+  });
+
+  it("never files a health document under its sender unless its own words say it is theirs (2026-11-20)", () => {
+    const health = { ...base, kind: "health_document" as const, match: null, addable: true };
+    for (const healthSubject of ["other", "unclear", undefined] as const) {
+      for (const waitForReview of [false, true]) {
+        // Was "add" / "ask_add" (whose default adds it), filing it under the sender: now "Who is this for?" to the sender.
+        expect(endingFor({ ...health, healthSubject, waitForReview })).toEqual({ action: "ask_health_for" });
+      }
+      // Asked once; nobody to ask (no sender who can answer): set aside, never filed.
+      expect(endingFor({ ...health, healthSubject, asked: new Set([HEALTH_FOR_SOURCE]) })).toEqual({ action: "wait" });
+      expect(endingFor({ ...health, healthSubject, senderMemberId: null })).toEqual({ action: "set_aside", reason: "health_not_claimed" });
+    }
+    // An allowed filer's document naming another member keeps #561's behaviour.
+    expect(endingFor({ ...health, healthSubject: "other", filedFor: "m-2" })).toEqual({ action: "file_for", memberId: "m-2" });
   });
 
   it("keeps a waiting item as a note at once, with no question (2026-11-20)", () => {
@@ -131,6 +147,19 @@ describe("every item ends as something", () => {
 });
 
 describe("questions and their defaults", () => {
+  it("\"Who is this for?\" defaults to set aside; only the sender's own tap files it, for them (2026-11-20)", () => {
+    const question = healthForQuestion({ title: "Blood test", dueOn: null, today });
+    expect(question.source).toBe(HEALTH_FOR_SOURCE);
+    expect(question.prompt.code).toBe("homesend.health_for");
+    expect(question.answers.map((a) => a.value)).toEqual(["for_me", "set_aside"]);
+    expect(question.defaultAnswer).toBe("set_aside");
+    expect(effectOf(HEALTH_FOR_SOURCE, "set_aside", true)).toEqual({ effect: "archive", reason: "health_not_claimed" });
+    expect(effectOf(HEALTH_FOR_SOURCE, "set_aside", false)).toEqual({ effect: "archive", reason: "removed_by_person" });
+    expect(effectOf(HEALTH_FOR_SOURCE, "for_me", false)).toEqual({ effect: "add", forSender: true });
+    // A default never files it, even if "for_me" were somehow the default.
+    expect(effectOf(HEALTH_FOR_SOURCE, "for_me", true)).toEqual({ effect: "none" });
+  });
+
   const today = "2026-11-14";
 
   it("keeps a Checking entry as read by default, but never confirms money or health by default", () => {

@@ -62,8 +62,6 @@ export const groceryDe: AreaCatalog<typeof groceryEn> = {
   "grocery.toBuy.emptyTitle": "Nichts zu kaufen",
   "grocery.toBuy.emptyLede": "Tippe bei einem Artikel auf +, um ihn auf die Liste zu setzen.",
   "grocery.summary.toBuy": "Zu kaufen",
-  "grocery.summary.atHome": "Zu Hause",
-  "grocery.summary.notCounted": "Noch nicht gezählt",
   "grocery.markBought": "Als gekauft markieren",
   "grocery.bought.title": "Was hast du gekauft?",
   "grocery.bought.description": "Prüfe jede Menge. Was du gekauft hast, kommt zum Vorrat zu Hause, der Rest bleibt auf der Liste.",

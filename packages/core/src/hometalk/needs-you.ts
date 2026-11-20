@@ -30,12 +30,13 @@ export const SOON_DAYS = 7;
  * still shown (worded by its `prompt.code`), so a part can add one without
  * this file changing first.
  */
-export const NEEDS_YOU_SOURCES = ["homesend_check", "homesend_waiting", "homesend_resend", "homesend_update", "homesend_add", "homesend_amount", "hometalk_proposal", "approval", "sender_trust", "conflict", "homebrain_conflict"] as const;
+export const NEEDS_YOU_SOURCES = ["homesend_check", "homesend_waiting", "homesend_resend", "homesend_update", "homesend_add", "homesend_amount", "homesend_health_for", "hometalk_proposal", "approval", "sender_trust", "conflict", "homebrain_conflict"] as const;
 
 /**
  * What still asks by default (the owner, 2026-11-20: "as autonomous as
  * possible, with minimum inputs required from the users"): trusting a new
- * sender; a health document for someone else; an unusual amount, clash or
+ * sender; "Who is this for?" about a health document that isn't clearly its
+ * sender's (`homesend_health_for`, to the sender only, default Set aside); an unusual amount, clash or
  * duplicate the nightly check found; a money amount read with doubt; "Add
  * this bill?" under the Admin's "Wait for review"; and a bill matching one on
  * record when two could match ("Update the existing bill?"); and "send it
@@ -44,7 +45,7 @@ export const NEEDS_YOU_SOURCES = ["homesend_check", "homesend_waiting", "homesen
  * entries still Checking"; "homesend_waiting" is no longer asked, and its open
  * rows are withdrawn (`needs-you-run.ts`).
  */
-export const ASKING_SOURCES: readonly string[] = ["sender_trust", "health_for_other", "homebrain_conflict", "conflict", "homesend_amount", "homesend_add", "homesend_update", "homesend_resend"];
+export const ASKING_SOURCES: readonly string[] = ["sender_trust", "homesend_health_for", "homebrain_conflict", "conflict", "homesend_amount", "homesend_add", "homesend_update", "homesend_resend"];
 export type NeedsYouSource = (typeof NEEDS_YOU_SOURCES)[number];
 
 /** 3 money due soon, 2 a school deadline, 1 a dated thing, 0 the rest. */
