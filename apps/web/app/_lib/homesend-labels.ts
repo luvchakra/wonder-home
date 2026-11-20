@@ -319,10 +319,7 @@ export type HomeSendPageLabels = {
       needsTitle: string;
       failedTitle: string;
       addedTitle: string;
-      addedIntro: string;
       sendTitle: string;
-      sendHint: string;
-      sendClose: string;
       answer: string;
       answerAria: string;
       add: string;
@@ -439,10 +436,6 @@ export type HomeSendPageLabels = {
     undoRecordingLine: string;
     undoAddingGrocery: string;
     undoUpdatingGrocery: string;
-    emptyChannelTitle: string;
-    emptyChannelDescription: string;
-    emptyTitle: string;
-    emptyDescription: string;
   };
   channels: {
     title: string;
@@ -456,12 +449,6 @@ export type HomeSendPageLabels = {
     emailAskAdmin: string;
     copyAria: string;
     addToContacts: string;
-    welcomeTitle: string;
-    welcome1: string;
-    welcome2: string;
-    welcome3: string;
-    welcomeWhatsApp: string;
-    welcomeShare: string;
     contactName: string;
     copy: string;
     copied: string;
@@ -472,13 +459,6 @@ export type HomeSendPageLabels = {
     newAddress: string;
     turningOff: string;
     turnOff: string;
-    installTitle: string;
-    installBody: string;
-    install: string;
-    installDescription: string;
-    gotIt: string;
-    /** By the device the page is open on (`useInstallPrompt`'s platform). */
-    installSteps: Record<"ios" | "android" | "desktop" | "unknown", string[]>;
   };
 };
 
@@ -831,10 +811,7 @@ export function homesendPageLabels(t: Translate, language: string): HomeSendPage
         needsTitle: t("homesend.section.needs"),
         failedTitle: t("homesend.section.failed"),
         addedTitle: t("homesend.section.added"),
-        addedIntro: t("homesend.section.addedIntro"),
         sendTitle: t("homesend.send.title"),
-        sendHint: t("homesend.send.hint"),
-        sendClose: t("homesend.send.close"),
         answer: t("homesend.row.answer"),
         answerAria: t("homesend.row.answerAria", keep("title")),
         add: t("homesend.row.add"),
@@ -989,10 +966,6 @@ export function homesendPageLabels(t: Translate, language: string): HomeSendPage
       undoRecordingLine: t("homesend.undo.recordingLine"),
       undoAddingGrocery: t("homesend.undo.addingGrocery"),
       undoUpdatingGrocery: t("homesend.undo.updatingGrocery"),
-      emptyChannelTitle: t("homesend.empty.channelTitle", keep("channel")),
-      emptyChannelDescription: t("homesend.empty.channelDescription"),
-      emptyTitle: t("homesend.empty.title"),
-      emptyDescription: t("homesend.empty.description"),
     },
     channels: {
       title: t("homesend.channels.title"),
@@ -1006,12 +979,6 @@ export function homesendPageLabels(t: Translate, language: string): HomeSendPage
       emailAskAdmin: t("homesend.channels.emailAskAdmin"),
       copyAria: t("homesend.channels.copyAria"),
       addToContacts: t("homesend.channels.addToContacts"),
-      welcomeTitle: t("homesend.channels.welcomeTitle"),
-      welcome1: t("homesend.channels.welcome1"),
-      welcome2: t("homesend.channels.welcome2"),
-      welcome3: t("homesend.channels.welcome3"),
-      welcomeWhatsApp: t("homesend.channels.welcomeWhatsApp"),
-      welcomeShare: t("homesend.channels.welcomeShare"),
       contactName: t("homesend.channels.contactName"),
       copy: t("homesend.channels.copy"),
       copied: t("homesend.channels.copied"),
@@ -1022,17 +989,6 @@ export function homesendPageLabels(t: Translate, language: string): HomeSendPage
       newAddress: t("homesend.channels.newAddress"),
       turningOff: t("homesend.channels.turningOff"),
       turnOff: t("homesend.channels.turnOff"),
-      installTitle: t("homesend.channels.installTitle"),
-      installBody: t("homesend.channels.installBody"),
-      install: t("homesend.channels.install"),
-      installDescription: t("homesend.channels.installDescription"),
-      gotIt: t("homesend.channels.gotIt"),
-      installSteps: {
-        ios: [t("homesend.install.ios1"), t("homesend.install.ios2"), t("homesend.install.ios3")],
-        android: [t("homesend.install.android1"), t("homesend.install.android2"), t("homesend.install.android3")],
-        desktop: [t("homesend.install.desktop1"), t("homesend.install.desktop2")],
-        unknown: [t("homesend.install.other")],
-      },
     },
   };
 }

@@ -1,6 +1,7 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
+import { after } from "next/server";
 import { z } from "zod";
 
 import { confirmByAction } from "@wonderhome/core/homesend/changes";
@@ -8,7 +9,6 @@ import { toErrorBody } from "@wonderhome/core/api/errors";
 import { createClient } from "@wonderhome/core/db/server";
 import { billType } from "@wonderhome/core/finance/bill-catalog";
 import {
-  cancelObligation,
   createObligation,
   markObligationPaid,
   undoBillPayment,
@@ -24,6 +24,8 @@ import { retireBudget, saveBudget } from "@wonderhome/core/finance/budget-reposi
 import { BUDGET_PERIODS, isBudgetCategory } from "@wonderhome/core/finance/budgets";
 import { OBLIGATION_KINDS } from "@wonderhome/core/finance/payments";
 import { requireHouseholdAdmin } from "@wonderhome/core/identity/households";
+import { REMOVE_BILLS_MAX, removeBills } from "@wonderhome/core/finance/remove-bills";
+import { reconcileRemindersNow } from "../_lib/reminders";
 
 import type { ActionState } from "./actions";
 
@@ -182,25 +184,39 @@ export async function updateObligationAction(
   }
 }
 
-const cancelSchema = z.object({ id: z.uuid(), householdId: z.uuid() });
+const idSchema = z.object({ id: z.uuid(), householdId: z.uuid() });
 
-/** Standing a bill down — a status flip, never a hard delete (CLAUDE.md principle 12). */
-export async function cancelObligationAction(
+const removeSchema = z.object({ householdId: z.uuid(), ids: z.array(z.uuid()).min(1).max(REMOVE_BILLS_MAX) });
+
+/**
+ * Removing bills — the bill row's Remove and "Tidy up" (the owner,
+ * 2026-11-20). The screen has already asked once, naming each bill; this
+ * stands them down (never a hard delete, CLAUDE.md rule 12), releases what
+ * HomeSend had pointing at them, and settles their reminders after the
+ * response (`finance/remove-bills.ts`). Admins only, as for editing a bill.
+ */
+export async function removeBillsAction(
   _previous: ActionState,
   formData: FormData,
 ): Promise<ActionState> {
-  const parsed = cancelSchema.safeParse({
-    id: formData.get("id"),
+  const parsed = removeSchema.safeParse({
     householdId: formData.get("householdId"),
+    ids: formData.getAll("id"),
   });
   if (!parsed.success) return { error: "Something is missing." };
 
   try {
     const supabase = await createClient();
-    await requireHouseholdAdmin(supabase, parsed.data.householdId);
-    await cancelObligation(supabase, parsed.data);
+    const admin = await requireHouseholdAdmin(supabase, parsed.data.householdId);
+    const { removed } = await removeBills(supabase, {
+      householdId: parsed.data.householdId,
+      ids: parsed.data.ids,
+      actor: { memberId: admin.memberId, isAdmin: true },
+    });
+    if (removed.length > 0) after(() => reconcileRemindersNow(parsed.data.householdId, { force: true }));
     revalidatePath("/bills");
-    return { notice: "Cancelled." };
+    revalidatePath("/home-send");
+    return { notice: "Removed." };
   } catch (thrown) {
     return { error: toErrorBody(thrown, "finance").body.error.message };
   }
@@ -353,7 +369,7 @@ export async function saveBudgetAction(_previous: ActionState, formData: FormDat
 
 /** Turning a budget off — kept, never deleted (CLAUDE.md principle 12). */
 export async function retireBudgetAction(_previous: ActionState, formData: FormData): Promise<ActionState> {
-  const parsed = cancelSchema.safeParse({ id: formData.get("id"), householdId: formData.get("householdId") });
+  const parsed = idSchema.safeParse({ id: formData.get("id"), householdId: formData.get("householdId") });
   if (!parsed.success) return { error: "Something is missing." };
   try {
     const supabase = await createClient();

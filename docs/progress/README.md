@@ -11,6 +11,8 @@ decision that shapes later work each earns a note, written before moving on.
 
 | Date | Note |
 |---|---|
+| 2026-11-20 | [HomeSend: WhatsApp as an icon, empty card gone, and a clutter-free screen](2026-11-20-homesend-whatsapp-icon.md) |
+| 2026-11-20 | [Bills: Remove, Tidy up, and one email added once](2026-11-20-bills-remove-and-tidy-up.md) |
 | 2026-11-20 | [Health documents: "Who is this for?" instead of filing under the sender](2026-11-20-health-who-is-this-for.md) |
 | 2026-11-20 | [Groceries: summary cards removed, Order on Instamart only on To Buy (25-047)](2026-11-20-groceries-no-summary-cards.md) |
 | 2026-11-20 | [Meal ingredients tell one story (25-048); recipe cards get a cross and a picture (25-050)](2026-11-20-meal-ingredient-state.md) |

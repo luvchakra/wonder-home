@@ -1,10 +1,11 @@
 "use client";
 
 import { Archive } from "lucide-react";
-import { startTransition, useActionState, useState } from "react";
+import { startTransition, useActionState, useState, type ReactNode } from "react";
 
 import { Alert } from "@wonderhome/core/ui/alert";
 import { Card } from "@wonderhome/core/ui/card";
+import { CollapsibleSection } from "@wonderhome/core/ui/collapsible-section";
 import { IconTile } from "@wonderhome/core/ui/icon-tile";
 import { Pill } from "@wonderhome/core/ui/pill";
 import { EmptyState } from "@wonderhome/core/ui/states";
@@ -116,5 +117,21 @@ export function HomeSendArchived({ householdId, items, reasons = {}, labels, isA
         onConfirm={confirmDelete}
       />
     </div>
+  );
+}
+
+/**
+ * "Set aside", folded away on the HomeSend page (owner, 2026-11-20: "clutter free"). Shown once there is
+ * something set aside, and kept mounted for the rest of the visit, so restoring the last item still
+ * shows its own "Restored" inside rather than vanishing with the list.
+ */
+export function SetAsideFold({ title, count, children }: { title: string; count: number; children: ReactNode }) {
+  const [seen, setSeen] = useState(count > 0);
+  if (count > 0 && !seen) setSeen(true);
+  if (!seen && count === 0) return null;
+  return (
+    <CollapsibleSection icon={Archive} tone="neutral" title={title} count={count} as="h2">
+      {children}
+    </CollapsibleSection>
   );
 }

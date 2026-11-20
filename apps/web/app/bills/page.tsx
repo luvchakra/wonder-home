@@ -47,7 +47,8 @@ import {
 import { ExpandableRow } from "@wonderhome/core/ui/expandable-row";
 import { IconTile } from "@wonderhome/core/ui/icon-tile";
 import { Badge, PillLink } from "@wonderhome/core/ui/pill";
-import { unconfirmedEntityIds } from "@wonderhome/core/homesend/changes";
+import { sourcedBillIds, unconfirmedEntityIds } from "@wonderhome/core/homesend/changes";
+import { billCategory, planTidy, type KeepReason } from "@wonderhome/core/finance/duplicates";
 import { QuoteCard } from "@wonderhome/core/ui/quote-card";
 import { SectionHeader } from "@wonderhome/core/ui/section-header";
 import { SegmentedControl } from "@wonderhome/core/ui/segmented-control";
@@ -69,6 +70,7 @@ import {
   type BillPeriodLabels,
 } from "../_components/finance-forms";
 import { billFormLabels, billKindName } from "../_lib/bill-form-labels";
+import { BillTidyButton, type TidyGroup, type TidyRow } from "../_components/bill-tidy";
 import { formatDate, requireSession } from "../_lib/session";
 
 export const metadata = { title: "Bills & Finance" };
@@ -140,7 +142,7 @@ export default async function BillsPage({
   }
 
   const active = tab === "transactions" || tab === "budget" ? tab : "overview";
-  const [agenda, obligations, members, historyRows, budgetRows, integrations, address, givenPeriods, checkingIds] =
+  const [agenda, obligations, members, historyRows, budgetRows, integrations, address, givenPeriods, checkingIds, sourcedIds] =
     await Promise.all([
       financeAgenda(supabase, householdId).catch(() => null),
       listObligations(supabase, householdId).catch(() => []),
@@ -163,6 +165,8 @@ export default async function BillsPage({
       listGivenPeriods(supabase, householdId).catch(() => new Map()),
       // Bills HomeSend added and is still checking (14-062): "Checking" on the row itself.
       unconfirmedEntityIds(supabase, householdId).catch(() => new Set<string>()),
+      // Bills that came from something sent in: "Tidy up" suggests keeping these (2026-11-20).
+      sourcedBillIds(supabase, householdId).catch(() => new Set<string>()),
     ]);
 
   // A stale mailbox and "no bills by email" must never look alike (17-003): if
@@ -213,6 +217,47 @@ export default async function BillsPage({
     .filter((o) => o.status !== "paid" && o.status !== "cancelled")
     .sort((a, b) => (a.dueOn ?? "9999").localeCompare(b.dueOn ?? "9999"));
   const settled = obligations.filter((o) => o.status === "paid");
+  // "Tidy up" (the owner, 2026-11-20): bills that look entered twice, from the
+  // records alone, and the whole list to pick from. Suggestions only.
+  const tidy = admin && upcoming.length > 1 ? tidyFor(upcoming) : null;
+  function tidyFor(bills: Obligation[]) {
+    const plan = planTidy(bills.map((bill) => ({ ...bill, checking: checkingIds.has(bill.id), fromSource: sourcedIds.has(bill.id) })));
+    const byId = new Map(bills.map((bill) => [bill.id, bill]));
+    const kindName = (bill: Obligation) => {
+      const category = billCategory(bill);
+      return category.typical ? t(`bills.type.${category.key}` as TranslationKey) : bill.name;
+    };
+    const longDate = (iso: string) => formatDate(timezone, new Date(iso), "long");
+    const list = (items: string[]) => new Intl.ListFormat(viewer.language, { type: "conjunction" }).format(items);
+    const rows: TidyRow[] = bills.map((bill) => ({
+      id: bill.id,
+      name: bill.name,
+      detail: billDetail(t, timezone, bill),
+      checking: checkingIds.has(bill.id) ? t("homesend.history.checking") : null,
+    }));
+    const groups: TidyGroup[] = plan.duplicates.map((group) => {
+      const members = group.ids.map((id) => byId.get(id)!);
+      const amounts = list(members.map((bill) => (bill.amountMinor !== null && bill.currency ? formatMoney(bill.amountMinor, bill.currency) : t("bills.amountNotIn"))));
+      const what = kindName(members[0]!);
+      const reason = group.sameDay
+        ? t("bills.tidy.reasonSameDay", { what, amounts, date: longDate(members[0]!.dueOn!) })
+        : t("bills.tidy.reasonNear", { what, amounts, dates: list([...new Set(members.map((bill) => longDate(bill.dueOn!)))]) });
+      return { reason, ids: group.ids, keepId: group.keepId, keepNote: t(`bills.tidy.suggested.${group.keepBecause satisfies KeepReason}` as TranslationKey) };
+    });
+    // The pick list, a kind's bills together in due order, in the order the list shows them.
+    const seriesOf = new Map(plan.series.flatMap((series) => series.ids.map((id) => [id, series] as const)));
+    const emitted = new Set<string>();
+    const sections: { label: string | null; ids: string[] }[] = [];
+    for (const bill of bills) {
+      const series = seriesOf.get(bill.id);
+      if (!series) sections.push({ label: null, ids: [bill.id] });
+      else if (!emitted.has(series.category.key)) {
+        emitted.add(series.category.key);
+        sections.push({ label: kindName(bill), ids: series.ids });
+      }
+    }
+    return { rows, groups, sections };
+  }
   const needs = agenda ? [...agenda.bills, ...agenda.anomalies] : [];
   const trackedBills = obligations
     .filter((o) => o.status !== "cancelled")
@@ -501,7 +546,34 @@ export default async function BillsPage({
                 title={t("bills.upcoming")}
                 count={upcoming.length}
                 // The line always shows, with Add a bill, even before the first bill (the owner, 2026-10-21); the empty state below has no second one.
-                action={admin ? <AddBillButton householdId={householdId} defaultCurrency={householdCurrency} labels={formLabels} choices={billChoices} /> : undefined}
+                action={
+                  admin ? (
+                    <span className="flex flex-wrap items-center justify-end gap-1.5">
+                      {tidy ? (
+                        <BillTidyButton
+                          householdId={householdId}
+                          rows={tidy.rows}
+                          groups={tidy.groups}
+                          sections={tidy.sections}
+                          labels={{
+                            open: t("bills.tidy.open"),
+                            title: t("bills.tidy.title"),
+                            description: t("bills.tidy.description"),
+                            same: t("bills.tidy.same"),
+                            keepOne: t("bills.tidy.keepOne"),
+                            pick: t("bills.tidy.pick"),
+                            removeSelected: t("bills.tidy.removeSelected", { count: "{count}" }),
+                            confirmTitle: t("bills.tidy.confirmTitle"),
+                            confirmDescription: t("bills.tidy.confirmDescription"),
+                            noDuplicates: t("bills.tidy.noDuplicates"),
+                            remove: formLabels.remove,
+                          }}
+                        />
+                      ) : null}
+                      <AddBillButton householdId={householdId} defaultCurrency={householdCurrency} labels={formLabels} choices={billChoices} />
+                    </span>
+                  ) : undefined
+                }
               />
               {upcoming.length === 0 ? (
                 <EmptyState
@@ -941,11 +1013,25 @@ function BillRow({
             }}
             labels={labels}
             choices={choices}
+            removeDetail={sentenceStart(billDetail(t, timezone, bill))}
+            paymentsKept={history.length > 0}
           />
         ) : null}
       </div>
     </ExpandableRow>
   );
+}
+
+/** A detail line opening a sentence: its first letter capital where the script has one. */
+function sentenceStart(text: string): string {
+  return text.charAt(0).toLocaleUpperCase() + text.slice(1);
+}
+
+/** "₹2,140 · due Thu, 5 Nov": a bill's amount and day, as its row and its Remove confirm say them. */
+function billDetail(t: Translate, timezone: string, bill: Obligation): string {
+  const amount = bill.amountMinor !== null && bill.currency ? formatMoney(bill.amountMinor, bill.currency) : t("bills.amountNotIn");
+  const due = bill.dueOn ? t("bills.due", { date: formatDate(timezone, new Date(bill.dueOn), "long") }) : t("bills.noDueDate");
+  return `${due} · ${amount}`;
 }
 
 function TransactionRow({
