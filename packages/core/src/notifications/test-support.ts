@@ -13,7 +13,12 @@ const STAMP = "2026-10-20T06:00:00.000Z";
 
 // A small in-memory database: the tables the sweep reads and the notifications it writes.
 // `missing` names tables that aren't there yet (a migration not applied): every read of them fails.
-export function memoryDatabase(seed: Record<string, Row[]>, missing: readonly string[] = []) {
+/**
+ * `checks`: a table's CHECK constraints as predicates over a row after an
+ * update; one that fails refuses the whole update with 23514, as Postgres
+ * does, and changes nothing.
+ */
+export function memoryDatabase(seed: Record<string, Row[]>, missing: readonly string[] = [], checks: Record<string, (row: Row) => boolean> = {}) {
   const tables: Record<string, Row[]> = Object.fromEntries(Object.entries(seed).map(([name, rows]) => [name, rows.map((row) => ({ ...row }))]));
   let counter = 0;
   const from = (table: string) => {
@@ -51,7 +56,11 @@ export function memoryDatabase(seed: Record<string, Row[]>, missing: readonly st
       then: (resolve: (value: unknown) => void) => {
         if (missing.includes(table)) return resolve({ data: null, error: { code: "42P01", message: "missing" } });
         const hit = matching();
-        if (mode === "update") for (const row of hit) Object.assign(row, patch);
+        if (mode === "update") {
+          const check = checks[table];
+          if (check && hit.some((row) => !check({ ...row, ...patch }))) return resolve({ data: null, error: { code: "23514", message: "check violation" } });
+          for (const row of hit) Object.assign(row, patch);
+        }
         resolve({ data: hit, error: null, count: hit.length });
       },
     };

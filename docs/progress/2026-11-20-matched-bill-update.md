@@ -23,3 +23,10 @@ The final check of "Nothing stuck in review" (PRs #545–#553) found bills that 
 
 ## Open
 - The one-time pass is the deadlines clock itself (every ten minutes once deployed). The after-count is in the PR thread and the coordinator report.
+
+## Follow-up: the record step's claim (same day)
+The first clock pass after #556 (run 44706942758, 09:00 UTC) recorded neither bill. `recordWaitingBill` claimed the item by setting `status = routed` and `routed_table` before the bill existed, with no `routed_id`. That breaks `home_send_items_routed_together`, so the claim failed and the step caught the error, and the item kept waiting. The in-memory database doesn't enforce CHECK constraints, so the test passed anyway.
+
+The fix: claim through the review columns only (the item stays `classified`), create the bill, then route with table and id together, on the claim held. If routing fails, the bill is stood down and the item waits again. `memoryDatabase` now takes a table's CHECKs, and `needs-you-run.test.ts` gives it `home_send_items`' two routed constraints. The test fails on the old code and passes on the fix.
+
+Open, for the owner: a waiting bill that can't be recorded (money set to "Wait for review", a missing amount or due date, or a document with several records) still gets no Needs-you question. Rule 2 says it is never defaulted into a note, and nobody has chosen a default for it yet.
