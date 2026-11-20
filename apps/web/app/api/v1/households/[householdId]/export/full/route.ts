@@ -5,7 +5,15 @@ import { requireUser } from "@wonderhome/core/api/auth";
 import { ApiError, toErrorBody } from "@wonderhome/core/api/errors";
 import { adminClientFor, adminGrant } from "@wonderhome/core/db/admin-context";
 import { createClient } from "@wonderhome/core/db/server";
-import { archiveFilename, exportAvailable, householdArchiveEntries, type ExportProgress } from "@wonderhome/core/household/full-export";
+import {
+  archiveFilename,
+  exportAvailable,
+  hasHealthContent,
+  HEALTH_PASSWORD_MIN,
+  healthPasswordProblem,
+  householdArchiveEntries,
+  type ExportProgress,
+} from "@wonderhome/core/household/full-export";
 import { isHouseholdOwner } from "@wonderhome/core/household/reset-policy";
 import { zipReadableStream } from "@wonderhome/core/household/zip";
 import { requireMembership } from "@wonderhome/core/identity/households";
@@ -25,10 +33,26 @@ import { stepUpRefusal } from "../../../../../../_lib/platform-step-up-rules";
  * It is read with the owner's own session, so it holds what they can see and
  * nothing more (`household/full-export.ts`); memory stays at one page or one
  * file however big the home is.
+ *
+ * Health records the owner can see are written only inside an AES-256 ZIP
+ * locked with a password the owner types here (owner, 2026-11-20); the
+ * password lives only for this request.
  */
 type Params = { params: Promise<{ householdId: string }> };
 
-const bodySchema = z.object({ password: z.string().max(200).optional() });
+const bodySchema = z.object({
+  password: z.string().max(200).optional(),
+  // The password that locks the health part (owner, 2026-11-20). Only ever in
+  // this POST body: never in a URL, a log line, the audit trail or storage.
+  healthPassword: z.string().max(400).optional(),
+  healthPasswordRepeat: z.string().max(400).optional(),
+});
+
+const HEALTH_PROBLEM: Record<NonNullable<ReturnType<typeof healthPasswordProblem>>, string> = {
+  too_short: `Choose a password of at least ${HEALTH_PASSWORD_MIN} characters for the health records. Nothing was downloaded.`,
+  too_long: "That health records password is too long. Nothing was downloaded.",
+  mismatch: "The two health records passwords don't match. Nothing was downloaded.",
+};
 
 export const maxDuration = 300;
 export const dynamic = "force-dynamic";
@@ -53,23 +77,40 @@ export async function POST(request: Request, { params }: Params) {
       return Response.json({ error: { code: "not_available", message: "The full download isn't available yet. Nothing was changed." } }, { status: 503, headers });
     }
 
+    // Health records leave only locked with the owner's own password. With
+    // none the owner can see, there is nothing to lock and nothing is asked.
+    const healthPresent = await hasHealthContent(supabase, householdId);
+    let healthPassword: string | undefined;
+    if (healthPresent) {
+      const problem = healthPasswordProblem(parsed.data.healthPassword ?? "", parsed.data.healthPasswordRepeat ?? "");
+      if (problem) {
+        return Response.json({ error: { code: "health_password", message: HEALTH_PROBLEM[problem] } }, { status: 400, headers });
+      }
+      healthPassword = parsed.data.healthPassword;
+    }
+
     const now = new Date();
     const progress: ExportProgress = { tables: [], files: [] };
     const stream = zipReadableStream(
-      householdArchiveEntries({ supabase, householdId, householdName: membership.household.name, requestedBy: membership.displayName, now }, progress),
+      householdArchiveEntries({ supabase, householdId, householdName: membership.household.name, requestedBy: membership.displayName, now, healthPassword }, progress),
       now,
       () => log.error("full download failed part-way", { event: "household_export_failed", allow: ["event"] }),
     );
 
     // The record of who took a copy, and when, stays in the household's activity.
-    await recordAuditEvent(adminClientFor(adminGrant.householdOwner(membership, "record the full download"), householdId), {
-      householdId,
-      eventType: "household.exported",
-      actorMemberId: membership.memberId,
-      targetTable: "households",
-      targetId: householdId,
-      metadata: { kind: "full" },
-    });
+    // A trail that can't be written is logged, not a reason to refuse the owner their data.
+    try {
+      await recordAuditEvent(adminClientFor(adminGrant.householdOwner(membership, "record the full download"), householdId), {
+        householdId,
+        eventType: "household.exported",
+        actorMemberId: membership.memberId,
+        targetTable: "households",
+        targetId: householdId,
+        metadata: { kind: "full", health_encrypted: healthPassword !== undefined },
+      });
+    } catch {
+      log.error("full download not audited", { event: "household_export_unaudited", allow: ["event"] });
+    }
 
     return new Response(stream, {
       headers: {

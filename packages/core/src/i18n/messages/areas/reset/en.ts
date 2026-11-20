@@ -53,4 +53,11 @@ export const resetHomeEn = {
   "settingsSearch.kw.danger-zone": "danger, delete everything, wipe, owner only",
   "settingsSearch.kw.full-download": "export, backup, copy of all data, zip, take my data",
   "settingsSearch.kw.reset-home": "start over, wipe, erase, delete home, delete all, fresh start, clear everything",
+  "resetHome.health.lede": "The health records in this download are locked with this password. WonderHome doesn't keep it, and without it they can't be opened.",
+  "resetHome.health.password": "Password for the health records",
+  "resetHome.health.repeat": "Type it again",
+  "resetHome.health.hint": "At least {min} characters. Write it down somewhere safe.",
+  "resetHome.health.tooShort": "Use at least {min} characters for the health records password.",
+  "resetHome.health.tooLong": "That password is too long. Use at most 200 characters.",
+  "resetHome.health.mismatch": "The two health records passwords don't match.",
 };

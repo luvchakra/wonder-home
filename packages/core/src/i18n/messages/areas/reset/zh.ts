@@ -56,4 +56,11 @@ export const resetHomeZh: AreaCatalog<typeof resetHomeEn> = {
   "settingsSearch.kw.danger-zone": "危险, 删除全部, 所有者",
   "settingsSearch.kw.full-download": "导出, 备份, 全部数据, zip, 数据副本",
   "settingsSearch.kw.reset-home": "重新开始, 清除, 删除家庭, 全部删除, 重置",
+  "resetHome.health.lede": "此下载中的健康记录将用这个密码加密。WonderHome 不会保存它，没有它就无法打开这些记录。",
+  "resetHome.health.password": "健康记录密码",
+  "resetHome.health.repeat": "再输入一次",
+  "resetHome.health.hint": "至少 {min} 个字符。请把它记在安全的地方。",
+  "resetHome.health.tooShort": "健康记录密码至少需要 {min} 个字符。",
+  "resetHome.health.tooLong": "密码太长了。最多使用 200 个字符。",
+  "resetHome.health.mismatch": "两次输入的健康记录密码不一致。",
 };

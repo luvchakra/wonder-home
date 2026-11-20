@@ -56,4 +56,11 @@ export const resetHomeHi: AreaCatalog<typeof resetHomeEn> = {
   "settingsSearch.kw.danger-zone": "ख़तरा, सब मिटाएँ, मालिक",
   "settingsSearch.kw.full-download": "निर्यात, बैकअप, पूरा डेटा, ज़िप, डेटा की कॉपी",
   "settingsSearch.kw.reset-home": "फिर से शुरू, सब मिटाएँ, घर हटाएँ, नई शुरुआत, रीसेट",
+  "resetHome.health.lede": "इस डाउनलोड में सेहत के रिकॉर्ड इस पासवर्ड से लॉक होते हैं। WonderHome इसे नहीं रखता, और इसके बिना उन्हें खोला नहीं जा सकता।",
+  "resetHome.health.password": "सेहत के रिकॉर्ड का पासवर्ड",
+  "resetHome.health.repeat": "फिर से लिखें",
+  "resetHome.health.hint": "कम से कम {min} अक्षर। इसे किसी सुरक्षित जगह लिख लें।",
+  "resetHome.health.tooShort": "सेहत के रिकॉर्ड के पासवर्ड में कम से कम {min} अक्षर रखें।",
+  "resetHome.health.tooLong": "यह पासवर्ड बहुत लंबा है। ज़्यादा से ज़्यादा 200 अक्षर रखें।",
+  "resetHome.health.mismatch": "सेहत के रिकॉर्ड के दोनों पासवर्ड मेल नहीं खाते।",
 };

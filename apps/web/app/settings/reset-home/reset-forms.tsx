@@ -1,6 +1,6 @@
 "use client";
 
-import { useActionState, useEffect, useState } from "react";
+import { useActionState, useEffect, useId, useState } from "react";
 import { useFormStatus } from "react-dom";
 
 import { Alert } from "@wonderhome/core/ui/alert";
@@ -30,7 +30,23 @@ export type StepUpLabels = {
   googleFresh: string;
 };
 
-export type DownloadLabels = StepUpLabels & { button: string; preparing: string; done: string; error: string };
+export type DownloadLabels = StepUpLabels & {
+  button: string;
+  preparing: string;
+  done: string;
+  error: string;
+  healthLede: string;
+  healthPassword: string;
+  healthRepeat: string;
+  healthHint: string;
+  healthTooShort: string;
+  healthTooLong: string;
+  healthMismatch: string;
+};
+
+/** The same rule the server applies (`healthPasswordProblem`); kept here so the client bundle needs no server module. */
+const HEALTH_MIN = 12;
+const HEALTH_MAX = 200;
 
 export type ResetLabels = StepUpLabels & {
   name: string;
@@ -79,6 +95,7 @@ export function DownloadFullData({
   labels,
   language,
   googleConfirmHere = true,
+  askHealthPassword,
 }: {
   householdId: string;
   stepUp: StaffStepUp;
@@ -87,21 +104,41 @@ export function DownloadFullData({
   language: string;
   /** False where the page already shows its one "Confirm with Google" (rule 14: no two buttons for one job). */
   googleConfirmHere?: boolean;
+  /** True when the owner can see health records: they are then locked with a password typed here. */
+  askHealthPassword: boolean;
 }) {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [doneAt, setDoneAt] = useState<string | null>(null);
+  // Each field its own id: two forms on one page both have a "password" field, and a label must find its own.
+  const idBase = useId();
   const [password, setPassword] = useState("");
+  const [healthPassword, setHealthPassword] = useState("");
+  const [healthRepeat, setHealthRepeat] = useState("");
   const blocked = stepUp.method === "google" && !stepUp.freshUntil;
 
   const download = async () => {
-    setBusy(true);
     setError(null);
+    if (askHealthPassword) {
+      if (healthPassword.length < HEALTH_MIN) return setError(labels.healthTooShort);
+      if (healthPassword.length > HEALTH_MAX) return setError(labels.healthTooLong);
+      if (healthPassword !== healthRepeat) return setError(labels.healthMismatch);
+    }
+    setBusy(true);
+    // The passwords go in this one request body and nowhere else; the fields
+    // are emptied as soon as it starts, and nothing is kept in the browser.
+    const body = JSON.stringify({
+      ...(stepUp.method === "password" ? { password } : {}),
+      ...(askHealthPassword ? { healthPassword, healthPasswordRepeat: healthRepeat } : {}),
+    });
+    setPassword("");
+    setHealthPassword("");
+    setHealthRepeat("");
     try {
       const response = await fetch(`/api/v1/households/${householdId}/export/full`, {
         method: "POST",
         headers: { "content-type": "application/json" },
-        body: JSON.stringify(stepUp.method === "password" ? { password } : {}),
+        body,
       });
       if (!response.ok) {
         const payload = await response.json().catch(() => null);
@@ -122,7 +159,6 @@ export function DownloadFullData({
       }
       window.dispatchEvent(new Event(DOWNLOADED_EVENT));
       setDoneAt(at);
-      setPassword("");
     } catch (caught) {
       setError(caught instanceof Error ? caught.message : labels.error);
     } finally {
@@ -144,12 +180,39 @@ export function DownloadFullData({
           <PasswordField
             label={labels.password}
             name="password"
+            id={`${idBase}-password`}
             autoComplete="current-password"
             required
             hint={labels.passwordHint}
             value={password}
             onChange={(event) => setPassword(event.currentTarget.value)}
           />
+        ) : null}
+        {askHealthPassword ? (
+          <fieldset className="space-y-3 rounded-[var(--wh-radius-sm)] bg-[var(--wh-surface-muted)] p-3">
+            <p className="text-sm">{labels.healthLede}</p>
+            <PasswordField
+              label={labels.healthPassword}
+              name="healthPassword"
+              id={`${idBase}-health-password`}
+              autoComplete="new-password"
+              required
+              maxLength={HEALTH_MAX}
+              hint={labels.healthHint}
+              value={healthPassword}
+              onChange={(event) => setHealthPassword(event.currentTarget.value)}
+            />
+            <PasswordField
+              label={labels.healthRepeat}
+              name="healthPasswordRepeat"
+              id={`${idBase}-health-repeat`}
+              autoComplete="new-password"
+              required
+              maxLength={HEALTH_MAX}
+              value={healthRepeat}
+              onChange={(event) => setHealthRepeat(event.currentTarget.value)}
+            />
+          </fieldset>
         ) : null}
         {error ? <Alert>{error}</Alert> : null}
         {doneAt ? <Alert tone="info">{labels.done.replace("{time}", timeOf(doneAt, language))}</Alert> : null}
@@ -224,7 +287,7 @@ export function ResetHomeForm({
         onChange={(event) => setTyped(event.currentTarget.value)}
       />
       {stepUp.method === "password" ? (
-        <PasswordField label={labels.password} name="password" autoComplete="current-password" required hint={labels.passwordHint} />
+        <PasswordField label={labels.password} name="password" id="reset-home-password" autoComplete="current-password" required hint={labels.passwordHint} />
       ) : null}
       {state.code ? <Alert tone="risk">{labels.errors[state.code]}</Alert> : null}
       <fieldset disabled={!matches || blocked}>

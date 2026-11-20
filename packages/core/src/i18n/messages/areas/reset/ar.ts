@@ -56,4 +56,11 @@ export const resetHomeAr: AreaCatalog<typeof resetHomeEn> = {
   "settingsSearch.kw.danger-zone": "خطر، حذف كل شيء، المالك",
   "settingsSearch.kw.full-download": "تصدير، نسخة احتياطية، كل البيانات، zip، نسخة من بياناتي",
   "settingsSearch.kw.reset-home": "البدء من جديد، مسح، حذف المنزل، حذف الكل، إعادة ضبط",
+  "resetHome.health.lede": "السجلات الصحية في هذا التنزيل مقفلة بكلمة المرور هذه. لا يحتفظ بها WonderHome، ولا يمكن فتحها بدونها.",
+  "resetHome.health.password": "كلمة مرور السجلات الصحية",
+  "resetHome.health.repeat": "اكتبها مرة أخرى",
+  "resetHome.health.hint": "{min} حرفًا على الأقل. دوّنها في مكان آمن.",
+  "resetHome.health.tooShort": "استخدم {min} حرفًا على الأقل لكلمة مرور السجلات الصحية.",
+  "resetHome.health.tooLong": "كلمة المرور طويلة جدًا. استخدم 200 حرف على الأكثر.",
+  "resetHome.health.mismatch": "كلمتا مرور السجلات الصحية غير متطابقتين.",
 };

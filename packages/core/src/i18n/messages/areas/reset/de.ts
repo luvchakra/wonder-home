@@ -56,4 +56,11 @@ export const resetHomeDe: AreaCatalog<typeof resetHomeEn> = {
   "settingsSearch.kw.danger-zone": "Gefahr, alles löschen, Eigentümer",
   "settingsSearch.kw.full-download": "Export, Backup, alle Daten, ZIP, Kopie meiner Daten",
   "settingsSearch.kw.reset-home": "neu anfangen, alles löschen, Zuhause löschen, zurücksetzen, Neustart",
+  "resetHome.health.lede": "Die Gesundheitsunterlagen in diesem Download werden mit diesem Passwort gesperrt. WonderHome speichert es nicht, und ohne es lassen sie sich nicht öffnen.",
+  "resetHome.health.password": "Passwort für die Gesundheitsunterlagen",
+  "resetHome.health.repeat": "Noch einmal eingeben",
+  "resetHome.health.hint": "Mindestens {min} Zeichen. Notiere es an einem sicheren Ort.",
+  "resetHome.health.tooShort": "Verwende mindestens {min} Zeichen für das Passwort der Gesundheitsunterlagen.",
+  "resetHome.health.tooLong": "Das Passwort ist zu lang. Verwende höchstens 200 Zeichen.",
+  "resetHome.health.mismatch": "Die beiden Passwörter für die Gesundheitsunterlagen stimmen nicht überein.",
 };

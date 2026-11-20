@@ -70,6 +70,11 @@ test.describe("the owner downloads, then resets a QA home", () => {
     await admin.from("household_roles").insert({ household_id: ids.household, member_id: member.data.id, role: "administrator" });
     const seeded = await admin.from("recipes").insert({ household_id: ids.household, name: "E2E Dal" });
     if (seeded.error) throw seeded.error;
+    // The owner's own health record, so the download asks for a health records password.
+    const ownerMember = await admin.from("household_members").select("id").eq("household_id", ids.household).eq("profile_id", ids.owner).single();
+    if (ownerMember.error) throw ownerMember.error;
+    const health = await admin.from("health_records").insert({ household_id: ids.household, member_id: ownerMember.data.id, label: "E2E thyroid report", record_type: "lab_result", file_path: `${ids.household}/e2e-report.pdf` });
+    if (health.error) throw health.error;
   });
 
   test.afterAll(async () => {
@@ -106,6 +111,10 @@ test.describe("the owner downloads, then resets a QA home", () => {
     const zone = page.locator("#danger-zone");
     await expect(zone.getByRole("heading", { name: "Danger zone" })).toBeVisible();
     await expect(zone.getByRole("button", { name: "Download full data" })).toBeVisible();
+    // There is a health record to lock, so the download asks for its password, twice.
+    await expect(zone.getByLabel("Password for the health records", { exact: true })).toBeVisible();
+    await expect(zone.getByLabel("Type it again", { exact: true })).toBeVisible();
+    await expect(zone.getByText("WonderHome doesn't keep it")).toBeVisible();
     await zone.getByRole("link", { name: /Reset home/ }).click();
     await expect(page).toHaveURL(/\/settings\/reset-home$/);
     await streamed(page);
@@ -125,14 +134,24 @@ test.describe("the owner downloads, then resets a QA home", () => {
 
   test("the owner downloads everything, then resets the home", async ({ page }) => {
     test.skip(!migrationLive, "the reset migration is not on this project yet");
-    test.setTimeout(120_000);
+    // The download reads every table; from a machine far from the database that is a minute or more.
+    test.setTimeout(300_000);
     await signIn(page, ownerEmail, "/settings/reset-home");
     await streamed(page);
     await expect(page.getByTestId("download-note")).toContainText("haven't downloaded");
 
+    const step1 = page.locator("#download");
+    await step1.getByLabel("Your WonderHome password", { exact: true }).fill(password);
+    // Too short first: refused before anything is sent.
+    await step1.getByLabel("Password for the health records", { exact: true }).fill("short");
+    await step1.getByLabel("Type it again", { exact: true }).fill("short");
+    await step1.getByRole("button", { name: "Download full data" }).click();
+    await expect(step1.getByText("Use at least 12 characters")).toBeVisible();
+    const healthPassword = "e2e health phrase long";
+    await step1.getByLabel("Password for the health records", { exact: true }).fill(healthPassword);
+    await step1.getByLabel("Type it again", { exact: true }).fill(healthPassword);
     const download = page.waitForEvent("download");
-    await page.locator("#download").getByLabel("Your WonderHome password", { exact: true }).fill(password);
-    await page.locator("#download").getByRole("button", { name: "Download full data" }).click();
+    await step1.getByRole("button", { name: "Download full data" }).click();
     const file = await download;
     expect(file.suggestedFilename()).toMatch(/^wonderhome-e2e-reset-.*\.zip$/);
     const bytes = await (await file.createReadStream())!.toArray();
@@ -140,6 +159,10 @@ test.describe("the owner downloads, then resets a QA home", () => {
     expect(zip.subarray(0, 4).toString("hex")).toBe("504b0304");
     expect(zip.includes(Buffer.from("data/meals-and-recipes/recipes.json"))).toBe(true);
     expect(zip.includes(Buffer.from("E2E Dal"))).toBe(true);
+    // Health only inside the AES-256 archive; never in clear. The fields are emptied once it starts.
+    expect(zip.includes(Buffer.from("health-records-protected.zip"))).toBe(true);
+    expect(zip.includes(Buffer.from("E2E thyroid report"))).toBe(false);
+    await expect(step1.getByLabel("Password for the health records", { exact: true })).toHaveValue("");
     await expect(page.getByTestId("download-note")).toContainText("downloaded a copy");
 
     const reset = page.getByRole("button", { name: "Reset home", exact: true });

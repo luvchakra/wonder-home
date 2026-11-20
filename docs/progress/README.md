@@ -11,6 +11,7 @@ decision that shapes later work each earns a note, written before moving on.
 
 | Date | Note |
 |---|---|
+| 2026-11-20 | [Download full data: health records locked with a password (AES-256 ZIP)](2026-11-20-reset-home-health-password.md) |
 | 2026-11-20 | [HomeTalk: the composer stays at the bottom on desktop](2026-11-20-hometalk-composer-pinned.md) |
 | 2026-11-20 | [Reset home and Download full data: the owner's Danger zone (15-014)](2026-11-20-reset-home.md) |
 | 2026-11-20 | [A member's contact email and phone, kept apart from sign-in (01-015)](2026-11-20-member-contact-details.md) |

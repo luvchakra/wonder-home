@@ -56,4 +56,11 @@ export const resetHomeFr: AreaCatalog<typeof resetHomeEn> = {
   "settingsSearch.kw.danger-zone": "danger, tout effacer, propriétaire",
   "settingsSearch.kw.full-download": "exporter, sauvegarde, toutes les données, zip, copie de mes données",
   "settingsSearch.kw.reset-home": "recommencer, tout effacer, supprimer le foyer, réinitialiser, repartir à zéro",
+  "resetHome.health.lede": "Les dossiers de santé de ce téléchargement sont verrouillés avec ce mot de passe. WonderHome ne le conserve pas, et sans lui ils ne peuvent pas être ouverts.",
+  "resetHome.health.password": "Mot de passe des dossiers de santé",
+  "resetHome.health.repeat": "Saisissez-le à nouveau",
+  "resetHome.health.hint": "Au moins {min} caractères. Notez-le en lieu sûr.",
+  "resetHome.health.tooShort": "Utilisez au moins {min} caractères pour le mot de passe des dossiers de santé.",
+  "resetHome.health.tooLong": "Ce mot de passe est trop long. Utilisez 200 caractères au maximum.",
+  "resetHome.health.mismatch": "Les deux mots de passe des dossiers de santé ne correspondent pas.",
 };
