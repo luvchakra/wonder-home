@@ -45,6 +45,33 @@ export function keyFingerprint(apiKey: string): string {
   return createHash("sha256").update(apiKey, "utf8").digest("hex");
 }
 
+/**
+ * Where a key that reaches a provider came from, so an alert can say which
+ * copy is being refused (owner, 2026-11-21) — never anything of the key itself.
+ * `platform_saved`: Platform admin. `household` / `household_voice`: a home's
+ * own key. `tooling`: a developer's environment (local dev, `npm run eval`).
+ * Since 2026-11-21 no deployment variable or GitHub secret reaches a provider,
+ * so those two are kept only to label alerts recorded before.
+ */
+export const KEY_ORIGINS = ["platform_saved", "household", "household_voice", "tooling", "deployment_variable", "github_secret"] as const;
+export type KeyOrigin = (typeof KEY_ORIGINS)[number];
+
+const origins = new Map<string, KeyOrigin>();
+let lastNoted: { apiKey: string; origin: KeyOrigin } | null = null;
+
+/** Called by the one resolution (`model-key.ts`, `credentials.ts`) as it hands a key out. Cheap on repeat. */
+export function noteKeyOrigin(apiKey: string, origin: KeyOrigin): void {
+  if (lastNoted && lastNoted.apiKey === apiKey && lastNoted.origin === origin) return;
+  lastNoted = { apiKey, origin };
+  if (origins.size > 500) origins.clear();
+  origins.set(keyFingerprint(apiKey), origin);
+}
+
+/** Where a key came from, if the resolution handed it out on this server. */
+export function originOfKey(apiKey: string): KeyOrigin | null {
+  return origins.get(keyFingerprint(apiKey)) ?? null;
+}
+
 type Recorder = {
   rpc: (fn: string, args: Record<string, unknown>) => PromiseLike<{ error: unknown }>;
 };
@@ -104,18 +131,23 @@ export async function noteKeyFailure(apiKey: string, provider: ModelProvider, ki
     if (!db) return;
     const fingerprint = keyFingerprint(apiKey);
     lastResolved.delete(fingerprint);
-    await db.rpc("record_ai_key_alert", { p_fingerprint: fingerprint, p_provider: provider, p_kind: kind });
+    const source = origins.get(fingerprint) ?? null;
+    const { error } = await db.rpc("record_ai_key_alert", { p_fingerprint: fingerprint, p_provider: provider, p_kind: kind, p_source: source });
+    // Before migration 20261121000000 the function takes three arguments: record without the source.
+    if (error && ["PGRST202", "42883"].includes((error as { code?: string }).code ?? "")) {
+      await db.rpc("record_ai_key_alert", { p_fingerprint: fingerprint, p_provider: provider, p_kind: kind });
+    }
   } catch {
     // Best effort: a refusal still reaches the caller as it always did.
   }
 }
 
-export async function noteKeyWorking(apiKey: string, now = Date.now()): Promise<void> {
+export async function noteKeyWorking(apiKey: string, now = Date.now(), force = false): Promise<void> {
   try {
     const fingerprint = keyFingerprint(apiKey);
     refusedUntil.delete(fingerprint);
     const last = lastResolved.get(fingerprint);
-    if (last !== undefined && now - last < RESOLVE_EVERY_MS) return;
+    if (!force && last !== undefined && now - last < RESOLVE_EVERY_MS) return;
     lastResolved.set(fingerprint, now);
     const db = await getRecorder();
     if (!db) return;

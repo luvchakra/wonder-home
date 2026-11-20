@@ -17,6 +17,15 @@ Detail: `docs/external-providers.md`.
 - **Partner keys** (`/api/v1/partner/*`, `packages/core/src/developer/`) are off unless `WONDERHOME_DEVELOPER_API=on`. Scopes only narrow. A sandbox key (`whk_test_`) writes nothing. Writes go through the same domain service a screen uses.
 
 
+## WonderHome's own AI key: one place (owner, 2026-11-21)
+
+- **Where it is set.** WonderHome's own AI key, its provider, every model name (`WONDERHOME_AI_MODEL`, `_UNDERSTANDING_MODEL`, `_ANSWER_MODEL`, `_INTAKE_MODEL`, `_SECOND_READ_MODEL`, `WONDERHOME_GEMINI_TRANSCRIBE_MODEL`, `WONDERHOME_GEMINI_LIVE_MODEL`) and the Google speech key (`WONDERHOME_SPEECH_KEY`) are saved only in Platform admin → AI & providers (`platform_config`). The list is `STORE_ONLY_KEYS` in `platform/settings/runtime-env.ts`.
+- **What is ignored.** On a deployment (Vercel, the GitHub runner, any server) `runtimeEnv()` drops a variable or secret with one of those names. A server that has not read the saved settings yet reads them as unset ("no key": the rules answer); `runtimeEnvForAi()` waits for them (bounded, retried) before a reader sends a key. A store that can't be read means no key, never a stale copy. There is no first-time-setup fallback to a Vercel variable: the owner saves the key in Platform admin (the card says "Vercel has this variable, but WonderHome ignores it").
+- **Tooling only.** `next dev`, unit tests and `npm run eval -- --provider configured` (which calls `allowAiSettingsFromEnvironment()`) may take them from the shell's environment; `aiSettingsFromEnvironmentAllowed()` refuses this whenever `VERCEL` is set.
+- **One resolution.** `ai/model-key.ts`: `platformKey()` (WonderHome's key, from the saved settings) and `servingModelKey()` ("which key serves this household now, and where it came from": the household's own key, else WonderHome's, else none). A household's own key still wins (`ai/privacy.ts`). `ai-settings-one-place.test.ts` fails on any direct `process.env` read of these names and on a workflow passing one as a secret.
+- **Checked on save.** Saving WonderHome's key checks it with the provider first (listing one model, no tokens; `provider-clients.ts` `checkKeyWithProvider`); a refused key or one for another provider is not saved. "Test key" checks the saved one.
+- **Alerts say which copy.** Each `ai_key_alerts` row records `key_source` (Platform admin, a household's own key or voice key, tooling); an alert on a key no longer configured anywhere closes as `superseded`; an open alert on WonderHome's key is emailed to the platform owner and operators once a day while it stays open (`platform-key-alert.ts`).
+
 ## External providers
 Never invent credentials or claim a live integration. Build provider-neutral interfaces and deterministic mocks/fixtures first. A real provider is considered live only after credentials, authentication, contract behavior and integration tests are configured.
 

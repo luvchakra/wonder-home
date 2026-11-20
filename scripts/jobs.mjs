@@ -46,7 +46,8 @@ const admin = adminClientFor(adminGrant.worker(`background-jobs:${job}`, "platfo
 
 // The keys saved in Platform admin are laid over this runner's secrets exactly as on Vercel (2026-11-21): the
 // runner once sent the repository's old WONDERHOME_AI_KEY for six days after the owner saved a new key in the
-// portal. Waits for the read (a job has no visitor waiting); a store that can't be read leaves the secrets.
+// portal. Waits for the read (a job has no visitor waiting); a store that can't be read means no AI key (2026-11-21:
+// WonderHome's AI settings are never taken from a secret), so model steps stay on Vercel.
 const { enablePlatformSettings } = await jiti.import(join(root, "packages/core/src/platform/settings/server.ts"));
 await enablePlatformSettings(15_000);
 

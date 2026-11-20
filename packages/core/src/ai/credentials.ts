@@ -4,6 +4,7 @@ import { auditChange } from "../api/audit";
 import { ApiError } from "../api/errors";
 import { createAdminClient } from "../db/admin";
 import { writeKeyRow } from "./key-row";
+import { noteKeyOrigin } from "./key-alerts";
 import { MODEL_PROVIDERS, type HouseholdKey, type ModelProvider } from "./model-key";
 
 /**
@@ -131,6 +132,7 @@ export async function readHouseholdKey(householdId: string): Promise<HouseholdKe
   if (!data) return null;
 
   const row = data as Row;
+  noteKeyOrigin(row.api_key as string, "household");
   return { provider: row.provider as ModelProvider, key: row.api_key as string };
 }
 
@@ -188,5 +190,6 @@ export async function readGeminiVoiceKey(householdId: string): Promise<Household
   const { data, error } = await admin.from("household_gemini_voice_credentials").select("api_key").eq("household_id", householdId).maybeSingle();
   if (error) throw new Error(`readGeminiVoiceKey failed: ${error.code ?? "unknown"}`);
   if (!data) return null;
+  noteKeyOrigin((data as Row).api_key as string, "household_voice");
   return { provider: "google", key: (data as Row).api_key as string };
 }

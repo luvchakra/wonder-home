@@ -2,6 +2,7 @@ import { mkdirSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 
 import { platformKey } from "../ai/model-key";
+import { allowAiSettingsFromEnvironment } from "../platform/settings/runtime-env";
 import { GOLDEN_CASES } from "./cases";
 import { UNDERSTANDING_SET } from "./cases-understanding";
 import { formatLatency, formatRatio, measure } from "./metrics";
@@ -43,6 +44,9 @@ function targetFrom(args: readonly string[]): RunTarget {
   const index = args.indexOf("--provider");
   const wanted = index >= 0 ? args[index + 1] : "deterministic";
   if (!wanted || wanted === "deterministic") return { provider: "deterministic" };
+  // Tooling, not the app: the evaluation may take the key and models from this shell's environment
+  // (`runtime-env.ts` `STORE_ONLY_KEYS`). Refused on Vercel, so a deployment can never reach this path.
+  allowAiSettingsFromEnvironment();
   const configured = platformKey();
   if (!configured) throw new Error("No WONDERHOME_AI_KEY is set, so there is no provider to evaluate. Run without --provider for the deterministic run.");
   if (wanted !== "configured" && wanted !== configured.provider) {

@@ -14,14 +14,19 @@ const IDLE: KeyTestState = { tone: null, message: null };
  * any open alert and what it has meant for families, and "Test key". Never
  * the key itself.
  */
-export function AiKeyHealth({ provider, last4, alertLine, canTest }: { provider: string | null; last4: string | null; alertLine: string | null; canTest: boolean }) {
+export function AiKeyHealth({ provider, last4, alertLine, canTest, homesOnOwnKey = null }: { provider: string | null; last4: string | null; alertLine: string | null; canTest: boolean; homesOnOwnKey?: number | null }) {
   const [tested, test, testing] = useActionState(testPlatformKeyAction, IDLE);
   const name = provider ? ({ anthropic: "Anthropic", google: "Google", openai: "OpenAI" } as Record<string, string>)[provider] ?? provider : null;
   return (
     <div className="space-y-3">
       <p className="text-sm">
-        {name ? <>In use: a {name} key{last4 ? <> ending in <span className="font-mono">{last4}</span></> : null}.</> : "No key is in use: every household without its own key is answered by rules only."}
+        {name ? <>In use: a {name} key{last4 ? <> ending in <span className="font-mono">{last4}</span></> : null}, saved here. Nothing in Vercel or GitHub is used for AI.</> : "No key is saved here, so every household without its own key is answered by rules only. A key in Vercel or GitHub is never used."}
       </p>
+      {homesOnOwnKey !== null ? (
+        <p className="text-sm text-[var(--wh-foreground-muted)]">
+          {homesOnOwnKey === 0 ? "No home uses an AI key of its own." : `${homesOnOwnKey} ${homesOnOwnKey === 1 ? "home uses" : "homes use"} an AI key of their own; theirs answers for them.`}
+        </p>
+      ) : null}
       {alertLine ? <Alert tone="risk">{alertLine}</Alert> : name ? <p className="text-sm text-[var(--wh-foreground-muted)]">No provider has refused it.</p> : null}
       {tested.message ? <Alert tone={tested.tone === "risk" ? "risk" : "info"}>{tested.message}</Alert> : null}
       {canTest && name ? (

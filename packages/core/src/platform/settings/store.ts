@@ -2,7 +2,7 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 
 import { log } from "../../observability/logger";
 import { PLATFORM_SETTINGS, lastFourOf, settingDefinition, validateSetting, type SettingDefinition } from "./registry";
-import type { Env, StoredSettings } from "./runtime-env";
+import { STORE_ONLY_KEYS, type Env, type StoredSettings } from "./runtime-env";
 
 /**
  * Reads and writes `public.platform_config` (migration
@@ -25,6 +25,8 @@ export type SettingStatus = {
   last4: string | null;
   /** Whether Vercel also has the variable (so it can be deleted once a value is saved). */
   inEnvironment: boolean;
+  /** WonderHome never reads this setting from Vercel (`STORE_ONLY_KEYS`), so a copy there is ignored. */
+  storeOnly: boolean;
   updatedAt: string | null;
 };
 
@@ -52,6 +54,7 @@ export async function loadStoredSettings(admin: SupabaseClient): Promise<StoredS
 export function statusFor(entry: SettingDefinition, row: StatusRow | undefined, env: Env): SettingStatus {
   const fromEnv = env[entry.key]?.trim() ?? "";
   const inEnvironment = fromEnv !== "";
+  const storeOnly = STORE_ONLY_KEYS.includes(entry.key);
   if (row) {
     return {
       key: entry.key,
@@ -59,14 +62,15 @@ export function statusFor(entry: SettingDefinition, row: StatusRow | undefined, 
       value: entry.kind === "secret" ? null : row.value,
       last4: entry.kind === "secret" ? row.value_last4 : null,
       inEnvironment,
+      storeOnly,
       updatedAt: row.updated_at,
     };
   }
-  if (inEnvironment) {
-    return { key: entry.key, source: "environment", value: entry.kind === "secret" ? null : fromEnv, last4: entry.kind === "secret" ? lastFourOf(fromEnv) : null, inEnvironment, updatedAt: null };
+  if (inEnvironment && !storeOnly) {
+    return { key: entry.key, source: "environment", value: entry.kind === "secret" ? null : fromEnv, last4: entry.kind === "secret" ? lastFourOf(fromEnv) : null, inEnvironment, storeOnly, updatedAt: null };
   }
-  if (entry.defaultValue !== null) return { key: entry.key, source: "default", value: entry.kind === "secret" ? null : entry.defaultValue, last4: null, inEnvironment, updatedAt: null };
-  return { key: entry.key, source: "unset", value: null, last4: null, inEnvironment, updatedAt: null };
+  if (entry.defaultValue !== null) return { key: entry.key, source: "default", value: entry.kind === "secret" ? null : entry.defaultValue, last4: null, inEnvironment, storeOnly, updatedAt: null };
+  return { key: entry.key, source: "unset", value: null, last4: null, inEnvironment, storeOnly, updatedAt: null };
 }
 
 /** What every setting is now and where it comes from. Never a secret's value. */

@@ -24,6 +24,8 @@ export type SettingRowView = {
   /** The value in use (settings only), or a secret's mask. */
   shown: string | null;
   inEnvironment: boolean;
+  /** WonderHome never reads this one from Vercel (the AI settings): a copy there is ignored, guaranteed by `runtime-env.ts` and its test. */
+  storeOnly: boolean;
   updatedAt: string | null;
   canEdit: boolean;
   /** Why it can't be changed here, when it can't. */
@@ -38,6 +40,18 @@ const SOURCE: Record<SettingRowView["source"], { label: string; tone: BadgeTone 
   default: { label: "Default", tone: "neutral" },
   unset: { label: "Not set", tone: "neutral" },
 };
+
+/** What the card says about a copy of this setting in Vercel: only what the code guarantees. */
+export function vercelCopyWords(view: Pick<SettingRowView, "storeOnly" | "source" | "inEnvironment">): string {
+  if (view.storeOnly) {
+    return view.source === "saved"
+      ? "Vercel still has this variable. WonderHome ignores it; delete it there."
+      : "Vercel has this variable, but WonderHome ignores it. Save the value here to use it.";
+  }
+  return view.source === "saved"
+    ? "Vercel still has this variable. The saved value is used; Vercel's is read only while a server is first loading saved settings. It can be deleted there."
+    : "Save it here to manage it in one place.";
+}
 
 /** Rule 4 for a setting: its name, one line of what it does, where it comes from, then the one thing to do. */
 export function SettingRow({ view, stepUp = { method: "password" }, next = "/platform-admin" }: { view: SettingRowView; stepUp?: StaffStepUp; next?: string }) {
@@ -60,9 +74,7 @@ export function SettingRow({ view, stepUp = { method: "password" }, next = "/pla
             {view.updatedAt ? <span>changed {new Date(view.updatedAt).toLocaleString("en-IN", { dateStyle: "medium", timeStyle: "short" })}</span> : null}
             <code className="text-[0.6875rem] break-all text-[var(--wh-foreground-subtle)]">{view.key}</code>
           </p>
-          {view.source === "saved" && view.inEnvironment ? (
-            <p className="text-xs text-[var(--wh-foreground-muted)]">Vercel still has this variable. It is no longer used and can be deleted there.</p>
-          ) : null}
+          {view.inEnvironment ? <p className="text-xs text-[var(--wh-foreground-muted)]">{vercelCopyWords(view)}</p> : null}
         </div>
         {view.canEdit ? (
           <Button type="button" variant="secondary" onClick={() => setOpen((value) => !value)} aria-expanded={open}>
@@ -106,7 +118,7 @@ export function SettingRow({ view, stepUp = { method: "password" }, next = "/pla
             <form action={clear} className="space-y-3">
               <input type="hidden" name="key" value={view.key} />
               {view.secret ? <StepUpPassword stepUp={stepUp} label="Your WonderHome password, to clear it" id={`clear-password__${view.key}`} name={`password__${view.key}`} /> : null}
-              <Button type="submit" variant="quiet" disabled={clearing}>{clearing ? "Clearing…" : view.inEnvironment ? "Use the Vercel value" : "Use the default"}</Button>
+              <Button type="submit" variant="quiet" disabled={clearing}>{clearing ? "Clearing…" : view.storeOnly ? (view.secret ? "Remove" : "Use the default") : view.inEnvironment ? "Use the Vercel value" : "Use the default"}</Button>
             </form>
           ) : null}
         </div>

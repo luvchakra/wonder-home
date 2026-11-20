@@ -106,3 +106,4 @@ function watchGemini(client: GoogleGenAI, apiKey: string): GoogleGenAI {
   client.authTokens.create = watch(client.authTokens.create.bind(client.authTokens), false);
   return client;
 }
+

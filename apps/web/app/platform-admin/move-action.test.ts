@@ -74,6 +74,8 @@ beforeEach(() => {
   for (const key of [...PLATFORM_SETTINGS.map((entry) => entry.key), ...STAYS_IN_VERCEL.map((stay) => stay.key), ...UNUSED_IN_VERCEL]) {
     vi.stubEnv(key, "");
   }
+  vi.stubEnv("TMDB_API_KEY", SECRET);
+  // An AI key in Vercel is never moved: it may be the old refused copy (2026-11-21).
   vi.stubEnv("WONDERHOME_AI_KEY", SECRET);
   vi.stubEnv("GOOGLE_MAPS_API_KEY", MAPS);
   vi.stubEnv("WONDERHOME_WEATHER_PROVIDER", "open-meteo");
@@ -106,12 +108,13 @@ describe("Move all from Vercel", () => {
     const result = await moveAllFromVercelAction();
     expect(result.tone).toBe("info");
     const sent = (imported()[0]?.[1] as { p_items: { key: string }[] }).p_items.map((item) => item.key);
-    expect(sent.sort()).toEqual(["GOOGLE_MAPS_API_KEY", "WONDERHOME_AI_KEY", "WONDERHOME_WEATHER_PROVIDER"]);
+    expect(sent.sort()).toEqual(["GOOGLE_MAPS_API_KEY", "TMDB_API_KEY", "WONDERHOME_WEATHER_PROVIDER"]);
     expect(sent).not.toContain("SUPABASE_SERVICE_ROLE_KEY");
+    expect(sent).not.toContain("WONDERHOME_AI_KEY");
     expect(sent).not.toContain("CRON_SECRET");
     expect(result.report?.counts).toMatchObject({ moved: 3, alreadyInPortal: 0, mustStay: 2, mismatch: 0, failed: 0 });
     expect(result.report?.items.every((row) => row.outcome === "moved")).toBe(true);
-    expect(result.report?.safeToDelete.sort()).toEqual(["GOOGLE_MAPS_API_KEY", "WONDERHOME_AI_KEY", "WONDERHOME_WEATHER_PROVIDER"]);
+    expect(result.report?.safeToDelete.sort()).toEqual(["GOOGLE_MAPS_API_KEY", "TMDB_API_KEY", "WONDERHOME_WEATHER_PROVIDER"]);
     expect(result.report?.mustStay.map((stay) => stay.key).sort()).toEqual(["CRON_SECRET", "SUPABASE_SERVICE_ROLE_KEY"]);
     // The answer and the log carry names and words, never a secret (not even its last four).
     const payload = JSON.stringify(result);
@@ -144,11 +147,11 @@ describe("Move all from Vercel", () => {
 
   it("says so when what reads back doesn't match Vercel, and doesn't list it as safe to delete", async () => {
     state.staff = { profileId: "p-owner", role: "owner" };
-    state.corrupt = "WONDERHOME_AI_KEY";
+    state.corrupt = "TMDB_API_KEY";
     const result = await moveAllFromVercelAction();
     expect(result.tone).toBe("risk");
-    expect(result.report?.items.find((row) => row.key === "WONDERHOME_AI_KEY")?.outcome).toBe("mismatch");
-    expect(result.report?.safeToDelete).not.toContain("WONDERHOME_AI_KEY");
+    expect(result.report?.items.find((row) => row.key === "TMDB_API_KEY")?.outcome).toBe("mismatch");
+    expect(result.report?.safeToDelete).not.toContain("TMDB_API_KEY");
     expect(result.report?.counts.mismatch).toBe(1);
   });
 

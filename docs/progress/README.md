@@ -11,6 +11,7 @@ decision that shapes later work each earns a note, written before moving on.
 
 | Date | Note |
 |---|---|
+| 2026-11-21 | [WonderHome's AI key in one place: Platform admin](2026-11-21-ai-key-one-place.md) |
 | 2026-11-21 | [HomeSend understanding: never without the model, then complex messages (14-073, 14-074)](2026-11-21-homesend-understanding.md) |
 | 2026-11-20 | [HomeTalk understanding: take what was said, ask only what must be asked](2026-11-20-hometalk-understanding.md) |
 | 2026-11-20 | [HomeTalk's talk button never does nothing](2026-11-20-talk-button-silent.md) |

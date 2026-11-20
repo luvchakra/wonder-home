@@ -2,7 +2,7 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 
 import { log } from "../../observability/logger";
 import { PLATFORM_SETTINGS, STAYS_IN_VERCEL, UNUSED_IN_VERCEL, lastFourOf, validateSetting, type SettingDefinition } from "./registry";
-import type { Env } from "./runtime-env";
+import { STORE_ONLY_KEYS, type Env } from "./runtime-env";
 import { saveSetting, settingStatuses, type SettingStatus } from "./store";
 
 /**
@@ -70,6 +70,8 @@ export function planMove(statuses: ReadonlyMap<string, SettingStatus>, env: Env)
   let notSet = 0;
   for (const entry of PLATFORM_SETTINGS) {
     if (STAYS.has(entry.key)) continue; // never, even if one were added to the registry by mistake
+    // An AI key is never copied from Vercel: that copy may be the old refused one. It is entered by hand and checked on save.
+    if (entry.kind === "secret" && STORE_ONLY_KEYS.includes(entry.key)) continue;
     const raw = fromEnv(env, entry.key);
     if (!raw) {
       notSet += 1;

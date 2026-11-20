@@ -4,9 +4,9 @@ import { renderEmailLayout } from "../email/layout";
 import { escapeHtml, type Mailer } from "../email/mailer";
 import { siteOrigin } from "../notifications/email";
 import { QUOTA_ALERT_AFTER_MS } from "../notifications/notices";
-import { keyFingerprint, type KeyAlertKind } from "./key-alerts";
+import { keyFingerprint, type KeyAlertKind, type KeyOrigin } from "./key-alerts";
 import { platformKey } from "./model-key";
-import { runtimeEnv } from "../platform/settings/runtime-env";
+import { runtimeEnv, savedSettingsLoaded } from "../platform/settings/runtime-env";
 
 /**
  * An alert on WonderHome's own key reaches the platform admins (story 14-048,
@@ -24,23 +24,38 @@ import { runtimeEnv } from "../platform/settings/runtime-env";
  * and nothing of the key itself is ever read back or sent.
  */
 
-export type PlatformKeyAlert = { id: string; provider: string; kind: KeyAlertKind; failures: number; firstSeenAt: string; lastSeenAt: string; notifiedAt: string | null };
+export type PlatformKeyAlert = { id: string; provider: string; kind: KeyAlertKind; failures: number; firstSeenAt: string; lastSeenAt: string; notifiedAt: string | null; source?: KeyOrigin | null };
 
-type AlertRow = { id: string; provider: string; kind: KeyAlertKind; failures: number; first_seen_at: string; last_seen_at: string; platform_notified_at: string | null };
+/** Where the refused key came from, in words for the platform owner (2026-11-21). Never anything of the key. */
+export const KEY_ORIGIN_WORDS: Record<KeyOrigin, string> = {
+  platform_saved: "the key saved in Platform admin",
+  household: "a household's own key",
+  household_voice: "a household's own voice key",
+  tooling: "a developer's local key",
+  deployment_variable: "the old copy in Vercel's WONDERHOME_AI_KEY variable",
+  github_secret: "the old copy in the GitHub Actions secret",
+};
+
+/** One sentence naming the copy refused, or "" when the alert predates that record. */
+export function refusedCopyWords(source: KeyOrigin | null | undefined): string {
+  return source ? `The key being refused is ${KEY_ORIGIN_WORDS[source]}.` : "";
+}
+
+type AlertRow = { id: string; provider: string; kind: KeyAlertKind; failures: number; first_seen_at: string; last_seen_at: string; platform_notified_at: string | null; key_source?: KeyOrigin | null };
 
 /** The open alert on the platform's own key, or null (no key, nothing open, or it can't be read). */
 export async function openPlatformKeyAlert(admin: SupabaseClient, env: Record<string, string | undefined> = runtimeEnv()): Promise<PlatformKeyAlert | null> {
   const key = platformKey(env);
   if (!key) return null;
-  const { data, error } = await admin
-    .from("ai_key_alerts")
-    .select("id, provider, kind, failures, first_seen_at, last_seen_at, platform_notified_at")
-    .eq("key_fingerprint", keyFingerprint(key.key))
-    .is("resolved_at", null)
-    .maybeSingle();
+  const fingerprint = keyFingerprint(key.key);
+  const read = (columns: string) => admin.from("ai_key_alerts").select(columns).eq("key_fingerprint", fingerprint).is("resolved_at", null).maybeSingle();
+  const base = "id, provider, kind, failures, first_seen_at, last_seen_at, platform_notified_at";
+  let { data, error } = await read(`${base}, key_source`);
+  // Before migration 20261121030000 there is no key_source column.
+  if (error) ({ data, error } = await read(base));
   if (error || !data) return null;
-  const row = data as AlertRow;
-  return { id: row.id, provider: row.provider, kind: row.kind, failures: row.failures, firstSeenAt: row.first_seen_at, lastSeenAt: row.last_seen_at, notifiedAt: row.platform_notified_at };
+  const row = data as unknown as AlertRow;
+  return { id: row.id, provider: row.provider, kind: row.kind, failures: row.failures, firstSeenAt: row.first_seen_at, lastSeenAt: row.last_seen_at, notifiedAt: row.platform_notified_at, source: row.key_source ?? null };
 }
 
 /** Every day an open alert lasts, the platform's owners and operators hear of it again. */
@@ -52,6 +67,9 @@ export const RETELL_EVERY_MS = 24 * 60 * 60 * 1000;
  * not a household's own key (the database checks those). Returns how many.
  */
 export async function supersedeStaleKeyAlerts(admin: SupabaseClient, env: Record<string, string | undefined> = runtimeEnv()): Promise<number> {
+  // Until this server has read the saved settings the platform key reads as unset (one place, 2026-11-21):
+  // it must never be mistaken for "used by nobody".
+  if (!savedSettingsLoaded()) return 0;
   try {
     const keep = platformSecretFingerprints(env);
     const { data, error } = await admin.rpc("supersede_ai_key_alerts", { p_keep: keep });
@@ -97,12 +115,13 @@ export async function itemsReadWithoutModelSince(admin: SupabaseClient, since: s
 }
 
 /** One plain line for the card: since when, and what it has meant. */
-export function platformAlertLine(alert: Pick<PlatformKeyAlert, "provider" | "kind" | "firstSeenAt">, unread: number | null, timeZone = "Asia/Kolkata"): string {
+export function platformAlertLine(alert: Pick<PlatformKeyAlert, "provider" | "kind" | "firstSeenAt" | "source">, unread: number | null, timeZone = "Asia/Kolkata"): string {
   const provider = PROVIDER_NAMES[alert.provider] ?? alert.provider;
   const since = new Date(alert.firstSeenAt).toLocaleDateString("en-IN", { day: "numeric", month: "short", timeZone });
   const what = alert.kind === "key_rejected" ? `${provider} has refused WonderHome's key` : alert.kind === "out_of_credits" ? `WonderHome's ${provider} account is out of credit` : `WonderHome's ${provider} key is over its quota`;
   const families = unread === null ? "families without their own key are answered by rules only" : `${unread} ${unread === 1 ? "item was" : "items were"} read by rules only`;
-  return `Since ${since}, ${what}: nothing has been read by a model, and ${families}. Save a working key, then press Test key.`;
+  const copy = refusedCopyWords(alert.source);
+  return `Since ${since}, ${what}: nothing has been read by a model, and ${families}.${copy ? ` ${copy}` : ""} Save a working key, then press Test key.`;
 }
 
 const PROVIDER_NAMES: Record<string, string> = { anthropic: "Anthropic", google: "Google", openai: "OpenAI" };
@@ -114,12 +133,13 @@ const WHAT_WENT_WRONG: Record<KeyAlertKind, string> = {
 };
 
 /** The email: which provider, what went wrong, what households see meanwhile, and what to do. Never the key. */
-export function platformKeyMail(alert: Pick<PlatformKeyAlert, "provider" | "kind"> & Partial<Pick<PlatformKeyAlert, "firstSeenAt" | "notifiedAt">>, origin: string, now = new Date(), unread: number | null = null): { subject: string; text: string; html: string } {
+export function platformKeyMail(alert: Pick<PlatformKeyAlert, "provider" | "kind"> & Partial<Pick<PlatformKeyAlert, "firstSeenAt" | "notifiedAt" | "source">>, origin: string, now = new Date(), unread: number | null = null): { subject: string; text: string; html: string } {
   const provider = PROVIDER_NAMES[alert.provider] ?? alert.provider;
   const days = alert.firstSeenAt ? Math.floor((now.getTime() - new Date(alert.firstSeenAt).getTime()) / RETELL_EVERY_MS) : 0;
   const headline = days >= 1 ? `Still not fixed, day ${days + 1}: WonderHome's own ${provider} key ${WHAT_WENT_WRONG[alert.kind]}` : `WonderHome's own ${provider} key ${WHAT_WENT_WRONG[alert.kind]}`;
   const lines = [
     `${provider} refused WonderHome's platform key.`,
+    ...(alert.source ? [refusedCopyWords(alert.source)] : []),
     unread === null
       ? "Households without a key of their own are answered by WonderHome's rules only: nothing they send is read by a model until it works again."
       : `Households without a key of their own are answered by WonderHome's rules only: ${unread} ${unread === 1 ? "thing" : "things"} sent in since it started ${unread === 1 ? "was" : "were"} kept unread, and will be read once it works.`,

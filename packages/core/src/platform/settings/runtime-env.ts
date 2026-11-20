@@ -22,6 +22,70 @@ import { forgetPlatformData, keptPerServer } from "../../lib/platform-cache";
  */
 
 export type Env = Readonly<Record<string, string | undefined>>;
+
+/**
+ * WonderHome's own AI settings live in one place: Platform admin (owner,
+ * 2026-11-21, "ensure its only configured once and used from there"). On a
+ * deployment (Vercel, the GitHub runner, any server) these names are taken
+ * from the saved store alone: a deployment variable or a GitHub secret of the
+ * same name is ignored, and until the store has been read they read as unset
+ * ("no key": the rules answer), never as a stale copy. Only tooling (local
+ * `next dev`, unit tests, `npm run eval -- --provider configured`, which calls
+ * `allowAiSettingsFromEnvironment()`) may take them from the environment, and
+ * never on Vercel. `registry.test.ts` checks each is a Platform admin setting;
+ * `ai-settings-one-place.test.ts` fails on a direct `process.env` read of one.
+ */
+export const STORE_ONLY_KEYS: readonly string[] = [
+  "WONDERHOME_AI_KEY",
+  "WONDERHOME_AI_PROVIDER",
+  "WONDERHOME_AI_MODEL",
+  "WONDERHOME_AI_UNDERSTANDING_MODEL",
+  "WONDERHOME_AI_ANSWER_MODEL",
+  "WONDERHOME_AI_INTAKE_MODEL",
+  "WONDERHOME_AI_SECOND_READ_MODEL",
+  "WONDERHOME_GEMINI_TRANSCRIBE_MODEL",
+  "WONDERHOME_SPEECH_KEY",
+  "WONDERHOME_GEMINI_LIVE_MODEL",
+];
+
+let toolingOptIn = false;
+
+/** Readers that keep a value derived from these settings (the model names) and must re-derive it when they change. */
+const listeners = new Set<() => void>();
+export function whenSettingsChange(listener: () => void): void {
+  listeners.add(listener);
+}
+function settingsChanged(): void {
+  for (const listener of listeners) {
+    try {
+      listener();
+    } catch {
+      // A reader's own problem never stops the others.
+    }
+  }
+}
+
+/** Tooling only (`evaluation/cli.ts`): the AI settings may come from this process's environment. Refused on Vercel. */
+export function allowAiSettingsFromEnvironment(): void {
+  toolingOptIn = true;
+  withoutAi = null;
+  merged = null;
+  settingsChanged();
+}
+
+/** Whether this process is tooling that may read AI settings from its environment. Never on a deployment. */
+export function aiSettingsFromEnvironmentAllowed(env: Env = process.env): boolean {
+  if (env.VERCEL) return false;
+  return toolingOptIn || env.NODE_ENV === "development" || Boolean(env.VITEST);
+}
+
+/** The process environment without the store-only names, unless this is tooling. */
+function deploymentEnv(): Env {
+  if (aiSettingsFromEnvironmentAllowed()) return process.env;
+  withoutAi ??= Object.fromEntries(Object.entries(process.env).filter(([key]) => !STORE_ONLY_KEYS.includes(key)));
+  return withoutAi;
+}
+let withoutAi: Env | null = null;
 export type StoredSettings = Readonly<Record<string, string>>;
 
 let loader: (() => Promise<StoredSettings>) | null = null;
@@ -44,6 +108,8 @@ export function useSettingsLoader(load: (() => Promise<StoredSettings>) | null, 
   loadedAt = Number.NEGATIVE_INFINITY;
   everLoaded = false;
   refreshing = null;
+  withoutAi = null;
+  settingsChanged();
 }
 
 /** Loads the saved values now (shared by concurrent callers). A failed read keeps what was there. */
@@ -58,6 +124,7 @@ export function refreshRuntimeEnv(now = Date.now()): Promise<void> {
         merged = null;
         loadedAt = now;
         everLoaded = true;
+        settingsChanged();
       },
       () => {
         // The store could not be read: keep the last values (or the plain
@@ -74,9 +141,29 @@ export function refreshRuntimeEnv(now = Date.now()): Promise<void> {
 /** The environment to read a setting from, now. Never waits; refreshes behind itself when stale. */
 export function runtimeEnv(now = Date.now()): Env {
   if (loader && now - loadedAt >= TTL_MS) void refreshRuntimeEnv(now);
-  if (Object.keys(stored).length === 0) return process.env;
-  merged ??= { ...process.env, ...stored };
+  const base = deploymentEnv();
+  if (Object.keys(stored).length === 0) return base;
+  merged ??= { ...base, ...stored };
   return merged;
+}
+
+/** Whether the saved settings have been read on this server (else the AI settings read as unset). */
+export function savedSettingsLoaded(): boolean {
+  return everLoaded;
+}
+
+/**
+ * For a reader about to send a key: if this server has not yet read the saved
+ * settings, wait for them (bounded, retried once), then answer as `runtimeEnv()`.
+ * A store that still can't be read leaves the AI settings unset: no key.
+ */
+export async function runtimeEnvForAi(waitMs = 2_500, now = Date.now()): Promise<Env> {
+  if (loader && !everLoaded) {
+    for (let attempt = 0; attempt < 2 && !everLoaded; attempt += 1) {
+      await Promise.race([refreshRuntimeEnv(Date.now()), new Promise<void>((resolve) => setTimeout(resolve, waitMs).unref?.())]);
+    }
+  }
+  return runtimeEnv(now);
 }
 
 /** The same, after waiting for a refresh if the copy is stale: for a request that must see a save just made. */
@@ -95,10 +182,8 @@ export async function freshRuntimeEnv(now = Date.now()): Promise<Env> {
  * waits again; a stale copy refreshes behind itself as before.
  */
 export async function settledRuntimeEnv(waitMs = 5_000, now = Date.now()): Promise<Env> {
-  if (loader && !everLoaded) {
-    await Promise.race([refreshRuntimeEnv(now), new Promise<void>((resolve) => setTimeout(resolve, waitMs).unref?.())]);
-  }
-  return runtimeEnv(now);
+  // Since 2026-11-21 (one place) a store that still can't be read leaves the AI settings unset, never the variables.
+  return runtimeEnvForAi(waitMs / 2, now);
 }
 
 /** After a save on this server: drop the kept copy so the next read loads the new value. */

@@ -122,13 +122,14 @@ export type RunOptions = {
 
 /** Runs one job's steps in order; one step failing never stops the next. */
 export async function runJob(admin: SupabaseClient, job: JobName, options: RunOptions = {}): Promise<{ ok: boolean; steps: StepReport[] }> {
-  // The saved platform settings over the runner's secrets (`scripts/jobs.mjs` loads them first), as every model call sees them.
+  // The saved platform settings (`scripts/jobs.mjs` loads them first), as every model call sees them. WonderHome's AI
+  // settings come from there only: the workflow passes no AI secret, and one left behind is ignored (2026-11-21).
   const env = options.env ?? runtimeEnv();
   const hasModel = platformKey(env) !== null;
   const reports: StepReport[] = [];
   for (const step of JOBS[job]) {
     if (NEEDS_MODEL.has(step) && !hasModel) {
-      reports.push({ step, state: "left-to-vercel", reason: "no WonderHome AI key saved or on the runner" });
+      reports.push({ step, state: "left-to-vercel", reason: "no WonderHome AI key saved in Platform admin (or it couldn't be read)" });
       continue;
     }
     if (options.dryRun) {

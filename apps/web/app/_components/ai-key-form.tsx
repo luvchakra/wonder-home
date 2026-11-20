@@ -1,7 +1,7 @@
 "use client";
 
 import { Check } from "lucide-react";
-import { useActionState } from "react";
+import { useActionState, useState } from "react";
 import { useFormStatus } from "react-dom";
 
 import { Alert } from "@wonderhome/core/ui/alert";
@@ -19,6 +19,10 @@ export type AiKeyFormLabels = {
   useOwn: string;
   saving: string;
   remove: string;
+  /** When set, removing asks once first ("Use WonderHome's key instead", one confirmed tap). */
+  removeConfirm?: string;
+  removeYes?: string;
+  removeNo?: string;
   /** Beside the masked key once one is set: "Key saved". */
   saved: string;
   /** The field's label once a key is set: it now replaces the saved one. */
@@ -68,6 +72,7 @@ export function AiKeyForm({
 }) {
   const [saveState, saveAction] = useActionState(save, {});
   const [removeState, removeAction] = useActionState(remove, {});
+  const [confirming, setConfirming] = useState(false);
   const state = saveState.error || saveState.notice ? saveState : removeState;
 
   return (
@@ -113,12 +118,24 @@ export function AiKeyForm({
       </form>
 
       {configured ? (
-        <form action={removeAction}>
-          <input type="hidden" name="householdId" value={householdId} />
-          <Button type="submit" variant="secondary" className="w-full">
+        labels.removeConfirm && !confirming ? (
+          <Button type="button" variant="secondary" className="w-full" onClick={() => setConfirming(true)}>
             {labels.remove}
           </Button>
-        </form>
+        ) : (
+          <form action={removeAction} className="space-y-2">
+            <input type="hidden" name="householdId" value={householdId} />
+            {labels.removeConfirm ? <p className="text-sm">{labels.removeConfirm}</p> : null}
+            <Button type="submit" variant="secondary" className="w-full">
+              {labels.removeConfirm ? (labels.removeYes ?? labels.remove) : labels.remove}
+            </Button>
+            {labels.removeConfirm ? (
+              <Button type="button" variant="quiet" className="w-full" onClick={() => setConfirming(false)}>
+                {labels.removeNo}
+              </Button>
+            ) : null}
+          </form>
+        )
       ) : null}
     </div>
   );
