@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 
 import type { GroceryItem } from "../commerce/inventory";
 import type { IngredientNeed } from "./meals";
-import { itemFor, mealShortfalls, servingScale } from "./shortfall";
+import { ingredientNames, itemFor, mealIngredientState, mealShortfalls, servingScale } from "./shortfall";
 
 const item = (id: string, name: string, unit: string, stock: number | null, toBuy: number | null = null, extra: Partial<GroceryItem> = {}): GroceryItem => ({
   id, name, category: "grocery", unit, step: null, lowLevel: null, storage: null, note: null, aliases: [], imageUrl: null, imagePath: null, catalog: null, lastPurchasedOn: null, updatedAt: "2026-09-20T00:00:00Z",
@@ -90,5 +90,57 @@ describe("itemFor", () => {
     expect(itemFor({ name: "anything", consumableId: "b" }, groceries)?.id).toBe("b");
     expect(itemFor({ name: "Milk", consumableId: null }, groceries)).toBeNull();
     expect(itemFor({ name: "Toned milk", consumableId: null }, groceries)?.id).toBe("b");
+  });
+});
+
+describe("mealIngredientState — one reading for the meal card and the Ingredients sheet", () => {
+  // The owner's Idli (2026-11-20): two ingredients, both on the To Buy list,
+  // their stored status still "needed". The card said "2 ingredients to get",
+  // listed three names ("Batter, Idli" is one catalog name) as "Still to get",
+  // and the sheet said "Nothing to add … Already covered" for the same three.
+  const groceries = [
+    item("batter", "Batter, Idli", "kg", null, 1000),
+    item("oil", "Sunflower oil", "l", null, 1000),
+    item("salt", "Salt", "kg", 1000),
+    item("chutney", "Coconut chutney", "g", null),
+  ];
+  const idli = [need("Batter, Idli", 1, "unit"), need("Sunflower oil", 1, "unit")];
+
+  it("calls what the To Buy list covers still to buy, with nothing to add", () => {
+    const state = mealIngredientState({ ingredients: idli, scale: 1, groceries });
+    expect(state.toBuy).toEqual(["Batter, Idli", "Sunflower oil"]);
+    expect(state.onList).toEqual(["Batter, Idli", "Sunflower oil"]);
+    expect(state.toAdd).toEqual([]);
+    expect(state.inKitchen).toEqual([]);
+    expect(state.plan.short).toEqual([]);
+  });
+
+  it("tells apart In Kitchen, on the To Buy list, and not counted and not on the list", () => {
+    const state = mealIngredientState({
+      ingredients: [...idli, need("Salt", 10, "g"), need("Coconut chutney", 200, "g"), need("Curry leaves", 1, "unit", { status: "have" })],
+      scale: 1,
+      groceries,
+    });
+    expect(state.inKitchen).toEqual(["Salt", "Curry leaves"]);
+    expect(state.onList).toEqual(["Batter, Idli", "Sunflower oil"]);
+    expect(state.toAdd).toEqual(["Coconut chutney"]);
+    // The card's number is the strip's names, and the sheet's lines are the ones to add.
+    expect(state.toBuy).toHaveLength(state.onList.length + state.toAdd.length);
+    expect(state.plan.short.map((line) => line.name)).toEqual(state.toAdd);
+  });
+
+  it("a need the kitchen covers only with the list's help is on the list, not In Kitchen", () => {
+    const state = mealIngredientState({ ingredients: [need("Tomatoes", 0.5, "kg")], scale: 1, groceries: [item("tomatoes", "Tomatoes", "kg", 300, 300)] });
+    expect(state.onList).toEqual(["Tomatoes"]);
+  });
+
+  it("follows the servings: more servings can turn In Kitchen into to add", () => {
+    const groceriesWithRice = [item("rice", "Rice", "kg", 500)];
+    expect(mealIngredientState({ ingredients: [need("Rice", 400, "g")], scale: 1, groceries: groceriesWithRice }).inKitchen).toEqual(["Rice"]);
+    expect(mealIngredientState({ ingredients: [need("Rice", 400, "g")], scale: 2, groceries: groceriesWithRice }).toAdd).toEqual(["Rice"]);
+  });
+
+  it("joins names without commas, so a catalog name with one stays one name", () => {
+    expect(ingredientNames(["Batter, Idli", "Sunflower oil"])).toBe("Batter, Idli · Sunflower oil");
   });
 });

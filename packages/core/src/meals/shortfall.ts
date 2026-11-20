@@ -114,3 +114,72 @@ function lineFor(need: IngredientNeed, scale: number, groceries: readonly Grocer
   const step = item ? stepInBase(item.unit, item.step) : { quantity: 1, unit: "pcs" };
   return { ...base, need: null, short: some ? null : step, basis: have ? "unmeasured" : "estimate" };
 }
+
+/**
+ * Where each of a meal's ingredients stands — the one reading the meal card's
+ * line, its strip and the Ingredients sheet all show (owner, 2026-11-20:
+ * "contradicting messages"). Before this, the card read each ingredient's
+ * stored status and the sheet read the household's stock and To Buy list, so
+ * one meal could be "still to get" and "already covered" at once.
+ *
+ * - **in_kitchen** — the household said it has it (or swapped it), or what is
+ *   in the kitchen covers the need on its own.
+ * - **on_list** — still to buy, but the To Buy list already covers it:
+ *   nothing to add.
+ * - **to_add** — still to buy, and the list does not cover it yet.
+ *
+ * `toBuy` is on_list + to_add: the number the card says, and exactly the
+ * names its strip lists (rule 9).
+ */
+export type IngredientState = "in_kitchen" | "on_list" | "to_add";
+
+export type MealIngredientState = {
+  lines: { name: string; state: IngredientState; line: ShortfallLine | null }[];
+  inKitchen: string[];
+  onList: string[];
+  toAdd: string[];
+  /** Everything still to buy (on_list and to_add), in the recipe's order. */
+  toBuy: string[];
+  plan: MealShortfalls;
+};
+
+export function mealIngredientState(input: { ingredients: readonly IngredientNeed[]; scale: number; groceries: readonly GroceryItem[] }): MealIngredientState {
+  const plan = mealShortfalls(input);
+  const byName = new Map<string, ShortfallLine>();
+  for (const line of [...plan.short, ...plan.covered]) byName.set(line.name, line);
+  const lines: MealIngredientState["lines"] = [];
+  for (const need of input.ingredients) {
+    if (need.status === "have" || need.status === "substituted") {
+      lines.push({ name: need.name, state: "in_kitchen", line: null });
+      continue;
+    }
+    const line = byName.get(need.name) ?? lineFor(need, input.scale, input.groceries);
+    lines.push({ name: need.name, state: line.short ? "to_add" : kitchenCovers(line) ? "in_kitchen" : "on_list", line });
+  }
+  const named = (state: IngredientState) => lines.filter((entry) => entry.state === state).map((entry) => entry.name);
+  return {
+    lines,
+    inKitchen: named("in_kitchen"),
+    onList: named("on_list"),
+    toAdd: named("to_add"),
+    toBuy: lines.filter((entry) => entry.state !== "in_kitchen").map((entry) => entry.name),
+    plan,
+  };
+}
+
+/** A covered line the kitchen alone covers, without counting the list. */
+function kitchenCovers(line: ShortfallLine): boolean {
+  if (!line.have || !(line.have.quantity > 0)) return false;
+  if (!line.need) return true;
+  const gap = subtractAmounts(line.need, line.have);
+  return gap !== null && !(gap.quantity > 0);
+}
+
+/**
+ * Ingredient names joined for one line of text. Not with commas: catalog
+ * names carry their own ("Batter, Idli"), so a comma list made two
+ * ingredients read as three.
+ */
+export function ingredientNames(names: readonly string[]): string {
+  return names.join(" · ");
+}

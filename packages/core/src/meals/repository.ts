@@ -919,6 +919,25 @@ export type MealAgenda = {
   rows: Meal[];
 };
 
+/** What is on the To Buy list now, by item id and lower-case name. Bounded; unreadable reads as empty (the stored status still counts). */
+async function toBuyNow(supabase: SupabaseClient, householdId: string): Promise<{ ids: Set<string>; names: Set<string> }> {
+  const { data, error } = await supabase
+    .from("shopping_list_entries")
+    .select("consumable_id, consumables(name)")
+    .eq("household_id", householdId)
+    .eq("state", "to_buy")
+    .limit(500);
+  const ids = new Set<string>();
+  const names = new Set<string>();
+  if (error) return { ids, names };
+  for (const row of (data ?? []) as { consumable_id: string; consumables: { name: string } | { name: string }[] | null }[]) {
+    ids.add(row.consumable_id);
+    const item = Array.isArray(row.consumables) ? row.consumables[0] : row.consumables;
+    if (item?.name) names.add(item.name.trim().toLocaleLowerCase());
+  }
+  return { ids, names };
+}
+
 export async function mealAgenda(
   supabase: SupabaseClient,
   householdId: string,
@@ -932,14 +951,19 @@ export async function mealAgenda(
   const now = options.now ?? new Date();
   const today = now.toISOString().slice(0, 10);
 
-  const meals = options.meals ? options.meals.filter((meal) => meal.onDate >= today) : await listMeals(supabase, householdId, { from: today });
+  // One wave: the meals and what is on the To Buy list, so an ingredient on
+  // the list is never called missing (owner, 2026-11-20).
+  const [meals, onList] = await Promise.all([
+    options.meals ? Promise.resolve(options.meals.filter((meal) => meal.onDate >= today)) : listMeals(supabase, householdId, { from: today }),
+    toBuyNow(supabase, householdId),
+  ]);
 
   return {
     meals: meals
       // Availability comes from module 12's calendar once it exists. Until then
       // the cook is assumed available, which overstates rather than understates
       // — nothing is called at risk purely because WonderHome cannot see a diary.
-      .map((meal) => assessMeal(meal, { now, cookAvailable: true }))
+      .map((meal) => assessMeal(meal, { now, cookAvailable: true, onList }))
       .filter((assessment) => assessment.notable),
     checked: meals.length,
     rows: meals,

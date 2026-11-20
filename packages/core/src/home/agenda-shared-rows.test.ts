@@ -25,6 +25,7 @@ function fakeDatabase(tables: Record<string, Row[]>) {
         in: (column: string, values: unknown[]) => ((rows = rows.filter((row) => values.includes(row[column]))), query),
         gte: (column: string, value: string) => ((rows = rows.filter((row) => String(row[column]) >= value)), query),
         lte: (column: string, value: string) => ((rows = rows.filter((row) => String(row[column]) <= value)), query),
+        limit: (count: number) => ((rows = rows.slice(0, count)), query),
         order: (column: string) => ((rows = rows.sort((a, b) => String(a[column]).localeCompare(String(b[column])))), query),
         then: (resolve: (result: { data: Row[]; error: null }) => unknown) => resolve({ data: rows, error: null }),
       };
