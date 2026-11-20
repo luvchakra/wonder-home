@@ -327,6 +327,11 @@ export const SENSITIVE_ACTIONS: readonly SensitiveAction[] = [
     recordedIn: "packages/core/src/homesend/matched-update.ts",
   },
   {
+    event: "homesend.added_checking",
+    because: "Something sent in that waited (a bill, receipt or health document record first couldn't add on its own) was added with what is known, marked Checking, by a person's Add on \"Add this bill?\" or by its 24-hour default (owner 2026-11-20: \"record\"). It writes a money or health record, so the household should see who or what did it.",
+    recordedIn: "packages/core/src/homesend/add-default.ts",
+  },
+  {
     event: "needs_you.answered",
     because: "Someone answered a \"Needs you\" question with one tap, which changed an entry or set an item aside. It is a change to household data made in their name.",
     recordedIn: "apps/web/app/(auth)/needs-you-actions.ts",
@@ -828,6 +833,8 @@ export function describeAuditEvent(
       return { title: "A HomeSend item that no longer applies was tidied away", detail: `${TIDY_REASON_WORDS[stringOr(metadata.reason, "") ?? ""] ?? "No longer applies"}${metadata.by === "ai" ? " · checked AI verdict" : ""}. It is kept and can be restored.` };
     case "homesend.kept_checking":
       return { title: "A HomeSend entry stays Checking until someone confirms it", detail: metadata.how === "default" ? "Nobody answered within a day; check it before paying." : null };
+    case "homesend.added_checking":
+      return { title: "Something sent in was added, marked Checking", detail: metadata.by === "default" ? "Nobody answered within a day; check it before paying." : null };
     case "homesend.matched_update":
       return {
         title: metadata.mode === "cancel" ? "A bill on record was cancelled from a newer message" : metadata.mode === "flag" ? "A bill a message said was called off was kept, marked Checking" : "A bill on record was updated from a newer copy",

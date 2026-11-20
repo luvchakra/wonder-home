@@ -84,6 +84,8 @@ export type EndingInput = {
    * setting isn't "Wait for review"), with what it can't be added without.
    */
   recordable?: boolean;
+  /** A bill, receipt or health document "Add this bill?" can add with what is known (`add-default.ts` `canAdd`). */
+  addable?: boolean;
 };
 
 /** How long a read-again has before the sender is asked to send it again. */
@@ -102,6 +104,8 @@ export type Ending =
   | { action: "record" }
   /** Ask its one question, with a default; `duplicate`: it looks like something already on record. */
   | { action: "ask"; duplicate?: true }
+  /** "Add this bill?" (the owner, 2026-11-20: "record"): default Add after 24 h, recorded as Checking with what is known. */
+  | { action: "ask_add" }
   /** "Update the existing bill?" (the owner, 2026-11-20): default Update, marked Checking; a cancellation's default keeps the record Checking. */
   | { action: "ask_update"; cancel: boolean }
   /** Nothing to do yet (a read-again is queued, or its question is open). */
@@ -152,6 +156,9 @@ export function endingFor(item: EndingInput): Ending {
     if (item.match === "duplicate") return item.asked.has("homesend_waiting") ? { action: "wait" } : { action: "ask", duplicate: true };
     // Nothing on record and the household records bills directly: what record first would have done (decision 2).
     if (item.kind === "bill" && item.recordable === true && item.match === null) return { action: "record" };
+    // Nothing on record, but not recorded on its own (money or health set to "Wait for review", a detail
+    // missing, several records): asked "Add this bill?", and added as Checking by default (owner, 2026-11-20).
+    if (item.match === null && item.addable === true) return item.asked.has(ADD_SOURCE) ? { action: "wait" } : { action: "ask_add" };
     return { action: "wait" };
   }
   if (item.asked.has("homesend_waiting")) return { action: "wait" };
@@ -171,9 +178,11 @@ function afterReadAgain(item: EndingInput): Ending {
 
 /** The source of "Update the existing bill?" questions. */
 export const UPDATE_SOURCE = "homesend_update";
+/** The source of "Add this bill?" questions. */
+export const ADD_SOURCE = "homesend_add";
 
 export type HomeSendQuestion = {
-  source: "homesend_check" | "homesend_waiting" | "homesend_resend" | typeof UPDATE_SOURCE;
+  source: "homesend_check" | "homesend_waiting" | "homesend_resend" | typeof UPDATE_SOURCE | typeof ADD_SOURCE;
   prompt: NeedsYouPrompt;
   answers: NeedsYouAnswer[];
   defaultAnswer: string;
@@ -243,6 +252,25 @@ export function updateQuestion(input: { kind: HomeSendKind | null; title: string
   };
 }
 
+/**
+ * "Add this bill?" (or receipt, or health document): something record first
+ * could not add on its own. Add records it with what is known, marked
+ * Checking, its money reminders saying "check before paying"; Set aside
+ * archives it, restorable. If nobody answers in 24 hours it is added (the
+ * owner, 2026-11-20: "record"). Nothing is paid.
+ */
+export function addQuestion(input: { kind: HomeSendKind | null; title: string | null; dueOn: string | null; today: string }): HomeSendQuestion {
+  const code = input.kind === "receipt" ? "homesend.add.receipt" : input.kind === "health_document" ? "homesend.add.health" : "homesend.add";
+  return {
+    source: ADD_SOURCE,
+    prompt: { code, title: input.title, kind: input.kind },
+    answers: [{ value: "add" }, { value: "set_aside" }],
+    defaultAnswer: "add",
+    consequence: consequenceOf(input.kind, input.dueOn, input.today),
+    dueOn: input.dueOn,
+  };
+}
+
 /** "Couldn't read what you sent — send it again?" Asked once, of the sender; the default sets it aside. */
 export function resendQuestion(input: { title: string | null }): HomeSendQuestion {
   return {
@@ -268,6 +296,8 @@ export type HomeSendAnswerEffect =
    * record is marked Checking ("not yet confirmed") — always for a default.
    */
   | { effect: "revise"; mode: "update" | "cancel" | "flag"; checking: boolean }
+  /** Added with what is known, marked Checking (`add-default.ts`). */
+  | { effect: "add" }
   | { effect: "none" };
 
 /**
@@ -280,6 +310,11 @@ export function effectOf(source: string, answer: string, byDefault: boolean): Ho
     if (answer === "looks_right") return { effect: "confirm" };
     if (answer === "keep_checking") return { effect: "keep_checking" };
     if (answer === "not_right") return { effect: "undo" };
+    return { effect: "none" };
+  }
+  if (source === ADD_SOURCE) {
+    if (answer === "add") return { effect: "add" };
+    if (answer === "set_aside") return { effect: "archive", reason: "removed_by_person" };
     return { effect: "none" };
   }
   if (source === UPDATE_SOURCE) {
