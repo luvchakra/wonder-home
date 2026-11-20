@@ -10,6 +10,17 @@ export const recipesDe: AreaCatalog<typeof recipesEn> = {
   "recipes.editDescription": "Es ist deine Version: Ändere den Namen, die Zutaten, die Schritte oder die Werte.",
   "recipes.saveChanges": "Änderungen speichern",
   "recipes.remove": "Aus deinen Rezepten entfernen",
+  "recipes.picture.caption": "Bild (optional)",
+  "recipes.picture.add": "Bild hinzufügen",
+  "recipes.picture.change": "Bild ändern",
+  "recipes.picture.remove": "Bild entfernen",
+  "recipes.picture.undo": "Bild behalten",
+  "recipes.picture.tooLarge": "Das Bild ist zu groß. Bitte nimm eins unter 5 MB.",
+  "recipes.removeNamed": "{name} entfernen",
+  "recipes.removeAsk": "{name} entfernen?",
+  "recipes.removeLede": "Es wird beim Planen nicht mehr angeboten, und die Wochenvorlage nutzt es nicht mehr. Schon geplante Essen damit bleiben, wie sie sind.",
+  "recipes.removeYes": "Entfernen",
+  "recipes.keep": "Behalten",
   "recipes.fromCatalog": "Aus den Ideen von WonderHome",
 
   // The catalog

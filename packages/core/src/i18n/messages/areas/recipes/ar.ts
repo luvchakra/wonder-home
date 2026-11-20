@@ -10,6 +10,17 @@ export const recipesAr: AreaCatalog<typeof recipesEn> = {
   "recipes.editDescription": "هذه نسختك: غيّر الاسم أو المكونات أو الخطوات أو الأرقام.",
   "recipes.saveChanges": "حفظ التغييرات",
   "recipes.remove": "إزالة من وصفاتك",
+  "recipes.picture.caption": "صورة (اختياري)",
+  "recipes.picture.add": "أضف صورة",
+  "recipes.picture.change": "غيّر الصورة",
+  "recipes.picture.remove": "أزل الصورة",
+  "recipes.picture.undo": "أبقِ الصورة",
+  "recipes.picture.tooLarge": "هذه الصورة كبيرة جدًا. استخدم صورة أصغر من 5 ميغابايت.",
+  "recipes.removeNamed": "إزالة {name}",
+  "recipes.removeAsk": "إزالة {name}؟",
+  "recipes.removeLede": "لن تُعرض عند تخطيط وجبة، ولن يستخدمها قالب الأسبوع بعد الآن. الوجبات المخططة بها تبقى كما هي.",
+  "recipes.removeYes": "إزالة",
+  "recipes.keep": "أبقِها",
   "recipes.fromCatalog": "من أفكار WonderHome",
 
   // The catalog

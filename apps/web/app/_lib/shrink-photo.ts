@@ -12,10 +12,10 @@ const MAX_EDGE = 512;
  * 6 MB picture posts as a few dozen kilobytes. Falls back to the original
  * when the browser cannot read the image (the server then judges it).
  */
-export async function shrinkPhoto(file: File): Promise<File> {
+export async function shrinkPhoto(file: File, maxEdge: number = MAX_EDGE): Promise<File> {
   try {
     const bitmap = await createImageBitmap(file);
-    const scale = Math.min(1, MAX_EDGE / Math.max(bitmap.width, bitmap.height));
+    const scale = Math.min(1, maxEdge / Math.max(bitmap.width, bitmap.height));
     const canvas = document.createElement("canvas");
     canvas.width = Math.max(1, Math.round(bitmap.width * scale));
     canvas.height = Math.max(1, Math.round(bitmap.height * scale));

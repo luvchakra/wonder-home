@@ -1,4 +1,4 @@
-# Meal ingredients tell one story (HomeFood 25-048)
+# Meal ingredients tell one story (25-048); recipe cards get a cross and a picture (25-050)
 
 The owner, 2026-11-20, on tomorrow's Idli: "contradicting messages, check and fix".
 
@@ -30,3 +30,34 @@ The owner, 2026-11-20, on tomorrow's Idli: "contradicting messages, check and fi
 
 ## Open
 - 25-049: HomeTalk's meal context and the agenda reason should read live To Buy state, and the agenda reasons and action labels should be localised.
+
+## Part 2 and 3 (same PR, 25-050): a cross on each recipe card, a recipe's own picture
+The owner, 2026-11-20: "add option to remove each item with a cross icon at bottom left of each card" and "add option to add a picture".
+- **Cross** (`RemoveRecipeButton`, `apps/web/app/_components/meal-forms.tsx`): bottom left of each card in Your recipes, 44px, named "Remove {name}". It asks once with what removing affects. Then it retires the recipe through the existing `retireRecipeAction`, which is soft (`active = false`) and open to any member, the same as editing (`recipes_write_member`):
+  - Meals already planned keep it.
+  - The week template drops it (it already skips retired recipes).
+  - Its own picture is deleted from Storage.
+  - WonderHome's ideas can't be removed. Removing a saved copy leaves the idea.
+  - The edit sheet's Remove stays. It is a different surface, so rule 14 still holds.
+  - "Liked by …" moved to its own line above the thumbs. On the idea cards it had been squeezed to 41px.
+- **Picture** (`PhotoPickField` with `wide`, on Add a recipe and the pencil; `keepRecipePicture` in `(auth)/meal-actions.ts`):
+  - Reuses `_lib/photos.ts`: bytes are sniffed (JPEG/PNG/WebP only), with a 5 MB cap and plain-sentence refusals.
+  - Files are stored in the private `avatars` bucket at `<household>/recipes/<id>` and read through signed URLs.
+  - The browser shrinks the photo to 1280px first, because a request may carry 4.5 MB.
+  - It shows on the card, on the recipe page and on meals planned with it, ahead of the catalog dish's picture.
+  - A bad file is refused before anything is saved.
+- **Migration `20261121000000_recipe_pictures.sql`**: adds `recipes.image_path` and member-write Storage policies for `<household>/recipes/`, in set form. It is safe in either order:
+  - Before it runs, `readRecipeRows` retries without the column.
+  - `setRecipeImage` returns false, the upload is removed, and the recipe saves with "The picture couldn't be kept just now…".
+  - The owner runs the SQL by hand. No Supabase tool calls were made from this session.
+- **Verified:**
+  - Unit tests: `meals/recipe-remove.test.ts` covers retire permission, another household, a 42501 refusal, picture path and missing-column. `_lib/photos.test.ts` covers bytes over claims, the 5 MB cap and removal.
+  - Help ¶15 updated in eight languages, along with its keywords.
+  - Build and `check:bundle` pass.
+  - Live QA household, before the migration:
+    - At 360px the crosses sit at x=29/199, the confirm text is right, and "Your recipes 3" and "Recipes 3" update after a removal.
+    - The edit sheet shows "Add a picture", then a 320×96 preview with Change and Remove after choosing one.
+    - Saving keeps the recipe with the notice, and Storage is empty.
+    - At 1280px nothing overflows.
+  - Cleanup ran: household `fc44b348-…` and account `fbf9dfb4-…` are deleted (counts 0, no files).
+- **Open:** the upload path with the migration applied hasn't been seen live yet. Check it once the SQL is run. The share card (`/meals/recipe-card/[id]`) still uses only the catalog picture.

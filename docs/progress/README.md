@@ -13,7 +13,7 @@ decision that shapes later work each earns a note, written before moving on.
 |---|---|
 | 2026-11-20 | [Health documents: "Who is this for?" instead of filing under the sender](2026-11-20-health-who-is-this-for.md) |
 | 2026-11-20 | [Groceries: summary cards removed, Order on Instamart only on To Buy (25-047)](2026-11-20-groceries-no-summary-cards.md) |
-| 2026-11-20 | [Meal ingredients tell one story: card, Ingredients sheet and agenda row (25-048)](2026-11-20-meal-ingredient-state.md) |
+| 2026-11-20 | [Meal ingredients tell one story (25-048); recipe cards get a cross and a picture (25-050)](2026-11-20-meal-ingredient-state.md) |
 | 2026-11-20 | [Desktop sidebar: the WonderWorks layout in WonderHome's own look](2026-11-20-desktop-sidebar.md) |
 | 2026-11-20 | [HomeSend stops asking: "Looks right?" gone by default, the evening summary as the report](2026-11-20-homesend-stop-asking.md) |
 | 2026-11-20 | [HomeSend confirms by evidence and action: payment proof, updates at once, a stronger second read](2026-11-20-homesend-confirm-by-evidence.md) |

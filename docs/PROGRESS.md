@@ -11,11 +11,11 @@ in `docs/progress/`; for the running log of what changed when, `tracking/PROGRES
 
 ## The whole picture
 
-**433 of 476 stories done — 91%**
+**434 of 477 stories done — 91%**
 
 | Status | Stories |
 |---|---:|
-| Done | 433 |
+| Done | 434 |
 | In Progress | 13 |
 | Blocked | 1 |
 | Not Started | 25 |
@@ -50,7 +50,7 @@ in `docs/progress/`; for the running log of what changed when, `tracking/PROGRES
 | 22 Internationalization and Localization | `████████░░` | 7 | 8 | 1 deferred |
 | 23 Smart Notifications | `██████████` | 13 | 13 | — |
 | 24 HomePlaces | `██████████` | 15 | 15 | — |
-| 25 HomeFood | `████████░░` | 39 | 47 | 8 not started |
+| 25 HomeFood | `████████░░` | 40 | 48 | 8 not started |
 | 26 HomeEvents | `███████░░░` | 15 | 20 | 2 in progress, 3 not started |
 | 27 Notification Channels and Events | `█████████░` | 24 | 25 | 1 blocked |
 
@@ -665,7 +665,7 @@ in `docs/progress/`; for the running log of what changed when, `tracking/PROGRES
 
 ### 25 — HomeFood
 
-39 of 47 done `████████░░`
+40 of 48 done `████████░░`
 
 | Story | Priority | Status | Notes |
 |---|---|---|---|
@@ -716,6 +716,7 @@ in `docs/progress/`; for the running log of what changed when, `tracking/PROGRES
 | `25-047` Groceries: no summary cards; Order on Instamart only on To Buy | P1 | Done | The owner, 2026-11-20 (marked-up screenshot: "remove crossed out section. show order from Instamart only if to buy tab is clicked"). The row of three cards on To Buy is gone at every width: At home (a filter, the same items as the In Kitchen tab) and Not counted yet (a filter; each row still says "Not counted yet" in its own status) go with nothing in their place; Mark as bought had no other door, so it stays as one quiet outline button at the top of To Buy (adults, when something is on the list) opening the same "What did you buy?" sheet. Order on Instamart is rendered only on the To Buy tab; what it does is unchanged. `grocery.summary.atHome`/`notCounted` removed in eight languages; help (meals-and-shopping ¶2, ¶21) and its `updated` date in eight languages. Verified signed-in at 360 px and 1280 px on all three tabs (no overflow; Instamart and Mark as bought only on To Buy; the sheet opens). PR #570. Note: `docs/progress/2026-11-20-groceries-no-summary-cards.md`. |
 | `25-048` A meal's card, its Ingredients sheet and its agenda row tell one story | P0 | Done | PR #571. The owner, 2026-11-20: "contradicting messages" on Idli — "2 ingredients to get" over a strip naming three, "Still to get" on the card while the sheet said "Nothing to add … Already covered". Causes: (a)/(c) the catalog item is named "Batter, Idli" (one of 653 catalog names with a comma; real data, not a matching bug) and names were joined with ", "; (b) the card and the agenda row (`assessMeal`) read each ingredient's stored status ("needed"; it only becomes "shopping" when the sheet adds it), while the sheet read stock and the To Buy list. Now one reading, `meals/shortfall.ts` `mealIngredientState` (In Kitchen / on To Buy / to add), feeds the card's line ("2 to buy"), its strip ("To buy: Batter, Idli · Sunflower oil" and "All on the To Buy list." or "Not on the To Buy list yet: …") and the sheet ("Nothing to add: everything still to buy is already on the To Buy list." plus "Already on To Buy: …" / "In Kitchen: …"); names join with " · " (`ingredientNames`). `mealAgenda` reads the open To Buy entries in the same wave and `assessMeal` no longer calls an ingredient on the list missing (it also fixes a dead "shopping" check). Words in all eight languages; Help "Meals and shopping" ¶7. Browser-checked at 360px and 1280px on a QA household in the owner's exact state. |
 | `25-049` HomeTalk's meal context and the agenda reason read live To Buy state, in the reader's language | P2 | Not Started | Follow-up of 25-048. `context/builders.ts` still summarises a meal from stored statuses (now worded "not yet marked in (the To Buy list may already have them)"), because the context records carry `Consumable`s, not the To Buy list; `assessMeal`'s reason and `agenda-row.tsx`'s action labels ("Shop", "Swap") are English for every language. Pass the open To Buy entries into the meal context and localise the agenda reasons and labels. |
+| `25-050` Recipe cards: a cross to remove, and the household's own picture | P1 | Done | PR #571. The owner, 2026-11-20: "add option to remove each item with a cross icon at bottom left of each card" and "add option to add a picture". **Cross:** `RemoveRecipeButton` (44px, "Remove {name}") at the bottom left of each card in Your recipes; it asks once ("Remove Idli?": no longer offered when planning, the week template stops using it, meals already planned stay as they are) and retires the recipe through the same `retireRecipeAction` as the edit sheet's Remove (any member, per `recipes_write_member`; another household's recipe or a refusal changes nothing). "Liked by …" now sits on its own line above the thumbs, so no name is squeezed (the idea cards had it 41px wide). WonderHome's ideas are not removable; removing a saved copy leaves the idea. **Picture:** an optional Picture on Add a recipe and the pencil (one `PhotoPickField`, wide preview, shrunk to 1280px in the browser, change, remove, undo), kept through `_lib/photos.ts` (sniffed JPEG/PNG/WebP, 5 MB, private `avatars` bucket at `<household>/recipes/<id>`, signed URLs) and shown on the recipe card, its page and the meals planned with it, ahead of the catalog dish's picture. Removed from Storage when the recipe is removed or the picture is. Migration `20261121000000_recipe_pictures.sql` (column `recipes.image_path`, member-write Storage policies in set form) is safe in either order: before it, the recipes read without the column and a picture is skipped while the recipe saves, saying so. Browser-checked at 360px and 1280px before the migration; with it, the upload path is not yet seen live. |
 
 ### 26 — HomeEvents
 
