@@ -28,20 +28,23 @@ export function HomeSendLearned({
   rows,
   manages,
   labels,
+  folded = false,
 }: {
   householdId: string;
   rows: LearnedRow[];
   manages: boolean;
   labels: { title: string; intro: string; empty: string; forget: string; forgetAll: string; forgotten: string; adminDecides: string };
+  /** Inside a folding card (`CollapsibleSection`), which shows the tile and title itself. */
+  folded?: boolean;
 }) {
   const [state, forget, pending] = useActionState<ActionState, FormData>(forgetLearnedAction, {});
 
   return (
     <div className="space-y-3">
       <div className="flex items-start gap-3">
-        <IconTile icon={Sparkles} tone="ai" />
+        {folded ? null : <IconTile icon={Sparkles} tone="ai" />}
         <div className="min-w-0 flex-1">
-          <p className="text-sm font-semibold">{labels.title}</p>
+          <p className={folded ? "sr-only" : "text-sm font-semibold"}>{labels.title}</p>
           <p className="mt-0.5 text-sm text-[var(--wh-foreground-muted)]">{rows.length > 0 ? labels.intro : labels.empty}</p>
         </div>
       </div>

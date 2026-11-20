@@ -26,6 +26,7 @@ export function RecordFirstPicker({
   options,
   manages,
   labels,
+  folded = false,
 }: {
   householdId: string;
   setting: keyof typeof ICONS;
@@ -33,6 +34,8 @@ export function RecordFirstPicker({
   options: readonly string[];
   manages: boolean;
   labels: { title: string; detail: string; option: Record<string, string>; adminDecides: string };
+  /** Inside a folding card (`CollapsibleSection`), which shows the tile and title itself. */
+  folded?: boolean;
 }) {
   const [current, setCurrent] = useState(value);
   const [state, save, saving] = useActionState<ActionState, FormData>(saveRecordFirstAction, {});
@@ -50,9 +53,9 @@ export function RecordFirstPicker({
   return (
     <div className="space-y-3">
       <div className="flex items-start gap-3">
-        <IconTile icon={ICONS[setting]} tone={TONES[setting]} />
+        {folded ? null : <IconTile icon={ICONS[setting]} tone={TONES[setting]} />}
         <div className="min-w-0 flex-1">
-          <p id={titleId} className="text-sm font-semibold">
+          <p id={titleId} className={folded ? "sr-only" : "text-sm font-semibold"}>
             {labels.title}
           </p>
           <p className="mt-0.5 text-sm text-[var(--wh-foreground-muted)]">{labels.detail}</p>

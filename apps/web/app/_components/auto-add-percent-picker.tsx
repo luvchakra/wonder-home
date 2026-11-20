@@ -20,12 +20,15 @@ export function AutoAddPercentPicker({
   options,
   manages,
   labels,
+  folded = false,
 }: {
   householdId: string;
   percent: number;
   options: readonly number[];
   manages: boolean;
   labels: { title: string; detail: string; option: Record<number, string>; adminDecides: string };
+  /** Inside a folding card (`CollapsibleSection`), which shows the tile and title itself. */
+  folded?: boolean;
 }) {
   const [value, setValue] = useState(percent);
   const [state, save, saving] = useActionState<ActionState, FormData>(saveAutoAddPercentAction, {});
@@ -41,9 +44,9 @@ export function AutoAddPercentPicker({
   return (
     <div id="auto-add" className="scroll-mt-20 space-y-3">
       <div className="flex items-start gap-3">
-        <IconTile icon={Gauge} tone="primary" />
+        {folded ? null : <IconTile icon={Gauge} tone="primary" />}
         <div className="min-w-0 flex-1">
-          <p id="auto-add-percent-title" className="text-sm font-semibold">
+          <p id="auto-add-percent-title" className={folded ? "sr-only" : "text-sm font-semibold"}>
             {labels.title}
           </p>
           <p className="mt-0.5 text-sm text-[var(--wh-foreground-muted)]">{labels.detail}</p>

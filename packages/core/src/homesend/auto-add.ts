@@ -122,9 +122,10 @@ export function waitRowWords(waiting: WaitingFor, t: Translate): string {
  * Whether bills and receipts ("money") and health documents ("health") may
  * be recorded without a person's review, and how (decision 2, the owner
  * 2026-11-14, replacing the two 2026-10-26 switches): `true` means it is
- * recorded through the same rules as a grocery; `checking[area]` means it is
- * recorded as Checking whatever the score, so a person confirms it with one
- * tap. Both off is "Wait for review", and the answer whenever the setting
+ * recorded through the same rules as a grocery (confirmed above the bar,
+ * Checking below it). `checking[area]` (recorded as Checking whatever the
+ * score) is no longer set by any setting since the owner removed that choice
+ * on 2026-11-21; the engine still honours it if passed. Both off is "Wait for review", and the answer whenever the setting
  * can't be read (`household/record-first-repository.ts`). Paying never happens.
  */
 export type DirectAddArea = "money" | "health";
@@ -138,7 +139,7 @@ export function directAddFrom(modes: Record<DirectAddArea, MoneyHealthMode>): Di
   return {
     money: modes.money !== "review",
     health: modes.health !== "review",
-    checking: { money: modes.money === "checking", health: modes.health === "checking" },
+    checking: { money: false, health: false },
   };
 }
 

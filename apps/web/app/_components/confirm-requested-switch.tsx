@@ -21,11 +21,14 @@ export function ConfirmRequestedSwitch({
   confirm,
   manages,
   labels,
+  folded = false,
 }: {
   householdId: string;
   confirm: boolean;
   manages: boolean;
   labels: { title: string; on: string; off: string; adminDecides: string };
+  /** Inside a folding card (`CollapsibleSection`), which shows the tile and title itself. */
+  folded?: boolean;
 }) {
   const [checked, setChecked] = useState(confirm);
   const [state, save, saving] = useActionState<ActionState, FormData>(saveConfirmRequestedAction, {});
@@ -41,9 +44,9 @@ export function ConfirmRequestedSwitch({
   return (
     <div id="confirm-requested" className="scroll-mt-20 space-y-3">
       <div className="flex items-start gap-3">
-        <IconTile icon={MessageCircleQuestion} tone="primary" />
+        {folded ? null : <IconTile icon={MessageCircleQuestion} tone="primary" />}
         <div className="min-w-0 flex-1">
-          <p className="text-sm font-semibold">{labels.title}</p>
+          <p className={folded ? "sr-only" : "text-sm font-semibold"}>{labels.title}</p>
           <p className="mt-0.5 text-sm text-[var(--wh-foreground-muted)]" aria-live="polite">
             {checked ? labels.on : labels.off}
           </p>

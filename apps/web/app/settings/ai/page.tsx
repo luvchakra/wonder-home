@@ -1,5 +1,6 @@
 import type { TranslationKey } from "@wonderhome/core/i18n/translate";
-import { Bot, Mic, ShieldCheck } from "lucide-react";
+import { Archive, BellRing, Bot, Clock, Gauge, HeartPulse, Hourglass, Mail, MessageCircleQuestion, Mic, ShieldCheck, Sparkles, Wallet } from "lucide-react";
+import { Fragment } from "react";
 
 import { credentialStatus, geminiVoiceKeyStatus } from "@wonderhome/core/ai/credentials";
 import { describeKeySource, platformKey, resolveModelKey } from "@wonderhome/core/ai/model-key";
@@ -17,6 +18,7 @@ import { listHouseholdRules } from "@wonderhome/core/homebrain/rules-repository"
 import { listMembers } from "@wonderhome/core/identity/households";
 import { AppShell } from "@wonderhome/core/shell/app-shell";
 import { Card } from "@wonderhome/core/ui/card";
+import { CollapsibleSection } from "@wonderhome/core/ui/collapsible-section";
 import { IconTile } from "@wonderhome/core/ui/icon-tile";
 import { Badge } from "@wonderhome/core/ui/pill";
 import { QuoteCard } from "@wonderhome/core/ui/quote-card";
@@ -53,6 +55,8 @@ export const dynamic = "force-dynamic";
  */
 /** Each "Nothing waits" switch's words. */
 const NOTHING_WAITS_KEYS = { remind_checking: "remindChecking", apply_defaults: "applyDefaults", ask_checking: "askChecking" } as const;
+/** Each "Nothing waits" card's tile, as the switch drew it before the cards folded. */
+const NOTHING_WAITS_ICONS = { remind_checking: BellRing, apply_defaults: Clock, ask_checking: MessageCircleQuestion } as const;
 
 export default async function AiAssistantSettingsPage({ searchParams }: { searchParams: Promise<{ returnTo?: string }> }) {
   const [query, session] = await Promise.all([searchParams, requireSession("/settings/ai")]);
@@ -133,6 +137,12 @@ export default async function AiAssistantSettingsPage({ searchParams }: { search
     : key.provider === "google"
       ? t("settingsPage.ai.voiceKey.assistant")
       : t("settingsPage.ai.voiceKey.none");
+  // Each folded card's one line: what is set, in words (the owner, 2026-11-21).
+  const recordFirstSummary = (setting: "approvalScope" | "moneyHealth" | "outsideSenders", value: string) =>
+    value === "actions" ? t("settingsPage.ai.summary.actions") : value === "confirmed" ? t("settingsPage.ai.summary.confirmed") : value === "ask_once" ? t("settingsPage.ai.summary.askOnce") : t(`settingsPage.ai.recordFirst.${setting}.${value}` as TranslationKey);
+  const filerChoices = members.filter((member) => member.status === "active" && (member.memberType === "adult" || member.memberType === "helper")).map((member) => ({ id: member.id, name: member.displayName, helper: member.memberType === "helper" }));
+  const healthFilerNames = filerChoices.filter((member) => healthFilers.includes(member.id)).map((member) => member.name);
+  const shareLines = dataUseLines(t, dataUse);
   // The environment variable's name keeps its own code styling wherever the sentence puts it.
   const [noKeyBefore, noKeyAfter] = t("settingsPage.ai.noPlatformKey", { variable: "{variable}" }).split("{variable}");
 
@@ -148,14 +158,17 @@ export default async function AiAssistantSettingsPage({ searchParams }: { search
         {/* This is the page the banner sends an Admin to, so it says what is wrong without a link back to itself. */}
         <KeyAlertBanner alerts={keyAlerts} manages={manages} link={false} t={t} />
 
-        {/* What HomeTalk does with a request (HomeBrain 4.0 §3.9): first, because it is what a person meets every day. */}
-        <section id="acting">
+        {/* What HomeTalk does with a request (HomeBrain 4.0 §3.9): first, because it is what a person meets every day.
+            Each setting is a folding card (the owner, 2026-11-21: "make these collapsible cards with chevron"):
+            folded, its tile, title and what is set in words; open, the full description and its one control. */}
+        <section id="acting" className="space-y-3">
           <SectionHeader title={t("settingsPage.ai.section.acting")} />
-          <Card className="p-4">
+          <CollapsibleSection as="h3" icon={MessageCircleQuestion} tone="primary" title={t("settingsPage.ai.confirmRequested.title")} intro={t(confirmRequested ? "settingsPage.ai.summary.confirmOn" : "settingsPage.ai.summary.confirmOff")}>
             <ConfirmRequestedSwitch
               householdId={householdId}
               confirm={confirmRequested}
               manages={manages}
+              folded
               labels={{
                 title: t("settingsPage.ai.confirmRequested.title"),
                 on: t("settingsPage.ai.confirmRequested.on"),
@@ -163,14 +176,21 @@ export default async function AiAssistantSettingsPage({ searchParams }: { search
                 adminDecides: t("settingsPage.adminDecides"),
               }}
             />
-          </Card>
+          </CollapsibleSection>
           {/* HomeSend's bar for adding on its own (the owner, 2026-10-26): beside the other "acting" choice. */}
-          <Card className="mt-3 p-4">
+          <CollapsibleSection
+            as="h3"
+            icon={Gauge}
+            tone="primary"
+            title={t("settingsPage.ai.autoAdd.title")}
+            intro={chosenPercent !== null ? t("settingsPage.ai.autoAdd.option", { percent: chosenPercent }) : t("settingsPage.ai.summary.autoAddEach")}
+          >
             <AutoAddPercentPicker
               householdId={householdId}
               percent={autoAddPercent}
               options={[0, ...AUTO_ADD_PERCENTS]}
               manages={manages}
+              folded
               labels={{
                 title: t("settingsPage.ai.autoAdd.title"),
                 detail: t("settingsPage.ai.autoAdd.detail"),
@@ -179,7 +199,7 @@ export default async function AiAssistantSettingsPage({ searchParams }: { search
               }}
             />
             {/* Each kind's bar right now (HomeBrain knows): one line each, or the Admin's bar for all. */}
-            <div id="kind-bars" className="mt-4 border-t border-[var(--wh-border)] pt-3">
+            <div id="kind-bars" className="border-t border-[var(--wh-border)] pt-3">
               <p className="text-sm font-semibold">{t("settingsPage.ai.kindBars.title")}</p>
               {chosenPercent !== null ? (
                 <p className="mt-0.5 text-sm text-[var(--wh-foreground-muted)]">{t("settingsPage.ai.kindBars.admin", { percent: chosenPercent })}</p>
@@ -197,37 +217,41 @@ export default async function AiAssistantSettingsPage({ searchParams }: { search
                 </>
               )}
             </div>
-          </Card>
+          </CollapsibleSection>
           {/* Record first (the owner, 2026-11-14): what waits, money and health, new email senders — beside the bar. */}
           {(
             [
-              ["approvalScope", "approval-scope", APPROVAL_SCOPES, recordFirst.approvalScope],
-              ["moneyHealth", "money-health", MONEY_HEALTH_MODES, recordFirst.moneyHealth],
-              ["outsideSenders", "new-senders", OUTSIDE_SENDER_MODES, recordFirst.outsideSenders],
+              ["approvalScope", "approval-scope", APPROVAL_SCOPES, recordFirst.approvalScope, Hourglass, "primary"],
+              ["moneyHealth", "money-health", MONEY_HEALTH_MODES, recordFirst.moneyHealth, Wallet, "money"],
+              ["outsideSenders", "new-senders", OUTSIDE_SENDER_MODES, recordFirst.outsideSenders, Mail, "primary"],
             ] as const
-          ).map(([setting, anchor, options, value]) => (
-            <Card key={setting} id={anchor} className="mt-3 scroll-mt-20 p-4">
-              <RecordFirstPicker
-                householdId={householdId}
-                setting={setting}
-                value={value}
-                options={options}
-                manages={manages}
-                labels={{
-                  title: t(`settingsPage.ai.recordFirst.${setting}.title`),
-                  detail: t(`settingsPage.ai.recordFirst.${setting}.detail`),
-                  option: Object.fromEntries(options.map((option: string) => [option, t(`settingsPage.ai.recordFirst.${setting}.${option}` as TranslationKey)])),
-                  adminDecides: t("settingsPage.adminDecides"),
-                }}
-              />
+          ).map(([setting, anchor, options, value, icon, tone]) => (
+            <Fragment key={setting}>
+              <CollapsibleSection id={anchor} as="h3" icon={icon} tone={tone} title={t(`settingsPage.ai.recordFirst.${setting}.title`)} intro={recordFirstSummary(setting, value)}>
+                <RecordFirstPicker
+                  householdId={householdId}
+                  setting={setting}
+                  value={value}
+                  options={options}
+                  manages={manages}
+                  folded
+                  labels={{
+                    title: t(`settingsPage.ai.recordFirst.${setting}.title`),
+                    detail: t(`settingsPage.ai.recordFirst.${setting}.detail`),
+                    option: Object.fromEntries(options.map((option: string) => [option, t(`settingsPage.ai.recordFirst.${setting}.${option}` as TranslationKey)])),
+                    adminDecides: t("settingsPage.adminDecides"),
+                  }}
+                />
+              </CollapsibleSection>
               {setting === "moneyHealth" ? (
-                // Who may file health records for others (the owner, 2026-11-20): in "Money and health entries", never a child.
-                <div id="health-filers" className="mt-4 scroll-mt-20 border-t border-[var(--wh-border)] pt-4">
+                // Who may file health records for others (the owner, 2026-11-20): right after "Money and health entries", never a child.
+                <CollapsibleSection id="health-filers" as="h3" icon={HeartPulse} tone="health" title={t("settingsPage.ai.healthFilers.title")} intro={healthFilerNames.length > 0 ? healthFilerNames.join(", ") : t("settingsPage.ai.summary.nobody")}>
                   <HealthFilersPicker
                     householdId={householdId}
-                    members={members.filter((member) => member.status === "active" && (member.memberType === "adult" || member.memberType === "helper")).map((member) => ({ id: member.id, name: member.displayName, helper: member.memberType === "helper" }))}
+                    members={filerChoices}
                     selected={healthFilers}
                     manages={manages}
+                    folded
                     labels={{
                       title: t("settingsPage.ai.healthFilers.title"),
                       detail: t("settingsPage.ai.healthFilers.detail"),
@@ -236,16 +260,17 @@ export default async function AiAssistantSettingsPage({ searchParams }: { search
                       adminDecides: t("settingsPage.adminDecides"),
                     }}
                   />
-                </div>
+                </CollapsibleSection>
               ) : null}
-            </Card>
+            </Fragment>
           ))}
           {/* HomeSend's daily tidy (the owner, 2026-11-03): beside the other HomeSend choices. */}
-          <Card id="homesend-tidy" className="mt-3 p-4">
+          <CollapsibleSection id="homesend-tidy" as="h3" icon={Archive} tone="ai" title={t("settingsPage.ai.homesendTidy.title")} intro={t(homesendTidy !== false ? "settingsPage.ai.summary.on" : "settingsPage.ai.summary.off")}>
             <HomeSendTidySwitch
               householdId={householdId}
               on={homesendTidy !== false}
               manages={manages}
+              folded
               labels={{
                 title: t("settingsPage.ai.homesendTidy.title"),
                 on: t("settingsPage.ai.homesendTidy.on"),
@@ -254,18 +279,20 @@ export default async function AiAssistantSettingsPage({ searchParams }: { search
                 adminDecides: t("settingsPage.adminDecides"),
               }}
             />
-          </Card>
+          </CollapsibleSection>
           {/* "Nothing waits" (2026-11-14): decisions 3 and 4, each an Admin can switch back; "Looks right?" (2026-11-20), off unless turned on. */}
           {(["remind_checking", "apply_defaults", "ask_checking"] as const).map((which) => {
             const key = NOTHING_WAITS_KEYS[which];
             const stored = which === "remind_checking" ? nothingWaits.remindChecking : which === "apply_defaults" ? nothingWaits.applyDefaults : nothingWaits.askChecking;
+            const on = which === "ask_checking" ? stored === true : stored !== false;
             return (
-              <Card key={which} id={`nothing-waits-${which}`} className="mt-3 p-4">
+              <CollapsibleSection key={which} id={`nothing-waits-${which}`} as="h3" icon={NOTHING_WAITS_ICONS[which]} tone="ai" title={t(`settingsPage.ai.${key}.title`)} intro={t(on ? "settingsPage.ai.summary.on" : "settingsPage.ai.summary.off")}>
                 <HomeSendTidySwitch
                   householdId={householdId}
                   which={which}
-                  on={which === "ask_checking" ? stored === true : stored !== false}
+                  on={on}
                   manages={manages}
+                  folded
                   labels={{
                     title: t(`settingsPage.ai.${key}.title`),
                     on: t(`settingsPage.ai.${key}.on`),
@@ -274,15 +301,16 @@ export default async function AiAssistantSettingsPage({ searchParams }: { search
                     adminDecides: t("settingsPage.adminDecides"),
                   }}
                 />
-              </Card>
+              </CollapsibleSection>
             );
           })}
           {/* What HomeSend has learned (14-066): so the same question is never asked twice. */}
-          <Card id="homesend-learned" className="mt-3 p-4">
+          <CollapsibleSection id="homesend-learned" as="h3" icon={Sparkles} tone="ai" title={t("settingsPage.ai.learned.title")} intro={learnedRows.length > 0 ? t("settingsPage.ai.summary.learned", { count: learnedRows.length }) : t("settingsPage.ai.summary.learnedNone")}>
             <HomeSendLearned
               householdId={householdId}
               rows={learnedRows}
               manages={manages}
+              folded
               labels={{
                 title: t("settingsPage.ai.learned.title"),
                 intro: t("settingsPage.ai.learned.intro"),
@@ -293,7 +321,7 @@ export default async function AiAssistantSettingsPage({ searchParams }: { search
                 adminDecides: t("settingsPage.adminDecides"),
               }}
             />
-          </Card>
+          </CollapsibleSection>
         </section>
 
 
@@ -333,52 +361,36 @@ export default async function AiAssistantSettingsPage({ searchParams }: { search
           </Card>
         </section>
 
-        <section id="voice-key">
-          <SectionHeader title={t("settingsPage.ai.voiceKey.title")} />
-          <Card className="space-y-4 p-4">
-            <div className="flex items-start gap-3">
-              <IconTile icon={Mic} tone="ai" />
-              <div className="min-w-0 flex-1">
-                <p className="text-sm font-semibold">{voiceLine}</p>
-                <p className="mt-0.5 text-xs text-[var(--wh-foreground-muted)]">{t("settingsPage.ai.voiceKey.intro")}</p>
-              </div>
-            </div>
-            {manages ? (
-              <AiKeyForm
-                householdId={householdId}
-                save={saveGeminiVoiceKey}
-                remove={removeGeminiVoiceKey}
-                configured={voiceCredential.configured}
-                labels={{ ...aiKeyFormLabels(t), useOwn: t("settingsPage.ai.voiceKey.save"), remove: t("settingsPage.ai.voiceKey.remove") }}
-                returnTo={returnTo}
-                googleOnly
-              />
-            ) : (
-              <p className="text-xs text-[var(--wh-foreground-subtle)]">{t("settingsPage.adminDecides")}</p>
-            )}
-          </Card>
-        </section>
+        <CollapsibleSection id="voice-key" icon={Mic} tone="ai" title={t("settingsPage.ai.voiceKey.title")} intro={voiceLine}>
+          <p className="text-sm text-[var(--wh-foreground-muted)]">{t("settingsPage.ai.voiceKey.intro")}</p>
+          {manages ? (
+            <AiKeyForm
+              householdId={householdId}
+              save={saveGeminiVoiceKey}
+              remove={removeGeminiVoiceKey}
+              configured={voiceCredential.configured}
+              labels={{ ...aiKeyFormLabels(t), useOwn: t("settingsPage.ai.voiceKey.save"), remove: t("settingsPage.ai.voiceKey.remove") }}
+              returnTo={returnTo}
+              googleOnly
+            />
+          ) : (
+            <p className="text-xs text-[var(--wh-foreground-subtle)]">{t("settingsPage.adminDecides")}</p>
+          )}
+        </CollapsibleSection>
 
-        <section id="share">
-          <SectionHeader title={t("settingsPage.ai.section.share")} />
-          <Card className="space-y-4 p-4">
-            {/* Read on the server every time. A screen cannot cache its way
-                into a more permissive answer (story 15-005). */}
-            <div className="flex items-start gap-3">
-              <IconTile icon={ShieldCheck} tone="primary" />
-              <ul className="min-w-0 flex-1 space-y-1.5">
-                {dataUseLines(t, dataUse).map((line) => (
-                  <li key={line} className="text-sm text-[var(--wh-foreground-muted)]">{line}</li>
-                ))}
-              </ul>
-            </div>
-            {manages ? (
-              <DataUseForm action={saveDataUseAction} householdId={householdId} policy={dataUse} labels={dataUseFormLabels(t)} returnTo={returnTo} />
-            ) : (
-              <p className="text-xs text-[var(--wh-foreground-subtle)]">{t("settingsPage.adminDecides")}</p>
-            )}
-          </Card>
-        </section>
+        {/* Read on the server every time. A screen cannot cache its way into a more permissive answer (story 15-005). */}
+        <CollapsibleSection id="share" icon={ShieldCheck} tone="primary" title={t("settingsPage.ai.section.share")} intro={shareLines[0]}>
+          <ul className="space-y-1.5">
+            {shareLines.map((line) => (
+              <li key={line} className="text-sm text-[var(--wh-foreground-muted)]">{line}</li>
+            ))}
+          </ul>
+          {manages ? (
+            <DataUseForm action={saveDataUseAction} householdId={householdId} policy={dataUse} labels={dataUseFormLabels(t)} returnTo={returnTo} />
+          ) : (
+            <p className="text-xs text-[var(--wh-foreground-subtle)]">{t("settingsPage.adminDecides")}</p>
+          )}
+        </CollapsibleSection>
 
         <QuoteCard>{t("settingsPage.ai.quote")}</QuoteCard>
       </div>

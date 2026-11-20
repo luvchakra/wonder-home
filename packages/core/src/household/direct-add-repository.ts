@@ -79,7 +79,7 @@ export async function loadRecordFirst(supabase: SupabaseClient, householdId: str
   const settings = settingsFrom(rows);
   const modes = areaModes(settings);
   // Shown as one choice: the old switches split it only until an Admin picks; the more careful of the two is shown.
-  const shown: MoneyHealthMode = modes.money === modes.health ? modes.money : modes.money === "checking" || modes.health === "checking" ? "checking" : "confirmed";
+  const shown: MoneyHealthMode = modes.money === "review" || modes.health === "review" ? "review" : "confirmed";
   return { approvalScope: settings.approvalScope, moneyHealth: shown, outsideSenders: settings.outsideSenders, directAdd: directAddFrom(modes) };
 }
 
