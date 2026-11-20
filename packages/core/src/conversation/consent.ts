@@ -77,6 +77,11 @@ const ACT: ReadonlySet<HouseholdIntent["action"]> = new Set([
   "correct_entry",
 ]);
 
+/** Writing information down (record first): never held for a yes, and never "prepared" for lack of a tool (2026-11-20). */
+export function isRecording(action: HouseholdIntent["action"]): boolean {
+  return ACT.has(action);
+}
+
 /**
  * Who owns a responsibility, and moving something already on the calendar,
  * change a record the household relies on (both are consequential in the

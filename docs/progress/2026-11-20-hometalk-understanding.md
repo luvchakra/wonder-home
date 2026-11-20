@@ -17,6 +17,34 @@ Fri 20 Nov, 10:08 pm: "add a reminder for tomorrow doctor appointment at 1 o'clo
 
 Why an appointment rather than a reminder: the product already has a home for appointments (`record_health_appointment`, recorded at once under record-first, with a reminder policy). A bare reminder would go off *at* 1pm, which is when the person needs to be leaving, not hearing about it. Someone else's appointment ("Asmi's dentist") stays a reminder, because who a health record is for is never assumed. "Remind me to book the dentist" also stays a reminder.
 
+## The owner's second try, 11:25 pm (third PR)
+
+He typed "add a reminder for tomorrow Dr apartment at 1 o'clock" ("Dr apartment" is dictation for "doctor appointment"). HomeTalk replied "📝 I have prepared this, and not done it: book a Dr apartment appointment. It is waiting for you." After he approved it: "Approved — noted, though there is nothing I can do about this on my own yet." No appointment was saved, and the day and time disappeared from the replies.
+
+**Cause.** Production reads with the model: the rules could not have produced this reading, because "Dr apartment" has no appointment word in it. #583 had added `record_health_appointment` to the model prompt. The model picked it, with `typeText: "Dr apartment"` and no `appointmentType`. `canExecute` requires that type, so the engine downgraded the turn to "prepared". The proposal summary said "Book a … appointment" and dropped the day and time. On approval, the route found nothing it could run and answered with `notYetDoable`'s default, leaving the action marked approved.
+
+**Fix (engine, so it covers the model path and the rules path alike).**
+- `settleAppointment` makes every appointment reading whole before anything is decided:
+  - "Dr", "doc", "docter", "apartment", "apointment" and "appt" are read as a doctor's appointment.
+  - The speaker is the target when the model left it unset.
+  - A non-health appointment becomes the reminder the person asked for, with their own words, day and time.
+  - Someone else's appointment stays a reminder.
+- The summary says "Add your doctor appointment tomorrow at 1 o'clock" and never "Book".
+- Appointments recorded by HomeTalk now have Undo, which cancels them, never deletes them.
+- A recording the executor can't run is never held as "prepared": the one missing detail is asked instead.
+- An approved action that can't run is closed as failed, with its reason, instead of waiting forever.
+- A test fails if any recording action has no executor case.
+
+**HomeTalk's reply now, word for word:**
+
+> 🩺 Added your doctor appointment tomorrow (Sat 21 Nov) at 1pm. See [Health & Fitness](/health). I'll remind you on the day at 7am.
+> I took "1 o'clock" as 1pm — say "1am" if not.
+> Say **undo** to take it back ↩️
+
+**Regression cases:** HT-305 to HT-309 (the sentence itself, "dr appt", "doc appointment", "doctor apointment", Hinglish "reminder kal dr appointment 1 baje"). The model's own reading of "Dr apartment" is covered in `owner-reminder-turn.test.ts`. A real provider run still needs a key, which this container doesn't have.
+
+**His approved action from 11:26 pm** was left as "approved" by the old code. It was not read or changed here: no database access from this session. From now on, such an action is closed as failed with its reason.
+
 ## What was measured
 
 There is a new **understanding set** of 100 sentences (`evaluation/cases-understanding.ts`, `npm run eval -- --set understanding`). They are typed the way people type: no punctuation, "tmrw", "pls", "kal subah 8 baje", "half kg tomatoes", "milk khatam ho gaya", "6 30 pm", spoken "one o clock", follow-ups such as "no, 1 am" and "at 1 o'clock". They cover reminders, health appointments, calendar plans, dated news, To Buy, meals, bills (recorded, never paid), absences, school, health, repairs, places, questions about the household's own records, preferences and notes, screens, multi-part sentences and corrections. Each case says what a sensible person expects recorded and whether a question is justified.

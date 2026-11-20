@@ -1,3 +1,5 @@
+import { readFileSync } from "node:fs";
+
 import { describe, expect, it } from "vitest";
 
 import { choicesFor, asksForTime } from "../hometalk/choices";
@@ -5,9 +7,11 @@ import { en } from "../i18n/messages/en";
 import { translator } from "../i18n/translate";
 import { appointmentFromReminder } from "./appointment-reading";
 import type { PendingClarification } from "./clarify";
+import { isRecording } from "./consent";
 import { converse, type TurnInput } from "./engine";
+import { canExecute } from "./executor";
 import { groundIntent } from "./grounding";
-import type { HouseholdIntent } from "./intent";
+import { INTENT_ACTIONS, type HouseholdIntent } from "./intent";
 import { NO_REFERENCES } from "./references";
 import { reminderMoment } from "./reminder-time";
 import { readTimeOfDay } from "./time-of-day";
@@ -137,5 +141,75 @@ describe("a question and its answers are about the same thing", () => {
     if (result.kind !== "reply") throw new Error("expected a reply");
     expect(result.intent.parameters).toMatchObject({ when: "tomorrow", time: "1 o'clock" });
     expect(result.proposal.kind).not.toBe("clarify");
+  });
+});
+
+describe("the owner's second try, 11:25 pm: \"Dr apartment\" (dictation) was held as a booking, then could not be done", () => {
+  const SECOND = "add a reminder for tomorrow Dr apartment at 1 o'clock";
+  const run = (utterance: string, understand?: TurnInput["understand"]) => converse(turn(utterance, understand, { executable: canExecute }));
+
+  it("the model's reading of it, a health appointment with no type, is recorded at once as the doctor, tomorrow at 1 o'clock", async () => {
+    const result = await run(SECOND, modelSaid("record_health_appointment", { typeText: "Dr apartment", when: "tomorrow", time: "1 o'clock" }));
+    if (result.kind !== "reply") throw new Error("expected a reply");
+    expect(result.intent.action).toBe("record_health_appointment");
+    expect(result.intent.parameters).toMatchObject({ appointmentType: "doctor", typeText: "doctor", when: "tomorrow", time: "1 o'clock" });
+    expect(result.proposal.kind).toBe("executed");
+    expect(result.text).not.toMatch(/\bbook/i);
+    expect(result.text).toMatch(/tomorrow/);
+  });
+
+  it("read as a reminder (by the model or the rules), it is the same appointment", async () => {
+    for (const understand of [modelSaid("set_reminder", { what: "Dr apartment", when: "tomorrow", time: "1 o'clock" }), undefined]) {
+      const result = await run(SECOND, understand);
+      if (result.kind !== "reply") throw new Error("expected a reply");
+      expect(result.intent.action).toBe("record_health_appointment");
+      expect(result.proposal.kind).toBe("executed");
+    }
+  });
+
+  it.each([
+    "add a reminder for tomorrow dr appt at 1 o'clock",
+    "add a reminder for tomorrow doc appointment at 1 o'clock",
+    "add a reminder for tomorrow doctor apointment at 1 o'clock",
+    "add a reminder for tomorrow dr. apartment at 1 o'clock",
+    "reminder kal dr appointment 1 baje",
+  ])("%s → the doctor, tomorrow at 1pm, recorded", async (utterance) => {
+    const result = await run(utterance);
+    if (result.kind !== "reply") throw new Error("expected a reply");
+    expect(result.intent.action).toBe("record_health_appointment");
+    expect(result.intent.parameters.appointmentType).toBe("doctor");
+    expect(result.proposal.kind).toBe("executed");
+  });
+
+  it("an appointment that is not a health one is the reminder asked for, with the person's words, day and time", async () => {
+    const result = await run("add a reminder for my bank appointment tomorrow at 11", modelSaid("record_health_appointment", { typeText: "bank", when: "tomorrow", time: "11" }));
+    if (result.kind !== "reply") throw new Error("expected a reply");
+    expect(result.intent.action).toBe("set_reminder");
+    expect(result.intent.parameters).toMatchObject({ what: "bank appointment", when: "tomorrow" });
+    expect(result.proposal.kind).toBe("executed");
+  });
+
+  it("a recording the executor cannot run is never \"prepared, waiting for you\": the one missing detail is asked", async () => {
+    const result = await run("add an appointment", modelSaid("record_health_appointment", { typeText: "doctor" }));
+    if (result.kind !== "reply") throw new Error("expected a reply");
+    expect(result.proposal.kind).not.toBe("prepared");
+  });
+
+  it("every recording action has an executor of its own, so nothing approvable is left with nothing to run it", () => {
+    const source = readFileSync(new URL("./executor.ts", import.meta.url), "utf8");
+    const body = source.slice(source.indexOf("export async function executeIntent"));
+    for (const action of INTENT_ACTIONS.filter((candidate) => isRecording(candidate))) {
+      expect(body, action).toContain(`case "${action}":`);
+    }
+  });
+});
+
+describe("someone else's appointment from a model's reading", () => {
+  it("stays a reminder for the speaker, never a health record filed for the wrong person", async () => {
+    const result = await converse(turn("add a reminder for asmi's dentist tomorrow at 4", modelSaid("record_health_appointment", { typeText: "dentist", when: "tomorrow", time: "4" }), { executable: canExecute }));
+    if (result.kind !== "reply") throw new Error("expected a reply");
+    expect(result.intent.action).toBe("set_reminder");
+    expect(result.intent.parameters.what).toBe("Asmi's dentist appointment");
+    expect(result.proposal.kind).toBe("executed");
   });
 });
