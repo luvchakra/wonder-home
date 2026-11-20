@@ -9,6 +9,9 @@ vi.mock("../health/records", () => ({
   RECORD_TYPES: ["prescription", "lab_result", "imaging_report", "vaccination_certificate", "discharge_summary", "referral", "insurance_document", "visit_summary", "other"],
   updateRecord: async (...args: unknown[]) => void calls.push({ fn: "updateRecord", args }),
 }));
+// These cases are the 14-061 plan, which runs since 2026-11-20 only under the Admin's "Ask me to confirm entries still Checking".
+const switches = { askChecking: true as boolean | null };
+vi.mock("../household/nothing-waits-repository", () => ({ loadNothingWaits: async () => ({ remindChecking: true, applyDefaults: true, askChecking: switches.askChecking }) }));
 vi.mock("../homesend/changes", () => ({ confirmHomeSendEntry: async (...args: unknown[]) => (calls.push({ fn: "confirm", args }), 1) }));
 
 const { answerCheckQuestion, beginChecking, currentCheckQuestion } = await import("./checking-questions");
@@ -190,3 +193,22 @@ describe("HomeTalk's checks on an entry added as Checking (14-061, the owner 202
     expect(calls.some((call) => call.fn === "updateObligation")).toBe(false);
   });
 });
+
+describe("since 2026-11-20, with the Admin's switch off (the default)", () => {
+  it("plans only the doubtful amount of a bill read from a photo, and nothing for a school notice", async () => {
+    switches.askChecking = false;
+    try {
+      const rows: Row[] = [
+        { id: "i1", household_id: "h1", status: "routed", classified_kind: "bill", extracted: { title: "Electricity", payee: "BESCOM", amount: 2140, dueDate: "2026-11-10" }, understanding: { check: { unverified: [FROM_A_FILE] } }, routed_table: "financial_obligations", routed_id: "b1", created_by_member_id: "m1" },
+        { id: "i2", household_id: "h1", status: "routed", classified_kind: "school_item", extracted: { title: "Science project", dueDate: "2026-11-10" }, understanding: { check: { unverified: [FROM_A_FILE] } }, routed_table: "school_items", routed_id: "s1", created_by_member_id: "m1" },
+      ];
+      const bill = await beginChecking(client(rows), { householdId: "h1", itemId: "i1", recipientMemberId: "m1", score: 0.82, percent: 95 });
+      expect(bill?.planned).toEqual([{ field: "amount", mode: "confirm" }]);
+      const school = await beginChecking(client(rows), { householdId: "h1", itemId: "i2", recipientMemberId: "m1", score: 0.82, percent: 95 });
+      expect(school).toBeNull();
+    } finally {
+      switches.askChecking = true;
+    }
+  });
+});
+

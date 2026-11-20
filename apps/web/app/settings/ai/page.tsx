@@ -50,6 +50,9 @@ export const dynamic = "force-dynamic";
  * only someone with `household.manage` sees the editors, and the actions
  * check that again on the server. A stored key is never shown back.
  */
+/** Each "Nothing waits" switch's words. */
+const NOTHING_WAITS_KEYS = { remind_checking: "remindChecking", apply_defaults: "applyDefaults", ask_checking: "askChecking" } as const;
+
 export default async function AiAssistantSettingsPage({ searchParams }: { searchParams: Promise<{ returnTo?: string }> }) {
   const [query, session] = await Promise.all([searchParams, requireSession("/settings/ai")]);
   const returnTo = safeReturnTo(query.returnTo);
@@ -249,24 +252,28 @@ export default async function AiAssistantSettingsPage({ searchParams }: { search
               }}
             />
           </Card>
-          {/* "Nothing waits" (2026-11-14): decisions 3 and 4, each an Admin can switch back. */}
-          {(["remind_checking", "apply_defaults"] as const).map((which) => (
-            <Card key={which} id={`nothing-waits-${which}`} className="mt-3 p-4">
-              <HomeSendTidySwitch
-                householdId={householdId}
-                which={which}
-                on={(which === "remind_checking" ? nothingWaits.remindChecking : nothingWaits.applyDefaults) !== false}
-                manages={manages}
-                labels={{
-                  title: t(`settingsPage.ai.${which === "remind_checking" ? "remindChecking" : "applyDefaults"}.title`),
-                  on: t(`settingsPage.ai.${which === "remind_checking" ? "remindChecking" : "applyDefaults"}.on`),
-                  off: t(`settingsPage.ai.${which === "remind_checking" ? "remindChecking" : "applyDefaults"}.off`),
-                  detail: t(`settingsPage.ai.${which === "remind_checking" ? "remindChecking" : "applyDefaults"}.detail`),
-                  adminDecides: t("settingsPage.adminDecides"),
-                }}
-              />
-            </Card>
-          ))}
+          {/* "Nothing waits" (2026-11-14): decisions 3 and 4, each an Admin can switch back; "Looks right?" (2026-11-20), off unless turned on. */}
+          {(["remind_checking", "apply_defaults", "ask_checking"] as const).map((which) => {
+            const key = NOTHING_WAITS_KEYS[which];
+            const stored = which === "remind_checking" ? nothingWaits.remindChecking : which === "apply_defaults" ? nothingWaits.applyDefaults : nothingWaits.askChecking;
+            return (
+              <Card key={which} id={`nothing-waits-${which}`} className="mt-3 p-4">
+                <HomeSendTidySwitch
+                  householdId={householdId}
+                  which={which}
+                  on={which === "ask_checking" ? stored === true : stored !== false}
+                  manages={manages}
+                  labels={{
+                    title: t(`settingsPage.ai.${key}.title`),
+                    on: t(`settingsPage.ai.${key}.on`),
+                    off: t(`settingsPage.ai.${key}.off`),
+                    detail: t(`settingsPage.ai.${key}.detail`),
+                    adminDecides: t("settingsPage.adminDecides"),
+                  }}
+                />
+              </Card>
+            );
+          })}
           {/* What HomeSend has learned (14-066): so the same question is never asked twice. */}
           <Card id="homesend-learned" className="mt-3 p-4">
             <HomeSendLearned

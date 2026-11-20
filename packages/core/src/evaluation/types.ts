@@ -203,9 +203,13 @@ export type HomeSendCase = CaseBase & {
   /**
    * "Nothing waits" (2026-11-14): what a waiting, failed or Checking item
    * becomes under `homesend/deadlines.ts`, observed as the action
-   * ("set_aside:<reason>", "note", "read_again", "ask_resend",
-   * "ask→default:<answer>", "check→default:<answer>"). The source's words are
-   * the item's text; the reading's kind is its kind.
+   * ("set_aside:<reason>", "note", "read_again", "already_recorded",
+   * "add→checking", "record→checking", "ask_add→default:<answer>",
+   * "ask_update→default:<answer>", "check→default:<answer>",
+   * "amount→default:<answer>", "checking:no_question"). The source's words
+   * are the item's text; the reading's kind is its kind. Since 2026-11-20 a
+   * Checking entry is asked about only when its money amount was read with
+   * doubt, unless `askChecking`.
    */
   ending?: {
     status: "classified" | "failed" | "checking";
@@ -222,6 +226,12 @@ export type HomeSendCase = CaseBase & {
     recordable?: boolean;
     /** "Add this bill?" can add it with what is known (`add-default.ts` `canAdd`). */
     addable?: boolean;
+    /** The Admin set this area to "Wait for review" (2026-11-20: only then is "Add this bill?" asked). */
+    waitForReview?: boolean;
+    /** A Checking entry read from a photo or a file (nothing to check the amount against word by word). */
+    fromAFile?: boolean;
+    /** The Admin turned on "Ask me to confirm entries still Checking". */
+    askChecking?: boolean;
     /** The match has a second candidate bill on record (2026-11-20 review): asked, never applied at once. */
     ambiguous?: boolean;
     /** A document with several bills where money is recorded directly (2026-11-20 review): each added at once. */

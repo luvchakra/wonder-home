@@ -157,61 +157,104 @@ export function homesendNotices(rows: readonly HomeSendRow[], directory: Directo
   return notices;
 }
 
-// --- HomeSend: one daily summary (the owner, 2026-11-14, "Nothing waits") ---
+// --- HomeSend: one daily summary (the owner, 2026-11-14, "Nothing waits"; the main report since 2026-11-20) ---
 
-/** An entry HomeSend added (`homesend_changes`, created, not undone). */
-export type AddedRow = { created_by_member_id: string | null; created_at: string };
+/** An entry HomeSend added (`homesend_changes`, created, not undone); `confirmation_state` "unconfirmed" is Checking. */
+export type AddedRow = { created_by_member_id: string | null; created_at: string; confirmation_state?: string | null };
+/** An item HomeSend set aside on its own (`home_send_items`, archived by a rule or a default, not by a person). */
+export type SetAsideRow = { created_by_member_id: string | null; archived_at: string | null; archive_reason: string | null };
 /** An open "Needs you" question (`needs_you_items`); null recipient: the Admins. */
 export type NeedsYouRow = { recipient_member_id: string | null };
 
+/** The household's hour (24 h clock) from which the day's summary is sent: once a day, in the evening. */
+export const SUMMARY_HOUR = 19;
+/** Set aside by a person: their own act, not something to report back. */
+const PERSON_REASONS: ReadonlySet<string> = new Set(["removed_by_person"]);
+
 /**
- * One notice per person per day, replacing a notice per item and the grouped
- * "N waiting" one: "WonderHome added 6 things today · 1 needs a word — it's at
- * the top of HomeTalk." What was added is counted for whoever sent it (a
- * child's or helper's send for the Admin); what needs a word is counted for
- * whoever it asks. On a day nothing was added but something needs a word, the
- * same thread says only that. Counts only: nothing an entry says reaches a
- * lock screen. It opens the "Needs you" list at the top of HomeTalk, is
- * rewritten as the day goes on, and resolves by itself the next day (a new
- * day is a new thread) or when nothing is left to say.
+ * The daily summary, the main report (the owner, 2026-11-20: "as autonomous
+ * as possible, with minimum inputs required from the users"): "Added 6 things
+ * today · 2 are Checking, 1 set aside. Each opens in HomeSend, with Undo."
+ * Once a day on the household's clock (from `SUMMARY_HOUR`), and silent on a
+ * day with nothing. It goes to each adult who sent something (their own) and
+ * to every Admin (the whole household's). The lines themselves — which entry,
+ * open it, Undo — are in the app (HomeSend's "Today" list); a notice carries
+ * counts only, so nothing an entry says reaches a lock screen.
+ *
+ * Open "Needs you" questions still speak during the day, in the same thread:
+ * "1 thing needs a word"; in the evening the summary says it too. The thread
+ * is the household's day, so it resolves by itself the next day.
  */
-export function homesendSummaryNotices(added: readonly AddedRow[], needs: readonly NeedsYouRow[], directory: Directory, now: Date, timeZone = "UTC"): Notice[] {
-  const today = localMoment(now, timeZone).dateKey;
+export function homesendSummaryNotices(
+  added: readonly AddedRow[],
+  needs: readonly NeedsYouRow[],
+  directory: Directory,
+  now: Date,
+  timeZone = "UTC",
+  setAside: readonly SetAsideRow[] = [],
+): Notice[] {
+  const moment = localMoment(now, timeZone);
+  const today = moment.dateKey;
+  const evening = moment.hour >= SUMMARY_HOUR;
   const admin = adminOf(directory);
-  const adultOrAdmin = (memberId: string | null) => {
-    const member = memberId ? directory.members.get(memberId) : undefined;
-    return reachable(directory, memberId) && member?.memberType === "adult" ? memberId! : admin;
+  const admins = [...directory.members.values()].filter((member) => member.isAdmin && reachable(directory, member.id)).map((member) => member.id);
+  // An adult who sent something hears about their own; every Admin hears about the household's.
+  const adultSender = (memberId: string | null) => (reachable(directory, memberId) && directory.members.get(memberId!)?.memberType === "adult" ? memberId! : null);
+  type Day = { added: number; checking: number; setAside: number };
+  const days = new Map<string, Day>();
+  const bump = (recipient: string, change: Partial<Day>) => {
+    const day = days.get(recipient) ?? { added: 0, checking: 0, setAside: 0 };
+    day.added += change.added ?? 0;
+    day.checking += change.checking ?? 0;
+    day.setAside += change.setAside ?? 0;
+    days.set(recipient, day);
   };
-  const addedFor = new Map<string, number>();
+  const forEveryone = (sender: string | null, change: Partial<Day>) => {
+    const own = adultSender(sender);
+    const to = new Set([...admins, ...(own ? [own] : [])]);
+    for (const recipient of to) bump(recipient, change);
+  };
   for (const row of added) {
     if (localMoment(new Date(row.created_at), timeZone).dateKey !== today) continue;
-    const recipient = adultOrAdmin(row.created_by_member_id);
-    if (recipient) addedFor.set(recipient, (addedFor.get(recipient) ?? 0) + 1);
+    forEveryone(row.created_by_member_id, { added: 1, checking: row.confirmation_state === "unconfirmed" ? 1 : 0 });
+  }
+  for (const row of setAside) {
+    if (!row.archived_at || localMoment(new Date(row.archived_at), timeZone).dateKey !== today) continue;
+    if (row.archive_reason && PERSON_REASONS.has(row.archive_reason)) continue;
+    forEveryone(row.created_by_member_id, { setAside: 1 });
   }
   const needsFor = new Map<string, number>();
   for (const row of needs) {
     const recipient = row.recipient_member_id && reachable(directory, row.recipient_member_id, true) ? row.recipient_member_id : admin;
     if (recipient) needsFor.set(recipient, (needsFor.get(recipient) ?? 0) + 1);
   }
-  const recipients = new Set([...addedFor.keys(), ...needsFor.keys()]);
+  const recipients = new Set([...(evening ? days.keys() : []), ...needsFor.keys()]);
   const endOfDay = new Date(now.getTime() + DAY_MS);
-  return [...recipients].map((recipient) => {
-    const count = addedFor.get(recipient) ?? 0;
+  const notices: Notice[] = [];
+  for (const recipient of recipients) {
+    const day = evening ? days.get(recipient) : undefined;
     const waiting = needsFor.get(recipient) ?? 0;
-    return {
-      sourceType: "homesend_item" as const,
-      // The thread is the household's day, not a record: one per person per day.
-      sourceId: recipient,
-      threadKey: `homesend:summary:${today}`,
-      recipientMemberId: recipient,
-      category: "system" as const,
-      priority: "normal" as const,
-      title: count > 0 ? msg("reminder.homesend.summary.title", { count }) : msg("reminder.needsYou.title", { count: waiting }),
-      body: count > 0 ? (waiting > 0 ? msg("reminder.homesend.summary.needs", { count: waiting }) : msg("reminder.homesend.summary.none")) : msg("reminder.needsYou.body"),
-      action: { action: "open", target: waiting > 0 ? "/ai#needs-you" : "/home-send" },
-      expiresAt: endOfDay,
-    };
-  });
+    const reported = day && day.added + day.setAside > 0 ? day : null;
+    if (!reported && waiting === 0) continue;
+    const base = { sourceType: "homesend_item" as const, sourceId: recipient, threadKey: `homesend:summary:${today}`, recipientMemberId: recipient, category: "system" as const, priority: "normal" as const, expiresAt: endOfDay };
+    if (!reported) {
+      notices.push({ ...base, title: msg("reminder.needsYou.title", { count: waiting }), body: msg("reminder.needsYou.body"), action: { action: "open", target: "/ai#needs-you" } });
+      continue;
+    }
+    const parts = [
+      ...(reported.checking > 0 ? [msg("reminder.homesend.daily.checking", { count: reported.checking })] : []),
+      ...(reported.setAside > 0 ? [msg("reminder.homesend.daily.setAside", { count: reported.setAside })] : []),
+      ...(waiting > 0 ? [msg("reminder.homesend.daily.needs", { count: waiting })] : []),
+    ];
+    const line = parts.length > 0 ? parts.slice(1).reduce((joined, next) => msg("reminder.homesend.join", { a: { msg: joined }, b: { msg: next } }), parts[0]!) : msg("reminder.homesend.daily.allConfirmed");
+    notices.push({
+      ...base,
+      title: reported.added > 0 ? msg("reminder.homesend.daily.title", { count: reported.added }) : msg("reminder.homesend.daily.titleSetAside", { count: reported.setAside }),
+      body: msg("reminder.homesend.daily.body", { line: { msg: line } }),
+      action: { action: "open", target: waiting > 0 ? "/ai#needs-you" : "/home-send#today" },
+    });
+  }
+  return notices;
 }
 
 // --- HomeSend: questions waiting about entries added as Checking (14-062; the owner, 2026-11-03) ---

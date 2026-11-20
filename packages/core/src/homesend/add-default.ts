@@ -40,8 +40,11 @@ import { vendorKey } from "../homebrain/rules";
  *     from a sender on "Who may file health records for others", for the
  *     member it names (`health-filers.ts`, the owner 2026-11-20).
  *
- * Every entry is an `unconfirmed` HomeSend change, so it shows Checking and
- * is asked "Looks right?" next. Nothing is ever paid. The item is claimed
+ * Since 2026-11-20 ("as autonomous as possible") the question is asked only
+ * when an Admin set money or health to "Wait for review"; otherwise the
+ * deadlines step adds it at once (`byRule`), as the default would have a day
+ * later. Every entry is an `unconfirmed` HomeSend change, so it shows Checking
+ * and is in the daily summary with Undo. Nothing is ever paid. The item is claimed
  * through its review columns first (a routed item needs its table and id
  * together), so a person who settled it meanwhile wins.
  */
@@ -82,6 +85,8 @@ export async function addWaitingItem(
      * member instead of the sender. The caller checked the list.
      */
     healthFor?: string | null;
+    /** Added by the deadlines step's own rule, not a question's default (2026-11-20: "Add this bill?" only under "Wait for review"). */
+    byRule?: boolean;
   },
 ): Promise<AddResult> {
   const { data: itemRow, error } = await client
@@ -217,7 +222,7 @@ export async function addWaitingItem(
       domain: entry.domain,
       entityId: entry.entityId,
       createdByMemberId: actor,
-      auto: { state: "unconfirmed", confidence: null, source: filedForOther ? "health_filer" : how.byDefault ? "needs_you_default" : "needs_you" },
+      auto: { state: "unconfirmed", confidence: null, source: filedForOther ? "health_filer" : how.byRule ? "record_first" : how.byDefault ? "needs_you_default" : "needs_you" },
     });
   }
   await auditChange({
@@ -226,7 +231,7 @@ export async function addWaitingItem(
     eventType: filedForOther ? "homesend.health_filed_for" : "homesend.added_checking",
     targetTable: first.table,
     targetId: first.entityId,
-    metadata: { intakeId: itemId, kind, entries: written.length, by: how.byDefault ? "default" : "person", ...(filedForOther ? { filedFor: how.healthFor, sender, by: "allowed_filer" } : {}) },
+    metadata: { intakeId: itemId, kind, entries: written.length, by: how.byRule ? "rule" : how.byDefault ? "default" : "person", ...(filedForOther ? { filedFor: how.healthFor, sender, by: "allowed_filer" } : {}) },
   });
   return "done";
 }

@@ -61,26 +61,66 @@ describe("the deadlines step", () => {
     // Read again already, its sender not in HomeTalk right now: set aside with its reason, nobody asked (2026-11-20 review).
     expect(item("garbled2")).toMatchObject({ status: "archived", archive_reason: "unreadable" });
     expect(tables.needs_you_items!.some((row) => row.subject_id === "garbled2")).toBe(false);
-    // A child's notice: asked of the Admins, kept as a note by default.
+    // A child's notice HomeSend couldn't complete: kept as a note at once, no question (2026-11-20).
     expect(item("notice")).toMatchObject({ status: "archived", archive_reason: "kept_as_note" });
-    expect(tables.needs_you_items!.find((row) => row.subject_id === "notice")).toMatchObject({ recipient_member_id: null, status: "defaulted", answer: "note" });
+    expect(tables.needs_you_items!.some((row) => row.subject_id === "notice")).toBe(false);
     // A bill held on the money switch is left to part B (recorded as Checking): no question, no note.
     expect(item("bill-held").status).toBe("classified");
     expect(tables.needs_you_items!.some((row) => row.subject_id === "bill-held")).toBe(false);
 
-    // Checking: the grocery is kept as read; the bill stays Checking with its question closed.
-    expect(tables.homesend_changes!.find((row) => row.id === "c2")).toMatchObject({ confirmation_state: "confirmed", confirmed_by_member_id: null });
-    expect(tables.homesend_changes!.find((row) => row.id === "c1")!.confirmation_state).toBe("unconfirmed");
-    expect(tables.needs_you_items!.find((row) => row.subject_id === "elec")).toMatchObject({ status: "defaulted", answer: "keep_checking" });
+    // Checking: no "Looks right?" by default (2026-11-20). Both stay Checking, in the daily summary with Undo.
+    expect(tables.homesend_changes!.map((row) => row.confirmation_state)).toEqual(["unconfirmed", "unconfirmed"]);
+    expect(tables.needs_you_items!).toEqual([]);
 
     // HomeTalk proposals: the one 48 hours old closes as not done; the fresh one stays.
     expect(tables.conversation_actions!.map((row) => row.approval_status)).toEqual(["expired", "proposed"]);
-    expect(result).toMatchObject({ ready: true, notes: 1, setAside: 2, readAgain: 1, proposalsClosed: 1, defaulted: 3 });
+    expect(result).toMatchObject({ ready: true, notes: 2, setAside: 2, readAgain: 1, proposalsClosed: 1, asked: 0, defaulted: 0 });
     expect(tables.needs_you_items!.filter((row) => row.status === "open")).toEqual([]);
 
     // A second pass changes nothing.
     const again = await runNeedsYouDeadlines(client, { now: NOW, householdIds: ["h1"], sweep: false });
     expect(again).toMatchObject({ defaulted: 0, asked: 0, notes: 0, setAside: 0, readAgain: 0 });
+  });
+
+  it("with the Admin's \"Ask me to confirm entries still Checking\" on, asks Looks right as before: grocery kept as read, money kept Checking", async () => {
+    const { client, tables } = seed();
+    tables.policies!.push({ household_id: "h1", category: "ai_autonomy", name: "Ask me to confirm entries still Checking", active: true, rule: { on: true } });
+    await runNeedsYouDeadlines(client, { now: NOW, householdIds: ["h1"], sweep: false });
+    expect(tables.homesend_changes!.find((row) => row.id === "c2")).toMatchObject({ confirmation_state: "confirmed", confirmed_by_member_id: null });
+    expect(tables.homesend_changes!.find((row) => row.id === "c1")!.confirmation_state).toBe("unconfirmed");
+    expect(tables.needs_you_items!.find((row) => row.subject_id === "elec")).toMatchObject({ source: "homesend_check", status: "defaulted", answer: "keep_checking" });
+  });
+
+  it("asks the sender only about a money amount read with doubt, defaulting to keep it Checking", async () => {
+    const { client, tables } = seed();
+    Object.assign(tables.home_send_items!.find((row) => row.id === "elec")!, { extracted: { title: "Electricity", amount: 2140, currency: "INR" }, check: { unverified: ["the original, which can't be checked word by word"] } });
+    await runNeedsYouDeadlines(client, { now: NOW, householdIds: ["h1"], sweep: false });
+    const question = tables.needs_you_items!.find((row) => row.subject_id === "elec");
+    expect(question).toMatchObject({ source: "homesend_amount", recipient_member_id: "m1", default_answer: "keep_checking", status: "defaulted" });
+    expect((question!.prompt as { title: string }).title).toBe("Electricity · ₹2,140");
+    expect(tables.homesend_changes!.find((row) => row.id === "c1")!.confirmation_state).toBe("unconfirmed");
+    expect(tables.needs_you_items!.some((row) => row.subject_id === "milk")).toBe(false);
+  });
+
+  it("closes a HomeTalk question chain about anything but the amount, leaving the entry Checking (2026-11-20)", async () => {
+    const { client, tables } = seed();
+    const chain = { version: 1, recipientMemberId: "m1", base: 0.8, percent: 95, planned: [{ field: "title", mode: "confirm" }, { field: "dueDate", mode: "fill" }], answered: [], open: { field: "title", mode: "confirm", ordinal: 1 }, done: null };
+    Object.assign(tables.home_send_items!.find((row) => row.id === "milk")!, { checking: chain, understanding: { checking: chain } });
+    await runNeedsYouDeadlines(client, { now: NOW, householdIds: ["h1"], sweep: false });
+    const milk = tables.home_send_items!.find((row) => row.id === "milk")!;
+    expect((milk.understanding as { checking: { open: unknown; done: string } }).checking).toMatchObject({ open: null, done: "please_check" });
+    expect(tables.homesend_changes!.find((row) => row.id === "c2")!.confirmation_state).toBe("unconfirmed");
+  });
+
+  it("withdraws open questions no longer asked (a waiting item's question, Looks right with the switch off)", async () => {
+    const { client, tables } = seed();
+    const open = { household_id: "h1", status: "open", default_at: "2026-11-20T00:00:00Z", expires_at: "2026-11-21T00:00:00Z" };
+    tables.needs_you_items!.push({ ...open, id: "r2", source: "homesend_waiting", subject_id: "plumber" }, { ...open, id: "r3", source: "homesend_check", subject_id: "milk" });
+    const result = await runNeedsYouDeadlines(client, { now: NOW, householdIds: ["h1"], sweep: false });
+    expect(tables.needs_you_items!.filter((row) => ["r2", "r3"].includes(row.id as string)).map((row) => row.status)).toEqual(["withdrawn", "withdrawn"]);
+    expect(result.withdrawn).toBe(2);
+    // What they asked about still ends as their default would have.
+    expect(tables.home_send_items!.find((row) => row.id === "plumber")).toMatchObject({ status: "archived", archive_reason: "kept_as_note" });
   });
 
   it("asks a sender to send it again only while they are in HomeTalk", async () => {
@@ -93,7 +133,7 @@ describe("the deadlines step", () => {
 
   it("withdraws a question whose entry was confirmed elsewhere (Mark paid, an edit)", async () => {
     const { client, tables } = seed();
-    tables.needs_you_items!.push({ id: "q1", household_id: "h1", source: "homesend_check", subject_id: "elec", status: "open", default_at: "2026-11-20T00:00:00Z", expires_at: "2026-11-21T00:00:00Z" });
+    tables.needs_you_items!.push({ id: "q1", household_id: "h1", source: "homesend_amount", subject_id: "elec", status: "open", default_at: "2026-11-20T00:00:00Z", expires_at: "2026-11-21T00:00:00Z" });
     tables.homesend_changes!.find((row) => row.id === "c1")!.confirmation_state = "confirmed";
     await runNeedsYouDeadlines(client, { now: NOW, householdIds: ["h1"], sweep: false });
     expect(tables.needs_you_items!.find((row) => row.id === "q1")).toMatchObject({ status: "withdrawn" });
@@ -101,11 +141,13 @@ describe("the deadlines step", () => {
 
   it("applies no default when an Admin switched decision 4 off, and closes the question at 48 hours instead", async () => {
     const { client, tables } = seed();
-    tables.policies!.push({ household_id: "h1", category: "ai_autonomy", name: "Apply a question's default after a day", active: true, rule: { on: false } });
+    tables.policies!.push(
+      { household_id: "h1", category: "ai_autonomy", name: "Apply a question's default after a day", active: true, rule: { on: false } },
+      { household_id: "h1", category: "ai_autonomy", name: "Ask me to confirm entries still Checking", active: true, rule: { on: true } },
+    );
     await runNeedsYouDeadlines(client, { now: NOW, householdIds: ["h1"], sweep: false });
     expect(tables.homesend_changes!.find((row) => row.id === "c2")!.confirmation_state).toBe("unconfirmed");
-    expect(tables.home_send_items!.find((row) => row.id === "notice")!.status).toBe("classified");
-    expect(tables.needs_you_items!.find((row) => row.subject_id === "notice")).toMatchObject({ status: "expired" });
+    expect(tables.needs_you_items!.find((row) => row.subject_id === "milk")).toMatchObject({ status: "expired" });
   });
 
   it("updates a matched bill at once, marked Checking with Undo, asking nothing (2026-11-20 review)", async () => {
@@ -158,18 +200,18 @@ describe("the deadlines step", () => {
     expect(tables.obligations![0]).toMatchObject({ name: "Water bill", amount_minor: 64000, due_on: "2026-11-09" });
     expect(tables.homesend_changes![0]).toMatchObject({ intake_id: "water", domain: "bill", confirmation_state: "unconfirmed" });
     expect(tables.home_send_items![0]).toMatchObject({ status: "routed", routed_table: "obligations", review_decision: "auto_added" });
-    // The next pass asks "Looks right?", whose default keeps money Checking.
+    // The next pass asks nothing (2026-11-20): the amount was in the words sent; it stays Checking.
     await runNeedsYouDeadlines(client, { now: NOW, householdIds: ["h1"], sweep: false });
-    expect(tables.needs_you_items!.find((row) => row.subject_id === "water")).toMatchObject({ source: "homesend_check", default_answer: "keep_checking" });
+    expect(tables.needs_you_items!.some((row) => row.subject_id === "water")).toBe(false);
     expect(tables.obligations).toHaveLength(1);
   });
 
-  it("asks \"Add this bill?\" and adds it as Checking by default, with what's known (owner, 2026-11-20: \"record\")", async () => {
+  it("under the Admin's \"Wait for review\", asks \"Add this bill?\" and adds it as Checking by default, with what's known (owner, 2026-11-20: \"record\")", async () => {
     const { client, tables } = memoryDatabase({
       households: [{ id: "h1", timezone: "Asia/Kolkata", owner_member_id: "m1" }],
       household_members: [{ id: "m1", household_id: "h1", member_type: "adult", status: "active", profile_id: "u1" }],
       household_roles: [{ household_id: "h1", member_id: "m1", role: "head" }],
-      policies: [],
+      policies: [{ household_id: "h1", category: "ai_autonomy", name: "Money and health entries from HomeSend", active: true, rule: { value: "review" } }],
       needs_you_items: [],
       conversation_actions: [],
       jobs: [],
@@ -185,20 +227,20 @@ describe("the deadlines step", () => {
     }, [], HOME_SEND_CHECKS);
     await runNeedsYouDeadlines(client, { now: NOW, householdIds: ["h1"], sweep: false });
     // The document's two bills are added at once (2026-11-20 review); only the gas bill was asked.
-    expect(tables.needs_you_items!.filter((row) => row.source === "homesend_add").map((row) => [row.subject_id, row.status, row.answer])).toEqual([["gas", "defaulted", "add"]]);
+    expect(tables.needs_you_items!.filter((row) => row.source === "homesend_add").map((row) => [row.subject_id, row.status, row.answer])).toEqual([["gas", "defaulted", "add"], ["doc", "defaulted", "add"]]);
     const bills = tables.obligations!.map((row) => [row.name, row.amount_minor ?? null, row.due_on ?? null]);
-    expect(bills).toEqual([["Maintenance", 250000, "2026-12-01"], ["Parking", null, null], ["Gas bill", null, "2026-11-30"]]);
+    expect(bills).toEqual([["Gas bill", null, "2026-11-30"], ["Maintenance", 250000, "2026-12-01"], ["Parking", null, null]]);
     expect(tables.homesend_changes!.every((row) => row.confirmation_state === "unconfirmed")).toBe(true);
     expect(tables.homesend_changes!).toHaveLength(3);
     expect(tables.home_send_items!.map((row) => row.status)).toEqual(["routed", "routed"]);
   });
 
-  it("adds a waiting receipt's lines and files a health document privately for its sender, both Checking", async () => {
+  it("under \"Wait for review\", adds a waiting receipt's lines and files a health document privately for its sender, both Checking", async () => {
     const { client, tables } = memoryDatabase({
       households: [{ id: "h1", timezone: "Asia/Kolkata", owner_member_id: "m1" }],
       household_members: [{ id: "m1", household_id: "h1", member_type: "adult", status: "active", profile_id: "u1" }],
       household_roles: [{ household_id: "h1", member_id: "m1", role: "head" }],
-      policies: [],
+      policies: [{ household_id: "h1", category: "ai_autonomy", name: "Money and health entries from HomeSend", active: true, rule: { value: "review" } }],
       needs_you_items: [],
       conversation_actions: [],
       jobs: [],
@@ -262,5 +304,28 @@ describe("the deadlines step", () => {
     expect(tables.homesend_changes!.filter((row) => row.intake_id !== "elec-sent").every((row) => row.confirmation_state === "unconfirmed")).toBe(true);
     // Nothing asked, nothing paid by WonderHome: only records of what the household paid.
     expect(tables.needs_you_items).toEqual([]);
+  });
+
+  it("adds a bill record first couldn't add at once, as Checking, when money isn't on \"Wait for review\" (2026-11-20)", async () => {
+    const { client, tables } = memoryDatabase({
+      households: [{ id: "h1", timezone: "Asia/Kolkata", owner_member_id: "m1" }],
+      household_members: [{ id: "m1", household_id: "h1", member_type: "adult", status: "active", profile_id: "u1" }],
+      household_roles: [{ household_id: "h1", member_id: "m1", role: "head" }],
+      policies: [],
+      needs_you_items: [],
+      conversation_actions: [],
+      jobs: [],
+      obligations: [],
+      home_send_items: [
+        { id: "gas", household_id: "h1", status: "classified", classified_kind: "bill", raw_text: "Gas bill due 30 Nov", title: "Gas bill", due: "2026-11-30", readable: true, extracted: { title: "Gas bill", dueDate: "2026-11-30", payee: "Indane" }, change: "new", retry_count: 0, created_by_member_id: "m1", created_at: NOW.toISOString(), updated_at: NOW.toISOString() },
+      ],
+      homesend_changes: [],
+      audit_events: [],
+    }, [], HOME_SEND_CHECKS);
+    const result = await runNeedsYouDeadlines(client, { now: NOW, householdIds: ["h1"], sweep: false });
+    expect(result).toMatchObject({ added: 1, asked: 0 });
+    expect(tables.needs_you_items).toEqual([]);
+    expect(tables.obligations!.map((row) => [row.name, row.amount_minor ?? null])).toEqual([["Gas bill", null]]);
+    expect(tables.homesend_changes![0]).toMatchObject({ intake_id: "gas", confirmation_state: "unconfirmed" });
   });
 });

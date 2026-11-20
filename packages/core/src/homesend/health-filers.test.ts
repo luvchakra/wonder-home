@@ -67,8 +67,8 @@ describe("Who may file health records for others (owner, 2026-11-20)", () => {
     const waiting = { status: "classified" as const, kind: "health_document" as const, readable: true, failureReason: null, rawText: "Blood test", retryCount: 0, retryRequestedAt: null, canReadAgain: true, senderMemberId: KUNAL, asked: new Set<string>(), minutesSinceTouched: 60, match: null, addable: true };
     expect(endingFor({ ...waiting, filedFor: UPASANA })).toEqual({ action: "file_for", memberId: UPASANA });
     expect(endingFor({ ...waiting, filedFor: null })).toEqual({ action: "ask_add" });
-    // Matched on record: the match's question, never filed.
-    expect(endingFor({ ...waiting, match: "duplicate", filedFor: UPASANA }).action).toBe("ask");
+    // Matched on record: never filed for anyone; the same one again is set aside as already on record (2026-11-20: no question).
+    expect(endingFor({ ...waiting, match: "duplicate", filedFor: UPASANA }).action).toBe("already_recorded");
   });
 
   it("lets HomeBrain fill a health document's person from its own words only for an allowed sender", () => {

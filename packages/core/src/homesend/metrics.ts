@@ -222,6 +222,19 @@ export type NothingWaitsMetrics = {
   /** Kept Checking on purpose: a money or health entry whose question closed ("check before paying"). */
   checkingKept: number;
   undoneWithin7d: Ratio;
+  /**
+   * Since 2026-11-20 (the owner: "as autonomous as possible, with minimum
+   * inputs required from the users"). Null until the function answers them
+   * (migration 20261120170000): questions asked out of sends (shown per 10;
+   * target under 0.5), questions a person answered out of those closed
+   * (target: at least half, or the question goes), entries confirmed without
+   * a tap by basis, and entries undone or corrected within 7 days (target
+   * under 1 in 20).
+   */
+  questionsAsked: Ratio | null;
+  answeredByPerson: Ratio | null;
+  confirmedWithoutTap: { basis: string; count: number }[] | null;
+  undoneOrCorrectedWithin7d: Ratio | null;
 };
 
 const count = (value: unknown): number => {
@@ -247,12 +260,32 @@ export function parseNothingWaits(raw: unknown): NothingWaitsMetrics | null {
     checkingOver7d: count(value.checkingOver7d),
     checkingKept: count(value.checkingKept),
     undoneWithin7d: ratio(value.undoneWithin7d),
+    questionsAsked: "questionsAsked" in value ? ratio(value.questionsAsked) : null,
+    answeredByPerson: "answeredByPerson" in value ? ratio(value.answeredByPerson) : null,
+    confirmedWithoutTap: Array.isArray(value.confirmedWithoutTap)
+      ? (value.confirmedWithoutTap as { basis?: unknown; count?: unknown }[])
+          .slice(0, 12)
+          .map((row) => ({ basis: typeof row.basis === "string" && /^[a-z_]{1,40}$/.test(row.basis) ? row.basis : "other", count: count(row.count) }))
+      : null,
+    undoneOrCorrectedWithin7d: "undoneOrCorrectedWithin7d" in value ? ratio(value.undoneOrCorrectedWithin7d) : null,
   };
 }
 
+/** Questions asked per 10 things sent, to one decimal; null when nothing was sent or it isn't measured. */
+export function questionsPerTen(ratioValue: Ratio | null): number | null {
+  if (!ratioValue || ratioValue.of === 0) return null;
+  return Math.round((ratioValue.count * 100) / ratioValue.of) / 10;
+}
+
 /** Where each measure stands against the redesign's target. */
-export function nothingWaitsOnTarget(metrics: NothingWaitsMetrics): { neededPerson: boolean; open: boolean; checking: boolean; undone: boolean } {
+export function nothingWaitsOnTarget(metrics: NothingWaitsMetrics): { neededPerson: boolean; open: boolean; checking: boolean; undone: boolean; questions: boolean; answered: boolean; corrected: boolean } {
+  const perTen = questionsPerTen(metrics.questionsAsked);
+  const answered = metrics.answeredByPerson;
+  const corrected = metrics.undoneOrCorrectedWithin7d;
   return {
+    questions: perTen === null || perTen < 0.5,
+    answered: !answered || answered.of === 0 || answered.count * 2 >= answered.of,
+    corrected: !corrected || corrected.of === 0 || corrected.count * 20 < corrected.of,
     neededPerson: metrics.neededPerson.of === 0 || metrics.neededPerson.count * 10 < metrics.neededPerson.of,
     open: metrics.openByHousehold.every((row) => row.open <= 3 && row.oldestHours <= 48),
     checking: metrics.checkingOver7d === 0,

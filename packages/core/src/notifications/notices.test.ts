@@ -317,28 +317,41 @@ describe("the notice sweep", () => {
   });
 
   // "Nothing waits" (2026-11-14): one daily summary replaces the grouped notices, pointing at "Needs you".
-  it("says what needs a word, then what was added today, in one thread per person per day", async () => {
+  // Since 2026-11-20 it is the main report: once a day, in the household's evening, to each adult who sent
+  // something and to every Admin, silent on a day with nothing.
+  it("says what needs a word during the day, and the day's summary in the evening, in one thread per person per day", async () => {
+    const EVENING = new Date("2026-10-20T14:00:00Z"); // 19:30 in Kolkata
     const needs = [{ id: "n1", household_id: "h1", recipient_member_id: "upasana", status: "open" }];
     const { client, tables } = memoryDatabase(base({ needs_you_items: needs, homesend_changes: [] }));
     expect(await sweepNotices(client, "h1", NOW, { adapters })).toEqual({ created: 1, updated: 0, resolved: 0 });
     expect(tables.notifications![0]).toMatchObject({ recipient_member_id: "upasana", title: "1 thing needs a word", thread_key: "homesend:summary:2026-10-20", source_type: "homesend_item" });
     expect(await sweepNotices(client, "h1", NOW, { adapters })).toEqual({ created: 0, updated: 0, resolved: 0 });
-    tables.homesend_changes!.push({ household_id: "h1", created_by_member_id: "upasana", change_type: "created", undone_at: null, created_at: NOW.toISOString() });
-    expect(await sweepNotices(client, "h1", NOW, { adapters })).toEqual({ created: 0, updated: 1, resolved: 0 });
-    expect(tables.notifications![0]).toMatchObject({ title: "WonderHome added 1 thing today", body: "1 needs a word — it's at the top of HomeTalk." });
-    // A child's send is counted for the Admin; nothing waiting says so.
+    // Added in the morning: nothing is said until the evening.
+    tables.homesend_changes!.push({ household_id: "h1", created_by_member_id: "upasana", change_type: "created", undone_at: null, confirmation_state: "unconfirmed", created_at: NOW.toISOString() });
+    expect(await sweepNotices(client, "h1", NOW, { adapters })).toEqual({ created: 0, updated: 0, resolved: 0 });
+    expect(await sweepNotices(client, "h1", EVENING, { adapters })).toEqual({ created: 1, updated: 1, resolved: 0 });
+    const upasana = tables.notifications!.find((row) => row.recipient_member_id === "upasana" && row.status !== "resolved")!;
+    expect(upasana).toMatchObject({ title: "Added 1 thing today", body: "1 is Checking, 1 needs a word. Each one opens in HomeSend, with Undo." });
+    // A child's send is reported to the Admins; what HomeSend set aside on its own is in the same line.
     tables.needs_you_items![0]!.status = "answered";
-    tables.homesend_changes!.push({ household_id: "h1", created_by_member_id: "asmi", change_type: "created", undone_at: null, created_at: NOW.toISOString() });
-    await sweepNotices(client, "h1", NOW, { adapters });
-    const open = tables.notifications!.filter((row) => row.status !== "resolved");
+    tables.homesend_changes!.push({ household_id: "h1", created_by_member_id: "asmi", change_type: "created", undone_at: null, confirmation_state: "confirmed", created_at: NOW.toISOString() });
+    tables.home_send_items!.push({ id: "page", household_id: "h1", status: "archived", archive_reason: "not_household", archived_at: NOW.toISOString(), created_by_member_id: "kunal", updated_at: NOW.toISOString(), created_at: NOW.toISOString() });
+    await sweepNotices(client, "h1", EVENING, { adapters });
+    const open = tables.notifications!.filter((row) => row.status !== "resolved" && String(row.thread_key).startsWith("homesend:summary"));
     expect(open.map((row) => [row.recipient_member_id, row.title, row.body])).toEqual(
       expect.arrayContaining([
-        ["upasana", "WonderHome added 1 thing today", "Nothing needs you. Undo any of them in HomeSend for 7 days."],
-        ["kunal", "WonderHome added 1 thing today", "Nothing needs you. Undo any of them in HomeSend for 7 days."],
+        ["upasana", "Added 2 things today", "1 is Checking, 1 set aside. Each one opens in HomeSend, with Undo."],
+        ["kunal", "Added 2 things today", "1 is Checking, 1 set aside. Each one opens in HomeSend, with Undo."],
       ]),
     );
     // Nothing is said about the waiting item itself: the old grouped notice is gone.
     expect(tables.notifications!.some((row) => row.thread_key === "homesend:waiting")).toBe(false);
+  });
+
+  it("is silent on a day with nothing", async () => {
+    const { client, tables } = memoryDatabase(base({ needs_you_items: [], homesend_changes: [], home_send_items: [] }));
+    await sweepNotices(client, "h1", new Date("2026-10-20T15:00:00Z"), { adapters });
+    expect(tables.notifications!.filter((row) => String(row.thread_key).startsWith("homesend:summary"))).toEqual([]);
   });
 
   it("rewrites one thread as replies come in, and brings it back unread", async () => {

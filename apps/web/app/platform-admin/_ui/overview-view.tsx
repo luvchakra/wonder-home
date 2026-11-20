@@ -38,7 +38,7 @@ import {
   type Period,
   type AdvisorSignal,
 } from "@wonderhome/core/platform/overview";
-import { nothingWaitsOnTarget, type NothingWaitsMetrics } from "@wonderhome/core/homesend/metrics";
+import { nothingWaitsOnTarget, questionsPerTen, type NothingWaitsMetrics } from "@wonderhome/core/homesend/metrics";
 import { ButtonLink } from "@wonderhome/core/ui/button";
 import type { IconTone } from "@wonderhome/core/ui/icon-tile";
 import { IconTile } from "@wonderhome/core/ui/icon-tile";
@@ -393,6 +393,22 @@ function PlansBreakdown({ snapshot, linkPlans }: { snapshot: OverviewSnapshot; l
   );
 }
 
+/** Why an entry was confirmed with nobody tapping, in words. */
+const BASIS_WORDS: Record<string, string> = {
+  default: "by a question's default",
+  answer: "by an answer elsewhere",
+  bar: "over the household's bar",
+  second_source: "by a second source",
+  recurring: "as a recurring one",
+  acted: "by someone acting on it",
+  action: "by someone acting on it",
+  payment: "by a payment message",
+  payment_proof: "by a payment message",
+  receipt: "by a matching receipt",
+  marked_paid: "by someone marking it paid",
+  due_passed: "by its day passing with no correction",
+};
+
 /** The four "Nothing waits" measures (2026-11-14), each beside its target, counts out of totals (principle 9). */
 function NothingWaitsPanel({ metrics }: { metrics: NothingWaitsMetrics | null }) {
   if (!metrics) {
@@ -415,7 +431,18 @@ function NothingWaitsPanel({ metrics }: { metrics: NothingWaitsMetrics | null })
     },
     { label: "Checking entries older than 7 days, no stated reason", value: `${metrics.checkingOver7d}${metrics.checkingKept > 0 ? ` (and ${metrics.checkingKept} kept Checking: check before paying)` : ""}`, target: "none", ok: on.checking },
     { label: "Entries undone within 7 days (30 days)", value: `${metrics.undoneWithin7d.count} of ${metrics.undoneWithin7d.of}`, target: "under 1 in 20", ok: on.undone },
+    // 2026-11-20: HomeSend on its own. Each is "not measured yet" until the function answers it.
+    ...(metrics.questionsAsked
+      ? [{ label: "Questions asked per 10 things sent (30 days)", value: `${questionsPerTen(metrics.questionsAsked) ?? 0} (${metrics.questionsAsked.count} questions, ${metrics.questionsAsked.of} sent)`, target: "under 0.5", ok: on.questions }]
+      : []),
+    ...(metrics.answeredByPerson
+      ? [{ label: "Questions a person answered (30 days)", value: `${metrics.answeredByPerson.count} of ${metrics.answeredByPerson.of}`, target: "at least half, or the question is removed", ok: on.answered }]
+      : []),
+    ...(metrics.undoneOrCorrectedWithin7d
+      ? [{ label: "Entries undone or corrected within 7 days (30 days)", value: `${metrics.undoneOrCorrectedWithin7d.count} of ${metrics.undoneOrCorrectedWithin7d.of}`, target: "under 1 in 20", ok: on.corrected }]
+      : []),
   ];
+  const confirmed = metrics.confirmedWithoutTap;
   return (
     <div className="space-y-2 rounded-[var(--wh-radius)] border border-[var(--wh-border)] px-3.5 py-3">
       <div className="flex items-center gap-2">
@@ -430,6 +457,12 @@ function NothingWaitsPanel({ metrics }: { metrics: NothingWaitsMetrics | null })
           </li>
         ))}
       </ul>
+      {confirmed ? (
+        <p className="text-sm">
+          <span className="font-medium">Confirmed without a tap (30 days):</span>{" "}
+          {confirmed.length === 0 ? "none yet" : confirmed.map((row) => `${row.count} ${BASIS_WORDS[row.basis] ?? row.basis.replace(/_/g, " ")}`).join(", ")}
+        </p>
+      ) : null}
       <p className="text-xs text-[var(--wh-foreground-subtle)]">Aggregate only, across every household. Per household figures carry no name.</p>
     </div>
   );

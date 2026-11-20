@@ -117,7 +117,7 @@ export async function applyHomeSendAnswer(
 }
 
 /** The item's Checking questions end ("confirmed" or "please_check"), so HomeTalk and WhatsApp stop asking. */
-async function endChecking(client: SupabaseClient, householdId: string, itemId: string, done: "confirmed" | "please_check"): Promise<void> {
+export async function endChecking(client: SupabaseClient, householdId: string, itemId: string, done: "confirmed" | "please_check"): Promise<void> {
   const { data } = await client.from("home_send_items").select("understanding, updated_at").eq("household_id", householdId).eq("id", itemId).maybeSingle();
   const understanding = (data?.understanding as Record<string, unknown> | null) ?? null;
   const checking = understanding?.checking as Record<string, unknown> | null | undefined;

@@ -92,6 +92,12 @@ export type EndingInput = {
    * `healthFiledFor`, the owner 2026-11-20): filed for them now, as Checking.
    */
   filedFor?: string | null;
+  /**
+   * An Admin set this kind's area (money, or health) to "Wait for review": then
+   * "Add this bill?" is asked. Otherwise it is added at once (2026-11-20).
+   * Absent: not known, so the careful answer, asking, applies.
+   */
+  waitForReview?: boolean;
   /** The match on record has a second candidate (two bills): asked, never applied at once. */
   ambiguous?: boolean;
   /** A document with several records, in a household that records money directly: each added as Checking at once. */
@@ -114,13 +120,15 @@ export type Ending =
   | { action: "note" }
   /** Read once more, another way (the job queue's read-again). */
   | { action: "read_again" }
-  /** Ask the sender once to send it again; set aside if nobody does in 24 hours. */
+  /** Ask the sender once to send it again; only while they are in HomeTalk (2026-11-20 review), set aside if nobody does in 24 hours. */
   | { action: "ask_resend" }
+  /** Set aside as "already on record": the same one again (2026-11-20: no longer asked). */
+  | { action: "already_recorded" }
   /** Recorded now as Checking, as record first would have (a bill sent before 14 Nov that matches nothing). */
   | { action: "record" }
-  /** Ask its one question, with a default; `duplicate`: it looks like something already on record. */
-  | { action: "ask"; duplicate?: true }
-  /** "Add this bill?" (the owner, 2026-11-20: "record"): default Add after 24 h, recorded as Checking with what is known. */
+  /** Added now as Checking with what is known (`add-default.ts`), as "Add this bill?"'s default would have a day later. */
+  | { action: "add" }
+  /** "Add this bill?" (the owner, 2026-11-20: "record"), only under the Admin's "Wait for review": default Add after 24 h. */
   | { action: "ask_add" }
   /** Filed now for the member it names, marked Checking, with no question (an allowed sender's health document, the owner 2026-11-20). */
   | { action: "file_for"; memberId: string }
@@ -145,13 +153,20 @@ const READ_AGAIN: ReadonlySet<HomeSendFailureReason> = new Set(["link_unreachabl
  *   1. Not household information (a pasted page, an ad, a newsletter) that
  *      HomeSend couldn't read or place: set aside now, with that reason.
  *   2. Couldn't be read: read again once, another way; then the sender is
- *      asked once to send it again ("homesend_resend", default: set aside
- *      after 24 hours); with nobody to ask (an email), set aside.
+ *      asked to send it again only if they are in HomeTalk right now
+ *      ("homesend_resend"); otherwise set aside with that reason, in the
+ *      daily summary with Restore.
  *   3. Read, but HomeSend couldn't tell what it is: kept as a household note.
- *   4. Anything else waiting on a person: its one question
- *      ("homesend_waiting"), default after 24 hours. A bill, receipt or
- *      health document is left to part B, which records it as Checking
- *      (decision 2) rather than ever defaulting it into a note.
+ *   4. Anything else waiting: kept as a household note now. A bill, receipt
+ *      or health document is never made a note: it is recorded as Checking
+ *      (decision 2), updated, or set aside as already on record.
+ *
+ * Since 2026-11-20 (the owner: "as autonomous as possible, with minimum inputs
+ * required from the users"; 8 of the 9 questions asked since 14 Nov went
+ * unanswered) the waiting item's question is gone: it did only what its
+ * default did, a day later. What still asks: "send it again?" to a sender in
+ * HomeTalk right now, "Update the existing bill?" for an ambiguous match or a
+ * cancellation, and "Add this bill?" when an Admin chose "Wait for review".
  */
 export function endingFor(item: EndingInput): Ending {
   if (item.status !== "received" && item.status !== "classified" && item.status !== "failed") return { action: "wait" };
@@ -177,26 +192,27 @@ export function endingFor(item: EndingInput): Ending {
       if (item.match === "update" && item.kind === "bill" && item.ambiguous !== true) return { action: "update_now" };
       return { action: "ask_update", cancel: item.match === "cancellation" };
     }
-    // The same one again: the default keeps what is on record and sets this copy aside as "already on record".
-    if (item.match === "duplicate") return item.asked.has("homesend_waiting") ? { action: "wait" } : { action: "ask", duplicate: true };
+    // The same one again: what is on record is kept, and this copy set aside as "already on record" (Restore brings it back).
+    if (item.match === "duplicate") return { action: "already_recorded" };
     // Nothing on record and the household records bills directly: what record first would have done (decision 2).
     if (item.kind === "bill" && item.recordable === true && item.match === null) return { action: "record" };
-    // Nothing on record, but not recorded on its own (money or health set to "Wait for review", a detail
-    // missing, several records): asked "Add this bill?", and added as Checking by default (owner, 2026-11-20).
+    // Nothing on record, but not recorded on its own (a detail missing, several records): added now as
+    // Checking with what is known. Only under the Admin's "Wait for review" is "Add this bill?" asked.
     // An allowed sender's health document naming another member: filed for them, never asked (the owner, 2026-11-20).
     if (item.kind === "health_document" && item.match === null && item.addable === true && item.filedFor) return { action: "file_for", memberId: item.filedFor };
     if (item.match === null && item.addable === true) {
       if (item.asked.has(ADD_SOURCE)) return { action: "wait" };
       // Several records, money recorded directly: each added now, as one would be (the 2026-11-20 review).
-      return item.severalNow === true ? { action: "add_now" } : { action: "ask_add" };
+      if (item.severalNow === true) return { action: "add_now" };
+      // Not under the Admin's "Wait for review": added now as Checking with what is known (2026-11-20, part 3).
+      return item.waitForReview === false ? { action: "add" } : { action: "ask_add" };
     }
     return { action: "wait" };
   }
-  if (item.asked.has("homesend_waiting")) return { action: "wait" };
-  return { action: "ask" };
+  return { action: "note" };
 }
 
-/** Read once more another way; after that (and an hour for it to run), ask the sender once, or set it aside. */
+/** Read once more another way; after that (and an hour for it to run), ask a sender who is in HomeTalk now, or set it aside. */
 function afterReadAgain(item: EndingInput): Ending {
   if (item.retryRequestedAt) return { action: "wait" };
   if (item.retryCount === 0 && item.canReadAgain) return { action: "read_again" };
@@ -212,9 +228,18 @@ function afterReadAgain(item: EndingInput): Ending {
 export const UPDATE_SOURCE = "homesend_update";
 /** The source of "Add this bill?" questions. */
 export const ADD_SOURCE = "homesend_add";
+/** The source of the one question kept about a Checking entry: a money amount read with doubt (2026-11-20). */
+export const AMOUNT_SOURCE = "homesend_amount";
+/**
+ * Sources no longer asked (2026-11-20). Their open rows are withdrawn by the
+ * deadlines step; "homesend_check" is asked again only when an Admin turned on
+ * "Ask me to confirm entries still Checking". ("Send it again?" stays, asked
+ * only of a sender in HomeTalk right now: the review's own rule.)
+ */
+export const RETIRED_SOURCES: readonly string[] = ["homesend_waiting"];
 
 export type HomeSendQuestion = {
-  source: "homesend_check" | "homesend_waiting" | "homesend_resend" | typeof UPDATE_SOURCE | typeof ADD_SOURCE;
+  source: "homesend_check" | "homesend_waiting" | "homesend_resend" | typeof UPDATE_SOURCE | typeof ADD_SOURCE | typeof AMOUNT_SOURCE;
   prompt: NeedsYouPrompt;
   answers: NeedsYouAnswer[];
   defaultAnswer: string;
@@ -245,7 +270,28 @@ export function checkQuestion(input: { kind: string; title: string | null; dueOn
 }
 
 /**
- * A waiting item's one question. The default keeps it as a household note
+ * "Is ₹2,140 right?" — the one question kept by default about a Checking
+ * entry (the owner, 2026-11-20): a bill's or receipt's amount read with doubt
+ * (from a photo or a file, or not found in the words sent). Asked of its
+ * sender only. A blank date is harmless; a wrong amount is not. Right confirms
+ * the entry; the default after 24 hours keeps it Checking, its reminders
+ * saying "check before paying". A wrong amount is corrected by saying it
+ * ("No, it's 2,410"), which fixes the entry in place.
+ */
+export function amountQuestion(input: { kind: string; title: string | null; amount: string | null; dueOn: string | null; today: string }): HomeSendQuestion {
+  return {
+    source: AMOUNT_SOURCE,
+    prompt: { code: "homesend.amount", title: input.amount ? `${input.title ?? ""}${input.title ? " · " : ""}${input.amount}` : input.title, kind: input.kind, field: "amount" },
+    answers: [{ value: "looks_right" }, { value: "keep_checking" }],
+    defaultAnswer: "keep_checking",
+    consequence: consequenceOf(input.kind, input.dueOn, input.today),
+    dueOn: input.dueOn,
+  };
+}
+
+/**
+ * A waiting item's one question (no longer asked since 2026-11-20: open rows
+ * are withdrawn; kept so a row asked earlier still reads). The default keeps it as a household note
  * (findable by asking HomeTalk, restorable) — never an add a person didn't
  * see, since the reading still lacks something; a possible duplicate's
  * default keeps what is already on record.
@@ -303,7 +349,7 @@ export function addQuestion(input: { kind: HomeSendKind | null; title: string | 
   };
 }
 
-/** "Couldn't read what you sent — send it again?" Asked once, of the sender; the default sets it aside. */
+/** "Couldn't read what you sent — send it again?" No longer asked since 2026-11-20; kept so an older row still reads. */
 export function resendQuestion(input: { title: string | null }): HomeSendQuestion {
   return {
     source: "homesend_resend",
@@ -338,7 +384,7 @@ export type HomeSendAnswerEffect =
  * their own removal, the default's is "not sent again".
  */
 export function effectOf(source: string, answer: string, byDefault: boolean): HomeSendAnswerEffect {
-  if (source === "homesend_check") {
+  if (source === "homesend_check" || source === AMOUNT_SOURCE) {
     if (answer === "looks_right") return { effect: "confirm" };
     if (answer === "keep_checking") return { effect: "keep_checking" };
     if (answer === "not_right") return { effect: "undo" };

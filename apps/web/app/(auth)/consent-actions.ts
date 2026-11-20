@@ -158,9 +158,10 @@ export async function saveHomeSendTidyAction(_previous: ActionState, formData: F
 /**
  * The "Nothing waits" switches (2026-11-14): "Remind about entries still
  * Checking" (decision 3) and "Apply a question's default after a day"
- * (decision 4). An Admin's, both on unless turned off.
+ * (decision 4), both on unless turned off; "Ask me to confirm entries still
+ * Checking" (2026-11-20), off unless turned on. An Admin's.
  */
-const nothingWaitsSchema = z.object({ householdId: z.uuid(), which: z.enum(["remind_checking", "apply_defaults"]), on: z.enum(["on", "off"]) });
+const nothingWaitsSchema = z.object({ householdId: z.uuid(), which: z.enum(["remind_checking", "apply_defaults", "ask_checking"]), on: z.enum(["on", "off"]) });
 
 export async function saveNothingWaitsAction(_previous: ActionState, formData: FormData): Promise<ActionState> {
   const parsed = nothingWaitsSchema.safeParse(Object.fromEntries(formData));
