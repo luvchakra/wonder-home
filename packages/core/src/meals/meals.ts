@@ -1,4 +1,5 @@
 import { isoDate, silent, type HomeAssessment } from "../home/assessment";
+import { ingredientNames } from "./shortfall";
 import { dietClash, dishDietOf, isDiet, type Diet, type DietClash } from "./diet";
 
 /**
@@ -83,6 +84,13 @@ export type MealContext = {
   now: Date;
   /** Whether the named cook is around between starting and ready. */
   cookAvailable: boolean;
+  /**
+   * What is on the To Buy list now, by item id and by lower-case name. An
+   * ingredient on it is being bought, whatever its stored status says — the
+   * meal card and the Ingredients sheet read it the same way (owner,
+   * 2026-11-20). Not given: only the stored status counts.
+   */
+  onList?: { ids: ReadonlySet<string>; names: ReadonlySet<string> };
 };
 
 /**
@@ -104,23 +112,28 @@ export function assessMeal(meal: Meal, context: MealContext): HomeAssessment {
     return silent(subjectKey, meal.name, "This meal is settled.");
   }
 
+  const onList = (ingredient: IngredientNeed) =>
+    Boolean(context.onList) &&
+    ((ingredient.consumableId !== null && context.onList!.ids.has(ingredient.consumableId)) ||
+      context.onList!.names.has(ingredient.name.trim().toLocaleLowerCase()));
+  // Only what nobody has, and nobody is buying: an ingredient on the To Buy
+  // list is in hand as far as this meal's risk goes.
   const missing = meal.ingredients.filter(
     (ingredient) =>
       ingredient.essential &&
-      (ingredient.status === "needed" || ingredient.status === "missing"),
+      (ingredient.status === "needed" || ingredient.status === "missing") &&
+      !onList(ingredient),
   );
 
   if (missing.length > 0) {
-    const shopping = missing.every(
-      (ingredient) => ingredient.status === "shopping",
-    );
     return {
       subjectKey,
       title: meal.name,
       status: "blocked",
       riskLevel: "medium",
-      notable: !shopping,
-      reason: `${meal.name} needs ${missing.map((ingredient) => ingredient.name).join(", ")}.`,
+      notable: true,
+      // Not joined with commas: a catalog name carries its own ("Batter, Idli").
+      reason: `${meal.name} needs ${ingredientNames(missing.map((ingredient) => ingredient.name))}${context.onList ? ", not on the To Buy list yet" : ""}.`,
       // The action is shopping or substituting, never "cook anyway".
       action: {
         action: missing.length === 1 ? "substitute" : "shop_for_meal",

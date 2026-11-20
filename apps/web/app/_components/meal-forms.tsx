@@ -1,6 +1,6 @@
 "use client";
 
-import { Lightbulb, Pencil, Plus } from "lucide-react";
+import { Lightbulb, Pencil, Plus, X } from "lucide-react";
 import { SLOT_READY_BY } from "@wonderhome/core/meals/week";
 import { useActionState, useEffect, useState } from "react";
 import { useFormStatus } from "react-dom";
@@ -16,6 +16,7 @@ import type { RecipeForEdit } from "@wonderhome/core/meals/repository";
 
 import type { ActionState } from "../(auth)/actions";
 import { DishIdeas, type DishIdeaLabels } from "./dish-ideas";
+import { PhotoPickField, type PhotoPickLabels } from "./photo-pick-field";
 import { RecipePicker, type RecipePickerLabels } from "./recipe-picker";
 import type { Diet } from "@wonderhome/core/meals/diet";
 import type { PickerDish } from "@wonderhome/core/meals/recipe-picker";
@@ -138,6 +139,14 @@ export type MealFormLabels = {
   editRecipeDescription: string;
   saveRecipe: string;
   removeRecipe: string;
+  /** A recipe's own picture (25-050): optional, on the add and the edit sheet. */
+  recipePicture: PhotoPickLabels & { caption: string };
+  /** The cross on a recipe's card (25-050); `{name}` is the recipe's. */
+  removeRecipeNamed: string;
+  removeRecipeAsk: string;
+  removeRecipeLede: string;
+  removeRecipeYes: string;
+  keepRecipe: string;
 };
 
 /** Fills a label's `{placeholders}`; a value is inserted as it is, never read as a pattern. */
@@ -558,6 +567,7 @@ export function AddRecipeSheet({
   onOpenChange,
   onCreated,
   recipe,
+  pictureUrl = null,
 }: {
   householdId: string;
   labels: MealFormLabels;
@@ -566,6 +576,8 @@ export function AddRecipeSheet({
   onCreated?: (recipe: { id: string; name: string }) => void;
   /** A recipe already kept: the same form, filled in, saving changes to it (25-022). */
   recipe?: RecipeForEdit;
+  /** Its own picture now, as a short-lived URL (25-050). */
+  pictureUrl?: string | null;
 }) {
   const [state, formAction] = useActionState<RecipeActionState, FormData>(recipe ? updateRecipeAction : createRecipeAction, {});
   // A recipe that went through starts the next one on a fresh form (the rows are kept in state), and a caller waiting on it picks it.
@@ -608,6 +620,8 @@ export function AddRecipeSheet({
           autoComplete="off"
           defaultValue={recipe?.name}
         />
+        {/* Optional, never in the way of saving: a photo taken or picked, shrunk in the browser, shown before it is kept (25-050). */}
+        <PhotoPickField name="photo" displayName={recipe?.name ?? ""} currentUrl={pictureUrl} labels={labels.recipePicture} caption={labels.recipePicture.caption} wide />
         <Field
           label={labels.cuisine}
           name="cuisine"
@@ -738,7 +752,7 @@ export function AddRecipeSheet({
 }
 
 /** The pencil on a household recipe's card: its own form, filled in (25-022, rule 12). */
-export function EditRecipeButton({ householdId, labels, recipe }: { householdId: string; labels: MealFormLabels; recipe: RecipeForEdit }) {
+export function EditRecipeButton({ householdId, labels, recipe, pictureUrl = null }: { householdId: string; labels: MealFormLabels; recipe: RecipeForEdit; pictureUrl?: string | null }) {
   const [open, setOpen] = useState(false);
   return (
     <>
@@ -750,7 +764,62 @@ export function EditRecipeButton({ householdId, labels, recipe }: { householdId:
       >
         <Pencil aria-hidden className="size-4" />
       </button>
-      {open ? <AddRecipeSheet householdId={householdId} labels={labels} open={open} onOpenChange={setOpen} recipe={recipe} /> : null}
+      {open ? <AddRecipeSheet householdId={householdId} labels={labels} open={open} onOpenChange={setOpen} recipe={recipe} pictureUrl={pictureUrl} /> : null}
+    </>
+  );
+}
+
+/**
+ * The cross at the bottom left of a household recipe's card (the owner,
+ * 2026-11-20; 25-050). Removing asks once, saying what it affects, then
+ * retires the recipe through the same governed write as the edit sheet's
+ * Remove: it is no longer offered, the week template drops it, and meals
+ * already planned with it stay as they are.
+ */
+export function RemoveRecipeButton({ householdId, labels, recipe }: { householdId: string; labels: MealFormLabels; recipe: { id: string; name: string } }) {
+  const [open, setOpen] = useState(false);
+  const [removing, setRemoving] = useState(false);
+  const [error, setError] = useState<string | undefined>(undefined);
+  return (
+    <>
+      <button
+        type="button"
+        onClick={() => {
+          setError(undefined);
+          setOpen(true);
+        }}
+        aria-label={fill(labels.removeRecipeNamed, { name: recipe.name })}
+        className="grid size-11 shrink-0 place-items-center rounded-full text-[var(--wh-foreground-muted)] hover:bg-[var(--wh-surface-muted)] focus-visible:outline-2 focus-visible:outline-[var(--wh-primary)]"
+      >
+        <X aria-hidden className="size-4" />
+      </button>
+      {open ? (
+        <Sheet open={open} onOpenChange={setOpen} title={fill(labels.removeRecipeAsk, { name: recipe.name })} description={labels.removeRecipeLede}>
+          <div className="space-y-3">
+            {error ? <Alert>{error}</Alert> : null}
+            <div className="flex flex-wrap gap-2">
+              <Button
+                type="button"
+                variant="secondary"
+                className="text-[var(--wh-risk)]"
+                disabled={removing}
+                onClick={async () => {
+                  setRemoving(true);
+                  const result = await retireRecipeAction({ householdId, recipeId: recipe.id });
+                  setRemoving(false);
+                  if (result.error) setError(result.error);
+                  else setOpen(false);
+                }}
+              >
+                <X aria-hidden className="size-4" /> {removing ? labels.removing : labels.removeRecipeYes}
+              </Button>
+              <Button type="button" variant="quiet" disabled={removing} onClick={() => setOpen(false)}>
+                {labels.keepRecipe}
+              </Button>
+            </div>
+          </div>
+        </Sheet>
+      ) : null}
     </>
   );
 }

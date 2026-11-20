@@ -10,6 +10,17 @@ export const recipesHi: AreaCatalog<typeof recipesEn> = {
   "recipes.editDescription": "यह आपका तरीका है: नाम, सामग्री, बनाने के चरण या आँकड़े बदलें।",
   "recipes.saveChanges": "बदलाव सहेजें",
   "recipes.remove": "आपकी रेसिपी से हटाएँ",
+  "recipes.picture.caption": "तस्वीर (ज़रूरी नहीं)",
+  "recipes.picture.add": "तस्वीर जोड़ें",
+  "recipes.picture.change": "तस्वीर बदलें",
+  "recipes.picture.remove": "तस्वीर हटाएँ",
+  "recipes.picture.undo": "तस्वीर रहने दें",
+  "recipes.picture.tooLarge": "यह तस्वीर बहुत बड़ी है। कृपया 5 MB से छोटी तस्वीर लें।",
+  "recipes.removeNamed": "{name} हटाएँ",
+  "recipes.removeAsk": "{name} हटाएँ?",
+  "recipes.removeLede": "खाना प्लान करते समय यह नहीं दिखेगी, और हफ़्ते का टेम्पलेट इसे इस्तेमाल करना बंद कर देगा। जो खाने पहले से इसके साथ प्लान हैं, वे जैसे हैं वैसे ही रहेंगे।",
+  "recipes.removeYes": "हटाएँ",
+  "recipes.keep": "रहने दें",
   "recipes.fromCatalog": "WonderHome के सुझावों से",
 
   // The catalog

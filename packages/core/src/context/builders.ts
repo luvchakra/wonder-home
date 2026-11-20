@@ -1,4 +1,5 @@
 import { assessConsumable, type Consumable } from "../commerce/consumables";
+import { ingredientNames } from "../meals/shortfall";
 import type { Order } from "../commerce/orders";
 import type { CalendarSource, HolidayRecord } from "../calendar/projection";
 import type { FamilyEvent } from "../family/schedule";
@@ -596,7 +597,7 @@ export function buildContextItems(records: ContextRecords, options: BuildOptions
         domain: "meals",
         entityType: "meal",
         entityId: meal.id,
-        summary: `${capitalize(meal.slot)} on ${meal.onDate} is ${meal.name}, ready by ${timeOf(meal.readyBy)}, cooked by ${name(meal.cookMemberId) ?? "nobody yet"}; status ${words(meal.status)}${missing.length > 0 ? `; missing ${missing.join(", ")}` : ""}.`,
+        summary: `${capitalize(meal.slot)} on ${meal.onDate} is ${meal.name}, ready by ${timeOf(meal.readyBy)}, cooked by ${name(meal.cookMemberId) ?? "nobody yet"}; status ${words(meal.status)}${missing.length > 0 ? `; missing ${ingredientNames(missing)}` : ""}.`,
         need: "what is planned for meals",
         privacyClass: "general",
         subjectMemberIds: [meal.cookMemberId],

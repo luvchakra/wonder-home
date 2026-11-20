@@ -1,4 +1,4 @@
-import { Fragment } from "react";
+import { Fragment, type ReactNode } from "react";
 import {
   ChefHat,
   ChevronLeft,
@@ -14,6 +14,7 @@ import { may } from "@wonderhome/core/billing/repository";
 import {
   isHouseholdAdmin,
   listMembers,
+  signAvatarPaths,
 } from "@wonderhome/core/identity/households";
 import { startBy, type Meal } from "@wonderhome/core/meals/meals";
 import type { Translate } from "@wonderhome/core/i18n/translate";
@@ -26,7 +27,7 @@ import { nextOption, weekdayOf, type TemplateOption } from "@wonderhome/core/mea
 import { listTemplateOptions, planWeekFromTemplate, weekPlanned } from "@wonderhome/core/meals/week-template-repository";
 import { listCatalogRecipes, RECIPE_COURSES, type RecipeCourse } from "@wonderhome/core/meals/recipe-catalog";
 import { publicEnv } from "@wonderhome/core/config/env";
-import { itemFor } from "@wonderhome/core/meals/shortfall";
+import { ingredientNames, itemFor, mealIngredientState, servingScale } from "@wonderhome/core/meals/shortfall";
 import type { TranslationKey } from "@wonderhome/core/i18n/translate";
 import { AppShell } from "@wonderhome/core/shell/app-shell";
 import Link from "next/link";
@@ -47,6 +48,7 @@ import {
   AddRecipeButton,
   ChangeMealButton,
   EditRecipeButton,
+  RemoveRecipeButton,
   type MealFormLabels,
   PlanMealButton,
   SuggestMealButton,
@@ -156,6 +158,10 @@ export default async function MealsPage({
     // The week template (the owner, 2026-10-20): its options, and whether WonderHome has planned this week from it.
     active === "plan" || active === "template" ? listTemplateOptions(supabase, householdId).catch(() => [] as TemplateOption[]) : Promise.resolve([] as TemplateOption[]),
     active === "plan" ? weekPlanned(supabase, householdId, weekStart) : Promise.resolve(null),
+    // The household's own recipe pictures (25-050), signed in one call as soon as the recipe rows are in.
+    recipeReads.forEdit
+      .then((rows) => signAvatarPaths(supabase, rows.flatMap((row) => (row.imagePath ? [row.imagePath] : []))))
+      .catch(() => new Map<string, string>()),
   ]);
   // Marks a refusal handled when the page returns early; `await reads` below still throws.
   reads.catch(() => undefined);
@@ -173,7 +179,7 @@ export default async function MealsPage({
     );
   }
 
-  const [agenda, members, recipes, preferenceRows, recipeChoices, groceries, catalog, firstWeekMeals, templateOptions, weekRecord] = await reads;
+  const [agenda, members, recipes, preferenceRows, recipeChoices, groceries, catalog, firstWeekMeals, templateOptions, weekRecord, ownPictures] = await reads;
   const adult = membership.memberType === "adult";
   // Each week WonderHome picks from the template and plans it, accepted by
   // default: the first time an adult opens a week not yet past that it has
@@ -248,9 +254,12 @@ export default async function MealsPage({
   // came from, else the catalog dish of the same name; the tile only when
   // neither has one (the owner, 2026-10-21).
   const catalogPictureByName = new Map(catalog.filter((dish) => dish.imageUrl).map((dish) => [dish.name.trim().toLowerCase(), dish.imageUrl]));
+  // A recipe's own picture comes first (25-050), else its catalog dish's.
+  const recipePicture = (recipe: { imagePath: string | null; catalogRecipeId: string | null }): string | null =>
+    (recipe.imagePath ? (ownPictures.get(recipe.imagePath) ?? null) : null) ?? (recipe.catalogRecipeId ? (pictureOf.get(recipe.catalogRecipeId) ?? null) : null);
   const mealPicture = (meal: Meal): string | null => {
     const own = meal.recipe ? recipes.find((recipe) => recipe.id === meal.recipe!.id) : undefined;
-    const fromRecipe = own?.catalogRecipeId ? (pictureOf.get(own.catalogRecipeId) ?? null) : null;
+    const fromRecipe = own ? recipePicture(own) : null;
     return fromRecipe ?? catalogPictureByName.get(meal.name.trim().toLowerCase()) ?? catalogPictureByName.get((meal.recipe?.name ?? "").trim().toLowerCase()) ?? null;
   };
   const allPreferences = (preferenceRows.data as PreferenceRow[] | null) ?? [];
@@ -579,11 +588,11 @@ export default async function MealsPage({
               ) : (
                 <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4">
                   {recipes.map((recipe) => {
-                    const picture = recipe.catalogRecipeId ? (pictureOf.get(recipe.catalogRecipeId) ?? null) : null;
+                    const picture = recipePicture(recipe);
                     return (
                       <Card key={recipe.id} className="wh-lift relative flex flex-col p-3 focus-within:ring-2 focus-within:ring-[var(--wh-primary)]">
                         {picture ? (
-                          // eslint-disable-next-line @next/next/no-img-element -- a catalog picture from public storage, already sized
+                          // eslint-disable-next-line @next/next/no-img-element -- the household's own picture (signed) or a catalog one, already sized
                           <img src={picture} alt="" loading="lazy" className="h-24 w-full rounded-[var(--wh-radius-sm)] object-cover" />
                         ) : (
                           <div aria-hidden className="grid h-24 place-items-center rounded-[var(--wh-radius-sm)] bg-[var(--wh-tone-meals-soft)]">
@@ -610,7 +619,7 @@ export default async function MealsPage({
                             ) : null}
                           </div>
                           <div className="relative z-10 flex shrink-0 flex-col items-center">
-                            <EditRecipeButton householdId={householdId} labels={formLabels} recipe={recipe} />
+                            <EditRecipeButton householdId={householdId} labels={formLabels} recipe={recipe} pictureUrl={recipe.imagePath ? (ownPictures.get(recipe.imagePath) ?? null) : null} />
                             <RecipeShareButton
                               name={recipe.name}
                               message={recipeShareText(recipe, shareWords)}
@@ -620,7 +629,14 @@ export default async function MealsPage({
                           </div>
                         </div>
                         <div className="relative z-10">
-                          <TasteLine dish={recipe.name} householdId={householdId} taste={taste(recipe.name)} labels={tasteLabels} t={t} />
+                          <TasteLine
+                            dish={recipe.name}
+                            householdId={householdId}
+                            taste={taste(recipe.name)}
+                            labels={tasteLabels}
+                            t={t}
+                            leading={<RemoveRecipeButton householdId={householdId} labels={formLabels} recipe={{ id: recipe.id, name: recipe.name }} />}
+                          />
                         </div>
                       </Card>
                     );
@@ -858,13 +874,20 @@ function nutrientLine(
 }
 
 /** A recipe card's foot: who in the family likes it, and the viewer's own like and dislike. */
-function TasteLine({ dish, householdId, taste, labels, t }: { dish: string; householdId: string; taste: { taste: "like" | "dislike" | null; likedBy: string[] }; labels: DishTasteLabels; t: Translate }) {
+/**
+ * A card's bottom row: an optional control at the left (the recipe card's
+ * cross, 25-050), the thumbs at the right, and "Liked by …" on its own line
+ * above them when someone liked it, so no name is squeezed beside them (rule 11).
+ */
+function TasteLine({ dish, householdId, taste, labels, t, leading }: { dish: string; householdId: string; taste: { taste: "like" | "dislike" | null; likedBy: string[] }; labels: DishTasteLabels; t: Translate; leading?: ReactNode }) {
+  const liked = taste.likedBy.length > 0 ? t("meals.taste.likedBy", { names: taste.likedBy.join(", ") }) : null;
   return (
-    <div className="mt-2 flex items-center justify-between gap-1 border-t border-[var(--wh-border)] pt-1">
-      <span className="min-w-0 text-[0.6875rem] break-words text-[var(--wh-handled)]">
-        {taste.likedBy.length > 0 ? t("meals.taste.likedBy", { names: taste.likedBy.join(", ") }) : null}
-      </span>
-      <DishTaste householdId={householdId} dish={dish} taste={taste.taste} labels={labels} />
+    <div className="mt-2 border-t border-[var(--wh-border)] pt-1">
+      {liked ? <p className="pt-1 text-[0.6875rem] break-words text-[var(--wh-handled)]">{liked}</p> : null}
+      <div className="flex items-center justify-between gap-1">
+        {leading ?? <span aria-hidden />}
+        <DishTaste householdId={householdId} dish={dish} taste={taste.taste} labels={labels} />
+      </div>
     </div>
   );
 }
@@ -903,10 +926,16 @@ function MealCard({
   groceries: GroceryItem[];
   words: GroceryWords;
 }) {
-  const missing = meal.ingredients.filter(
-    (need) =>
-      need.essential && need.status !== "have" && need.status !== "substituted",
-  );
+  // One reading of the ingredients, the same the Ingredients sheet shows: In
+  // Kitchen, already on To Buy, or still to add (owner, 2026-11-20).
+  const stock = mealIngredientState({
+    ingredients: meal.ingredients,
+    scale: servingScale(meal.servings, meal.recipe?.serves),
+    groceries: meal.ingredients.flatMap((need) => {
+      const item = itemFor(need, groceries);
+      return item ? [item] : [];
+    }),
+  });
   const begin = startBy(meal);
   const tone =
     meal.status === "at_risk"
@@ -926,7 +955,7 @@ function MealCard({
         })
       : null;
 
-  const toGet = missing.length;
+  const toBuy = stock.toBuy.length;
   // Folded by default (the owner, 2026-10-21: "keep all the entries folded,
   // minimise the height of each card so maximum entries are visible"): one
   // short row — picture, meal, dish, when, status — and the chevron opens
@@ -954,7 +983,7 @@ function MealCard({
                   <span className="min-w-0 break-words">{meal.name}</span>
                 </span>
                 <span className="block text-xs leading-relaxed text-[var(--wh-foreground-muted)]">
-                  {[labels.slots[meal.slot], formatTime(timezone, meal.readyBy), toGet > 0 ? t("meals.card.toGet", { count: toGet }) : null]
+                  {[labels.slots[meal.slot], formatTime(timezone, meal.readyBy), toBuy > 0 ? t("meals.card.toBuy", { count: toBuy }) : null]
                     .filter((piece): piece is string => Boolean(piece))
                     .map((piece, index, pieces) => (
                       <Fragment key={piece}>
@@ -990,21 +1019,25 @@ function MealCard({
                 </Fragment>
               ))}
           </p>
-      {missing.length > 0 ? (
-        // What is on the list is said to be; what is not is "still to get" —
-        // never "on the shopping list" for something nobody added.
+      {toBuy > 0 ? (
+        // The strip names exactly what the line counts. Whether the To Buy
+        // list already has them is said in words under it, never implied.
         <div className="mt-2 space-y-1">
-          {missing.some((need) => need.status !== "shopping") ? (
-            <p className="flex items-center gap-1.5 rounded-[var(--wh-radius-sm)] bg-[var(--wh-attention-soft)] px-2.5 py-1.5 text-xs text-[var(--wh-attention)]">
-              <ShoppingBasket aria-hidden className="size-3.5" />{" "}
-              {t("meals.card.stillNeeded", { items: missing.filter((need) => need.status !== "shopping").map((need) => need.name).join(", ") })}
-            </p>
-          ) : null}
-          {missing.some((need) => need.status === "shopping") ? (
-            <p className="text-xs text-[var(--wh-foreground-muted)]">
-              {t("meals.card.missing", { items: missing.filter((need) => need.status === "shopping").map((need) => need.name).join(", ") })}
-            </p>
-          ) : null}
+          <p
+            className={
+              stock.toAdd.length > 0
+                ? "flex items-center gap-1.5 rounded-[var(--wh-radius-sm)] bg-[var(--wh-attention-soft)] px-2.5 py-1.5 text-xs text-[var(--wh-attention)]"
+                : "flex items-center gap-1.5 rounded-[var(--wh-radius-sm)] bg-[var(--wh-surface-muted)] px-2.5 py-1.5 text-xs text-[var(--wh-foreground-muted)]"
+            }
+          >
+            <ShoppingBasket aria-hidden className="size-3.5 shrink-0" />{" "}
+            <span>{t("meals.card.toBuyList", { items: ingredientNames(stock.toBuy) })}</span>
+          </p>
+          <p className="text-xs text-[var(--wh-foreground-muted)]">
+            {stock.toAdd.length === 0
+              ? t("meals.card.allOnList")
+              : t("meals.card.notOnList", { items: ingredientNames(stock.toAdd) })}
+          </p>
         </div>
       ) : meal.ingredients.length > 0 ? (
         <p className="mt-2 text-xs text-[var(--wh-handled)]">
@@ -1050,8 +1083,10 @@ function MealCard({
             add: t("grocery.meal.add", { amount: "{amount}" }),
             estimate: t("grocery.meal.estimate"),
             unmeasured: t("grocery.meal.unmeasured"),
-            covered: t("grocery.meal.covered", { names: "{names}" }),
-            none: t("grocery.meal.none"),
+            onListNames: t("grocery.meal.onListNames", { names: "{names}" }),
+            inKitchenNames: t("grocery.meal.inKitchenNames", { names: "{names}" }),
+            noneOnList: t("grocery.meal.noneOnList"),
+            noneInKitchen: t("grocery.meal.noneInKitchen"),
             noIngredients: t("grocery.meal.noIngredients"),
             open: t("grocery.meal.open"),
             failed: t("grocery.meal.failed"),

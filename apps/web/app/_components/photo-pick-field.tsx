@@ -10,6 +10,16 @@ import { shrinkPhoto } from "../_lib/shrink-photo";
 
 export type PhotoPickLabels = { add: string; change: string; remove: string; undo: string; tooLarge: string };
 
+/**
+ * Only a local preview (`blob:`, made here from the chosen file) or a signed
+ * storage address (`https:`) is ever put in an image's src; anything else
+ * shows no picture. A chosen file is untrusted and is only ever an image.
+ */
+function imageSource(url: string | null): string | null {
+  if (!url) return null;
+  return url.startsWith("blob:") || url.startsWith("https://") ? url : null;
+}
+
 /** What a photo may still weigh after shrinking (the server refuses more). */
 const MAX_BYTES = 5 * 1024 * 1024;
 
@@ -27,6 +37,7 @@ export function PhotoPickField({
   currentUrl,
   labels,
   caption,
+  wide = false,
 }: {
   name: string;
   displayName: string;
@@ -34,6 +45,8 @@ export function PhotoPickField({
   labels: PhotoPickLabels;
   /** Beside the photo: whose card this is ("You", "Child 2"). */
   caption: string;
+  /** A dish's picture (a recipe, 25-050): a wide preview and a larger photo, not a round avatar. */
+  wide?: boolean;
 }) {
   const inputRef = useRef<HTMLInputElement>(null);
   const [preview, setPreview] = useState<string | null>(null);
@@ -45,7 +58,7 @@ export function PhotoPickField({
   async function picked(input: HTMLInputElement) {
     const file = input.files?.[0];
     if (!file) return;
-    const small = await shrinkPhoto(file);
+    const small = await shrinkPhoto(file, wide ? 1280 : undefined);
     if (small.size > MAX_BYTES) {
       setProblem(labels.tooLarge);
       input.value = "";
@@ -67,12 +80,19 @@ export function PhotoPickField({
     setRemoved(Boolean(currentUrl));
   }
 
-  const shown = preview ?? (removed ? null : currentUrl);
+  const shown = imageSource(preview ?? (removed ? null : currentUrl));
 
   return (
     <div className="space-y-1">
       <div className="flex flex-wrap items-center gap-3">
-        <Avatar name={displayName || "?"} size="lg" imageUrl={shown} />
+        {wide ? (
+          shown ? (
+            // eslint-disable-next-line @next/next/no-img-element -- a local preview or a short-lived signed URL; only ever shown as an image
+            <img src={shown} alt="" className="h-24 w-full rounded-[var(--wh-radius-sm)] object-cover" />
+          ) : null
+        ) : (
+          <Avatar name={displayName || "?"} size="lg" imageUrl={shown} />
+        )}
         <div className="min-w-0 flex-1 space-y-1.5">
           <p className="text-sm font-semibold break-words text-[var(--wh-foreground-muted)]">{caption}</p>
           <div className="flex flex-wrap gap-2">

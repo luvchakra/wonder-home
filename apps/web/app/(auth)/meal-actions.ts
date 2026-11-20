@@ -46,6 +46,7 @@ import { atLocal } from "@wonderhome/core/notifications/timing";
 import { copyLastWeek, shiftDay, weekDays, weekStartOf } from "@wonderhome/core/meals/week";
 
 import type { ActionState } from "./actions";
+import { deletePhoto, postedPhoto, storePhoto, wantsPhotoRemoved } from "../_lib/photos";
 
 /**
  * Planning a meal by hand — the manual half of "Plan with AI", which had no
@@ -379,6 +380,38 @@ const recipeSchema = z.object({
 /** A recipe's add form also learns the new recipe, so a meal's sheet can pick it straight away. */
 export type RecipeActionState = ActionState & { recipeId?: string; recipeName?: string };
 
+type PostedPhoto = Awaited<ReturnType<typeof postedPhoto>>;
+
+/**
+ * A recipe's own picture (25-050), after the recipe itself is saved: stored
+ * in the private avatars bucket under the household's recipes folder, the
+ * same path grocery and member photos use. A picture never blocks the
+ * recipe: when it can't be kept (the migration not applied yet, or the
+ * bucket refuses), the upload is removed and the notice says so.
+ */
+async function keepRecipePicture(
+  supabase: Awaited<ReturnType<typeof createClient>>,
+  input: { householdId: string; recipeId: string; photo: PostedPhoto; remove: boolean },
+): Promise<"kept" | "removed" | "skipped" | null> {
+  const { recipePhotoPath, setRecipeImage } = await import("@wonderhome/core/meals/repository");
+  const path = recipePhotoPath(input.householdId, input.recipeId);
+  if (!input.photo) {
+    if (!input.remove) return null;
+    await deletePhoto(supabase, path);
+    return (await setRecipeImage(supabase, { householdId: input.householdId, recipeId: input.recipeId, imagePath: null })) ? "removed" : null;
+  }
+  try {
+    await storePhoto(supabase, path, input.photo);
+  } catch {
+    return "skipped";
+  }
+  if (await setRecipeImage(supabase, { householdId: input.householdId, recipeId: input.recipeId, imagePath: path })) return "kept";
+  await deletePhoto(supabase, path);
+  return "skipped";
+}
+
+const PICTURE_SKIPPED = " The picture couldn't be kept just now, so the recipe is saved without it. Try adding it again from the pencil.";
+
 export async function createRecipeAction(
   _previous: RecipeActionState,
   formData: FormData,
@@ -408,6 +441,8 @@ export async function createRecipeAction(
   }
 
   try {
+    // A picture that is not one is refused before anything is saved, in a plain sentence.
+    const photo = await postedPhoto(formData, "photo");
     const supabase = await createClient();
     await requireMembership(supabase, parsed.data.householdId);
 
@@ -445,11 +480,13 @@ export async function createRecipeAction(
       optionalIngredients: optional.map((line) => ({ name: line.name, consumableId: line.consumableId ?? null })),
     });
 
+    const picture = await keepRecipePicture(supabase, { householdId: parsed.data.householdId, recipeId: created.id, photo, remove: false });
     revalidatePath("/meals");
     return {
-      notice: worked
-        ? `Added, with nutrients worked out from ${worked.counted} of ${worked.total} ingredients. It'll be there to pick next time you plan a meal.`
-        : "Added. It'll be there to pick next time you plan a meal.",
+      notice:
+        (worked
+          ? `Added, with nutrients worked out from ${worked.counted} of ${worked.total} ingredients. It'll be there to pick next time you plan a meal.`
+          : "Added. It'll be there to pick next time you plan a meal.") + (picture === "skipped" ? PICTURE_SKIPPED : ""),
       recipeId: created.id,
       recipeName: parsed.data.name,
     };
@@ -760,6 +797,7 @@ export async function updateRecipeAction(_previous: RecipeActionState, formData:
   if (!recipeId.success || !parsed.success) return { error: parsed.success ? "Please try again." : (parsed.error.issues[0]?.message ?? "Please check the details above.") };
   if (parsed.data.totalMinutes < parsed.data.activeMinutes) return { error: "Total time can't be less than active cooking time." };
   try {
+    const photo = await postedPhoto(formData, "photo");
     const supabase = await createClient();
     await requireMembership(supabase, parsed.data.householdId);
     const { lines: essentials, entries } = await linkIngredients(supabase, {
@@ -791,8 +829,10 @@ export async function updateRecipeAction(_previous: RecipeActionState, formData:
       essentialIngredients: essentials,
       optionalIngredients: optional.map((line) => ({ name: line.name, consumableId: line.consumableId ?? null })),
     });
+    const picture = await keepRecipePicture(supabase, { householdId: parsed.data.householdId, recipeId: recipeId.data, photo, remove: wantsPhotoRemoved(formData, "photo") });
     revalidatePath("/meals");
-    return { notice: "Saved.", recipeId: recipeId.data, recipeName: parsed.data.name };
+    revalidatePath(`/meals/recipes/mine/${recipeId.data}`);
+    return { notice: `Saved.${picture === "skipped" ? PICTURE_SKIPPED : ""}`, recipeId: recipeId.data, recipeName: parsed.data.name };
   } catch (thrown) {
     return { error: toErrorBody(thrown, "meals").body.error.message };
   }
@@ -806,7 +846,9 @@ export async function retireRecipeAction(input: { householdId: string; recipeId:
     const supabase = await createClient();
     await requireMembership(supabase, parsed.data.householdId);
     const { retireRecipe } = await import("@wonderhome/core/meals/repository");
-    await retireRecipe(supabase, parsed.data);
+    const { imagePath } = await retireRecipe(supabase, parsed.data);
+    // Its own picture goes with it (25-050); meals already planned keep their name.
+    if (imagePath) await deletePhoto(supabase, imagePath);
     revalidatePath("/meals");
     return { notice: "Removed from your recipes." };
   } catch (thrown) {

@@ -10,6 +10,17 @@ export const recipesZh: AreaCatalog<typeof recipesEn> = {
   "recipes.editDescription": "这是你的版本：可以修改名称、所需食材、步骤或数值。",
   "recipes.saveChanges": "保存修改",
   "recipes.remove": "从你的菜谱中移除",
+  "recipes.picture.caption": "图片（可选）",
+  "recipes.picture.add": "添加图片",
+  "recipes.picture.change": "更换图片",
+  "recipes.picture.remove": "移除图片",
+  "recipes.picture.undo": "保留图片",
+  "recipes.picture.tooLarge": "这张图片太大了，请使用 5 MB 以内的图片。",
+  "recipes.removeNamed": "移除{name}",
+  "recipes.removeAsk": "移除{name}？",
+  "recipes.removeLede": "计划饭菜时不会再推荐它，每周模板也不再使用它。已经用它计划好的饭菜保持不变。",
+  "recipes.removeYes": "移除",
+  "recipes.keep": "保留",
   "recipes.fromCatalog": "来自 WonderHome 的想法",
 
   // The catalog

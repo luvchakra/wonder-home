@@ -604,6 +604,8 @@ export type RecipeWithIngredients = {
   recipe: Recipe;
   /** The WonderHome catalog dish it was saved from, if any. */
   catalogRecipeId: string | null;
+  /** The household's own picture of it, in the private avatars bucket; null when none. */
+  imagePath: string | null;
   ingredients: {
     name: string;
     consumableId: string | null;
@@ -620,18 +622,18 @@ export type RecipeWithIngredients = {
  */
 const RECIPE_SET_LIMIT = 200;
 
+const RECIPE_COLUMNS =
+  "id, name, cuisine, active_minutes, total_minutes, serves, method, calories_per_serving, protein_grams, carbs_grams, fat_grams, catalog_recipe_id, recipe_ingredients(name, consumable_id, essential, quantity, unit)";
+
 async function readRecipeRows(supabase: SupabaseClient, householdId: string): Promise<Row[]> {
-  const { data, error } = await supabase
-    .from("recipes")
-    .select(
-      "id, name, cuisine, active_minutes, total_minutes, serves, method, calories_per_serving, protein_grams, carbs_grams, fat_grams, catalog_recipe_id, recipe_ingredients(name, consumable_id, essential, quantity, unit)",
-    )
-    .eq("household_id", householdId)
-    .eq("active", true)
-    .order("name")
-    .limit(RECIPE_SET_LIMIT);
+  const read = (columns: string) =>
+    supabase.from("recipes").select(columns).eq("household_id", householdId).eq("active", true).order("name").limit(RECIPE_SET_LIMIT);
+  // `image_path` (the household's own picture, 25-050) arrives with its
+  // migration; until it is applied the recipes read as before, without one.
+  let { data, error } = await read(`${RECIPE_COLUMNS}, image_path`);
+  if (error && MISSING_COLUMN.has(error.code ?? "")) ({ data, error } = await read(RECIPE_COLUMNS));
   if (error) throw new Error(`recipes failed: ${error.code ?? "unknown"}`);
-  return (data ?? []) as Row[];
+  return (data ?? []) as unknown as Row[];
 }
 
 function withIngredients(data: Row[]): RecipeWithIngredients[] {
@@ -646,6 +648,7 @@ function withIngredients(data: Row[]): RecipeWithIngredients[] {
       proteinGrams: row.protein_grams === null || row.protein_grams === undefined ? null : Number(row.protein_grams),
     },
     catalogRecipeId: (row.catalog_recipe_id as string | null) ?? null,
+    imagePath: (row.image_path as string | null | undefined) ?? null,
     ingredients: ((row.recipe_ingredients as Row[] | null) ?? []).map(
       (ingredient) => ({
         name: ingredient.name as string,
@@ -919,6 +922,25 @@ export type MealAgenda = {
   rows: Meal[];
 };
 
+/** What is on the To Buy list now, by item id and lower-case name. Bounded; unreadable reads as empty (the stored status still counts). */
+async function toBuyNow(supabase: SupabaseClient, householdId: string): Promise<{ ids: Set<string>; names: Set<string> }> {
+  const { data, error } = await supabase
+    .from("shopping_list_entries")
+    .select("consumable_id, consumables(name)")
+    .eq("household_id", householdId)
+    .eq("state", "to_buy")
+    .limit(500);
+  const ids = new Set<string>();
+  const names = new Set<string>();
+  if (error) return { ids, names };
+  for (const row of (data ?? []) as { consumable_id: string; consumables: { name: string } | { name: string }[] | null }[]) {
+    ids.add(row.consumable_id);
+    const item = Array.isArray(row.consumables) ? row.consumables[0] : row.consumables;
+    if (item?.name) names.add(item.name.trim().toLocaleLowerCase());
+  }
+  return { ids, names };
+}
+
 export async function mealAgenda(
   supabase: SupabaseClient,
   householdId: string,
@@ -932,14 +954,19 @@ export async function mealAgenda(
   const now = options.now ?? new Date();
   const today = now.toISOString().slice(0, 10);
 
-  const meals = options.meals ? options.meals.filter((meal) => meal.onDate >= today) : await listMeals(supabase, householdId, { from: today });
+  // One wave: the meals and what is on the To Buy list, so an ingredient on
+  // the list is never called missing (owner, 2026-11-20).
+  const [meals, onList] = await Promise.all([
+    options.meals ? Promise.resolve(options.meals.filter((meal) => meal.onDate >= today)) : listMeals(supabase, householdId, { from: today }),
+    toBuyNow(supabase, householdId),
+  ]);
 
   return {
     meals: meals
       // Availability comes from module 12's calendar once it exists. Until then
       // the cook is assumed available, which overstates rather than understates
       // — nothing is called at risk purely because WonderHome cannot see a diary.
-      .map((meal) => assessMeal(meal, { now, cookAvailable: true }))
+      .map((meal) => assessMeal(meal, { now, cookAvailable: true, onList }))
       .filter((assessment) => assessment.notable),
     checked: meals.length,
     rows: meals,
@@ -990,6 +1017,8 @@ export type RecipeForEdit = {
   carbsGrams: number | null;
   fatGrams: number | null;
   catalogRecipeId: string | null;
+  /** The household's own picture of it (private avatars bucket); null when none. */
+  imagePath: string | null;
   essentials: { name: string; quantity: number; unit: string }[];
   optional: string[];
 };
@@ -1027,6 +1056,7 @@ function toRecipesForEdit(data: Row[]): RecipeForEdit[] {
       carbsGrams: number(row.carbs_grams),
       fatGrams: number(row.fat_grams),
       catalogRecipeId: (row.catalog_recipe_id as string | null) ?? null,
+      imagePath: (row.image_path as string | null | undefined) ?? null,
       essentials: ingredients.filter((line) => line.essential === true).map((line) => ({ name: line.name as string, quantity: Number(line.quantity ?? 1), unit: (line.unit as string | null) ?? "unit" })),
       optional: ingredients.filter((line) => line.essential !== true).map((line) => line.name as string),
     };
@@ -1077,12 +1107,46 @@ async function updateRecipeImpl(supabase: SupabaseClient, input: UpdateRecipeInp
   }
 }
 
-/** A recipe the household no longer wants offered: retired, never deleted, so meals that used it keep it (rule 12). */
-async function retireRecipeImpl(supabase: SupabaseClient, input: { householdId: string; recipeId: string }): Promise<void> {
-  const { data, error } = await supabase.from("recipes").update({ active: false }).eq("id", input.recipeId).eq("household_id", input.householdId).select("id");
+/**
+ * A recipe the household no longer wants offered: retired, never deleted, so
+ * meals that used it keep it (rule 12). Its own picture goes with it (25-050):
+ * the path is cleared here and the caller removes the file.
+ * Who may: whoever may change it — any member, by the recipes policy; a
+ * refusal or a recipe of another household changes nothing and says so.
+ */
+async function retireRecipeImpl(supabase: SupabaseClient, input: { householdId: string; recipeId: string }): Promise<{ imagePath: string | null }> {
+  const { data: before } = await supabase.from("recipes").select("image_path").eq("id", input.recipeId).eq("household_id", input.householdId).maybeSingle();
+  const imagePath = ((before as Row | null)?.image_path as string | null | undefined) ?? null;
+  const { data, error } = await supabase
+    .from("recipes")
+    .update(imagePath ? { active: false, image_path: null } : { active: false })
+    .eq("id", input.recipeId)
+    .eq("household_id", input.householdId)
+    .select("id");
+  if (error?.code === "42501") throw ApiError.forbidden("You can't remove recipes in this household.");
   if (error) throw new Error(`retireRecipe failed: ${error.code ?? "unknown"}`);
   if (!data || data.length === 0) throw ApiError.notFound("That recipe is no longer here.");
+  return { imagePath };
+}
+
+/** Where a household recipe's own picture lives in the private avatars bucket. */
+export function recipePhotoPath(householdId: string, recipeId: string): string {
+  return `${householdId}/recipes/${recipeId}`;
+}
+
+/**
+ * Records (or clears) a recipe's own picture once the upload is done. False
+ * when the column is not there yet (its migration not applied): the caller
+ * then removes the upload and the recipe saves without a picture.
+ */
+async function setRecipeImageImpl(supabase: SupabaseClient, input: { householdId: string; recipeId: string; imagePath: string | null }): Promise<boolean> {
+  const { error } = await supabase.from("recipes").update({ image_path: input.imagePath }).eq("household_id", input.householdId).eq("id", input.recipeId);
+  if (error && MISSING_COLUMN.has(error.code ?? "")) return false;
+  if (error?.code === "42501") throw ApiError.forbidden("You can't change recipes in this household.");
+  if (error) throw new Error(`setRecipeImage failed: ${error.code ?? "unknown"}`);
+  return true;
 }
 
 export const updateRecipe = invalidatesContext(updateRecipeImpl, (_supabase, input) => input.householdId);
 export const retireRecipe = invalidatesContext(retireRecipeImpl, (_supabase, input) => input.householdId);
+export const setRecipeImage = invalidatesContext(setRecipeImageImpl, (_supabase, input) => input.householdId);

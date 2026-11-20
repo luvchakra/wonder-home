@@ -148,6 +148,19 @@ export function mealFormLabels(t: Translate, unitNames: Record<string, string>):
     editRecipeDescription: t("recipes.editDescription"),
     saveRecipe: t("recipes.saveChanges"),
     removeRecipe: t("recipes.remove"),
+    recipePicture: {
+      caption: t("recipes.picture.caption"),
+      add: t("recipes.picture.add"),
+      change: t("recipes.picture.change"),
+      remove: t("recipes.picture.remove"),
+      undo: t("recipes.picture.undo"),
+      tooLarge: t("recipes.picture.tooLarge"),
+    },
+    removeRecipeNamed: t("recipes.removeNamed", KEEP),
+    removeRecipeAsk: t("recipes.removeAsk", KEEP),
+    removeRecipeLede: t("recipes.removeLede"),
+    removeRecipeYes: t("recipes.removeYes"),
+    keepRecipe: t("recipes.keep"),
   };
 }
 

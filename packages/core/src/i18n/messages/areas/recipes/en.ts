@@ -8,6 +8,17 @@ export const recipesEn = {
   "recipes.editDescription": "It's your version: change the name, what it needs, the steps or the figures.",
   "recipes.saveChanges": "Save changes",
   "recipes.remove": "Remove from your recipes",
+  "recipes.picture.caption": "Picture (optional)",
+  "recipes.picture.add": "Add a picture",
+  "recipes.picture.change": "Change picture",
+  "recipes.picture.remove": "Remove picture",
+  "recipes.picture.undo": "Keep the picture",
+  "recipes.picture.tooLarge": "That picture is too large. Please use one under 5 MB.",
+  "recipes.removeNamed": "Remove {name}",
+  "recipes.removeAsk": "Remove {name}?",
+  "recipes.removeLede": "It won't be offered when you plan a meal, and the week template stops using it. Meals already planned with it stay as they are.",
+  "recipes.removeYes": "Remove",
+  "recipes.keep": "Keep it",
   "recipes.fromCatalog": "From WonderHome's ideas",
 
   // The catalog

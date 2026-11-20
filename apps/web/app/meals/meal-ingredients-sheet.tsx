@@ -7,7 +7,7 @@ import { useState, useTransition } from "react";
 import type { GroceryItem } from "@wonderhome/core/commerce/inventory";
 import type { IngredientNeed } from "@wonderhome/core/meals/meals";
 import { ingredientRowsOf } from "@wonderhome/core/meals/ingredient-lines";
-import { mealShortfalls, servingScale, type ShortfallLine } from "@wonderhome/core/meals/shortfall";
+import { ingredientNames, mealIngredientState, servingScale, type ShortfallLine } from "@wonderhome/core/meals/shortfall";
 import { Alert } from "@wonderhome/core/ui/alert";
 import { Button } from "@wonderhome/core/ui/button";
 import { IconTile } from "@wonderhome/core/ui/icon-tile";
@@ -33,8 +33,10 @@ export type MealIngredientsLabels = {
   add: string;
   estimate: string;
   unmeasured: string;
-  covered: string;
-  none: string;
+  onListNames: string;
+  inKitchenNames: string;
+  noneOnList: string;
+  noneInKitchen: string;
   noIngredients: string;
   open: string;
   failed: string;
@@ -57,8 +59,9 @@ export type MealIngredientsLabels = {
 /**
  * A meal's ingredients, as what to buy (HomeFood 25-003a, design §3.5):
  * only the shortfalls — what the meal needs at the servings planned, less what
- * is at home and what is already on the list — and one action, **Add n to the
- * list**. The numbers move as the servings change, worked out here by the
+ * is In Kitchen and what is already on To Buy — and one action, **Add n to the
+ * list**. Below it, which ingredients To Buy already has and which are In
+ * Kitchen, from `mealIngredientState`, the reading the meal card shows too. The numbers move as the servings change, worked out here by the
  * same pure function the server runs again before anything is added.
  */
 export function MealIngredientsSheet({
@@ -88,7 +91,9 @@ export function MealIngredientsSheet({
   const [result, setResult] = useState<{ added: number } | { error: true } | null>(null);
   const [pending, startTransition] = useTransition();
 
-  const plan = mealShortfalls({ ingredients, scale: servingScale(planned, recipeServes), groceries });
+  // The same reading the meal card shows, at the servings picked here.
+  const stock = mealIngredientState({ ingredients, scale: servingScale(planned, recipeServes), groceries });
+  const plan = stock.plan;
   const say = (amount: { quantity: number; unit: string }) => sayAmount(words, amount);
   const choices = [...new Set([...Array.from({ length: 12 }, (_, index) => index + 1), ...(planned && planned > 12 ? [planned] : [])])];
 
@@ -140,7 +145,8 @@ export function MealIngredientsSheet({
           {ingredients.length === 0 ? (
             <NoIngredientsYet householdId={householdId} mealId={mealId} recipes={recipes} labels={labels.empty} />
           ) : plan.short.length === 0 ? (
-            <p className="text-sm text-[var(--wh-handled)]">{labels.none}</p>
+            // "Nothing to add" is about the list only: what is still to buy is said to be on it, never "at home".
+            <p className="text-sm text-[var(--wh-handled)]">{stock.onList.length > 0 ? labels.noneOnList : labels.noneInKitchen}</p>
           ) : (
             <ul className="divide-y divide-[var(--wh-border)]">
               {plan.short.map((line) => (
@@ -159,8 +165,11 @@ export function MealIngredientsSheet({
             </ul>
           )}
 
-          {plan.covered.length > 0 ? (
-            <p className="text-xs text-[var(--wh-foreground-subtle)]">{fill(labels.covered, { names: plan.covered.map((line) => line.name).join(", ") })}</p>
+          {stock.onList.length > 0 ? (
+            <p className="text-xs text-[var(--wh-foreground-muted)]">{fill(labels.onListNames, { names: ingredientNames(stock.onList) })}</p>
+          ) : null}
+          {stock.inKitchen.length > 0 ? (
+            <p className="text-xs text-[var(--wh-foreground-subtle)]">{fill(labels.inKitchenNames, { names: ingredientNames(stock.inKitchen) })}</p>
           ) : null}
 
           {result && "error" in result ? <Alert>{labels.failed}</Alert> : null}

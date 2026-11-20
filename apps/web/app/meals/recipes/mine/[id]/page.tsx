@@ -2,6 +2,7 @@ import { ChefHat, Clock, CookingPot, Flame, Users } from "lucide-react";
 
 import { may } from "@wonderhome/core/billing/repository";
 import { publicEnv } from "@wonderhome/core/config/env";
+import { signAvatarPaths } from "@wonderhome/core/identity/households";
 import { listRecipesForEdit } from "@wonderhome/core/meals/repository";
 import { listCatalogRecipes } from "@wonderhome/core/meals/recipe-catalog";
 import { AppShell } from "@wonderhome/core/shell/app-shell";
@@ -49,9 +50,11 @@ export default async function OwnRecipePage({ params }: { params: Promise<{ id: 
     );
   }
 
-  const picture = recipe.catalogRecipeId
+  // The household's own picture first (25-050), signed for a short while; else the catalog dish's.
+  const own = recipe.imagePath ? ((await signAvatarPaths(supabase, [recipe.imagePath]).catch(() => new Map<string, string>())).get(recipe.imagePath) ?? null) : null;
+  const picture = own ?? (recipe.catalogRecipeId
     ? ((await listCatalogRecipes(supabase, publicEnv().NEXT_PUBLIC_SUPABASE_URL).catch(() => [])).find((dish) => dish.id === recipe.catalogRecipeId)?.imageUrl ?? null)
-    : null;
+    : null);
   const words = groceryWords(t, viewer.language);
   const number = new Intl.NumberFormat(viewer.language, { maximumFractionDigits: 2 });
   const amount = (quantity: number, unit: string) =>
@@ -74,7 +77,7 @@ export default async function OwnRecipePage({ params }: { params: Promise<{ id: 
       <div className="space-y-5">
         <header className="wh-rise space-y-3">
           {picture ? (
-            // eslint-disable-next-line @next/next/no-img-element -- a catalog picture from public storage, already sized
+            // eslint-disable-next-line @next/next/no-img-element -- the household's own picture (signed) or a catalog one
             <img src={picture} alt={recipe.name} className="aspect-[16/10] w-full rounded-[var(--wh-radius)] object-cover shadow-[var(--wh-shadow-card)] sm:aspect-[21/9]" />
           ) : (
             <div aria-hidden className="grid aspect-[16/7] w-full place-items-center rounded-[var(--wh-radius)] bg-[var(--wh-tone-meals-soft)]">

@@ -95,6 +95,34 @@ describe("whether the family eats on time", () => {
     expect(assessment.notable).toBe(false);
   });
 
+  it("stays quiet when the To Buy list has it, whatever the stored status says (owner, 2026-11-20)", () => {
+    // The Idli case: both ingredients put on To Buy from the Groceries screen,
+    // their stored status still "needed". The row said "Needs Batter, Idli, Sunflower oil."
+    const onList = { ids: new Set(["batter"]), names: new Set(["sunflower oil"]) };
+    const idli = meal({
+      ingredients: [
+        ingredient({ name: "Batter, Idli", consumableId: "batter", status: "needed" }),
+        ingredient({ name: "Sunflower oil", consumableId: null, status: "needed" }),
+      ],
+    });
+    expect(assessMeal(idli, { ...context, onList }).notable).toBe(false);
+  });
+
+  it("names only what is not on the To Buy list, without commas between names", () => {
+    const onList = { ids: new Set(["oil"]), names: new Set<string>() };
+    const idli = meal({
+      ingredients: [
+        ingredient({ name: "Batter, Idli", consumableId: "batter", status: "needed" }),
+        ingredient({ name: "Coconut chutney", consumableId: "chutney", status: "missing" }),
+        ingredient({ name: "Sunflower oil", consumableId: "oil", status: "needed" }),
+      ],
+    });
+    const assessment = assessMeal(idli, { ...context, onList });
+    expect(assessment.status).toBe("blocked");
+    expect(assessment.reason).toMatch(/needs Batter, Idli · Coconut chutney, not on the To Buy list yet\.$/);
+    expect(assessment.action).toEqual({ action: "shop_for_meal", target: "dinner-1" });
+  });
+
   it("ignores a missing garnish", () => {
     const assessment = assessMeal(
       meal({ ingredients: [ingredient(), ingredient({ name: "Coriander", essential: false, status: "needed" })] }),
