@@ -1,3 +1,4 @@
+import { dayHalfOf, readTimeOfDay } from "../conversation/time-of-day";
 import { observeMemory } from "./memory-runner";
 import { fillSubject } from "../homebrain/subject-fill";
 import { fillFromHistory } from "../homebrain/history-fill";
@@ -101,6 +102,15 @@ function groundedDay(intent: HouseholdIntent): string | null {
     if (typeof date === "string") return date;
   }
   return null;
+}
+
+/** The local time a reminder or an appointment was grounded to, "HH:MM" (2026-11-20). */
+function groundedTime(intent: HouseholdIntent): string | null {
+  const resolved = intent.parameters.remindAtResolved as { time?: unknown } | undefined;
+  const said = typeof resolved?.time === "string" ? resolved.time : intent.action === "record_health_appointment" && typeof intent.parameters.time === "string" ? intent.parameters.time : null;
+  if (!said) return null;
+  const time = readTimeOfDay(said, { hint: dayHalfOf(typeof intent.parameters.when === "string" ? intent.parameters.when : null) });
+  return time ? `${String(time.hour).padStart(2, "0")}:${String(time.minute).padStart(2, "0")}` : null;
 }
 
 /** A model that is down, or that answers something unreadable — the §16 failure paths. */
@@ -298,6 +308,7 @@ async function talkTurn(c: HomeTalkCase, utterance: string, carried: Carried, mo
     ...EMPTY,
     interpretation: intent.action,
     date: groundedDay(intent),
+    time: groundedTime(intent),
     entity,
     action: result.proposal.kind,
     safety: {

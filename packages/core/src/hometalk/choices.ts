@@ -98,6 +98,8 @@ export function choicesFor(pending: PendingClarification | null | undefined, con
     const names = named.length > 0 ? named : [...(context.people ?? [])];
     return names.length >= 2 ? single(names.map((name) => ({ label: name, say: name }))) : null;
   }
+  // The answers are about what the question asks: a "what time" question gets times, whatever slot it was filed under (2026-11-20).
+  if (awaiting === "time" || (awaiting === "day" && asksForTime(pending.question))) return single(timeChoices(context));
   if (awaiting === "day") return single(dayChoices(context, "ahead"));
   if (awaiting === "referent" || pending.action === "order_items" || pending.action === "add_to_list" || pending.action === "plan_meal" || pending.action === "complete_school_item" || pending.action === "adjust_schedule") {
     const labels = readFocus(pending.parameters.candidates).map((candidate) => candidate.label);
@@ -129,11 +131,7 @@ function intakeChoices(pending: PendingClarification, context: ChoiceContext, sk
     case "date":
       return marked(single([...dayChoices(context, kind === "receipt" || kind === "health_document" ? "past" : "ahead"), skip]));
     case "time":
-      return single([
-        ...COMMON_TIMES.map((time) => ({ label: t(`hometalk.choice.time.${time.key}`), say: time.say })),
-        { label: t("hometalk.choice.anotherTime"), say: null },
-        skip,
-      ]);
+      return single([...timeChoices(context), skip]);
     case "recordType":
       {
         const set = single([...RECORD_TYPE_CHOICES.map((type) => ({ label: t(`hometalk.choice.record.${type.key}`), say: type.say })), skip]);
@@ -158,6 +156,16 @@ function unitAskChoice(said: string, t: Translate): HomeTalkChoice {
   const word = amount[2]!.toLowerCase();
   const unit: SuggestedAmount["unit"] = word.startsWith("litre") ? "l" : word.startsWith("bottle") ? "bottle" : word.startsWith("packet") ? "packet" : word.startsWith("bunch") ? "bunch" : (word as SuggestedAmount["unit"]);
   return { label: t(`hometalk.choice.amount.${unit}`, { count: Number(amount[1]) }), say: said };
+}
+
+/** A question that asks for a time of day, not a day. */
+export function asksForTime(question: string): boolean {
+  return /^\W*(?:what|which) time\b|\bat what time\b/i.test(question.replace(/^\p{Extended_Pictographic}\s*/u, ""));
+}
+
+function timeChoices(context: ChoiceContext): HomeTalkChoice[] {
+  const { t } = context;
+  return [...COMMON_TIMES.map((time) => ({ label: t(`hometalk.choice.time.${time.key}`), say: time.say })), { label: t("hometalk.choice.anotherTime"), say: null }];
 }
 
 /** A few times a household plans around; "Another time…" for the rest. */

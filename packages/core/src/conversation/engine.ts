@@ -1,3 +1,4 @@
+import { appointmentFromReminder } from "./appointment-reading";
 import { normaliseUtterance } from "./normalise";
 import { readWhyQuestion } from "../homebrain/why";
 import type { AutonomyMode } from "../household/autonomy";
@@ -295,6 +296,9 @@ export async function converse(raw: TurnInput): Promise<TurnResult> {
       intent = { ...intent, parameters: filled, confidence: Math.max(intent.confidence, rules.confidence) };
     }
   }
+
+  // A doctor's appointment said as a reminder is the appointment, recorded where appointments live (2026-11-20).
+  if (!answered || answered.action === "set_reminder") intent = appointmentFromReminder(intent);
 
   // A link, a map or directions is never a thing to buy, whoever read it as one: "add maps link" is never
   // put on the list or asked "how much" (the owner, 2026-10-27).

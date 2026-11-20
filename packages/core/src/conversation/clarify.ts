@@ -149,7 +149,7 @@ export function answerClarification(
 
   // A grounding question (Wave 4): who, which day, or which of these.
   const awaiting = pending.parameters.awaiting;
-  if (awaiting === "member" || awaiting === "day" || awaiting === "referent") {
+  if (awaiting === "member" || awaiting === "day" || awaiting === "time" || awaiting === "referent") {
     return answerGroundingQuestion(pending, utterance, context);
   }
 
@@ -231,7 +231,7 @@ export function answerClarification(
 }
 
 /** How long an answer to each grounding question can plausibly be. */
-const awaitingWordLimit: Record<string, number> = { member: 4, day: 5, referent: 6, quantity: 8 };
+const awaitingWordLimit: Record<string, number> = { member: 4, day: 5, time: 5, referent: 6, quantity: 8 };
 
 /** "None", "nothing", "don't add it": leave the list as it is. The shared "leave it" words are `isLeaveIt`. */
 const ENOUGH = /^(?:no|nope|none|nothing|nothing more|no more|no need|no thanks?|no,? thank you|enough|that'?s enough|it'?s enough|that'?s fine|that'?s all|fine as it is|leave it|leave it as it is|leave them|skip|skip it|don'?t add (?:it|them|any(?:thing)?)|cancel)(?:,?\s*(?:thanks|thank you))?$/i;
@@ -475,6 +475,10 @@ function answerGroundingQuestion(
   if (awaiting === "day") {
     return { ...base, target: pending.target, parameters: { ...rest, when: answer } };
   }
+  // "What time?" answered: the time, with the day already said kept (2026-11-20).
+  if (awaiting === "time") {
+    return { ...base, target: pending.target, parameters: { ...rest, time: answer.replace(/^(?:at|around)\s+/i, "") } };
+  }
   // A choice between named candidates.
   const choice = chooseCandidate(answer, readFocus(candidates));
   if (!choice) return null;
@@ -508,6 +512,12 @@ export function escalatedQuestion(pending: PendingClarification): string {
   switch (pending.parameters.awaiting) {
     case "member":
       return 'Sorry, I still couldn\'t tell who you mean. Could you say their name as your household has it — for example "Asmi"? I\'ll take it from there.';
+    case "time":
+      return [
+        "Sorry, I still couldn't pin down the time. Could you say it one of these ways?",
+        '- "9am" or "6:30pm"',
+        '- "half past 6" or "7 in the evening"',
+      ].join("\n");
     case "day":
       return [
         "Sorry, I still couldn't pin down when. Could you say it one of these ways?",

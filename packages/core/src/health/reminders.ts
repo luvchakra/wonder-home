@@ -34,6 +34,12 @@ const DAY_OF_MINUTE = 7 * 60;
 /** …never later than this long before the appointment starts. */
 const DAY_OF_LEAD_MS = 2 * 60 * 60 * 1000;
 
+/** When an appointment's day-of reminder lands: 07:00 local on its day, or two hours before it when that is earlier. */
+export function dayOfReminderAt(startsAt: string, timeZone: string): Date {
+  const day = localMoment(new Date(startsAt), timeZone).dateKey;
+  return new Date(Math.min(atLocal(day, DAY_OF_MINUTE, timeZone).getTime(), new Date(startsAt).getTime() - DAY_OF_LEAD_MS));
+}
+
 /**
  * Which reminder kinds this appointment is due for right `now`, on the
  * household's own clock (the owner's review, 2026-10-22: the day was read in

@@ -23,6 +23,8 @@ import type { HouseholdIntent } from "./intent";
 import { joinWords } from "./proposal";
 import { linkTo } from "./reply-format";
 import { formatHourMinute, parseTimeOfDay, reminderMoment } from "./reminder-time";
+import { dayHalfOf } from "./time-of-day";
+import { dayOfReminderAt } from "../health/reminders";
 import { resolveDay } from "./temporal";
 
 /**
@@ -778,7 +780,11 @@ async function setReminder(intent: HouseholdIntent, context: ExecutionContext): 
   if (!context.admin) return { ok: false, reason: "I could not set a reminder just now." };
   const now = context.now ?? new Date();
   const when = String(intent.parameters.when ?? "");
-  const moment = reminderMoment(when, typeof intent.parameters.time === "string" ? intent.parameters.time : null, { timezone: context.timezone, now });
+  const moment = reminderMoment(when, typeof intent.parameters.time === "string" ? intent.parameters.time : null, {
+    timezone: context.timezone,
+    now,
+    context: typeof intent.parameters.what === "string" ? intent.parameters.what : undefined,
+  });
   if (!moment.ok) return { ok: false, reason: moment.question };
   const due = moment.at;
 
@@ -809,7 +815,7 @@ async function setReminder(intent: HouseholdIntent, context: ExecutionContext): 
   const whenText = `${onDay(moment.day)} at ${moment.time}`;
   return {
     ok: true,
-    text: `I will remind you ${whenText} to **${what}**. It will show under ${linkTo("/notifications", "Notifications")} then — only you will see it.`,
+    text: `I will remind you ${whenText} to **${what}**. It will show under ${linkTo("/notifications", "Notifications")} then — only you will see it.${moment.assumedFrom ? `\nI took "${moment.assumedFrom}" as ${moment.time} — say "${moment.otherTime}" if not.` : ""}`,
     result: { notificationId: (data as { id: string }).id, what, remindAt: due.toISOString() },
   };
 }
@@ -868,7 +874,7 @@ async function recordHealthAppointment(intent: HouseholdIntent, context: Executi
   if (!onDate) return { ok: false, reason: `Which day is the ${typeText} appointment? Say "today", "tomorrow" or a day of the week.` };
 
   const timeText = typeof intent.parameters.time === "string" ? intent.parameters.time : null;
-  const time = timeText ? parseTimeOfDay(timeText) : null;
+  const time = timeText ? parseTimeOfDay(timeText, dayHalfOf(when)) : null;
   if (!time) return { ok: false, reason: `What time is the ${typeText} appointment on ${describeDate(onDate, when, context.timezone)}?` };
 
   const member = context.members.find((entry) => entry.id === context.actorMemberId);
@@ -889,9 +895,13 @@ async function recordHealthAppointment(intent: HouseholdIntent, context: Executi
   );
 
   const conflictNote = conflicts.length > 0 ? " That overlaps with something else on your calendar — worth a look." : "";
+  const at = formatHourMinute(time.hour, time.minute);
+  // Said as a reminder: when its reminder comes, by the appointment's own policy (`health/reminders.ts`).
+  const remindNote = intent.parameters.saidAsReminder === true ? ` I'll remind you on the day at ${formatClock(dayOfReminderAt(startsAt, context.timezone), context.timezone)}.` : "";
+  const assumedNote = time.assumed && timeText ? `\nI took "${timeText}" as ${at} — say "${formatHourMinute((time.hour + 12) % 24, time.minute)}" if not.` : "";
   return {
     ok: true,
-    text: `Booked — a ${typeText} appointment ${describeDate(onDate, when, context.timezone)} at ${formatHourMinute(time.hour, time.minute)}. See ${linkTo("/health", "Health & Fitness")}.${conflictNote}`,
+    text: `Booked — a ${typeText} appointment ${describeDate(onDate, when, context.timezone)} at ${at}. See ${linkTo("/health", "Health & Fitness")}.${remindNote}${conflictNote}${assumedNote}`,
     result: { appointmentId: appointment.id, appointmentType, startsAt },
   };
 }
@@ -1141,6 +1151,14 @@ function capitalize(value: string): string {
  */
 export function resolveWhen(when: string, now: Date, timezone: string): string | null {
   return resolveDay(when.trim() === "" ? "today" : when, { timezone, now });
+}
+
+/** "7am" — a moment on the household's clock. */
+function formatClock(at: Date, timezone: string): string {
+  const parts = new Intl.DateTimeFormat("en-GB", { hour: "numeric", minute: "numeric", hourCycle: "h23", timeZone: timezone }).formatToParts(at);
+  const hour = Number(parts.find((part) => part.type === "hour")?.value ?? "0");
+  const minute = Number(parts.find((part) => part.type === "minute")?.value ?? "0");
+  return formatHourMinute(hour, minute);
 }
 
 function describeDate(isoDate: string, when: string, timezone: string): string {
