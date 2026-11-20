@@ -11,7 +11,7 @@ decision that shapes later work each earns a note, written before moving on.
 
 | Date | Note |
 |---|---|
-| 2026-11-20 | [Set aside: Delete on each row, short names, and the daily Swag Labs paste](2026-11-20-set-aside-delete.md) |
+| 2026-11-20 | [Set aside: Delete on each row, short names; an unchanged portal page files once](2026-11-20-set-aside-delete.md) |
 | 2026-11-14 | [Nothing stuck in review: the live NSR run, two email intake fixes, the bill Undo line](2026-11-14-nsr-live-run.md) |
 | 2026-11-14 | [Nothing waits: every item ends as something, defaults after a day, one "Needs you" list (14-067)](2026-11-14-nothing-waits.md) |
 | 2026-11-14 | [Record first: HomeTalk records at once, actions expire, money and health as Checking, new senders trusted once, plain corrections](2026-11-14-record-first.md) |

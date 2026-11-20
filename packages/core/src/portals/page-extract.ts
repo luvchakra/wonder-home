@@ -1,3 +1,5 @@
+import { createHash } from "node:crypto";
+
 import type { RawPortalItem, ScrapeTarget } from "./fetch-connection";
 
 /**
@@ -9,9 +11,11 @@ import type { RawPortalItem, ScrapeTarget } from "./fetch-connection";
  * understanding turns that text into the right entry, awaiting confirmation. A
  * provider adapter (e.g. loop-learning) can return properly-split items later.
  *
- * Dedup is by day: the item carries the fetch date, so a page files at most once
- * per day (the twice-daily run and "Fetch now" taps collapse), and a changed
- * page the next day is a new item. A blank or too-short page yields nothing.
+ * Dedup is by what the page says: the item carries the fetch date for the
+ * reader, but its `contentKey` (a digest of the text) is what the cursor
+ * remembers, so an unchanged page files nothing on later fetches and a changed
+ * page is a new item (owner, 2026-11-20: the same page filed daily for weeks).
+ * A blank or too-short page yields nothing.
  */
 
 const MIN_CONTENT = 40;
@@ -39,6 +43,7 @@ export function extractGenericItems(text: string, target: ScrapeTarget, now: Dat
       dueOn: fetchDay(now),
       detail: clean.slice(0, MAX_DETAIL),
       sourceUrl: target.url,
+      contentKey: `page:${createHash("sha256").update(clean.replace(/\s+/g, " ")).digest("hex").slice(0, 32)}`,
     },
   ];
 }

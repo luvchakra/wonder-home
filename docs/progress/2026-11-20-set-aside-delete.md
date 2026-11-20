@@ -21,47 +21,27 @@ Owner, 2026-11-20: "give option to delete over here" (HomeSend → Set aside).
   Help: `help.guide.home-send.body.12` in all eight; section `updated` set to 2026-11-20.
 
 ## The daily paste
-The Swag Labs page came from no E2E spec or script. It was the **"Secret Sauce" (saucedemo.com)
-portal connection** made in a real household during the 2026-10-28 live bring-up
-(`docs/progress/2026-10-28-connections-live-bringup.md`). Once "Pages to read" was set on it, pg_cron
-(`wonderhome-portal-fetch-morning/evening`) queued a fetch twice a day. The Fly worker filed each
-page through `homeSendPortalFiler` as pasted text: `"Open Menu\n\nDate: <day>\n\n…"`. The daily
-tidy then set each one aside as "Not household information". The fix is data: disconnect that
-connection, then delete only the items it filed. A household that wants a portal sets up its own.
+It came from no E2E spec, script or workflow. It is the household's **"Secret Sauce" (saucedemo.com)
+portal connection**, set up during the 2026-10-28 live bring-up
+(`docs/progress/2026-10-28-connections-live-bringup.md`). pg_cron
+(`wonderhome-portal-fetch-morning/evening`) queues its fetch, and the Fly worker files the page
+through `homeSendPortalFiler` as pasted text: `"Open Menu\n\nDate: <day>\n\n…"`. It was filed again
+every day because generic page dedup keyed on the fetch day (`page-extract.ts`), so the same page
+counted as new each day. About 25 rows since 27 Oct, per the coordinator.
 
-SQL (sent to the coordinator; the Supabase MCP refuses these sessions). It changes data only, not
-the schema, so it is safe before or after the deploy:
-
-```sql
--- 1. Look: the test connection(s) and what they filed.
-select c.id, c.household_id, c.name, c.status, c.created_at, c.created_by_member_id
-  from public.connections c where c.params::text ilike '%saucedemo.com%';
-
--- 2. Clean up, in one transaction.
-begin;
-create temp table sauce_conn on commit drop as
-  select id, household_id, created_by_member_id, created_at
-    from public.connections where params::text ilike '%saucedemo.com%';
-create temp table sauce_items on commit drop as
-  select i.id from public.home_send_items i
-    join sauce_conn c on c.household_id = i.household_id
-   where i.source = 'pasted_text'
-     and i.created_at >= c.created_at
-     and (c.created_by_member_id is null or i.created_by_member_id = c.created_by_member_id)
-     and i.raw_text like 'Open Menu%'
-     and i.raw_text like '%Swag Labs%'
-     and i.raw_text like '%carry.allTheThings()%'
-     and not exists (select 1 from public.homesend_changes h where h.intake_id = i.id and h.undone_at is null);
-select count(*) as items_to_delete from sauce_items;
-delete from public.home_send_items where parent_item_id in (select id from sauce_items);
-delete from public.home_send_items where id in (select id from sauce_items);
-delete from public.portal_fetch_jobs where connection_id in (select id from sauce_conn) and status in ('pending', 'running');
-update public.portal_sessions set state = 'never', session = null, updated_at = now() where connection_id in (select id from sauce_conn);
-update public.connections set status = 'disconnected', updated_at = now() where id in (select id from sauce_conn);
-commit;
-```
+- **Fix:** a whole page now carries a `contentKey`, a digest of its text, and the cursor hash uses it
+  instead of the date (`portals/page-extract.ts`, `portals/fetch-connection.ts`). An unchanged page
+  files nothing; a changed page is filed again. The worker on Fly has no CI deploy, so this reaches
+  live fetches only once the worker is redeployed (`fly deploy`).
+- **Cleanup (2026-11-20):** the coordinator then ruled that the rows and the connection are the
+  owner's, so the cleanup SQL was withdrawn. The owner had already run it: **24** Swag Labs items
+  deleted, and the "Secret Sauce" connection set to disconnected, with its session cleared and pending
+  fetch jobs removed. It deleted only items matching that connection's household, member, creation date and
+  page text, with no live entry. **1** Swag Labs item remains (it missed a filter, or an entry still
+  points at it); it is left for the owner's "Delete all set aside".
 
 ## Verified
+- `packages/core/src/portals`: 43 passed (2 new: an unchanged page files once across days; same text, same key).
 - `packages/core/src/homesend/inbox-view.test.ts`: 12 passed (4 new for `setAsideName`, one with the
   real scraped text).
 - `packages/core/src/help/localized.test.ts` + `packages/core/src/i18n`: 78 passed. `lint:help-links` green.
@@ -71,5 +51,7 @@ commit;
   sign in. The owner should check HomeSend → Set aside on a phone.
 
 ## Open
-- The SQL above must run on the live project (coordinator) before the old rows go.
+- Redeploy the portal worker (`fly deploy`) so the dedup fix reaches live fetches.
+- The "Secret Sauce" connection is disconnected; the owner decides whether to remove it in Settings.
+- 1 Swag Labs item is left for "Delete all set aside".
 - No QA data was created by this session.

@@ -36,6 +36,12 @@ export type RawPortalItem = {
   dueOn?: string | null;
   detail?: string | null;
   sourceUrl: string;
+  /**
+   * What the item says, when its date is only the fetch day (a whole page):
+   * dedup keys on this instead of the date, so an unchanged page files
+   * nothing on the next day's fetch (owner, 2026-11-20).
+   */
+  contentKey?: string | null;
 };
 
 /** Turns a rendered page into structured items. The real one validates through HomeBrain. */
@@ -160,7 +166,7 @@ export async function fetchConnection(deps: FetchConnectionDeps): Promise<FetchC
           sourceUrl: target.url,
           kind: item.kind,
           title: item.title,
-          occurredOn: item.dueOn ?? null,
+          occurredOn: item.contentKey ?? item.dueOn ?? null,
         });
         if (seen.has(hash) || batch.has(hash)) continue;
         batch.add(hash);
