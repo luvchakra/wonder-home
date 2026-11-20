@@ -423,7 +423,9 @@ test.describe("every signed-in screen loads", () => {
 
     await signIn(page);
     await page.goto("/home-send");
-    await expect(page.getByRole("button", { name: /Send something/ })).toBeVisible();
+    // Sending is one tap: the two buttons are on the page, with no row to open first (2026-11-20).
+    await expect(page.getByRole("button", { name: "Choose a file" })).toBeVisible();
+    await expect(page.getByRole("button", { name: "Paste a message or link" })).toBeVisible();
     await expect(page.getByRole("heading", { name: /Added recently/ })).toBeVisible();
     await expect(page.getByRole("heading", { name: /Set aside/ })).toBeVisible();
     // No review section: the waiting bill is not listed here, and nothing offers to add it from this page.
@@ -431,6 +433,8 @@ test.describe("every signed-in screen loads", () => {
     await expect(page.getByText("Water bill")).toHaveCount(0);
     await expect(page.getByRole("button", { name: "Add all anyway" })).toHaveCount(0);
 
+    // Set aside is folded away (owner, 2026-11-20: "clutter free"); one tap opens it with Restore and Delete inside.
+    await page.getByRole("heading", { name: /Set aside/ }).click();
     const row = page.locator("li").filter({ hasText: "Annual Day rehearsal" }).first();
     await expect(row).toContainText("Replaced by a newer one");
     await row.getByRole("button", { name: "Restore Annual Day rehearsal" }).click();

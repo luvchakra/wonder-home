@@ -19,7 +19,6 @@ import { IconTile, type IconTone } from "@wonderhome/core/ui/icon-tile";
 import { CollapsibleSection } from "@wonderhome/core/ui/collapsible-section";
 import { Badge, Pill, PillLink } from "@wonderhome/core/ui/pill";
 import { SectionHeader } from "@wonderhome/core/ui/section-header";
-import { EmptyState } from "@wonderhome/core/ui/states";
 
 import {
   confirmHomeSendEntryAction,
@@ -168,10 +167,13 @@ export function HomeSendInbox({
   archived = null,
   labels,
   shared = null,
-  welcome = null,
+  summary = null,
+  leadAction = null,
 }: {
-  /** The first-time explainer, while the household has never sent anything (14-066). */
-  welcome?: React.ReactNode;
+  /** A small icon button kept at the right of the opening sentence (the WhatsApp door, owner 2026-11-20). */
+  leadAction?: React.ReactNode;
+  /** Today's report (what WonderHome did with what was sent), right under the opening sentence. */
+  summary?: React.ReactNode;
   /** "Got it — X is added" after a share from the phone, with its Undo (14-066). */
   shared?: { notice: string; changeId: string; title: string; itemId?: string; whole?: boolean } | null;
   /** The opening sentence (rule 7): the situation in one line, with the counts. */
@@ -223,7 +225,6 @@ export function HomeSendInbox({
   const [selected, setSelected] = useState<ReadonlySet<string>>(new Set());
   const [selecting, setSelecting] = useState(false);
   const [expanded, setExpanded] = useState<ReadonlySet<string>>(new Set());
-  const [sendOpen, setSendOpen] = useState(false);
   const [handled, setHandled] = useState<ReadonlySet<string>>(new Set());
 
   const [mode, setMode] = useState<"drop" | "paste">("drop");
@@ -399,13 +400,22 @@ export function HomeSendInbox({
   const openItemFull = openItem ? [...pending, ...failed, ...history].find((entry) => entry.id === openItem.id) : undefined;
   const canRemove = (item: HomeSendItem) => mayRemoveHomeSendItem({ memberId: viewerMemberId, memberType: viewerType, isAdmin }, item);
   const canRemoveOpen = Boolean(openItemFull && canRemove(openItemFull));
-  const leadLine = <p className="text-base font-medium text-[var(--wh-foreground)]">{lead}</p>;
+  const leadText = <p className="min-w-0 flex-1 text-base font-medium text-[var(--wh-foreground)]">{lead}</p>;
+  // The opening sentence wraps beside the icon; the icon never pushes it into a truncation (rules 7, 11).
+  const leadLine = leadAction ? (
+    <div className="flex items-start gap-2">
+      {leadText}
+      <div className="-my-2.5 -me-1.5 shrink-0">{leadAction}</div>
+    </div>
+  ) : (
+    leadText
+  );
 
   return (
     <RemoveProvider householdId={householdId} labels={words.remove} undoLabel={words.undo} cancelLabel={calm.clear.cancel}>
     <div className="space-y-5">
       {isAdmin && clearCounts ? <HomeSendClear householdId={householdId} counts={clearCounts} labels={labels} lead={leadLine} /> : leadLine}
-      {welcome}
+      {summary}
 
       {/* "Send something": one compact row that opens on tap; a file dropped anywhere on it is read (rule 15 keeps the whole drop zone a tap away). */}
       <div
@@ -423,36 +433,23 @@ export function HomeSendInbox({
         </form>
         {!openItem ? (
           <>
-            {!sendOpen ? (
-              <button type="button" onClick={() => setSendOpen(true)} className="flex w-full items-center gap-3 rounded-[var(--wh-radius-sm)] text-left" aria-expanded={false}>
-                <IconTile icon={UploadCloud} tone="ai" size="sm" />
-                <span className="min-w-0 flex-1">
-                  <span className="block text-sm font-semibold">{uploading || pasting ? review.reading : calm.sendTitle}</span>
-                  <span className="block text-xs text-[var(--wh-foreground-subtle)]">{calm.sendHint}</span>
-                  <span className="hidden text-xs text-[var(--wh-foreground-subtle)] md:block">{words.pasteAnywhere}</span>
-                </span>
-              </button>
-            ) : (
-              <div className="space-y-3">
+            {/* "Send something": one tap to pick a photo or file, or to paste; nothing to fill in (owner, 2026-11-20). */}
+            <div className="space-y-3">
                 <div className="flex items-center gap-3">
                   <IconTile icon={UploadCloud} tone="ai" size="sm" />
                   <span className="min-w-0 flex-1">
-                    <span className="block text-sm font-semibold">{calm.sendTitle}</span>
-                    <span className="block text-xs text-[var(--wh-foreground-subtle)]">{words.dropHint}</span>
+                    <span className="block text-sm font-semibold">{uploading || pasting ? review.reading : calm.sendTitle}</span>
+                    <span className="hidden text-xs text-[var(--wh-foreground-subtle)] lg:block">{words.dropTitle} · {words.pasteAnywhere}</span>
                   </span>
-                  <Pill type="button" tone="quiet" onClick={() => { setSendOpen(false); setMode("drop"); }} aria-expanded>
-                    {calm.sendClose}
-                  </Pill>
                 </div>
                 <div className="flex flex-wrap gap-2">
                   <Pill type="button" tone="soft" onClick={() => fileInputRef.current?.click()} disabled={busy}>
                     <Camera aria-hidden className="size-3.5" /> {uploading ? review.reading : words.chooseFile}
                   </Pill>
-                  <Pill type="button" tone="quiet" onClick={() => setMode(mode === "paste" ? "drop" : "paste")} disabled={busy}>
+                  <Pill type="button" tone="quiet" onClick={() => setMode(mode === "paste" ? "drop" : "paste")} disabled={busy} aria-expanded={mode === "paste"}>
                     <ClipboardPaste aria-hidden className="size-3.5" /> {words.paste}
                   </Pill>
                 </div>
-                <p className="hidden text-xs text-[var(--wh-foreground-subtle)] lg:block">{words.dropTitle}</p>
                 {mode === "paste" ? (
                   <form action={pasteAction} className="space-y-3">
                     <input type="hidden" name="householdId" value={householdId} />
@@ -472,7 +469,6 @@ export function HomeSendInbox({
                   </form>
                 ) : null}
               </div>
-            )}
             {uploadState.error ? <Alert>{uploadState.error}</Alert> : null}
             {failedNotice ? <Alert>{failedNotice}</Alert> : null}
             {autoApplied ? (
@@ -804,7 +800,7 @@ export function HomeSendInbox({
       ) : null}
 
       {added.length > 0 ? (
-        <CollapsibleSection icon={CheckCircle2} tone="primary" title={calm.addedTitle} intro={calm.addedIntro} count={added.length} as="h2">
+        <CollapsibleSection icon={CheckCircle2} tone="primary" title={calm.addedTitle} count={added.length} as="h2">
           <ul className="divide-y divide-[var(--wh-border)] px-4 pb-2">
               {added.map((item) => {
                 const title = titleFor(item, review.source);
@@ -962,9 +958,6 @@ export function HomeSendInbox({
         </Link>
       ) : null}
 
-      {pending.length === 0 && failed.length === 0 && history.length === 0 && !openItem && !welcome ? (
-        <EmptyState icon={UploadCloud} tone="ai" title={words.emptyTitle} description={words.emptyDescription} />
-      ) : null}
     </div>
     </RemoveProvider>
   );

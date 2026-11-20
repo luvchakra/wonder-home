@@ -1,6 +1,6 @@
 "use client";
 
-import { Check, ChevronRight, Contact, Copy, Download, Mail, MessageCircle, Send } from "lucide-react";
+import { Check, Contact, Copy, Download, Mail, MessageCircle, Send } from "lucide-react";
 import Link from "next/link";
 import { useActionState, useState } from "react";
 
@@ -10,7 +10,7 @@ import { Alert } from "@wonderhome/core/ui/alert";
 import { Card } from "@wonderhome/core/ui/card";
 import { IconTile } from "@wonderhome/core/ui/icon-tile";
 import { Pill } from "@wonderhome/core/ui/pill";
-import { SectionHeader } from "@wonderhome/core/ui/section-header";
+import { CollapsibleSection } from "@wonderhome/core/ui/collapsible-section";
 import { Sheet } from "@wonderhome/core/ui/sheet";
 import { Button } from "@wonderhome/core/ui/button";
 
@@ -36,7 +36,6 @@ export function HomeSendChannels({
   isAdmin,
   emailConfigured,
   address,
-  whatsapp = null,
   labels,
 }: {
   /** The section's words in the viewer's language (`homesendPageLabels`). */
@@ -45,57 +44,45 @@ export function HomeSendChannels({
   isAdmin: boolean;
   emailConfigured: boolean;
   address: HomeSendAddress | null;
-  /** WonderHome's WhatsApp number, and whether this adult has linked theirs — null when WhatsApp isn't available to them. */
-  whatsapp?: { number: string; connected: boolean } | null;
 }) {
   const install = useInstallPrompt();
 
-  if (!emailConfigured && !whatsapp && install.installed) return null;
+  // WhatsApp is the icon beside the opening sentence (owner, 2026-11-20), not a row here (rule 14).
+  if (!emailConfigured && install.installed) return null;
 
+  // Set up once and rarely touched again, so folded away below everything else (owner, 2026-11-20: "clutter free").
   return (
-    <section>
-      <SectionHeader title={labels.title} />
+    <CollapsibleSection icon={Send} tone="primary" title={labels.title} as="h2">
       <div className="space-y-3">
-        {whatsapp ? <WhatsAppChannel number={whatsapp.number} connected={whatsapp.connected} labels={labels} /> : null}
         {emailConfigured ? (
           <EmailChannel householdId={householdId} isAdmin={isAdmin} address={address} labels={labels} />
         ) : null}
         {!install.installed ? <InstallChannel labels={labels} /> : null}
       </div>
-    </section>
+    </CollapsibleSection>
   );
 }
 
 /**
- * WhatsApp (story 14-016): the whole row opens its settings, where a number
- * is connected or managed — connecting needs the one-time code, so it never
- * happens from here.
+ * WhatsApp (story 14-016) as one icon at the right of the opening sentence (owner, 2026-11-20):
+ * it opens the same settings the old row did, where a number is connected or managed — connecting
+ * needs the one-time code, so it never happens from here. The row's words stay its name and
+ * description, the number in its own figures.
  */
-function WhatsAppChannel({ number, connected, labels }: { number: string; connected: boolean; labels: ChannelLabels }) {
-  // The number keeps its own figures, set apart from the words around it.
-  const [before, after = ""] = labels.whatsappConnected.split("{number}");
+export function HomeSendWhatsAppButton({ number, connected, labels }: { number: string; connected: boolean; labels: ChannelLabels }) {
+  const description = connected ? labels.whatsappConnected.replace("{number}", `\u2066${number}\u2069`) : labels.whatsappConnect;
   return (
-    <Link href="/settings/connections#whatsapp" className="block rounded-[var(--wh-radius)] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--wh-primary)]">
-      <Card className="flex items-center gap-3 p-4 transition-colors hover:bg-[var(--wh-surface-muted)]">
-        <IconTile icon={MessageCircle} tone="handled" />
-        <div className="min-w-0 flex-1">
-          <p className="text-sm font-semibold">{labels.whatsappTitle}</p>
-          <p className="mt-0.5 text-xs text-[var(--wh-foreground-muted)]">
-            {connected ? (
-              <>
-                {before}
-                <span className="tabular-nums" dir="ltr">
-                  {number}
-                </span>
-                {after}
-              </>
-            ) : (
-              labels.whatsappConnect
-            )}
-          </p>
-        </div>
-        <ChevronRight aria-hidden className="size-4 shrink-0 text-[var(--wh-foreground-subtle)]" />
-      </Card>
+    <Link
+      href="/settings/connections#whatsapp"
+      aria-label={labels.whatsappTitle}
+      aria-describedby="home-send-whatsapp-description"
+      title={`${labels.whatsappTitle} — ${description}`}
+      className="inline-flex size-11 items-center justify-center rounded-[var(--wh-radius)] transition-opacity hover:opacity-80 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--wh-primary)]"
+    >
+      <IconTile icon={MessageCircle} tone="handled" size="sm" />
+      <span id="home-send-whatsapp-description" className="sr-only">
+        {description}
+      </span>
     </Link>
   );
 }
@@ -247,48 +234,5 @@ function InstallChannel({ labels }: { labels: ChannelLabels }) {
         </Button>
       </Sheet>
     </>
-  );
-}
-
-/**
- * The first-time explainer (14-066): three lines and the two one-tap setups,
- * shown only while the household has never sent HomeSend anything — so it is
- * seen once, with nothing stored to remember it.
- */
-export function HomeSendWelcome({ whatsapp, labels }: { whatsapp: { connected: boolean } | null; labels: ChannelLabels }) {
-  const install = useInstallPrompt();
-  const [guide, setGuide] = useState(false);
-  const showWhatsApp = Boolean(whatsapp && !whatsapp.connected);
-  return (
-    <Card className="space-y-3 p-4">
-      <div className="flex items-start gap-3">
-        <IconTile icon={Send} tone="primary" />
-        <div className="min-w-0 flex-1 space-y-1 text-sm">
-          <p className="font-semibold">{labels.welcomeTitle}</p>
-          <p className="text-[var(--wh-foreground-muted)]">{labels.welcome1}</p>
-          <p className="text-[var(--wh-foreground-muted)]">{labels.welcome2}</p>
-          <p className="text-[var(--wh-foreground-muted)]">{labels.welcome3}</p>
-        </div>
-      </div>
-      {showWhatsApp || !install.installed ? (
-        <div className="flex flex-wrap gap-2">
-          {showWhatsApp ? (
-            <Link href="/settings/connections#whatsapp" className="inline-flex items-center gap-1.5 rounded-full bg-[var(--wh-primary)] px-3 py-1.5 text-sm font-medium text-[var(--wh-primary-foreground)]">
-              <MessageCircle aria-hidden className="size-4" />
-              {labels.welcomeWhatsApp}
-            </Link>
-          ) : null}
-          {!install.installed ? (
-            <Pill type="button" tone="quiet" onClick={() => (install.canPrompt ? void install.prompt() : setGuide(true))}>
-              <Download aria-hidden className="size-3.5" />
-              {labels.welcomeShare}
-            </Pill>
-          ) : null}
-        </div>
-      ) : null}
-      <Sheet open={guide} onOpenChange={setGuide} title={labels.installTitle} description={labels.installDescription}>
-        <p className="text-sm text-[var(--wh-foreground-muted)]">{labels.installBody}</p>
-      </Sheet>
-    </Card>
   );
 }
