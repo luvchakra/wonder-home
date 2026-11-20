@@ -1,6 +1,7 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
+import { z } from "zod";
 
 import { adminClientFor, adminGrant } from "@wonderhome/core/db/admin-context";
 import { platformCan } from "@wonderhome/core/platform/admin";
@@ -27,12 +28,17 @@ export type RazorpayField = "keyId" | "keySecret" | "password";
 export type RazorpayActionState = { tone: "info" | "risk" | null; message: string | null; field: RazorpayField | null };
 
 const PAGES = ["/platform-admin", "/platform-admin/integrations", "/platform-admin/secrets", "/platform-admin/security"];
-const text = (value: FormDataEntryValue | null) => (typeof value === "string" ? value.slice(0, 4096) : "");
+const input = z.object({
+  keyId: z.string().max(200).default(""),
+  keySecret: z.string().max(200).default(""),
+  password: z.string().max(200).default(""),
+});
 
 export async function saveRazorpayAction(_previous: RazorpayActionState, formData: FormData): Promise<RazorpayActionState> {
-  const rawId = text(formData.get("razorpay_key_id"));
-  const rawSecret = text(formData.get("razorpay_key_secret"));
-  const password = text(formData.get("razorpay_password")).slice(0, 200);
+  const field = (name: string) => formData.get(name) ?? undefined;
+  const parsed = input.safeParse({ keyId: field("razorpay_key_id"), keySecret: field("razorpay_key_secret"), password: field("razorpay_password") });
+  if (!parsed.success) return { tone: "risk", message: "That's too long to be a Razorpay key. Paste just the key.", field: null };
+  const { keyId: rawId, keySecret: rawSecret, password } = parsed.data;
   const idEntry = settingDefinition("RAZORPAY_KEY_ID");
   const secretEntry = settingDefinition("RAZORPAY_KEY_SECRET");
   if (!idEntry || !secretEntry) return { tone: "risk", message: "Razorpay isn't a setting WonderHome knows.", field: null };
