@@ -723,14 +723,16 @@ describe("processing into HomeSend", () => {
 
     // 14-061 (the owner, 2026-11-03, decision C): added as Checking, the first check follows on the sender's own
     // verified link, with the reading said back, and is left open in their WhatsApp conversation for the reply.
-    it("AT-H11 added as Checking: the first check goes to its sender on WhatsApp, left open for the reply", async () => {
+    // Since 2026-11-20 these questions are planned only under the Admin's "Ask me to confirm entries still Checking"
+    // (`all: true` below); by default a grocery added as Checking gets no question at all.
+    it("AT-H11 added as Checking, with the Admin's switch on: the first check goes to its sender on WhatsApp, left open for the reply", async () => {
       const { h, id } = await received("text");
       h.tables.whatsapp_messages![0]!.text_content = "2 litres mustard oil";
       const out = replies();
       const addOnItsOwn: WhatsAppIntakeDeps["addOnItsOwn"] = async ({ itemId, memberId }) => {
         const item = h.tables.home_send_items!.find((row) => row.id === itemId)!;
         // What `addIfAllowed` does after a Checking add: the questions are planned for the sender.
-        item.understanding = { ...(item.understanding as object), checking: startChecking({ kind: "grocery_item", extracted: item.extracted as never, check: { unverified: [] }, recipientMemberId: memberId, score: 0.9, percent: 95 }) };
+        item.understanding = { ...(item.understanding as object), checking: startChecking({ all: true, kind: "grocery_item", extracted: item.extracted as never, check: { unverified: [] }, recipientMemberId: memberId, score: 0.9, percent: 95 }) };
         return { title: "Mustard oil", where: "Groceries", percent: 90, why: "unsure", unconfirmed: true as const };
       };
       await processWhatsAppMessage(h.client, id, { config: CONFIG, fetch: out.fetchImpl, ingest: { classify: oil }, ask: async () => "x", addOnItsOwn });
