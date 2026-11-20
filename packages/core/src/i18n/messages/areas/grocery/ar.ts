@@ -62,8 +62,6 @@ export const groceryAr: AreaCatalog<typeof groceryEn> = {
   "grocery.toBuy.emptyTitle": "لا شيء للشراء",
   "grocery.toBuy.emptyLede": "اضغط + على أي غرض لإضافته إلى القائمة.",
   "grocery.summary.toBuy": "للشراء",
-  "grocery.summary.atHome": "في البيت",
-  "grocery.summary.notCounted": "لم يُعدّ بعد",
   "grocery.markBought": "وضع علامة تم الشراء",
   "grocery.bought.title": "ماذا اشتريت؟",
   "grocery.bought.description": "راجع كل كمية. ما اشتريته يُضاف إلى ما في البيت، والباقي يبقى في القائمة.",

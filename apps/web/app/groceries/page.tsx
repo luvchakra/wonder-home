@@ -187,8 +187,9 @@ export default async function GroceriesPage({
             categories={categories}
             words={words}
           />
-          {/* Ordering the list on Instamart (25-032): an adult's, only where the deployment has it on. */}
-          {canMarkBought && instamartMode() !== "off" ? (
+          {/* Ordering the list on Instamart (25-032): an adult's, only where the deployment has it on,
+              and only on To buy, the list it orders (the owner, 2026-11-20). */}
+          {view === "to-buy" && canMarkBought && instamartMode() !== "off" ? (
             <Link
               href="/groceries/order"
               className="ml-auto inline-flex min-h-11 shrink-0 items-center gap-2 rounded-[var(--wh-radius-pill)] border border-[var(--wh-border)] bg-[var(--wh-surface)] px-4 text-sm font-semibold text-[var(--wh-primary)] hover:bg-[var(--wh-primary-soft)]"

@@ -1,6 +1,6 @@
 "use client";
 
-import { ArrowDownUp, CircleCheck, CircleHelp, Search, ShoppingBasket, ShoppingCart } from "lucide-react";
+import { ArrowDownUp, Search, ShoppingBasket, ShoppingCart } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
 
@@ -20,7 +20,6 @@ import {
   GroceryRow,
   type GroceryStatus,
 } from "@wonderhome/core/ui/grocery-row";
-import { MetricCard } from "@wonderhome/core/ui/metric-card";
 import { EmptyState } from "@wonderhome/core/ui/states";
 import type { Ladder } from "@wonderhome/core/commerce/buying-sizes";
 
@@ -57,8 +56,7 @@ export type ListItem = {
  * row per item with what is at home and what to buy side by side, each with
  * its own − amount + (an adult changes what is at home right here). "To buy"
  * is the same rows, narrowed to what is on the list — one list, no category
- * headings (the owner, 2026-10-20) — under three cards: At home, Not
- * counted yet, and Mark as bought, which is the action itself.
+ * headings (the owner, 2026-10-20) — with Mark as bought as its one action.
  */
 export function GroceryList({
   householdId,
@@ -103,9 +101,6 @@ export function GroceryList({
       /* preference not saved this time */
     }
   };
-  // At home and Not counted yet are ways in (the owner, 2026-10-20: "make the cards clickable"):
-  // a tap shows just the items they count, a second tap goes back to the list.
-  const [stockFilter, setStockFilter] = useState<"home" | "uncounted" | null>(null);
   // What the steppers have saved since the page was read, so "To buy" and its button follow along.
   const [onList, setOnList] = useState<Record<string, number>>(() =>
     Object.fromEntries(
@@ -136,16 +131,11 @@ export function GroceryList({
     .filter(
       (item) =>
       // To buy follows the steppers: an item taken off the list leaves this view at once and stays under All.
-      // A card's filter shows every item it counts, on the list or not, as its number does.
-      (stockFilter === "home"
-        ? item.stock !== null && item.stock > 0
-        : stockFilter === "uncounted"
-          ? item.stock === null
-          : view === "all"
-            ? true
-            : view === "in-kitchen"
-              ? item.stock !== null && item.stock > 0
-              : (onList[item.id] ?? 0) > 0) &&
+      (view === "all"
+        ? true
+        : view === "in-kitchen"
+          ? item.stock !== null && item.stock > 0
+          : (onList[item.id] ?? 0) > 0) &&
       (!category || item.category === category) &&
       (!needle ||
         [item.name, item.category, ...item.aliases].some((text) =>
@@ -158,8 +148,6 @@ export function GroceryList({
     (item) => item.toBuy && (onList[item.id] ?? 0) > 0,
   );
 
-  const atHome = items.filter((item) => item.stock !== null && item.stock > 0).length;
-  const notCounted = items.filter((item) => item.stock === null).length;
   const boughtLines = toBuyNow.map((item) => ({
     entryId: item.toBuy!.entryId,
     itemId: item.id,
@@ -243,49 +231,28 @@ export function GroceryList({
 
   return (
     <div className="space-y-3">
-      {view === "to-buy" && items.length > 0 ? (
-        // Three across, by the owner's call (an exception to rule 19): labels wrap, never cut.
-        <ul className="grid grid-cols-3 gap-2.5">
-          <li className="min-w-0">
-            <MetricCard
-              stacked
-              label={words.summary.atHome}
-              value={atHome}
-              icon={CircleCheck}
-              tone="handled"
-              pressed={stockFilter === "home"}
-              disabled={atHome === 0}
-              onClick={() => setStockFilter((current) => (current === "home" ? null : "home"))}
-            />
-          </li>
-          <li className="min-w-0">
-            <MetricCard
-              stacked
-              label={words.summary.notCounted}
-              value={notCounted}
-              icon={CircleHelp}
-              tone="attention"
-              pressed={stockFilter === "uncounted"}
-              disabled={notCounted === 0}
-              onClick={() => setStockFilter((current) => (current === "uncounted" ? null : "uncounted"))}
-            />
-          </li>
-          <li className="min-w-0">
-            {canMarkBought && toBuyNow.length > 0 ? (
-              <MarkBoughtButton
-                householdId={householdId}
-                today={today}
-                words={words}
-                lines={boughtLines}
-                trigger={(open) => (
-                  <MetricCard stacked label={words.bought.open} value={toBuyNow.length} icon={ShoppingCart} tone="primary" onClick={open} />
-                )}
-              />
-            ) : (
-              <MetricCard stacked label={words.bought.open} value={toBuyNow.length} icon={ShoppingCart} tone="primary" />
+      {/* The three summary cards are gone (the owner, 2026-11-20: crossed out);
+          the tabs already count At home and To buy. Mark as bought had no
+          other door, so it stays as one quiet button, on To buy only. */}
+      {view === "to-buy" && canMarkBought && toBuyNow.length > 0 ? (
+        <div className="flex justify-end">
+          <MarkBoughtButton
+            householdId={householdId}
+            today={today}
+            words={words}
+            lines={boughtLines}
+            trigger={(open) => (
+              <button
+                type="button"
+                onClick={open}
+                className="inline-flex min-h-11 items-center gap-2 rounded-[var(--wh-radius-pill)] border border-[var(--wh-border)] bg-[var(--wh-surface)] px-4 text-sm font-semibold text-[var(--wh-primary)] hover:bg-[var(--wh-primary-soft)] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--wh-primary)]"
+              >
+                <ShoppingCart aria-hidden className="size-4" />
+                {words.bought.open}
+              </button>
             )}
-          </li>
-        </ul>
+          />
+        </div>
       ) : null}
 
       {/* Search and the sort share one row; the sort is picked, not typed

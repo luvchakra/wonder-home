@@ -86,10 +86,6 @@ export function groceryWords(translate: Translate, language: string | undefined)
       remove: t("grocery.stepper.remove"),
       removeLabel: t("grocery.stepper.removeLabel"),
     },
-    summary: {
-      atHome: t("grocery.summary.atHome"),
-      notCounted: t("grocery.summary.notCounted"),
-    },
     stockStepper: {
       less: t("grocery.stock.less"),
       more: t("grocery.stock.more"),

@@ -62,8 +62,6 @@ export const groceryZh: AreaCatalog<typeof groceryEn> = {
   "grocery.toBuy.emptyTitle": "没有要买的",
   "grocery.toBuy.emptyLede": "点任意物品上的 + 就能加入清单。",
   "grocery.summary.toBuy": "待买",
-  "grocery.summary.atHome": "家里有",
-  "grocery.summary.notCounted": "还没清点",
   "grocery.markBought": "标记为已买",
   "grocery.bought.title": "你买了什么？",
   "grocery.bought.description": "核对一下每样的数量。买到的会计入家里的库存，其余的留在清单上。",
