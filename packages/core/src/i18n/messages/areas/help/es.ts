@@ -102,7 +102,7 @@ export const helpEs: AreaCatalog<typeof helpEn> = {
   "help.guide.talk-to-wonderhome.body.4":
     "Varias peticiones en una frase se atienden una por una. Una parte posterior que depende de una anterior (“…y recuérdame comprarlos”) solo sigue adelante si la parte anterior de verdad se hizo.",
   "help.guide.talk-to-wonderhome.body.5":
-    "“Recuérdame llamar al fontanero mañana a las 5” crea un recordatorio solo para ti, que llega cuando toca. Cuando se menciona a alguien y podrían encajar dos personas, HomeTalk pregunta cuál en lugar de adivinar.",
+    "“Recuérdame llamar al fontanero mañana a las 5” crea un recordatorio solo para ti, que llega cuando toca. Cuando se menciona a alguien y podrían encajar dos personas, HomeTalk pregunta cuál en lugar de adivinar. Di el día y la hora como quieras — “mañana a la una”, “a las seis y media”: si no dices de la mañana o de la tarde, HomeTalk elige la más probable y te lo dice, y “No, a la 1 de la madrugada” lo cambia. Una cita médica u otra cita de salud tuya dicha como recordatorio se añade a Salud y bienestar, en privado, con sus recordatorios habituales.",
   "help.guide.talk-to-wonderhome.body.6":
     "Edita tu último mensaje para reformularlo y busca en tus conversaciones anteriores desde el cuadro de búsqueda de arriba. Nunca dice que hizo algo a menos que lo hiciera de verdad; cuando solo preparó algo, dice que lo preparó, y cuando no hacía falta cambiar nada, también lo dice.",
   "help.guide.talk-to-wonderhome.body.7":

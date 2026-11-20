@@ -1,3 +1,4 @@
+import { readTimeOfDay } from "./time-of-day";
 import type { HouseholdIntent, IntentTarget } from "./intent";
 import { readItemAmount } from "./quantity";
 import { resolveTemporal } from "./temporal";
@@ -94,6 +95,14 @@ export function readCorrection(utterance: string): Correction | null {
   const actually = /^actually[,.!]?\s+(?:it'?s|it is|that'?s|that is)?\s*(.+)$/i.exec(text);
   if (actually && actually[1]!.split(/\s+/).length <= 4) return { kind: "value", to: actually[1]!.trim() };
 
+  // "At 1 o'clock" just after a reminder or appointment: its time (2026-11-20).
+  const at = /^(?:at|make it)\s+(.+)$/i.exec(text);
+  if (at && at[1]!.split(/\s+/).length <= 3 && readTimeOfDay(at[1]!)) return { kind: "value", to: at[1]!.trim() };
+
+  // "No, 1 am", "no make it sunday", "nahi, 4 baje" (2026-11-20): a short new value after a no.
+  const no = /^(?:no|nope|nahi|na)[,.!]?\s+(?:(?:make it|it'?s|it is|that'?s|at|on)\s+)*(.+)$/i.exec(text);
+  if (no && no[1]!.split(/\s+/).length <= 3 && !/^(?:thanks|thank you|need|don'?t|leave|cancel|stop)\b/i.test(no[1]!)) return { kind: "value", to: no[1]!.trim() };
+
   return null;
 }
 
@@ -134,6 +143,12 @@ export function applyCorrection(
     if (index < 0) return null;
     const next = items.map((item, at) => (at === index ? correction.to : item));
     return finish(currentTarget, next.length === 1 ? { ...parameters, item: next[0], items: undefined } : { ...parameters, items: next, item: undefined });
+  }
+
+  // "No, 1 am" — a time, for a reminder or an appointment (2026-11-20). Only a time said plainly, never a bare number.
+  if ((subject.actionType === "set_reminder" || subject.actionType === "record_health_appointment") && /(?:[ap]\.?m\b|o'?\s?clock|:\d{2}|\bnoon\b|\bmidnight\b|\bhalf past\b|\bquarter (?:past|to)\b|\bin the (?:morning|evening|afternoon)\b)/i.test(correction.to)) {
+    const time = readTimeOfDay(correction.to);
+    if (time) return finish(currentTarget, { ...parameters, time: correction.to.replace(/^at\s+/i, "") });
   }
 
   // "Make that Friday" — a day, for a request that has one.
@@ -198,6 +213,9 @@ export function describeCorrection(subject: CorrectableAction, corrected: Househ
   const beforeWhen = name(before.when) ?? name(before.to);
   const afterWhen = name(after.when) ?? name(after.to);
   if (beforeWhen && afterWhen && beforeWhen !== afterWhen) return `${beforeWhen} → ${afterWhen}`;
+  const beforeTime = name(before.time);
+  const afterTime = name(after.time);
+  if (afterTime && beforeTime !== afterTime) return `${beforeTime ?? "the time"} → ${afterTime}`;
   const beforeWindow = name(before.window);
   const afterWindow = name(after.window);
   if (beforeWindow && afterWindow && beforeWindow !== afterWindow) return `${beforeWindow} → ${afterWindow}`;

@@ -3,6 +3,7 @@ import { join } from "node:path";
 
 import { platformKey } from "../ai/model-key";
 import { GOLDEN_CASES } from "./cases";
+import { UNDERSTANDING_SET } from "./cases-understanding";
 import { formatLatency, formatRatio, measure } from "./metrics";
 import { releasable, releaseArtifact, releaseGates } from "./report";
 import { runEvaluation, type RunTarget } from "./run";
@@ -15,6 +16,7 @@ import { runEvaluation, type RunTarget } from "./run";
  *   npm run eval -- --write             also write the release artifact to docs/ai-releases/
  *   npm run eval -- --cases HT-117,HS-24 [--runs 3]   only those cases, each run that many times
  *   npm run eval -- --utterance "Asmi has a test on Friday"   how one HomeTalk sentence is read
+ *   npm run eval -- --set understanding [--verbose]   the wide understanding set, measured (2026-11-20)
  *
  * The last two are for finding a defect cheaply: they never write an
  * artifact and say nothing about the release gates, which only mean
@@ -82,8 +84,47 @@ async function readUtterance(target: RunTarget, utterance: string): Promise<numb
   return 0;
 }
 
+/**
+ * The wide understanding set (2026-11-20): how many requests are understood
+ * fully in one turn, how many get a question nobody needed, how many are filed
+ * as the wrong thing, and questions per request. Measured, never a gate.
+ */
+async function understandingRun(target: RunTarget, verbose: boolean): Promise<number> {
+  const run = await runEvaluation(target, UNDERSTANDING_SET);
+  let full = 0;
+  let needless = 0;
+  let misfiled = 0;
+  const questions: number[] = [];
+  for (const result of run.results) {
+    const c = UNDERSTANDING_SET.find((entry) => entry.id === result.caseId)!;
+    const expectations = [c.expected, ...(c.followUps ?? []).map((turn) => turn.expected)];
+    const turns = result.turns ?? [];
+    const asked = turns.filter((turn) => turn.action === "clarify").length;
+    questions.push(asked);
+    const unneeded = turns.some((turn, index) => turn.action === "clarify" && expectations[index]?.action !== "clarify");
+    const wrong = turns.some((turn, index) => turn.action !== "clarify" && expectations[index]?.interpretation !== undefined && turn.interpretation !== expectations[index]!.interpretation);
+    if (result.pass) full += 1;
+    if (unneeded) needless += 1;
+    if (wrong) misfiled += 1;
+    if (verbose || !result.pass) {
+      const failed = result.stages.filter((stage) => !stage.pass).map((stage) => `${stage.stage} ${JSON.stringify(stage.expected)}→${JSON.stringify(stage.actual)}`);
+      console.log(`${result.pass ? "pass" : "FAIL"} ${result.caseId} "${c.utterance}"${unneeded ? " [needless question]" : ""}${wrong ? " [mis-filed]" : ""}${failed.length ? `\n    ${failed.join("\n    ")}` : ""}${!result.pass && turns.length ? `\n    said: ${turns.map((turn) => turn.answer.replace(/\s+/g, " ").slice(0, 140)).join(" | ")}` : ""}`);
+    }
+  }
+  const sorted = [...questions].sort((a, b) => a - b);
+  const median = sorted.length ? sorted[Math.floor(sorted.length / 2)]! : 0;
+  const total = run.results.length;
+  console.log(`understanding — ${run.provider} (${run.model}), ${total} requests`);
+  console.log(`  understood fully in one go  ${full}/${total}`);
+  console.log(`  a question nobody needed    ${needless}/${total}`);
+  console.log(`  filed as the wrong thing    ${misfiled}/${total}`);
+  console.log(`  questions per request       median ${median}, mean ${(questions.reduce((a, b) => a + b, 0) / Math.max(1, total)).toFixed(2)}`);
+  return 0;
+}
+
 export async function main(args: readonly string[], repoRoot: string): Promise<number> {
   const target = targetFrom(args);
+  if (valueOf(args, "--set") === "understanding") return understandingRun(target, args.includes("--verbose"));
   const utterance = valueOf(args, "--utterance");
   if (utterance) return readUtterance(target, utterance);
   const picked = valueOf(args, "--cases");

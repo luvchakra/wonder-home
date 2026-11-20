@@ -102,7 +102,7 @@ export const helpDe: AreaCatalog<typeof helpEn> = {
   "help.guide.talk-to-wonderhome.body.4":
     "Mehrere Anliegen in einem Satz werden nacheinander erledigt. Ein späterer Teil, der auf einem früheren aufbaut („…und erinnere mich daran, sie zu kaufen“), geht nur weiter, wenn der frühere Teil wirklich passiert ist.",
   "help.guide.talk-to-wonderhome.body.5":
-    "„Erinnere mich morgen um 17 Uhr daran, den Klempner anzurufen“ legt eine Erinnerung nur für dich an, die kommt, wenn sie fällig ist. Wenn jemand erwähnt wird und zwei Personen passen könnten, fragt HomeTalk nach, wer gemeint ist, statt zu raten.",
+    "„Erinnere mich morgen um 17 Uhr daran, den Klempner anzurufen“ legt eine Erinnerung nur für dich an, die kommt, wenn sie fällig ist. Wenn jemand erwähnt wird und zwei Personen passen könnten, fragt HomeTalk nach, wer gemeint ist, statt zu raten. Sag Tag und Uhrzeit, wie du willst – „morgen um 1“, „halb sieben“: Sagst du nicht vormittags oder nachmittags, wählt HomeTalk das Wahrscheinliche und sagt es dir, und „Nein, 1 Uhr nachts“ ändert es. Ein eigener Arzt- oder anderer Gesundheitstermin, als Erinnerung gesagt, wird privat unter Gesundheit & Fitness eingetragen, mit seinen üblichen Erinnerungen.",
   "help.guide.talk-to-wonderhome.body.6":
     "Bearbeite deine letzte Nachricht, um sie anders zu formulieren, und durchsuche deine früheren Gespräche über das Suchfeld oben. Es sagt nie, dass es etwas getan hat, wenn es das nicht wirklich hat; wo es nur etwas vorbereitet hat, sagt es „vorbereitet“, und wo nichts geändert werden musste, sagt es das.",
   "help.guide.talk-to-wonderhome.body.7":

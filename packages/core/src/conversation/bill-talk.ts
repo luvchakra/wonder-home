@@ -113,7 +113,9 @@ export function readBillUtterance(text: string): Read | null {
   const paid =
     said.match(/^(?:i |we |i've |we've |i have |we have |just )*(?:paid|settled|cleared)\s+(?:off\s+)?(.+)$/i) ??
     said.match(/^mark\s+(.+?)\s+(?:as\s+)?(?:paid|settled|done)(.*)$/i) ??
-    said.match(/^(.+?)\s+(?:is|has been|was|got)\s+(?:paid|settled)(.*)$/i);
+    said.match(/^(.+?)\s+(?:is|has been|was|got)\s+(?:paid|settled)(.*)$/i) ??
+    // "electricity bill paid 2840" (2026-11-20).
+    said.match(/^(.+?)\s+(?:paid|settled|cleared)(\s+.*)?$/i);
   if (paid) {
     let rest = `${paid[1]!}${paid[2] ?? ""}`;
     if (!billish(rest)) return null;

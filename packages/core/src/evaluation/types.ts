@@ -321,6 +321,8 @@ export type CaseResult = {
   latencyMs: number;
   /** Tokens, when the provider reported them. */
   tokens: { input: number; output: number } | null;
+  /** A HomeTalk case's turns as read: what each was taken as and what it did, for the understanding measures. */
+  turns?: { interpretation: string | null; action: string | null; answer: string }[];
 };
 
 /** Which model, prompt and context a run was made with (§12, §22). */

@@ -102,7 +102,7 @@ export const helpFr: AreaCatalog<typeof helpEn> = {
   "help.guide.talk-to-wonderhome.body.4":
     "Plusieurs demandes dans une même phrase sont traitées une par une. Une partie qui s’appuie sur une précédente (« …et rappelle-moi de les acheter ») n’avance que si la partie précédente a réellement eu lieu.",
   "help.guide.talk-to-wonderhome.body.5":
-    "« Rappelle-moi d’appeler le plombier demain à 17 h » crée un rappel pour vous seul, envoyé au bon moment. Quand quelqu’un est mentionné et que deux personnes pourraient correspondre, HomeTalk demande laquelle plutôt que de deviner.",
+    "« Rappelle-moi d’appeler le plombier demain à 17 h » crée un rappel pour vous seul, envoyé au bon moment. Quand quelqu’un est mentionné et que deux personnes pourraient correspondre, HomeTalk demande laquelle plutôt que de deviner. Dites le jour et l’heure comme vous voulez — « demain à 1 heure », « six heures et demie » : sans matin ni soir, HomeTalk choisit le plus probable et vous le dit, et « Non, 1 h du matin » le change. Un rendez-vous chez le médecin ou un autre rendez-vous de santé à vous, dit comme un rappel, est ajouté à Santé et forme, en privé, avec ses rappels habituels.",
   "help.guide.talk-to-wonderhome.body.6":
     "Modifiez votre dernier message pour le reformuler, et recherchez dans vos conversations passées depuis le champ de recherche en haut. Il ne dit jamais avoir fait quelque chose s’il ne l’a pas vraiment fait ; quand il a seulement préparé quelque chose, il dit « préparé », et quand rien n’avait besoin de changer, il le dit.",
   "help.guide.talk-to-wonderhome.body.7":

@@ -79,6 +79,17 @@ export function readItemAmount(phrase: string): ReadItem {
   const moreOnly = text.match(/^(?:some )?more (.+)$/i);
   if (moreOnly) return { item: cleanItem(moreOnly[1]!), amount: null };
 
+  // "dozen eggs" (the "a" taken off in a list) is a dozen (2026-11-20).
+  const dozen = text.match(/^dozen\s+(?:of\s+)?(.+)$/i);
+  if (dozen) return { item: cleanItem(dozen[1]!), amount: { quantity: 1, unit: "dozen", more: false } };
+
+  // "curd 1 packet", "maggi 2 packets": the amount said after the thing.
+  const after = text.match(new RegExp(String.raw`^(.+?)\s+${NUMBER}\s*(${UNIT_WORDS})\b\.?$`, "i"));
+  if (after) {
+    const quantity = numberValue(after[2]!);
+    if (quantity && !/^an?$/i.test(after[2]!)) return { item: cleanItem(after[1]!), amount: { quantity: roundQuantity(quantity), unit: normalizeUnit(after[3]!), more: false } };
+  }
+
   text = text.replace(/^(?:some|the|a|an)\s+/i, "");
   return { item: cleanItem(text), amount: null };
 }
