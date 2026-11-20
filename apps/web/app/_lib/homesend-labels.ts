@@ -459,13 +459,6 @@ export type HomeSendPageLabels = {
     newAddress: string;
     turningOff: string;
     turnOff: string;
-    installTitle: string;
-    installBody: string;
-    install: string;
-    installDescription: string;
-    gotIt: string;
-    /** By the device the page is open on (`useInstallPrompt`'s platform). */
-    installSteps: Record<"ios" | "android" | "desktop" | "unknown", string[]>;
   };
 };
 
@@ -996,17 +989,6 @@ export function homesendPageLabels(t: Translate, language: string): HomeSendPage
       newAddress: t("homesend.channels.newAddress"),
       turningOff: t("homesend.channels.turningOff"),
       turnOff: t("homesend.channels.turnOff"),
-      installTitle: t("homesend.channels.installTitle"),
-      installBody: t("homesend.channels.installBody"),
-      install: t("homesend.channels.install"),
-      installDescription: t("homesend.channels.installDescription"),
-      gotIt: t("homesend.channels.gotIt"),
-      installSteps: {
-        ios: [t("homesend.install.ios1"), t("homesend.install.ios2"), t("homesend.install.ios3")],
-        android: [t("homesend.install.android1"), t("homesend.install.android2"), t("homesend.install.android3")],
-        desktop: [t("homesend.install.desktop1"), t("homesend.install.desktop2")],
-        unknown: [t("homesend.install.other")],
-      },
     },
   };
 }
