@@ -861,6 +861,16 @@ describe("processing into HomeSend", () => {
     expect(h.tables.home_send_items).toEqual([]);
   });
 
+  /** An amount question left open, as the conversation route keeps it. */
+  const quantityAsked = (names: string[], utterance: string): NonNullable<TurnInput["clarifying"]> => ({
+    action: "add_to_list",
+    target: { kind: "list", reference: "groceries" },
+    parameters: { ...(names.length === 1 ? { item: names[0] } : { items: names }), awaiting: "quantity", quantityFor: names },
+    question: "How much should I add?",
+    utterance,
+    asked: 1,
+  }) as NonNullable<TurnInput["clarifying"]>;
+
   // The owner, 2026-10-26: "coconut oil" met "already on the shopping list, so there was nothing to add" — "it should ask for quantity".
   it("HomeTalk's how-much question is answered on WhatsApp: \"2 litres\" adds 2 litres of coconut oil", async () => {
     const oil = {
@@ -873,9 +883,12 @@ describe("processing into HomeSend", () => {
         utterance, channel: "text", actor: { memberId: MEMBER, roles: ["head"] }, pending: null, clarifying, autonomyFor: () => "execute", entitledFor: () => true, executable: canExecute, sessionId: "s-wa", now,
         ground: (intent) => groundIntent(intent, { people: [], viewerMemberId: MEMBER, timezone: "Asia/Kolkata", now, references: async () => NO_REFERENCES, groceries: async () => [oil] }),
       });
+    // Since the owner's 2026-11-20 decision an add with no amount is done at once, never asked how much…
     const first = await talk("Add coconut oil to the groceries");
-    expect(first.kind === "reply" && first.text).toBe('**Coconut oil** is already on your shopping list (1 L).\nHow much more should I add?\nOr say "that\'s enough" to leave it.');
-    const clarifying = first.kind === "reply" ? (first.clarification ?? null) : null;
+    expect(first.kind === "reply" && first.proposal.kind).toBe("executed");
+    expect(first.kind === "reply" && first.text).not.toMatch(/How much/);
+    // …so an open amount question (one asked before, or "how many bottles") is built here: a WhatsApp reply still answers it.
+    const clarifying = quantityAsked(["coconut oil"], "Add coconut oil to the groceries");
 
     const { h, id } = await received("text");
     h.tables.whatsapp_messages![0]!.text_content = "2 litres";
@@ -960,8 +973,8 @@ describe("processing into HomeSend", () => {
         ground: (intent) => groundIntent(intent, { people: [], viewerMemberId: MEMBER, timezone: "Asia/Kolkata", now, references: async () => NO_REFERENCES, groceries: async () => kitchen }),
       });
     const first = await talk("Add milk, eggs and bread to the groceries");
-    expect(first.kind === "reply" && first.text).toContain('For example "2 of each" or "1 litre milk and 6 eggs".');
-    const clarifying = first.kind === "reply" ? (first.clarification ?? null) : null;
+    expect(first.kind === "reply" && first.proposal.kind).toBe("executed");
+    const clarifying = quantityAsked(["milk", "eggs", "bread"], "Add milk, eggs and bread to the groceries");
 
     const { h, id } = await received("text");
     h.tables.whatsapp_messages![0]!.text_content = "2 of each";

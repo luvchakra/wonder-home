@@ -309,10 +309,10 @@ describe("a link is never a thing to buy", () => {
     }
   });
 
-  it("\"add milk\" still asks how much, as before", async () => {
-    // Expected: add_to_list for milk, awaiting its quantity.
+  it("\"add milk\" is added at once, never asked how much (the owner, 2026-11-20, replacing 2026-10-26)", async () => {
     const result = await converse(turn({ utterance: "add milk", ground }));
     expect(result.kind === "reply" && result.intent).toMatchObject({ action: "add_to_list", parameters: { item: "milk" } });
-    expect(result.kind === "reply" && result.text).toMatch(/How much milk should I add\?/);
+    expect(result.kind === "reply" && result.text).not.toMatch(/How much/);
+    expect(result.kind === "reply" ? result.clarification?.parameters.awaiting : null).not.toBe("quantity");
   });
 });
