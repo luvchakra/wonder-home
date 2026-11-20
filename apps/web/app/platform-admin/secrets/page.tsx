@@ -2,6 +2,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 
 import { secretGroups } from "../../_lib/platform-settings-view";
+import { staffStepUp } from "../../_lib/platform-step-up";
 import { platformStaff } from "../../_lib/platform-staff";
 import { PageBody, PageTitle } from "../_ui/page-title";
 import { SettingGroups } from "../_ui/setting-groups";
@@ -13,7 +14,7 @@ export const metadata = { title: "Secrets · Platform admin", robots: { index: f
 export default async function PlatformSecretsPage() {
   const staff = await platformStaff("secrets.manage");
   if (!staff) notFound();
-  const { groups, storeReady } = await secretGroups(staff);
+  const [{ groups, storeReady }, stepUp] = await Promise.all([secretGroups(staff), staffStepUp()]);
 
   return (
     <PageBody>
@@ -26,7 +27,24 @@ export default async function PlatformSecretsPage() {
           </Link>
         }
       />
-      <SettingGroups groups={groups} storeReady={storeReady} />
+      <SettingGroups
+        groups={groups}
+        storeReady={storeReady}
+        stepUp={stepUp}
+        next="/platform-admin/secrets"
+        hide={["RAZORPAY_KEY_SECRET"]}
+        before={{
+          billing: (
+            <p className="text-sm">
+              The Razorpay key id and key secret are entered together, with one Save:{" "}
+              <Link href="/platform-admin/integrations#razorpay" className="font-medium text-[var(--wh-primary)] hover:underline">
+                Integrations → Payments → Razorpay
+              </Link>
+              .
+            </p>
+          ),
+        }}
+      />
     </PageBody>
   );
 }

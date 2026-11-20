@@ -1,9 +1,20 @@
+import { headers } from "next/headers";
 import Link from "next/link";
 
-import { settingGroupsFor } from "../../_lib/platform-settings-view";
+import { razorpayCard, settingGroupsFor } from "../../_lib/platform-settings-view";
+import { staffStepUp } from "../../_lib/platform-step-up";
 import { platformStaff } from "../../_lib/platform-staff";
 import { PageBody, PageTitle } from "../_ui/page-title";
+import { RazorpayCard } from "../_ui/razorpay-card";
 import { SettingGroups } from "../_ui/setting-groups";
+
+/** The Razorpay key id and secret have one editor: the Razorpay card (rule 23). */
+const ON_THE_CARD = ["RAZORPAY_KEY_ID", "RAZORPAY_KEY_SECRET"] as const;
+
+async function siteOrigin(): Promise<string> {
+  const host = (await headers()).get("host") ?? "home.wonderapps.biz";
+  return `${/^(localhost|127\.0\.0\.1)(:|$)/.test(host) ? "http" : "https"}://${host}`;
+}
 
 export const dynamic = "force-dynamic";
 export const metadata = { title: "Integrations · Platform admin", robots: { index: false, follow: false } };
@@ -12,7 +23,7 @@ export const metadata = { title: "Integrations · Platform admin", robots: { ind
 export default async function PlatformIntegrationsPage() {
   const staff = await platformStaff("operations.read");
   if (!staff) return null; // the layout has already answered 404
-  const { groups, storeReady } = await settingGroupsFor(staff, "integrations");
+  const [{ groups, storeReady }, card, stepUp] = await Promise.all([settingGroupsFor(staff, "integrations"), siteOrigin().then((origin) => razorpayCard(staff, origin)), staffStepUp()]);
 
   return (
     <PageBody>
@@ -33,7 +44,14 @@ export default async function PlatformIntegrationsPage() {
           </Link>
         }
       />
-      <SettingGroups groups={groups} storeReady={storeReady} />
+      <SettingGroups
+        groups={groups}
+        storeReady={storeReady}
+        stepUp={stepUp}
+        next="/platform-admin/integrations"
+        hide={ON_THE_CARD}
+        before={{ billing: <RazorpayCard view={card} stepUp={stepUp} /> }}
+      />
     </PageBody>
   );
 }

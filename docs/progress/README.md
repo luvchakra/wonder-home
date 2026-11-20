@@ -11,8 +11,13 @@ decision that shapes later work each earns a note, written before moving on.
 
 | Date | Note |
 |---|---|
+<<<<<<< Updated upstream
 | 2026-11-20 | [Who may file health records for others: an Admin's list skips "Who is this for?"](2026-11-20-health-filers.md) |
 | 2026-11-20 | [Knowing instead of asking: memory fills every kind, usual bill amounts, every child at a school, known senders trusted, every answer teaches](2026-11-20-knowing-instead-of-asking.md) |
+=======
+<<<<<<< Updated upstream
+| 2026-11-20 | [Razorpay keys: one card, and a step-up a Google-only owner can pass](2026-11-20-razorpay-one-card.md) |
+>>>>>>> Stashed changes
 | 2026-11-20 | [Nothing stuck: a matched bill updates by default, an old waiting bill is recorded](2026-11-20-matched-bill-update.md) |
 | 2026-11-20 | [Set aside: Delete on each row, short names; an unchanged portal page files once](2026-11-20-set-aside-delete.md) |
 | 2026-11-20 | [Razorpay subscriptions end to end: plans from our prices, checkout in place, receipts, owner setup](2026-11-20-razorpay-subscriptions.md) |
