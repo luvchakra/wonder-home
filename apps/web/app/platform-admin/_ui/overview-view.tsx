@@ -403,6 +403,10 @@ const BASIS_WORDS: Record<string, string> = {
   acted: "by someone acting on it",
   action: "by someone acting on it",
   payment: "by a payment message",
+  payment_proof: "by a payment message",
+  receipt: "by a matching receipt",
+  marked_paid: "by someone marking it paid",
+  due_passed: "by its day passing with no correction",
 };
 
 /** The four "Nothing waits" measures (2026-11-14), each beside its target, counts out of totals (principle 9). */

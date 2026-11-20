@@ -5,7 +5,7 @@ import { revalidatePath } from "next/cache";
 import { z } from "zod";
 
 import { toErrorBody } from "@wonderhome/core/api/errors";
-import { cancelObligation, restoreObligation, updateObligation } from "@wonderhome/core/finance/repository";
+import { cancelObligation, listObligations, removeTransaction, restoreObligation, undoBillPayment, updateObligation, type PaidBill } from "@wonderhome/core/finance/repository";
 import { removePurchase, retireConsumable } from "@wonderhome/core/commerce/repository";
 import { adjustListEntry, changeStock, listGroceries, recordedChange, type GroceryItem } from "@wonderhome/core/commerce/inventory";
 import { duplicateReceipt } from "@wonderhome/core/commerce/receipt-stock";
@@ -621,6 +621,9 @@ async function reverseChange(supabase: Awaited<ReturnType<typeof createClient>>,
       // portal's due date is read, midnight UTC being a day.
       const dueTimeKnown = typeof previous.dueTimeKnown === "boolean" ? previous.dueTimeKnown : Boolean(dueAt && !dueAt.includes("T00:00:00"));
       await updateSchoolItem(supabase, householdId, change.entityId, { dueAt, dueTimeKnown, endsAt: (previous.endsAt as string | null | undefined) ?? null });
+    } else if (change.domain === "bill" && previous.payment && typeof previous.payment === "object") {
+      // A payment proof marked it paid (2026-11-20 review): the payment is taken back, the bill as it was.
+      await undoBillPayment(supabase, { householdId, obligationId: change.entityId, paid: previous.payment as PaidBill });
     } else if (change.domain === "bill") {
       await updateObligation(supabase, {
         id: change.entityId,
@@ -642,6 +645,11 @@ async function reverseChange(supabase: Awaited<ReturnType<typeof createClient>>,
       await restoreObligation(supabase, { id: change.entityId, householdId, status: status && status !== "cancelled" ? status : "expected" });
     }
   } else if (change.domain === "bill") {
+    // A payment recorded on its own (a paid one-off) takes its history row with it.
+    const bill = (await listObligations(supabase, householdId, { id: change.entityId }))[0];
+    if (bill?.status === "paid" && bill.recurrence === "one_off" && bill.dueOn) {
+      await removeTransaction(supabase, { householdId, obligationId: change.entityId, periodLabel: bill.dueOn.slice(0, 7) }).catch(() => undefined);
+    }
     await cancelObligation(supabase, { id: change.entityId, householdId });
   } else if (change.domain === "school_item") {
     await cancelSchoolItem(supabase, householdId, change.entityId);

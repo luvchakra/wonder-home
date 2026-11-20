@@ -98,6 +98,16 @@ export type EndingInput = {
    * Absent: not known, so the careful answer, asking, applies.
    */
   waitForReview?: boolean;
+  /** The match on record has a second candidate (two bills): asked, never applied at once. */
+  ambiguous?: boolean;
+  /** A document with several records, in a household that records money directly: each added as Checking at once. */
+  severalNow?: boolean;
+  /**
+   * The sender is in HomeTalk right now (a turn in the last few minutes):
+   * only then is "send it again" asked; anyone else's unreadable item is set
+   * aside with its reason (the owner, 2026-11-20 review).
+   */
+  senderActive?: boolean;
 };
 
 /** How long a read-again has before the sender is asked to send it again. */
@@ -110,6 +120,8 @@ export type Ending =
   | { action: "note" }
   /** Read once more, another way (the job queue's read-again). */
   | { action: "read_again" }
+  /** Ask the sender once to send it again; only while they are in HomeTalk (2026-11-20 review), set aside if nobody does in 24 hours. */
+  | { action: "ask_resend" }
   /** Set aside as "already on record": the same one again (2026-11-20: no longer asked). */
   | { action: "already_recorded" }
   /** Recorded now as Checking, as record first would have (a bill sent before 14 Nov that matches nothing). */
@@ -122,6 +134,10 @@ export type Ending =
   | { action: "file_for"; memberId: string }
   /** "Update the existing bill?" (the owner, 2026-11-20): default Update, marked Checking; a cancellation's default keeps the record Checking. */
   | { action: "ask_update"; cancel: boolean }
+  /** One clear bill on record with a newer amount or date: updated now, marked Checking, with Undo (2026-11-20 review). */
+  | { action: "update_now" }
+  /** A document with several bills, where money is recorded directly: each added now as Checking (2026-11-20 review). */
+  | { action: "add_now" }
   /** Nothing to do yet (a read-again is queued, or its question is open). */
   | { action: "wait" };
 
@@ -136,8 +152,10 @@ const READ_AGAIN: ReadonlySet<HomeSendFailureReason> = new Set(["link_unreachabl
  *
  *   1. Not household information (a pasted page, an ad, a newsletter) that
  *      HomeSend couldn't read or place: set aside now, with that reason.
- *   2. Couldn't be read: read again once, another way; then set aside with
- *      that reason, in the daily summary with Restore.
+ *   2. Couldn't be read: read again once, another way; then the sender is
+ *      asked to send it again only if they are in HomeTalk right now
+ *      ("homesend_resend"); otherwise set aside with that reason, in the
+ *      daily summary with Restore.
  *   3. Read, but HomeSend couldn't tell what it is: kept as a household note.
  *   4. Anything else waiting: kept as a household note now. A bill, receipt
  *      or health document is never made a note: it is recorded as Checking
@@ -145,10 +163,10 @@ const READ_AGAIN: ReadonlySet<HomeSendFailureReason> = new Set(["link_unreachabl
  *
  * Since 2026-11-20 (the owner: "as autonomous as possible, with minimum inputs
  * required from the users"; 8 of the 9 questions asked since 14 Nov went
- * unanswered) none of these asks: "send it again?" and the waiting item's
- * question did only what their default did, a day later. What still asks:
- * "Update the existing bill?" for a matched bill, and "Add this bill?" when an
- * Admin chose "Wait for review".
+ * unanswered) the waiting item's question is gone: it did only what its
+ * default did, a day later. What still asks: "send it again?" to a sender in
+ * HomeTalk right now, "Update the existing bill?" for an ambiguous match or a
+ * cancellation, and "Add this bill?" when an Admin chose "Wait for review".
  */
 export function endingFor(item: EndingInput): Ending {
   if (item.status !== "received" && item.status !== "classified" && item.status !== "failed") return { action: "wait" };
@@ -169,7 +187,10 @@ export function endingFor(item: EndingInput): Ending {
     // Record first never adds one that matches a record already on file, so it is asked about here
     // (the owner, 2026-11-20: "update"): a newer amount or date updates the record, marked Checking.
     if (item.match === "update" || item.match === "cancellation") {
-      return item.asked.has(UPDATE_SOURCE) ? { action: "wait" } : { action: "ask_update", cancel: item.match === "cancellation" };
+      if (item.asked.has(UPDATE_SOURCE)) return { action: "wait" };
+      // A newer amount or date for one clear bill is applied now (the 2026-11-20 review); a cancellation never cancels, and two candidates are asked.
+      if (item.match === "update" && item.kind === "bill" && item.ambiguous !== true) return { action: "update_now" };
+      return { action: "ask_update", cancel: item.match === "cancellation" };
     }
     // The same one again: what is on record is kept, and this copy set aside as "already on record" (Restore brings it back).
     if (item.match === "duplicate") return { action: "already_recorded" };
@@ -180,20 +201,25 @@ export function endingFor(item: EndingInput): Ending {
     // An allowed sender's health document naming another member: filed for them, never asked (the owner, 2026-11-20).
     if (item.kind === "health_document" && item.match === null && item.addable === true && item.filedFor) return { action: "file_for", memberId: item.filedFor };
     if (item.match === null && item.addable === true) {
-      if (item.waitForReview === false) return { action: "add" };
-      return item.asked.has(ADD_SOURCE) ? { action: "wait" } : { action: "ask_add" };
+      if (item.asked.has(ADD_SOURCE)) return { action: "wait" };
+      // Several records, money recorded directly: each added now, as one would be (the 2026-11-20 review).
+      if (item.severalNow === true) return { action: "add_now" };
+      // Not under the Admin's "Wait for review": added now as Checking with what is known (2026-11-20, part 3).
+      return item.waitForReview === false ? { action: "add" } : { action: "ask_add" };
     }
     return { action: "wait" };
   }
   return { action: "note" };
 }
 
-/** Read once more another way; after that (and an hour for it to run), set aside: nobody is asked to resend (2026-11-20). */
+/** Read once more another way; after that (and an hour for it to run), ask a sender who is in HomeTalk now, or set it aside. */
 function afterReadAgain(item: EndingInput): Ending {
   if (item.retryRequestedAt) return { action: "wait" };
   if (item.retryCount === 0 && item.canReadAgain) return { action: "read_again" };
   if (item.retryCount > 0 && item.minutesSinceTouched < READ_AGAIN_GRACE_MINUTES) return { action: "wait" };
-  return { action: "set_aside", reason: "unreadable" };
+  if (item.asked.has("homesend_resend")) return { action: "wait" };
+  // Asked only of a sender in HomeTalk right now: asking someone who isn't there is a 48-hour delay with no gain.
+  return item.senderMemberId && item.senderActive === true ? { action: "ask_resend" } : { action: "set_aside", reason: "unreadable" };
 }
 
 // --- 3. The questions and their defaults -----------------------------------
@@ -207,9 +233,10 @@ export const AMOUNT_SOURCE = "homesend_amount";
 /**
  * Sources no longer asked (2026-11-20). Their open rows are withdrawn by the
  * deadlines step; "homesend_check" is asked again only when an Admin turned on
- * "Ask me to confirm entries still Checking".
+ * "Ask me to confirm entries still Checking". ("Send it again?" stays, asked
+ * only of a sender in HomeTalk right now: the review's own rule.)
  */
-export const RETIRED_SOURCES: readonly string[] = ["homesend_waiting", "homesend_resend"];
+export const RETIRED_SOURCES: readonly string[] = ["homesend_waiting"];
 
 export type HomeSendQuestion = {
   source: "homesend_check" | "homesend_waiting" | "homesend_resend" | typeof UPDATE_SOURCE | typeof ADD_SOURCE | typeof AMOUNT_SOURCE;

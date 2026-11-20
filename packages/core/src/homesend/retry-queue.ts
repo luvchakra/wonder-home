@@ -1,7 +1,7 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 
 import { log } from "../observability/logger";
-import { rereadFailedItem, understand, type IngestDeps } from "./ingest";
+import { rereadFailedItem, secondReadDeps, understand, type IngestDeps } from "./ingest";
 import { clearHomeSendRetryRequested, getHomeSendItem, markHomeSendFailed } from "./repository";
 import { notificationJobHandlers } from "../notifications/retry-handler";
 import type { TrustedEmailAdd } from "./trusted-arrival";
@@ -148,7 +148,8 @@ async function retryClassification(admin: SupabaseClient, job: ClaimedJob, deps?
             : { channel: "pasted or forwarded text" },
       text: item.rawText,
     },
-    deps,
+    // A second read: the stronger reader (2026-11-20 review).
+    secondReadDeps(deps),
   );
   if (outcome.classifyFailed) return "failed";
   // An email read now (mail held until "Trust this sender?", or read late) is added like one read on arrival.
@@ -170,7 +171,7 @@ async function rereadJob(admin: SupabaseClient, job: ClaimedJob, deps?: IngestDe
   try {
     if (item.status !== "failed") return "skipped";
     try {
-      await rereadFailedItem(admin, item, deps);
+      await rereadFailedItem(admin, item, secondReadDeps(deps));
     } catch (thrown) {
       log.warn("homesend reread failed", { reason: thrown instanceof Error ? thrown.name : "unknown", allow: ["reason"] });
       await markHomeSendFailed(admin, job.household_id, itemId, item.failureReason ?? "unreadable").catch(() => undefined);

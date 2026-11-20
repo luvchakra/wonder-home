@@ -449,7 +449,7 @@ export async function markBillPaidAction(input: z.input<typeof markPaidSchema>):
       currency: parsed.data.currency,
     });
     // Marking a Checking bill paid is saying it was right (decision 3, 2026-11-14).
-    await confirmByAction(supabase, parsed.data.householdId, parsed.data.obligationId, admin.memberId);
+    await confirmByAction(supabase, parsed.data.householdId, parsed.data.obligationId, admin.memberId, "marked_paid");
     revalidatePath("/bills");
     revalidatePath("/household/home");
     return { paid };

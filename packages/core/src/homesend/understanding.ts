@@ -77,6 +77,12 @@ export type IntakeUnderstanding = {
    * DDU 2.0; the plan then derives its records from the headline reading.
    */
   document?: DocumentReading;
+  /**
+   * A bank, card or UPI message saying the household paid (decision 2, the
+   * owner 2026-11-20; `payment-proof.ts`): stored as a receipt-kind item,
+   * settled by the deadlines pass (`payment-apply.ts`). Absent otherwise.
+   */
+  payment?: import("./payment-proof").PaymentProof & { outcome?: "paid" | "recorded" | "conflict"; billId?: string; billName?: string };
   safety: {
     /** The content addressed WonderHome with instructions; they were ignored (§16). */
     instructionsIgnored: boolean;

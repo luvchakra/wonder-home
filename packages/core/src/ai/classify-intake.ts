@@ -6,7 +6,7 @@ import { z } from "zod";
 import { OBLIGATION_KINDS } from "../finance/payments";
 import { RECORD_TYPES } from "../health/records";
 import { SCHOOL_ITEM_KINDS } from "../school/items";
-import { CLAUDE_INTAKE_MODEL, GEMINI_MODEL, OPENAI_MODEL } from "./model-client";
+import { CLAUDE_INTAKE_MODEL, GEMINI_MODEL, OPENAI_MODEL, SECOND_READ_MODEL } from "./model-client";
 import type { ModelProvider } from "./model-key";
 import { reviewIntakeKind } from "./intake-kind-check";
 import { anthropicClient, geminiClient, openaiClient } from "./provider-clients";
@@ -929,7 +929,10 @@ export async function classifyIntake(
   apiKey: string,
   source: IntakeSource,
   context?: IntakeContext,
+  /** `stronger`: the second read before anything is set aside as unreadable (2026-11-20 review): the provider's most capable model, thinking harder. */
+  options: { stronger?: boolean } = {},
 ): Promise<IntakeExtraction | null> {
+  const stronger = options.stronger === true;
   try {
     switch (provider) {
       case "anthropic": {
@@ -947,13 +950,13 @@ export async function classifyIntake(
                 ]
               : [{ type: "text", text: `${textPrompt(source, context)}\n\n${CLAUDE_TOOL_INSTRUCTION}` }];
         const response = await client.messages.create({
-          model: CLAUDE_INTAKE_MODEL,
+          model: stronger ? SECOND_READ_MODEL.anthropic : CLAUDE_INTAKE_MODEL,
           max_tokens: 8192,
           system: INTAKE_SYSTEM_PROMPT,
           tools: [CLAUDE_INTAKE_TOOL],
           tool_choice: { type: "auto" },
           messages: [{ role: "user", content }],
-          output_config: { effort: "low" },
+          output_config: { effort: stronger ? "high" : "low" },
         });
         if (response.stop_reason === "refusal") return null;
         const call = response.content.find((block) => block.type === "tool_use" && block.name === CLAUDE_INTAKE_TOOL.name);
@@ -972,7 +975,7 @@ export async function classifyIntake(
               ? [{ inlineData: { mimeType: "application/pdf", data: source.document.base64 } }, { text: attachmentPrompt(context) }]
               : [{ text: textPrompt(source, context) }];
         const response = await client.models.generateContent({
-          model: GEMINI_MODEL,
+          model: stronger ? SECOND_READ_MODEL.google : GEMINI_MODEL,
           contents: [{ role: "user", parts }],
           config: {
             systemInstruction: INTAKE_SYSTEM_PROMPT,
@@ -987,7 +990,7 @@ export async function classifyIntake(
       case "openai": {
         const client = openaiClient(apiKey, "classify");
         const completion = await client.chat.completions.parse({
-          model: OPENAI_MODEL,
+          model: stronger ? SECOND_READ_MODEL.openai : OPENAI_MODEL,
           messages: [
             { role: "system", content: INTAKE_SYSTEM_PROMPT },
             {

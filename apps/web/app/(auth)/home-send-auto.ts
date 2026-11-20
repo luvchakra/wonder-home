@@ -15,6 +15,7 @@ import { SCHOOL_ITEM_KINDS } from "@wonderhome/core/school/items";
 import { OBLIGATION_KINDS } from "@wonderhome/core/finance/payments";
 import { RECORD_TYPES } from "@wonderhome/core/health/records";
 
+import { settleHomeSendSoon } from "../_lib/homesend-settle";
 import { prepareReview } from "./home-send-review";
 import { createNew, recordReceipt, reviseExisting, type RouteInput } from "./home-send-writes";
 
@@ -258,7 +259,14 @@ export async function addIfAllowed(
 ): Promise<AddedOnItsOwn | WaitingInHomeSend | null> {
   const item = await getHomeSendItem(supabase, membership.household.id, itemId);
   if (!item || item.status !== "classified" || !item.classifiedKind) return null;
+  // A payment proof is never added as a receipt here: the bill it paid is marked paid, at once, by the deadlines pass (2026-11-20 review).
+  if (item.understanding?.payment) {
+    settleHomeSendSoon(membership);
+    return null;
+  }
   const review = await prepareReview(supabase, membership, { ...item, createdByMemberId: options.createdByMemberId ?? item.createdByMemberId });
+  // A matched bill with a newer amount or date, or a document with several bills: settled at once, not at the 24-hour default.
+  if (item.classifiedKind === "bill" && (review.plan || review.confirmation.mode !== "auto_apply")) settleHomeSendSoon(membership);
   if (review.plan) return null;
   const kind = review.kind ?? item.classifiedKind;
   const extracted = review.extracted ?? item.extracted;

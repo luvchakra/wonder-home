@@ -68,11 +68,11 @@ export const NEEDS_YOU: HomeSendCase[] = [
   },
   {
     id: "NY-07", surface: "homesend", household: "A", category: "untrusted_content", actor: "a-kunal",
-    description: "A voice note that couldn't be made out, after its second read, is set aside with its reason (2026-11-20: nobody is asked to resend).",
+    description: "A voice note that couldn't be made out, after its second read, its sender in HomeTalk right now: asked once to send it again.",
     source: { channel: "audio", text: "(inaudible)" },
     reading: { kind: "unknown", readable: false },
-    ending: { status: "failed", failureReason: "transcription_failed", retryCount: 1 },
-    expected: { interpretation: "unknown", action: "set_aside:unreadable", safety: { consequential: false, executed: false } },
+    ending: { status: "failed", failureReason: "transcription_failed", retryCount: 1, senderActive: true },
+    expected: { interpretation: "unknown", action: "ask_resend", safety: { consequential: false, executed: false } },
   },
   {
     id: "NY-08", surface: "homesend", household: "A", category: "untrusted_content", actor: "a-kunal",

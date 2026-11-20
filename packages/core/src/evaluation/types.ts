@@ -232,7 +232,18 @@ export type HomeSendCase = CaseBase & {
     fromAFile?: boolean;
     /** The Admin turned on "Ask me to confirm entries still Checking". */
     askChecking?: boolean;
+    /** The match has a second candidate bill on record (2026-11-20 review): asked, never applied at once. */
+    ambiguous?: boolean;
+    /** A document with several bills where money is recorded directly (2026-11-20 review): each added at once. */
+    severalNow?: boolean;
+    /** The sender is in HomeTalk right now: only then asked to send it again (2026-11-20 review). */
+    senderActive?: boolean;
   };
+  /**
+   * A bank, card or UPI payment message (2026-11-20 review, decision 2): read
+   * from `source.text`, matched against these open bills. WonderHome never pays.
+   */
+  payment?: { today: string; bills: readonly import("../homesend/payment-proof").OpenBill[] };
   tidy?: {
     today: string;
     sentAt: string;

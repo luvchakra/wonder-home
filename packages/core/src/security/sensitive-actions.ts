@@ -327,6 +327,11 @@ export const SENSITIVE_ACTIONS: readonly SensitiveAction[] = [
     recordedIn: "packages/core/src/homesend/matched-update.ts",
   },
   {
+    event: "homesend.payment_recorded",
+    because: "A bank, card or UPI message forwarded to HomeSend said the household paid (2026-11-20 review, decision 2): the bill it paid was marked paid, as Checking with Undo, or the payment was recorded on its own. WonderHome never pays; it changes a money record, so the household should see what did it.",
+    recordedIn: "packages/core/src/homesend/payment-apply.ts",
+  },
+  {
     event: "homesend.added_checking",
     because: "Something sent in that waited (a bill, receipt or health document record first couldn't add on its own) was added with what is known, marked Checking, by a person's Add on \"Add this bill?\" or by its 24-hour default (owner 2026-11-20: \"record\"). It writes a money or health record, so the household should see who or what did it.",
     recordedIn: "packages/core/src/homesend/add-default.ts",
@@ -847,10 +852,15 @@ export function describeAuditEvent(
       return { title: "Something sent in was added, marked Checking", detail: metadata.by === "default" ? "Nobody answered within a day; check it before paying." : null };
     case "homesend.health_filed_for":
       return { title: "A health document was filed for the person it names, marked Checking", detail: "Sent by someone an Admin allowed to file health records for others." };
+    case "homesend.payment_recorded":
+      return {
+        title: metadata.outcome === "paid" ? "A bill was marked paid from a payment message" : "A payment from a payment message was recorded",
+        detail: metadata.outcome === "conflict" ? "Its amount differs from the bill it looks like, so that bill was left as it was. Marked Checking." : "Marked Checking. WonderHome never pays; it only records what was paid.",
+      };
     case "homesend.matched_update":
       return {
         title: metadata.mode === "cancel" ? "A bill on record was cancelled from a newer message" : metadata.mode === "flag" ? "A bill a message said was called off was kept, marked Checking" : "A bill on record was updated from a newer copy",
-        detail: metadata.by === "default" ? "Nobody answered within a day; it is marked Checking, so check it before paying." : null,
+        detail: metadata.by === "default" ? "Nobody answered within a day; it is marked Checking, so check it before paying." : metadata.by === "at_once" ? "Updated at once from the newer copy, marked Checking, with Undo." : null,
       };
     case "needs_you.answered":
       return { title: "Someone answered a \"Needs you\" question", detail: stringOr(metadata.answer, null) };

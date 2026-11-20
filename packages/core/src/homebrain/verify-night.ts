@@ -20,6 +20,14 @@ import { normalizeWords, ruleFor, vendorKey, type HouseholdRule } from "./rules"
  *   recurring       a bill or receipt matching that payee's pattern (amount within 25% of its usual,
  *                   due within 3 days of its usual day of the month), or a grocery the household has
  *                   added and kept at least twice before
+ *   receipt         a Checking bill whose payee sent a matching receipt (the same amount, near its day)
+ *   due_passed      its day has passed with no correction and no conflict raised (never money's
+ *                   amount question still open; never health)
+ * (A payment proof confirms the bill it paid at once, `homesend/payment-apply.ts`; marking it
+ * paid confirms it too, `homesend/changes.ts` `confirmByAction`: the owner's 2026-11-20 review.)
+ *
+ * A payment message whose amount disagrees with the bill it looks like never marks that bill paid;
+ * its own entry gets the "unusual amount" question here.
  *
  * It never confirms a health document (a person does), never moves money,
  * never deletes, and never puts an amount or a health detail in a question.
@@ -43,6 +51,10 @@ export type VerifyEntry = {
   contentHash: string | null;
   unconfirmed: boolean;
   createdAt: string;
+  /** Someone corrected what was read (`home_send_items.review_corrected`): never confirmed by its day passing. */
+  corrected?: boolean;
+  /** A payment message whose amount disagrees with this bill on record (its name): asked as an unusual amount. */
+  paymentConflictWith?: string | null;
 };
 
 /** Something sent that is not itself a live entry (set aside, waiting, or undone): a second source. */
@@ -76,7 +88,7 @@ export type Conflict = {
   evidence: string[];
 };
 
-export type Confirmation = { changeId: string; basis: "second_source" | "recurring"; evidence: string[] };
+export type Confirmation = { changeId: string; basis: "second_source" | "recurring" | "receipt" | "due_passed"; evidence: string[] };
 
 export type VerifyPlan = { conflicts: Conflict[]; confirm: Confirmation[] };
 
@@ -107,6 +119,13 @@ function sameThing(a: { title: string; date: string | null; contentHash?: string
   return a.title.length > 0 && a.title === b.title && sameDay(a.date, b.date);
 }
 
+/** A receipt counts for a bill dated within this many days of it. */
+const RECEIPT_WINDOW_DAYS = 20;
+
+function dayDiff(a: string, b: string): number {
+  return Math.round((Date.parse(`${a.slice(0, 10)}T00:00:00Z`) - Date.parse(`${b.slice(0, 10)}T00:00:00Z`)) / 86_400_000);
+}
+
 const DAY_KINDS: ReadonlySet<BarKind> = new Set(["event", "school_item", "activity_item"]);
 
 /** Plans the night: conflicts to raise and Checking entries to confirm. `now` bounds "recent". */
@@ -116,10 +135,13 @@ export function planVerification(input: {
   rules: readonly HouseholdRule[];
   /** Names for questions: member id → first name. */
   names: ReadonlyMap<string, string>;
-  /** Change ids already raised on an earlier night: never asked twice. */
+  /** Change ids already raised on an earlier night: never asked twice, and never confirmed by their day passing. */
   alreadyRaised: ReadonlySet<string>;
   now: Date;
+  /** The household's today ("YYYY-MM-DD"); defaults to `now`'s UTC day. */
+  today?: string;
 }): VerifyPlan {
+  const today = input.today ?? input.now.toISOString().slice(0, 10);
   const since = input.now.getTime() - RECENT_HOURS * 3_600_000;
   const recent = input.entries.filter((entry) => Date.parse(entry.createdAt) >= since);
   const conflicts: Conflict[] = [];
@@ -133,6 +155,28 @@ export function planVerification(input: {
   const ordered = [...input.entries].sort((a, b) => a.createdAt.localeCompare(b.createdAt));
 
   for (const entry of recent) {
+    // 0. A payment message whose amount disagrees with the bill it looks like: that bill was left as it was; ask about the payment.
+    if (entry.paymentConflictWith) {
+      raise({
+        reason: "unusual_amount",
+        changeId: entry.changeId,
+        itemId: entry.itemId,
+        label: entry.label,
+        kind: entry.kind,
+        dueOn: entry.date?.slice(0, 10) ?? null,
+        otherChangeId: null,
+        recipientMemberId: entry.createdByMemberId,
+        question: `The payment “${entry.label}” doesn't match the amount on “${entry.paymentConflictWith}”, so that bill wasn't marked paid. Is the payment right?`,
+        answers: [
+          { id: "keep", label: "It's right", action: "keep" },
+          { id: "remove", label: "Remove it", action: "undo_this" },
+        ],
+        defaultAnswerId: "keep",
+        defaultWords: "I'll keep it as it is, and leave the bill unpaid.",
+        evidence: [`A payment message named the same payee as “${entry.paymentConflictWith}”, for a different amount.`],
+      });
+      continue;
+    }
     const earlier = ordered.filter((other) => other.changeId !== entry.changeId && other.createdAt <= entry.createdAt && other.kind === entry.kind);
 
     // 1. Duplicate: the same thing recorded twice. A grocery said twice is a top-up (I-27), never a duplicate.
@@ -288,7 +332,34 @@ export function planVerification(input: {
     }
     if (entry.kind === "grocery_item") {
       const kept = before.filter((other) => other.title === entry.title);
-      if (kept.length >= 2) confirm.push({ changeId: entry.changeId, basis: "recurring", evidence: [`“${entry.label}” has been added and kept ${kept.length} times before.`] });
+      if (kept.length >= 2) {
+        confirm.push({ changeId: entry.changeId, basis: "recurring", evidence: [`“${entry.label}” has been added and kept ${kept.length} times before.`] });
+        continue;
+      }
+    }
+    // A receipt from the bill's payee for the same amount, near its day.
+    if (entry.kind === "bill" && entry.amount !== null && entry.amount > 0 && vendorKey(entry.payee)) {
+      const key = vendorKey(entry.payee);
+      const receipts = [
+        ...input.entries.filter((other) => other.kind === "receipt").map((other) => ({ itemId: other.itemId, title: other.label, date: other.date, amount: other.amount, payee: other.payee })),
+        ...input.sources.filter((source) => source.kind === "receipt"),
+      ];
+      const paid = receipts.find(
+        (receipt) =>
+          receipt.itemId !== entry.itemId &&
+          vendorKey(receipt.payee) === key &&
+          receipt.amount !== null &&
+          Math.abs(receipt.amount - entry.amount!) <= Math.max(1, entry.amount! * 0.01) &&
+          (entry.date === null || receipt.date === null || Math.abs(dayDiff(receipt.date, entry.date)) <= RECEIPT_WINDOW_DAYS),
+      );
+      if (paid) {
+        confirm.push({ changeId: entry.changeId, basis: "receipt", evidence: [`${entry.payee} sent a receipt for the same amount${paid.date ? ` on ${paid.date.slice(0, 10)}` : ""}.`] });
+        continue;
+      }
+    }
+    // Its day has passed with nobody correcting it and no conflict raised about it (never health; money's open questions stand).
+    if (entry.date && entry.date.slice(0, 10) < today && entry.corrected !== true && !input.alreadyRaised.has(entry.changeId) && !entry.paymentConflictWith) {
+      confirm.push({ changeId: entry.changeId, basis: "due_passed", evidence: [`Its day, ${entry.date.slice(0, 10)}, passed with no correction and nothing found against it.`] });
     }
   }
 
