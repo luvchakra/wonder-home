@@ -2,7 +2,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 
 const state = vi.hoisted(() => ({
   staff: null as null | { profileId: string; role: "support" | "operator" | "owner" },
-  password: "ok" as "ok" | "wrong" | "limited" | "unavailable",
+  password: "ok" as "ok" | "wrong" | "limited" | "unavailable" | "reauth",
   rpc: vi.fn(),
 }));
 
@@ -59,12 +59,12 @@ describe("platform setting actions", () => {
   it("ask the owner's password again for a secret, and never echo its value", async () => {
     state.staff = { profileId: "p-owner", role: "owner" };
     state.password = "wrong";
-    expect(await saveSettingAction(IDLE, form("GOOGLE_MAPS_API_KEY", "AIzaSyExampleExample1234", "nope"))).toMatchObject({ tone: "risk", message: "That password didn't match. Nothing was changed." });
+    expect(await saveSettingAction(IDLE, form("GOOGLE_MAPS_API_KEY", "AIzaSyExampleExample1234", "nope"))).toMatchObject({ tone: "risk", message: "That isn't your WonderHome password. Nothing was changed." });
     expect(state.rpc).not.toHaveBeenCalled();
     state.password = "ok";
     const saved = await saveSettingAction(IDLE, form("GOOGLE_MAPS_API_KEY", "AIzaSyExampleExample1234", "right"));
     expect(saved).toMatchObject({ tone: "info" });
-    expect(saved.message).toContain("••••1234");
+    expect(saved.message).toContain("ends in 1234");
     expect(saved.message).not.toContain("AIzaSy");
     expect(state.rpc).toHaveBeenCalledWith("platform_config_secret_set", { p_key: "GOOGLE_MAPS_API_KEY", p_value: "AIzaSyExampleExample1234", p_actor: "p-owner" });
   });

@@ -11,6 +11,7 @@ import { forgetRuntimeEnv } from "@wonderhome/core/platform/settings/runtime-env
 import { clearSetting, saveSetting } from "@wonderhome/core/platform/settings/store";
 
 import { confirmStaffPassword } from "../_lib/platform-step-up";
+import { stepUpRefusal } from "../_lib/platform-step-up-rules";
 import { platformStaff } from "../_lib/platform-staff";
 
 /**
@@ -46,9 +47,7 @@ async function authorise(formData: FormData) {
     if (!platformCan(staff, "secrets.manage")) return { error: "Only the owner can change a secret." } as const;
     const check = await confirmStaffPassword(parsed.data.password ?? "");
     if (check !== "ok") {
-      return {
-        error: check === "limited" ? "Too many attempts. Wait a moment." : check === "unavailable" ? "We couldn't check your password just now. Nothing was changed." : "That password didn't match. Nothing was changed.",
-      } as const;
+      return { error: stepUpRefusal(check) } as const;
     }
   }
   return { staff, entry, value: parsed.data.value ?? "" } as const;
@@ -77,7 +76,7 @@ export async function saveSettingAction(_previous: SettingActionState, formData:
   done();
   return {
     tone: "info",
-    message: entry.kind === "secret" ? `Saved${result.last4 ? ` ••••${result.last4}` : ""}. WonderHome uses it within a minute, no redeploy.` : "Saved. WonderHome uses it within a minute, no redeploy.",
+    message: entry.kind === "secret" ? `Saved${result.last4 ? ` · ends in ${result.last4}` : ""}. WonderHome uses it within a minute, no redeploy.` : "Saved. WonderHome uses it within a minute, no redeploy.",
     key: entry.key,
   };
 }

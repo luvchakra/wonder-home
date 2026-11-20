@@ -1,4 +1,5 @@
 import { settingGroupsFor, settingTotals } from "../../_lib/platform-settings-view";
+import { staffStepUp } from "../../_lib/platform-step-up";
 import { platformStaff } from "../../_lib/platform-staff";
 import { PageBody, PageTitle, Panel } from "../_ui/page-title";
 import { MoveAllFromVercel } from "../_ui/move-all";
@@ -19,7 +20,7 @@ const STAYS_IN_VERCEL = [
 export default async function PlatformConfigurationPage() {
   const staff = await platformStaff("operations.read");
   if (!staff) return null; // the layout has already answered 404
-  const [{ groups, storeReady }, { totals }] = await Promise.all([settingGroupsFor(staff, "configuration"), settingTotals(staff)]);
+  const [{ groups, storeReady }, { totals }, stepUp] = await Promise.all([settingGroupsFor(staff, "configuration"), settingTotals(staff), staffStepUp()]);
 
   return (
     <PageBody>
@@ -35,7 +36,7 @@ export default async function PlatformConfigurationPage() {
       >
         <MoveAllFromVercel canMove={staff.role === "owner" && storeReady} stillInVercel={totals.environment} />
       </Panel>
-      <SettingGroups groups={groups} storeReady={storeReady} />
+      <SettingGroups groups={groups} storeReady={storeReady} stepUp={stepUp} next="/platform-admin/configuration" />
       <Panel title="What stays in Vercel" description="Everything else is here. These few stay in Vercel on purpose.">
         <ul className="space-y-2">
           {STAYS_IN_VERCEL.map((item) => (

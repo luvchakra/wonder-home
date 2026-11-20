@@ -75,3 +75,33 @@ export async function settingTotals(staff: PlatformAdmin) {
   }
   return { totals, storeReady, statuses };
 }
+
+/** What the one Razorpay card shows (owner, 2026-11-20). Never the secret: its last four at most. */
+export type RazorpayCardView = {
+  keyId: string | null;
+  keyIdSource: SettingStatus["source"];
+  secretSource: SettingStatus["source"];
+  secretLast4: string | null;
+  switchedOn: boolean;
+  webhookUrl: string;
+  webhookSecretInVercel: boolean;
+  canEdit: boolean;
+};
+
+export async function razorpayCard(staff: PlatformAdmin, origin: string): Promise<RazorpayCardView> {
+  const { statuses } = await platformSettingStatuses(staff);
+  const id = statuses.get("RAZORPAY_KEY_ID");
+  const secret = statuses.get("RAZORPAY_KEY_SECRET");
+  const providers = statuses.get("WONDERHOME_BILLING_PROVIDERS")?.value ?? "none";
+  const entries = ["RAZORPAY_KEY_ID", "RAZORPAY_KEY_SECRET"].map((key) => PLATFORM_SETTINGS.find((entry) => entry.key === key));
+  return {
+    keyId: id?.value ?? null,
+    keyIdSource: id?.source ?? "unset",
+    secretSource: secret?.source ?? "unset",
+    secretLast4: secret?.last4 ?? null,
+    switchedOn: providers.split(",").includes("razorpay"),
+    webhookUrl: `${origin}/api/v1/billing/webhook/razorpay`,
+    webhookSecretInVercel: Boolean(process.env.RAZORPAY_WEBHOOK_SECRET?.trim()),
+    canEdit: staff.role === "owner" && entries.every((entry) => entry && mayEdit(entry, staff.role)),
+  };
+}
