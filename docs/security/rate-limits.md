@@ -41,6 +41,7 @@ Per-household buckets marked ★ were added by SEC-06; they sit beside the membe
 | `places.search` | member | 120 / 10 min |
 | `places.find` | household | 30 / 1 h |
 | `event.reply` | hashed IP | 20 / 10 min |
+| `household.export` | member | 5 / hour |
 | `auth.attempt` | hashed IP | 30 / 10 min |
 | `careers.apply` / `careers.status` | hashed IP | 10 / 1 h, 30 / 1 h |
 | `partner.request` | API key | 120 / 60 s |

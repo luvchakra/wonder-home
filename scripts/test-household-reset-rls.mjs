@@ -29,6 +29,8 @@ const MANIFEST = JSON.parse(readFileSync(new URL("../packages/core/src/household
 const OWNER_A = "a1111111-1111-4111-8111-111111111111";
 const ADMIN_A = "a2222222-2222-4222-8222-222222222222";
 const CHILD_A = "a3333333-3333-4333-8333-333333333333";
+const HELPER_A = "a4444444-4444-4444-8444-444444444444";
+const ADULT_A = "a5555555-5555-4555-8555-555555555555";
 const OWNER_B = "b1111111-1111-4111-8111-111111111111";
 const ADULT_B = "b2222222-2222-4222-8222-222222222222";
 
@@ -110,6 +112,7 @@ before(() => {
   psql(
     `insert into auth.users (id, email) values
        ('${OWNER_A}', 'owner-a@example.test'), ('${ADMIN_A}', 'admin-a@example.test'), ('${CHILD_A}', 'child-a@example.test'),
+       ('${HELPER_A}', 'helper-a@example.test'), ('${ADULT_A}', 'adult-a@example.test'),
        ('${OWNER_B}', 'owner-b@example.test'), ('${ADULT_B}', 'adult-b@example.test');`,
     options,
   );
@@ -117,6 +120,8 @@ before(() => {
   [ids.b, ids.ownerB] = asProfile(OWNER_B, `select household_id || ' ' || member_id from wh.create_household('Banerjee Home', 'Bina');`, options).split(" ");
   ids.adminA = member(ids.a, ADMIN_A, "Arun", "adult", "administrator");
   ids.childA = member(ids.a, CHILD_A, "Anu", "child", "child");
+  ids.helperA = member(ids.a, HELPER_A, "Hema", "helper", "helper");
+  ids.adultA = member(ids.a, ADULT_A, "Ravi", "adult", "adult");
   ids.adultB = member(ids.b, ADULT_B, "Bose", "adult", "adult");
   fill(ids.a, ids.ownerA, ids.adminA, "A");
   fill(ids.b, ids.ownerB, ids.adultB, "B");
@@ -155,7 +160,7 @@ test("another Admin, a child, and another household's owner are refused", () => 
   assert.throws(() => asService(`select public.reset_household('${ids.a}', '${CHILD_A}', 'Sharma Home');`), /not_owner/);
   assert.throws(() => asService(`select public.reset_household('${ids.a}', '${OWNER_B}', 'Sharma Home');`), /not_owner/);
   assert.throws(() => asService(`select public.reset_household('${ids.b}', '${OWNER_A}', 'Banerjee Home');`), /not_owner/);
-  assert.equal(count("household_members", ids.a), 3);
+  assert.equal(count("household_members", ids.a), 5);
 });
 
 test("the home's name must be typed", () => {
@@ -182,12 +187,69 @@ test("the download reads as the caller: the owner never gets another member's pr
   assert.doesNotMatch(invitation, /token_hash/, "secret-named columns stay out of the download");
 });
 
+/**
+ * Rows a person's download would hold, and rows their own session reads, for every household
+ * table: "denied" where their role may not read the table at all (the download skips those too).
+ * A test-only function, created in this test's own database.
+ */
+function parity(profile) {
+  psql(
+    `create or replace function public.test_export_parity(p_household uuid)
+     returns setof text language plpgsql security invoker set search_path = '' as $fn$
+     declare t text; exported text; readable text;
+     begin
+       for t in select x from wh.household_tables() x loop
+         begin
+           exported := jsonb_array_length(public.household_export_rows(p_household, t, 0, 1000))::text;
+         exception when insufficient_privilege then exported := 'denied';
+         end;
+         begin
+           execute format('select count(*)::text from public.%I where household_id = $1', t) into readable using p_household;
+         exception when insufficient_privilege then readable := 'denied';
+         end;
+         return next t || '|' || exported || '|' || readable;
+       end loop;
+     end $fn$;
+     grant execute on function public.test_export_parity(uuid) to authenticated;`,
+    options,
+  );
+  return asProfile(profile, `select public.test_export_parity('${ids.a}');`, options).split("\n").filter(Boolean);
+}
+
+test("everyone's download is exactly what their own session reads, table by table: owner, Admin, adult, helper", () => {
+  for (const profile of [OWNER_A, ADMIN_A, ADULT_A, HELPER_A]) {
+    const lines = parity(profile);
+    assert.ok(lines.length > 150, "every household table was compared");
+    // Only the tables the download reads: the not-exported ones (secrets, machinery) are never asked for.
+    const differ = lines.filter((line) => {
+      const [table, exported, readable] = line.split("|");
+      return !(table in MANIFEST.notExported) && exported !== readable;
+    });
+    assert.deepEqual(differ, [], `download and screens disagree for ${profile}`);
+  }
+  // A helper reads less than the owner: the comparison above is meaningful, not all-or-nothing.
+  const total = (profile) => parity(profile).reduce((sum, line) => sum + (Number(line.split("|")[1]) || 0), 0);
+  assert.ok(total(HELPER_A) < total(OWNER_A), "a helper's download is smaller than the owner's");
+});
+
+test("a member's private health record and private HomeTalk conversation never reach another member's download", () => {
+  const rows = (profile, table) =>
+    asProfile(profile, `select public.household_export_rows('${ids.a}', '${table}', 0, 1000)::text;`, options);
+  // Arun (Admin) holds a private health record and a conversation (see fill()).
+  assert.match(rows(ADMIN_A, "health_records"), /Blood test A/);
+  assert.match(rows(ADMIN_A, "conversation_messages"), /Remind me about the bill/);
+  for (const other of [OWNER_A, ADULT_A, HELPER_A]) {
+    assert.doesNotMatch(rows(other, "health_records"), /Blood test A/, `${other} got Arun's health record`);
+    assert.doesNotMatch(rows(other, "conversation_messages"), /Remind me about the bill/, `${other} got Arun's conversation`);
+  }
+});
+
 test("resetting A leaves B byte-for-byte untouched and A as a new household", () => {
   const before = fingerprint(ids.b);
   const auditBefore = count("audit_events", ids.a);
 
   const result = JSON.parse(asService(`select public.reset_household('${ids.a}', '${OWNER_A}', '  sharma home ');`));
-  assert.equal(result.members_removed, 2);
+  assert.equal(result.members_removed, 4);
   assert.equal(result.invitations_revoked, 1);
 
   assert.equal(fingerprint(ids.b), before, "household B changed");
@@ -207,7 +269,7 @@ test("resetting A leaves B byte-for-byte untouched and A as a new household", ()
   assert.equal(psql(`select event_type from public.audit_events where household_id = '${ids.a}' order by created_at desc limit 1;`, options), "household.reset");
 
   // Their accounts are not deleted: they simply belong to no home now.
-  assert.equal(psql(`select count(*) from auth.users where id in ('${ADMIN_A}', '${CHILD_A}');`, options), "2");
+  assert.equal(psql(`select count(*) from auth.users where id in ('${ADMIN_A}', '${CHILD_A}', '${HELPER_A}', '${ADULT_A}');`, options), "4");
   assert.equal(asProfile(ADMIN_A, `select count(*) from public.household_members where household_id = '${ids.a}';`, options), "0");
 });
 

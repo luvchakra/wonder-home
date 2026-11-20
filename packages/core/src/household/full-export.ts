@@ -295,10 +295,10 @@ export async function* householdArchiveEntries(input: Input, progress: ExportPro
 export function readme(input: Pick<Input, "householdName" | "requestedBy" | "now">, progress: ExportProgress): string {
   const lines: string[] = [];
   const rows = progress.tables.reduce((sum, table) => sum + table.rows, 0);
-  lines.push(`WonderHome — full data for ${input.householdName}`);
+  lines.push(`WonderHome — your data from ${input.householdName}`);
   lines.push(`Downloaded by ${input.requestedBy} on ${input.now.toISOString()}.`);
   lines.push("");
-  lines.push("This is everything your home holds in WonderHome that you can see yourself:");
+  lines.push("This is everything in this home that you can see in WonderHome yourself, nothing more:");
   lines.push(`${rows} records in ${progress.tables.length} tables, and ${progress.files.filter((file) => !file.error).length} uploaded files.`);
   lines.push("");
   lines.push("HOW IT IS LAID OUT");

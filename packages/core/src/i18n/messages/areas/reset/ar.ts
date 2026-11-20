@@ -63,4 +63,8 @@ export const resetHomeAr: AreaCatalog<typeof resetHomeEn> = {
   "resetHome.health.tooShort": "استخدم {min} حرفًا على الأقل لكلمة مرور السجلات الصحية.",
   "resetHome.health.tooLong": "كلمة المرور طويلة جدًا. استخدم 200 حرف على الأكثر.",
   "resetHome.health.mismatch": "كلمتا مرور السجلات الصحية غير متطابقتين.",
+  "resetHome.mine.button": "تنزيل بياناتي",
+  "resetHome.mine.meta": "كل ما يمكنك رؤيته في هذا المنزل على WonderHome، في ملف ZIP واحد: ملف لكل نوع من السجلات، والصور والمستندات التي يمكنك فتحها، ودليل لما يحتويه كل ملف.",
+  "resetHome.mine.private": "الأشياء الخاصة بالآخرين — سجلاتهم الصحية ومحادثاتهم الخاصة في HomeTalk — ليست فيه، تمامًا كما لا يمكنك رؤيتها هنا.",
+  "resetHome.mine.child": "يمكن لأحد الوالدين أو لمسؤول تنزيل ما يحتفظ به WonderHome لك.",
 };

@@ -14,19 +14,21 @@ import {
   householdArchiveEntries,
   type ExportProgress,
 } from "@wonderhome/core/household/full-export";
-import { isHouseholdOwner } from "@wonderhome/core/household/reset-policy";
+import { isHouseholdOwner, mayDownloadOwnData } from "@wonderhome/core/household/reset-policy";
 import { zipReadableStream } from "@wonderhome/core/household/zip";
 import { requireMembership } from "@wonderhome/core/identity/households";
 import { log } from "@wonderhome/core/observability/logger";
 import { NO_STORE } from "@wonderhome/core/security/cache-policy";
+import { hitRateLimit, rateLimitMessage, retryAfterSeconds } from "@wonderhome/core/security/rate-limit";
 
 import { confirmStaffPassword } from "../../../../../../_lib/platform-step-up";
 import { stepUpRefusal } from "../../../../../../_lib/platform-step-up-rules";
 
 /**
- * "Download full data" (story 15-014): everything the home holds, as one ZIP.
+ * "Download my data" / "Download full data" (story 15-014): everything the
+ * person can see in the home, as one ZIP.
  *
- * The owner only, and only after confirming it is them (their password, or a
+ * Every adult and helper (never a child), five an hour, and only after confirming it is them (their password, or a
  * Google sign-in in the last ten minutes for a Google-only account) — export is
  * a step-up action in the security baseline. The archive is streamed back to
  * this request and nowhere else: no stored copy, no link to leak, never cached.
@@ -68,17 +70,33 @@ export async function POST(request: Request, { params }: Params) {
 
     const supabase = await createClient();
     const membership = await requireMembership(supabase, householdId);
-    if (!isHouseholdOwner(membership)) throw new ApiError("forbidden", "Only the home's owner can download all of its data.");
+    // Every adult and helper (owner, 2026-11-20: "everyone should have similar option to download the
+    // data"); never a child. What the file holds is what this person's own session can read.
+    if (!mayDownloadOwnData(membership, "app", householdId).ok) throw new ApiError("forbidden", "A parent or an Admin can download what WonderHome holds for you.");
 
+    let audit: ReturnType<typeof adminClientFor> | null = null;
+    try {
+      audit = adminClientFor(adminGrant.member(membership, "rate-limit and record a data download"), householdId);
+    } catch {
+      audit = null;
+    }
     const check = await confirmStaffPassword(parsed.data.password ?? "");
     if (check !== "ok") throw new ApiError(check === "limited" ? "rate_limited" : "forbidden", stepUpRefusal(check).replace("save", "download"), { stepUp: true });
+
+    // Counted once the person has proved it is them, so a mistyped password never uses up a download.
+    if (audit && !(await hitRateLimit(audit, "household.export", membership.memberId))) {
+      return Response.json(
+        { error: { code: "rate_limited", message: rateLimitMessage("household.export") } },
+        { status: 429, headers: { ...headers, "retry-after": String(retryAfterSeconds("household.export")) } },
+      );
+    }
 
     if (!(await exportAvailable(supabase, householdId))) {
       return Response.json({ error: { code: "not_available", message: "The full download isn't available yet. Nothing was changed." } }, { status: 503, headers });
     }
 
-    // Health records leave only locked with the owner's own password. With
-    // none the owner can see, there is nothing to lock and nothing is asked.
+    // Health records leave only locked with a password this person types. With
+    // none they can see, there is nothing to lock and nothing is asked.
     const healthPresent = await hasHealthContent(supabase, householdId);
     let healthPassword: string | undefined;
     if (healthPresent) {
@@ -91,26 +109,42 @@ export async function POST(request: Request, { params }: Params) {
 
     const now = new Date();
     const progress: ExportProgress = { tables: [], files: [] };
+    const owner = isHouseholdOwner(membership);
+
+    // One entry per download in the household's activity: who, when, and counts, never values.
+    // A trail that can't be written is logged, not a reason to refuse the person their data.
+    const record = async (completed: boolean) => {
+      try {
+        if (!audit) throw new Error("no service client");
+        await recordAuditEvent(audit, {
+          householdId,
+          eventType: "household.exported",
+          actorMemberId: membership.memberId,
+          targetTable: "households",
+          targetId: householdId,
+          metadata: {
+            kind: owner ? "owner" : "member",
+            completed,
+            health_encrypted: healthPassword !== undefined,
+            tables: progress.tables.length,
+            records: progress.tables.reduce((sum, table) => sum + table.rows, 0),
+            files: progress.files.filter((file) => !file.error).length,
+          },
+        });
+      } catch {
+        log.error("data download not audited", { event: "household_export_unaudited", allow: ["event"] });
+      }
+    };
+
     const stream = zipReadableStream(
       householdArchiveEntries({ supabase, householdId, householdName: membership.household.name, requestedBy: membership.displayName, now, healthPassword }, progress),
       now,
-      () => log.error("full download failed part-way", { event: "household_export_failed", allow: ["event"] }),
+      () => {
+        log.error("data download failed part-way", { event: "household_export_failed", allow: ["event"] });
+        void record(false);
+      },
+      () => void record(true),
     );
-
-    // The record of who took a copy, and when, stays in the household's activity.
-    // A trail that can't be written is logged, not a reason to refuse the owner their data.
-    try {
-      await recordAuditEvent(adminClientFor(adminGrant.householdOwner(membership, "record the full download"), householdId), {
-        householdId,
-        eventType: "household.exported",
-        actorMemberId: membership.memberId,
-        targetTable: "households",
-        targetId: householdId,
-        metadata: { kind: "full", health_encrypted: healthPassword !== undefined },
-      });
-    } catch {
-      log.error("full download not audited", { event: "household_export_unaudited", allow: ["event"] });
-    }
 
     return new Response(stream, {
       headers: {

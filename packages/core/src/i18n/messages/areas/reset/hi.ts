@@ -63,4 +63,8 @@ export const resetHomeHi: AreaCatalog<typeof resetHomeEn> = {
   "resetHome.health.tooShort": "सेहत के रिकॉर्ड के पासवर्ड में कम से कम {min} अक्षर रखें।",
   "resetHome.health.tooLong": "यह पासवर्ड बहुत लंबा है। ज़्यादा से ज़्यादा 200 अक्षर रखें।",
   "resetHome.health.mismatch": "सेहत के रिकॉर्ड के दोनों पासवर्ड मेल नहीं खाते।",
+  "resetHome.mine.button": "मेरा डेटा डाउनलोड करें",
+  "resetHome.mine.meta": "इस घर में WonderHome पर आप जो कुछ देख सकते हैं, सब एक ZIP फ़ाइल में: हर तरह के रिकॉर्ड की एक फ़ाइल, वे फ़ोटो और दस्तावेज़ जो आप खोल सकते हैं, और हर फ़ाइल क्या है इसकी गाइड।",
+  "resetHome.mine.private": "दूसरों की निजी चीज़ें — उनके सेहत के रिकॉर्ड और उनकी अपनी HomeTalk बातचीत — इसमें नहीं होतीं, जैसे आप उन्हें यहाँ भी नहीं देख सकते।",
+  "resetHome.mine.child": "माता-पिता या कोई Admin आपके लिए WonderHome में रखा डेटा डाउनलोड कर सकते हैं।",
 };

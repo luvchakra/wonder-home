@@ -60,4 +60,8 @@ export const resetHomeEn = {
   "resetHome.health.tooShort": "Use at least {min} characters for the health records password.",
   "resetHome.health.tooLong": "That password is too long. Use at most 200 characters.",
   "resetHome.health.mismatch": "The two health records passwords don't match.",
+  "resetHome.mine.button": "Download my data",
+  "resetHome.mine.meta": "Everything in this home that you can see in WonderHome, as one ZIP file: a file for each kind of record, the photos and documents you can open, and a guide to what each file is.",
+  "resetHome.mine.private": "Other people's private things — their health records and their own HomeTalk conversations — aren't in it, just as you can't see them here.",
+  "resetHome.mine.child": "A parent or an Admin can download what WonderHome holds for you.",
 };

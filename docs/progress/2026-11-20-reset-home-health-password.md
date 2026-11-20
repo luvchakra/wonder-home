@@ -58,3 +58,33 @@ The owner answered the health question from #576 (2026-11-20): "for health recor
 ## Cleanup
 
 E2E QA users and households on the live project were deleted by the spec. One household left by a run that timed out ("E2E Reset 8mry0c", its users already gone) was deleted by id. A service-role check found no `reset-*@e2e.wonderhome-test.internal` user and no "E2E Reset…" household left. The timing and probe users made by hand were deleted in the same scripts. No dev server is left running.
+
+## Everyone downloads their own data (same PR)
+
+The owner added (2026-11-20): "everyone should have similar option to download the data".
+
+**Who** (the coordinator's defaults; the owner can change them):
+- **Every adult**, Admin or not, and **every househelper**. Helpers have Settings today, so they get it too, holding only what a helper can see.
+- **Never a child.** A parent's or an Admin's download already holds what they can see of the child, and the screen says so to the child.
+- **Never by voice, HomeTalk, WhatsApp or an agent.** The rule is `mayDownloadOwnData` in `household/reset-policy.ts`, with unit tests: adult, Admin, helper and owner yes; child no; another household no; any non-app channel no.
+
+**Where:** Settings → Privacy & security → "Take a copy with you" → **Download my data**. It uses the same component and the same route as the owner's "Download full data" in the Danger zone. It replaces the old JSON-only "Download my copy" there, so there are not two buttons for one job (rule 14). The old `/privacy/export` API route is left in place for API clients, but no screen uses it any more. Reset home stays owner-only, unchanged.
+
+**What each person gets:** exactly what they can already see.
+- The export was already read through the person's own session and RLS. The route's owner gate became the member gate.
+- Storage files were already listed and fetched with the person's own client, so no household-wide admin grant ever reads a file.
+- The README now says "everything in this home that you can see … nothing more", and keeps saying what is left out and why.
+
+**Proved in the database test** (`scripts/test-household-reset-rls.mjs`, now 9/9):
+- **Equal to what they can read.** For the owner, an Admin, an ordinary adult and a helper, every household table the download reads holds exactly what that person's own session reads (a test-only parity function, table by table).
+- **No crossing over.** An Admin's private health record and private HomeTalk conversation are in their own download and in nobody else's: not the owner's, another adult's or the helper's.
+- **Role-sized.** A helper's download is smaller than the owner's.
+
+**Same safeguards as the owner's download:**
+- Step-up (password, or a recent Google sign-in).
+- The health records password and AES-256 lock.
+- Streamed, `no-store`, never stored.
+- One `household.exported` activity entry per download, written when it finishes: who, `kind: owner|member`, completed, `health_encrypted`, and counts of tables, records and files, never values.
+- A new per-person rate limit, `household.export`: 5 an hour, counted only after the step-up succeeds (`docs/security/rate-limits.md`).
+
+**E2E** (`e2e/reset-home.spec.ts`, 12/12 on mobile and desktop on QA households): the other Admin downloads from Privacy & security, is not asked for a health password (the owner's record is private to the owner), and gets "E2E Dal" but not the owner's health record or a protected archive. The member activity entry is written. Each person now signs in once per run and the session is reused, so a run stays well under Supabase's sign-in limit. The reset's wait for `/onboarding` allows 90 s for a far-away runner.

@@ -63,4 +63,8 @@ export const resetHomeFr: AreaCatalog<typeof resetHomeEn> = {
   "resetHome.health.tooShort": "Utilisez au moins {min} caractères pour le mot de passe des dossiers de santé.",
   "resetHome.health.tooLong": "Ce mot de passe est trop long. Utilisez 200 caractères au maximum.",
   "resetHome.health.mismatch": "Les deux mots de passe des dossiers de santé ne correspondent pas.",
+  "resetHome.mine.button": "Télécharger mes données",
+  "resetHome.mine.meta": "Tout ce que vous pouvez voir de ce foyer dans WonderHome, dans un seul fichier ZIP : un fichier par type d'enregistrement, les photos et documents que vous pouvez ouvrir, et un guide de ce que contient chaque fichier.",
+  "resetHome.mine.private": "Les éléments privés des autres — leurs dossiers de santé et leurs propres conversations HomeTalk — n'y figurent pas, tout comme vous ne les voyez pas ici.",
+  "resetHome.mine.child": "Un parent ou un Admin peut télécharger ce que WonderHome conserve pour vous.",
 };

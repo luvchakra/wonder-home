@@ -255,13 +255,21 @@ export async function* zipStream(entries: AsyncIterable<ZipEntry> | Iterable<Zip
 }
 
 /** A web stream of the archive, pulled as the reader is ready (so a slow download never piles up in memory). */
-export function zipReadableStream(entries: AsyncIterable<ZipEntry> | Iterable<ZipEntry>, now?: Date, onError?: (error: unknown) => void): ReadableStream<Uint8Array> {
+export function zipReadableStream(
+  entries: AsyncIterable<ZipEntry> | Iterable<ZipEntry>,
+  now?: Date,
+  onError?: (error: unknown) => void,
+  onDone?: () => void,
+): ReadableStream<Uint8Array> {
   const iterator = zipStream(entries, now);
   return new ReadableStream<Uint8Array>({
     async pull(controller) {
       try {
         const next = await iterator.next();
-        if (next.done) controller.close();
+        if (next.done) {
+          controller.close();
+          onDone?.();
+        }
         else controller.enqueue(next.value);
       } catch (error) {
         onError?.(error);

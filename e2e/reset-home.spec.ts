@@ -1,5 +1,5 @@
 import { createClient, type SupabaseClient } from "@supabase/supabase-js";
-import { expect, test, type Page } from "@playwright/test";
+import { expect, test, type BrowserContext, type Page } from "@playwright/test";
 
 import { streamed } from "./streaming";
 
@@ -84,7 +84,20 @@ test.describe("the owner downloads, then resets a QA home", () => {
     if (ids.other) await admin.auth.admin.deleteUser(ids.other);
   });
 
+  /**
+   * Each person signs in once per run and the session is reused: every password sign-in, step-ups
+   * included, counts against Supabase's per-address limit, and a run that signed in for every test
+   * could meet it.
+   */
+  const sessions = new Map<string, Awaited<ReturnType<BrowserContext["cookies"]>>>();
+
   async function signIn(page: Page, email: string, next: string) {
+    const saved = sessions.get(email);
+    if (saved) {
+      await page.context().addCookies(saved);
+      await page.goto(next);
+      if (new RegExp(next.replace(/\//g, "\\/") + "$").test(page.url())) return;
+    }
     await page.goto(next);
     await expect(page).toHaveURL(/\/sign-in\?next=/);
     await streamed(page);
@@ -92,6 +105,7 @@ test.describe("the owner downloads, then resets a QA home", () => {
     await page.locator('input[name="password"]').fill(password);
     await page.getByRole("button", { name: "Sign in", exact: true }).click();
     await expect(page).toHaveURL(new RegExp(next.replace(/\//g, "\\/") + "$"));
+    sessions.set(email, await page.context().cookies());
   }
 
   test("another Admin sees no Danger zone and the reset screen shows them nothing", async ({ page }) => {
@@ -103,6 +117,31 @@ test.describe("the owner downloads, then resets a QA home", () => {
     await expect(page.getByRole("heading", { name: `Reset ${homeName}` }).filter({ visible: true })).toHaveCount(0);
     await expect(page.getByRole("button", { name: "Reset home", exact: true }).filter({ visible: true })).toHaveCount(0);
     await expect(page.getByRole("button", { name: "Download full data" }).filter({ visible: true })).toHaveCount(0);
+  });
+
+  test("another Admin downloads their own copy from Privacy & security: what they can see, not the owner's private health record", async ({ page }) => {
+    test.setTimeout(300_000);
+    await signIn(page, otherEmail, "/settings/privacy");
+    await streamed(page);
+    const section = page.locator("#export");
+    await section.getByLabel("Your WonderHome password", { exact: true }).fill(password);
+    // The owner's health record is private to the owner, so this Admin has nothing to lock and is not asked.
+    await expect(section.getByLabel("Password for the health records", { exact: true })).toHaveCount(0);
+    const download = page.waitForEvent("download");
+    await section.getByRole("button", { name: "Download my data" }).click();
+    const file = await download;
+    const zip = Buffer.concat(await (await file.createReadStream())!.toArray());
+    expect(zip.subarray(0, 4).toString("hex")).toBe("504b0304");
+    expect(zip.includes(Buffer.from("E2E Dal"))).toBe(true);
+    expect(zip.includes(Buffer.from("E2E thyroid report"))).toBe(false);
+    expect(zip.includes(Buffer.from("health-records-protected.zip"))).toBe(false);
+    // One activity entry, written as the download finishes: who and counts, never values.
+    await expect
+      .poll(async () => {
+        const audit = await admin.from("audit_events").select("metadata").eq("household_id", ids.household).eq("event_type", "household.exported");
+        return (audit.data ?? []).some((row) => (row.metadata as { kind?: string; completed?: boolean }).kind === "member" && (row.metadata as { completed?: boolean }).completed === true);
+      })
+      .toBe(true);
   });
 
   test("the owner sees the Danger zone last on Settings, and the reset screen's three steps", async ({ page }) => {
@@ -170,7 +209,8 @@ test.describe("the owner downloads, then resets a QA home", () => {
     await page.getByLabel(`Type the home's name: ${homeName}`).fill(homeName.toLowerCase());
     await page.locator("form").filter({ has: reset }).getByLabel("Your WonderHome password", { exact: true }).fill(password);
     await reset.click();
-    await expect(page).toHaveURL(/\/onboarding/);
+    // The reset clears every table, then the files; from far away that takes more than a few seconds.
+    await expect(page).toHaveURL(/\/onboarding/, { timeout: 90_000 });
 
     const members = await admin.from("household_members").select("profile_id").eq("household_id", ids.household);
     expect(members.data?.map((row) => row.profile_id)).toEqual([ids.owner]);
