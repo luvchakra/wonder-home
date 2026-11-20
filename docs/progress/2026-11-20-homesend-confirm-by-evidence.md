@@ -13,7 +13,7 @@ The owner asked for HomeSend to be "as autonomous as possible, with minimum inpu
 ## Verified
 
 - Unit tests: `homesend/` + `hometalk/` + `homebrain/` + `evaluation/` + `help/` + the touched web actions' tests, all green (new: `payment-proof.test.ts` 13, deadlines 3 cases, verify-night 5, needs-you-run 2 end-to-end on the in-memory database). The in-memory test database gained `upsert` and copy-on-read.
-- Evaluation: `npm run eval -- --cases HS-60,HS-90,HS-106..HS-114` 11/11; NY-07 updated. HS-109–111 are the unsafe cases (a "payment" that asks to pay, to approve a collect request with a PIN, or carries instructions) and stay refused.
+- Evaluation: `npm run eval -- --cases HS-60,HS-90,HS-111..HS-119` 11/11; NY-07 updated. HS-114–116 are the unsafe cases (a "payment" that asks to pay, to approve a collect request with a PIN, or carries instructions) and stay refused.
 - Typecheck (core, web) and ESLint on the changed app files clean.
 
 ## Needs a person

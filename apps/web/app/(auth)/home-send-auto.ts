@@ -261,12 +261,12 @@ export async function addIfAllowed(
   if (!item || item.status !== "classified" || !item.classifiedKind) return null;
   // A payment proof is never added as a receipt here: the bill it paid is marked paid, at once, by the deadlines pass (2026-11-20 review).
   if (item.understanding?.payment) {
-    settleHomeSendSoon(membership.household.id);
+    settleHomeSendSoon(membership);
     return null;
   }
   const review = await prepareReview(supabase, membership, { ...item, createdByMemberId: options.createdByMemberId ?? item.createdByMemberId });
   // A matched bill with a newer amount or date, or a document with several bills: settled at once, not at the 24-hour default.
-  if (item.classifiedKind === "bill" && (review.plan || review.confirmation.mode !== "auto_apply")) settleHomeSendSoon(membership.household.id);
+  if (item.classifiedKind === "bill" && (review.plan || review.confirmation.mode !== "auto_apply")) settleHomeSendSoon(membership);
   if (review.plan) return null;
   const kind = review.kind ?? item.classifiedKind;
   const extracted = review.extracted ?? item.extracted;
