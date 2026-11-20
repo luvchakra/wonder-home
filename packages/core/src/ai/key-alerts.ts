@@ -141,12 +141,12 @@ export async function noteKeyFailure(apiKey: string, provider: ModelProvider, ki
   }
 }
 
-export async function noteKeyWorking(apiKey: string, now = Date.now(), force = false): Promise<void> {
+export async function noteKeyWorking(apiKey: string, now = Date.now()): Promise<void> {
   try {
     const fingerprint = keyFingerprint(apiKey);
     refusedUntil.delete(fingerprint);
     const last = lastResolved.get(fingerprint);
-    if (!force && last !== undefined && now - last < RESOLVE_EVERY_MS) return;
+    if (last !== undefined && now - last < RESOLVE_EVERY_MS) return;
     lastResolved.set(fingerprint, now);
     const db = await getRecorder();
     if (!db) return;

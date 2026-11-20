@@ -46,12 +46,14 @@ Which copy was refused can't be proven from code. Alerts didn't record a source 
 
 ## What changed
 
+Built on #588 (HomeSend session, merged first), which already added: `currentPlatformKey()` waiting up to 5 s on a cold server, the runner loading the saved settings (`scripts/jobs.mjs`), the key check on save and "Test key" (`ai/key-check.ts`, `ai-key-health.tsx`), the daily re-tell, superseded alerts (`supersede_ai_key_alerts`) and a one-minute hold on a refused key. #588 still fell back to the deployment variable after the wait; this PR removes that fallback everywhere.
+
 - `platform/settings/runtime-env.ts`: `STORE_ONLY_KEYS`, `aiSettingsFromEnvironmentAllowed()`, `allowAiSettingsFromEnvironment()`, `runtimeEnvForAi()`, `savedSettingsLoaded()`, and `whenSettingsChange()` so model names follow a save.
 - `ai/model-key.ts`: `platformKey()` notes where the key came from. `servingModelKey()` is the one "which key serves this home and from where" function, and `providerOfKey` is exported.
 - `ai/model-client.ts`, `voicelink/live-transcribe.ts`: model names are live bindings read from the saved settings (`applyModelNames`).
 - Registry: six model-name settings added under AI; the speech key description is corrected. "Move all from Vercel" never copies an AI key, since it may be the old refused copy.
-- Key check: `provider-clients.ts` `checkKeyWithProvider` lists one model, spending no tokens. Saving WonderHome's key checks it first and refuses a key the provider refuses or one for another provider. "Test key" is on the AI & providers page.
-- Alerts: migration `20261121020000_ai_key_alert_source.sql` adds `key_source`, `resolution`, the four-argument `record_ai_key_alert` and `close_superseded_ai_key_alerts`. It is safe in either order: the code falls back to the three-argument call. The platform alert is re-sent daily while open and names the copy refused. AI & providers and Overview say which copy is refused and how many homes use their own key (a count only).
+- Key check on save and "Test key": #588's (`ai/key-check.ts`); the AI card now also says nothing in Vercel or GitHub is used, and how many homes use their own key.
+- Alerts: migration `20261121030000_ai_key_alert_source.sql` adds `key_source` and the four-argument `record_ai_key_alert` (safe in either order; the code falls back to three arguments). The card line, Overview and the daily email name the copy refused. Superseding waits until the saved settings are read, so the platform key is never taken for unused.
 - Settings → AI Assistant (all eight languages): one line saying which key answers for this home now and since when. "Use WonderHome's key instead" removes the home's own key after one confirm. The "no platform key" line points to Platform admin, not an environment variable.
 - `background-jobs.yml` no longer passes `WONDERHOME_AI_*` secrets.
 - Checked `hero-cat.tsx`: it renders only for signed-in adults (not the public landing page) and is pooled per server and language for 3 hours. No change needed.
