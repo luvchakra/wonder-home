@@ -59,6 +59,10 @@ The owner answered the health question from #576 (2026-11-20): "for health recor
 
 E2E QA users and households on the live project were deleted by the spec. One household left by a run that timed out ("E2E Reset 8mry0c", its users already gone) was deleted by id. A service-role check found no `reset-*@e2e.wonderhome-test.internal` user and no "E2E Reset…" household left. The timing and probe users made by hand were deleted in the same scripts. No dev server is left running.
 
+## main was red after #576 (fixed here)
+
+`apps/web/client-writes.test.ts` (the gate for "a browser write never leaves a stale screen") flagged `app/settings/reset-home/reset-forms.tsx`. The download's POST writes a `household.exported` activity entry, and the form did not refresh. I hadn't run that gate in #576. Fixed properly: after a successful download the form calls `router.refresh()`, so a kept Activity screen is dropped. The gate and its test are unchanged. All three `apps/web/*.test.ts` gates pass.
+
 ## Everyone downloads their own data (same PR)
 
 The owner added (2026-11-20): "everyone should have similar option to download the data".

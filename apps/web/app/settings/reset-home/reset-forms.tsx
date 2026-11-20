@@ -2,6 +2,7 @@
 
 import { useActionState, useEffect, useId, useState } from "react";
 import { useFormStatus } from "react-dom";
+import { useRouter } from "next/navigation";
 
 import { Alert } from "@wonderhome/core/ui/alert";
 import { Button } from "@wonderhome/core/ui/button";
@@ -112,6 +113,7 @@ export function DownloadFullData({
   const [doneAt, setDoneAt] = useState<string | null>(null);
   // Each field its own id: two forms on one page both have a "password" field, and a label must find its own.
   const idBase = useId();
+  const router = useRouter();
   const [password, setPassword] = useState("");
   const [healthPassword, setHealthPassword] = useState("");
   const [healthRepeat, setHealthRepeat] = useState("");
@@ -159,6 +161,8 @@ export function DownloadFullData({
       }
       window.dispatchEvent(new Event(DOWNLOADED_EVENT));
       setDoneAt(at);
+      // The download writes an entry in the household's activity: drop any kept copy of a screen that shows it.
+      router.refresh();
     } catch (caught) {
       setError(caught instanceof Error ? caught.message : labels.error);
     } finally {
