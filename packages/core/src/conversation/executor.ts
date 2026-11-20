@@ -4,7 +4,7 @@ import { ApiError } from "../api/errors";
 import { runHouseholdAgents, type RunActor } from "../ai/run";
 import { buildContextItems, personItems, type PersonLike } from "../context/builders";
 import { resolveEntity, resolvePerson } from "../context/resolution";
-import { createAppointment, type AppointmentType } from "../health/appointments";
+import { createAppointment, setAppointmentStatus, type AppointmentType } from "../health/appointments";
 import { createFitnessGoal, FITNESS_ACTIVITY_LABEL, type FitnessActivityType, type FitnessFrequencyPeriod } from "../health/fitness";
 import { createIssue, listIssues, setIssueStatus } from "../health/issues";
 import { addFamilyEvent } from "../calendar/add-event";
@@ -133,7 +133,7 @@ export function canExecute(intent: HouseholdIntent): boolean {
     case "check_agents":
       return true;
     case "record_health_appointment":
-      return Boolean(intent.parameters.appointmentType);
+      return Boolean(intent.parameters.appointmentType ?? intent.parameters.typeText);
     case "log_health_issue":
       return typeof intent.parameters.label === "string" && intent.parameters.label.trim().length > 0;
     case "resolve_health_issue":
@@ -505,6 +505,12 @@ async function undoForCorrection(
       const { error } = await context.supabase.from("notifications").update({ status: "expired" }).eq("id", result.notificationId).eq("household_id", context.householdId);
       if (error) return { ok: false, reason: "I could not cancel the earlier reminder, so I left everything as it was." };
       return { ok: true, text: "Cancelled the earlier reminder." };
+    }
+    case "record_health_appointment": {
+      // Cancelled, as Health's own screen cancels it — never deleted (2026-11-20: "with Undo").
+      if (typeof result.appointmentId !== "string") return { ok: false, reason: "I could not find the appointment I added earlier, so I left it as it was." };
+      await setAppointmentStatus(context.supabase, { householdId: context.householdId, memberId: context.actorMemberId }, result.appointmentId, "cancelled");
+      return { ok: true, text: `Took the ${String(result.appointmentType ?? "health").replace(/_/g, " ")} appointment back off ${linkTo("/health", "Health & Fitness")}.` };
     }
     case "record_absence": {
       if (typeof result.memberId !== "string" || typeof result.onDate !== "string") {
@@ -901,7 +907,7 @@ async function recordHealthAppointment(intent: HouseholdIntent, context: Executi
   const assumedNote = time.assumed && timeText ? `\nI took "${timeText}" as ${at} — say "${formatHourMinute((time.hour + 12) % 24, time.minute)}" if not.` : "";
   return {
     ok: true,
-    text: `Booked — a ${typeText} appointment ${describeDate(onDate, when, context.timezone)} at ${at}. See ${linkTo("/health", "Health & Fitness")}.${remindNote}${conflictNote}${assumedNote}`,
+    text: `Added your ${typeText} appointment ${describeDate(onDate, when, context.timezone)} at ${at}. See ${linkTo("/health", "Health & Fitness")}.${remindNote}${conflictNote}${assumedNote}`,
     result: { appointmentId: appointment.id, appointmentType, startsAt },
   };
 }

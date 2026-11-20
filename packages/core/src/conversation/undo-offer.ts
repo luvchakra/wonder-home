@@ -6,4 +6,4 @@ import type { HouseholdIntent } from "./intent";
  * everything HomeTalk records straight away says how to take it back, a bill
  * added from a sentence included (NSR-22, found missing by the live run).
  */
-export const UNDOABLE: ReadonlySet<HouseholdIntent["action"]> = new Set(["add_to_list", "set_reminder", "record_absence", "plan_event", "plan_meal", "add_bill"]);
+export const UNDOABLE: ReadonlySet<HouseholdIntent["action"]> = new Set(["add_to_list", "set_reminder", "record_absence", "plan_event", "plan_meal", "add_bill", "record_health_appointment"]);

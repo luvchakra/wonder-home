@@ -1449,7 +1449,15 @@ async function carryOutApproved(input: {
   };
 
   if (!canExecute(intent)) {
-    return { text: notYetDoable(intent.action), action: input.action, focus: [] };
+    // Closed with its reason, never left waiting as approved (2026-11-20).
+    const reason = notYetDoable(intent.action);
+    await markActionResult(input.admin, {
+      actionId: input.action.id,
+      status: "failed",
+      result: { reason },
+      audit: { householdId: input.householdId, actorMemberId: input.membership.memberId, actionType: stored.actionType, source: input.source, modality: input.modality },
+    }).catch(() => undefined);
+    return { text: reason, action: { ...input.action, status: "failed" }, focus: [] };
   }
 
   const done = await executeIntent(intent, {

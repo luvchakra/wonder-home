@@ -39,6 +39,36 @@ export const UNDERSTANDING: HomeTalkCase[] = [
     utterance: "add reminder for Asmi's dentist appointment tomorrow at 4",
     expected: { interpretation: "set_reminder", date: "2026-09-24", time: "16:00", action: "executed" },
   },
+  {
+    id: "HT-305", surface: "hometalk", household: "A", category: "time_date", actor: "a-kunal",
+    description: "The owner's second try, word for word (dictation: \"Dr apartment\"): the doctor's appointment, tomorrow at 1pm, recorded at once, never a booking held for a yes.",
+    utterance: "add a reminder for tomorrow Dr apartment at 1 o'clock",
+    expected: { interpretation: "record_health_appointment", date: "2026-09-24", time: "13:00", action: "executed", answer: { excludes: ["Book", "book", "prepared", "waiting for you"] } },
+  },
+  {
+    id: "HT-306", surface: "hometalk", household: "A", category: "time_date", actor: "a-kunal",
+    description: "\"dr appt\": the same.",
+    utterance: "add a reminder for tomorrow dr appt at 1 o'clock",
+    expected: { interpretation: "record_health_appointment", date: "2026-09-24", time: "13:00", action: "executed" },
+  },
+  {
+    id: "HT-307", surface: "hometalk", household: "A", category: "time_date", actor: "a-kunal",
+    description: "\"doc appointment\": the same.",
+    utterance: "add a reminder for tomorrow doc appointment at 1 o'clock",
+    expected: { interpretation: "record_health_appointment", date: "2026-09-24", time: "13:00", action: "executed" },
+  },
+  {
+    id: "HT-308", surface: "hometalk", household: "A", category: "time_date", actor: "a-kunal",
+    description: "\"doctor apointment\" (a typo): the same.",
+    utterance: "add a reminder for tomorrow doctor apointment at 1 o'clock",
+    expected: { interpretation: "record_health_appointment", date: "2026-09-24", time: "13:00", action: "executed" },
+  },
+  {
+    id: "HT-309", surface: "hometalk", household: "A", category: "time_date", actor: "a-kunal", channel: "voice",
+    description: "Hinglish, spoken: \"reminder kal dr appointment 1 baje\".",
+    utterance: "reminder kal dr appointment 1 baje",
+    expected: { interpretation: "record_health_appointment", date: "2026-09-24", time: "13:00", action: "executed" },
+  },
 ];
 
 /** One sentence of the wide set: what a sensible person expects, and whether a question is justified ("clarify"). */
@@ -187,7 +217,7 @@ export const UNDERSTANDING_SET: HomeTalkCase[] = WIDE.map(([id, utterance, expec
  * the release gate until fixed; fixing one means removing it from here.
  */
 export const STILL_WEAK: Readonly<Record<string, string>> = {
-  "HU-026": "a whole-weekend plan is prepared, not recorded at once",
+  "HU-026": "a whole-weekend plan can't go on the calendar as read, so it asks for the day (never \"prepared\" any more)",
   "HU-050": "an amount in words (\"twelve hundred\") is not read by the bill rules",
   "HU-055": "absences are one day at a time; \"till monday\" goes to HomeSend to be read",
   "HU-066": "\"AC not cooling in the bedroom\" is not read by the repair rules",

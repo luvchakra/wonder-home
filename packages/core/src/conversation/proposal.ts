@@ -330,7 +330,8 @@ function summarize(intent: HouseholdIntent): string {
     case "assign_responsibility":
       return `Make ${groundedName(intent, "them")} responsible for ${String(intent.parameters.outcomeKey ?? "this").replace(/[._-]+/g, " ")}`;
     case "record_health_appointment":
-      return `Book a ${String(intent.parameters.typeText ?? "health")} appointment`;
+      // Recording an appointment books nothing with anyone (2026-11-20); the day and time said stay in it.
+      return `Add your ${String(intent.parameters.typeText ?? "health")} appointment${typeof intent.parameters.when === "string" ? ` ${intent.parameters.when}` : ""}${typeof intent.parameters.time === "string" ? ` at ${intent.parameters.time}` : ""}`;
     case "log_health_issue":
       return `Record ${String(intent.parameters.label ?? "this")}`;
     case "resolve_health_issue":

@@ -1,4 +1,5 @@
-import { appointmentFromReminder } from "./appointment-reading";
+import { appointmentFromReminder, settleAppointment } from "./appointment-reading";
+import { isRecording } from "./consent";
 import { normaliseUtterance } from "./normalise";
 import { readWhyQuestion } from "../homebrain/why";
 import type { AutonomyMode } from "../household/autonomy";
@@ -299,6 +300,7 @@ export async function converse(raw: TurnInput): Promise<TurnResult> {
 
   // A doctor's appointment said as a reminder is the appointment, recorded where appointments live (2026-11-20).
   if (!answered || answered.action === "set_reminder") intent = appointmentFromReminder(intent);
+  intent = settleAppointment(intent);
 
   // A link, a map or directions is never a thing to buy, whoever read it as one: "add maps link" is never
   // put on the list or asked "how much" (the owner, 2026-10-27).
@@ -374,8 +376,12 @@ export async function converse(raw: TurnInput): Promise<TurnResult> {
     confirmRequested: input.confirmRequestedChanges === true,
     ...(input.moneyHealthReview ? { moneyHealthReview: input.moneyHealthReview } : {}),
   });
-  const proposal: Proposal =
-    proposed.kind === "executed" && !(input.executable?.(intent) ?? false)
+  // A recording the executor cannot carry out as read is never held as "prepared, waiting for you" (the owner,
+  // 2026-11-20: approved, then "nothing I can do"): the one detail it lacks is asked instead.
+  const unrunnableRecording = proposed.kind === "executed" && input.executable !== undefined && !input.executable(intent) && isRecording(intent.action);
+  const proposal: Proposal = unrunnableRecording
+    ? { kind: "clarify", question: missingForRecording(intent) }
+    : proposed.kind === "executed" && !(input.executable?.(intent) ?? false)
       ? { kind: "prepared", preview: proposed.preview }
       : proposed;
 
@@ -470,4 +476,13 @@ function unknownIntent(input: TurnInput): HouseholdIntent {
 
 function lower(sentence: string): string {
   return sentence.charAt(0).toLowerCase() + sentence.slice(1).replace(/\.$/, "");
+}
+
+/** The one thing a recording still needs before it can be written down. */
+export function missingForRecording(intent: HouseholdIntent): string {
+  const has = (key: string) => typeof intent.parameters[key] === "string" && String(intent.parameters[key]).trim() !== "";
+  if ((intent.action === "set_reminder" || intent.action === "record_health_appointment" || intent.action === "record_absence") && !has("when")) return "Which day is it for — today, tomorrow, or a date?";
+  if (intent.action === "record_health_appointment" && !has("time")) return "What time is the appointment?";
+  if (intent.action === "set_reminder" && !has("what")) return "What should I remind you about?";
+  return "I couldn't write that down as I read it. Could you say it once more, with what it is and when?";
 }
