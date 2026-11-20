@@ -82,6 +82,7 @@ const COMPOSER_KEYS: (keyof TalkComposerLabels)[] = [
   "engineTrigger", "enginePicker", "transcribing", "listening", "paused", "thinking", "speaking", "whoListening",
   "resumeConversation", "pauseConversation", "resume", "pause", "tapToResume", "tapToPause", "stepListening", "stepTranscribing", "stepReady", "openHomeTalk",
   "floatLive", "unfloat", "floatFailed", "you", "getReady", "getReadyHint", "speakNow",
+  "voiceDenied", "voiceUnsupported", "voiceSetup", "voiceFailed",
 ];
 
 const PREVIEW_STATES = ["prepared", "needs_approval", "approved", "rejected", "executed", "unchanged", "refused"] as const;

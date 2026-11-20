@@ -2,6 +2,7 @@
 
 import { useEffect } from "react";
 
+import type { LiveFailureKind } from "../../voice/live-failure";
 import { useGeminiLive } from "./use-gemini-live";
 import { useLiveVoice } from "./use-live-voice";
 
@@ -47,7 +48,8 @@ export default function LiveTalkEngines({
   onUtterance: (transcript: string, confidence: number) => Promise<string>;
   onTranscript: (entry: { role: "member" | "assistant"; text: string; id?: string }) => void;
   onTranscriptRevised: (entry: { id: string; text: string }) => void;
-  onError: (message: string) => void;
+  /** `kind` is set by WonderHome's own loop; Gemini Live's messages come without one. */
+  onError: (message: string, kind?: LiveFailureKind) => void;
   onNavigate: (href: string) => void;
   onChanged: () => void;
   onEngines: (engines: LiveEngines) => void;
