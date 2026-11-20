@@ -117,10 +117,11 @@ export function googleProvider(apiKey: string, fetchImpl: typeof fetch = fetch):
 
     async listen({ clip, settings, hints }): Promise<Transcript> {
       const language = listeningLanguage(settings);
+      const model = modelFor(settings.recognitionModel, language);
       const config: Record<string, unknown> = {
         encoding: encodingFor(clip.mimeType),
         languageCode: language,
-        model: settings.recognitionModel,
+        model,
         enableAutomaticPunctuation: settings.automaticPunctuation,
         profanityFilter: settings.profanityFilter,
         maxAlternatives: 1,
@@ -131,13 +132,15 @@ export function googleProvider(apiKey: string, fetchImpl: typeof fetch = fetch):
 
       // Chirp is its own model family and refuses `useEnhanced`, which only
       // ever applied to the older ones.
-      if (settings.enhancedRecognition && settings.recognitionModel !== "chirp") {
+      if (settings.enhancedRecognition && model !== "chirp") {
         config.useEnhanced = true;
       }
 
-      if (settings.alternativeLanguages.length > 0) {
-        config.alternativeLanguageCodes = settings.alternativeLanguages.filter((code) => code !== language);
-      }
+      // Only languages the model can hear: Google refuses the whole request
+      // (a 400) when one alternative lacks the model, so a home that added
+      // Bengali to its listening languages would lose voice altogether.
+      const alternatives = settings.alternativeLanguages.filter((code) => code !== language && modelHears(model, code));
+      if (alternatives.length > 0) config.alternativeLanguageCodes = alternatives;
 
       // Names are what a household assistant mishears, so every hint we have
       // is worth sending. `boost` is Google's own weighting; 15 is firm
@@ -193,6 +196,23 @@ export function googleProvider(apiKey: string, fetchImpl: typeof fetch = fetch):
         .sort((left, right) => left.name.localeCompare(right.name));
     },
   };
+}
+
+/**
+ * Languages Google's V1 recognition offers only with its older models
+ * (`command_and_search`, `default`), not `latest_long` / `latest_short`
+ * (docs.cloud.google.com/speech-to-text/docs/v1/speech-to-text-supported-languages,
+ * read 2026-11-20). zh-CN refuses `latest_short` in practice too.
+ */
+const NO_LATEST_MODELS = new Set(["bn-IN", "gu-IN", "pa-IN", "pa-Guru-IN", "ur-IN", "zh-CN"]);
+
+function modelHears(model: string, language: string): boolean {
+  return !(model.startsWith("latest_") && NO_LATEST_MODELS.has(language));
+}
+
+/** The chosen model, or `command_and_search` where the listening language itself does not have it. */
+export function modelFor(model: string, language: string): string {
+  return modelHears(model, language) ? model : "command_and_search";
 }
 
 /** Which family a voice belongs to, read from Google's own naming convention. */
