@@ -14,7 +14,7 @@ import Link from "next/link";
 
 import { listPets } from "@wonderhome/core/home/repository";
 import type { Translate } from "@wonderhome/core/i18n/translate";
-import { describeAction, isFamilyMoment, type FamilyEvent } from "@wonderhome/core/family/schedule";
+import { describeAction, eventHref, isFamilyMoment, type FamilyEvent } from "@wonderhome/core/family/schedule";
 import { onboardingSummary, type OnboardingSummary } from "@wonderhome/core/household/onboarding";
 import { loadOnboarding, loadOnboardingFacts } from "@wonderhome/core/household/onboarding-repository";
 import { assessSetup } from "@wonderhome/core/household/setup";
@@ -125,7 +125,7 @@ function TodayEventRow({ event, timezone, t }: { event: FamilyEvent; timezone: s
           </div>
         </dl>
         {/* Everything else about it — who's asked, the invite link, what's left to plan — is on its own page. */}
-        <PillLink href={`/calendar/events/${event.id}`} tone="quiet">
+        <PillLink href={eventHref(event)} tone="quiet">
           {t("events.open")}
         </PillLink>
       </div>
@@ -396,7 +396,7 @@ async function DashboardBody({ session, now }: { session: Session; now: Date }) 
                   icon={<IconTile icon={CalendarHeart} tone="people" size="sm" />}
                   title={event.title}
                   meta={`${formatDate(timezone, event.startsAt)} · ${formatTime(timezone, event.startsAt)}`}
-                  href={`/calendar/events/${event.id}`}
+                  href={eventHref(event)}
                 />
               ))}
             </MetricDetailList>
@@ -517,7 +517,7 @@ async function DashboardBody({ session, now }: { session: Session; now: Date }) 
                   month={formatDate(timezone, nextMoment.startsAt).split(" ")[1] ?? ""}
                   when={eventWhen(nextMoment, timezone, t)}
                   place={nextMoment.location}
-                  href={`/calendar/events/${nextMoment.id}`}
+                  href={eventHref(nextMoment)}
                 />
               </ul>
               <div className="mt-2 flex flex-wrap items-center justify-between gap-3 border-t border-[var(--wh-border)] pt-3">
@@ -525,21 +525,21 @@ async function DashboardBody({ session, now }: { session: Session; now: Date }) 
                 <div className="flex min-w-0 flex-1 items-center gap-2">
                   {momentGoing.names.length > 0 ? <AvatarGroup names={momentGoing.names} /> : null}
                   <span className="min-w-0 text-xs text-[var(--wh-foreground-muted)]">{momentGoing.words}</span>
-                  <Link
+                  {nextMoment.examPaperId ? null : <Link
                     href={`/calendar/events/${nextMoment.id}#family`}
                     aria-label={t("events.going.ask")}
                     title={t("events.going.ask")}
                     className="grid size-8 shrink-0 place-items-center rounded-full border border-dashed border-[var(--wh-border-strong)] text-[var(--wh-foreground-subtle)] hover:bg-[var(--wh-surface-muted)]"
                   >
                     <UserRoundPlus aria-hidden className="size-4" />
-                  </Link>
+                  </Link>}
                 </div>
                 {momentLook.family ? (
                   <PillLink href="/family" tone="soft">
                     {t("homeScreen.planTogether")}
                   </PillLink>
                 ) : (
-                  <PillLink href={`/calendar/events/${nextMoment.id}`} tone="soft">
+                  <PillLink href={eventHref(nextMoment)} tone="soft">
                     {t("homeScreen.openEvent")}
                   </PillLink>
                 )}

@@ -4,7 +4,7 @@ import Link from "next/link";
 import { may } from "@wonderhome/core/billing/repository";
 import { describeCalendarHealth } from "@wonderhome/core/family/calendar-connector";
 import { familyAgenda } from "@wonderhome/core/family/repository";
-import { isFamilyMoment } from "@wonderhome/core/family/schedule";
+import { eventHref, isFamilyMoment } from "@wonderhome/core/family/schedule";
 import { listPets } from "@wonderhome/core/home/repository";
 import { platformMailConfig } from "@wonderhome/core/email/mailer";
 import { isHouseholdAdmin, listMembers } from "@wonderhome/core/identity/households";
@@ -93,7 +93,7 @@ export default async function FamilyPage() {
     may(supabase, householdId, "family.events"),
     // Every upcoming event and what needs a person, read once and alongside
     // the plan check; shown only when the plan includes family events.
-    familyAgenda(supabase, householdId, { now }).catch(() => null),
+    familyAgenda(supabase, householdId, { now, timeZone: timezone }).catch(() => null),
     listIntegrations(supabase, householdId).catch(() => []),
     listPets(supabase, householdId).catch(() => []),
     listEnrolments(supabase, householdId).catch(() => []),
@@ -638,7 +638,7 @@ export default async function FamilyPage() {
                           const going = eventGoing(event, (id) => members.find((member) => member.id === id)?.displayName ?? null, t, session.locale.format.locale);
                           return going.names.length > 0 ? going.words : null;
                         })()}
-                        href={`/calendar/events/${event.id}`}
+                        href={eventHref(event)}
                         action={event.actionState === "needs_gift" ? <SettleEventPill householdId={householdId} eventId={event.id} label={needLabels.giftSorted} /> : undefined}
                       />
                     ))}

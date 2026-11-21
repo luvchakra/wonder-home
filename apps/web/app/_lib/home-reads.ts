@@ -35,7 +35,7 @@ export const homeRows = cache((supabase: SupabaseClient, householdId: string, ti
   const utcToday = now.toISOString().slice(0, 10);
   const horizon = new Date(nowMs + HOME_HORIZON_DAYS * 86_400_000);
   const rows = {
-    events: listEvents(supabase, householdId, { from: new Date(nowMs - CAT_LOOKBACK_MS), to: horizon, limit: HOME_EVENT_LIMIT }),
+    events: listEvents(supabase, householdId, { from: new Date(nowMs - CAT_LOOKBACK_MS), to: horizon, limit: HOME_EVENT_LIMIT, exams: { timeZone: timezone } }),
     meals: listMeals(supabase, householdId, {
       from: householdToday < utcToday ? householdToday : utcToday,
       to: horizon.toISOString().slice(0, 10),

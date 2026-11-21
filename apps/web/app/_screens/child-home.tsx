@@ -1,7 +1,7 @@
 import { BookOpen, CalendarHeart, Flame, Heart, PartyPopper, Sparkles, Star, Target, Trophy } from "lucide-react";
 
 import { listEvents } from "@wonderhome/core/family/repository";
-import type { FamilyEvent } from "@wonderhome/core/family/schedule";
+import { eventHref, type FamilyEvent } from "@wonderhome/core/family/schedule";
 import type { Translate } from "@wonderhome/core/i18n/translate";
 import { localizeReminder } from "@wonderhome/core/notifications/message";
 import { listActivities } from "@wonderhome/core/school/activities";
@@ -65,7 +65,7 @@ export async function ChildHome({ session, tab = "today" }: { session: Session; 
   const triviaBandNow = triviaBand(view.ageBand ?? ageBandFor(parseDateOfBirth(membership.dateOfBirth ?? "")));
   const [items, events, goals, checkIns, companion, newest, activities, periods, duties, sayings, triviaRead] = await Promise.all([
     listSchoolItems(supabase, householdId, { childMemberId: memberId }).catch(() => [] as SchoolItem[]),
-    listEvents(supabase, householdId, { from: new Date(now.getTime() - 86_400_000), to: new Date(now.getTime() + 14 * 86_400_000) }).catch(() => [] as FamilyEvent[]),
+    listEvents(supabase, householdId, { from: new Date(now.getTime() - 86_400_000), to: new Date(now.getTime() + 14 * 86_400_000), exams: { timeZone: timezone } }).catch(() => [] as FamilyEvent[]),
     listGoals(supabase, householdId, memberId).catch(() => []),
     listCheckIns(supabase, householdId, memberId).catch(() => []),
     // The cat (08-018): its name, and the newest thing waiting under the child's own bell.
@@ -682,7 +682,7 @@ function EventList({ events, timezone, t }: { events: FamilyEvent[]; timezone: s
             month={formatDate(timezone, event.startsAt).split(" ")[1] ?? ""}
             when={eventWhen(event, timezone, t)}
             place={event.location}
-            href={`/calendar/events/${event.id}`}
+            href={eventHref(event)}
           />
         ))}
       </ul>

@@ -14,6 +14,7 @@ import {
   type Window,
 } from "./schedule";
 import { invalidatesContext } from "../context/invalidation";
+import { examPaperEvents, listExams } from "../school/exams";
 import type { EventCategory, EventVisibility } from "../calendar/projection";
 import type { RecurrenceRule } from "../calendar/recurrence";
 
@@ -32,8 +33,29 @@ type Row = Record<string, unknown>;
 export async function listEvents(
   supabase: SupabaseClient,
   householdId: string,
-  options: { from?: Date; to?: Date; /** At most this many rows, soonest first (a hot-path bound). */ limit?: number } = {},
+  options: {
+    from?: Date;
+    to?: Date;
+    /** At most this many rows, soonest first (a hot-path bound). */ limit?: number;
+    /**
+     * Also each child's exam papers in the window, as events (2026-11-21,
+     * `school/exams.ts` `examPaperEvents`), on the household's clock. Only
+     * screens that list events for people ask; HomeSend's matching never does.
+     */
+    exams?: { timeZone: string };
+  } = {},
 ): Promise<FamilyEvent[]> {
+  if (options.exams) {
+    const { exams, ...rest } = options;
+    const [events, papers] = await Promise.all([
+      listEvents(supabase, householdId, rest),
+      listExams(supabase, householdId)
+        .then((rows) => examPaperEvents(rows, exams.timeZone, { from: options.from, to: options.to }))
+        .catch(() => [] as FamilyEvent[]),
+    ]);
+    const merged = [...events, ...papers].sort((a, b) => a.startsAt.getTime() - b.startsAt.getTime());
+    return options.limit ? merged.slice(0, options.limit) : merged;
+  }
   let query = supabase
     .from("family_events")
     .select(
@@ -263,14 +285,14 @@ export async function familyAgenda(
    * earlier (no upper bound), so the same table is not read twice in one
    * request; the agenda keeps exactly the ones its own read would return.
    */
-  options: { now?: Date; events?: FamilyEvent[] } = {},
+  options: { now?: Date; events?: FamilyEvent[]; /** Also the children's exam papers, as events (`listEvents` `exams`). */ timeZone?: string } = {},
 ): Promise<FamilyAgenda> {
   const now = options.now ?? new Date();
 
   const [events, giftRows, conflictRows] = await Promise.all([
     options.events
       ? options.events.filter((event) => event.endsAt.getTime() >= now.getTime())
-      : listEvents(supabase, householdId, { from: now }),
+      : listEvents(supabase, householdId, { from: now, ...(options.timeZone ? { exams: { timeZone: options.timeZone } } : {}) }),
     supabase
       .from("gift_plans")
       .select("id, recipient, needed_by, status, responsible_member_id")

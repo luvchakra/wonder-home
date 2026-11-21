@@ -1493,7 +1493,7 @@ async function answerStatus(supabase: Supabase, householdId: string, membership:
   const when = typeof intent.parameters.when === "string" ? intent.parameters.when : null;
   const now = new Date();
 
-  const events = when ? await listEvents(supabase, householdId, windowFor(when, now, membership.household.timezone)).catch(() => []) : null;
+  const events = when ? await listEvents(supabase, householdId, { ...windowFor(when, now, membership.household.timezone), exams: { timeZone: membership.household.timezone } }).catch(() => []) : null;
 
   const placeOf = (need: { subjectKey: string }) => {
     const domain = agenda.domains.find((entry) => entry.needs.some((candidate) => candidate.subjectKey === need.subjectKey));
