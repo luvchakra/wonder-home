@@ -19,7 +19,7 @@ import { nextDueDate, previousDueDate } from "./payments";
  */
 
 /** `earlier`: a period before the current one with no payment on record — the household fills it in. */
-export type PeriodState = "paid" | "due" | "upcoming" | "earlier";
+export type PeriodState = "paid" | "due" | "upcoming" | "earlier" | "skipped";
 
 export type BillPeriod = {
   /** "2026-11" — the month the period's due date falls in. */
@@ -58,7 +58,8 @@ export const PERIODS_BEHIND = 3;
 
 const OPEN = new Set(["expected", "received", "scheduled", "overdue"]);
 
-export function billPeriods(bill: PeriodBill, paid: readonly PaidPeriod[], given: readonly GivenPeriod[], ahead = periodsAhead(bill.recurrence), behind = 0): BillPeriod[] {
+/** `skipped`: months an Admin skipped (11-022) — nothing paid, nothing owed, never "not entered". */
+export function billPeriods(bill: PeriodBill, paid: readonly PaidPeriod[], given: readonly GivenPeriod[], ahead = periodsAhead(bill.recurrence), behind = 0, skipped: ReadonlySet<string> = new Set()): BillPeriod[] {
   if (!bill.dueOn || !OPEN.has(bill.status)) return [];
   const paidBy = new Map(paid.map((row) => [row.periodLabel, row]));
   const givenBy = new Map(given.map((row) => [row.periodLabel, row]));
@@ -72,7 +73,9 @@ export function billPeriods(bill: PeriodBill, paid: readonly PaidPeriod[], given
     const done = paidBy.get(label);
     const known = givenBy.get(label);
     earlier.unshift(
-      done
+      !done && skipped.has(label)
+        ? { periodLabel: label, dueOn: back, state: "skipped", current: false, amountMinor: null, currency: bill.currency, amountFrom: null, paidOn: null, usualMinor: null }
+        : done
         ? { periodLabel: label, dueOn: back, state: "paid", current: false, amountMinor: done.amountMinor, currency: done.currency, amountFrom: "paid", paidOn: done.paidOn, usualMinor: null }
         : {
             periodLabel: label,

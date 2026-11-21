@@ -38,6 +38,7 @@
       "merchant_offers",
       "obligation_history",
       "obligation_periods",
+      "obligation_skips",
       "obligations",
       "payment_attempts",
       "payment_intents",

@@ -493,12 +493,14 @@ async function markObligationPaidImpl(
   let nextDueOn: string | null = null;
   let nextAmount: { amountMinor: number; currency: string } | null = null;
   if (dueOn && recurrence && recurrence !== "one_off") {
-    const [{ data: paidRows }, { data: givenRows }] = await Promise.all([
+    const [{ data: paidRows }, { data: givenRows }, { data: skipRows }] = await Promise.all([
       // `*`: a month paid only in part is not paid ahead (11-019).
       supabase.from("obligation_history").select("*").eq("obligation_id", input.obligationId).gte("period_label", periodLabel).limit(40),
       supabase.from("obligation_periods").select("period_label, amount_minor, currency").eq("obligation_id", input.obligationId).limit(40),
+      // Months an Admin skipped (11-022) are passed over too; none before that migration.
+      supabase.from("obligation_skips").select("period_label").eq("obligation_id", input.obligationId).gte("period_label", periodLabel).limit(40),
     ]);
-    nextDueOn = nextOpenDueDate(dueOn, recurrence, new Set(((paidRows ?? []) as Row[]).filter((row) => !isPartRow(row as never)).map((row) => row.period_label as string)));
+    nextDueOn = nextOpenDueDate(dueOn, recurrence, new Set([...((paidRows ?? []) as Row[]).filter((row) => !isPartRow(row as never)).map((row) => row.period_label as string), ...((skipRows ?? []) as Row[]).map((row) => row.period_label as string)]));
     const given = nextDueOn ? ((givenRows ?? []) as Row[]).find((row) => row.period_label === nextDueOn!.slice(0, 7)) : undefined;
     if (given) nextAmount = { amountMinor: Number(given.amount_minor), currency: given.currency as string };
   }

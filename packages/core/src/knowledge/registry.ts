@@ -566,6 +566,7 @@ export const KNOWLEDGE_REGISTRY = {
   notifications: { covered: "builder", records: "notifications", live: true },
   obligation_history: { covered: "builder", records: "billPayments" },
   obligation_periods: { covered: "builder", records: "billAhead" },
+  obligation_skips: { covered: "excluded", reason: "Months an Admin skipped on a recurring bill (11-022): the bill's own next due date already says where it is." },
   obligations: { covered: "builder", records: "obligations" },
   onboarding_events: { covered: "excluded", reason: "Setup telemetry." },
   order_items: {

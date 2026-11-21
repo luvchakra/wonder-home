@@ -57,7 +57,9 @@ import { EmptyState } from "@wonderhome/core/ui/states";
 import { markPaidProps } from "../_lib/mark-paid";
 import { billsTotal, daysOverdue, groupBills } from "@wonderhome/core/finance/bill-groups";
 import { isPaidWith, isPartRow, remainingMinor } from "@wonderhome/core/finance/part-payment";
+import { listSkips, repeatOf } from "@wonderhome/core/finance/recurring";
 import { MarkBillPaidButton, type MarkPaidLabels } from "../_components/mark-bill-paid-button";
+import { BillRepeatControls } from "../_components/bill-repeat-controls";
 import { MarkBillUnpaidButton } from "../_components/mark-bill-unpaid-button";
 import { currencyExponent } from "@wonderhome/core/billing/money";
 import { AgendaExpandableRow } from "../_components/agenda-expandable-row";
@@ -151,7 +153,7 @@ export default async function BillsPage({
   }
 
   const active = tab === "transactions" || tab === "budget" ? tab : "overview";
-  const [agenda, obligations, members, historyRows, budgetRows, integrations, address, givenPeriods, checkingIds, sourcedIds] =
+  const [agenda, obligations, members, historyRows, budgetRows, integrations, address, givenPeriods, checkingIds, sourcedIds, skips] =
     await Promise.all([
       financeAgenda(supabase, householdId).catch(() => null),
       listObligations(supabase, householdId).catch(() => []),
@@ -177,6 +179,8 @@ export default async function BillsPage({
       unconfirmedEntityIds(supabase, householdId).catch(() => new Set<string>()),
       // Bills that came from something sent in: "Tidy up" suggests keeping these (2026-11-20).
       sourcedBillIds(supabase, householdId).catch(() => new Set<string>()),
+      // Months an Admin skipped on a recurring bill (11-022).
+      listSkips(supabase, householdId).catch(() => new Map<string, Set<string>>()),
     ]);
 
   // A stale mailbox and "no bills by email" must never look alike (17-003): if
@@ -658,6 +662,7 @@ export default async function BillsPage({
                         key={bill.id}
                         bill={bill}
                         partRow={partRowOf(bill)}
+                        canRepeat={admin}
                         checking={checkingIds.has(bill.id) ? t("homesend.history.checking") : null}
                         owner={nameOf(bill.responsibleMemberId)}
                         timezone={timezone}
@@ -678,6 +683,7 @@ export default async function BillsPage({
                           givenPeriods.get(bill.id) ?? [],
                           undefined,
                           PERIODS_BEHIND,
+                          skips.get(bill.id),
                         )}
                         monthOf={(dueOn: string) => monthName.format(new Date(`${dueOn}T00:00:00Z`))}
                         periodLabels={periodLabels}
@@ -904,7 +910,10 @@ function BillRow({
   paid,
   lateBy,
   partRow,
+  canRepeat,
 }: {
+  /** Skip a month / End after this one on a recurring bill (11-022); Admins on the Upcoming list. */
+  canRepeat?: boolean;
   paid: PaidControls | null;
   /** This month's row when only part is paid (11-019). */
   partRow?: HistoryRow | null;
@@ -936,6 +945,15 @@ function BillRow({
     ? t("bills.due", { date: formatDate(timezone, new Date(bill.dueOn), "long") })
     : t("bills.noDueDate");
   const kindLabel = billKindName(t, bill.kind);
+  // How it repeats, in words (11-022), and the usual amount as an estimate when this month's isn't in.
+  const repeat = repeatOf(bill.recurrence ?? null, bill.dueOn);
+  const repeatWords = repeat
+    ? repeat.every === "year"
+      ? t("bills.repeat.year", { date: formatDate(timezone, new Date(repeat.dueOn), "long") })
+      : t(`bills.repeat.${repeat.every}`, { day: repeat.day })
+    : null;
+  const usual = bill.amountMinor === null ? (history.find((row) => !bill.currency || row.currency === bill.currency) ?? null) : null;
+  const estimate = usual ? t("bills.estimate", { amount: formatMoney(Number(usual.amount_minor), usual.currency) }) : null;
   // "₹500 paid · ₹700 left" while only part is paid (11-019); the confirm then offers what is left.
   const left = partRow ? remainingMinor(bill.amountMinor, partRow) : bill.amountMinor;
   const paidLine =
@@ -990,6 +1008,7 @@ function BillRow({
             <span className="block text-xs text-[var(--wh-foreground-subtle)]">
               {lateBy ? <span className="font-medium text-[var(--wh-attention)]">{lateBy} · </span> : null}
               {due} · {amount}
+              {estimate ? ` · ${estimate}` : ""}
               {paidLine ? ` · ${paidLine}` : ""}
               {owner ? ` · ${owner}` : ""}
             </span>
@@ -1002,6 +1021,7 @@ function BillRow({
         <dl className="grid grid-cols-2 gap-x-4 gap-y-2.5">
           <Fact label={t("bills.fact.kind")} value={kindLabel} />
           <Fact label={t("bills.fact.status")} value={statusWord(t, bill.status)} />
+          <Fact label={t("bills.fact.repeats")} value={repeatWords} />
           <Fact label={t("bills.fact.payee")} value={bill.payee} />
           <Fact label={t("bills.fact.owner")} value={owner} />
           <Fact
@@ -1021,6 +1041,21 @@ function BillRow({
             }
           />
         </dl>
+        {canRepeat && repeat && monthOf && bill.status !== "paid" ? (
+          <BillRepeatControls
+            householdId={householdId}
+            obligationId={bill.id}
+            labels={{
+              skip: t("bills.recurring.skip", { month: monthOf(repeat.dueOn) }),
+              skipped: t("bills.recurring.skipped", { month: monthOf(repeat.dueOn) }),
+              end: t("bills.recurring.end"),
+              ended: t("bills.recurring.ended", { name: bill.name }),
+              undo: t("bills.markPaid.undo"),
+              undone: t("bills.markPaid.undone"),
+              failed: t("bills.markPaid.failed"),
+            }}
+          />
+        ) : null}
         {periods && periods.length > 0 && monthOf && periodLabels ? (
           <div>
             <p className="mb-1.5 text-xs font-semibold tracking-wide text-[var(--wh-foreground-subtle)] uppercase">
@@ -1035,11 +1070,15 @@ function BillRow({
                     ? period.paidOn
                       ? t("bills.periods.paid", { date: formatDate(timezone, new Date(period.paidOn), "long") })
                       : t("bills.periods.paidNoDate")
+                    : period.state === "skipped"
+                      ? t("bills.periods.skipped")
                     : period.state === "earlier"
                       ? t("bills.periods.wasDue", { date: formatDate(timezone, new Date(period.dueOn), "long") })
                       : t("bills.periods.due", { date: formatDate(timezone, new Date(period.dueOn), "long") });
                 const amountWords =
-                  period.amountMinor !== null
+                  period.state === "skipped"
+                    ? "—"
+                    : period.amountMinor !== null
                     ? money(period.amountMinor)
                     : period.state === "earlier"
                       ? t("bills.periods.notEntered")
@@ -1053,7 +1092,7 @@ function BillRow({
                       <span className="block text-xs text-[var(--wh-foreground-subtle)]">{line}</span>
                     </span>
                     <span className={`shrink-0 text-right text-sm ${period.amountMinor !== null ? "font-medium" : period.state === "earlier" ? "font-medium text-[var(--wh-attention)]" : "text-[var(--wh-foreground-muted)]"}`}>{amountWords}</span>
-                    {period.state === "paid" ? (
+                    {period.state === "skipped" ? null : period.state === "paid" ? (
                       <CircleCheck aria-hidden className="size-4 shrink-0 text-[var(--wh-handled)]" />
                     ) : admin ? (
                       <BillPeriodButton
