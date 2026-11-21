@@ -567,6 +567,8 @@ export const KNOWLEDGE_REGISTRY = {
   obligation_history: { covered: "builder", records: "billPayments" },
   obligation_periods: { covered: "builder", records: "billAhead" },
   obligation_shares: { covered: "excluded", reason: "How an Admin split a bill between adults (11-026): a household arrangement shown on Bills, not a fact for the assistant." },
+  obligation_autopay: { covered: "excluded", reason: "Which bills an Admin marked \"Usually paid by autopay\" (11-024): a switch on the bill, not something the household knows." },
+  obligation_autopay_runs: { covered: "excluded", reason: "Periods the daily pass recorded as paid by autopay (11-024): the payment itself is in the bill's history, which is covered." },
   obligation_skips: { covered: "excluded", reason: "Months an Admin skipped on a recurring bill (11-022): the bill's own next due date already says where it is." },
   obligations: { covered: "builder", records: "obligations" },
   onboarding_events: { covered: "excluded", reason: "Setup telemetry." },

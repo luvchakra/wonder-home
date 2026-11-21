@@ -23,6 +23,8 @@ import {
   type NeedsYouRow,
   NOTICE_SOURCE_TYPES,
   orderNotices,
+  autopayNotices,
+  type AutopayRunRow,
   weatherNotices,
   type AbsenceRow,
   type AiKeyAlertRow,
@@ -102,7 +104,7 @@ async function sweep(admin: SupabaseClient, householdId: string, now: Date, adap
   const since = (days: number) => new Date(now.getTime() - days * 86_400_000).toISOString();
   const today = localMoment(now, timeZone).dateKey;
 
-  const [members, roles, responsibilities, guardians, items, checks, addedToday, setAsideToday, needsOpen, events, absences, helpers, orders, changes, checkIns, chatMessages, chatThreads, chatParticipants, open, closed, keyAlerts, tidyRun] = await Promise.all([
+  const [members, roles, responsibilities, guardians, items, checks, addedToday, setAsideToday, needsOpen, events, absences, helpers, orders, changes, checkIns, chatMessages, chatThreads, chatParticipants, open, closed, keyAlerts, tidyRun, autopayRuns] = await Promise.all([
     admin.from("household_members").select("id, profile_id, member_type, status, display_name, nickname").eq("household_id", householdId),
     admin.from("household_roles").select("member_id, role").eq("household_id", householdId),
     admin.from("responsibilities").select("outcome_key, primary_member_id, backup_member_id").eq("household_id", householdId),
@@ -139,6 +141,10 @@ async function sweep(admin: SupabaseClient, householdId: string, now: Date, adap
     Promise.resolve()
       .then(() => admin.from("homesend_tidy_runs").select("archived").eq("household_id", householdId).eq("run_on", today).limit(1))
       .catch(() => ({ data: [] })),
+    // Bills marked paid by autopay in the last three days (11-024); before its migration the read fails and is empty.
+    Promise.resolve()
+      .then(() => admin.from("obligation_autopay_runs").select("id, obligation_id, amount_minor, currency, owner_member_id, state, created_at, obligations(name)").eq("household_id", householdId).gte("created_at", since(3)).limit(100))
+      .catch(() => ({ data: [] })),
   ]);
 
   const memberRows = (members.data ?? []) as { id: string; profile_id: string | null; member_type: "adult" | "child" | "helper"; status: string; display_name: string; nickname: string | null }[];
@@ -171,6 +177,14 @@ async function sweep(admin: SupabaseClient, householdId: string, now: Date, adap
     ...eventReplyNotices(eventRows, guestRows, directory, now),
     ...helperAbsenceNotices((absences.data ?? []) as AbsenceRow[], helperRows, directory, now, timeZone),
     ...orderNotices((orders.data ?? []) as OrderRow[], directory, now),
+    ...autopayNotices(
+      ((autopayRuns.data ?? []) as (Omit<AutopayRunRow, "bill_name"> & { obligations: { name: string } | { name: string }[] | null })[]).map((row) => {
+        const bill = Array.isArray(row.obligations) ? row.obligations[0] : row.obligations;
+        return { ...row, bill_name: bill?.name ?? "A bill" };
+      }),
+      directory,
+      now,
+    ),
     ...weather,
     ...checkInNotices((checkIns.data ?? []) as (CheckInRow & { child_goals: { title: string } | { title: string }[] | null })[], directory, names, now),
     ...eventChangeNotices((changes.data ?? []) as EventChangeRow[], eventRows, participantRows, directory, names, now, timeZone),
@@ -235,7 +249,7 @@ async function sweep(admin: SupabaseClient, householdId: string, now: Date, adap
  */
 export async function householdsWithNoticeChanges(admin: SupabaseClient, since: Date, limit = 200): Promise<string[]> {
   const iso = since.toISOString();
-  const [items, guests, orders, absences, changes, checkIns, chat, keys] = await Promise.all([
+  const [items, guests, orders, absences, changes, checkIns, chat, keys, autopay, autopaySettled] = await Promise.all([
     admin.from("home_send_items").select("household_id").gte("updated_at", iso).limit(limit),
     admin.from("event_guests").select("household_id").gte("updated_at", iso).limit(limit),
     admin.from("orders").select("household_id").gte("updated_at", iso).limit(limit),
@@ -246,9 +260,16 @@ export async function householdsWithNoticeChanges(admin: SupabaseClient, since: 
     Promise.resolve()
       .then(() => admin.rpc("ai_key_alert_households", { p_since: iso }))
       .catch(() => ({ data: [] })),
+    // A bill marked paid by autopay, or its run undone or confirmed (11-024); none before its migration.
+    Promise.resolve()
+      .then(() => admin.from("obligation_autopay_runs").select("household_id").gte("created_at", iso).limit(limit))
+      .catch(() => ({ data: [] })),
+    Promise.resolve()
+      .then(() => admin.from("obligation_autopay_runs").select("household_id").gte("settled_at", iso).limit(limit))
+      .catch(() => ({ data: [] })),
   ]);
   const ids = new Set<string>();
-  for (const result of [items, guests, orders, absences, changes, checkIns, chat]) for (const row of (result.data ?? []) as { household_id: string }[]) ids.add(row.household_id);
+  for (const result of [items, guests, orders, absences, changes, checkIns, chat, autopay, autopaySettled]) for (const row of (result.data ?? []) as { household_id: string }[]) ids.add(row.household_id);
   for (const id of ((keys.data ?? []) as string[])) if (typeof id === "string") ids.add(id);
   // The daily HomeSend summary (2026-11-20): a household that had HomeSend activity today is swept once
   // as its evening begins (`SUMMARY_HOUR`, on its own clock), so the summary goes out with nothing else changing.

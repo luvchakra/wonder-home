@@ -370,6 +370,8 @@ export const fr: Catalog = {
   "reminder.order.title.delivered": "Votre commande a été livrée",
   "reminder.order.title.cancelled": "Votre commande a été annulée",
   "reminder.order.title.failed": "Votre commande n’a pas abouti",
+  "reminder.autopay.title": "Marqué comme payé par prélèvement",
+  "reminder.autopay.body": "{name}, {amount}. Ce n'est pas ça ? Annuler",
   "reminder.order.body": "{provider}",
   "reminder.order.bodyAmount": "{provider} · {amount}",
   "reminder.yourChild": "Votre enfant",

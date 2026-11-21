@@ -96,6 +96,8 @@ export const AUDIT_EVENTS = [
   "finance.bill_changed",
   "finance.bill_marked_paid",
   "finance.bill_marked_unpaid",
+  "finance.autopay_recorded",
+  "finance.autopay_undone",
   "finance.bill_file_added",
   "finance.bill_file_removed",
   "homesend.deleted",

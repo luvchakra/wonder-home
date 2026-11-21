@@ -380,6 +380,8 @@ export const en = {
   "reminder.order.title.delivered": "Your order was delivered",
   "reminder.order.title.cancelled": "Your order was cancelled",
   "reminder.order.title.failed": "Your order didn’t go through",
+  "reminder.autopay.title": "Marked as paid by autopay",
+  "reminder.autopay.body": "{name}, {amount}. Not right? Undo",
   "reminder.order.body": "{provider}",
   "reminder.order.bodyAmount": "{provider} · {amount}",
   "reminder.yourChild": "Your child",

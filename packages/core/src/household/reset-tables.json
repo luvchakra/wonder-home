@@ -36,6 +36,8 @@
       "bill_attachments",
       "budgets",
       "merchant_offers",
+      "obligation_autopay",
+      "obligation_autopay_runs",
       "obligation_history",
       "obligation_periods",
       "obligation_shares",

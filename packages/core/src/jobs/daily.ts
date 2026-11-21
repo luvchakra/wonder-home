@@ -1,6 +1,7 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 
 import { importOpenFoodFacts, todaysQueries, type ImportReport } from "../commerce/catalog-import";
+import { runAutopay } from "../finance/autopay";
 import { pruneExpiredShareHandoffs } from "../homesend/share-handoff";
 import { log } from "../observability/logger";
 import { purgeSoftDeleted, runRetentionCleanup, type CleanupSummary } from "../privacy/cleanup";
@@ -12,7 +13,9 @@ import { purgeExpired, summarise } from "../privacy/purge";
  * the sweeps folded in beside it): the published retention schedule, staged
  * share handoffs, matured deletion requests, the household's own cleanup
  * window, the soft-delete purge (dry-run only, the owner's Q4), old event
- * rows, and a few grocery catalog staples from Open Food Facts.
+ * rows, a few grocery catalog staples from Open Food Facts, and bills paid by
+ * autopay recorded on their due date (11-024; it writes the record only, and
+ * the notice sweep tells the bill's owner).
  *
  * Moved out of `/api/v1/platform/retention` (2026-11-07) so the GitHub runner
  * can do it with nothing but the database; the route still does it whenever
@@ -31,6 +34,8 @@ export type RetentionSweepResult = {
   cleanup: CleanupSummary | { error: string };
   purgeDryRun: { dryRun: boolean; wouldDelete: number } | { error: string };
   catalog: ImportReport | null;
+  /** Bills recorded as paid by autopay today (11-024), Checking with Undo. */
+  autopay: { households: number; marked: number; failed: number } | { error: string };
   /** True when any part failed (the route answers 207, the runner exits non-zero). */
   partial: boolean;
 };
@@ -109,6 +114,15 @@ export async function runRetentionSweeps(admin: SupabaseClient, now: Date = new 
     log.warn("grocery catalog refresh failed", { reason: thrown instanceof Error ? thrown.name : "unknown", allow: ["reason"] });
   }
 
+  // Bills on autopay whose day has come, recorded as paid, Checking (11-024). WonderHome never pays.
+  let autopay: RetentionSweepResult["autopay"];
+  try {
+    autopay = await runAutopay(admin, now);
+  } catch (thrown) {
+    autopay = { error: thrown instanceof Error ? thrown.message : "unknown" };
+    log.error("autopay pass failed", { reason: autopay.error, allow: ["reason"] });
+  }
+
   log.info("retention sweep", {
     summary: summarise(outcomes),
     handoffsDeleted,
@@ -116,8 +130,9 @@ export async function runRetentionSweeps(admin: SupabaseClient, now: Date = new 
     deletionsFailed,
     cleanupSummary: cleanup,
     purgeDryRun,
+    autopay,
     failed: failed.length,
-    allow: ["summary", "handoffsDeleted", "deletionsFulfilled", "deletionsFailed", "cleanupSummary", "purgeDryRun", "failed"],
+    allow: ["summary", "handoffsDeleted", "deletionsFulfilled", "deletionsFailed", "cleanupSummary", "purgeDryRun", "autopay", "failed"],
   });
 
   return {
@@ -127,6 +142,7 @@ export async function runRetentionSweeps(admin: SupabaseClient, now: Date = new 
     cleanup,
     purgeDryRun,
     catalog,
-    partial: failed.length > 0 || deletionsFailed !== 0 || "error" in cleanup || "error" in purgeDryRun,
+    autopay,
+    partial: failed.length > 0 || deletionsFailed !== 0 || "error" in cleanup || "error" in purgeDryRun || "error" in autopay,
   };
 }

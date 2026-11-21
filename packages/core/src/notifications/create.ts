@@ -58,7 +58,8 @@ export type NotificationSourceType =
   | "weather_plan"
   | "goal_checkin"
   | "chat_thread"
-  | "ai_key";
+  | "ai_key"
+  | "autopay";
 
 export async function createNotification(
   admin: SupabaseClient,

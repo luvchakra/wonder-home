@@ -66,6 +66,8 @@ import { MarkBillPaidButton, type MarkPaidLabels } from "../_components/mark-bil
 import { BillRepeatControls } from "../_components/bill-repeat-controls";
 import { QuickFix, SnoozeBillReminder, type QuickFixLabels } from "../_components/bill-quick-fix";
 import { BillSplitControl } from "../_components/bill-split-control";
+import { AutopayRunNote, BillAutopaySwitch } from "../_components/bill-autopay-control";
+import { listAutopay, listAutopayRuns, type AutopayRun } from "@wonderhome/core/finance/autopay";
 import { listShares, splitAmount, yearByKind, type Share } from "@wonderhome/core/finance/bill-split";
 import { MarkBillUnpaidButton } from "../_components/mark-bill-unpaid-button";
 import { currencyExponent } from "@wonderhome/core/billing/money";
@@ -114,9 +116,9 @@ type HistoryRow = {
 export default async function BillsPage({
   searchParams,
 }: {
-  searchParams: Promise<{ tab?: string; kind?: string; payee?: string; who?: string }>;
+  searchParams: Promise<{ tab?: string; kind?: string; payee?: string; who?: string; autopay?: string }>;
 }) {
-  const [{ tab, ...filterParams }, session] = await Promise.all([
+  const [{ tab, autopay: autopayFocus, ...filterParams }, session] = await Promise.all([
     searchParams,
     requireSession("/bills"),
   ]);
@@ -160,7 +162,7 @@ export default async function BillsPage({
   }
 
   const active = tab === "transactions" || tab === "budget" ? tab : "overview";
-  const [agenda, obligations, members, historyRows, budgetRows, integrations, address, givenPeriods, checkingIds, sourcedIds, skips, shares, yearRows] =
+  const [agenda, obligations, members, historyRows, budgetRows, integrations, address, givenPeriods, checkingIds, sourcedIds, skips, shares, yearRows, autopayIds, autopayRuns] =
     await Promise.all([
       financeAgenda(supabase, householdId).catch(() => null),
       listObligations(supabase, householdId).catch(() => []),
@@ -192,6 +194,9 @@ export default async function BillsPage({
       listShares(supabase, householdId).catch(() => new Map<string, Share[]>()),
       // This year's payments, for spend by kind (11-026); bounded.
       supabase.from("obligation_history").select("obligation_id, period_label, amount_minor, currency, kind").eq("household_id", householdId).gte("period_label", `${new Date().getUTCFullYear()}-01`).limit(2000),
+      // Bills on autopay and the payments it recorded that are still Checking (11-024); none before its migration.
+      listAutopay(supabase, householdId).catch(() => new Set<string>()),
+      listAutopayRuns(supabase, householdId).catch((): AutopayRun[] => []),
     ]);
 
   // A stale mailbox and "no bills by email" must never look alike (17-003): if
@@ -688,6 +693,27 @@ export default async function BillsPage({
                   ) : undefined
                 }
               />
+              {/* Payments autopay recorded, still Checking, with Undo for the bill's owner or an Admin (11-024). */}
+              {(() => {
+                const mine = autopayRuns.filter((run) => run.state === "checking" && (admin || run.ownerMemberId === membership.memberId));
+                if (mine.length === 0) return null;
+                return (
+                  <section aria-label={t("bills.autopay.title")} className="mb-3 rounded-[var(--wh-radius-sm)] bg-[var(--wh-surface-muted)] px-3 py-2">
+                    <ul>
+                      {mine.map((run) => (
+                        <AutopayRunNote
+                          key={run.id}
+                          householdId={householdId}
+                          runId={run.id}
+                          highlight={run.id === autopayFocus}
+                          line={t("bills.autopay.run", { name: obligations.find((entry) => entry.id === run.obligationId)?.name ?? "", amount: formatMoney(run.amountMinor, run.currency) })}
+                          labels={{ undo: t("bills.markPaid.undo"), undone: t("bills.markPaid.undone"), failed: t("bills.markPaid.failed") }}
+                        />
+                      ))}
+                    </ul>
+                  </section>
+                );
+              })()}
               {upcoming.length === 0 ? (
                 <EmptyState
                   icon={Receipt}
@@ -729,6 +755,7 @@ export default async function BillsPage({
                         bill={bill}
                         partRow={partRowOf(bill)}
                         split={shares.get(bill.id) ?? null}
+                        autopay={autopayIds.has(bill.id)}
                         memberNames={memberNames}
                         canRepeat={admin}
                         checking={checkingIds.has(bill.id) ? t("homesend.history.checking") : null}
@@ -997,10 +1024,13 @@ function BillRow({
   canRepeat,
   split,
   memberNames,
+  autopay,
 }: {
   memberNames?: Map<string, string>;
   /** How the bill is split between adults (11-026). */
   split?: Share[] | null;
+  /** "Usually paid by autopay" (11-024): a badge, and the switch for an Admin. */
+  autopay?: boolean;
   /** Skip a month / End after this one on a recurring bill (11-022); Admins on the Upcoming list. */
   canRepeat?: boolean;
   paid: PaidControls | null;
@@ -1107,6 +1137,11 @@ function BillRow({
                   {checking}
                 </Badge>
               ) : null}
+              {autopay ? (
+                <Badge tone="neutral" className="ml-2 align-middle">
+                  {t("bills.autopay.badge")}
+                </Badge>
+              ) : null}
             </span>
             <span className="block text-xs text-[var(--wh-foreground-subtle)]">
               {lateBy ? <span className="font-medium text-[var(--wh-attention)]">{lateBy} · </span> : null}
@@ -1175,6 +1210,14 @@ function BillRow({
               remove: t("bills.split.remove"),
               failed: t("bills.markPaid.failed"),
             }}
+          />
+        ) : null}
+        {admin && bill.status !== "paid" && bill.status !== "cancelled" ? (
+          <BillAutopaySwitch
+            householdId={householdId}
+            obligationId={bill.id}
+            on={Boolean(autopay)}
+            labels={{ on: t("bills.autopay.on"), off: t("bills.autopay.off"), hint: t("bills.autopay.hint"), failed: t("bills.markPaid.failed") }}
           />
         ) : null}
         {canRepeat && repeat && monthOf && bill.status !== "paid" ? (

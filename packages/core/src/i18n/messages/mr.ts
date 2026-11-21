@@ -370,6 +370,8 @@ export const mr: Catalog = {
   "reminder.order.title.delivered": "तुमची ऑर्डर पोहोचली",
   "reminder.order.title.cancelled": "तुमची ऑर्डर रद्द झाली",
   "reminder.order.title.failed": "तुमची ऑर्डर होऊ शकली नाही",
+  "reminder.autopay.title": "ऑटोपेने भरले असे नोंदवले",
+  "reminder.autopay.body": "{name}, {amount}. बरोबर नाही? पूर्ववत करा",
   "reminder.order.body": "{provider}",
   "reminder.order.bodyAmount": "{provider} · {amount}",
   "reminder.yourChild": "तुमचे मूल",
