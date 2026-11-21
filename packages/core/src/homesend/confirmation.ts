@@ -236,10 +236,10 @@ export function decideConfirmation(input: ConfirmationInput): ConfirmationDecisi
 
   // Added directly (the owner, 2026-11-03: "add the entry directly in
   // WonderHome without asking for a review"). More sure than the household's
-  // bar (95% unless an Admin picked another) it is simply added; below it, or
-  // read from a photo or file (no words of its own to check against), it is
-  // added marked "Checking": its reminders wait and HomeTalk asks until it is
-  // sure enough. What the household's autonomy setting says still decides
+  // bar (95% unless an Admin picked another) it is simply added, whatever it
+  // was read from (since 2026-11-21; money and health read from a photo or
+  // file stay Checking under their own setting); below it, it is added marked
+  // "Checking": its reminders still come, marked "not yet confirmed". What the household's autonomy setting says still decides
   // whether it is added at all.
   const unverified = input.understanding?.check?.unverified ?? [];
   const fromAFile = unverified.includes(FROM_A_FILE);
@@ -255,7 +255,11 @@ export function decideConfirmation(input: ConfirmationInput): ConfirmationDecisi
   }
   // Decision 2: money and health on "Record as Checking" are always Checking, so a person confirms them with one tap.
   const checkingOnly = directArea !== null && (input.directAdd ?? NO_DIRECT_ADD).checking?.[directArea] === true;
-  const checking = !aboveBar || fromAFile || unsureHearing || checkingOnly || input.filledFromHistory === true ? { unconfirmed: true as const } : {};
+  // The owner's rule of 2026-11-21 ("why it's still waiting? it automatically add in WonderHome"): above the Admin's bar
+  // an entry is confirmed whatever it was read from (photo, file, text, voice). The source alone keeps only money and
+  // health Checking, under their own setting, until the owner decides those too.
+  const sourceForcesChecking = fromAFile && directArea !== null;
+  const checking = !aboveBar || sourceForcesChecking || unsureHearing || checkingOnly || input.filledFromHistory === true ? { unconfirmed: true as const } : {};
   // A move is never made "Checking": an existing record is changed only when the reading is over the bar and has words of its own.
   if (move && checking.unconfirmed) return { mode: "prepare", reason: input.reconciliation!.message, question: null };
   const onList = listed ? { listed: true as const } : {};
