@@ -46,7 +46,7 @@ describe("replies to something sent in", () => {
       [
         "📚 Exam timetable: *Mid-Term Unit Test 2*.",
         "I added 8 exam days for Asmi (Std. IV).",
-        "They're marked Checking because I read them from a photo or file.",
+        "They're marked Checking because I wasn't sure enough of the reading. Their reminders still come, marked “not yet confirmed”.",
         "One question: which class is Kabir in? The answer picks the right column.",
         "See or undo: https://home.example/school?child=m-asmi#exams",
       ].join("\n"),

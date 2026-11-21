@@ -275,7 +275,7 @@ export async function addIfAllowed(
   // A matched bill with a newer amount or date, or a document with several bills: settled at once, not at the 24-hour default.
   if (item.classifiedKind === "bill" && (review.plan || review.confirmation.mode !== "auto_apply")) settleHomeSendSoon(membership);
   // A document with several dated things (a circular's PTM, things to bring, a fee): each added at once, linked to this
-  // item, Checking when read from a photo or file (2026-11-21). Bills keep record first's own path (`add-default.ts`).
+  // item, confirmed above the bar whatever it was read from, Checking below it (2026-11-21). Bills keep record first's own path (`add-default.ts`).
   if (review.plan && item.classifiedKind !== "bill") {
     const several = await applyPlanAtOnce(supabase, membership, item).catch(() => null);
     if (!several) return null;

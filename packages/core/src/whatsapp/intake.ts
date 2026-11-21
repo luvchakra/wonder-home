@@ -694,8 +694,10 @@ export function whatsappJobHandler(deps: WhatsAppIntakeDeps): JobHandler {
  * for nobody named, and a bill's or receipt's title loses its numbers.
  */
 export function addedReply(added: AddedOnItsOwn, forName?: string, t: Translate = ENGLISH): string {
-  // Added below the bar: said as Checking, its reminders waiting (the owner, 2026-11-03).
+  // Added below the bar: said as Checking, its reminders still coming marked "not yet confirmed". A confirmed add says
+  // what and for whom and how to undo it, with no percentage and no "read from a photo or file" (the owner, 2026-11-21).
   const checking = added.unconfirmed === true;
+  const sure = checking ? (t === ENGLISH ? sureClause({ percent: added.percent }) : sureIn(t, { ...added, why: undefined })) : "";
   // An exam timetable (2026-11-21): what it was, what was done for whom, the one question, where to see it. No dates here.
   if (added.timetable) return timetableReply(added.timetable, t, { origin: siteOrigin(runtimeEnv()) });
   // A document's several dated things, each added (2026-11-21): what it was, how many and which, Checking, where to see them.
@@ -708,11 +710,10 @@ export function addedReply(added: AddedOnItsOwn, forName?: string, t: Translate 
   // A record already on file moved to its new day (14-066, part 3): no date or number said back.
   if (added.moved) return t("whatsapp.moved", { title: (added.kind === "bill" ? withoutNumbers(added.title) : shortTitle(added.title)) ?? "it" });
   if (added.kind === "health_document") {
-    return t(checking ? "whatsapp.addedChecking" : "whatsapp.added", { title: t("whatsapp.addedHealthRecord"), where: added.where, sure: t === ENGLISH ? sureClause(added) : sureIn(t, added) });
+    return t(checking ? "whatsapp.addedChecking" : "whatsapp.added", { title: t("whatsapp.addedHealthRecord"), where: added.where, sure });
   }
   const money = added.kind === "bill" || added.kind === "receipt";
   const title = (money ? withoutNumbers(added.title) : shortTitle(added.title)) ?? (money ? t("whatsapp.addedMoneyEntry") : "it");
-  const sure = t === ENGLISH ? sureClause(added) : sureIn(t, added);
   // More of a grocery already on the list (I-27): "Added 2 L more *Mustard oil* (now 3 L)".
   if (added.more) return t(checking ? "whatsapp.addedMoreChecking" : "whatsapp.addedMore", { amount: amountWords(added.more.added), title, now: amountWords(added.more.now), sure });
   if (forName) return t(checking ? "whatsapp.addedForChecking" : "whatsapp.addedFor", { title, name: forName, where: added.where, sure });

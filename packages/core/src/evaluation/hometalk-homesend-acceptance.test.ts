@@ -169,8 +169,11 @@ describe("AT-B: always waits, whatever the settings (design §1.5)", () => {
     ["AT-B15", "school work missing its due date", { kind: "school_item", extracted: { ...SCHOOL.extracted, dueDate: null } as never, subject: SCHOOL.subject as never }, "ask", ["due date"]],
     ["AT-B16", "a grocery with no name", { extracted: { ...GROCERY.extracted, title: "" } as never }, "ask"],
   ];
-  it("AT-B05 a photo or file (can't be checked word by word) → added, always Checking (the owner, 2026-11-03)", () => {
-    expect(outcomeOf(permissive({ understanding: { ...READINGS.R97, check: { verified: false, unverified: [FROM_A_FILE] } } }))).toBe("checking");
+  // Changed owner rule (2026-11-21, replacing the photo-or-file part of 2026-11-03): above the bar a photo or file is
+  // added confirmed like any other reading, with Undo; below it, Checking. Money and health keep their own rule.
+  it("AT-B05 a photo or file above the bar → added, confirmed; below the bar → Checking (the owner, 2026-11-21)", () => {
+    expect(outcomeOf(permissive({ understanding: { ...READINGS.R97, check: { verified: false, unverified: [FROM_A_FILE] } } }))).toBe("auto_apply");
+    expect(outcomeOf(permissive({ understanding: { ...READINGS.R97, score: 0.55, check: { verified: false, unverified: [FROM_A_FILE] } } }))).toBe("checking");
   });
   for (const [id, what, over, expected, stillNeeded] of cases) {
     it(`${id} ${what} → ${expected}`, () => {
@@ -338,13 +341,13 @@ describe("AT-F: \"N% sure — why\"", () => {
 
   it("AT-F06 the WhatsApp reply carries the % and the reason, and says where to undo", () => {
     expect(addedReply({ title: "Maths worksheet", where: "Kids & School", percent: 97, why: "verified" }, "Asmi")).toBe(
-      "✅ Added *Maths worksheet* for Asmi to Kids & School (97% sure — every detail is in what you sent) — your household lets WonderHome add these on its own. You can undo it in HomeSend.",
+      "✅ Added *Maths worksheet* for Asmi to Kids & School — your household lets WonderHome add these on its own. You can undo it in HomeSend.",
     );
   });
 
   it("AT-F07 HomeTalk's hand-back carries the same", () => {
     expect(handedBackText("Got it, thanks.", { added: { title: "Coconut oil", where: "Groceries", percent: 96, why: "verified" }, stillNeeded: [] })).toBe(
-      "Got it, thanks. Added **Coconut oil** to Groceries (96% sure — every detail is in what you sent) — your household lets WonderHome add these on its own. You can undo it in HomeSend.",
+      "Got it, thanks. Added **Coconut oil** to Groceries — your household lets WonderHome add these on its own. You can undo it in HomeSend.",
     );
   });
 });
@@ -408,9 +411,9 @@ describe("AT-L: a grocery already on the shopping list (I-27)", () => {
     expect(decision.wait).toBeUndefined();
   });
 
-  it("AT-L08 a photo of the list → a top-up, always Checking", () => {
+  it("AT-L08 a photo of the list above the bar → a top-up, confirmed (the owner, 2026-11-21)", () => {
     const decision = decide(GROCERY, "execute", 60, "R97", { ...LISTED, understanding: { ...READINGS.R97, check: { verified: false, unverified: [FROM_A_FILE] } } });
-    expect(outcomeOf(decision)).toBe("checking");
+    expect(outcomeOf(decision)).toBe("auto_apply");
     expect(decision.wait).toBeUndefined();
   });
 
@@ -429,7 +432,7 @@ describe("AT-L: a grocery already on the shopping list (I-27)", () => {
 
   it("AT-L12 the WhatsApp top-up reply says how much more and what the list says now", () => {
     expect(addedReply({ title: "Mustard oil", where: "Groceries", percent: 97, why: "verified", more: { added: { quantity: 2000, unit: "ml" }, now: { quantity: 3000, unit: "ml" } } })).toBe(
-      "✅ Added 2 L more *Mustard oil* (now 3 L) (97% sure — every detail is in what you sent) — your household lets WonderHome add these on its own. You can undo it in HomeSend.",
+      "✅ Added 2 L more *Mustard oil* (now 3 L) — your household lets WonderHome add these on its own. You can undo it in HomeSend.",
     );
   });
 
@@ -453,7 +456,7 @@ describe("AT-L: a grocery already on the shopping list (I-27)", () => {
 
   it("AT-L15 HomeTalk's hand-back says the same", () => {
     expect(handedBackText("Got it.", { added: { title: "Mustard oil", where: "Groceries", percent: 97, why: "verified", more: { added: { quantity: 2000, unit: "ml" }, now: { quantity: 3000, unit: "ml" } } }, stillNeeded: [] })).toBe(
-      "Got it. Added 2 L more **Mustard oil** (now 3 L) (97% sure — every detail is in what you sent) — your household lets WonderHome add these on its own. You can undo it in HomeSend.",
+      "Got it. Added 2 L more **Mustard oil** (now 3 L) — your household lets WonderHome add these on its own. You can undo it in HomeSend.",
     );
     expect(handedBackText("Got it.", { added: { waiting: { reason: "on_list", listed: true }, title: "Mustard oil" }, stillNeeded: [] })).toBe(
       "Got it. **Mustard oil** is already on your shopping list, so I didn't add it twice. Choose what to do in HomeSend.",
@@ -546,7 +549,8 @@ describe("AT-G: WhatsApp words in all eight languages", () => {
         expect(said).not.toMatch(/[{}]/);
         expect(said).not.toMatch(/2,?140/);
       }
-      expect(added).toContain("97");
+      // A confirmed add shows no percentage (the owner, 2026-11-21).
+      expect(added).not.toMatch(/\d+ ?%/);
     });
   }
 });
@@ -711,14 +715,14 @@ describe("AT-N: adding money and health entries directly (the owner, 2026-10-26)
     }
   });
 
-  it("AT-N323 the WhatsApp message for a bill names it and where, with how sure, and never an amount or number", () => {
+  it("AT-N323 the WhatsApp message for a bill names it and where, with no percentage, and never an amount or number", () => {
     const reply = addedReply({ title: "Electricity bill ₹2,140 due 05/11", where: "Bills", kind: "bill", percent: 97, why: "verified" });
-    expect(reply).toBe("✅ Added *Electricity bill due* to Bills (97% sure — every detail is in what you sent) — your household lets WonderHome add these on its own. You can undo it in HomeSend.");
+    expect(reply).toBe("✅ Added *Electricity bill due* to Bills — your household lets WonderHome add these on its own. You can undo it in HomeSend.");
     expect(reply.replace("97%", "")).not.toMatch(/\d/);
   });
   it("AT-N324 the WhatsApp message for a health document never repeats its title or who it is for", () => {
     const reply = addedReply({ title: "Blood test — HbA1c 6.1", where: "Health", kind: "health_document", percent: 97, why: "verified" }, "Kunal");
-    expect(reply).toBe("✅ Added *a health record* to Health (97% sure — every detail is in what you sent) — your household lets WonderHome add these on its own. You can undo it in HomeSend.");
+    expect(reply).toBe("✅ Added *a health record* to Health — your household lets WonderHome add these on its own. You can undo it in HomeSend.");
   });
   it("AT-N325 a money title that is only numbers says 'an entry'", () => {
     expect(addedReply({ title: "₹540", where: "Groceries", kind: "receipt" })).toContain("*an entry*");
