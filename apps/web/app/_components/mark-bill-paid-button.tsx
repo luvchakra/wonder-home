@@ -10,7 +10,7 @@ import { Pill } from "@wonderhome/core/ui/pill";
 import { Select } from "@wonderhome/core/ui/select";
 import { Sheet } from "@wonderhome/core/ui/sheet";
 
-import { PAID_WITH, type PaidWith } from "@wonderhome/core/finance/part-payment";
+import type { PaidWith } from "@wonderhome/core/finance/part-payment";
 import type { PaidBill } from "@wonderhome/core/finance/repository";
 
 import { markBillPaidAction, undoBillPaidAction } from "../(auth)/finance-actions";
@@ -115,7 +115,7 @@ export function MarkBillPaidButton({
       try {
         const payer = String(data.get("paidBy") ?? "");
         const method = String(data.get("paidWith") ?? "");
-        const paidWith = (PAID_WITH as readonly string[]).includes(method) ? (method as PaidWith) : null;
+        const paidWith = method in labels.methods ? (method as PaidWith) : null;
         const result = await markBillPaidAction({ householdId, obligationId, paidOn: String(data.get("paidOn") ?? today), amount, currency: amount === null ? null : currency, paidByMemberId: payer === "" ? null : payer, paidWith, part });
         if (result.error || !result.paid) return setError(result.error ?? labels.failed);
         setOpen(false);
@@ -180,9 +180,9 @@ export function MarkBillPaidButton({
           </div>
           <Select label={labels.paidWith} name="paidWith" defaultValue="">
             <option value="">{labels.paidWithNotSaid}</option>
-            {PAID_WITH.map((method) => (
+            {Object.entries(labels.methods).map(([method, word]) => (
               <option key={method} value={method}>
-                {labels.methods[method]}
+                {word}
               </option>
             ))}
           </Select>

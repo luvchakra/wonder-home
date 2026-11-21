@@ -3,7 +3,7 @@
   "sharedCapGz": 138500,
   "newRouteCapGz": 241400,
   "routes": {
-    "/": 210500,
+    "/": 211500,
     "/_global-error": 142700,
     "/_not-found": 169700,
     "/about": 175700,
