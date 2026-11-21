@@ -29,7 +29,7 @@ function fakeClient(tables: Record<string, Row[]>, missing: string[] = []) {
     const run = (): Result => {
       if (missing.includes(table)) return { data: null, error: { code: "42P01" } };
       if (op.kind === "insert") {
-        const row = { id: `${table}-${rows.length + 1}`, state: "checking", created_at: new Date().toISOString(), ...op.row };
+        const row: Row = { id: `${table}-${rows.length + 1}`, state: "checking", created_at: new Date().toISOString(), ...op.row };
         if (table === "obligation_autopay_runs" && rows.some((other) => other.obligation_id === row.obligation_id && other.period_label === row.period_label)) return { data: null, error: { code: "23505" } };
         rows.push(row);
         return { data: [row], error: null };

@@ -249,7 +249,7 @@ async function sweep(admin: SupabaseClient, householdId: string, now: Date, adap
  */
 export async function householdsWithNoticeChanges(admin: SupabaseClient, since: Date, limit = 200): Promise<string[]> {
   const iso = since.toISOString();
-  const [items, guests, orders, absences, changes, checkIns, chat, keys, autopay] = await Promise.all([
+  const [items, guests, orders, absences, changes, checkIns, chat, keys, autopay, autopaySettled] = await Promise.all([
     admin.from("home_send_items").select("household_id").gte("updated_at", iso).limit(limit),
     admin.from("event_guests").select("household_id").gte("updated_at", iso).limit(limit),
     admin.from("orders").select("household_id").gte("updated_at", iso).limit(limit),
@@ -262,11 +262,14 @@ export async function householdsWithNoticeChanges(admin: SupabaseClient, since: 
       .catch(() => ({ data: [] })),
     // A bill marked paid by autopay, or its run undone or confirmed (11-024); none before its migration.
     Promise.resolve()
-      .then(() => admin.from("obligation_autopay_runs").select("household_id").or(`created_at.gte.${iso},settled_at.gte.${iso}`).limit(limit))
+      .then(() => admin.from("obligation_autopay_runs").select("household_id").gte("created_at", iso).limit(limit))
+      .catch(() => ({ data: [] })),
+    Promise.resolve()
+      .then(() => admin.from("obligation_autopay_runs").select("household_id").gte("settled_at", iso).limit(limit))
       .catch(() => ({ data: [] })),
   ]);
   const ids = new Set<string>();
-  for (const result of [items, guests, orders, absences, changes, checkIns, chat, autopay]) for (const row of (result.data ?? []) as { household_id: string }[]) ids.add(row.household_id);
+  for (const result of [items, guests, orders, absences, changes, checkIns, chat, autopay, autopaySettled]) for (const row of (result.data ?? []) as { household_id: string }[]) ids.add(row.household_id);
   for (const id of ((keys.data ?? []) as string[])) if (typeof id === "string") ids.add(id);
   // The daily HomeSend summary (2026-11-20): a household that had HomeSend activity today is swept once
   // as its evening begins (`SUMMARY_HOUR`, on its own clock), so the summary goes out with nothing else changing.
