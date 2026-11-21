@@ -92,6 +92,12 @@ export const AUDIT_EVENTS = [
   "homesend.restored_all",
   "homesend.removed",
   "finance.bill_removed",
+  "finance.bill_added",
+  "finance.bill_changed",
+  "finance.bill_marked_paid",
+  "finance.bill_marked_unpaid",
+  "finance.bill_file_added",
+  "finance.bill_file_removed",
   "homesend.deleted",
   "homesend.added_all_anyway",
   "homesend.added_anyway",
@@ -232,6 +238,31 @@ export async function listAuditEvents(
 
   if (error) throw new Error(`listAuditEvents failed: ${error.code ?? "unknown"}`);
 
+  return (data ?? []).map((row) => ({
+    id: row.id as string,
+    eventType: row.event_type as string,
+    actorMemberId: (row.actor_member_id as string | null) ?? null,
+    targetTable: (row.target_table as string | null) ?? null,
+    targetId: (row.target_id as string | null) ?? null,
+    metadata: (row.metadata as Record<string, unknown> | null) ?? {},
+    createdAt: row.created_at as string,
+  }));
+}
+
+/**
+ * One record's trail (11-021: a bill's changes and by whom), newest first.
+ * By target id alone, because the same bill is audited as "obligations" by
+ * Bills and as "bill" by HomeSend. Administrators only, by RLS.
+ */
+export async function listAuditEventsFor(supabase: SupabaseClient, householdId: string, targetId: string, limit = 40): Promise<AuditRow[]> {
+  const { data, error } = await supabase
+    .from("audit_events")
+    .select("id, event_type, actor_member_id, target_table, target_id, metadata, created_at")
+    .eq("household_id", householdId)
+    .eq("target_id", targetId)
+    .order("created_at", { ascending: false })
+    .limit(Math.min(Math.max(limit, 1), 100));
+  if (error) throw new Error(`listAuditEventsFor failed: ${error.code ?? "unknown"}`);
   return (data ?? []).map((row) => ({
     id: row.id as string,
     eventType: row.event_type as string,

@@ -1121,6 +1121,10 @@ function BillRow({
             paymentsKept={history.length > 0}
           />
         ) : null}
+        {/* The whole record — every payment, where it came from, files, changes (11-021). */}
+        <PillLink href={`/bills/${bill.id}`} tone="quiet">
+          {t("bills.record.open")}
+        </PillLink>
       </div>
     </ExpandableRow>
   );
