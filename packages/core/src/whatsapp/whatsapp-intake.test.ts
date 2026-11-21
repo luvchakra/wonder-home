@@ -712,9 +712,9 @@ describe("processing into HomeSend", () => {
         await processWhatsAppMessage(h.client, id, { config: CONFIG, fetch: out.fetchImpl, ingest: { classify: oil }, ask: async () => "x", addOnItsOwn });
         const reply = out.sent[0]!.text;
         if (expected === "checking") {
-          expect(reply).toMatch(/^✅ Added \*Mustard oil\* to Groceries \(9\d% sure — every detail is in what you sent\) — marked \*Checking\* until it's confirmed, so its reminders wait\. Say it's right or undo it in HomeSend\.$/);
+          expect(reply).toMatch(/^✅ Added \*Mustard oil\* to Groceries \(9\d% sure\) — marked \*Checking\* until it's confirmed; its reminders still come, marked “not yet confirmed”\. Say it's right or undo it in HomeSend\.$/);
         } else if (expected === "added") {
-          expect(reply).toMatch(/^✅ Added \*Mustard oil\* to Groceries \(9\d% sure — every detail is in what you sent\) — your household lets WonderHome add these on its own\. You can undo it in HomeSend\.$/);
+          expect(reply).toMatch(/^✅ Added \*Mustard oil\* to Groceries — your household lets WonderHome add these on its own\. You can undo it in HomeSend\.$/);
         } else {
           expect(reply).toBe("Got it 👍 I found groceries: Mustard oil. 🛒 I've kept it in HomeSend, where you can see it or undo anything: https://home.wonderapps.biz/home-send");
         }
@@ -747,10 +747,10 @@ describe("processing into HomeSend", () => {
     // I-27 (the owner, 2026-10-26, 8:47 PM IST): Mustard oil already on the shopping list. The app's review is
     // stood in for by HomeSend's own decision, with the match it would find and the list's answer (1 L to buy).
     const listedCases: [id: string, autonomy: "execute" | "prepare", bar: number, said: string, quantity: number | null, expected: string][] = [
-      ["AT-H08", "execute", 95, "2 litres mustard oil", 2, "✅ Added 2 L more *Mustard oil* (now 3 L) (97% sure — every detail is in what you sent) — your household lets WonderHome add these on its own. You can undo it in HomeSend."],
+      ["AT-H08", "execute", 95, "2 litres mustard oil", 2, "✅ Added 2 L more *Mustard oil* (now 3 L) — your household lets WonderHome add these on its own. You can undo it in HomeSend."],
       ["AT-H09", "prepare", 95, "2 litres mustard oil", 2, "Got it 👍 *Mustard oil* is already on your shopping list, so I didn't add it twice. Choose what to do in HomeSend: https://home.wonderapps.biz/home-send 🛒"],
       // Below the bar: still the top-up, marked Checking (the owner, 2026-11-03).
-      ["AT-H10", "execute", 99, "2 litres mustard oil", 2, "✅ Added 2 L more *Mustard oil* (now 3 L) (97% sure — every detail is in what you sent) — marked *Checking* until it's confirmed. Say it's right or undo it in HomeSend."],
+      ["AT-H10", "execute", 99, "2 litres mustard oil", 2, "✅ Added 2 L more *Mustard oil* (now 3 L) (97% sure) — marked *Checking* until it's confirmed. Say it's right or undo it in HomeSend."],
       // No amount: HomeTalk asks how much first (design §4.6); nothing is added, nothing is echoed.
       ["AT-H11", "execute", 95, "mustard oil", null, "Got it 👍 I found groceries: Mustard oil. 🛒 How much should I get? For example 2 litres or 1 kg."],
     ];
@@ -1574,13 +1574,12 @@ describe("a bare shopping list on WhatsApp (design §13.4)", () => {
 });
 
 describe("WonderHome's own WhatsApp words in the member's language (14-047)", () => {
-  it("acknowledges, says what was added and how sure, in Hindi", async () => {
+  it("acknowledges, says what was added, with no percentage once confirmed, in Hindi", async () => {
     const t = await translatorFor("hi");
     const outcome = { duplicate: false, state: "needs_review", itemId: "i-1", notice: "", item: { classifiedKind: "bill", extracted: { title: "Water" } } } as never;
     expect(acknowledgementFor(outcome, { t }).text).toBe("मिल गया 👍 मुझे एक बिल मिला। 🧾 मैंने इसे HomeSend में रख लिया है, जहाँ आप इसे देख सकते हैं या कुछ भी वापस ले सकते हैं: https://home.wonderapps.biz/home-send");
-    const sure = `${t("homesend.found.percentSure", { percent: 97 })} — ${t("homesend.found.why.verified")}`;
     expect(addedReply({ title: "Milk", where: "Groceries", percent: 97, why: "verified" }, undefined, t)).toBe(
-      `✅ *Milk* को Groceries में जोड़ दिया (${sure}) — आपका परिवार WonderHome को ये अपने आप जोड़ने देता है। आप इसे HomeSend में वापस ले सकते हैं।`,
+      `✅ *Milk* को Groceries में जोड़ दिया — आपका परिवार WonderHome को ये अपने आप जोड़ने देता है। आप इसे HomeSend में वापस ले सकते हैं।`,
     );
   });
 

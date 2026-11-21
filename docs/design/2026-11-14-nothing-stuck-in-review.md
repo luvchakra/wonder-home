@@ -46,7 +46,7 @@ Doors: paste, share sheet, WhatsApp, forwarded email, photo or file, HomeTalk ty
 | When it is | Before | After |
 |---|---|---|
 | A clear reading in a Pre Approved area | Added. Below the 95% bar it is Checking, its reminders held. | Added. Below the bar it is Checking with its reminders on, marked "not yet confirmed" (decision 3). |
-| A photo or a file | Checking, with one "Looks right?" question. | Checking with reminders on; a question only for a missing or clashing detail. |
+| A photo or a file | Checking, with one "Looks right?" question. | Checking with reminders on; a question only for a missing or clashing detail. **Since 2026-11-21** (owner): above the bar it is added confirmed like any other reading; money and health keep their own setting. |
 | A bill or a receipt | Waits, unless an Admin turned on "Add money entries directly". | Recorded as Checking, with a "check before paying" reminder. Paying never happens (decision 2). |
 | A health document | Waits, unless the same switch is on. | Filed as Checking in that person's health record, seen only by them, their guardians and Admins (decision 2). |
 | An area set to "Wait for Approval" | Waits for approval before anything is recorded. | Recorded. Approval applies when an action follows (decision 1). |

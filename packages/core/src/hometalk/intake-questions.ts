@@ -369,20 +369,22 @@ export async function answerIntakeQuestion(
 /** The closing words once HomeTalk has nothing left to ask. Never an amount, a health detail or a number. */
 export function handedBackText(lead: string, outcome: { added: AddedOnItsOwn | WaitingInHomeSend | null; stillNeeded: readonly string[] }): string {
   const added = wasAdded(outcome.added) ? outcome.added : null;
-  // Added below the bar: marked Checking, its reminders waiting until it is confirmed (the owner, 2026-11-03).
+  // Added below the bar: marked Checking; its reminders still come, marked "not yet confirmed" (`notifications/reconcile.ts`).
   const tail = added?.unconfirmed
-    ? " — marked **Checking** until it's confirmed, so its reminders wait. Say it's right or undo it in HomeSend."
+    ? " — marked **Checking** until it's confirmed; its reminders still come, marked “not yet confirmed”. Say it's right or undo it in HomeSend."
     : " — your household lets WonderHome add these on its own. You can undo it in HomeSend.";
   // An exam timetable (2026-11-21): what it was, each child's exam days with their dates, the one question, where to see it.
   if (added?.timetable) return `${lead} ${timetableReply(added.timetable, translator("en", en), { origin: siteOrigin(runtimeEnv()), dates: shortDay })}`;
-  if (added?.several) return `${lead} 📄 Added ${added.several.count} things from **${added.title}**: ${added.several.names.join(", ")}${added.unconfirmed ? ", marked **Checking** because I read them from a photo or file" : ""}. See or undo them in HomeSend.`;
+  if (added?.several) return `${lead} 📄 Added ${added.several.count} things from **${added.title}**: ${added.several.names.join(", ")}${added.unconfirmed ? ", marked **Checking** because I wasn't sure enough of the reading" : ""}. See or undo them in HomeSend.`;
   // A record already on file moved to its new day, not a second copy (14-066, part 3).
   if (added?.moved) return `${lead} 📅 **${added.title}** was already on record, so I moved it to its new day instead of adding it twice. You can undo it in HomeSend.`;
+  // How sure only for a Checking entry, as one short reason; a confirmed add says what and how to undo (the owner, 2026-11-21).
+  const sure = added?.unconfirmed ? sureClause({ percent: added.percent }) : "";
   if (added?.more) {
     // More of a grocery already on the list (I-27), as HomeTalk's own add says it: "+2 L, now 3 L".
-    return `${lead} Added ${amountWords(added.more.added)} more **${added.title}** (now ${amountWords(added.more.now)})${sureClause(added)}${tail}`;
+    return `${lead} Added ${amountWords(added.more.added)} more **${added.title}** (now ${amountWords(added.more.now)})${sure}${tail}`;
   }
-  if (added) return `${lead} Added **${added.title}** to ${added.where}${sureClause(added)}${tail}`;
+  if (added) return `${lead} Added **${added.title}** to ${added.where}${sure}${tail}`;
   if (outcome.stillNeeded.length > 0) return `${lead} I've kept it in HomeSend — the ${listDetails(outcome.stillNeeded.map((label) => ({ label })))} can be filled in there.`;
   const held = outcome.added && "waiting" in outcome.added ? outcome.added : null;
   const waiting = held ? waitingWords(held.waiting, held.title) : null;

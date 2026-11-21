@@ -42,9 +42,12 @@ describe("HomeSend confirmation strategy (Wave 3 §12)", () => {
     const unchecked = { readable: true, confidence: "high" as const, score: 0.9, check: { verified: false, unverified: ["the name"] }, safety: { instructionsIgnored: false, signals: [] } };
     expect(decide({ understanding: unchecked })).toMatchObject({ mode: "auto_apply", unconfirmed: true });
     expect(decide({ understanding: unchecked }).reason).toContain("marked Checking");
-    // A photo or file has no words of its own to check against: added, but always Checking.
+    // A photo or file more sure than the bar is added confirmed, like any other reading (the owner, 2026-11-21:
+    // "why it's still waiting? it automatically add in WonderHome"); below the bar it is Checking.
     const photo = { ...unchecked, score: 0.99, check: { verified: false, unverified: ["the original, which can't be checked word by word"] } };
-    expect(decide({ understanding: photo })).toMatchObject({ mode: "auto_apply", unconfirmed: true });
+    expect(decide({ understanding: photo }).mode).toBe("auto_apply");
+    expect(decide({ understanding: photo }).unconfirmed).toBeUndefined();
+    expect(decide({ understanding: { ...photo, score: 0.9 } })).toMatchObject({ mode: "auto_apply", unconfirmed: true });
     // Exactly 95% is not more than 95%.
     expect(decide({ understanding: { ...unchecked, score: 0.95, check: { verified: true, unverified: [] } } })).toMatchObject({ mode: "auto_apply", unconfirmed: true });
     // An item read before the check existed has no score: added, and checked.
@@ -189,7 +192,9 @@ describe("a clear move updates the record on file instead of asking (14-066, par
     expect(decideConfirmation({ ...base, autonomy: "prepare" }).mode).toBe("prepare");
     expect(decideConfirmation({ ...base, memberInitiated: false }).mode).toBe("prepare");
     expect(decideConfirmation({ ...base, understanding: { ...reading, score: 0.9 } }).update).toBeUndefined();
-    expect(decideConfirmation({ ...base, understanding: { ...reading, check: { verified: false, unverified: [FROM_A_FILE] } } as never }).mode).toBe("prepare");
+    // A photo or file over the bar moves it like any other reading (the owner, 2026-11-21), with Undo; below the bar it waits.
+    expect(decideConfirmation({ ...base, understanding: { ...reading, check: { verified: false, unverified: [FROM_A_FILE] } } as never }).mode).toBe("auto_apply");
+    expect(decideConfirmation({ ...base, understanding: { ...reading, score: 0.9, check: { verified: false, unverified: [FROM_A_FILE] } } as never }).update).toBeUndefined();
     expect(decideConfirmation({ ...base, understanding: { ...reading, safety: { signals: ["instruction"], instructionsIgnored: true } } as never }).mode).toBe("prepare");
     // A bill waits unless an Admin lets money entries in directly.
     expect(decideConfirmation({ ...base, kind: "bill", extracted: { title: "Electricity", payee: "BESCOM", amount: 2140, dueDate: "2026-11-12", needs: [], confidence: "high" } as never }).mode).toBe("govern");

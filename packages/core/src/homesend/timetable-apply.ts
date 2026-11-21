@@ -5,6 +5,7 @@ import { listMembers } from "../identity/households";
 import { log } from "../observability/logger";
 import { listEnrolments, saveEnrolment } from "../school/enrolments";
 import { listExams, saveExam, savePaper } from "../school/exams";
+import { readsAboveTheBar } from "./above-bar";
 import { recordHomeSendChange } from "./changes";
 import type { HomeSendItem } from "./items";
 import { routeHomeSendItem } from "./repository";
@@ -57,7 +58,7 @@ export async function addTimetable(
   supabase: SupabaseClient,
   input: {
     householdId: string;
-    item: Pick<HomeSendItem, "id" | "source" | "extracted" | "createdByMemberId" | "filePath">;
+    item: Pick<HomeSendItem, "id" | "source" | "extracted" | "createdByMemberId" | "filePath" | "understanding">;
     actorMemberId: string | null;
     /** Only this child (after "Which class is <child> in?" was answered). */
     onlyChildId?: string;
@@ -69,8 +70,8 @@ export async function addTimetable(
   if (!schedule || schedule.kind !== "exam") return null;
   const everyone = await timetableChildren(supabase, input.householdId);
   const plan = planTimetable(schedule, input.onlyChildId ? everyone.filter((child) => child.memberId === input.onlyChildId) : everyone);
-  // Read from a photo or a file: added as Checking until someone confirms it (decision 2, 2026-11-14).
-  const checking = Boolean(input.item.filePath) || input.item.source === "whatsapp_media" || input.item.source === "manual_upload" || input.item.source === "email_attachment";
+  // More sure than the household's bar: confirmed, whatever it was read from (the owner, 2026-11-21). Below it: Checking.
+  const checking = !(await readsAboveTheBar(supabase, input.householdId, "school_item", input.item.understanding?.score));
   const added: TimetableAdded = { title: plan.title, examType: plan.examType, children: [], asked: [], checking };
 
   // Through the School area's own read, never this module's: HomeSend writes and reads only through domain services.
@@ -137,7 +138,7 @@ export async function answerClassQuestion(
   if (!grade) return false;
   const { data: item } = await supabase
     .from("home_send_items")
-    .select("id, source, extracted, created_by_member_id, file_path")
+    .select("id, source, extracted, created_by_member_id, file_path, understanding")
     .eq("household_id", input.householdId)
     .eq("id", input.itemId)
     .maybeSingle();
@@ -147,10 +148,10 @@ export async function answerClassQuestion(
   const school = enrolment?.schoolName ?? ((item.extracted as { schedule?: { school?: string | null } } | null)?.schedule?.school ?? null);
   if (!school) return false;
   await saveEnrolment(supabase, { householdId: input.householdId, childMemberId: input.childMemberId, schoolName: school, grade: String(grade) });
-  const row = item as { id: string; source: HomeSendItem["source"]; extracted: HomeSendItem["extracted"]; created_by_member_id: string | null; file_path: string | null };
+  const row = item as { id: string; source: HomeSendItem["source"]; extracted: HomeSendItem["extracted"]; created_by_member_id: string | null; file_path: string | null; understanding: HomeSendItem["understanding"] };
   const added = await addTimetable(supabase, {
     householdId: input.householdId,
-    item: { id: row.id, source: row.source, extracted: row.extracted, createdByMemberId: row.created_by_member_id, filePath: row.file_path },
+    item: { id: row.id, source: row.source, extracted: row.extracted, createdByMemberId: row.created_by_member_id, filePath: row.file_path, understanding: row.understanding },
     actorMemberId: input.actorMemberId,
     onlyChildId: input.childMemberId,
     ask: false,

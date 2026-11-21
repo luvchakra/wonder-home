@@ -1,6 +1,7 @@
 import "server-only";
 
 import { listObligations } from "@wonderhome/core/finance/repository";
+import { readsAboveTheBar } from "@wonderhome/core/homesend/above-bar";
 import { applyDocumentPlan, type PlanWriter } from "@wonderhome/core/homesend/apply";
 import { recordHomeSendChange } from "@wonderhome/core/homesend/changes";
 import type { HomeSendItem } from "@wonderhome/core/homesend/items";
@@ -113,8 +114,8 @@ export const ROUTED_TABLE: Record<PlanEntry["domain"], string> = { bill: "obliga
  * Every new or changed thing a document's plan holds, written now through the
  * same governed writes and Undo as a person's Apply, each linked to the one
  * source item. Nothing the plan would ask about (which child?) and nothing it
- * would cancel is written: those wait for a person. Checking when read from a
- * photo or file. Null when there was nothing to write.
+ * would cancel is written: those wait for a person. Confirmed above the household's
+ * bar, Checking below it (money read from a photo or file always). Null when there was nothing to write.
  */
 export async function applyPlanAtOnce(
   supabase: Supabase,
@@ -125,7 +126,11 @@ export async function applyPlanAtOnce(
   if (!plan) return null;
   const include = new Set(plan.entries.filter((entry) => entry.included && !entry.question && (entry.action === "create" || entry.action === "update")).map((entry) => entry.key));
   if (include.size === 0) return null;
-  const checking = Boolean(item.filePath) || item.source === "whatsapp_media" || item.source === "manual_upload" || item.source === "email_attachment";
+  // Above the household's bar it is confirmed whatever it was read from (the owner, 2026-11-21); money (a fee) read from a
+  // photo or file keeps its own rule and stays Checking, like `confirmation.ts`. Below the bar: Checking.
+  const fromAFile = Boolean(item.filePath) || item.source === "whatsapp_media" || item.source === "manual_upload" || item.source === "email_attachment";
+  const money = plan.entries.some((entry) => include.has(entry.key) && entry.domain === "bill");
+  const checking = (fromAFile && money) || !(await readsAboveTheBar(supabase, membership.household.id, item.classifiedKind ?? null, item.understanding?.score));
   const receipt = await applyDocumentPlan(plan, include, writerFor(supabase, membership, item.id, { state: checking ? "unconfirmed" : "confirmed", source: item.source }), { intakeId: item.id });
   const first = receipt.changes.find((change) => change.changeId && change.entityId);
   await recordDocumentApplied(supabase, membership.household.id, item.id, {

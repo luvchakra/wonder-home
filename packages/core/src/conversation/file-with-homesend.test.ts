@@ -45,7 +45,7 @@ describe("something told to HomeTalk and filed with HomeSend", () => {
     expect(asked).toEqual(["i-1"]);
     expect(result).toEqual({
       ok: true,
-      text: "Added **Mustard oil** to Groceries (97% sure — every detail is in what you sent) — your household lets WonderHome add these on its own. You can undo it in HomeSend.",
+      text: "Added **Mustard oil** to Groceries — your household lets WonderHome add these on its own. You can undo it in HomeSend.",
       result: { homeSendItemId: "i-1", added: "Groceries" },
     });
   });
@@ -80,12 +80,12 @@ describe("AT-J: filed from HomeTalk, under the approval settings", () => {
   const bill = { title: "Electricity", payee: "BESCOM", amount: 2140, dueDate: "2026-11-05", needs: [], confidence: "high" };
   // A wait that would otherwise have been added says why, with what was read (I-27, 2026-10-26).
   const cases: [id: string, kind: string, extracted: Record<string, unknown>, autonomy: "execute" | "prepare", bar: number, expected: RegExp, listed?: boolean][] = [
-    ["AT-J01", "grocery_item", oil, "execute", 95, /^Added \*\*Mustard oil\*\* to Groceries \(97% sure — every detail is in what you sent\)/],
-    // Below the bar it is added, marked Checking (the owner, 2026-11-03).
-    ["AT-J02", "grocery_item", oil, "execute", 99, /^Added \*\*Mustard oil\*\* to Groceries \(97% sure — every detail is in what you sent\) — marked \*\*Checking\*\* until it's confirmed, so its reminders wait\./],
+    ["AT-J01", "grocery_item", oil, "execute", 95, /^Added \*\*Mustard oil\*\* to Groceries — your household lets WonderHome add these on its own\./],
+    // Below the bar it is added, marked Checking, with how sure as its one reason (the owner, 2026-11-03 and 2026-11-21).
+    ["AT-J02", "grocery_item", oil, "execute", 99, /^Added \*\*Mustard oil\*\* to Groceries \(97% sure\) — marked \*\*Checking\*\* until it's confirmed; its reminders still come, marked “not yet confirmed”\./],
     ["AT-J03", "grocery_item", oil, "prepare", 60, /^Your household has groceries set to Wait for Approval, so it needs your yes before it's added\. Approve it in HomeSend\. I read it as/],
     ["AT-J04", "bill", bill, "execute", 60, /for you to check before anything is added/],
-    ["AT-J05", "grocery_item", oil, "execute", 95, /^Added 2 L more \*\*Mustard oil\*\* \(now 3 L\) \(97% sure/, true],
+    ["AT-J05", "grocery_item", oil, "execute", 95, /^Added 2 L more \*\*Mustard oil\*\* \(now 3 L\) — your household/, true],
     ["AT-J06", "grocery_item", oil, "prepare", 95, /^\*\*Mustard oil\*\* is already on your shopping list, so I didn't add it twice\. Choose what to do in HomeSend\./, true],
   ];
   for (const [id, kind, extracted, autonomy, bar, expected, listed] of cases) {

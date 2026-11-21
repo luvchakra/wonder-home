@@ -28,12 +28,13 @@ describe("HomeSend's bar for adding on its own", () => {
     expect(sureWhy({ check: null, confidence: "high" })).toBeNull();
   });
 
-  // Design §7: every "added on its own" message says how sure, and why.
-  it("puts how sure, and why, in every added-on-its-own message", () => {
+  // Design §7 as the owner changed it on 2026-11-21: how sure is said only for a Checking entry; a confirmed add says what and how to undo.
+  it("says how sure only when an entry is Checking", () => {
     const added = { title: "Maths worksheet", where: "Kids & School", percent: 97, why: "verified" as const };
     expect(sureClause(added)).toBe(" (97% sure — every detail is in what you sent)");
     expect(sureClause({ percent: null })).toBe("");
-    expect(addedReply(added)).toBe("✅ Added *Maths worksheet* to Kids & School (97% sure — every detail is in what you sent) — your household lets WonderHome add these on its own. You can undo it in HomeSend.");
-    expect(handedBackText("Got it, thanks.", { added, stillNeeded: [] })).toContain("to Kids & School (97% sure — every detail is in what you sent) —");
+    expect(addedReply(added)).toBe("✅ Added *Maths worksheet* to Kids & School — your household lets WonderHome add these on its own. You can undo it in HomeSend.");
+    expect(handedBackText("Got it, thanks.", { added, stillNeeded: [] })).toContain("to Kids & School — your household");
+    expect(handedBackText("Got it, thanks.", { added: { ...added, percent: 80, unconfirmed: true }, stillNeeded: [] })).toContain("to Kids & School (80% sure) — marked **Checking**");
   });
 });
