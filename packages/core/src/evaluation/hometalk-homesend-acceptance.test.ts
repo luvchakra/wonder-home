@@ -299,7 +299,7 @@ describe("AT-E: second asks and the closing line", () => {
 
   it("AT-E12 the closing line names what is left, and never an amount", () => {
     expect(handedBackText("Got it, thanks.", { added: null, stillNeeded: ["who it's from", "due date"] })).toBe("Got it, thanks. I've kept it in HomeSend — the who it's from and due date can be filled in there.");
-    expect(handedBackText("Got it, thanks.", { added: null, stillNeeded: [] })).toBe("Got it, thanks. I've kept it in HomeSend, where you can see it or undo anything.");
+    expect(handedBackText("Got it, thanks.", { added: null, stillNeeded: [] })).toBe("Got it, thanks. Nothing was added yet. Open it in HomeSend to finish it.");
   });
 });
 

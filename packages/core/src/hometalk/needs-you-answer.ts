@@ -45,7 +45,7 @@ export async function applyNeedsYouAnswer(
   if (item.source === CLASS_QUESTION_SOURCE) {
     const childMemberId = item.prompt.field?.startsWith("class:") ? item.prompt.field.slice("class:".length) : null;
     if (!childMemberId || how.byDefault || answer === "note") return "done";
-    const added = await answerClassQuestion(client, { householdId: item.householdId, itemId: item.subjectId, childMemberId, answer, actorMemberId: how.actor.memberId });
+    const added = await answerClassQuestion(client, { householdId: item.householdId, itemId: item.subjectId, childMemberId, answer, actorMemberId: how.actor.memberId, questionId: item.id });
     return added ? "done" : "settled";
   }
   const handler = handlerFor(item.source);

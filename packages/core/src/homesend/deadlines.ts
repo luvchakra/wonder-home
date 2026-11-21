@@ -1,6 +1,9 @@
 import { consequenceOf, type Consequence, type NeedsYouAnswer, type NeedsYouPrompt } from "../hometalk/needs-you";
 import type { HomeSendFailureReason, HomeSendKind, HomeSendStatus } from "./items";
 
+/** An open "Which class is <child> in?" question about the item (`timetable-apply.ts`, source `homesend_class`). */
+export const CLASS_OPEN = "homesend_class:open";
+
 /**
  * "Nothing waits" (the owner, 2026-11-14; part A of
  * docs/design/2026-11-14-nothing-stuck-in-review.md): every item sent to
@@ -192,6 +195,9 @@ export function endingFor(item: EndingInput): Ending {
   }
   if (item.readable === false) return afterReadAgain(item);
   if (!item.kind || item.kind === "unknown") return { action: "note" };
+  // A timetable waiting on "Which class is <child> in?" is not filed as a note under the question (21 Nov): the answer
+  // adds that child's exam days; "Keep it as a note", or the question's default, ends it on a later pass.
+  if (item.asked.has(CLASS_OPEN)) return { action: "wait" };
   // A bill, receipt or health document waiting on the Admin's switch is never made a note by default (it
   // would lose its reminder): decision 2 (part B, "Record first") records it as Checking instead.
   if (WAITS_FOR_RECORD_FIRST.has(item.kind)) {

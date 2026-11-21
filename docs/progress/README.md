@@ -11,6 +11,7 @@ decision that shapes later work each earns a note, written before moving on.
 
 | Date | Note |
 |---|---|
+| 2026-11-21 | [A timetable read late still becomes exam days (14-077)](2026-11-21-timetable-read-late.md) |
 | 2026-11-21 | [HomeSend: confirmed above the bar, whatever it was read from (14-075)](2026-11-21-confirmed-above-bar.md) |
 | 2026-11-21 | [HomeSend matches without asking; undated school notices become notes; HD set in eval (14-076)](2026-11-21-homesend-match-without-asking.md) |
 | 2026-11-21 | [WonderHome's AI key in one place: Platform admin](2026-11-21-ai-key-one-place.md) |

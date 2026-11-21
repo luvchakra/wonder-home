@@ -1071,8 +1071,46 @@ function cutAt(root: unknown, path: readonly (string | number)[], maximum: numbe
  * days grounded. The regression set runs recorded readings through this
  * (`evaluation/homesend-documents`), so it gates exactly what a live read does.
  */
+/**
+ * A timetable's small slips are mended, never the reason a whole reading is
+ * lost (the owner's exam timetable, 21 Nov): a row's dueDate in another shape
+ * becomes null (its dateText still gives the day), an empty column heading is
+ * named by its place, a number in a cell becomes text. If the schedule still
+ * doesn't fit, the reading is kept without it and the reply says the table
+ * couldn't be read (`homesend/school-note.ts` `looksLikeTimetable`).
+ */
+export function repairSchedule(raw: unknown): unknown {
+  if (!raw || typeof raw !== "object") return raw;
+  const schedule = (raw as { schedule?: unknown }).schedule;
+  if (!schedule || typeof schedule !== "object") return raw;
+  const table = schedule as { columns?: unknown; rows?: unknown };
+  const columns = Array.isArray(table.columns) ? table.columns.map((column, index) => (typeof column === "string" && column.trim() ? column : typeof column === "number" ? String(column) : `Column ${index + 1}`)) : table.columns;
+  const rows = Array.isArray(table.rows)
+    ? table.rows.map((row) => {
+        if (!row || typeof row !== "object") return row;
+        const line = row as { dueDate?: unknown; dateText?: unknown; cells?: unknown };
+        return {
+          ...line,
+          dateText: typeof line.dateText === "string" ? line.dateText : null,
+          dueDate: typeof line.dueDate === "string" && /^\d{4}-\d{2}-\d{2}$/.test(line.dueDate) ? line.dueDate : null,
+          cells: Array.isArray(line.cells) ? line.cells.map((cell) => (typeof cell === "string" ? cell : typeof cell === "number" ? String(cell) : null)) : [],
+        };
+      })
+    : table.rows;
+  return { ...(raw as object), schedule: { ...table, columns, rows } };
+}
+
+function parseReading(raw: unknown): ReturnType<typeof IntakeExtractionSchema.safeParse> {
+  const repaired = repairSchedule(raw);
+  const parsed = parseLeniently(IntakeExtractionSchema, repaired);
+  if (parsed.success || !repaired || typeof repaired !== "object") return parsed;
+  // Only the timetable is wrong: keep everything else.
+  if (!parsed.error.issues.every((issue) => issue.path[0] === "schedule")) return parsed;
+  return parseLeniently(IntakeExtractionSchema, { ...(repaired as object), schedule: null });
+}
+
 export function acceptReading(raw: unknown, context?: IntakeContext): IntakeExtraction | ClassifyFailure {
-  const parsed = parseLeniently(IntakeExtractionSchema, raw);
+  const parsed = parseReading(raw);
   return parsed.success ? groundIntakeDate(sanitizeIntakeExtraction(parsed.data), context) : { failed: "rejected" };
 }
 
@@ -1161,7 +1199,7 @@ export async function classifyIntakeDetailed(
           return rejected("not_json");
         }
         if (json === null) return rejected("empty");
-        const parsed = parseLeniently(IntakeExtractionSchema, json);
+        const parsed = parseReading(json);
         return parsed.success ? groundIntakeDate(sanitizeIntakeExtraction(parsed.data), context) : rejected("schema");
       }
       case "openai": {

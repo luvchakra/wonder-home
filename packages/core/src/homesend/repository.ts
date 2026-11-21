@@ -625,6 +625,65 @@ export async function keepAsNoteNow(supabase: SupabaseClient, householdId: strin
   return true;
 }
 
+/** What an earlier send already became, by the same content or the same kind and title (pure; 21 Nov). */
+export function twinOf(
+  item: { id: string; contentHash: string | null; classifiedKind: string | null; title: string | null },
+  candidates: readonly { id: string; contentHash: string | null; classifiedKind: string | null; title: string | null; routedTable: string | null }[],
+): { id: string; title: string | null; routedTable: string | null } | null {
+  const norm = (value: string | null) => (value ?? "").toLowerCase().replace(/[^\p{L}\p{N}]+/gu, " ").trim();
+  const title = norm(item.title);
+  const found = candidates.find(
+    (other) => other.id !== item.id && ((item.contentHash && other.contentHash === item.contentHash) || (title.length >= 6 && other.classifiedKind === item.classifiedKind && norm(other.title) === title)),
+  );
+  return found ? { id: found.id, title: found.title, routedTable: found.routedTable } : null;
+}
+
+/**
+ * The item an earlier send of the same thing was already added from, within
+ * the last fortnight: a photo read late (it waited on the model) after the
+ * person sent it again and that copy was added (the owner's timetable, 21 Nov).
+ */
+export async function findAddedTwin(
+  supabase: SupabaseClient,
+  householdId: string,
+  item: { id: string; contentHash: string | null; classifiedKind: string | null; title: string | null },
+  now: Date = new Date(),
+): Promise<{ id: string; title: string | null; routedTable: string | null } | null> {
+  const since = new Date(now.getTime() - 14 * 24 * 60 * 60 * 1000).toISOString();
+  const { data, error } = await supabase
+    .from("home_send_items")
+    .select("id, content_hash, classified_kind, extracted, routed_table")
+    .eq("household_id", householdId)
+    .eq("status", "routed")
+    .neq("id", item.id)
+    .gte("created_at", since)
+    .order("created_at", { ascending: false })
+    .limit(30);
+  if (error) return null;
+  const candidates = ((data ?? []) as Row[]).map((row) => ({
+    id: row.id as string,
+    contentHash: (row.content_hash as string | null) ?? null,
+    classifiedKind: (row.classified_kind as string | null) ?? null,
+    title: ((row.extracted as { title?: string | null } | null)?.title ?? null) as string | null,
+    routedTable: (row.routed_table as string | null) ?? null,
+  }));
+  return twinOf(item, candidates);
+}
+
+/** A classified item set aside at once as "already on record" (restorable), with an audit row. True when it moved. */
+export async function setAsideAsAlreadyRecorded(supabase: SupabaseClient, householdId: string, itemId: string, twinId: string, now: Date = new Date()): Promise<boolean> {
+  const { data, error } = await supabase
+    .from("home_send_items")
+    .update({ status: "archived", archived_from: "classified", archived_at: now.toISOString(), archive_reason: "already_recorded", retry_requested_at: null })
+    .eq("household_id", householdId)
+    .eq("id", itemId)
+    .eq("status", "classified")
+    .select("id");
+  if (error || (data ?? []).length === 0) return false;
+  await auditChange({ householdId, eventType: "homesend.auto_archived", targetTable: "home_send_items", targetId: itemId, metadata: { reason: "already_recorded", by: "rule", from: "classified", twin: twinId } }).catch(() => undefined);
+  return true;
+}
+
 /**
  * The Undo after "Archive all": exactly these archived items back to where
  * each was, in one update per place. Anything no longer archived is left alone.

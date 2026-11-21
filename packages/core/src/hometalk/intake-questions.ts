@@ -393,7 +393,7 @@ export function handedBackText(lead: string, outcome: { added: AddedOnItsOwn | W
   if (outcome.stillNeeded.length > 0) return `${lead} I've kept it in HomeSend — the ${listDetails(outcome.stillNeeded.map((label) => ({ label })))} can be filled in there.`;
   const held = outcome.added && "waiting" in outcome.added ? outcome.added : null;
   const waiting = held ? waitingWords(held.waiting, held.title) : null;
-  return `${lead} ${waiting ?? "I've kept it in HomeSend, where you can see it or undo anything."}`;
+  return `${lead} ${waiting ?? "Nothing was added yet. Open it in HomeSend to finish it."}`;
 }
 
 /** "3 Dec", for a reply in the app. */

@@ -254,8 +254,12 @@ async function endHouseholdItems(admin: SupabaseClient, householdId: string, now
   const subjects = [...new Set([...waitingRows.map((row) => row.id as string), ...checkRows.map((row) => row.intake_id as string)])];
   const asked = new Map<string, Set<string>>();
   for (let start = 0; start < subjects.length; start += 200) {
-    const { data } = await admin.from("needs_you_items").select("source, subject_id").eq("household_id", householdId).in("subject_id", subjects.slice(start, start + 200)).limit(1000);
-    for (const row of (data ?? []) as Row[]) asked.set(row.subject_id as string, new Set([...(asked.get(row.subject_id as string) ?? []), row.source as string]));
+    const { data } = await admin.from("needs_you_items").select("source, subject_id, status").eq("household_id", householdId).in("subject_id", subjects.slice(start, start + 200)).limit(1000);
+    for (const row of (data ?? []) as Row[]) {
+      // A question still open is marked too: an item waiting on it is not ended under it (`deadlines.ts` `CLASS_OPEN`).
+      const marks = [row.source as string, ...(row.status === "open" ? [`${row.source as string}:open`] : [])];
+      asked.set(row.subject_id as string, new Set([...(asked.get(row.subject_id as string) ?? []), ...marks]));
+    }
   }
   let changed = false;
 

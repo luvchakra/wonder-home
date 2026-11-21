@@ -131,7 +131,7 @@ describe("14-050: filling them in, one item after another", () => {
     const clarify = (first.ok ? first.result.clarify : null) as { parameters: Record<string, unknown> };
     const answered = await executeIntent({ ...yes, action: "complete_homesend_item", utterance: "Friday", parameters: { ...clarify.parameters, answer: "Friday" } }, context(h.client) as never);
     expect(h.tables.home_send_items!.find((row) => row.id === "i-worksheet")!.extracted).toMatchObject({ dueDate: expect.stringMatching(/^2026-10-30$/) });
-    expect(answered.ok && answered.text).toMatch(/^Got it, thanks\. I've kept it in HomeSend, where you can see it or undo anything\. Next, \*\*Diwali dinner\*\*: Which day is it\?$/);
+    expect(answered.ok && answered.text).toMatch(/^Got it, thanks\. Nothing was added yet. Open it in HomeSend to finish it\. Next, \*\*Diwali dinner\*\*: Which day is it\?$/);
     expect(answered.ok && answered.result.clarify).toMatchObject({ parameters: { itemId: "i-dinner", field: "date", queue: [] } });
   });
 

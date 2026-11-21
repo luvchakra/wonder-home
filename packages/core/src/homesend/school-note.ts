@@ -16,6 +16,8 @@ export function isUndatedSchoolNotice(item: {
   if (item.classifiedKind !== "school_item") return false;
   const extracted = item.extracted as { schedule?: unknown; dueDate?: unknown; dateText?: unknown } | null | undefined;
   if (!extracted || extracted.schedule) return false;
+  // A timetable whose table couldn't be read is never filed away as a note: the reply says so (21 Nov).
+  if (looksLikeTimetable(item.extracted)) return false;
   if (dated(extracted)) return false;
   const records = ((item.understanding as { document?: { records?: readonly unknown[] } | null } | null | undefined)?.document?.records ?? []) as readonly (Dated & { record?: Dated })[];
   return !records.some((entry) => dated(entry) || dated(entry?.record));
@@ -30,4 +32,12 @@ function dated(value: Dated): boolean {
 export function noteSummary(summary: string | null | undefined, title: string | null | undefined): string {
   const line = (summary?.trim() || title?.trim() || "").replace(/\s+/g, " ").replace(/[.。!]+$/u, "");
   return line.length > 160 ? `${line.slice(0, 157).trimEnd()}…` : line;
+}
+
+const TIMETABLE_WORDS = /\b(time ?table|date ?sheet|exam(ination)? schedule|test schedule|schedule of (exams|tests))\b/i;
+
+/** A school item that says it is a timetable, whether or not its table was read (its title or summary). Pure. */
+export function looksLikeTimetable(extracted: Loose, summary?: string | null): boolean {
+  const reading = extracted as { title?: unknown; summary?: unknown } | null | undefined;
+  return [reading?.title, reading?.summary, summary].some((text) => typeof text === "string" && TIMETABLE_WORDS.test(text));
 }
