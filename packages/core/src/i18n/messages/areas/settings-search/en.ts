@@ -29,6 +29,8 @@ export const settingsSearchEn = {
   "settingsSearch.kw.ai-approval-scope": "wait for approval, approval, record, recording, actions, automatic, review",
   "settingsSearch.kw.ai-new-senders": "email, sender, new sender, trust, allowlist, forwarding, block",
   "settingsSearch.kw.ai-homesend-tidy": "clean up, tidy, archive, old, expired, past, duplicate, stale, homesend",
+  "settingsSearch.kw.ai-health-filers": "health, medical, records, file for others, report, prescription, adults",
+  "settingsSearch.kw.ai-homesend-learned": "learned, rules, memory, homesend, sender, taught, forget",
   "settingsSearch.kw.ai-key": "api key, key, token, provider, model, own key",
   "settingsSearch.kw.ai-provider": "anthropic, claude, gemini, google, openai, gpt, model",
   "settingsSearch.kw.ai-api-key": "key, api, token, secret, own key",

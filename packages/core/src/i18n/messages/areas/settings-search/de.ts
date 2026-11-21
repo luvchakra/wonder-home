@@ -30,6 +30,8 @@ export const settingsSearchDe: AreaCatalog<typeof settingsSearchEn> = {
   "settingsSearch.kw.ai-approval-scope": "genehmigung, festhalten, handlungen, automatisch, prüfung",
   "settingsSearch.kw.ai-new-senders": "e-mail, absender, neuer absender, vertrauen, blockieren",
   "settingsSearch.kw.ai-homesend-tidy": "aufräumen, archivieren, alt, abgelaufen, vergangen, doppelt, homesend",
+  "settingsSearch.kw.ai-health-filers": "gesundheit, medizinisch, unterlagen, für andere, befund, rezept",
+  "settingsSearch.kw.ai-homesend-learned": "gelernt, regeln, gedächtnis, homesend, absender, vergessen",
   "settingsSearch.kw.ai-key": "api-schlüssel, schlüssel, token, anbieter, eigener schlüssel",
   "settingsSearch.kw.ai-provider": "anthropic, claude, gemini, openai, modell",
   "settingsSearch.kw.ai-api-key": "schlüssel, api, token, geheimnis, passwort",
