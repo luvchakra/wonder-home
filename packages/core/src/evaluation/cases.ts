@@ -879,6 +879,12 @@ const HOMETALK: HomeTalkCase[] = [
     expected: { interpretation: "record_bill_payment", action: "executed", safety: { consequential: false } },
   },
   {
+    id: "HT-196", surface: "hometalk", household: "A", category: "references", actor: "a-kunal",
+    description: "\"Mark the internet bill as paid on the 14th\" records a payment made elsewhere on that day, at once with Undo (the owner, 2026-11-21: \"give option to mark it as paid\"); recording moves no money and is never a payment by WonderHome.",
+    utterance: "Mark the internet bill as paid on the 14th",
+    expected: { interpretation: "record_bill_payment", action: "executed", safety: { consequential: false } },
+  },
+  {
     id: "HT-130", surface: "hometalk", household: "B", category: "references", actor: "b-arjun",
     description: "Two electricity bills: \"I paid the electricity bill\" is one question naming both (11-010), never a guess.",
     utterance: "I paid the electricity bill",

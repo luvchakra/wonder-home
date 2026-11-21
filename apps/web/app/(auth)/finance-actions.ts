@@ -11,6 +11,7 @@ import { billType } from "@wonderhome/core/finance/bill-catalog";
 import {
   createObligation,
   markObligationPaid,
+  markObligationUnpaid,
   undoBillPayment,
   payBillPeriod,
   recordAmount,
@@ -444,6 +445,7 @@ const markPaidSchema = z.object({
   paidOn: isoDate,
   amount: z.number().min(0).max(1_000_000_000).nullable(),
   currency: z.string().regex(/^[A-Z]{3}$/).nullable(),
+  paidByMemberId: z.uuid().nullish(),
 });
 
 /**
@@ -463,9 +465,12 @@ export async function markBillPaidAction(input: z.input<typeof markPaidSchema>):
       paidOn: parsed.data.paidOn,
       amountMinor: parsed.data.amount === null ? null : toMinor(parsed.data.amount, parsed.data.currency!),
       currency: parsed.data.currency,
+      paidByMemberId: parsed.data.paidByMemberId ?? null,
     });
     // Marking a Checking bill paid is saying it was right (decision 3, 2026-11-14).
     await confirmByAction(supabase, parsed.data.householdId, parsed.data.obligationId, admin.memberId, "marked_paid");
+    // Its reminders stop now rather than at the next scheduled reconcile.
+    after(() => reconcileRemindersNow(parsed.data.householdId, { force: true }));
     revalidatePath("/bills");
     revalidatePath("/household/home");
     return { paid };
@@ -494,6 +499,62 @@ export async function undoBillPaidAction(input: { householdId: string; obligatio
     const supabase = await createClient();
     await requireHouseholdAdmin(supabase, parsed.data.householdId);
     await undoBillPayment(supabase, parsed.data);
+    revalidatePath("/bills");
+    revalidatePath("/household/home");
+    return {};
+  } catch (thrown) {
+    return { error: toErrorBody(thrown, "finance").body.error.message };
+  }
+}
+
+const bulkPaidSchema = z.object({
+  householdId: z.uuid(),
+  paidOn: isoDate,
+  ids: z.array(z.uuid()).min(1).max(REMOVE_BILLS_MAX),
+});
+
+/**
+ * "Mark selected as paid" (the owner, 2026-11-21): several bills paid outside
+ * WonderHome, cleared with one yes that lists them. Each is the same governed
+ * write as one "Mark paid" — paid on the day given, for the bill's own amount
+ * (an amount not in yet stays blank) — and confirms a Checking bill. Nothing
+ * is paid by WonderHome.
+ */
+export async function markBillsPaidAction(_previous: ActionState, formData: FormData): Promise<ActionState> {
+  const parsed = bulkPaidSchema.safeParse({ householdId: formData.get("householdId"), paidOn: formData.get("paidOn"), ids: formData.getAll("id") });
+  if (!parsed.success) return { error: "Something is missing." };
+  try {
+    const supabase = await createClient();
+    const admin = await requireHouseholdAdmin(supabase, parsed.data.householdId);
+    let marked = 0;
+    // One at a time: a recurring bill's next period depends on its own history.
+    for (const obligationId of parsed.data.ids) {
+      try {
+        await markObligationPaid(supabase, { householdId: parsed.data.householdId, obligationId, paidOn: parsed.data.paidOn });
+        await confirmByAction(supabase, parsed.data.householdId, obligationId, admin.memberId, "marked_paid");
+        marked += 1;
+      } catch {
+        // Already settled or removed meanwhile: the rest still go through.
+      }
+    }
+    if (marked > 0) after(() => reconcileRemindersNow(parsed.data.householdId, { force: true }));
+    revalidatePath("/bills");
+    revalidatePath("/household/home");
+    return marked > 0 ? { notice: "Marked as paid." } : { error: "Those bills are already settled." };
+  } catch (thrown) {
+    return { error: toErrorBody(thrown, "finance").body.error.message };
+  }
+}
+
+/** "Mark as unpaid" on a settled bill: back to waiting, its recorded payment taken out. */
+export async function markBillUnpaidAction(input: { householdId: string; obligationId: string }): Promise<{ error?: string }> {
+  const parsed = z.object({ householdId: z.uuid(), obligationId: z.uuid() }).safeParse(input);
+  if (!parsed.success) return { error: "Please try again." };
+  try {
+    const supabase = await createClient();
+    await requireHouseholdAdmin(supabase, parsed.data.householdId);
+    await markObligationUnpaid(supabase, parsed.data);
+    after(() => reconcileRemindersNow(parsed.data.householdId, { force: true }));
     revalidatePath("/bills");
     revalidatePath("/household/home");
     return {};

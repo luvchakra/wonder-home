@@ -24,6 +24,8 @@ export function markPaidProps(t: Translate, input: { householdId: string; timezo
       undo: key("undo"),
       undone: key("undone"),
       failed: key("failed"),
+      paidBy: key("paidBy"),
+      paidBySomeone: key("paidBySomeone"),
     } satisfies MarkPaidLabels,
   };
 }

@@ -7,6 +7,7 @@ import { Alert } from "@wonderhome/core/ui/alert";
 import { Button } from "@wonderhome/core/ui/button";
 import { Field } from "@wonderhome/core/ui/field";
 import { Pill } from "@wonderhome/core/ui/pill";
+import { Select } from "@wonderhome/core/ui/select";
 import { Sheet } from "@wonderhome/core/ui/sheet";
 
 import type { PaidBill } from "@wonderhome/core/finance/repository";
@@ -25,6 +26,8 @@ export type MarkPaidLabels = {
   undo: string;
   undone: string;
   failed: string;
+  paidBy: string;
+  paidBySomeone: string;
 };
 
 const UNDO_WINDOW_MS = 8000;
@@ -44,6 +47,9 @@ export function MarkBillPaidButton({
   currency,
   exponent,
   labels,
+  members,
+  defaultPayerId,
+  tone = "primary",
 }: {
   householdId: string;
   obligationId: string;
@@ -56,6 +62,11 @@ export function MarkBillPaidButton({
   /** Decimal places of the currency, so money stays decimal (rule 22). */
   exponent: number;
   labels: MarkPaidLabels;
+  /** The adults who could have paid, for "Who paid" (a choice is picked, not typed). */
+  members?: { id: string; name: string }[];
+  /** Whoever handles the bill, picked to start with. */
+  defaultPayerId?: string | null;
+  tone?: "primary" | "quiet";
 }) {
   const router = useRouter();
   const anchor = useRef<HTMLSpanElement>(null);
@@ -90,7 +101,8 @@ export function MarkBillPaidButton({
     setError(null);
     startTransition(async () => {
       try {
-        const result = await markBillPaidAction({ householdId, obligationId, paidOn: String(data.get("paidOn") ?? today), amount, currency: amount === null ? null : currency });
+        const payer = String(data.get("paidBy") ?? "");
+        const result = await markBillPaidAction({ householdId, obligationId, paidOn: String(data.get("paidOn") ?? today), amount, currency: amount === null ? null : currency, paidByMemberId: payer === "" ? null : payer });
         if (result.error || !result.paid) return setError(result.error ?? labels.failed);
         setOpen(false);
         setNote(say(labels.done));
@@ -122,7 +134,7 @@ export function MarkBillPaidButton({
 
   return (
     <span ref={anchor} className="flex flex-col items-end gap-1">
-      <Pill type="button" tone="primary" onClick={() => setOpen(true)}>
+      <Pill type="button" tone={tone} onClick={() => setOpen(true)}>
         {labels.button}
       </Pill>
       <Sheet open={open} onOpenChange={setOpen} title={say(labels.title)} description={labels.description}>
@@ -138,6 +150,16 @@ export function MarkBillPaidButton({
             <Field label={`${labels.amount} (${currency})`} name="amount" type="number" min={0} step={(1 / 10 ** exponent).toFixed(exponent)} inputMode="decimal" defaultValue={amountMinor !== null ? (amountMinor / 10 ** exponent).toFixed(exponent) : undefined} />
             <Field label={labels.paidOn} name="paidOn" type="date" defaultValue={today} required />
           </div>
+          {members && members.length > 0 ? (
+            <Select label={labels.paidBy} name="paidBy" defaultValue={defaultPayerId ?? ""}>
+              <option value="">{labels.paidBySomeone}</option>
+              {members.map((member) => (
+                <option key={member.id} value={member.id}>
+                  {member.name}
+                </option>
+              ))}
+            </Select>
+          ) : null}
           <Button type="submit" className="w-full" disabled={pending}>
             {pending ? labels.saving : labels.confirm}
           </Button>

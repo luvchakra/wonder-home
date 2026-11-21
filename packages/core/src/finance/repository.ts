@@ -392,6 +392,8 @@ async function markObligationPaidImpl(
     /** What was paid, when the person says; otherwise the bill's own amount. */
     amountMinor?: number | null;
     currency?: string | null;
+    /** Who paid, when the person says; otherwise whoever handles the bill. */
+    paidByMemberId?: string | null;
   },
 ): Promise<PaidBill> {
   const { data, error } = await supabase
@@ -421,7 +423,7 @@ async function markObligationPaidImpl(
       paidOn: input.paidOn,
       payee: (bill.payee as string | null) ?? null,
       kind: (bill.kind as string | null) ?? null,
-      ownerMemberId: (bill.responsible_member_id as string | null) ?? null,
+      ownerMemberId: input.paidByMemberId ?? (bill.responsible_member_id as string | null) ?? null,
     });
   }
 
@@ -519,6 +521,41 @@ async function undoBillPaymentImpl(
       .from("obligation_periods")
       .upsert({ household_id: input.householdId, obligation_id: input.obligationId, period_label: took.periodLabel, amount_minor: took.amountMinor, currency: took.currency }, { onConflict: "obligation_id,period_label" });
   }
+}
+
+/**
+ * "Mark as unpaid" on a settled one-off bill (the owner, 2026-11-21): the
+ * bill goes back to waiting, on the day it was due, and the payment recorded
+ * for its month comes out of the history, so totals and budgets agree. A
+ * recurring bill is never "paid" (it moves on), so its payments are taken
+ * back from the Transactions list instead. Nothing is paid or refunded.
+ */
+async function markObligationUnpaidImpl(
+  supabase: SupabaseClient,
+  input: { householdId: string; obligationId: string },
+): Promise<{ periodLabel: string | null }> {
+  const { data, error } = await supabase
+    .from("obligations")
+    .select("id, status, due_on")
+    .eq("id", input.obligationId)
+    .eq("household_id", input.householdId)
+    .maybeSingle();
+  if (error) throw new Error(`markObligationUnpaid failed: ${error.code ?? "unknown"}`);
+  if (!data) throw ApiError.notFound("That bill is no longer here.");
+  if ((data as Row).status !== "paid") throw ApiError.badRequest("That bill isn't marked as paid.");
+  const dueOn = ((data as Row).due_on as string | null) ?? null;
+  const periodLabel = dueOn ? dueOn.slice(0, 7) : null;
+  if (periodLabel) await removeTransactionImpl(supabase, { householdId: input.householdId, obligationId: input.obligationId, periodLabel });
+  const { error: updateError } = await supabase
+    .from("obligations")
+    .update({ status: "expected" })
+    .eq("id", input.obligationId)
+    .eq("household_id", input.householdId);
+  if (updateError) {
+    if (updateError.code === "42501") throw ApiError.forbidden("Only a household administrator can change a bill.");
+    throw new Error(`markObligationUnpaid failed: ${updateError.code ?? "unknown"}`);
+  }
+  return { periodLabel };
 }
 
 /**
@@ -770,6 +807,7 @@ export const recordAmount = invalidatesContext(recordAmountImpl, (_supabase, inp
 export const markObligationPaid = invalidatesContext(markObligationPaidImpl, (_supabase, input) => input.householdId);
 export const removeTransaction = invalidatesContext(removeTransactionImpl, (_supabase, input) => input.householdId);
 export const undoBillPayment = invalidatesContext(undoBillPaymentImpl, (_supabase, input) => input.householdId);
+export const markObligationUnpaid = invalidatesContext(markObligationUnpaidImpl, (_supabase, input) => input.householdId);
 export const setBillPeriodAmount = invalidatesContext(setBillPeriodAmountImpl, (_supabase, input) => input.householdId);
 export const payBillPeriod = invalidatesContext(payBillPeriodImpl, (_supabase, input) => input.householdId);
 export const applyObligationSyncPlan = invalidatesContext(applyObligationSyncPlanImpl, (_supabase, input) => input.householdId);
