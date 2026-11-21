@@ -12,6 +12,7 @@ decision that shapes later work each earns a note, written before moving on.
 | Date | Note |
 |---|---|
 | 2026-11-21 | [HomeSend finds the record a document is about: a syllabus updates its exam (14-078)](2026-11-21-syllabus-finds-its-exam.md) |
+| 2026-11-21 | [Bills: recurring bills done properly (11-022)](2026-11-21-bills-recurring.md) |
 | 2026-11-21 | [Bills: a bill's full record (11-021)](2026-11-21-bills-full-record.md) |
 | 2026-11-21 | [Bills: part payment and how it was paid (11-019)](2026-11-21-bills-part-payment.md) |
 | 2026-11-21 | [Bills: grouped by Overdue / This week / Later / No due date, with one total line (11-020)](2026-11-21-bills-grouped-total.md) |
