@@ -2,6 +2,7 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 
 import { auditChange } from "../api/audit";
 import { localMoment } from "../notifications/timing";
+import { listAutopayRuns, settleAutopayRun } from "../finance/autopay";
 import { cancelObligation, createObligation, listObligations, markObligationPaid, type PaidBill } from "../finance/repository";
 import { confirmByEvidence, recordHomeSendChange } from "./changes";
 import { matchPaymentToBill, paymentTitle, type OpenBill, type PaymentProof } from "./payment-proof";
@@ -81,14 +82,26 @@ export async function settlePaymentProof(client: SupabaseClient, householdId: st
     .filter((bill) => OPEN.includes(bill.status))
     .slice(0, 300)
     .map((bill) => ({ id: bill.id, name: bill.name ?? "", payee: bill.payee, amountMinor: bill.amountMinor, currency: bill.currency, dueOn: bill.dueOn, status: bill.status }));
-  const match = matchPaymentToBill(proof, bills, today);
   const paidOn = proof.paidOn ?? today;
   const amountMinor = Math.round(proof.amount * 100);
+
+  // A bill already marked paid by autopay and still Checking (11-024): a payment that agrees confirms it;
+  // one that disagrees flags it and is recorded on its own below, so the nightly check asks its
+  // "unusual amount" question. The autopay payment itself is never changed.
+  const runs = (await listAutopayRuns(client, householdId, now)).filter((run) => run.state === "checking");
+  const byId = new Map(onRecord.map((bill) => [bill.id, bill]));
+  const runBills: OpenBill[] = runs.flatMap((run) => {
+    const bill = byId.get(run.obligationId);
+    return bill ? [{ id: run.id, name: bill.name ?? "", payee: bill.payee, amountMinor: run.amountMinor, currency: run.currency, dueOn: run.dueOn, status: "expected" }] : [];
+  });
+  const autopayMatch = runBills.length > 0 ? matchPaymentToBill(proof, runBills, today) : ({ type: "none" } as const);
+  const autopayRun = autopayMatch.type === "none" ? null : runs.find((run) => run.id === autopayMatch.billId)!;
+  const match = autopayRun ? ({ type: "none" } as const) : matchPaymentToBill(proof, bills, today);
 
   // Claimed by its review columns first, so a person who settled it meanwhile wins.
   const { data: claimed, error: claimError } = await client
     .from("home_send_items")
-    .update({ review_decision: match.type === "paid" ? "updated" : "auto_added", review_subject: "not_needed", review_corrected: false, reviewed_at: now.toISOString() })
+    .update({ review_decision: match.type === "paid" || autopayMatch.type === "paid" ? "updated" : "auto_added", review_subject: "not_needed", review_corrected: false, reviewed_at: now.toISOString() })
     .eq("household_id", householdId)
     .eq("id", itemId)
     .eq("status", "classified")
@@ -97,6 +110,14 @@ export async function settlePaymentProof(client: SupabaseClient, householdId: st
   if (claimError) throw new Error(`payment claim failed: ${claimError.code ?? "unknown"}`);
   if ((claimed ?? []).length === 0) return "settled";
   const release = () => client.from("home_send_items").update({ review_decision: null, review_subject: null, review_corrected: null, reviewed_at: null }).eq("household_id", householdId).eq("id", itemId).eq("status", "classified");
+
+  if (autopayRun && autopayMatch.type === "paid") {
+    const bill = byId.get(autopayRun.obligationId)!;
+    await route(client, householdId, itemId, autopayRun.obligationId, now, { ...understanding, payment: { ...proof, outcome: "paid", billId: autopayRun.obligationId, billName: bill.name ?? "" } });
+    await settleAutopayRun(client, householdId, autopayRun.id, true, now);
+    await auditChange({ householdId, eventType: "homesend.payment_recorded", targetTable: "obligations", targetId: autopayRun.obligationId, metadata: { intakeId: itemId, outcome: "autopay_confirmed", method: proof.method } });
+    return "paid";
+  }
 
   if (match.type === "paid") {
     let paid: PaidBill;
@@ -150,7 +171,11 @@ export async function settlePaymentProof(client: SupabaseClient, householdId: st
     await release();
     throw thrown;
   }
-  const conflict = match.type === "amount_conflict" ? bills.find((entry) => entry.id === match.billId) : undefined;
+  const autopayBill = autopayRun ? byId.get(autopayRun.obligationId) : undefined;
+  const conflict = autopayRun && autopayBill
+    ? { id: autopayBill.id, name: autopayBill.name ?? "" }
+    : match.type === "amount_conflict" ? bills.find((entry) => entry.id === match.billId) : undefined;
+  if (autopayRun) await settleAutopayRun(client, householdId, autopayRun.id, false, now);
   await route(client, householdId, itemId, created.id, now, { ...understanding, payment: { ...proof, outcome: conflict ? "conflict" : "recorded", ...(conflict ? { billId: conflict.id, billName: conflict.name } : {}) } });
   await recordHomeSendChange(client, { householdId, intakeId: itemId, domain: "bill", entityId: created.id, createdByMemberId: actor, auto: { state: "unconfirmed", confidence: null, source: "payment_proof" } });
   await auditChange({ householdId, eventType: "homesend.payment_recorded", targetTable: "obligations", targetId: created.id, metadata: { intakeId: itemId, outcome: conflict ? "conflict" : "recorded", method: proof.method } });

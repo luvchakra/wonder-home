@@ -370,6 +370,8 @@ export const de: Catalog = {
   "reminder.order.title.delivered": "Deine Bestellung wurde geliefert",
   "reminder.order.title.cancelled": "Deine Bestellung wurde storniert",
   "reminder.order.title.failed": "Deine Bestellung ging nicht durch",
+  "reminder.autopay.title": "Als per Dauerauftrag bezahlt markiert",
+  "reminder.autopay.body": "{name}, {amount}. Stimmt nicht? Rückgängig",
   "reminder.order.body": "{provider}",
   "reminder.order.bodyAmount": "{provider} · {amount}",
   "reminder.yourChild": "Dein Kind",

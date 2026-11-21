@@ -403,6 +403,16 @@ export const SENSITIVE_ACTIONS: readonly SensitiveAction[] = [
     recordedIn: "apps/web/app/(auth)/finance-actions.ts",
   },
   {
+    event: "finance.autopay_recorded",
+    because: "The daily pass recorded an autopay bill as paid on its due date (11-024), Checking with Undo. WonderHome never pays; a family asks afterwards who marked it.",
+    recordedIn: "packages/core/src/finance/autopay.ts",
+  },
+  {
+    event: "finance.autopay_undone",
+    because: "Someone undid a payment the autopay pass recorded (11-024); the bill went back as it was.",
+    recordedIn: "packages/core/src/finance/autopay.ts",
+  },
+  {
     event: "finance.bill_marked_paid",
     because: "Someone recorded a payment made elsewhere (in full or in part). Money settled without WonderHome paying is what a family asks about afterwards.",
     recordedIn: "apps/web/app/(auth)/finance-actions.ts",
@@ -939,6 +949,10 @@ export function describeAuditEvent(
       return { title: "A bill was edited", detail: stringOr(metadata.name, null) };
     case "finance.bill_marked_paid":
       return { title: metadata.partial === true ? "Part of a bill was marked paid" : "A bill was marked paid", detail: stringOr(metadata.period, null) };
+    case "finance.autopay_recorded":
+      return { title: "A bill was marked as paid by autopay", detail: "Checking until a payment message confirms it. WonderHome never pays." };
+    case "finance.autopay_undone":
+      return { title: "A payment marked by autopay was undone", detail: stringOr(metadata.periodLabel, null) };
     case "finance.bill_marked_unpaid":
       return { title: "A bill was marked as unpaid", detail: "Its payment came out of the totals." };
     case "finance.bill_file_added":

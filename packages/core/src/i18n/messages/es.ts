@@ -370,6 +370,8 @@ export const es: Catalog = {
   "reminder.order.title.delivered": "Tu pedido se entregó",
   "reminder.order.title.cancelled": "Tu pedido se canceló",
   "reminder.order.title.failed": "Tu pedido no se pudo hacer",
+  "reminder.autopay.title": "Marcado como pagado por domiciliación",
+  "reminder.autopay.body": "{name}, {amount}. ¿No es correcto? Deshacer",
   "reminder.order.body": "{provider}",
   "reminder.order.bodyAmount": "{provider} · {amount}",
   "reminder.yourChild": "Tu hijo o hija",

@@ -370,6 +370,8 @@ export const zh: Catalog = {
   "reminder.order.title.delivered": "你的订单已送达",
   "reminder.order.title.cancelled": "你的订单已取消",
   "reminder.order.title.failed": "你的订单没有成功",
+  "reminder.autopay.title": "已标记为自动扣款支付",
+  "reminder.autopay.body": "{name}，{amount}。不对？撤销",
   "reminder.order.body": "{provider}",
   "reminder.order.bodyAmount": "{provider} · {amount}",
   "reminder.yourChild": "你的孩子",

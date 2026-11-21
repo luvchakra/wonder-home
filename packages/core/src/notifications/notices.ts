@@ -26,7 +26,7 @@ import { countByGroup, type TidiedEntry } from "../homesend/tidy";
  * name, a title and a count crosses to another channel.
  */
 
-export const NOTICE_SOURCE_TYPES = ["homesend_item", "event_replies", "helper_absence", "grocery_order", "event_change", "weather_plan", "goal_checkin", "chat_thread", "ai_key"] as const;
+export const NOTICE_SOURCE_TYPES = ["homesend_item", "event_replies", "helper_absence", "grocery_order", "event_change", "weather_plan", "goal_checkin", "chat_thread", "ai_key", "autopay"] as const;
 export type NoticeSourceType = (typeof NOTICE_SOURCE_TYPES)[number];
 
 export type Notice = {
@@ -422,6 +422,49 @@ export function orderNotices(rows: readonly OrderRow[], directory: Directory, no
       // An Instamart order opens where it is followed (story 25-032).
       action: { action: "open", target: row.provider === "Swiggy Instamart" ? "/groceries/order" : "/groceries" },
       expiresAt: new Date(new Date(row.updated_at).getTime() + 3 * DAY_MS),
+    });
+  }
+  return notices;
+}
+
+// --- A bill marked paid by autopay (11-024) ---------------------------------
+
+export type AutopayRunRow = {
+  id: string;
+  obligation_id: string;
+  amount_minor: number;
+  currency: string;
+  owner_member_id: string | null;
+  state: string;
+  created_at: string;
+  bill_name: string;
+};
+
+/**
+ * "Marked as paid by autopay: {name}, ₹X. Not right? Undo" — one notice per
+ * run, to the bill's owner (otherwise an Admin), while the run is still
+ * Checking and for three days at most. Undo or a payment message that
+ * confirms it resolves the notice, since the sweep no longer wants it.
+ */
+export function autopayNotices(rows: readonly AutopayRunRow[], directory: Directory, now: Date): Notice[] {
+  const notices: Notice[] = [];
+  for (const row of rows) {
+    if (row.state !== "checking") continue;
+    const createdAt = new Date(row.created_at).getTime();
+    if (now.getTime() - createdAt > 3 * DAY_MS) continue;
+    const recipient = reachable(directory, row.owner_member_id) ? row.owner_member_id : adminOf(directory);
+    if (!recipient) continue;
+    notices.push({
+      sourceType: "autopay",
+      sourceId: row.id,
+      threadKey: `autopay:${row.id}`,
+      recipientMemberId: recipient,
+      category: "bills",
+      priority: "normal",
+      title: msg("reminder.autopay.title"),
+      body: msg("reminder.autopay.body", { name: row.bill_name, amount: { money: Number(row.amount_minor) / 100, currency: row.currency } }),
+      action: { action: "open", target: `/bills?autopay=${row.id}` },
+      expiresAt: new Date(createdAt + 3 * DAY_MS),
     });
   }
   return notices;

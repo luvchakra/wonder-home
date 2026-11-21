@@ -378,6 +378,8 @@ export const ar: Catalog = {
   "reminder.order.title.delivered": "تم تسليم طلبك",
   "reminder.order.title.cancelled": "أُلغي طلبك",
   "reminder.order.title.failed": "لم يكتمل طلبك",
+  "reminder.autopay.title": "سُجّل كمدفوع بالدفع التلقائي",
+  "reminder.autopay.body": "{name}، {amount}. غير صحيح؟ تراجع",
   "reminder.order.body": "{provider}",
   "reminder.order.bodyAmount": "{provider} · {amount}",
   "reminder.yourChild": "طفلك",
