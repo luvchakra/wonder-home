@@ -357,6 +357,8 @@ export const schoolHi: AreaCatalog<typeof schoolEn> = {
   "school.exams.paper.startsAt": "शुरू (वैकल्पिक)",
   "school.exams.paper.endsAt": "खत्म (वैकल्पिक)",
   "school.exams.paper.syllabus": "सिलेबस (वैकल्पिक)",
+  "school.exams.paper.maxMarks": "अधिकतम अंक (वैकल्पिक)",
+  "school.exams.paper.outOf": "{marks} में से",
   "school.exams.paper.syllabusPlaceholder": "अध्याय 1–4, कविता 2 और 5",
   "school.exams.paper.links": "सामग्री के लिंक (वैकल्पिक)",
   "school.exams.paper.linksHint": "हर पंक्ति में एक वेब पता, ज़्यादा से ज़्यादा दस।",

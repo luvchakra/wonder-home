@@ -56,6 +56,7 @@ function extraction(over: Partial<IntakeExtraction>): IntakeExtraction {
     pages: { total: null, unreadable: [] },
     records: [],
     schedule: null,
+    syllabus: null,
     ...over,
   };
 }

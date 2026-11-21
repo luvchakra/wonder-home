@@ -1,6 +1,8 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 
-import { listEnrolments } from "../school/enrolments";
+import { listEnrolments, type Enrolment } from "../school/enrolments";
+import { listExams } from "../school/exams";
+import { openExams } from "./exam-match";
 import { rateLimitMessage } from "../security/rate-limit";
 import { fillFromEvidence } from "./completeness";
 import { recoverWhen } from "./when";
@@ -128,6 +130,7 @@ function toStoredExtraction(extraction: IntakeExtraction): HomeSendExtraction {
     change: extraction.change,
     confidence: extraction.confidence,
     schedule: extraction.schedule ?? null,
+    syllabus: extraction.syllabus ?? null,
   };
 }
 
@@ -324,11 +327,14 @@ export async function understand(
   // The reference day a date phrase is resolved against — when the content
   // arrived, in the household's own timezone (Wave 4 §7 applied to intake).
   // The children at school (school and class only, no names) so a timetable or notice matches a class without asking.
-  const [timezone, children] = await Promise.all([
+  // The household's open exams (name, class, days, subjects; no names or notes) so a syllabus can point at its exam (2026-11-21).
+  const enrolments = listEnrolments(supabase, householdId).catch(() => []);
+  const [timezone, children, exams] = await Promise.all([
     input.context?.timezone ?? householdTimezone(supabase, householdId),
-    input.context?.children ?? listEnrolments(supabase, householdId).then((rows) => rows.map((row) => ({ school: row.schoolName ?? null, grade: row.grade ?? null }))).catch(() => []),
+    input.context?.children ?? enrolments.then((rows) => rows.map((row) => ({ school: row.schoolName ?? null, grade: row.grade ?? null }))),
+    input.context?.exams ?? examsForReading(supabase, householdId, enrolments),
   ]);
-  const context: IntakeContext = { ...input.context, now: input.context?.now ?? new Date(), timezone, children };
+  const context: IntakeContext = { ...input.context, now: input.context?.now ?? new Date(), timezone, children, exams };
 
   let result: ClassifyResult;
   try {
@@ -1030,4 +1036,19 @@ export async function rereadFailedItem(
 
   await markHomeSendFailed(supabase, item.householdId, item.id, "unreadable");
   return failedOutcome(item.id, "unreadable");
+}
+
+/** The open exams the reading prompt may point at (`classify-intake.ts` `examsLine`), in `openExams` order. */
+async function examsForReading(supabase: SupabaseClient, householdId: string, enrolments: Promise<Enrolment[]>): Promise<NonNullable<IntakeContext["exams"]>> {
+  const [exams, rows] = await Promise.all([listExams(supabase, householdId).catch(() => []), enrolments]);
+  return openExams(exams, new Date().toISOString().slice(0, 10)).map((exam) => {
+    const days = exam.papers.map((paper) => paper.onDate).sort();
+    return {
+      name: exam.title ?? exam.examType,
+      grade: rows.find((row) => row.childMemberId === exam.childMemberId)?.grade ?? null,
+      from: days[0]!,
+      to: days[days.length - 1]!,
+      subjects: exam.papers.map((paper) => paper.subject),
+    };
+  });
 }

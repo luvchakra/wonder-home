@@ -616,7 +616,11 @@ async function reverseChange(supabase: Awaited<ReturnType<typeof createClient>>,
   const previous = change.previous ?? {};
 
   if (change.changeType === "updated") {
-    if (change.domain === "school_item") {
+    if (change.domain === "school_exam") {
+      // A syllabus or a revised timetable: every paper's study words, marks and day, and the exam's notes, put back at once.
+      const { restoreExamSyllabus } = await import("@wonderhome/core/homesend/syllabus-apply");
+      await restoreExamSyllabus(supabase, { householdId, examId: change.entityId, previous });
+    } else if (change.domain === "school_item") {
       const dueAt = (previous.dueAt as string | null | undefined) ?? null;
       // Changes recorded before 14-014 kept no time flag: read it the way a
       // portal's due date is read, midnight UTC being a day.

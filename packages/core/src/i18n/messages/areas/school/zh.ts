@@ -357,6 +357,8 @@ export const schoolZh: AreaCatalog<typeof schoolEn> = {
   "school.exams.paper.startsAt": "开始（可选）",
   "school.exams.paper.endsAt": "结束（可选）",
   "school.exams.paper.syllabus": "考试范围（可选）",
+  "school.exams.paper.maxMarks": "满分（可选）",
+  "school.exams.paper.outOf": "满分 {marks}",
   "school.exams.paper.syllabusPlaceholder": "第 1–4 章，第 2 和第 5 首诗",
   "school.exams.paper.links": "学习资料链接（可选）",
   "school.exams.paper.linksHint": "每行一个网址，最多十个。",

@@ -4,12 +4,14 @@ import { askNeedsYou, closeNeedsYou } from "../hometalk/needs-you-repository";
 import { listMembers } from "../identity/households";
 import { log } from "../observability/logger";
 import { listEnrolments, saveEnrolment } from "../school/enrolments";
-import { listExams, saveExam, savePaper } from "../school/exams";
+import { listExams, saveExam, savePaper, type Exam } from "../school/exams";
 import { readsAboveTheBar } from "./above-bar";
 import { recordHomeSendChange } from "./changes";
 import type { HomeSendItem } from "./items";
 import { routeHomeSendItem } from "./repository";
-import { classOf, planTimetable, type TimetableChild, type TimetablePlan } from "./timetable";
+import { examKey, paperFor } from "./exam-match";
+import { attachKeptSyllabi, type SyllabusAttached } from "./syllabus-apply";
+import { classOf, planTimetable, type TimetableChild, type TimetablePaper, type TimetablePlan } from "./timetable";
 
 /**
  * An exam timetable read from what was sent becomes each child's exam, at
@@ -43,6 +45,10 @@ export type TimetableAdded = {
   /** Children asked "Which class is <child> in?". */
   asked: { memberId: string; name: string }[];
   checking: boolean;
+  /** A revised timetable for an exam on record: each child's moved or added days, updated in place (2026-11-21). */
+  revised?: { memberId: string; name: string; examId: string; moved: string[]; added: string[] }[];
+  /** Syllabi kept as notes before this timetable arrived, now brought to its exams. */
+  syllabi?: SyllabusAttached[];
 };
 
 export async function timetableChildren(supabase: SupabaseClient, householdId: string): Promise<TimetableChild[]> {
@@ -76,10 +82,16 @@ export async function addTimetable(
 
   // Through the School area's own read, never this module's: HomeSend writes and reads only through domain services.
   const existing = await listExams(supabase, input.householdId).catch(() => []);
-  const already = new Set(existing.map((exam) => `${exam.childMemberId}|${(exam.title ?? "").trim().toLowerCase()}`));
+  // The same exam by name ("MTUT 2" = "Mid-Term Unit Test 2", `exam-match.ts` `examKey`): updated in place, never a second one.
+  const sameExam = (memberId: string) => existing.find((exam) => exam.childMemberId === memberId && examKey(exam.title ?? exam.examType) === examKey(plan.title) && examKey(plan.title) !== "");
 
   for (const child of plan.children) {
-    if (already.has(`${child.memberId}|${(plan.title ?? "").trim().toLowerCase()}`)) continue;
+    const onRecord = sameExam(child.memberId);
+    if (onRecord) {
+      const revised = await reviseExam(supabase, { householdId: input.householdId, exam: onRecord, papers: child.papers, item: input.item, by: input.actorMemberId ?? input.item.createdByMemberId, checking });
+      if (revised.moved.length > 0 || revised.added.length > 0) (added.revised ??= []).push({ memberId: child.memberId, name: child.name, examId: onRecord.id, ...revised });
+      continue;
+    }
     const exam = await saveExam(supabase, { householdId: input.householdId, childMemberId: child.memberId, examType: plan.examType, title: plan.title?.slice(0, 120) ?? null, notes: `From what was sent to HomeSend: the ${child.column} column.` });
     for (const paper of child.papers) {
       await savePaper(supabase, { householdId: input.householdId, examId: exam.id, subject: paper.subject, onDate: paper.onDate, startsAt: null, endsAt: null, syllabus: null, links: [] });
@@ -99,8 +111,12 @@ export async function addTimetable(
     added.children.push({ memberId: child.memberId, name: child.name, column: child.column, count: child.papers.length, from: child.papers[0]!.onDate, to: child.papers[child.papers.length - 1]!.onDate, examId: exam.id });
   }
 
+  const routedTo = added.children[0]?.examId ?? added.revised?.[0]?.examId;
+  if (routedTo) await routeHomeSendItem(supabase, input.householdId, input.item.id, { routedTable: "school_exams", routedId: routedTo }).catch(() => undefined);
+  // A syllabus sent before this timetable was kept as a note: now it has its exam (2026-11-21).
   if (added.children.length > 0) {
-    await routeHomeSendItem(supabase, input.householdId, input.item.id, { routedTable: "school_exams", routedId: added.children[0]!.examId }).catch(() => undefined);
+    const syllabi = await attachKeptSyllabi(supabase, { householdId: input.householdId, actorMemberId: input.actorMemberId }).catch(() => []);
+    if (syllabi.length > 0) added.syllabi = syllabi;
   }
 
   // One child at a time: a question per item may be open at once (`needs_you_items_one_open`), so the next child is
@@ -129,7 +145,50 @@ export async function addTimetable(
       }
     }
   }
-  return added.children.length > 0 || added.asked.length > 0 ? added : null;
+  return added.children.length > 0 || added.asked.length > 0 || (added.revised?.length ?? 0) > 0 ? added : null;
+}
+
+/**
+ * A revised timetable for an exam already on record: a subject on a new day
+ * is moved, a new subject is added, nothing is removed (a paper missing from
+ * a revision may just be on another page). One `updated` change with each
+ * moved paper's old day and the added papers, so Undo puts it back. The same
+ * timetable sent again changes nothing.
+ */
+async function reviseExam(
+  supabase: SupabaseClient,
+  input: { householdId: string; exam: Exam; papers: TimetablePaper[]; item: Pick<HomeSendItem, "id" | "source" | "understanding">; by: string | null; checking: boolean },
+): Promise<{ moved: string[]; added: string[] }> {
+  const moved: { id: string; subject: string; onDate: string }[] = [];
+  const addedIds: string[] = [];
+  const addedSubjects: string[] = [];
+  for (const paper of input.papers) {
+    const onRecord = paperFor(paper.subject, input.exam.papers);
+    if (onRecord) {
+      if (onRecord.onDate === paper.onDate) continue;
+      await savePaper(supabase, { householdId: input.householdId, examId: input.exam.id, id: onRecord.id, subject: onRecord.subject, onDate: paper.onDate, startsAt: onRecord.startsAt, endsAt: onRecord.endsAt, syllabus: onRecord.syllabus, links: onRecord.links });
+      moved.push({ id: onRecord.id, subject: onRecord.subject, onDate: onRecord.onDate });
+    } else {
+      const saved = await savePaper(supabase, { householdId: input.householdId, examId: input.exam.id, subject: paper.subject, onDate: paper.onDate, startsAt: null, endsAt: null, syllabus: null, links: [] });
+      addedIds.push(saved.id);
+      addedSubjects.push(paper.subject);
+    }
+  }
+  if (input.by && (moved.length > 0 || addedIds.length > 0)) {
+    await recordHomeSendChange(supabase, {
+      householdId: input.householdId,
+      intakeId: input.item.id,
+      domain: "school_exam",
+      entityId: input.exam.id,
+      createdByMemberId: input.by,
+      changeType: "updated",
+      previous: { papers: moved.map((one) => ({ id: one.id, onDate: one.onDate })), addedPaperIds: addedIds },
+      auto: { state: input.checking ? "unconfirmed" : "confirmed", confidence: null, source: input.item.source },
+    }).catch((thrown: unknown) => {
+      log.warn("homesend: revised exam change not recorded", { reason: thrown instanceof Error ? thrown.message.slice(0, 60) : "unknown", allow: ["reason"] });
+    });
+  }
+  return { moved: moved.map((one) => one.subject), added: addedSubjects };
 }
 
 /**

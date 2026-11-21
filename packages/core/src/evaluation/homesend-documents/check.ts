@@ -1,6 +1,8 @@
 import type { IntakeExtraction } from "../../ai/classify-intake";
 import { detectInstructionInjection } from "../../homesend/injection";
 import { readPaymentProof } from "../../homesend/payment-proof";
+import { matchExam } from "../../homesend/exam-match";
+import { planSyllabus, studyText } from "../../homesend/syllabus-apply";
 import { planTimetable } from "../../homesend/timetable";
 import type { DocumentCase } from "./cases";
 
@@ -58,6 +60,7 @@ export function documentMisses(testCase: DocumentCase, read: IntakeExtraction): 
   }
   if (expected.paymentProof !== undefined && Boolean(readPaymentProof(testCase.source.caption, testCase.source.text).proof) !== expected.paymentProof) misses.push("payment proof differs");
   if (expected.injection !== undefined && detectInstructionInjection(testCase.source.text).flagged !== expected.injection) misses.push("injection differs");
+  if (expected.syllabus) misses.push(...syllabusMisses(testCase, read));
   // A health document is never filed for someone its words don't name.
   if (read.kind === "health_document" && read.subjectMemberName) misses.push("health subject guessed");
   return misses;
@@ -68,4 +71,26 @@ function stable(value: unknown): string {
   return JSON.stringify(value, (_key, inner: unknown) =>
     inner && typeof inner === "object" && !Array.isArray(inner) ? Object.fromEntries(Object.entries(inner as Record<string, unknown>).sort(([a], [b]) => a.localeCompare(b))) : inner,
   );
+}
+
+/** Which exam a syllabus updates, which papers change, what has no paper, and every row's words kept byte for byte. */
+function syllabusMisses(testCase: DocumentCase, read: IntakeExtraction): string[] {
+  const expected = testCase.expected.syllabus!;
+  const syllabus = read.syllabus;
+  if (!syllabus) return ["no syllabus"];
+  const misses: string[] = [];
+  // Byte for byte: every line WonderHome would write is a line of what was sent (Devanagari stays Devanagari).
+  for (const row of syllabus.rows) {
+    for (const line of studyText(row.portion).split("\n")) if (!testCase.source.text.includes(line)) misses.push(`${row.subject} changed: ${line.slice(0, 30)}`);
+  }
+  const found = matchExam({ title: syllabus.title, school: syllabus.school, grade: syllabus.grade }, testCase.exams ?? [], testCase.children ?? [], DOCUMENT_CONTEXT.now.toISOString().slice(0, 10));
+  if (expected === "none") return found.kind === "none" ? misses : [...misses, `matched ${found.kind}`];
+  if (found.kind !== "match" || found.exams.length !== 1 || found.exams[0]!.exam.id !== expected.examId) return [...misses, `exam ${found.kind}`];
+  const exam = (testCase.exams ?? []).find((one) => one.id === expected.examId)!;
+  const plan = planSyllabus({ papers: exam.papers.map((paper) => ({ ...paper, examId: exam.id, startsAt: null, endsAt: null, links: [] as string[] })) }, syllabus);
+  const changed = plan.papers.filter((one) => (one.paper.syllabus ?? "") !== one.syllabus || one.paper.maxMarks !== one.maxMarks);
+  if (JSON.stringify(changed.map((one) => one.paper.subject)) !== JSON.stringify(expected.updated)) misses.push(`updated ${changed.map((one) => one.paper.subject).join(",")}`);
+  if (JSON.stringify(plan.extras.map((extra) => extra.subject)) !== JSON.stringify(expected.unmatched)) misses.push("unmatched differs");
+  if (expected.maxMarks !== undefined && changed.some((one) => one.maxMarks !== expected.maxMarks)) misses.push("max marks differ");
+  return misses;
 }

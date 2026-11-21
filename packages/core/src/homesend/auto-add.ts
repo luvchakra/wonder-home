@@ -77,6 +77,8 @@ export type AddedOnItsOwn = {
   moved?: { from: string | null; to: string };
   /** An exam timetable: each child's exam days, and who was asked their class (2026-11-21, `timetable-apply.ts`). */
   timetable?: import("./timetable-apply").TimetableAdded;
+  /** A syllabus matched to an exam on record: each exam's papers updated in place (2026-11-21, `syllabus-apply.ts`). */
+  syllabus?: import("./syllabus-apply").SyllabusAttached[];
   /** A document's several dated things, each added (2026-11-21): how many, for whom. */
   several?: { count: number; names: string[] };
   /** Not an entry: a school notice with no dated thing, kept as a school note at once, with its one-line summary (2026-11-21). */

@@ -556,6 +556,7 @@ const paperSchema = z.object({
   startsAt: timeField,
   endsAt: timeField,
   syllabus: optionalText(4000),
+  maxMarks: z.union([z.literal(""), z.coerce.number().int({ error: "Max marks is a whole number." }).min(1, { error: "Max marks is a whole number from 1 to 1000." }).max(1000, { error: "Max marks is a whole number from 1 to 1000." })]).optional(),
   links: z.string().max(6000).optional(),
 });
 
@@ -570,6 +571,7 @@ export async function savePaperAction(_previous: ActionState, formData: FormData
     startsAt: field(formData, "startsAt"),
     endsAt: field(formData, "endsAt"),
     syllabus: field(formData, "syllabus"),
+    maxMarks: field(formData, "maxMarks"),
     links: field(formData, "links"),
   });
   if (!parsed.success) return { error: parsed.error.issues[0]?.message ?? "Please check the details above." };
@@ -579,7 +581,7 @@ export async function savePaperAction(_previous: ActionState, formData: FormData
   const { refused } = cleanLinks(typed);
   if (refused.length > 0) return { error: `"${refused[0]}" is not a web address.` };
   if (typed.length > MAX_EXAM_LINKS) return { error: `At most ${MAX_EXAM_LINKS} links.` };
-  return inHousehold(parsed.data.householdId, (supabase) => savePaper(supabase, { ...parsed.data, links: typed, id: parsed.data.id || null }));
+  return inHousehold(parsed.data.householdId, (supabase) => savePaper(supabase, { ...parsed.data, maxMarks: typeof parsed.data.maxMarks === "number" ? parsed.data.maxMarks : null, links: typed, id: parsed.data.id || null }));
 }
 
 const schoolRecordSchema = z.object({ householdId: z.uuid(), id: z.uuid(), kind: z.enum(["period", "exam", "paper"]) });

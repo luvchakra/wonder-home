@@ -357,6 +357,8 @@ export const schoolEn = {
   "school.exams.paper.startsAt": "Starts (optional)",
   "school.exams.paper.endsAt": "Ends (optional)",
   "school.exams.paper.syllabus": "Syllabus (optional)",
+  "school.exams.paper.maxMarks": "Max marks (optional)",
+  "school.exams.paper.outOf": "Out of {marks}",
   "school.exams.paper.syllabusPlaceholder": "Chapters 1–4, poems 2 and 5",
   "school.exams.paper.links": "Links to material (optional)",
   "school.exams.paper.linksHint": "One web address per line, at most ten.",

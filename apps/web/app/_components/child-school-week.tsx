@@ -144,7 +144,7 @@ export function ChildSchoolWeek({
                           <div className="flex items-start gap-2">
                             <span className="min-w-0 flex-1">
                               <span className="block font-medium">{paper.subject}</span>
-                              <span className="block text-xs text-[var(--wh-foreground-muted)]">{[dateWord(paper.onDate), span(paper.startsAt, paper.endsAt)].filter(Boolean).join(" · ")}</span>
+                              <span className="block text-xs text-[var(--wh-foreground-muted)]">{[dateWord(paper.onDate), span(paper.startsAt, paper.endsAt), paper.maxMarks ? t("school.exams.paper.outOf", { marks: paper.maxMarks }) : null].filter(Boolean).join(" · ")}</span>
                             </span>
                             {canChange ? (
                               <span className="flex items-center gap-1">

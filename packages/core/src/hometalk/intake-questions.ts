@@ -1,6 +1,6 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 
-import { timetableReply } from "../homesend/timetable-words";
+import { syllabusReply, timetableReply } from "../homesend/timetable-words";
 import { siteOrigin } from "../notifications/email";
 import { runtimeEnv } from "../platform/settings/runtime-env";
 import type { PendingClarification } from "../conversation/clarify";
@@ -378,6 +378,7 @@ export function handedBackText(lead: string, outcome: { added: AddedOnItsOwn | W
     : " — your household lets WonderHome add these on its own. You can undo it in HomeSend.";
   // An exam timetable (2026-11-21): what it was, each child's exam days with their dates, the one question, where to see it.
   if (added?.timetable) return `${lead} ${timetableReply(added.timetable, translator("en", en), { origin: siteOrigin(runtimeEnv()), dates: shortDay })}`;
+  if (added?.syllabus?.length) return `${lead} ${syllabusReply(added.syllabus, translator("en", en), { origin: siteOrigin(runtimeEnv()) })}`;
   if (added?.several) return `${lead} 📄 Added ${added.several.count} things from **${added.title}**: ${added.several.names.join(", ")}${added.unconfirmed ? ", marked **Checking** because I wasn't sure enough of the reading" : ""}. See or undo them in HomeSend.`;
   // A school notice with nothing dated in it: kept as a school note at once, with its one line (2026-11-21).
   if (added?.note) return `${lead} 📝 Kept **${added.title}** as a school note: ${noteSummary(added.note.summary, added.title)}. Nothing in it has a date, so nothing went on the calendar. See it or restore it in HomeSend.`;

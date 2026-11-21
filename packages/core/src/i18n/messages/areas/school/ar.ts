@@ -365,6 +365,8 @@ export const schoolAr: AreaCatalog<typeof schoolEn> = {
   "school.exams.paper.startsAt": "تبدأ (اختياري)",
   "school.exams.paper.endsAt": "تنتهي (اختياري)",
   "school.exams.paper.syllabus": "المنهج (اختياري)",
+  "school.exams.paper.maxMarks": "الدرجة القصوى (اختياري)",
+  "school.exams.paper.outOf": "من {marks}",
   "school.exams.paper.syllabusPlaceholder": "الفصول 1–4، القصيدتان 2 و5",
   "school.exams.paper.links": "روابط للمواد (اختياري)",
   "school.exams.paper.linksHint": "عنوان ويب واحد في كل سطر، عشرة على الأكثر.",

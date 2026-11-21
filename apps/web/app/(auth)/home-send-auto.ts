@@ -1,5 +1,6 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 
+import { attachSyllabus } from "@wonderhome/core/homesend/syllabus-apply";
 import { addTimetable } from "@wonderhome/core/homesend/timetable-apply";
 import { ACTIVITY_ITEM_KINDS } from "@wonderhome/core/ai/classify-intake";
 import { CONSUMABLE_CATEGORIES } from "@wonderhome/core/commerce/consumables";
@@ -266,6 +267,15 @@ export async function addIfAllowed(
   if (item.understanding?.payment) {
     settleHomeSendSoon(membership);
     return null;
+  }
+  // A syllabus (or any school document ABOUT an exam on record): the exam it is for is found from the household's own
+  // records and its papers updated in place, before anything is filed as new or kept as a note (2026-11-21).
+  if (item.classifiedKind === "school_item" && item.extracted?.syllabus) {
+    const attached = await attachSyllabus(supabase, { householdId: membership.household.id, item, actorMemberId: options.createdByMemberId ?? item.createdByMemberId ?? membership.memberId }).catch(() => null);
+    if (attached && attached.length > 0) {
+      const first = attached[0]!;
+      return { title: first.examName, where: "Kids & School", kind: "school_item", syllabus: attached, ...(attached.some((one) => one.checking && !one.unchanged) ? { unconfirmed: true as const } : {}) };
+    }
   }
   // An exam timetable (one column per class): each child's own column becomes their exam, at once (2026-11-21).
   if (item.classifiedKind === "school_item" && item.extracted?.schedule?.kind === "exam") {

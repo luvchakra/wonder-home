@@ -357,6 +357,8 @@ export const schoolMr: AreaCatalog<typeof schoolEn> = {
   "school.exams.paper.startsAt": "सुरू (ऐच्छिक)",
   "school.exams.paper.endsAt": "संपते (ऐच्छिक)",
   "school.exams.paper.syllabus": "अभ्यासक्रम (ऐच्छिक)",
+  "school.exams.paper.maxMarks": "कमाल गुण (ऐच्छिक)",
+  "school.exams.paper.outOf": "{marks} पैकी",
   "school.exams.paper.syllabusPlaceholder": "धडे 1–4, कविता 2 आणि 5",
   "school.exams.paper.links": "साहित्याच्या लिंक (ऐच्छिक)",
   "school.exams.paper.linksHint": "प्रत्येक ओळीत एक वेब पत्ता, जास्तीत जास्त दहा.",

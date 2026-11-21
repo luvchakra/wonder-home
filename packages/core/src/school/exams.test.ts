@@ -12,7 +12,7 @@ const exam = (id: string, papers: [string, string, string | null][], extra: Part
   examType: "Mid-term",
   title: "Term 1",
   notes: null,
-  papers: papers.map(([subject, onDate, startsAt], index) => ({ id: `${id}-p${index}`, examId: id, subject, onDate, startsAt, endsAt: startsAt ? "11:00" : null, syllabus: index === 0 ? "Chapters 1-4\nand revision" : null, links: [] })),
+  papers: papers.map(([subject, onDate, startsAt], index) => ({ id: `${id}-p${index}`, examId: id, subject, onDate, startsAt, endsAt: startsAt ? "11:00" : null, syllabus: index === 0 ? "Chapters 1-4\nand revision" : null, maxMarks: null, links: [] })),
   ...extra,
 });
 

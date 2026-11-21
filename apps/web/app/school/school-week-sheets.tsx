@@ -65,6 +65,7 @@ export type SchoolWeekWords = {
     endsAt: string;
     syllabus: string;
     syllabusPlaceholder: string;
+    maxMarks: string;
     links: string;
     linksHint: string;
     save: string;
@@ -73,7 +74,7 @@ export type SchoolWeekWords = {
 
 export type PeriodValue = { id: string; weekday: number; startsAt: string; endsAt: string; subject: string; teacherName: string | null; room: string | null };
 export type ExamValue = { id: string; examType: string; title: string | null; notes: string | null };
-export type PaperValue = { id: string; subject: string; onDate: string; startsAt: string | null; endsAt: string | null; syllabus: string | null; links: string[] };
+export type PaperValue = { id: string; subject: string; onDate: string; startsAt: string | null; endsAt: string | null; syllabus: string | null; maxMarks?: number | null; links: string[] };
 
 const ICON_BUTTON =
   "grid size-9 place-items-center rounded-full text-[var(--wh-foreground-muted)] transition-colors hover:bg-[var(--wh-surface-muted)] hover:text-[var(--wh-foreground)] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--wh-primary)] disabled:opacity-50";
@@ -283,8 +284,9 @@ export function PaperSheet({ householdId, exam, paper, words }: { householdId: s
           </div>
           <label className="block space-y-1.5">
             <span className="text-sm font-medium">{w.syllabus}</span>
-            <textarea name="syllabus" rows={3} maxLength={4000} defaultValue={paper?.syllabus ?? ""} placeholder={w.syllabusPlaceholder} className={TEXTAREA} />
+            <textarea name="syllabus" rows={paper?.syllabus ? 6 : 3} maxLength={4000} defaultValue={paper?.syllabus ?? ""} placeholder={w.syllabusPlaceholder} className={TEXTAREA} />
           </label>
+          <Field label={w.maxMarks} name="maxMarks" type="number" inputMode="numeric" min={1} max={1000} step={1} defaultValue={paper?.maxMarks ?? ""} />
           <label className="block space-y-1.5">
             <span className="text-sm font-medium">{w.links}</span>
             <textarea name="links" rows={2} defaultValue={paper?.links.join("\n") ?? ""} placeholder="https://" inputMode="url" className={TEXTAREA} />

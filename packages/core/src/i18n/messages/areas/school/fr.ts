@@ -357,6 +357,8 @@ export const schoolFr: AreaCatalog<typeof schoolEn> = {
   "school.exams.paper.startsAt": "Début (facultatif)",
   "school.exams.paper.endsAt": "Fin (facultatif)",
   "school.exams.paper.syllabus": "Programme (facultatif)",
+  "school.exams.paper.maxMarks": "Note maximale (facultatif)",
+  "school.exams.paper.outOf": "Sur {marks}",
   "school.exams.paper.syllabusPlaceholder": "Chapitres 1 à 4, poèmes 2 et 5",
   "school.exams.paper.links": "Liens vers le matériel (facultatif)",
   "school.exams.paper.linksHint": "Une adresse web par ligne, dix au maximum.",

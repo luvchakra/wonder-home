@@ -103,6 +103,8 @@ export type HomeSendExtraction = {
   confidence?: "high" | "medium" | "low";
   /** A dated table by class (an exam timetable), as read; each child's column is picked by `timetable.ts`. */
   schedule?: import("../ai/classify-intake").IntakeSchedule | null;
+  /** A syllabus by subject (2026-11-21): which exam it updates is decided by `homesend/syllabus-apply.ts`. */
+  syllabus?: import("../ai/classify-intake").IntakeSyllabus | null;
 };
 
 /**
