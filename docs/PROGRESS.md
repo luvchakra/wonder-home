@@ -11,14 +11,14 @@ in `docs/progress/`; for the running log of what changed when, `tracking/PROGRES
 
 ## The whole picture
 
-**451 of 502 stories done — 89.8%**
+**452 of 502 stories done — 90%**
 
 | Status | Stories |
 |---|---:|
-| Done | 451 |
+| Done | 452 |
 | In Progress | 14 |
 | Blocked | 1 |
-| Not Started | 32 |
+| Not Started | 31 |
 | Deferred | 4 |
 
 ## By module
@@ -36,7 +36,7 @@ in `docs/progress/`; for the running log of what changed when, `tracking/PROGRES
 | 08 Kids & School Intelligence | `███████░░░` | 26 | 35 | 8 in progress, 1 not started |
 | 09 Commerce, Groceries & Pet Supplies | `██████████` | 9 | 9 | — |
 | 10 Meals & Cooking | `██████████` | 16 | 16 | — |
-| 11 Bills, Fees & Finance | `███████░░░` | 20 | 26 | 6 not started |
+| 11 Bills, Fees & Finance | `████████░░` | 21 | 26 | 5 not started |
 | 12 Family Time & Social Activities | `██████████` | 9 | 9 | — |
 | 13 Maintenance, Laundry & Pet Care | `█████████░` | 10 | 11 | 1 in progress |
 | 14 AI Orchestration & Learning | `████████░░` | 67 | 77 | 1 in progress, 6 not started, 3 deferred |
@@ -72,7 +72,6 @@ in `docs/progress/`; for the running log of what changed when, `tracking/PROGRES
 | `08-035` Kids Trivia: generated cards per topic, refilled in the background | 08 Kids & School Intelligence | P1 | In Progress |
 | `11-011` Payees beyond the catalogue's cities, and outside India | 11 Bills, Fees & Finance | P2 | Not Started |
 | `11-017` No second bill from two separate sends at once, or from a late "Add this bill?" | 11 Bills, Fees & Finance | P1 | Not Started |
-| `11-023` Quick fixes on a row | 11 Bills, Fees & Finance | P2 | Not Started |
 | `11-024` "Usually paid by autopay" | 11 Bills, Fees & Finance | P2 | Not Started |
 | `11-025` Search, filter and a year's CSV | 11 Bills, Fees & Finance | P2 | Not Started |
 | `11-026` Split a bill between adults; a year's spend by kind | 11 Bills, Fees & Finance | P3 | Not Started |
@@ -361,7 +360,7 @@ in `docs/progress/`; for the running log of what changed when, `tracking/PROGRES
 
 ### 11 — Bills, Fees & Finance
 
-20 of 26 done `███████░░░`
+21 of 26 done `████████░░`
 
 | Story | Priority | Status | Notes |
 |---|---|---|---|
@@ -387,7 +386,7 @@ in `docs/progress/`; for the running log of what changed when, `tracking/PROGRES
 | `11-020` Bills grouped by Overdue / This week / Later / No due date, with one total line | P0 | Done | The owner, 2026-11-21 ("also add more useful features"). Upcoming was one flat list cut at 8; it is now grouped by what the reader is deciding (rule 17), each in due order, and an overdue row says "51 days overdue" in words (rule 3). Above it one line: "₹8,168.82 due · ₹7,018.82 of it overdue · 1 amount not in yet", per currency and never converted; tapping it lists each amount added (rule 9). Pure `finance/bill-groups.ts` (tests: groups across a month end, the owner's own list, two currencies). `listObligations` now bounded (500). Help Bills ¶13. |
 | `11-021` A bill opens to its full detail | P1 | Done | The owner, 2026-11-21. A bill row's chevron opens in place as before and now ends with **Full record** → `/bills/[id]` (reads in one wave): the bill's facts; every payment with when, how (11-019) and who, parts listed one by one; **Where it came from** — the HomeSend item that added it (channel, subject, sender, received, who sent it) with **Open what was sent** (a 5-minute signed link through the viewer's session; never a rejected file), or "Added by hand"; **Files** — an Admin attaches a photo or PDF of the bill or receipt (same checks as HomeSend uploads: real type from the bytes, 4 MB, malware scan, rate limit; stored in the `home-send` bucket under the household folder) and takes one off (kept, `removed_at`); **Changes** for an Admin — the audit trail for this bill (new events `finance.bill_added/changed/marked_paid/marked_unpaid/file_added/file_removed`, plus HomeSend's own). Not through HomeSend ingest: a file attached here files it, it doesn't create or re-read a bill. Migration `20261121170000_bill_attachments.sql` (new table, RLS in set forms, an audit index), safe in either order. Help ¶15. |
 | `11-022` Recurring bills done properly | P1 | Done | The owner, 2026-11-21. A recurring bill's details say **Repeats: Every month, on day 5** (quarterly and yearly too, `finance/recurring.ts` `repeatOf`). An amount not in yet shows **usually ₹X (estimate)** on the row, from the last payment in the same currency, never added to the totals (rule 9). An Admin's **Skip {month}** records the skip (`obligation_skips`), pays and records nothing, and moves the bill to its next open month exactly as Mark paid would (the next month's given amount, else not in yet); the month then reads **Skipped** under Month by month, and Mark paid passes over skipped months too. **End after this one** makes it one-off, so once paid it is settled. Both at once with Undo, audited as `finance.bill_changed`, reminders reconciled. Migration `20261121180000_bill_skips.sql` (new table, RLS in set forms), safe in either order. Help ¶16. |
-| `11-023` Quick fixes on a row | P2 | Not Started | Proposed 2026-11-21. Change the due date or amount, snooze the reminder to a day, and pick who handles it, without opening the editor. Today the row's pencil editor does all but snoozing, so this is a convenience, ranked below 11-021/11-022. |
+| `11-023` Quick fixes on a row | P2 | Done | The owner, 2026-11-21. In a bill's details an Admin taps the pencil beside **Due**, **Amount** or **Who handles it** to fix that one value in place (`quickFixBillAction`, the editor's own governed `updateObligation`; confirms a Checking entry like the editor, audited `finance.bill_changed`, reminders reconciled). The row's editor keeps everything else, so nothing is edited in two places. **Remind me on…** lets anyone a reminder about the bill goes to pick a day up to a month ahead: only their own waiting reminders for it (`recipient_member_id`, `source_type` obligation) move to 9:00 that day through the reminder's own snooze (`finance/bill-reminders.ts`), which the reconcile keeps. No migration. Help ¶17. |
 | `11-024` "Usually paid by autopay" | P2 | Not Started | Proposed 2026-11-21; **needs the owner's yes before building**, since it marks money as settled without a person. A bill flagged autopay is marked paid on its due date as Checking with one tap to undo; never a payment by WonderHome. |
 | `11-025` Search, filter and a year's CSV | P2 | Not Started | Proposed 2026-11-21. Filter Bills and Transactions by kind, payee or person; export the year's bills and payments as CSV (decimal amounts, one currency column). |
 | `11-026` Split a bill between adults; a year's spend by kind | P3 | Not Started | Proposed 2026-11-21. Shares per adult on a bill (decimal, summing exactly to the total) and a yearly view of spend per kind beside the monthly one. |
