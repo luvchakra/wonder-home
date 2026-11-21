@@ -116,7 +116,7 @@ export function examTypeOf(title: string | null): TimetablePlan["examType"] {
   return "Unit test";
 }
 
-function sameSchool(a: string | null, b: string | null): boolean {
+export function sameSchool(a: string | null, b: string | null): boolean {
   const norm = (value: string | null) => (value ?? "").toLowerCase().replace(/[^a-z0-9]+/g, " ").replace(/\b(school|the|international|public|high|centre|center|innovation|cambridge)\b/g, " ").replace(/\s+/g, " ").trim();
   const left = norm(a);
   const right = norm(b);

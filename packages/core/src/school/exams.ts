@@ -45,6 +45,8 @@ export type ExamPaper = {
   startsAt: string | null;
   endsAt: string | null;
   syllabus: string | null;
+  /** The paper's maximum marks, when known ("20 Mks" in a syllabus). Null until the 2026-11-21 migration is live. */
+  maxMarks: number | null;
   links: string[];
 };
 
@@ -65,6 +67,10 @@ const hhmm = (value: unknown): string | null => (typeof value === "string" && /^
 const PERIOD_COLUMNS = "id, child_member_id, weekday, starts_at, ends_at, subject, teacher_name, room";
 const EXAM_COLUMNS = "id, child_member_id, exam_type, title, notes";
 const PAPER_COLUMNS = "id, exam_id, subject, on_date, starts_at, ends_at, syllabus, links";
+const PAPER_COLUMNS_WITH_MARKS = `${PAPER_COLUMNS}, max_marks`;
+
+/** Postgres "undefined column" or PostgREST "column not in schema cache": the max-marks migration isn't live yet (safe in either order). */
+const missingColumn = (error: { code?: string } | null) => error?.code === "42703" || error?.code === "PGRST204";
 
 function toPeriod(row: Row): TimetablePeriod {
   return {
@@ -88,6 +94,7 @@ function toPaper(row: Row): ExamPaper {
     startsAt: hhmm(row.starts_at),
     endsAt: hhmm(row.ends_at),
     syllabus: text(row.syllabus),
+    maxMarks: typeof row.max_marks === "number" ? row.max_marks : null,
     links: Array.isArray(row.links) ? (row.links as unknown[]).filter((link): link is string => typeof link === "string") : [],
   };
 }
@@ -120,20 +127,23 @@ export async function listExams(supabase: SupabaseClient, householdId: string): 
   if (error) throw new Error(`listExams failed: ${error.code ?? "unknown"}`);
   const rows = (data ?? []) as Row[];
   if (rows.length === 0) return [];
-  const { data: papers, error: paperError } = await supabase
-    .from("school_exam_papers")
-    .select(PAPER_COLUMNS)
-    .eq("household_id", householdId)
-    .eq("active", true)
-    .in(
-      "exam_id",
-      rows.map((row) => row.id as string),
-    )
-    .order("on_date")
-    .order("starts_at", { nullsFirst: true });
+  const readPapers = (columns: string) =>
+    supabase
+      .from("school_exam_papers")
+      .select(columns)
+      .eq("household_id", householdId)
+      .eq("active", true)
+      .in(
+        "exam_id",
+        rows.map((row) => row.id as string),
+      )
+      .order("on_date")
+      .order("starts_at", { nullsFirst: true });
+  let { data: papers, error: paperError } = await readPapers(PAPER_COLUMNS_WITH_MARKS);
+  if (missingColumn(paperError)) ({ data: papers, error: paperError } = await readPapers(PAPER_COLUMNS));
   if (paperError) throw new Error(`listExams failed: ${paperError.code ?? "unknown"}`);
   const byExam = new Map<string, ExamPaper[]>();
-  for (const paper of ((papers ?? []) as Row[]).map(toPaper)) byExam.set(paper.examId, [...(byExam.get(paper.examId) ?? []), paper]);
+  for (const paper of ((papers ?? []) as unknown as Row[]).map(toPaper)) byExam.set(paper.examId, [...(byExam.get(paper.examId) ?? []), paper]);
   const exams = rows.map((row) => ({
     id: row.id as string,
     childMemberId: row.child_member_id as string,
@@ -271,6 +281,8 @@ export type PaperInput = {
   startsAt: string | null;
   endsAt: string | null;
   syllabus?: string | null;
+  /** Left as it is when absent. */
+  maxMarks?: number | null;
   links: string[];
 };
 
@@ -291,10 +303,16 @@ async function savePaperImpl(supabase: SupabaseClient, input: PaperInput): Promi
     syllabus: input.syllabus?.trim().slice(0, 4000) || null,
     links,
   };
-  const query = input.id
-    ? supabase.from("school_exam_papers").update(row).eq("id", input.id).eq("household_id", input.householdId).select("id").single()
-    : supabase.from("school_exam_papers").insert(row).select("id").single();
-  const { data, error } = await query;
+  if (input.maxMarks !== undefined && input.maxMarks !== null && (!Number.isInteger(input.maxMarks) || input.maxMarks < 1 || input.maxMarks > 1000)) {
+    throw ApiError.badRequest("Max marks is a whole number from 1 to 1000.");
+  }
+  const write = (values: Record<string, unknown>) =>
+    input.id
+      ? supabase.from("school_exam_papers").update(values).eq("id", input.id).eq("household_id", input.householdId).select("id").single()
+      : supabase.from("school_exam_papers").insert(values).select("id").single();
+  let { data, error } = await write(input.maxMarks === undefined ? row : { ...row, max_marks: input.maxMarks });
+  // Before the max-marks migration is live the paper is still saved, without its marks.
+  if (input.maxMarks !== undefined && missingColumn(error)) ({ data, error } = await write(row));
   if (error || !data) refused(error, "savePaper");
   return { id: (data as Row).id as string };
 }

@@ -141,6 +141,7 @@ export function schoolWeekWords(t: Translate, language: string, examTypes: { bui
       endsAt: t("school.exams.paper.endsAt"),
       syllabus: t("school.exams.paper.syllabus"),
       syllabusPlaceholder: t("school.exams.paper.syllabusPlaceholder"),
+      maxMarks: t("school.exams.paper.maxMarks"),
       links: t("school.exams.paper.links"),
       linksHint: t("school.exams.paper.linksHint"),
       save: t("school.exams.paper.save"),

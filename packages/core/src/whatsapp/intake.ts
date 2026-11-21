@@ -11,7 +11,7 @@ import { openIntakeQuestion } from "../hometalk/intake-questions";
 import { lastQuestionStartedAt, mayStartQuestion } from "../hometalk/question-cadence";
 import { enqueueClassifyRetry, type ClaimedJob, type JobHandler } from "../homesend/retry-queue";
 import { queueModelRead } from "../homesend/model-unavailable";
-import { timetableReply } from "../homesend/timetable-words";
+import { syllabusReply, timetableReply } from "../homesend/timetable-words";
 import { siteOrigin } from "../notifications/email";
 import { runtimeEnv } from "../platform/settings/runtime-env";
 import { gateTranscript, TRANSCRIPT_CONFIDENCE_FLOOR, type TranscriptGate } from "../homesend/audio";
@@ -701,6 +701,8 @@ export function addedReply(added: AddedOnItsOwn, forName?: string, t: Translate 
   const sure = checking ? (t === ENGLISH ? sureClause({ percent: added.percent }) : sureIn(t, { ...added, why: undefined })) : "";
   // An exam timetable (2026-11-21): what it was, what was done for whom, the one question, where to see it. No dates here.
   if (added.timetable) return timetableReply(added.timetable, t, { origin: siteOrigin(runtimeEnv()) });
+  // A syllabus matched to an exam on record (2026-11-21): whose exam, which subjects now say what to study, where to see it.
+  if (added.syllabus?.length) return syllabusReply(added.syllabus, t, { origin: siteOrigin(runtimeEnv()) });
   // A document's several dated things, each added (2026-11-21): what it was, how many and which, Checking, where to see them.
   if (added.several) {
     const lines = [t("whatsapp.several.lead", { title: shortTitle(added.title) ?? "it" }), t("whatsapp.several.added", { count: added.several.count, names: added.several.names.map((name) => withoutNumbers(name) ?? name).join(", ") })];

@@ -1,6 +1,7 @@
 import type { IntakeSchedule } from "../../ai/classify-intake";
 import type { TimetableChild } from "../../homesend/timetable";
 import { EXAM_TIMETABLE_STD_3_7, STD_IV_PAPERS } from "./exam-timetable";
+import { asmiMtut2, SYLLABUS_ROWS, SYLLABUS_TEXT, syllabusReading, type RecordedExam } from "./syllabus-grade5";
 
 /**
  * HomeSend's regression set for complex, realistic messages (2026-11-21,
@@ -25,6 +26,8 @@ export type DocumentCase = {
   /** The recorded reading: only the fields that differ from an empty reading. */
   reading: Record<string, unknown>;
   children?: TimetableChild[];
+  /** The household's exams on record when it was sent (with each paper's current study words). */
+  exams?: RecordedExam[];
   expected: {
     readable: boolean;
     kind: string;
@@ -38,6 +41,13 @@ export type DocumentCase = {
     paymentProof?: boolean;
     /** Instructions aimed at WonderHome inside the content. */
     injection?: boolean;
+    /**
+     * A syllabus: the exam it updates ("none": kept as a note, nothing
+     * written), the papers whose study words change (the paper's subject,
+     * in the document's order), the subjects with no paper, and every
+     * row's words kept exactly as sent, script and all.
+     */
+    syllabus?: "none" | { examId: string; updated: string[]; unmatched: string[]; maxMarks?: number };
   };
 };
 
@@ -206,5 +216,63 @@ export const DOCUMENT_CASES: DocumentCase[] = [
     source: { channel: "whatsapp_media", text: "" },
     reading: { readable: false, kind: "unknown" },
     expected: { readable: false, kind: "unknown" },
+  },
+  {
+    id: "HD-17",
+    description: "The Grade 5 syllabus after the MTUT2 timetable: each of Asmi's eight papers gets what to study, three scripts kept exactly",
+    source: { channel: "whatsapp_media", caption: "DOC-20261118-WA0013.pdf", text: SYLLABUS_TEXT },
+    reading: syllabusReading(),
+    children: [{ memberId: "m-asmi", name: "Asmi", grade: "Std. V", school: "PODAR Innovation Centre, Cambridge Schools" }],
+    exams: [asmiMtut2()],
+    expected: {
+      readable: true,
+      kind: "school_item",
+      syllabus: { examId: "e-asmi-mtut2", updated: ["English", "Hindi", "French", "Marathi", "Mathematics", "Science", "Computing Theory", "Humanities"], unmatched: [], maxMarks: 20 },
+    },
+  },
+  {
+    id: "HD-18",
+    description: "The syllabus before its timetable: no exam on record, so it is kept as a note (and attached when the timetable comes)",
+    source: { channel: "whatsapp_media", caption: "DOC-20261118-WA0013.pdf", text: SYLLABUS_TEXT },
+    reading: syllabusReading(),
+    children: [{ memberId: "m-asmi", name: "Asmi", grade: "Std. V", school: "PODAR Innovation Centre, Cambridge Schools" }],
+    exams: [],
+    expected: { readable: true, kind: "school_item", syllabus: "none" },
+  },
+  {
+    id: "HD-19",
+    description: "A Grade 6 syllabus for the same exam name: Asmi (Std. V) is never updated",
+    source: { channel: "whatsapp_media", text: SYLLABUS_TEXT.replace("Grade 5", "Grade 6") },
+    reading: syllabusReading({ grade: "Grade 6" }),
+    children: [{ memberId: "m-asmi", name: "Asmi", grade: "Std. V", school: "PODAR Innovation Centre, Cambridge Schools" }],
+    exams: [asmiMtut2()],
+    expected: { readable: true, kind: "school_item", syllabus: "none" },
+  },
+  {
+    id: "HD-20",
+    description: "A revised syllabus: only the subject whose portion changed is updated, the rest stay as they are",
+    source: { channel: "whatsapp_media", text: SYLLABUS_TEXT.replace("(3.1 to 3.4)", "(3.1 to 3.5)") },
+    reading: syllabusReading({ rows: SYLLABUS_ROWS.map((row) => (row.subject === "Science" ? { ...row, portion: row.portion.replace("(3.1 to 3.4)", "(3.1 to 3.5)") } : row)) }),
+    children: [{ memberId: "m-asmi", name: "Asmi", grade: "Std. V", school: "PODAR Innovation Centre, Cambridge Schools" }],
+    exams: [
+      (() => {
+        const exam = asmiMtut2(Object.fromEntries(SYLLABUS_ROWS.map((row) => [row.subject === "Computing" ? "Computing Theory" : row.subject, row.portion])));
+        return { ...exam, papers: exam.papers.map((paper) => ({ ...paper, maxMarks: 20 })) };
+      })(),
+    ],
+    expected: { readable: true, kind: "school_item", syllabus: { examId: "e-asmi-mtut2", updated: ["Science"], unmatched: [] } },
+  },
+  {
+    id: "HD-21",
+    description: "A syllabus subject with no paper in the timetable: listed, kept on the exam's notes, never guessed onto another paper",
+    source: { channel: "whatsapp_media", text: `${SYLLABUS_TEXT}\nArt | Unit 2 Colour wheel | 10 marks` },
+    reading: syllabusReading({ rows: [...SYLLABUS_ROWS, { subject: "Art", portion: "Unit 2 Colour wheel", marks: "10 marks" }] }),
+    children: [{ memberId: "m-asmi", name: "Asmi", grade: "Std. V", school: "PODAR Innovation Centre, Cambridge Schools" }],
+    exams: [asmiMtut2()],
+    expected: {
+      readable: true,
+      kind: "school_item",
+      syllabus: { examId: "e-asmi-mtut2", updated: ["English", "Hindi", "French", "Marathi", "Mathematics", "Science", "Computing Theory", "Humanities"], unmatched: ["Art"] },
+    },
   },
 ];

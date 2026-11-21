@@ -11,14 +11,14 @@ in `docs/progress/`; for the running log of what changed when, `tracking/PROGRES
 
 ## The whole picture
 
-**447 of 499 stories done — 89.6%**
+**448 of 502 stories done — 89.2%**
 
 | Status | Stories |
 |---|---:|
-| Done | 447 |
+| Done | 448 |
 | In Progress | 14 |
 | Blocked | 1 |
-| Not Started | 33 |
+| Not Started | 35 |
 | Deferred | 4 |
 
 ## By module
@@ -39,7 +39,7 @@ in `docs/progress/`; for the running log of what changed when, `tracking/PROGRES
 | 11 Bills, Fees & Finance | `██████░░░░` | 17 | 26 | 9 not started |
 | 12 Family Time & Social Activities | `██████████` | 9 | 9 | — |
 | 13 Maintenance, Laundry & Pet Care | `█████████░` | 10 | 11 | 1 in progress |
-| 14 AI Orchestration & Learning | `████████░░` | 66 | 74 | 1 in progress, 4 not started, 3 deferred |
+| 14 AI Orchestration & Learning | `████████░░` | 67 | 77 | 1 in progress, 6 not started, 3 deferred |
 | 15 Privacy, Security & Governance | `████████░░` | 12 | 14 | 2 not started |
 | 16 Platform Admin & Operations | `███████░░░` | 11 | 14 | 3 not started |
 | 17 External Integrations | `█████████░` | 10 | 11 | 1 not started |
@@ -88,6 +88,8 @@ in `docs/progress/`; for the running log of what changed when, `tracking/PROGRES
 | `14-039` Record index Phase 4: structure-first retrieval and coverage misses | 14 AI Orchestration & Learning | P1 | Not Started |
 | `14-056` HomeBrain 4.0 phase 3b — one structured call: answer or intent | 14 AI Orchestration & Learning | P0 | Not Started |
 | `14-057` HomeBrain 4.0 phase 3c — the reply streamed to the person | 14 AI Orchestration & Learning | P0 | Not Started |
+| `14-079` "Is this for Asmi's Mid-Term Unit Test 2?" when two exams of one child both fit | 14 AI Orchestration & Learning | P1 | Not Started |
+| `14-080` Other documents attach to the record they are about | 14 AI Orchestration & Learning | P1 | Not Started |
 | `15-013` Data retention phase 2b: notifications (household window) + HomeSend + enable real purge | 15 Privacy, Security & Governance | P1 | Not Started |
 | `15-012` Data retention phase 3: school items (household window) + "recently cleaned" view | 15 Privacy, Security & Governance | P2 | Not Started |
 | `16-011` Test connection for each provider key | 16 Platform Admin & Operations | P1 | Not Started |
@@ -429,7 +431,7 @@ in `docs/progress/`; for the running log of what changed when, `tracking/PROGRES
 
 ### 14 — AI Orchestration & Learning
 
-66 of 74 done `████████░░`
+67 of 77 done `████████░░`
 
 | Story | Priority | Status | Notes |
 |---|---|---|---|
@@ -503,6 +505,9 @@ in `docs/progress/`; for the running log of what changed when, `tracking/PROGRES
 | `14-075` HomeSend adds above the bar as confirmed whatever it was read from (photo, file, text, voice), with Undo; money and health keep their own setting; replies say what was added and how to undo, with no percentage unless Checking | P0 | Done | 2026-11-21 (owner: "why it's still waiting? it automatically add in WonderHome"). Note: `docs/progress/2026-11-21-confirmed-above-bar.md`. |
 | `14-076` HomeSend matches without asking: the reading is told each child's school and class (no names); a notice naming a class matches roman or arabic; a school notice with nothing dated is a school note at once with a one-line reply; the 16 HD documents run in `npm run eval` | P0 | Done | 2026-11-21. Note: `docs/progress/2026-11-21-homesend-match-without-asking.md`. Live provider read not run here (no model key). |
 | `14-077` A timetable read late still becomes exam days: a schedule's slips are mended, never the reason it is lost; a re-read finds the copy already added and says so; "Which class is X in?" is really asked, one child after another; a timetable waiting on it is not filed as a note; replies never say "kept" when nothing was added | P0 | Done | 2026-11-21 (owner: "why it still needs to keep in HomeSend, why can't it directly add in the application"). Note: `docs/progress/2026-11-21-timetable-read-late.md`. |
+| `14-078` HomeSend finds the record a document is ABOUT: a syllabus updates its exam | P0 | Done | The owner, 2026-11-21: "it should correlate that the syllabus is related with the existing MTUT2 Timetable. and then look through the subjects and update each subject notes properly". Before a school reading is filed as new or kept as a note, `homesend/exam-match.ts` looks for the household's exam it is about. It matches on the name however it is written (`examKey`: "Mid Term Unit Test 2 -2026-27 / Grade 5: Syllabus" = "Mid-Term Unit Test 2" = "MTUT2"), the child's class (Grade 5 = Std. V, `classOf`), the school (naming variants of the enrolment's, `sameSchool`) and the exam window (last paper within 60 days). The evidence is kept for "Why?"; it is never a model's word. The reading schema gains `syllabus` (rows copied exactly, script and all; `examRef` points at one of the household's open exams, listed inside the untrusted fence with name, class, days and subjects only, and is used only where the evidence already fits). `homesend/syllabus-apply.ts` puts each row on its paper's "What to study" plus max marks (new column `school_exam_papers.max_marks`; the pencil edits both, rule 12/23). Subject matching is tolerant but never a guess (`paperFor`: Computing = Computing Theory, Maths = Mathematics, Hindi/French options). A subject with no paper is named in the reply and kept on the exam's notes. Only what differs is written, so a second send changes nothing and a revision updates in place. One `updated` change per exam carries every paper's previous words and marks for one Undo; it is confirmed above the bar and Checking below it. A syllabus kept as a note before its timetable is attached when the timetable arrives (`attachKeptSyllabi`). A revised timetable for an exam on record moves its days in place instead of adding a second exam. Reply: "📚 Syllabus for Asmi's Mid-Term Unit Test 2 (Grade 5). I added what to study to 8 subjects: …", in 8 languages. HD-17…HD-21 are in `npm run eval`. The model step is unverified live (no key in CI). Help: HomeSend ¶20 in 8 languages. |
+| `14-079` "Is this for Asmi's Mid-Term Unit Test 2?" when two exams of one child both fit | P1 | Not Started | Follow-up to 14-078. Today a document whose evidence fits two exams of the same child is kept as a note, as before. Ask one Needs-you question (a new `homesend_exam_for` source in `ASKING_SOURCES`, the candidates as tap answers, default: keep it as a note) and apply `attachSyllabus` to the exam that is picked. |
+| `14-080` Other documents attach to the record they are about | P1 | Not Started | Follow-up to 14-078, using the same `exam-match.ts` step. A datesheet, hall ticket or result attaches to its exam (a result's marks go on each paper). A school fee reminder attaches to the school fee bill already on record; bills keep their own money rules (`matched-update.ts`), and nothing is ever paid. |
 | `14-066` HomeSend zero touch: infer who a child's notice is for before asking, never ask the same thing twice, one-tap sending, moved dates in place, one tap for a photo, batched questions | P0 | Done | The owner, 2026-11-07 ("design and implement HomeSend in a more user friendly and intuitive way; least input from user should be expected"). Design note `docs/progress/2026-11-07-homesend-zero-touch.md` (tap budget per path). Part 1: `homesend/learned.ts` `inferSubject` fills "Who is this for?" from the school the notice names, what the household told HomeSend about that sender (`homesend_learned_defaults`, learned on HomeTalk/WhatsApp answers and review picks; a sender sent for two children is `mixed` and asked again), or the one child at school; a name in the notice always wins; never another household, never money/approval. Settings → AI Assistant "What HomeSend has learned" (Admin forgets, audited `homesend.learned_forgotten`). Eval HS-48–52, RLS tests, help body.13 + FAQ in eight languages. Migration `20261107233000_homesend_learned_defaults.sql`. Part 2: a share is added on arrival (`addIfAllowed`) and lands on "Got it" with Undo; paste anywhere on the page; email "Add to contacts" vCard; first-time explainer while nothing was ever sent; help body.14. Part 3: a clear moved date (same name, same person, only the day, nothing else like it; `reconcile.ts` `clearMove`) moves the record on file in place with Undo where the area is Pre Approved and the reading is over the bar with words of its own, never an amount (`confirmation.ts` `update`, eval HS-53/54); a photo/file in Checking gets one "Looks right?" (`checking.ts` `confirm_all`), details only after a no, three questions at most; waiting questions run one after another (`checking-questions.ts` `withNextWaiting`, "N quick ones"); WhatsApp starts at most one question an hour per person (`hometalk/question-cadence.ts`); help body.15 + FAQ. No migration. |
 | `14-068` Record first: HomeTalk records straight away, waiting actions expire after 48 h, Wait for Approval holds actions only, money and health recorded as Checking, new email senders trusted once, plain corrections | P0 | Done | The owner, 2026-11-14 ("think of redesign of HomeBrain, HomeSend and HomeTalk as a cohesive unit so that minimum intervention is required … ensure its not stuck in review"; then "implement"). Plan "Nothing stuck in review", phase 2, decisions 1, 2 and 5. Design and verification: `docs/progress/2026-11-14-record-first.md`. Migration `20261114181700_record_first_sender_trust.sql`. Eval HT-01/18/72/105/122/131 (updated), HT-190–195, HS-80–89; NSR-20–39. #550; follow-up PR: events and classes recorded first (HS-86–89), a trusted sender's email added on arrival (`homesend/trusted-arrival.ts`), `docs/progress/2026-11-14-record-first-events-email.md`. |
 | `14-065` HomeSend: remove each item on its own (swipe, detail, ⋯ on desktop), Undo, and Delete for good in Archived | P1 | Done | The owner, 2026-11-03 ("give option to individually delete each item"). Remove archives with `removed_by_person` (a group asks once; an added entry is undone with it); Delete for good removes the row and stored file, sender-or-Admin, audited `homesend.deleted`; Admin "Delete all archived". Migration `20261103230000_homesend_remove_items` (reason value + delete RLS policy), live. `home-send-remove.tsx`, `home-send-remove-actions.ts`, `homesend/remove.ts`. |
