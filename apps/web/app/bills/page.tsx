@@ -1,3 +1,4 @@
+import type { ReactNode } from "react";
 import {
   CalendarDays,
   CircleCheck,
@@ -60,6 +61,7 @@ import { isPaidWith, isPartRow, remainingMinor } from "@wonderhome/core/finance/
 import { listSkips, repeatOf } from "@wonderhome/core/finance/recurring";
 import { MarkBillPaidButton, type MarkPaidLabels } from "../_components/mark-bill-paid-button";
 import { BillRepeatControls } from "../_components/bill-repeat-controls";
+import { QuickFix, SnoozeBillReminder, type QuickFixLabels } from "../_components/bill-quick-fix";
 import { MarkBillUnpaidButton } from "../_components/mark-bill-unpaid-button";
 import { currencyExponent } from "@wonderhome/core/billing/money";
 import { AgendaExpandableRow } from "../_components/agenda-expandable-row";
@@ -945,6 +947,19 @@ function BillRow({
     ? t("bills.due", { date: formatDate(timezone, new Date(bill.dueOn), "long") })
     : t("bills.noDueDate");
   const kindLabel = billKindName(t, bill.kind);
+  // Fix one thing in place (11-023): an Admin, on a bill still to pay.
+  const quickLabels: QuickFixLabels = {
+    edit: t("bills.quick.edit"),
+    save: t("bills.quick.save"),
+    cancel: t("bills.quick.cancel"),
+    saved: t("bills.quick.saved"),
+    failed: t("bills.markPaid.failed"),
+    someone: t("bills.quick.nobody"),
+    snooze: t("bills.quick.snooze"),
+    snoozeDay: t("bills.quick.snoozeDay"),
+    snoozed: t("bills.quick.snoozed"),
+  };
+  const quick = paid && bill.status !== "paid" && bill.status !== "cancelled" ? { labels: quickLabels, members: paid.payers ?? [], currency: paid.markPaid.currency } : null;
   // How it repeats, in words (11-022), and the usual amount as an estimate when this month's isn't in.
   const repeat = repeatOf(bill.recurrence ?? null, bill.dueOn);
   const repeatWords = repeat
@@ -1023,7 +1038,7 @@ function BillRow({
           <Fact label={t("bills.fact.status")} value={statusWord(t, bill.status)} />
           <Fact label={t("bills.fact.repeats")} value={repeatWords} />
           <Fact label={t("bills.fact.payee")} value={bill.payee} />
-          <Fact label={t("bills.fact.owner")} value={owner} />
+          <Fact label={t("bills.fact.owner")} value={owner} fix={quick ? <QuickFix householdId={householdId} obligationId={bill.id} label={t("bills.fact.owner")} field={{ kind: "owner", value: bill.responsibleMemberId, members: quick.members }} labels={quick.labels} /> : null} />
           <Fact
             label={t("bills.fact.due")}
             value={
@@ -1031,6 +1046,7 @@ function BillRow({
                 ? formatDate(timezone, new Date(bill.dueOn), "long")
                 : null
             }
+            fix={quick ? <QuickFix householdId={householdId} obligationId={bill.id} label={t("bills.fact.due")} field={{ kind: "dueOn", value: bill.dueOn }} labels={quick.labels} /> : null}
           />
           <Fact
             label={t("bills.fact.amount")}
@@ -1039,8 +1055,12 @@ function BillRow({
                 ? formatMoney(bill.amountMinor, bill.currency)
                 : null
             }
+            fix={quick ? <QuickFix householdId={householdId} obligationId={bill.id} label={t("bills.fact.amount")} field={{ kind: "amount", value: bill.amountMinor, currency: bill.currency ?? quick.currency, exponent: currencyExponent(bill.currency ?? quick.currency) }} labels={quick.labels} /> : null}
           />
         </dl>
+        {bill.status !== "paid" && bill.status !== "cancelled" ? (
+          <SnoozeBillReminder householdId={householdId} obligationId={bill.id} today={new Intl.DateTimeFormat("en-CA", { timeZone: timezone }).format(new Date())} labels={quickLabels} />
+        ) : null}
         {canRepeat && repeat && monthOf && bill.status !== "paid" ? (
           <BillRepeatControls
             householdId={householdId}
@@ -1315,14 +1335,17 @@ function distinct(values: (string | null | undefined)[]): string[] {
   return Array.from(new Set(values.filter((value): value is string => Boolean(value?.trim())))).sort((a, b) => a.localeCompare(b));
 }
 
-function Fact({ label, value }: { label: string; value: string | null }) {
-  if (!value) return null;
+function Fact({ label, value, fix }: { label: string; value: string | null; fix?: ReactNode }) {
+  if (!value && !fix) return null;
   return (
     <div>
       <dt className="text-xs font-medium tracking-wide text-[var(--wh-foreground-subtle)] uppercase">
         {label}
       </dt>
-      <dd className="text-sm capitalize">{value}</dd>
+      <dd className="flex flex-wrap items-center gap-x-1 text-sm capitalize">
+        <span>{value ?? "—"}</span>
+        {fix}
+      </dd>
     </div>
   );
 }
