@@ -59,6 +59,9 @@ import { markPaidProps } from "../_lib/mark-paid";
 import { billsTotal, daysOverdue, groupBills } from "@wonderhome/core/finance/bill-groups";
 import { isPaidWith, isPartRow, remainingMinor } from "@wonderhome/core/finance/part-payment";
 import { listSkips, repeatOf } from "@wonderhome/core/finance/recurring";
+import { isFiltering, matchesBill, matchesPayment, parseBillFilter, payeeChoices } from "@wonderhome/core/finance/bill-filter";
+import { Select } from "@wonderhome/core/ui/select";
+import { Button } from "@wonderhome/core/ui/button";
 import { MarkBillPaidButton, type MarkPaidLabels } from "../_components/mark-bill-paid-button";
 import { BillRepeatControls } from "../_components/bill-repeat-controls";
 import { QuickFix, SnoozeBillReminder, type QuickFixLabels } from "../_components/bill-quick-fix";
@@ -109,9 +112,9 @@ type HistoryRow = {
 export default async function BillsPage({
   searchParams,
 }: {
-  searchParams: Promise<{ tab?: string }>;
+  searchParams: Promise<{ tab?: string; kind?: string; payee?: string; who?: string }>;
 }) {
-  const [{ tab }, session] = await Promise.all([
+  const [{ tab, ...filterParams }, session] = await Promise.all([
     searchParams,
     requireSession("/bills"),
   ]);
@@ -229,10 +232,13 @@ export default async function BillsPage({
     history[0]?.currency ??
     householdCurrency;
 
+  // Search and filter by kind, payee or person (11-025): the lists only; budgets keep every payment.
+  const filter = parseBillFilter(filterParams);
   const upcoming = obligations
-    .filter((o) => o.status !== "paid" && o.status !== "cancelled")
+    .filter((o) => o.status !== "paid" && o.status !== "cancelled" && matchesBill(o, filter))
     .sort((a, b) => (a.dueOn ?? "9999").localeCompare(b.dueOn ?? "9999"));
-  const settled = obligations.filter((o) => o.status === "paid");
+  const settled = obligations.filter((o) => o.status === "paid" && matchesBill(o, filter));
+  const shownHistory = isFiltering(filter) ? history.filter((row) => matchesPayment(row, obligations.find((o) => o.id === row.obligation_id), filter)) : history;
   // Grouped by what the reader is deciding, with one total line (the owner, 2026-11-21).
   // What is left on a bill paid in part counts, not the whole again (11-019).
   const partRowOf = (bill: { id: string; dueOn: string | null }) =>
@@ -537,6 +543,50 @@ export default async function BillsPage({
             </div>
           ) : null}
         </header>
+
+        <details className="rounded-[var(--wh-radius)] bg-[var(--wh-surface)] p-3 shadow-[var(--wh-shadow-card)]" open={isFiltering(filter)}>
+          <summary className="min-h-11 cursor-pointer py-2 text-sm font-medium">
+            {isFiltering(filter) ? t("bills.filter.showing", { count: upcoming.length + settled.length }) : t("bills.filter.title")}
+          </summary>
+          <form method="get" action="/bills" className="mt-2 grid gap-3 sm:grid-cols-3">
+            {active !== "overview" ? <input type="hidden" name="tab" value={active} /> : null}
+            <Select label={t("bills.fact.kind")} name="kind" defaultValue={filter.kind ?? ""}>
+              <option value="">{t("bills.filter.any")}</option>
+              {[...new Set(obligations.map((o) => o.kind as string))].sort().map((kind) => (
+                <option key={kind} value={kind}>
+                  {billKindName(t, kind)}
+                </option>
+              ))}
+            </Select>
+            <Select label={t("bills.fact.payee")} name="payee" defaultValue={filter.payee ?? ""}>
+              <option value="">{t("bills.filter.any")}</option>
+              {payeeChoices([...obligations.map((o) => o.payee), ...history.map((row) => row.payee)]).map((payee) => (
+                <option key={payee} value={payee}>
+                  {payee}
+                </option>
+              ))}
+            </Select>
+            <Select label={t("bills.fact.owner")} name="who" defaultValue={filter.who ?? ""}>
+              <option value="">{t("bills.filter.anyone")}</option>
+              {members.map((member) => (
+                <option key={member.id} value={member.id}>
+                  {member.displayName}
+                </option>
+              ))}
+            </Select>
+            <div className="flex flex-wrap items-center gap-2 sm:col-span-3">
+              <Button type="submit">{t("bills.filter.show")}</Button>
+              {isFiltering(filter) ? (
+                <PillLink href={active === "overview" ? "/bills" : `/bills?tab=${active}`} tone="quiet">
+                  {t("bills.filter.clear")}
+                </PillLink>
+              ) : null}
+              <a href={`/bills/export?year=${today.slice(0, 4)}`} download className="inline-flex min-h-11 items-center px-2 text-sm font-medium text-[var(--wh-primary)] underline">
+                {t("bills.filter.csv", { year: today.slice(0, 4) })}
+              </a>
+            </div>
+          </form>
+        </details>
 
         {mailHealth ? (
           <Card className="flex items-start gap-3 p-4">
@@ -863,7 +913,7 @@ export default async function BillsPage({
           ) : (
             <Card className="p-2">
               <ul className="divide-y divide-[var(--wh-border)]">
-                {history.slice(0, 40).map((row) => {
+                {shownHistory.slice(0, 40).map((row) => {
                   const bill = obligations.find(
                     (o) => o.id === row.obligation_id,
                   );
