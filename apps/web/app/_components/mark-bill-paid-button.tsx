@@ -10,6 +10,7 @@ import { Pill } from "@wonderhome/core/ui/pill";
 import { Select } from "@wonderhome/core/ui/select";
 import { Sheet } from "@wonderhome/core/ui/sheet";
 
+import { PAID_WITH, type PaidWith } from "@wonderhome/core/finance/part-payment";
 import type { PaidBill } from "@wonderhome/core/finance/repository";
 
 import { markBillPaidAction, undoBillPaidAction } from "../(auth)/finance-actions";
@@ -28,6 +29,13 @@ export type MarkPaidLabels = {
   failed: string;
   paidBy: string;
   paidBySomeone: string;
+  howMuch: string;
+  full: string;
+  part: string;
+  paidWith: string;
+  paidWithNotSaid: string;
+  partDone: string;
+  methods: Record<PaidWith, string>;
 };
 
 const UNDO_WINDOW_MS = 8000;
@@ -49,6 +57,7 @@ export function MarkBillPaidButton({
   labels,
   members,
   defaultPayerId,
+  paidLine,
   tone = "primary",
 }: {
   householdId: string;
@@ -66,6 +75,8 @@ export function MarkBillPaidButton({
   members?: { id: string; name: string }[];
   /** Whoever handles the bill, picked to start with. */
   defaultPayerId?: string | null;
+  /** "₹500 paid · ₹700 left" when part of it is paid already (11-019); amountMinor is then what is left. */
+  paidLine?: string | null;
   tone?: "primary" | "quiet";
 }) {
   const router = useRouter();
@@ -75,6 +86,7 @@ export function MarkBillPaidButton({
   const [error, setError] = useState<string | null>(null);
   const [paid, setPaid] = useState<PaidBill | null>(null);
   const [note, setNote] = useState<string | null>(null);
+  const [part, setPart] = useState(false);
 
   const row = () => anchor.current?.closest("li") ?? null;
   const name = billName;
@@ -102,10 +114,12 @@ export function MarkBillPaidButton({
     startTransition(async () => {
       try {
         const payer = String(data.get("paidBy") ?? "");
-        const result = await markBillPaidAction({ householdId, obligationId, paidOn: String(data.get("paidOn") ?? today), amount, currency: amount === null ? null : currency, paidByMemberId: payer === "" ? null : payer });
+        const method = String(data.get("paidWith") ?? "");
+        const paidWith = (PAID_WITH as readonly string[]).includes(method) ? (method as PaidWith) : null;
+        const result = await markBillPaidAction({ householdId, obligationId, paidOn: String(data.get("paidOn") ?? today), amount, currency: amount === null ? null : currency, paidByMemberId: payer === "" ? null : payer, paidWith, part });
         if (result.error || !result.paid) return setError(result.error ?? labels.failed);
         setOpen(false);
-        setNote(say(labels.done));
+        setNote(say(result.paid.partial ? labels.partDone : labels.done));
         setPaid(result.paid);
       } catch {
         setError(labels.failed);
@@ -146,10 +160,32 @@ export function MarkBillPaidButton({
           }}
         >
           {error ? <Alert>{error}</Alert> : null}
+          {paidLine ? <p className="text-sm text-[var(--wh-foreground-muted)]">{paidLine}</p> : null}
+          {amountMinor !== null ? (
+            <fieldset className="space-y-1.5">
+              <legend className="text-sm font-medium">{labels.howMuch}</legend>
+              <div className="flex flex-wrap gap-2">
+                {([false, true] as const).map((value) => (
+                  <label key={String(value)} className="flex min-h-11 items-center gap-2 rounded-full border border-[var(--wh-border)] px-3 text-sm">
+                    <input type="radio" name="part" checked={part === value} onChange={() => setPart(value)} />
+                    {value ? labels.part : labels.full}
+                  </label>
+                ))}
+              </div>
+            </fieldset>
+          ) : null}
           <div className="grid grid-cols-2 gap-3">
             <Field label={`${labels.amount} (${currency})`} name="amount" type="number" min={0} step={(1 / 10 ** exponent).toFixed(exponent)} inputMode="decimal" defaultValue={amountMinor !== null ? (amountMinor / 10 ** exponent).toFixed(exponent) : undefined} />
             <Field label={labels.paidOn} name="paidOn" type="date" defaultValue={today} required />
           </div>
+          <Select label={labels.paidWith} name="paidWith" defaultValue="">
+            <option value="">{labels.paidWithNotSaid}</option>
+            {PAID_WITH.map((method) => (
+              <option key={method} value={method}>
+                {labels.methods[method]}
+              </option>
+            ))}
+          </Select>
           {members && members.length > 0 ? (
             <Select label={labels.paidBy} name="paidBy" defaultValue={defaultPayerId ?? ""}>
               <option value="">{labels.paidBySomeone}</option>

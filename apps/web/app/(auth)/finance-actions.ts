@@ -24,6 +24,7 @@ import type { PaidBill } from "@wonderhome/core/finance/repository";
 import { retireBudget, saveBudget } from "@wonderhome/core/finance/budget-repository";
 import { BUDGET_PERIODS, isBudgetCategory } from "@wonderhome/core/finance/budgets";
 import { OBLIGATION_KINDS } from "@wonderhome/core/finance/payments";
+import { PAID_WITH } from "@wonderhome/core/finance/part-payment";
 import { requireHouseholdAdmin } from "@wonderhome/core/identity/households";
 import { REMOVE_BILLS_MAX, removeBills } from "@wonderhome/core/finance/remove-bills";
 import { reconcileRemindersNow } from "../_lib/reminders";
@@ -446,6 +447,10 @@ const markPaidSchema = z.object({
   amount: z.number().min(0).max(1_000_000_000).nullable(),
   currency: z.string().regex(/^[A-Z]{3}$/).nullable(),
   paidByMemberId: z.uuid().nullish(),
+  /** How it was paid (11-019), picked from a known set. */
+  paidWith: z.enum(PAID_WITH).nullish(),
+  /** "Part of it" (11-019): the rest stays due. */
+  part: z.boolean().optional(),
 });
 
 /**
@@ -466,6 +471,8 @@ export async function markBillPaidAction(input: z.input<typeof markPaidSchema>):
       amountMinor: parsed.data.amount === null ? null : toMinor(parsed.data.amount, parsed.data.currency!),
       currency: parsed.data.currency,
       paidByMemberId: parsed.data.paidByMemberId ?? null,
+      ...(parsed.data.paidWith !== undefined ? { paidWith: parsed.data.paidWith } : {}),
+      part: parsed.data.part ?? false,
     });
     // Marking a Checking bill paid is saying it was right (decision 3, 2026-11-14).
     await confirmByAction(supabase, parsed.data.householdId, parsed.data.obligationId, admin.memberId, "marked_paid");
@@ -491,6 +498,18 @@ export async function undoBillPaidAction(input: { householdId: string; obligatio
         recorded: z.boolean(),
         tookAhead: z.object({ periodLabel: z.string().regex(MONTH), amountMinor: z.number().int(), currency: z.string().regex(/^[A-Z]{3}$/) }).nullish(),
         previous: z.object({ dueOn: isoDate.nullable(), status: z.enum(["expected", "received", "scheduled", "overdue"]), amountMinor: z.number().int().nullable(), currency: z.string().regex(/^[A-Z]{3}$/).nullable() }),
+        partial: z.object({ paidMinor: z.number().int(), leftMinor: z.number().int() }).nullish(),
+        previousRow: z
+          .object({
+            amountMinor: z.number().int().min(0),
+            currency: z.string().regex(/^[A-Z]{3}$/),
+            dueMinor: z.number().int().positive(),
+            parts: z.array(z.object({ amountMinor: z.number().int().min(0), paidOn: isoDate, paidWith: z.enum(PAID_WITH).nullable(), memberId: z.uuid().nullable() })).max(60),
+            paidOn: isoDate.nullable(),
+            paidWith: z.enum(PAID_WITH).nullable(),
+            ownerMemberId: z.uuid().nullable(),
+          })
+          .nullish(),
       }),
     })
     .safeParse(input);
