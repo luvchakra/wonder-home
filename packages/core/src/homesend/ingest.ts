@@ -1,5 +1,6 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 
+import { listEnrolments } from "../school/enrolments";
 import { rateLimitMessage } from "../security/rate-limit";
 import { fillFromEvidence } from "./completeness";
 import { recoverWhen } from "./when";
@@ -322,11 +323,12 @@ export async function understand(
 
   // The reference day a date phrase is resolved against — when the content
   // arrived, in the household's own timezone (Wave 4 §7 applied to intake).
-  const context: IntakeContext = {
-    ...input.context,
-    now: input.context?.now ?? new Date(),
-    timezone: input.context?.timezone ?? (await householdTimezone(supabase, householdId)),
-  };
+  // The children at school (school and class only, no names) so a timetable or notice matches a class without asking.
+  const [timezone, children] = await Promise.all([
+    input.context?.timezone ?? householdTimezone(supabase, householdId),
+    input.context?.children ?? listEnrolments(supabase, householdId).then((rows) => rows.map((row) => ({ school: row.schoolName ?? null, grade: row.grade ?? null }))).catch(() => []),
+  ]);
+  const context: IntakeContext = { ...input.context, now: input.context?.now ?? new Date(), timezone, children };
 
   let result: ClassifyResult;
   try {

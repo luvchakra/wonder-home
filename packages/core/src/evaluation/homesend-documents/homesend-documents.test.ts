@@ -5,6 +5,7 @@ import { detectInstructionInjection } from "../../homesend/injection";
 import { readPaymentProof } from "../../homesend/payment-proof";
 import { planTimetable } from "../../homesend/timetable";
 import { DOCUMENT_CASES } from "./cases";
+import { documentMisses } from "./check";
 
 /** An empty reading, so each case records only what its model said. */
 const BLANK = {
@@ -61,6 +62,8 @@ describe("HomeSend regression set: complex messages become the right entries (14
       }
       // A health document is never filed for someone its words don't name.
       if (read.kind === "health_document") expect(read.subjectMemberName).toBeNull();
+      // The same checks `npm run eval` scores (`check.ts`): none missed.
+      expect(documentMisses(testCase, read)).toEqual([]);
     });
   }
 

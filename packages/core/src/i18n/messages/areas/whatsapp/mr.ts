@@ -54,6 +54,7 @@ export const whatsappMr: AreaCatalog<typeof whatsappEn> = {
   "whatsapp.check.leadMany": "🔍 तुम्ही पाठवलेल्याबद्दल {count} छोटे प्रश्न — आधी, {title}:",
   "whatsapp.check.confirmAll": "मी हे वाचलं: {summary}. बरोबर आहे का?",
   "whatsapp.check.later": "💬 याबद्दल माझा एक छोटा प्रश्न आहे — तो आधी विचारलेल्या प्रश्नानंतर येईल.",
+  "whatsapp.keptNote": "📝 *{title}* शाळेची नोंद म्हणून ठेवलं: {summary}. यात कोणतीही तारीख नाही, म्हणून कॅलेंडरमध्ये काही जोडलं नाही. ते HomeSend मध्ये पाहा किंवा परत आणा: {link}",
   "whatsapp.moved": "📅 *{title}* आधीच नोंदलेलं होतं, म्हणून ते दोनदा जोडण्याऐवजी मी नव्या दिवशी हलवलं. तुम्ही ते HomeSend मध्ये Undo करू शकता.",
   "whatsapp.check.confirm": "मी {label} बरोबर वाचलं का: {value}?",
   "whatsapp.check.confirmIt": "मी बरोबर वाचलं का: {value}?",

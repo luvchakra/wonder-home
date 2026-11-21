@@ -11,11 +11,11 @@ in `docs/progress/`; for the running log of what changed when, `tracking/PROGRES
 
 ## The whole picture
 
-**442 of 487 stories done — 90.8%**
+**443 of 488 stories done — 90.8%**
 
 | Status | Stories |
 |---|---:|
-| Done | 442 |
+| Done | 443 |
 | In Progress | 14 |
 | Blocked | 1 |
 | Not Started | 26 |
@@ -39,7 +39,7 @@ in `docs/progress/`; for the running log of what changed when, `tracking/PROGRES
 | 11 Bills, Fees & Finance | `████████░░` | 15 | 17 | 2 not started |
 | 12 Family Time & Social Activities | `██████████` | 9 | 9 | — |
 | 13 Maintenance, Laundry & Pet Care | `█████████░` | 10 | 11 | 1 in progress |
-| 14 AI Orchestration & Learning | `████████░░` | 64 | 72 | 1 in progress, 4 not started, 3 deferred |
+| 14 AI Orchestration & Learning | `████████░░` | 65 | 73 | 1 in progress, 4 not started, 3 deferred |
 | 15 Privacy, Security & Governance | `████████░░` | 12 | 14 | 2 not started |
 | 16 Platform Admin & Operations | `███████░░░` | 11 | 14 | 3 not started |
 | 17 External Integrations | `█████████░` | 10 | 11 | 1 not started |
@@ -413,7 +413,7 @@ in `docs/progress/`; for the running log of what changed when, `tracking/PROGRES
 
 ### 14 — AI Orchestration & Learning
 
-64 of 72 done `████████░░`
+65 of 73 done `████████░░`
 
 | Story | Priority | Status | Notes |
 |---|---|---|---|
@@ -485,6 +485,7 @@ in `docs/progress/`; for the running log of what changed when, `tracking/PROGRES
 | `14-073` The assistant never quietly runs without its model: the saved platform key on every path (runner, cold servers), keys checked on save and by "Test key", the open alert re-told daily and shown with its effect, `model_unavailable` kept and read again until a model reads it, the sender told once | P0 | Done | 2026-11-21. Note: `docs/progress/2026-11-21-homesend-understanding.md` |
 | `14-074` HomeSend understands complex messages: a document's several dated things (exam timetables by class column, circulars, holiday lists, fee instalments) each added at once, linked to their one source; plain replies (what it was, what was done, where to see it) | P0 | Done | 2026-11-21. Part 2 of the same note; with 08-036 |
 | `14-075` HomeSend adds above the bar as confirmed whatever it was read from (photo, file, text, voice), with Undo; money and health keep their own setting; replies say what was added and how to undo, with no percentage unless Checking | P0 | Done | 2026-11-21 (owner: "why it's still waiting? it automatically add in WonderHome"). Note: `docs/progress/2026-11-21-confirmed-above-bar.md`. |
+| `14-076` HomeSend matches without asking: the reading is told each child's school and class (no names); a notice naming a class matches roman or arabic; a school notice with nothing dated is a school note at once with a one-line reply; the 16 HD documents run in `npm run eval` | P0 | Done | 2026-11-21. Note: `docs/progress/2026-11-21-homesend-match-without-asking.md`. Live provider read not run here (no model key). |
 | `14-066` HomeSend zero touch: infer who a child's notice is for before asking, never ask the same thing twice, one-tap sending, moved dates in place, one tap for a photo, batched questions | P0 | Done | The owner, 2026-11-07 ("design and implement HomeSend in a more user friendly and intuitive way; least input from user should be expected"). Design note `docs/progress/2026-11-07-homesend-zero-touch.md` (tap budget per path). Part 1: `homesend/learned.ts` `inferSubject` fills "Who is this for?" from the school the notice names, what the household told HomeSend about that sender (`homesend_learned_defaults`, learned on HomeTalk/WhatsApp answers and review picks; a sender sent for two children is `mixed` and asked again), or the one child at school; a name in the notice always wins; never another household, never money/approval. Settings → AI Assistant "What HomeSend has learned" (Admin forgets, audited `homesend.learned_forgotten`). Eval HS-48–52, RLS tests, help body.13 + FAQ in eight languages. Migration `20261107233000_homesend_learned_defaults.sql`. Part 2: a share is added on arrival (`addIfAllowed`) and lands on "Got it" with Undo; paste anywhere on the page; email "Add to contacts" vCard; first-time explainer while nothing was ever sent; help body.14. Part 3: a clear moved date (same name, same person, only the day, nothing else like it; `reconcile.ts` `clearMove`) moves the record on file in place with Undo where the area is Pre Approved and the reading is over the bar with words of its own, never an amount (`confirmation.ts` `update`, eval HS-53/54); a photo/file in Checking gets one "Looks right?" (`checking.ts` `confirm_all`), details only after a no, three questions at most; waiting questions run one after another (`checking-questions.ts` `withNextWaiting`, "N quick ones"); WhatsApp starts at most one question an hour per person (`hometalk/question-cadence.ts`); help body.15 + FAQ. No migration. |
 | `14-068` Record first: HomeTalk records straight away, waiting actions expire after 48 h, Wait for Approval holds actions only, money and health recorded as Checking, new email senders trusted once, plain corrections | P0 | Done | The owner, 2026-11-14 ("think of redesign of HomeBrain, HomeSend and HomeTalk as a cohesive unit so that minimum intervention is required … ensure its not stuck in review"; then "implement"). Plan "Nothing stuck in review", phase 2, decisions 1, 2 and 5. Design and verification: `docs/progress/2026-11-14-record-first.md`. Migration `20261114181700_record_first_sender_trust.sql`. Eval HT-01/18/72/105/122/131 (updated), HT-190–195, HS-80–89; NSR-20–39. #550; follow-up PR: events and classes recorded first (HS-86–89), a trusted sender's email added on arrival (`homesend/trusted-arrival.ts`), `docs/progress/2026-11-14-record-first-events-email.md`. |
 | `14-065` HomeSend: remove each item on its own (swipe, detail, ⋯ on desktop), Undo, and Delete for good in Archived | P1 | Done | The owner, 2026-11-03 ("give option to individually delete each item"). Remove archives with `removed_by_person` (a group asks once; an added entry is undone with it); Delete for good removes the row and stored file, sender-or-Admin, audited `homesend.deleted`; Admin "Delete all archived". Migration `20261103230000_homesend_remove_items` (reason value + delete RLS policy), live. `home-send-remove.tsx`, `home-send-remove-actions.ts`, `homesend/remove.ts`. |

@@ -54,6 +54,7 @@ export const whatsappAr: AreaCatalog<typeof whatsappEn> = {
   "whatsapp.check.leadMany": "🔍 {count} أسئلة سريعة عمّا أرسلته — أولاً، {title}:",
   "whatsapp.check.confirmAll": "هذا ما قرأته: {summary}. هل هذا صحيح؟",
   "whatsapp.check.later": "💬 لديّ سؤال سريع عنه — سيأتي بعد السؤال الذي طرحته من قبل.",
+  "whatsapp.keptNote": "📝 احتفظت بـ *{title}* كملاحظة مدرسية: {summary}. لا يوجد فيه أي تاريخ، لذلك لم يُضف شيء إلى التقويم. اطّلع عليه أو استعده في HomeSend: {link}",
   "whatsapp.moved": "📅 *{title}* كان مسجلاً من قبل، لذا نقلته إلى يومه الجديد بدلاً من إضافته مرتين. يمكنك التراجع عنه في HomeSend.",
   "whatsapp.check.confirm": "هل قرأت {label} بشكل صحيح: {value}؟",
   "whatsapp.check.confirmIt": "هل قرأته بشكل صحيح: {value}؟",

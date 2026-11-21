@@ -689,6 +689,13 @@ export type IntakeContext = {
   from?: string | null;
   url?: string | null;
   filename?: string | null;
+  /**
+   * The household's children at school, from WonderHome's own records: each
+   * one's school and class, never a name or a health detail (names travel as
+   * roles, as `privacy.ts` `minimiseContext` does), so a timetable or notice
+   * can be matched to a class without asking. Told outside the fence.
+   */
+  children?: readonly { school: string | null; grade: string | null }[];
 };
 
 function contextLines(context: IntakeContext | undefined): string {
@@ -705,6 +712,14 @@ function contextLines(context: IntakeContext | undefined): string {
 
 const WEEKDAY_NAMES = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"] as const;
 
+/** The household's children at school (WonderHome's records, outside the fence): school and class only, as roles. */
+export function childrenLine(context: IntakeContext | undefined): string {
+  const known = (context?.children ?? []).filter((child) => child.school || child.grade).slice(0, 8);
+  if (known.length === 0) return "";
+  const lines = known.map((child, index) => `- Child ${index + 1}: ${[child.grade ? `class ${child.grade.slice(0, 20)}` : "class not on record", child.school ? `at ${child.school.slice(0, 80)}` : null].filter(Boolean).join(" ")}`);
+  return `The household's children at school (from WonderHome's records, not from the content; for matching a class or school only, never copied into a field):\n${lines.join("\n")}`;
+}
+
 /** The reference day, from WonderHome itself — so it sits outside the fence. */
 function referenceLine(context: IntakeContext | undefined): string {
   if (!context?.now || !context.timezone) return "";
@@ -714,11 +729,11 @@ function referenceLine(context: IntakeContext | undefined): string {
 }
 
 function textPrompt(source: { text: string }, context: IntakeContext | undefined): string {
-  return [userPrompt(), referenceLine(context), contextLines(context), fenceUntrusted(source.text)].filter(Boolean).join("\n\n");
+  return [userPrompt(), referenceLine(context), childrenLine(context), contextLines(context), fenceUntrusted(source.text)].filter(Boolean).join("\n\n");
 }
 
 function attachmentPrompt(context: IntakeContext | undefined): string {
-  return [userPrompt(), referenceLine(context), contextLines(context), "The content is the attached file."].filter(Boolean).join("\n\n");
+  return [userPrompt(), referenceLine(context), childrenLine(context), contextLines(context), "The content is the attached file."].filter(Boolean).join("\n\n");
 }
 
 /**

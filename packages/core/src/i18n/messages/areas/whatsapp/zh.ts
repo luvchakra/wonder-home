@@ -54,6 +54,7 @@ export const whatsappZh: AreaCatalog<typeof whatsappEn> = {
   "whatsapp.check.leadMany": "🔍 关于你发来的内容有 {count} 个小问题 — 先看 {title}：",
   "whatsapp.check.confirmAll": "我读到的是：{summary}。对吗？",
   "whatsapp.check.later": "💬 关于这个我有个小问题 — 会在我已经问的那个之后再问。",
+  "whatsapp.keptNote": "📝 已把 *{title}* 存为学校备注：{summary}。里面没有日期，所以没有加到日历。可以在 HomeSend 里查看或恢复：{link}",
   "whatsapp.moved": "📅 *{title}* 已经有记录了，所以我把它改到了新的日期，而没有重复添加。你可以在 HomeSend 里撤销。",
   "whatsapp.check.confirm": "我读对{label}了吗：{value}？",
   "whatsapp.check.confirmIt": "我读对了吗：{value}？",

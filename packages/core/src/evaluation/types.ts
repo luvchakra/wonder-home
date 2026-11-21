@@ -243,6 +243,8 @@ export type HomeSendCase = CaseBase & {
    * A bank, card or UPI payment message (2026-11-20 review, decision 2): read
    * from `source.text`, matched against these open bills. WonderHome never pays.
    */
+  /** One of the complex-document regression set (`homesend-documents/cases.ts`, HD-…), scored by its own expectations. */
+  document?: string;
   payment?: { today: string; bills: readonly import("../homesend/payment-proof").OpenBill[] };
   tidy?: {
     today: string;

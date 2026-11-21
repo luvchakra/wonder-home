@@ -15,6 +15,7 @@ import { timetableReply } from "../homesend/timetable-words";
 import { siteOrigin } from "../notifications/email";
 import { runtimeEnv } from "../platform/settings/runtime-env";
 import { gateTranscript, TRANSCRIPT_CONFIDENCE_FLOOR, type TranscriptGate } from "../homesend/audio";
+import { noteSummary } from "../homesend/school-note";
 import { amountWords, sureClause, type AddedOnItsOwn, type WaitingInHomeSend } from "../homesend/auto-add";
 import { hearWhatsAppVoiceNote, ingestWhatsAppMedia, ingestWhatsAppText, IngestRejected, type IngestDeps, type IngestOutcome, type TranscribeResult } from "../homesend/ingest";
 import { COMPLETENESS } from "../homesend/completeness";
@@ -707,6 +708,8 @@ export function addedReply(added: AddedOnItsOwn, forName?: string, t: Translate 
     lines.push(t("whatsapp.timetable.open", { link: `${siteOrigin(runtimeEnv())}/home-send` }));
     return lines.join("\n");
   }
+  // A school notice with nothing dated in it: kept as a school note at once, with its one line (2026-11-21). No numbers said back.
+  if (added.note) return t("whatsapp.keptNote", { title: shortTitle(added.title) ?? "it", summary: withoutNumbers(noteSummary(added.note.summary, added.title)) ?? "", link: `${siteOrigin(runtimeEnv())}/home-send` });
   // A record already on file moved to its new day (14-066, part 3): no date or number said back.
   if (added.moved) return t("whatsapp.moved", { title: (added.kind === "bill" ? withoutNumbers(added.title) : shortTitle(added.title)) ?? "it" });
   if (added.kind === "health_document") {

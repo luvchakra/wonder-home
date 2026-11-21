@@ -54,6 +54,7 @@ export const whatsappHi: AreaCatalog<typeof whatsappEn> = {
   "whatsapp.check.leadMany": "🔍 आपने जो भेजा उसके बारे में {count} छोटे सवाल — पहले, {title}:",
   "whatsapp.check.confirmAll": "मैंने यह पढ़ा: {summary}। क्या यह सही है?",
   "whatsapp.check.later": "💬 इसके बारे में मेरा एक छोटा सवाल है — यह पहले पूछे गए सवाल के बाद आएगा।",
+  "whatsapp.keptNote": "📝 *{title}* को स्कूल नोट के रूप में रख लिया: {summary}। इसमें कोई तारीख नहीं है, इसलिए कैलेंडर में कुछ नहीं जोड़ा। इसे HomeSend में देखें या वापस लाएँ: {link}",
   "whatsapp.moved": "📅 *{title}* पहले से दर्ज था, इसलिए मैंने इसे दोबारा जोड़ने के बजाय नए दिन पर कर दिया। आप इसे HomeSend में Undo कर सकते हैं।",
   "whatsapp.check.confirm": "क्या मैंने {label} सही पढ़ा: {value}?",
   "whatsapp.check.confirmIt": "क्या मैंने सही पढ़ा: {value}?",
