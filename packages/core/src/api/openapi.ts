@@ -1824,6 +1824,25 @@ export function buildOpenApiDocument(): Json {
           },
         },
       },
+      "/households/{householdId}/export/full": {
+        parameters: [
+          { name: "householdId", in: "path", required: true, schema: { type: "string", format: "uuid" } },
+        ],
+        post: {
+          summary: "Download full data: everything the caller can see, as one ZIP",
+          description:
+            "Every adult and helper, never a child. Requires the caller's password (a step-up), checked before anything is read; five downloads an hour, counted only after the password is right. Read with the caller's own session, so it holds only what they can already see. Health records are written only inside an AES-256 part locked with a password typed in this request body (`healthPassword`, repeated as `healthPasswordRepeat`), never stored or logged. Each download is recorded in the household's activity with counts, never values.",
+          responses: {
+            "200": { description: "The archive, streamed as a ZIP attachment" },
+            "400": { description: "Something was missing, or the health records password is too short, too long or does not match" },
+            "401": { $ref: "#/components/responses/Unauthenticated" },
+            "403": { $ref: "#/components/responses/Forbidden" },
+            "404": { $ref: "#/components/responses/NotFound" },
+            "429": { description: "Too many downloads this hour" },
+            "503": { description: "The full download isn't available yet" },
+          },
+        },
+      },
       "/calendar/subscriptions/sync": {
         get: {
           summary: "The calendar-feed sweep, as a scheduler calls it with GET",
