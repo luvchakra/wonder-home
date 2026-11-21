@@ -55,6 +55,7 @@ import { SegmentedControl } from "@wonderhome/core/ui/segmented-control";
 import { EmptyState } from "@wonderhome/core/ui/states";
 
 import { markPaidProps } from "../_lib/mark-paid";
+import { billsTotal, daysOverdue, groupBills } from "@wonderhome/core/finance/bill-groups";
 import { MarkBillPaidButton, type MarkPaidLabels } from "../_components/mark-bill-paid-button";
 import { MarkBillUnpaidButton } from "../_components/mark-bill-unpaid-button";
 import { currencyExponent } from "@wonderhome/core/billing/money";
@@ -220,6 +221,16 @@ export default async function BillsPage({
     .filter((o) => o.status !== "paid" && o.status !== "cancelled")
     .sort((a, b) => (a.dueOn ?? "9999").localeCompare(b.dueOn ?? "9999"));
   const settled = obligations.filter((o) => o.status === "paid");
+  // Grouped by what the reader is deciding, with one total line (the owner, 2026-11-21).
+  const total = billsTotal(upcoming, today);
+  const sums = (rows: { minor: number; currency: string }[]) => new Intl.ListFormat(viewer.language, { type: "conjunction" }).format(rows.map((row) => formatMoney(row.minor, row.currency)));
+  const totalLine = [
+    total.due.length > 0 ? t("bills.total.due", { amount: sums(total.due) }) : null,
+    total.overdue.length > 0 ? t("bills.total.overdue", { amount: sums(total.overdue) }) : null,
+    total.amountsMissing > 0 ? t("bills.total.missing", { count: total.amountsMissing }) : null,
+  ]
+    .filter(Boolean)
+    .join(" · ");
   // "Tidy up" (the owner, 2026-11-20): bills that look entered twice, from the
   // records alone, and the whole list to pick from. Suggestions only.
   const tidy = admin && upcoming.length > 1 ? tidyFor(upcoming) : null;
@@ -587,7 +598,7 @@ export default async function BillsPage({
                             paidDescription: t("bills.tidy.paidDescription"),
                             paidConfirm: t("bills.tidy.paidConfirm"),
                           }}
-                          today={markPaidProps(t, { householdId, timezone, currency: householdCurrency }).today}
+                          today={today}
                         />
                       ) : null}
                       <AddBillButton householdId={householdId} defaultCurrency={householdCurrency} labels={formLabels} choices={billChoices} />
@@ -603,11 +614,35 @@ export default async function BillsPage({
                   description={t("bills.upcoming.emptyLede")}
                 />
               ) : (
+                <>
+                {/* One honest total, its sum shown on a tap (rule 9). */}
+                <details className="mb-3 rounded-[var(--wh-radius-sm)] bg-[var(--wh-surface-muted)] px-3 py-2.5">
+                  <summary className="cursor-pointer text-sm font-medium break-words">{totalLine}</summary>
+                  <ul className="mt-2 space-y-1">
+                    {total.parts.map((part) => (
+                      <li key={part.id} className="flex justify-between gap-3 text-sm">
+                        <span className="min-w-0 break-words text-[var(--wh-foreground-muted)]">
+                          {part.name}
+                          {part.overdue ? ` · ${t("bills.group.overdue")}` : ""}
+                        </span>
+                        <span className="shrink-0 font-medium">{formatMoney(part.minor, part.currency)}</span>
+                      </li>
+                    ))}
+                  </ul>
+                  {total.amountsMissing > 0 ? <p className="mt-2 text-xs text-[var(--wh-foreground-subtle)]">{t("bills.total.notCounted")}</p> : null}
+                </details>
+                <div className="space-y-4">
+                {groupBills(upcoming, today).map((group) => (
+                <section key={group.key} aria-label={t(`bills.group.${group.key}`)}>
+                  <p className={`mb-1.5 text-xs font-semibold tracking-wide uppercase ${group.key === "overdue" ? "text-[var(--wh-attention)]" : "text-[var(--wh-foreground-subtle)]"}`}>
+                    {t(`bills.group.${group.key}`)} · {group.bills.length}
+                  </p>
                 <Card className="p-2">
                   <ul className="divide-y divide-[var(--wh-border)]">
-                    {upcoming.slice(0, 8).map((bill) => (
+                    {group.bills.map((bill) => (
                       <BillRow
                         paid={paidControls}
+                        lateBy={daysOverdue(bill, today) > 0 ? t("bills.daysOverdue", { count: daysOverdue(bill, today) }) : null}
                         key={bill.id}
                         bill={bill}
                         checking={checkingIds.has(bill.id) ? t("homesend.history.checking") : null}
@@ -638,6 +673,10 @@ export default async function BillsPage({
                     ))}
                   </ul>
                 </Card>
+                </section>
+                ))}
+                </div>
+                </>
               )}
             </section>
 
@@ -850,8 +889,11 @@ function BillRow({
   periodLabels,
   defaultCurrency,
   paid,
+  lateBy,
 }: {
   paid: PaidControls | null;
+  /** "42 days overdue", said in words beside the date (rule 3); only the grouped list passes it. */
+  lateBy?: string | null;
   bill: Obligation;
   /** "Checking" while HomeSend's entry for it is unconfirmed (14-062); null otherwise. */
   checking?: string | null;
@@ -923,6 +965,7 @@ function BillRow({
               ) : null}
             </span>
             <span className="block text-xs text-[var(--wh-foreground-subtle)]">
+              {lateBy ? <span className="font-medium text-[var(--wh-attention)]">{lateBy} · </span> : null}
               {due} · {amount}
               {owner ? ` · ${owner}` : ""}
             </span>

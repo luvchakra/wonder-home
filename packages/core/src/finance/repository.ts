@@ -40,7 +40,9 @@ export async function listObligations(
       "id, name, kind, payee, amount_minor, currency, due_on, recurrence, bill_type, responsible_member_id, status, requires_review, updated_at",
     )
     .eq("household_id", householdId)
-    .order("due_on", { ascending: true, nullsFirst: false });
+    .order("due_on", { ascending: true, nullsFirst: false })
+    // Every list has a bound (CLAUDE.md performance); far above any household's bills.
+    .limit(500);
   // One row by id: a write path reading back the bill it changes, not the whole history.
   if (options.id) query = query.eq("id", options.id);
   // A near-term window (ISO days) for a caller that shows only those days; without one, every bill.

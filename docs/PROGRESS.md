@@ -11,14 +11,14 @@ in `docs/progress/`; for the running log of what changed when, `tracking/PROGRES
 
 ## The whole picture
 
-**446 of 492 stories done — 90.7%**
+**447 of 499 stories done — 89.6%**
 
 | Status | Stories |
 |---|---:|
-| Done | 446 |
+| Done | 447 |
 | In Progress | 14 |
 | Blocked | 1 |
-| Not Started | 27 |
+| Not Started | 33 |
 | Deferred | 4 |
 
 ## By module
@@ -36,7 +36,7 @@ in `docs/progress/`; for the running log of what changed when, `tracking/PROGRES
 | 08 Kids & School Intelligence | `███████░░░` | 26 | 35 | 8 in progress, 1 not started |
 | 09 Commerce, Groceries & Pet Supplies | `██████████` | 9 | 9 | — |
 | 10 Meals & Cooking | `██████████` | 16 | 16 | — |
-| 11 Bills, Fees & Finance | `████████░░` | 16 | 19 | 3 not started |
+| 11 Bills, Fees & Finance | `██████░░░░` | 17 | 26 | 9 not started |
 | 12 Family Time & Social Activities | `██████████` | 9 | 9 | — |
 | 13 Maintenance, Laundry & Pet Care | `█████████░` | 10 | 11 | 1 in progress |
 | 14 AI Orchestration & Learning | `████████░░` | 66 | 74 | 1 in progress, 4 not started, 3 deferred |
@@ -73,6 +73,12 @@ in `docs/progress/`; for the running log of what changed when, `tracking/PROGRES
 | `11-011` Payees beyond the catalogue's cities, and outside India | 11 Bills, Fees & Finance | P2 | Not Started |
 | `11-017` No second bill from two separate sends at once, or from a late "Add this bill?" | 11 Bills, Fees & Finance | P1 | Not Started |
 | `11-019` Part payment and how a bill was paid | 11 Bills, Fees & Finance | P1 | Not Started |
+| `11-021` A bill opens to its full detail | 11 Bills, Fees & Finance | P1 | Not Started |
+| `11-022` Recurring bills done properly | 11 Bills, Fees & Finance | P1 | Not Started |
+| `11-023` Quick fixes on a row | 11 Bills, Fees & Finance | P2 | Not Started |
+| `11-024` "Usually paid by autopay" | 11 Bills, Fees & Finance | P2 | Not Started |
+| `11-025` Search, filter and a year's CSV | 11 Bills, Fees & Finance | P2 | Not Started |
+| `11-026` Split a bill between adults; a year's spend by kind | 11 Bills, Fees & Finance | P3 | Not Started |
 | `13-009` A pet's likes, dislikes, favourites, fears and allergies | 13 Maintenance, Laundry & Pet Care | P1 | In Progress |
 | `14-021` HomeBrain 3.0 phase B — retrieval and one pass | 14 AI Orchestration & Learning | P0 | Deferred |
 | `14-022` HomeBrain 3.0 phase C — one answer source | 14 AI Orchestration & Learning | P0 | Deferred |
@@ -356,7 +362,7 @@ in `docs/progress/`; for the running log of what changed when, `tracking/PROGRES
 
 ### 11 — Bills, Fees & Finance
 
-16 of 19 done `████████░░`
+17 of 26 done `██████░░░░`
 
 | Story | Priority | Status | Notes |
 |---|---|---|---|
@@ -379,6 +385,13 @@ in `docs/progress/`; for the running log of what changed when, `tracking/PROGRES
 | `11-017` No second bill from two separate sends at once, or from a late "Add this bill?" | P1 | Not Started | Left open by 11-016. Two deliveries arriving together (a WhatsApp forward and an email of one bill) still each check before the other writes; and `homesend/add-default.ts` `addWaitingItem` (a tap or the 24-hour default on "Add this bill?") adds without checking again, so a bill recorded meanwhile can be doubled. Needs a per-household serialisation of HomeSend bill writes (or a payee + due-date guard) and a re-match before `addWaitingItem` writes that resolves the item rather than leaving it waiting. |
 | `11-018` Mark a bill paid from the Bills list, mark it unpaid, several at once | P0 | Done | The owner, 2026-11-21 ("give option to mark it as paid"): his list was full of bills already paid elsewhere. Every unpaid bill row's action is now **Mark paid** for an Admin (the old blue "Pay" only opened HomeTalk with "Pay the …", and WonderHome can't pay; rule 14, one button per job). One tap opens a small confirm — paid today, the bill's own amount, both editable, and **Who paid** picked from the adults (defaults to whoever handles it) — then records at once with Undo through the governed write HomeTalk's "I paid…" uses (`markObligationPaid`): a one-off bill moves to Settled, a recurring one moves on to its next month, an amount not in yet stays blank, a Checking bill is confirmed (`marked_paid`), and reminders reconcile straight after (`after()`). A settled bill has **Mark as unpaid** (`markObligationUnpaid`: back to waiting, its month's payment out of the totals). **Tidy up → Mark selected as paid** clears several with one confirm listing them (`markBillsPaidAction`). HomeTalk: eval HT-196 "Mark the internet bill as paid on the 14th". Not yet: part payment and "how it was paid" (11-019), Admin-only as today. |
 | `11-019` Part payment and how a bill was paid | P1 | Not Started | Left open by 11-018. `obligation_history` keeps one row per bill and month, so a second part payment would overwrite the first; needs payments as their own rows (or an amount-paid column) with the rest left due, and a `paid_with` choice (UPI, card, cash, bank transfer) shown on Transactions. Migration safe in either order. |
+| `11-020` Bills grouped by Overdue / This week / Later / No due date, with one total line | P0 | Done | The owner, 2026-11-21 ("also add more useful features"). Upcoming was one flat list cut at 8; it is now grouped by what the reader is deciding (rule 17), each in due order, and an overdue row says "51 days overdue" in words (rule 3). Above it one line: "₹8,168.82 due · ₹7,018.82 of it overdue · 1 amount not in yet", per currency and never converted; tapping it lists each amount added (rule 9). Pure `finance/bill-groups.ts` (tests: groups across a month end, the owner's own list, two currencies). `listObligations` now bounded (500). Help Bills ¶13. |
+| `11-021` A bill opens to its full detail | P1 | Not Started | Proposed 2026-11-21 (rule 21). Where it came from (the HomeSend item or message, with the document), every payment with who marked it, changes and by whom (audit), notes, and attach a photo or PDF of the bill or receipt through the existing HomeSend upload path. A route `/bills/[id]`; reads in one wave. |
+| `11-022` Recurring bills done properly | P1 | Not Started | Proposed 2026-11-21. "Repeats monthly on the 5th" in words, the last amount as the usual, an "amount not in yet" shown as an estimate from the usual (marked as such, never counted as known), skip a month, end the series. Builds on `periods.ts`. |
+| `11-023` Quick fixes on a row | P2 | Not Started | Proposed 2026-11-21. Change the due date or amount, snooze the reminder to a day, and pick who handles it, without opening the editor. Today the row's pencil editor does all but snoozing, so this is a convenience, ranked below 11-021/11-022. |
+| `11-024` "Usually paid by autopay" | P2 | Not Started | Proposed 2026-11-21; **needs the owner's yes before building**, since it marks money as settled without a person. A bill flagged autopay is marked paid on its due date as Checking with one tap to undo; never a payment by WonderHome. |
+| `11-025` Search, filter and a year's CSV | P2 | Not Started | Proposed 2026-11-21. Filter Bills and Transactions by kind, payee or person; export the year's bills and payments as CSV (decimal amounts, one currency column). |
+| `11-026` Split a bill between adults; a year's spend by kind | P3 | Not Started | Proposed 2026-11-21. Shares per adult on a bill (decimal, summing exactly to the total) and a yearly view of spend per kind beside the monthly one. |
 
 ### 12 — Family Time & Social Activities
 
