@@ -3,6 +3,7 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 import { ADD_SOURCE, AMOUNT_SOURCE, HEALTH_FOR_SOURCE, UPDATE_SOURCE } from "../homesend/deadlines";
 import { applyHomeSendAnswer } from "../homesend/needs-you";
 import { applySenderTrustAnswer, SENDER_TRUST_SOURCE } from "../homesend/sender-trust";
+import { answerClassQuestion, CLASS_QUESTION_SOURCE } from "../homesend/timetable-apply";
 import type { NeedsYouItem } from "./needs-you";
 import { handlerFor, type NeedsYouActor } from "./needs-you-repository";
 
@@ -39,6 +40,13 @@ export async function applyNeedsYouAnswer(
   if (item.source === SENDER_TRUST_SOURCE) {
     const settled = await applySenderTrustAnswer(client, item.householdId, item.subjectId, answer, { byDefault: how.byDefault, memberId: how.actor.memberId, now: how.now });
     return settled ? "done" : "settled";
+  }
+  // "Which class is <child> in?" (2026-11-21): the class is saved and that child's exam days added; the default keeps a note.
+  if (item.source === CLASS_QUESTION_SOURCE) {
+    const childMemberId = item.prompt.field?.startsWith("class:") ? item.prompt.field.slice("class:".length) : null;
+    if (!childMemberId || how.byDefault || answer === "note") return "done";
+    const added = await answerClassQuestion(client, { householdId: item.householdId, itemId: item.subjectId, childMemberId, answer, actorMemberId: how.actor.memberId });
+    return added ? "done" : "settled";
   }
   const handler = handlerFor(item.source);
   if (!handler) return "unhandled";

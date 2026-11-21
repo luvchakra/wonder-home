@@ -43,12 +43,16 @@ export async function recordModelUnavailable(
   householdId: string,
   itemId: string,
   extra: { rawText?: string | null; understanding?: IntakeUnderstanding | null } = {},
+  /** Since 2026-11-21 also `output_rejected` (a reading in a shape WonderHome couldn't use) and `unreadable` (a model declined). */
+  reason: "model_unavailable" | "output_rejected" | "unreadable" = "model_unavailable",
 ): Promise<boolean> {
-  const update: Record<string, unknown> = { status: "failed", failure_reason: "model_unavailable" };
+  const update: Record<string, unknown> = { status: "failed", failure_reason: reason };
   if (extra.rawText) update.raw_text = extra.rawText;
   if (extra.understanding) update.understanding = extra.understanding;
   const { error } = await supabase.from("home_send_items").update(update).eq("household_id", householdId).eq("id", itemId);
   if (!error) return true;
+  // The database doesn't know the newer reason yet: a rejected reading is read again the ordinary way.
+  if (error.code === "23514" && reason === "output_rejected") return recordModelUnavailable(supabase, householdId, itemId, extra, "unreadable");
   if (error.code !== "23514") log.warn("homesend: model_unavailable not recorded", { reason: error.code ?? "unknown", allow: ["reason"] });
   return false;
 }
@@ -108,18 +112,25 @@ export async function queueModelReads(
     result.marked += 1;
   }
 
-  // 2. Every item kept for want of a model, queued (once) to be read again.
+  // 2. Every item kept for want of a model (or read in a shape WonderHome couldn't use), queued (once) to be read again.
   const { data: waiting } = await admin
     .from("home_send_items")
-    .select("id, household_id, created_at")
+    .select("id, household_id, created_at, failure_reason, updated_at")
     .eq("status", "failed")
-    .eq("failure_reason", "model_unavailable")
+    .in("failure_reason", ["model_unavailable", "output_rejected"])
     .order("created_at", { ascending: false })
     .limit(limit);
-  for (const row of (waiting ?? []) as { id: string; household_id: string; created_at: string }[]) {
+  const rejectedSince = new Date(now.getTime() - DAY_MS).toISOString();
+  for (const row of (waiting ?? []) as { id: string; household_id: string; created_at: string; failure_reason: string; updated_at: string }[]) {
+    // A closer read that still gave nothing usable for a day: it goes the ordinary way, said plainly.
+    if (row.failure_reason === "output_rejected" && row.created_at < rejectedSince) {
+      const { error } = await admin.from("home_send_items").update({ failure_reason: "unreadable" }).eq("household_id", row.household_id).eq("id", row.id).eq("failure_reason", "output_rejected");
+      if (!error) result.expired += 1;
+      continue;
+    }
     if (row.created_at < since) {
       // Fourteen days without a model: it goes the ordinary way (read again, asked once, or set aside with its reason).
-      const { error } = await admin.from("home_send_items").update({ failure_reason: "unreadable" }).eq("household_id", row.household_id).eq("id", row.id).eq("failure_reason", "model_unavailable");
+      const { error } = await admin.from("home_send_items").update({ failure_reason: "unreadable" }).eq("household_id", row.household_id).eq("id", row.id).eq("failure_reason", row.failure_reason);
       if (!error) result.expired += 1;
       continue;
     }

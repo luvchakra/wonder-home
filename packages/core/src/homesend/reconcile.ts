@@ -62,7 +62,7 @@ export type HomeSendReconciliation = {
  * purchase — a receipt line is a new fact about what was bought, never a
  * second copy of a record (09-009), so there is nothing to reconcile it with.
  */
-export type ReconcilableDomain = Exclude<HomeSendChangeDomain, "purchase" | "activity">;
+export type ReconcilableDomain = Exclude<HomeSendChangeDomain, "purchase" | "activity" | "school_exam">;
 
 const DOMAIN_FOR_KIND: Record<ReconcilableDomain, ContextDomain> = {
   bill: "bills",

@@ -59,3 +59,59 @@ The webhook acknowledged in 11 s (created 18:11:56, acknowledged 18:12:07): the 
 - Apply migration `20261121020000_model_unavailable_and_stale_key_alerts.sql` (SQL sent to the coordinator).
 - Not verified against a live model (no provider key in this container): the provider check's real 200/401 answers and the retry reading a real photo.
 - GitHub repository secret `WONDERHOME_AI_KEY` can be deleted once the saved key works (the runner now uses the saved one).
+
+## Story A or B: why the timetable came back empty (from the code)
+
+The owner's home has its own Anthropic key, and HomeTalk turns in that home were read by a model minutes earlier, so the likeliest story is B. The empty reading had a cause inside HomeSend:
+
+- `classifyIntake` returned `null`, with no log, whenever a model's answer failed `IntakeExtractionSchema`.
+- Every list and text in that schema had a hard maximum (`records` 12, `facts` 8, `needs` 5, `summary` 300 characters), and exceeding any one rejected the whole reading.
+- A five-class exam timetable easily runs past 12 records, so a good reading was thrown away and landed as "unknown" with an empty summary. That matches the item's metadata.
+- The refusal at 18:13:46 UTC was the platform key, which the GitHub runner kept sending (fixed in #588).
+
+Not proven against a live model, which is not reachable from these containers.
+
+## Part 2 — HomeSend understands complex messages (14-074, 08-036)
+
+- **True reasons.** Each empty reading carries its true reason (`ai/classify-intake-failure.ts`):
+  - refused, timed out or unreachable → `model_unavailable`, read again until a model reads it;
+  - answered in an unusable shape → `output_rejected`: read again by the stronger reader, and the sender hears "I read it but couldn't turn it into entries yet…"; after a day it goes the ordinary way;
+  - declined → `unreadable`.
+  - Each reason is logged without content.
+- **Cut, never reject.** `parseLeniently`: anything over a limit is cut to the limit, never thrown away whole. `acceptReading` is the one path both providers and the regression set use.
+- **Timetables.** A dated table with a column per class is read as `schedule` (column headings and rows as written). `homesend/timetable.ts` then picks each child's column from the class on their school record ("Std IV" = "Grade 4" = "Class IV" = "4th"; a section only narrows when both sides name one). Dates are taken only from the table, `03-12-26` read as day-month-year. Weekends and empty or shaded rows are skipped.
+  - `timetable-apply.ts` writes one exam per child with a paper per day through `school/exams.ts`, under the sender's own session. Each exam gets a `homesend_changes` row (`school_exam`), marked Checking from a photo, and is undone with the item (`reverseChange` → `standDownSchoolRecord`).
+  - A child at the school with no class on record is asked once, "Which class is <child> in?" (`homesend_class`), with the columns as tap answers. The answer is saved on the enrolment and that child's days are added. The default after a day keeps the timetable as a note.
+  - Exam days remind through the school source (`examPaperSubject`). No new reminder kind was needed.
+- **Several dated things in one document.** A school circular's PTM, things to bring and so on are each added at once through the same writes and Undo as a person's Apply (`home-send-plan-writer.ts` `applyPlanAtOnce`), marked Checking from a photo. Anything the plan would ask about, or cancel, still waits. Bills keep record first's own path.
+- **Replies.** Every reply says what WonderHome took the thing to be, what it did for whom, and where to see or undo it, with a link. On WhatsApp no dates are echoed.
+  - "It's waiting in HomeSend for you to check" is gone from every reply class in eight languages, with the link added.
+  - "I couldn't tell what it's about" is now "I read it, but it isn't a bill, a school notice, …, so I'll keep it as a household note…".
+  - Enforced by `homesend/replies.test.ts`.
+- **Regression set.** `evaluation/homesend-documents/` holds 16 cases with recorded readings, plus the synthetic timetable image rendered with Playwright from the transcription. Covered:
+  - exam timetables: one child, two children, class not on record, a PDF with sections, a misleading caption;
+  - a circular with several asks, the owner's notice with no dated thing, and a 16-date holiday list cut to 12;
+  - fee instalments, a maintenance notice, a wedding card and a prescription;
+  - a bank debit (proof), a "pay now / enter PIN" message (never proof), and injected instructions;
+  - a blurred photo.
+
+### What the owner's two messages now do (in code; unverified against a live model)
+
+- **Timetable photo with "Exam timetable".**
+  - Read as a school_item with a `schedule` for Mid-Term Unit Test 2.
+  - With Asmi's class (Std IV) on her school record: one Mid-term exam "Mid-Term Unit Test 2" for Asmi with 8 papers (3, 4, 7, 8, 9, 10, 11 and 14 Dec), marked Checking, on School and the calendar, each reminded the evening before and on the day.
+  - The WhatsApp reply: "📚 Exam timetable: *Mid-Term Unit Test 2*. / I added 8 exam days for Asmi (Std. IV). / They're marked Checking because I read them from a photo or file. / See or undo: https://home.wonderapps.biz/school?child=…#exams".
+  - Without her class on record, the reply asks "One question: which class is Asmi in?…" and the question waits in Needs you with Std. III–VII as answers.
+- **Long school notice** (no dated ask): "Got it 👍 I read it, but it isn't a bill, … so I'll keep it as a household note you can ask HomeTalk about. 🗒️". The read may class it as a school notice instead; the deadlines pass keeps it as a note either way.
+
+### Verified
+
+- vitest on the touched areas (homesend, ai, whatsapp, hometalk, notifications, school, evaluation, i18n, help, the web HomeSend actions and components): all green.
+- `tsc` for core and web; app ESLint on changed files; migration, embed and help-link gates; `next build`.
+
+### Open
+
+- The model is not yet told the household's children and their classes; the column is picked afterwards, deterministically.
+- A notice with no dated thing becomes a note a day later (deadlines), not at once.
+- HomeTalk's paperclip replies in `conversation/` (another session's area) keep their wording.
+- Live check: send the synthetic timetable image (`evaluation/homesend-documents/exam-timetable-std3-7.jpg`) once the provider key works.

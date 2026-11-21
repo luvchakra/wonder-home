@@ -30,7 +30,7 @@ export const SOON_DAYS = 7;
  * still shown (worded by its `prompt.code`), so a part can add one without
  * this file changing first.
  */
-export const NEEDS_YOU_SOURCES = ["homesend_check", "homesend_waiting", "homesend_resend", "homesend_update", "homesend_add", "homesend_amount", "homesend_health_for", "hometalk_proposal", "approval", "sender_trust", "conflict", "homebrain_conflict"] as const;
+export const NEEDS_YOU_SOURCES = ["homesend_check", "homesend_waiting", "homesend_resend", "homesend_update", "homesend_add", "homesend_amount", "homesend_health_for", "homesend_class", "hometalk_proposal", "approval", "sender_trust", "conflict", "homebrain_conflict"] as const;
 
 /**
  * What still asks by default (the owner, 2026-11-20: "as autonomous as

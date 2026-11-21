@@ -11,6 +11,9 @@ import { openIntakeQuestion } from "../hometalk/intake-questions";
 import { lastQuestionStartedAt, mayStartQuestion } from "../hometalk/question-cadence";
 import { enqueueClassifyRetry, type ClaimedJob, type JobHandler } from "../homesend/retry-queue";
 import { queueModelRead } from "../homesend/model-unavailable";
+import { timetableReply } from "../homesend/timetable-words";
+import { siteOrigin } from "../notifications/email";
+import { runtimeEnv } from "../platform/settings/runtime-env";
 import { gateTranscript, TRANSCRIPT_CONFIDENCE_FLOOR, type TranscriptGate } from "../homesend/audio";
 import { amountWords, sureClause, type AddedOnItsOwn, type WaitingInHomeSend } from "../homesend/auto-add";
 import { hearWhatsAppVoiceNote, ingestWhatsAppMedia, ingestWhatsAppText, IngestRejected, type IngestDeps, type IngestOutcome, type TranscribeResult } from "../homesend/ingest";
@@ -533,7 +536,7 @@ async function readMessage(admin: SupabaseClient, messageId: string, deps: Whats
   }
 
   // Not read for want of a model (2026-11-21): queued to be read as soon as one answers; the sender is told then.
-  if (outcome.failureReason === "model_unavailable") await queueModelRead(admin, { householdId: row.household_id, itemId: outcome.itemId, now }).catch(() => false);
+  if (outcome.failureReason === "model_unavailable" || outcome.failureReason === "output_rejected") await queueModelRead(admin, { householdId: row.household_id, itemId: outcome.itemId, now }).catch(() => false);
   else if (outcome.classifyFailed) await enqueueClassifyRetry(admin, { householdId: row.household_id, itemId: outcome.itemId, now }).catch(() => false);
   await settle({ processing_status: "processed", failure_reason: null, homesend_item_id: outcome.itemId });
   // The rest of the burst is part of this item, answered by this one reply.
@@ -547,7 +550,9 @@ async function readMessage(admin: SupabaseClient, messageId: string, deps: Whats
   // gets one, and the rest follow as it is answered, or wait for HomeTalk in the app.
   const mayAsk = async () => mayStartQuestion(await lastQuestionStartedAt(admin, { householdId: row.household_id, memberId: row.member_id, now }), now);
   const question =
-    deps.ask && !outcome.duplicate && outcome.state === "needs_review" && (await mayAsk())
+    // An exam timetable asks nothing here: each child's column is picked from the class on record, and only a missing
+    // class is asked, as one Needs-you question (`timetable-apply.ts`).
+    deps.ask && !outcome.duplicate && outcome.state === "needs_review" && !outcome.item.extracted?.schedule && (await mayAsk())
       ? await openIntakeQuestion(admin, { householdId: row.household_id, memberId: row.member_id, itemId: outcome.itemId, surface: "whatsapp", t: await words(), cadence: "send" }).catch(() => null)
       : null;
   const t = await words();
@@ -691,6 +696,15 @@ export function whatsappJobHandler(deps: WhatsAppIntakeDeps): JobHandler {
 export function addedReply(added: AddedOnItsOwn, forName?: string, t: Translate = ENGLISH): string {
   // Added below the bar: said as Checking, its reminders waiting (the owner, 2026-11-03).
   const checking = added.unconfirmed === true;
+  // An exam timetable (2026-11-21): what it was, what was done for whom, the one question, where to see it. No dates here.
+  if (added.timetable) return timetableReply(added.timetable, t, { origin: siteOrigin(runtimeEnv()) });
+  // A document's several dated things, each added (2026-11-21): what it was, how many and which, Checking, where to see them.
+  if (added.several) {
+    const lines = [t("whatsapp.several.lead", { title: shortTitle(added.title) ?? "it" }), t("whatsapp.several.added", { count: added.several.count, names: added.several.names.map((name) => withoutNumbers(name) ?? name).join(", ") })];
+    if (checking) lines.push(t("whatsapp.timetable.checking"));
+    lines.push(t("whatsapp.timetable.open", { link: `${siteOrigin(runtimeEnv())}/home-send` }));
+    return lines.join("\n");
+  }
   // A record already on file moved to its new day (14-066, part 3): no date or number said back.
   if (added.moved) return t("whatsapp.moved", { title: (added.kind === "bill" ? withoutNumbers(added.title) : shortTitle(added.title)) ?? "it" });
   if (added.kind === "health_document") {
@@ -1155,6 +1169,7 @@ export function acknowledgementFor(
   if (outcome.duplicate) return { text: t("whatsapp.ack.duplicate"), asks: false };
   // The model couldn't be reached: the truth, and a promise the retry keeps (`homesend/model-unavailable.ts`).
   if (outcome.failureReason === "model_unavailable") return { text: t("whatsapp.ack.modelUnavailable"), asks: false };
+  if (outcome.failureReason === "output_rejected") return { text: t("whatsapp.ack.readAgain"), asks: false };
   if (outcome.state === "failed") {
     const reason = outcome.failureReason;
     const why = reason ? t(`homesend.failure.${reason.replace(/_(\w)/g, (_, letter: string) => letter.toUpperCase())}` as TranslationKey) || FAILURE_REASON_COPY[reason] : t("whatsapp.ack.unreadable");
@@ -1200,15 +1215,18 @@ export function acknowledgementFor(
   }
   // HomeTalk's question about it, worded by HomeTalk (`hometalk/intake-questions.ts`), follows what was found.
   if (options.question) return { text: `${t("whatsapp.ack.gotIt")} ${found} ${options.question}`, asks: true };
-  // Something that would have been added on its own says why it waits, never with an amount (I-27).
+  // Something that would have been added on its own says why it waits, never with an amount (I-27), and where to see it.
+  const link = `${siteOrigin(runtimeEnv())}/home-send`;
   const wait = options.wait?.waiting;
   if (wait && (wait.listed || wait.reason === "on_list")) {
-    return { text: `${t("whatsapp.ack.gotIt")} ${t("whatsapp.wait.onList", { title: shortTitle(options.wait!.title) ?? "" })}`, asks: false };
+    return { text: `${t("whatsapp.ack.gotIt")} ${t("whatsapp.wait.onList", { title: shortTitle(options.wait!.title) ?? "", link })}`, asks: false };
   }
-  if (wait?.reason === "wait_for_approval") return { text: `${t("whatsapp.ack.gotIt")} ${found} ${t(wait.area === "school" ? "whatsapp.wait.approvalSchool" : "whatsapp.wait.approvalGroceries")}`, asks: false };
-  if (wait?.reason === "untraced") return { text: `${t("whatsapp.ack.gotIt")} ${found} ${t("whatsapp.wait.untraced")}`, asks: false };
-  if (wait?.reason === "below_bar") return { text: `${t("whatsapp.ack.gotIt")} ${found} ${t("whatsapp.wait.belowBar", { percent: wait.percent ?? 95 })}`, asks: false };
-  return { text: `${t("whatsapp.ack.gotIt")} ${found} ${t("whatsapp.ack.waiting")}`, asks: false };
+  if (wait?.reason === "wait_for_approval") return { text: `${t("whatsapp.ack.gotIt")} ${found} ${t(wait.area === "school" ? "whatsapp.wait.approvalSchool" : "whatsapp.wait.approvalGroceries", { link })}`, asks: false };
+  if (wait?.reason === "untraced") return { text: `${t("whatsapp.ack.gotIt")} ${found} ${t("whatsapp.wait.untraced", { link })}`, asks: false };
+  if (wait?.reason === "below_bar") return { text: `${t("whatsapp.ack.gotIt")} ${found} ${t("whatsapp.wait.belowBar", { percent: wait.percent ?? 95, link })}`, asks: false };
+  // Read, and something HomeSend keeps track of: what it was, and where it is. A reading that is nothing it keeps says so on its own.
+  if (outcome.item.classifiedKind === "unknown") return { text: `${t("whatsapp.ack.gotIt")} ${found}`, asks: false };
+  return { text: `${t("whatsapp.ack.gotIt")} ${found} ${t("whatsapp.ack.waiting", { link })}`, asks: false };
 }
 
 /**

@@ -201,7 +201,7 @@ export function decideByRules(
   // Failed: only "still unreadable after every try".
   if (item.status === "failed") {
     // Kept for want of a model: never tidied away while it waits to be read (2026-11-21).
-    if (item.failureReason === "model_unavailable") return { action: "keep", why: "retry_left", askAi: false };
+    if (item.failureReason === "model_unavailable" || item.failureReason === "output_rejected") return { action: "keep", why: "retry_left", askAi: false };
     if (item.retryCount >= RETRY_CAP && !item.retryRequestedAt) {
       return { action: "archive", reason: "unreadable", by: "rule", evidence: [{ field: "tries", value: String(item.retryCount) }] };
     }

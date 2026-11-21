@@ -180,7 +180,7 @@ const READ_AGAIN: ReadonlySet<HomeSendFailureReason> = new Set(["link_unreachabl
 export function endingFor(item: EndingInput): Ending {
   if (item.status !== "received" && item.status !== "classified" && item.status !== "failed") return { action: "wait" };
   // Kept for want of a model (2026-11-21): no deadline starts and nothing is asked; the retry reads it (`model-unavailable.ts`).
-  if (item.status === "failed" && item.failureReason === "model_unavailable") return { action: "wait" };
+  if (item.status === "failed" && (item.failureReason === "model_unavailable" || item.failureReason === "output_rejected")) return { action: "wait" };
   const unreadable = item.status === "failed" ? item.failureReason !== null && READ_AGAIN.has(item.failureReason) : item.readable === false;
   const unplaced = unreadable || !item.kind || item.kind === "unknown";
   if (unplaced && notHouseholdInformation(item.rawText)) return { action: "set_aside", reason: "not_household" };

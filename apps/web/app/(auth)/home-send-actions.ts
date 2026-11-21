@@ -1,5 +1,6 @@
 "use server";
 
+import { standDownSchoolRecord } from "@wonderhome/core/school/exams";
 import { after } from "next/server";
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
@@ -653,6 +654,9 @@ async function reverseChange(supabase: Awaited<ReturnType<typeof createClient>>,
     await cancelObligation(supabase, { id: change.entityId, householdId });
   } else if (change.domain === "school_item") {
     await cancelSchoolItem(supabase, householdId, change.entityId);
+  } else if (change.domain === "school_exam") {
+    // An exam added from a timetable (2026-11-21): stood down with its days, the same as removing it on the School page.
+    await standDownSchoolRecord(supabase, { householdId, id: change.entityId, kind: "exam" });
   } else if (change.domain === "activity_item") {
     await standDownActivityNote(supabase, { householdId, id: change.entityId });
   } else if (change.domain === "activity") {

@@ -75,6 +75,10 @@ export type AddedOnItsOwn = {
   unconfirmed?: true;
   /** Not added: a record already on file moved to its new day (14-066, part 3), ISO dates. Undo puts the old day back. */
   moved?: { from: string | null; to: string };
+  /** An exam timetable: each child's exam days, and who was asked their class (2026-11-21, `timetable-apply.ts`). */
+  timetable?: import("./timetable-apply").TimetableAdded;
+  /** A document's several dated things, each added (2026-11-21): how many, for whom. */
+  several?: { count: number; names: string[] };
 };
 
 /** Something that would have been added on its own, still waiting in HomeSend, and why (`confirmation.ts` `wait`). */
@@ -106,9 +110,9 @@ export function wasAdded(result: AddedOnItsOwn | WaitingInHomeSend | null | unde
 /** Why it waits, in HomeTalk's words, never with an amount (I-27): null when nothing needs saying. */
 export function waitingWords(waiting: WaitingFor | null | undefined, title: string): string | null {
   if (!waiting) return null;
-  if (waiting.listed || waiting.reason === "on_list") return `**${title}** is already on your shopping list, so it's waiting in HomeSend for you to choose.`;
-  if (waiting.reason === "wait_for_approval") return `Your household has ${waiting.area === "school" ? "school work" : "groceries"} set to Wait for Approval, so it's waiting in HomeSend for you to approve.`;
-  return `WonderHome adds things on its own only when it is more than ${waiting.percent ?? DEFAULT_AUTO_ADD_PERCENT}% sure, so it's waiting in HomeSend for you to check.`;
+  if (waiting.listed || waiting.reason === "on_list") return `**${title}** is already on your shopping list, so I didn't add it twice. Choose what to do in HomeSend.`;
+  if (waiting.reason === "wait_for_approval") return `Your household has ${waiting.area === "school" ? "school work" : "groceries"} set to Wait for Approval, so it needs your yes before it's added. Approve it in HomeSend.`;
+  return `WonderHome adds things on its own only when it is more than ${waiting.percent ?? DEFAULT_AUTO_ADD_PERCENT}% sure, so this needs a look before it's added. Check it in HomeSend.`;
 }
 
 /** The Needs review row's one line of reason (design principle 4): "already on the shopping list", "below your bar of 95%". */

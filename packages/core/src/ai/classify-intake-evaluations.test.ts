@@ -64,6 +64,7 @@ describe("HomeSend classify-intake golden scenario evaluations", () => {
       issuedOn: null,
       pages: { total: null, unreadable: [] },
       records: [],
+      schedule: null,
     });
   });
 

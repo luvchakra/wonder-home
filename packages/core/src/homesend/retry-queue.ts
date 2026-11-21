@@ -141,10 +141,11 @@ async function retryClassification(admin: SupabaseClient, job: ClaimedJob, deps?
   if (!itemId || !job.household_id) return "skipped";
   const item = await getHomeSendItem(admin, job.household_id, itemId);
   // Kept for want of a model (2026-11-21): read the way it was sent (a photo as a photo), then added and told.
-  if (item && item.status === "failed" && item.failureReason === "model_unavailable") {
+  if (item && item.status === "failed" && (item.failureReason === "model_unavailable" || item.failureReason === "output_rejected")) {
     // Only a drain that can add and tell reads it, so the sender is never left untold; this one passes it on.
     if (!afterModelRead) return "failed";
-    const outcome = await rereadFailedItem(admin, item, deps ?? {});
+    // A reading in a shape WonderHome couldn't use is read again by the stronger reader (2026-11-21).
+    const outcome = await rereadFailedItem(admin, item, item.failureReason === "output_rejected" ? secondReadDeps(deps) : (deps ?? {}));
     if (outcome.classifyFailed) return "failed";
     if (!outcome.duplicate && outcome.state !== "failed") {
       await afterModelRead(admin, item, outcome).catch((thrown: unknown) =>

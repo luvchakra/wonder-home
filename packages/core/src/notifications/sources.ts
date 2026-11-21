@@ -210,6 +210,26 @@ export function schoolSubject(row: SchoolItemRow, childName: string | null, cont
   };
 }
 
+/** An exam paper (`school_exams` / `school_exam_papers`), as the school row it is reminded like. */
+export type ExamPaperRow = { id: string; exam_id: string; subject: string; on_date: string; starts_at: string | null; child_member_id: string; exam_title: string | null };
+
+/**
+ * An exam day reminds like a school exam (2026-11-21: a timetable read from
+ * HomeSend becomes exam papers): "<child> — Exam: Mathematics is tomorrow",
+ * the night before and on the day, through the school reminder source and its
+ * words. It opens the child's exams; there is nothing to tick off.
+ */
+export function examPaperSubject(row: ExamPaperRow, childName: string | null, context: SourceContext): ReminderSubject | null {
+  const title = row.exam_title ? `${row.subject} (${row.exam_title})` : row.subject;
+  const school = schoolSubject(
+    { id: row.id, child_member_id: row.child_member_id, kind: "exam", title, due_at: `${row.on_date}T00:00:00.000Z`, due_time_known: false, status: "pending" },
+    childName,
+    context,
+  );
+  if (!school) return null;
+  return { ...school, threadKey: `school:exam:${row.id}`, action: { action: "open", target: `/school?child=${row.child_member_id}#exams` } };
+}
+
 const OPEN_MEAL = new Set(["planned", "at_risk"]);
 /** When there is no recipe to say how long cooking takes, assume this much. */
 export const DEFAULT_PREP_MINUTES = 45;

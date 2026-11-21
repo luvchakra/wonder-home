@@ -36,6 +36,7 @@ import {
   mealSubject,
   petSubject,
   sameOccasionAsEvent,
+  examPaperSubject,
   schoolDaySubject,
   schoolSubject,
   type BillRow,
@@ -190,7 +191,7 @@ async function reconcile(
   const horizon = (days: number) => new Date(now.getTime() + days * 86_400_000).toISOString();
   const since = (days: number) => new Date(now.getTime() - days * 86_400_000).toISOString();
 
-  const [bills, school, meals, groceries, pets, events, members, roles, responsibilities, guardians, reminderPrefs, channelPrefs, householdPolicies, open, closed, checking, nothingWaits] =
+  const [bills, school, meals, groceries, pets, events, members, roles, responsibilities, guardians, reminderPrefs, channelPrefs, householdPolicies, open, closed, checking, nothingWaits, papers] =
     await Promise.all([
       admin
         .from("obligations")
@@ -264,6 +265,15 @@ async function reconcile(
       unconfirmedEntityIds(admin, householdId),
       // An Admin may switch decision 3 back: then a Checking entry's reminders wait until it is confirmed (the 2026-11-03 rule).
       loadNothingWaits(admin, householdId),
+      // Exam days (a timetable read from HomeSend, or added on the School page): reminded like a school exam (2026-11-21).
+      admin
+        .from("school_exam_papers")
+        .select("id, exam_id, subject, on_date, starts_at, exam:school_exams!school_exam_papers_exam_id_fkey(child_member_id, title, active)")
+        .eq("household_id", householdId)
+        .eq("active", true)
+        .gte("on_date", since(1).slice(0, 10))
+        .lte("on_date", horizon(3).slice(0, 10))
+        .limit(60),
     ]);
   const holdChecking = nothingWaits.remindChecking === false;
 
@@ -286,6 +296,16 @@ async function reconcile(
     else if (!holdChecking) push(subjects, notYetConfirmed(billSubject(row, context), true, context.format));
   }
   const eventRows = (events.data ?? []) as FamilyEventRow[];
+  type PaperRead = { id: string; exam_id: string; subject: string; on_date: string; starts_at: string | null; exam: { child_member_id: string; title: string | null; active: boolean } | null };
+  for (const paper of ((papers.data ?? []) as unknown as PaperRead[])) {
+    if (!paper.exam?.active) continue;
+    // An exam added as Checking (read from a photo): its days remind marked "not yet confirmed", or wait when an Admin chose that.
+    const unconfirmed = checking.has(paper.exam_id);
+    if (holdChecking && unconfirmed) continue;
+    const read = examPaperSubject({ ...paper, child_member_id: paper.exam.child_member_id, exam_title: paper.exam.title }, displayNames.get(paper.exam.child_member_id) ?? null, context);
+    const subject = unconfirmed ? notYetConfirmed(read, false, context.format) : read;
+    if (subject && subject.expiresAt > now) subjects.push(subject);
+  }
   for (const row of (school.data ?? []) as SchoolItemRow[]) {
     if (holdChecking && checking.has(row.id)) continue;
     // The same occasion as a family event that day is reminded once, by the event.
