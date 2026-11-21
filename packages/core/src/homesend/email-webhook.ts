@@ -268,7 +268,7 @@ export async function handleEmailWebhook(request: Request, deps: EmailWebhookDep
         // Persist first, retry where safe (§16): the item is kept and
         // waiting; a job asks for it to be read again once the provider is back.
         events.push({ kind: "classification_failed", householdId });
-        const queued = await (outcomeReason === "model_unavailable" ? queueModelRead(supabase, { householdId, itemId: item.id }) : enqueueClassifyRetry(supabase, { householdId, itemId: item.id })).catch(() => false);
+        const queued = await (outcomeReason === "model_unavailable" || outcomeReason === "output_rejected" ? queueModelRead(supabase, { householdId, itemId: item.id }) : enqueueClassifyRetry(supabase, { householdId, itemId: item.id })).catch(() => false);
         if (queued) {
           events.push({ kind: "retry_queued", householdId });
           queuedRetry = true;

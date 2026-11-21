@@ -14,12 +14,13 @@ const SAVED = `sk-ant-${"saved-in-platform-admin-0000000000SAVE"}`;
 const DEPLOYED = `sk-ant-${"old-deployment-variable-00000000000OLD"}`;
 
 const seen: string[] = [];
-vi.mock("./classify-intake", () => ({
-  classifyIntake: async (_provider: string, key: string) => {
+vi.mock("./classify-intake", () => {
+  const read = async (_provider: string, key: string) => {
     seen.push(key);
     return null;
-  },
-}));
+  };
+  return { classifyIntake: read, classifyIntakeDetailed: read };
+});
 vi.mock("./credentials", () => ({ readHouseholdKey: async () => null, readGeminiVoiceKey: async () => null }));
 
 const runtime = await import("../platform/settings/runtime-env");

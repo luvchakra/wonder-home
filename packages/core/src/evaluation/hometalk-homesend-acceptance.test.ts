@@ -295,8 +295,8 @@ describe("AT-E: second asks and the closing line", () => {
   });
 
   it("AT-E12 the closing line names what is left, and never an amount", () => {
-    expect(handedBackText("Got it, thanks.", { added: null, stillNeeded: ["who it's from", "due date"] })).toBe("Got it, thanks. It's waiting in HomeSend — the who it's from and due date can be filled in there.");
-    expect(handedBackText("Got it, thanks.", { added: null, stillNeeded: [] })).toBe("Got it, thanks. It's waiting in HomeSend for you to check.");
+    expect(handedBackText("Got it, thanks.", { added: null, stillNeeded: ["who it's from", "due date"] })).toBe("Got it, thanks. I've kept it in HomeSend — the who it's from and due date can be filled in there.");
+    expect(handedBackText("Got it, thanks.", { added: null, stillNeeded: [] })).toBe("Got it, thanks. I've kept it in HomeSend, where you can see it or undo anything.");
   });
 });
 
@@ -436,7 +436,7 @@ describe("AT-L: a grocery already on the shopping list (I-27)", () => {
   const outcome = { duplicate: false, state: "needs_review", itemId: "i", notice: "", item: { classifiedKind: "grocery_item", extracted: { title: "Mustard oil", quantity: 2, unit: "l" } } } as never;
   it("AT-L13 the WhatsApp reply when it waits on the list says so, and echoes no amount", () => {
     expect(acknowledgementFor(outcome, { wait: { waiting: { reason: "on_list", listed: true }, title: "Mustard oil" } }).text).toBe(
-      "Got it 👍 *Mustard oil* is already on your shopping list, so it's waiting in HomeSend for you to choose. 🛒",
+      "Got it 👍 *Mustard oil* is already on your shopping list, so I didn't add it twice. Choose what to do in HomeSend: https://home.wonderapps.biz/home-send 🛒",
     );
     // On the list and held by the setting or the bar: WhatsApp still says it is on the list.
     expect(acknowledgementFor(outcome, { wait: { waiting: { reason: "wait_for_approval", area: "groceries", listed: true }, title: "Mustard oil" } }).text).toMatch(/already on your shopping list/);
@@ -444,10 +444,10 @@ describe("AT-L: a grocery already on the shopping list (I-27)", () => {
 
   it("AT-L14 something new held by the setting or the bar says which", () => {
     expect(acknowledgementFor(outcome, { wait: { waiting: { reason: "wait_for_approval", area: "groceries" }, title: "Mustard oil" } }).text).toBe(
-      "Got it 👍 I found groceries: Mustard oil. 🛒 Your household has groceries set to Wait for Approval, so it's waiting in HomeSend for you to approve.",
+      "Got it 👍 I found groceries: Mustard oil. 🛒 Your household has groceries set to Wait for Approval, so it needs your yes before it's added. Approve it in HomeSend: https://home.wonderapps.biz/home-send",
     );
     expect(acknowledgementFor(outcome, { wait: { waiting: { reason: "below_bar", percent: 97 }, title: "Mustard oil" } }).text).toBe(
-      "Got it 👍 I found groceries: Mustard oil. 🛒 WonderHome adds things on its own only when it's more than 97% sure, so it's waiting in HomeSend for you to check.",
+      "Got it 👍 I found groceries: Mustard oil. 🛒 WonderHome adds things on its own only when it's more than 97% sure, so this needs a look before it's added. Check it in HomeSend: https://home.wonderapps.biz/home-send",
     );
   });
 
@@ -456,7 +456,7 @@ describe("AT-L: a grocery already on the shopping list (I-27)", () => {
       "Got it. Added 2 L more **Mustard oil** (now 3 L) (97% sure — every detail is in what you sent) — your household lets WonderHome add these on its own. You can undo it in HomeSend.",
     );
     expect(handedBackText("Got it.", { added: { waiting: { reason: "on_list", listed: true }, title: "Mustard oil" }, stillNeeded: [] })).toBe(
-      "Got it. **Mustard oil** is already on your shopping list, so it's waiting in HomeSend for you to choose.",
+      "Got it. **Mustard oil** is already on your shopping list, so I didn't add it twice. Choose what to do in HomeSend.",
     );
   });
 

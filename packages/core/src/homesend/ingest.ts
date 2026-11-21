@@ -3,7 +3,8 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 import { rateLimitMessage } from "../security/rate-limit";
 import { fillFromEvidence } from "./completeness";
 import { recoverWhen } from "./when";
-import type { IntakeContext, IntakeExtraction, IntakeSource } from "../ai/classify-intake";
+import type { ClassifyFailure, IntakeContext, IntakeExtraction, IntakeSource } from "../ai/classify-intake";
+import { isClassifyFailure } from "../ai/classify-intake-failure";
 import type { AudioClip } from "../voice/provider";
 import { gateTranscript, GEMINI_TRANSCRIPT_CONFIDENCE, geminiMayTranscribe, recordsWhatWasHeard, uncertainTranscriptPrompt } from "./audio";
 import { detectInstructionInjection, type InjectionScan } from "./injection";
@@ -35,7 +36,8 @@ import { buildUnderstanding, unreadableUnderstanding, type IntakeUnderstanding, 
 
 export type IngestActor = { householdId: string; memberId: string };
 
-export type ClassifyResult = IntakeExtraction | null | "no_provider";
+/** A reading; nothing (an older stand-in's way of saying the provider failed); no provider at all; or why there is none (2026-11-21). */
+export type ClassifyResult = IntakeExtraction | null | "no_provider" | ClassifyFailure;
 
 export type TranscribeResult =
   | { status: "transcribed"; text: string; confidence: number }
@@ -124,6 +126,7 @@ function toStoredExtraction(extraction: IntakeExtraction): HomeSendExtraction {
     needs: extraction.needs,
     change: extraction.change,
     confidence: extraction.confidence,
+    schedule: extraction.schedule ?? null,
   };
 }
 
@@ -142,11 +145,11 @@ async function householdTimezone(supabase: SupabaseClient, householdId: string):
 const defaultClassify: NonNullable<IngestDeps["classify"]> = async (householdId, source, context) => {
   const { readHouseholdKey } = await import("../ai/credentials");
   const { resolveModelKey, currentPlatformKey } = await import("../ai/model-key");
-  const { classifyIntake } = await import("../ai/classify-intake");
+  const { classifyIntakeDetailed } = await import("../ai/classify-intake");
   const householdKey = await readHouseholdKey(householdId).catch(() => null);
   const key = resolveModelKey(householdKey, (await currentPlatformKey()));
   if (key.source === "none" || !key.provider || !key.key) return "no_provider";
-  return classifyIntake(key.provider, key.key, source, context);
+  return classifyIntakeDetailed(key.provider, key.key, source, context);
 };
 
 /**
@@ -159,7 +162,7 @@ const defaultClassify: NonNullable<IngestDeps["classify"]> = async (householdId,
 export const strongerClassify: NonNullable<IngestDeps["classify"]> = async (householdId, source, context) => {
   const { readHouseholdKey } = await import("../ai/credentials");
   const { resolveModelKey, currentPlatformKey } = await import("../ai/model-key");
-  const { classifyIntake } = await import("../ai/classify-intake");
+  const { classifyIntake, classifyIntakeDetailed } = await import("../ai/classify-intake");
   const householdKey = await readHouseholdKey(householdId).catch(() => null);
   const key = resolveModelKey(householdKey, (await currentPlatformKey()));
   if (key.source === "none" || !key.provider || !key.key) return "no_provider";
@@ -171,7 +174,7 @@ export const strongerClassify: NonNullable<IngestDeps["classify"]> = async (hous
       if (read?.readable) return read;
     }
   }
-  return classifyIntake(key.provider, key.key, source, context, { stronger: true });
+  return classifyIntakeDetailed(key.provider, key.key, source, context, { stronger: true });
 };
 
 /** What a second read runs with: the stronger reader, unless a caller (a test) gave its own. */
@@ -333,7 +336,9 @@ export async function understand(
   }
 
   const sentText = "text" in input.source ? input.source.text : null;
-  if (result === "no_provider" || result === null) {
+  // Why there is no reading, when there is none (2026-11-21): an older stand-in's null means the provider failed.
+  const failure = result === null ? ({ failed: "unreachable" } as const) : isClassifyFailure(result) ? result : null;
+  if (result === "no_provider" || failure) {
     // A bank, card or UPI message needs no model: read on its own words (decision 2).
     const paidText = inputScan.flagged ? null : readPaymentProof(input.context?.subject, sentText).proof;
     if (paidText) {
@@ -346,14 +351,17 @@ export async function understand(
     const rawText = input.text ? input.text.slice(0, MAX_STORED_TEXT) : null;
     // The provider refused the key or couldn't be reached: that is not "unknown content" (2026-11-21). Kept as
     // `model_unavailable`, retried until a model reads it, never asked about or set aside meanwhile.
-    if (result === null && (await recordModelUnavailable(supabase, householdId, itemId, { rawText, understanding }))) {
+    // A model that answered in a shape WonderHome couldn't use is `output_rejected`: read again more closely, never
+    // "unknown"; one that would not read it is `unreadable`, said plainly.
+    const reason = failure ? failureReasonFor(failure.failed) : null;
+    if (reason && (await recordModelUnavailable(supabase, householdId, itemId, { rawText, understanding }, reason))) {
       return {
         itemId,
         duplicate: false,
         classifyFailed: true,
         state: "failed",
-        failureReason: "model_unavailable",
-        notice: FAILURE_REASON_COPY.model_unavailable,
+        failureReason: reason,
+        notice: FAILURE_REASON_COPY[reason],
         item: { id: itemId, classifiedKind: "unknown", extracted: null, understanding },
       };
     }
@@ -367,7 +375,7 @@ export async function understand(
     return {
       itemId,
       duplicate: false,
-      ...(result === null ? { classifyFailed: true } : {}),
+      ...(failure ? { classifyFailed: true } : {}),
       state: "needs_review",
       notice:
         result === "no_provider"
@@ -376,6 +384,7 @@ export async function understand(
       item: { id: itemId, classifiedKind: "unknown", extracted: null, understanding },
     };
   }
+  if (result === null || isClassifyFailure(result)) throw new Error("unreachable: a failed reading is handled above");
 
   const injection = { flagged: inputScan.flagged || scanOutput(result).flagged, signals: [...new Set([...inputScan.signals, ...scanOutput(result).signals])] };
 
@@ -421,6 +430,13 @@ export async function understand(
       : "Filled in from what you sent — check it over before adding.",
     item: { id: itemId, classifiedKind: kind, extracted, understanding },
   };
+}
+
+/** The item's failure reason for why a provider gave no reading. */
+export function failureReasonFor(failed: ClassifyFailure["failed"]): "model_unavailable" | "output_rejected" | "unreadable" {
+  if (failed === "rejected") return "output_rejected";
+  if (failed === "declined") return "unreadable";
+  return "model_unavailable";
 }
 
 /** A payment proof's reading: who was paid, how much and when; no lines, so nothing is ever added to Groceries. */

@@ -138,7 +138,7 @@ describe("the answer goes back onto the HomeSend item", () => {
     expect(h.tables.home_send_items![0]!.extracted).toMatchObject({ amount: 2140 });
     expect(result).toMatchObject({ handBack: true, stillNeeded: ["who it's from", "due date"] });
     const said = handedBackText(result.text, { added: null, stillNeeded: result.stillNeeded });
-    expect(said).toBe("Got it, thanks. It's waiting in HomeSend — the who it's from and due date can be filled in there.");
+    expect(said).toBe("Got it, thanks. I've kept it in HomeSend — the who it's from and due date can be filled in there.");
     expect(said).not.toMatch(/2,?140|₹/);
   });
 
@@ -173,7 +173,7 @@ describe("the answer goes back onto the HomeSend item", () => {
     const result = await answer(h.client, { kind: "event", field: "date", asked: ["title", "where", "date"] }, "Saturday 7 November");
     expect(result).toMatchObject({ handBack: true });
     expect(result.stillNeeded).toEqual(["start time"]);
-    expect(handedBackText(result.text, { added: null, stillNeeded: result.stillNeeded })).toBe("Got it, thanks. It's waiting in HomeSend — the start time can be filled in there.");
+    expect(handedBackText(result.text, { added: null, stillNeeded: result.stillNeeded })).toBe("Got it, thanks. I've kept it in HomeSend — the start time can be filled in there.");
   });
 
   it("says plainly when the item no longer waits in HomeSend", async () => {

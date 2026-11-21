@@ -1,5 +1,8 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 
+import { timetableReply } from "../homesend/timetable-words";
+import { siteOrigin } from "../notifications/email";
+import { runtimeEnv } from "../platform/settings/runtime-env";
 import type { PendingClarification } from "../conversation/clarify";
 import { openSession, recordMessage, type ConversationSurface } from "../conversation/repository";
 import { amountWords, sureClause, waitingWords, wasAdded, type AddedOnItsOwn, type WaitingInHomeSend } from "../homesend/auto-add";
@@ -370,6 +373,9 @@ export function handedBackText(lead: string, outcome: { added: AddedOnItsOwn | W
   const tail = added?.unconfirmed
     ? " — marked **Checking** until it's confirmed, so its reminders wait. Say it's right or undo it in HomeSend."
     : " — your household lets WonderHome add these on its own. You can undo it in HomeSend.";
+  // An exam timetable (2026-11-21): what it was, each child's exam days with their dates, the one question, where to see it.
+  if (added?.timetable) return `${lead} ${timetableReply(added.timetable, translator("en", en), { origin: siteOrigin(runtimeEnv()), dates: shortDay })}`;
+  if (added?.several) return `${lead} 📄 Added ${added.several.count} things from **${added.title}**: ${added.several.names.join(", ")}${added.unconfirmed ? ", marked **Checking** because I read them from a photo or file" : ""}. See or undo them in HomeSend.`;
   // A record already on file moved to its new day, not a second copy (14-066, part 3).
   if (added?.moved) return `${lead} 📅 **${added.title}** was already on record, so I moved it to its new day instead of adding it twice. You can undo it in HomeSend.`;
   if (added?.more) {
@@ -377,10 +383,15 @@ export function handedBackText(lead: string, outcome: { added: AddedOnItsOwn | W
     return `${lead} Added ${amountWords(added.more.added)} more **${added.title}** (now ${amountWords(added.more.now)})${sureClause(added)}${tail}`;
   }
   if (added) return `${lead} Added **${added.title}** to ${added.where}${sureClause(added)}${tail}`;
-  if (outcome.stillNeeded.length > 0) return `${lead} It's waiting in HomeSend — the ${listDetails(outcome.stillNeeded.map((label) => ({ label })))} can be filled in there.`;
+  if (outcome.stillNeeded.length > 0) return `${lead} I've kept it in HomeSend — the ${listDetails(outcome.stillNeeded.map((label) => ({ label })))} can be filled in there.`;
   const held = outcome.added && "waiting" in outcome.added ? outcome.added : null;
   const waiting = held ? waitingWords(held.waiting, held.title) : null;
-  return `${lead} ${waiting ?? "It's waiting in HomeSend for you to check."}`;
+  return `${lead} ${waiting ?? "I've kept it in HomeSend, where you can see it or undo anything."}`;
+}
+
+/** "3 Dec", for a reply in the app. */
+function shortDay(iso: string): string {
+  return new Date(`${iso}T00:00:00Z`).toLocaleDateString("en-IN", { day: "numeric", month: "short", timeZone: "UTC" });
 }
 
 // --- Filling in what waits in HomeSend (story 14-050) --------------------------------------

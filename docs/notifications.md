@@ -161,7 +161,12 @@ reminders about real records, never lines of text fired and forgotten.
   again every day it stays open (14-073, 2026-11-21; `ai/platform-key-alert.ts`,
   `platform_notified_at` is the last day told, claimed before sending), and the
   platform-admin AI card and Overview show it while it is open (14-048). An
-  alert for a key nobody uses any more is closed as superseded. Not yet pushed
+  alert for a key nobody uses any more is closed as superseded.
+- **Exam days** (08-036, 2026-11-21) remind through the school source: the
+  reconcile pass reads the next few days' `school_exam_papers` and words each
+  as a school exam (`sources.ts` `examPaperSubject`, `school_item` reminders,
+  opening the child's exams); an exam added as Checking reminds "not yet
+  confirmed", or waits when an Admin chose that. Not yet pushed
   to a platform admin's member account: email only.
 - **A second way, a summary, a fit** (stories 27-007, 27-008, 27-015). A bill,
   school or pet reminder unanswered past the policy's wait (`channelEscalation`,

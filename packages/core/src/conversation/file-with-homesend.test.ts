@@ -83,10 +83,10 @@ describe("AT-J: filed from HomeTalk, under the approval settings", () => {
     ["AT-J01", "grocery_item", oil, "execute", 95, /^Added \*\*Mustard oil\*\* to Groceries \(97% sure — every detail is in what you sent\)/],
     // Below the bar it is added, marked Checking (the owner, 2026-11-03).
     ["AT-J02", "grocery_item", oil, "execute", 99, /^Added \*\*Mustard oil\*\* to Groceries \(97% sure — every detail is in what you sent\) — marked \*\*Checking\*\* until it's confirmed, so its reminders wait\./],
-    ["AT-J03", "grocery_item", oil, "prepare", 60, /^Your household has groceries set to Wait for Approval, so it's waiting in HomeSend for you to approve\. I read it as/],
+    ["AT-J03", "grocery_item", oil, "prepare", 60, /^Your household has groceries set to Wait for Approval, so it needs your yes before it's added\. Approve it in HomeSend\. I read it as/],
     ["AT-J04", "bill", bill, "execute", 60, /for you to check before anything is added/],
     ["AT-J05", "grocery_item", oil, "execute", 95, /^Added 2 L more \*\*Mustard oil\*\* \(now 3 L\) \(97% sure/, true],
-    ["AT-J06", "grocery_item", oil, "prepare", 95, /^\*\*Mustard oil\*\* is already on your shopping list, so it's waiting in HomeSend for you to choose\./, true],
+    ["AT-J06", "grocery_item", oil, "prepare", 95, /^\*\*Mustard oil\*\* is already on your shopping list, so I didn't add it twice\. Choose what to do in HomeSend\./, true],
   ];
   for (const [id, kind, extracted, autonomy, bar, expected, listed] of cases) {
     it(`${id} ${kind}, ${autonomy === "execute" ? "Pre Approved" : "Wait for Approval"}, bar ${bar}%${listed ? ", already on the list" : ""}`, async () => {

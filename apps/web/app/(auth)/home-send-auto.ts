@@ -1,5 +1,6 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 
+import { addTimetable } from "@wonderhome/core/homesend/timetable-apply";
 import { ACTIVITY_ITEM_KINDS } from "@wonderhome/core/ai/classify-intake";
 import { CONSUMABLE_CATEGORIES } from "@wonderhome/core/commerce/consumables";
 import { type AddedOnItsOwn, DEFAULT_AUTO_ADD_PERCENT, scorePercent, sureWhy, type WaitingInHomeSend } from "@wonderhome/core/homesend/auto-add";
@@ -16,6 +17,7 @@ import { OBLIGATION_KINDS } from "@wonderhome/core/finance/payments";
 import { RECORD_TYPES } from "@wonderhome/core/health/records";
 
 import { settleHomeSendSoon } from "../_lib/homesend-settle";
+import { applyPlanAtOnce } from "./home-send-plan-writer";
 import { prepareReview } from "./home-send-review";
 import { createNew, recordReceipt, reviseExisting, type RouteInput } from "./home-send-writes";
 
@@ -264,9 +266,21 @@ export async function addIfAllowed(
     settleHomeSendSoon(membership);
     return null;
   }
+  // An exam timetable (one column per class): each child's own column becomes their exam, at once (2026-11-21).
+  if (item.classifiedKind === "school_item" && item.extracted?.schedule?.kind === "exam") {
+    const added = await addTimetable(supabase, { householdId: membership.household.id, item, actorMemberId: options.createdByMemberId ?? item.createdByMemberId ?? membership.memberId });
+    if (added) return { title: added.title ?? "Exam timetable", where: "School", kind: "school_item", timetable: added, ...(added.checking ? { unconfirmed: true as const } : {}) };
+  }
   const review = await prepareReview(supabase, membership, { ...item, createdByMemberId: options.createdByMemberId ?? item.createdByMemberId });
   // A matched bill with a newer amount or date, or a document with several bills: settled at once, not at the 24-hour default.
   if (item.classifiedKind === "bill" && (review.plan || review.confirmation.mode !== "auto_apply")) settleHomeSendSoon(membership);
+  // A document with several dated things (a circular's PTM, things to bring, a fee): each added at once, linked to this
+  // item, Checking when read from a photo or file (2026-11-21). Bills keep record first's own path (`add-default.ts`).
+  if (review.plan && item.classifiedKind !== "bill") {
+    const several = await applyPlanAtOnce(supabase, membership, item).catch(() => null);
+    if (!several) return null;
+    return { title: item.extracted?.title?.trim() || several.titles[0] || "it", where: "HomeSend", kind: item.classifiedKind, several: { count: several.count, names: several.titles }, ...(several.checking ? { unconfirmed: true as const } : {}) };
+  }
   if (review.plan) return null;
   const kind = review.kind ?? item.classifiedKind;
   const extracted = review.extracted ?? item.extracted;
