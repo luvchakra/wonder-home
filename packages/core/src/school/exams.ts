@@ -4,6 +4,7 @@ import { ApiError } from "../api/errors";
 import { atLocal } from "../calendar/dates";
 import type { CalendarEntry, CalendarViewer } from "../calendar/projection";
 import { invalidatesContext } from "../context/invalidation";
+import type { FamilyEvent } from "../family/schedule";
 
 /**
  * A child's school timetable and exams (story 08-015):
@@ -335,7 +336,7 @@ export function examEntries(exams: readonly Exam[], viewer: CalendarViewer, rang
         id: `exam:${paper.id}`,
         source: "school",
         sourceId: paper.id,
-        title: `${paper.subject} · ${exam.title ? `${exam.examType}, ${exam.title}` : exam.examType}`,
+        title: paperTitle(exam, paper),
         detail: paper.syllabus ? paper.syllabus.split("\n")[0]!.slice(0, 120) : null,
         start,
         end,
@@ -350,12 +351,69 @@ export function examEntries(exams: readonly Exam[], viewer: CalendarViewer, rang
         occurrenceDate: paper.onDate,
         repeats: false,
         protected: false,
-        href: `/school?child=${exam.childMemberId}#exams-${exam.childMemberId}`,
+        href: examHref(exam),
         can: { edit: false },
       });
     }
   }
   return entries;
+}
+
+/** Where an exam opens: the child's exams in Kids & School, the paper's own editor (rule 23). */
+export function examHref(exam: Pick<Exam, "childMemberId">): string {
+  return `/school?child=${exam.childMemberId}#exams-${exam.childMemberId}`;
+}
+
+/** "Science · Mid-term, Mid-Term Unit Test 2": the subject, then which exam. */
+export function paperTitle(exam: Pick<Exam, "examType" | "title">, paper: Pick<ExamPaper, "subject">): string {
+  return `${paper.subject} · ${exam.title ? `${exam.examType}, ${exam.title}` : exam.examType}`;
+}
+
+/**
+ * Exam papers as the household's events (2026-11-21, the owner: "it doesn't
+ * create an event for science on 3rd dec"): wherever a screen lists events
+ * (Home's upcoming and today, a child's home, the Calendar's Today plan, the
+ * Family page, HomeTalk's "what's on"), each paper is there too, as the
+ * child's all-day (or timed) school event, read live from the exam, so it is
+ * one thing, shown once, with one editor. It opens the exam in Kids & School
+ * (`href`), never a second copy in `family_events`; its reminders stay the
+ * exam's (`notifications/sources.ts` `examPaperSubject`).
+ */
+export function examPaperEvents(exams: readonly Exam[], timeZone: string, window: { from?: Date; to?: Date } = {}): FamilyEvent[] {
+  const events: FamilyEvent[] = [];
+  for (const exam of exams) {
+    for (const paper of exam.papers) {
+      const timed = Boolean(paper.startsAt);
+      const startsAt = atLocal(paper.onDate, timed ? minutesOf(paper.startsAt!) : 0, timeZone);
+      const endsAt = timed
+        ? paper.endsAt
+          ? atLocal(paper.onDate, minutesOf(paper.endsAt), timeZone)
+          : new Date(startsAt.getTime() + 60 * 60_000)
+        : atLocal(paper.onDate, 24 * 60, timeZone);
+      if (window.from && endsAt < window.from) continue;
+      if (window.to && startsAt > window.to) continue;
+      events.push({
+        id: `exam-${paper.id}`,
+        title: paperTitle(exam, paper),
+        kind: "school_event",
+        startsAt,
+        endsAt,
+        protected: false,
+        ownerMemberId: null,
+        status: "confirmed",
+        actionState: null,
+        actionDueAt: null,
+        participants: [{ memberId: exam.childMemberId, response: "yes", required: true }],
+        allDay: !timed,
+        location: null,
+        sourceSubscriptionId: null,
+        href: examHref(exam),
+        detail: paper.syllabus ? paper.syllabus.split("\n")[0]!.slice(0, 120) : null,
+        examPaperId: paper.id,
+      });
+    }
+  }
+  return events;
 }
 
 /** A child's periods for one weekday, in order. */

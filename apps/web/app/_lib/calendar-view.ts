@@ -95,7 +95,8 @@ export function badgesOf(entry: CalendarEntry, t: Translate): string[] {
   if (entry.status === "proposed") badges.push(t("calendar.entry.proposed"));
   if (entry.repeats && entry.source === "event") badges.push(t("calendar.entry.repeats"));
   if (entry.visibility === "private" && entry.source === "event") badges.push(t("calendar.entry.private"));
-  if (entry.visibility === "participants") badges.push(t("calendar.entry.participants"));
+  // An event's own invite list; a child's exam or class is seen by the child, their guardians and Admins (`may_see_child`), not "those going".
+  if (entry.visibility === "participants" && entry.source === "event") badges.push(t("calendar.entry.participants"));
   if (entry.protected) badges.push(t("calendar.entry.protected"));
   return badges;
 }

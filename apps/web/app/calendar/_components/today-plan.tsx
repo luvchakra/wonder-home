@@ -13,6 +13,7 @@ import { Suspense } from "react";
 import { describePredictionBasis, lookAheadWindow, predictHousehold } from "@wonderhome/core/ai/predictions";
 import { listConsumables } from "@wonderhome/core/commerce/repository";
 import { listEvents } from "@wonderhome/core/family/repository";
+import { eventHref } from "@wonderhome/core/family/schedule";
 import { listObligations } from "@wonderhome/core/finance/repository";
 import { format as formatMoney } from "@wonderhome/core/finance/payments";
 import { listMembers } from "@wonderhome/core/identity/households";
@@ -133,7 +134,7 @@ async function TodayBody({ session, active, now, reads }: { session: Session; ac
   const withAgenda = !isChild && active === "household";
   const shares = withAgenda ? agendaReads(view) : null;
   const shared: AgendaRows = {
-    events: shares?.events ? listEvents(supabase, householdId, { from: dayStart }) : undefined,
+    events: shares?.events ? listEvents(supabase, householdId, { from: dayStart, exams: { timeZone: timezone } }) : undefined,
     meals: shares?.meals ? listMeals(supabase, householdId, { from: today }) : undefined,
     obligations: shares?.obligations && seesMoney ? (reads?.obligations ?? listObligations(supabase, householdId)) : undefined,
     schoolItems: shares?.schoolItems && seesSchool ? (reads?.schoolItems ?? listSchoolItems(supabase, householdId)) : undefined,
@@ -145,7 +146,7 @@ async function TodayBody({ session, active, now, reads }: { session: Session; ac
     settle(
       shared.events
         ? shared.events.then((rows) => rows.filter((event) => event.startsAt.getTime() <= dayEnd.getTime()))
-        : listEvents(supabase, householdId, { from: dayStart, to: dayEnd }),
+        : listEvents(supabase, householdId, { from: dayStart, to: dayEnd, exams: { timeZone: timezone } }),
       [],
     ),
     isChild
@@ -198,17 +199,20 @@ async function TodayBody({ session, active, now, reads }: { session: Session; ac
     items.push({
       key: `event.${event.id}`,
       at: event.startsAt,
-      time: formatTime(timezone, event.startsAt),
+      // An all-day event (a child's exam paper) is said as "Today", never "00:00".
+      time: event.allDay ? t("today.today") : formatTime(timezone, event.startsAt),
       title: event.title,
-      meta: `${formatTime(timezone, event.startsAt)} – ${formatTime(timezone, event.endsAt)}${nameOf(event.ownerMemberId) ? ` · ${nameOf(event.ownerMemberId)}` : ""}`,
+      meta: event.examPaperId
+        ? [nameOf(event.participants[0]?.memberId ?? null), event.detail].filter(Boolean).join(" · ")
+        : `${formatTime(timezone, event.startsAt)} – ${formatTime(timezone, event.endsAt)}${nameOf(event.ownerMemberId) ? ` · ${nameOf(event.ownerMemberId)}` : ""}`,
       icon: CalendarHeart,
       tone: "people",
       state: stateFor(event.startsAt, event.endsAt, now, event.status === "happened", event.actionState),
       mine: participates || event.participants.length === 0,
       family: true,
       household: false,
-      action: event.actionState && event.actionState !== "ready" ? <PillLink href={`/calendar/events/${event.id}`}>{t("today.action.reply")}</PillLink> : undefined,
-      href: `/calendar/events/${event.id}`,
+      action: event.actionState && event.actionState !== "ready" ? <PillLink href={eventHref(event)}>{t("today.action.reply")}</PillLink> : undefined,
+      href: eventHref(event),
     });
   }
 

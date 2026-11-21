@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 
 import { buildContextItems } from "../context/builders";
 import { householdInsights } from "../homebrain/insights";
-import { cleanLinks, examEntries, orderExams, periodsOn, type Exam, type TimetablePeriod } from "./exams";
+import { cleanLinks, examEntries, examPaperEvents, orderExams, periodsOn, type Exam, type TimetablePeriod } from "./exams";
 
 const TZ = "Asia/Kolkata";
 
@@ -35,6 +35,29 @@ describe("a child's exams and timetable (08-015)", () => {
     expect(entries[0]).toMatchObject({ title: "Maths · Mid-term, Term 1", detail: "Chapters 1-4", allDay: false, category: "school", memberIds: ["asmi"], href: "/school?child=asmi#exams-asmi" });
     // 9:00 in Kolkata is 3:30 UTC.
     expect(entries[0]!.start.toISOString()).toBe("2026-11-02T03:30:00.000Z");
+  });
+
+  it("lists every paper, every subject, as the child's event wherever events are listed, opening the exam (2026-11-21)", () => {
+    const subjects = ["Science", "Humanities", "Mathematics", "English", "Computing Theory", "French", "Hindi", "Marathi"];
+    const days = ["03", "04", "07", "08", "09", "10", "11", "14"];
+    const mtut2 = exam("e2", subjects.map((subject, index) => [subject, `2026-12-${days[index]}`, null] as [string, string, null]), { title: "Mid-Term Unit Test 2" });
+    const events = examPaperEvents([mtut2], TZ, { from: new Date("2026-12-01T00:00:00Z"), to: new Date("2026-12-31T00:00:00Z") });
+    expect(events.map((event) => event.title.split(" · ")[0])).toEqual(subjects);
+    expect(events[0]).toMatchObject({
+      id: "exam-e2-p0",
+      title: "Science · Mid-term, Mid-Term Unit Test 2",
+      kind: "school_event",
+      allDay: true,
+      participants: [{ memberId: "asmi", response: "yes", required: true }],
+      href: "/school?child=asmi#exams-asmi",
+      detail: "Chapters 1-4",
+      examPaperId: "e2-p0",
+    });
+    // All day on 3 Dec in Kolkata: from local midnight to the next.
+    expect(events[0]!.startsAt.toISOString()).toBe("2026-12-02T18:30:00.000Z");
+    expect(events[0]!.endsAt.toISOString()).toBe("2026-12-03T18:30:00.000Z");
+    // Outside the window: not listed.
+    expect(examPaperEvents([mtut2], TZ, { from: new Date("2026-12-05T00:00:00Z"), to: new Date("2026-12-08T00:00:00Z") }).map((event) => event.title.split(" · ")[0])).toEqual(["Mathematics", "English"]);
   });
 
   it("lists a day's periods in order", () => {

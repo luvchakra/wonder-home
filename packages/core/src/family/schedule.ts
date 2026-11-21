@@ -52,7 +52,18 @@ export type FamilyEvent = {
   location?: string | null;
   /** Set when the event was imported from a calendar subscription (story 26-022); such events never lead as a family moment. */
   sourceSubscriptionId?: string | null;
+  /** Where it opens when it is not a `family_events` row (an exam paper opens its exam in Kids & School). */
+  href?: string | null;
+  /** One line about it (an exam paper: the first line of what to study). */
+  detail?: string | null;
+  /** Set when this is a child's exam paper, read live from the exam (`school/exams.ts` `examPaperEvents`). */
+  examPaperId?: string | null;
 };
+
+/** Where an event opens: its own page, or the screen that owns it (an exam paper: the exam). */
+export function eventHref(event: Pick<FamilyEvent, "id" | "href">): string {
+  return event.href ?? `/calendar/events/${event.id}`;
+}
 
 /** The kinds an event can be to count as time the family spends together. */
 export const FAMILY_MOMENT_KINDS: ReadonlySet<EventKind> = new Set(["family_time", "outing", "birthday", "gathering", "travel", "special_occasion"]);
