@@ -65,6 +65,8 @@ import { Button } from "@wonderhome/core/ui/button";
 import { MarkBillPaidButton, type MarkPaidLabels } from "../_components/mark-bill-paid-button";
 import { BillRepeatControls } from "../_components/bill-repeat-controls";
 import { QuickFix, SnoozeBillReminder, type QuickFixLabels } from "../_components/bill-quick-fix";
+import { BillSplitControl } from "../_components/bill-split-control";
+import { listShares, splitAmount, yearByKind, type Share } from "@wonderhome/core/finance/bill-split";
 import { MarkBillUnpaidButton } from "../_components/mark-bill-unpaid-button";
 import { currencyExponent } from "@wonderhome/core/billing/money";
 import { AgendaExpandableRow } from "../_components/agenda-expandable-row";
@@ -158,7 +160,7 @@ export default async function BillsPage({
   }
 
   const active = tab === "transactions" || tab === "budget" ? tab : "overview";
-  const [agenda, obligations, members, historyRows, budgetRows, integrations, address, givenPeriods, checkingIds, sourcedIds, skips] =
+  const [agenda, obligations, members, historyRows, budgetRows, integrations, address, givenPeriods, checkingIds, sourcedIds, skips, shares, yearRows] =
     await Promise.all([
       financeAgenda(supabase, householdId).catch(() => null),
       listObligations(supabase, householdId).catch(() => []),
@@ -186,6 +188,10 @@ export default async function BillsPage({
       sourcedBillIds(supabase, householdId).catch(() => new Set<string>()),
       // Months an Admin skipped on a recurring bill (11-022).
       listSkips(supabase, householdId).catch(() => new Map<string, Set<string>>()),
+      // How bills are split between adults (11-026).
+      listShares(supabase, householdId).catch(() => new Map<string, Share[]>()),
+      // This year's payments, for spend by kind (11-026); bounded.
+      supabase.from("obligation_history").select("obligation_id, period_label, amount_minor, currency, kind").eq("household_id", householdId).gte("period_label", `${new Date().getUTCFullYear()}-01`).limit(2000),
     ]);
 
   // A stale mailbox and "no bills by email" must never look alike (17-003): if
@@ -219,6 +225,14 @@ export default async function BillsPage({
   const nameOf = (id: string | null) =>
     members.find((member) => member.id === id)?.displayName ?? null;
   const admin = isHouseholdAdmin(membership);
+  const memberNames = new Map(members.map((member) => [member.id, member.displayName]));
+  // A year's spend by kind beside the months (11-026): a payment's own kind, else its bill's; per currency, never converted.
+  const thisYear = new Date().getUTCFullYear();
+  const kindOfBillId = new Map(obligations.map((o) => [o.id, o.kind as string]));
+  const byKind = yearByKind(
+    ((yearRows.data ?? []) as { obligation_id: string; period_label: string; amount_minor: number; currency: string; kind: string | null }[]).map((row) => ({ kind: row.kind ?? kindOfBillId.get(row.obligation_id) ?? null, amountMinor: Number(row.amount_minor), currency: row.currency, periodLabel: row.period_label })),
+    thisYear,
+  );
   const formLabels = billFormLabels(t);
   // "2 payments in USD, 1 payment in EUR" — counted, never converted (story 22-007).
   const paymentsIn = (counts: { currency: string; count: number }[]) =>
@@ -714,6 +728,8 @@ export default async function BillsPage({
                         key={bill.id}
                         bill={bill}
                         partRow={partRowOf(bill)}
+                        split={shares.get(bill.id) ?? null}
+                        memberNames={memberNames}
                         canRepeat={admin}
                         checking={checkingIds.has(bill.id) ? t("homesend.history.checking") : null}
                         owner={nameOf(bill.responsibleMemberId)}
@@ -804,6 +820,22 @@ export default async function BillsPage({
                     <section className="mt-4" aria-label={t("bills.spend.chart", { count: lineMonths.length })}>
                       <SpendLines months={lineMonths} monthWords={monthWords} series={spendSeries} tableLabel={t("bills.spend.table")} monthHeading={t("bills.spend.month")} />
                     </section>
+                    {byKind.length > 0 ? (
+                      <section className="mt-4" aria-label={t("bills.year.title", { year: thisYear })}>
+                        <p className="mb-1.5 text-xs font-semibold tracking-wide text-[var(--wh-foreground-subtle)] uppercase">{t("bills.year.title", { year: thisYear })}</p>
+                        <ul className="divide-y divide-[var(--wh-border)]">
+                          {byKind.map((row) => (
+                            <li key={`${row.kind}|${row.currency}`} className="flex items-center justify-between gap-3 py-2 text-sm">
+                              <span className="min-w-0 break-words">
+                                {billKindName(t, row.kind)}
+                                <span className="block text-xs text-[var(--wh-foreground-subtle)]">{t("bills.year.payments", { count: row.payments })}</span>
+                              </span>
+                              <span className="shrink-0 font-medium">{formatMoney(row.minor, row.currency)}</span>
+                            </li>
+                          ))}
+                        </ul>
+                      </section>
+                    ) : null}
                   </>
                 )}
                 {otherCurrencyCounts.size > 0 ? (
@@ -963,7 +995,12 @@ function BillRow({
   lateBy,
   partRow,
   canRepeat,
+  split,
+  memberNames,
 }: {
+  memberNames?: Map<string, string>;
+  /** How the bill is split between adults (11-026). */
+  split?: Share[] | null;
   /** Skip a month / End after this one on a recurring bill (11-022); Admins on the Upcoming list. */
   canRepeat?: boolean;
   paid: PaidControls | null;
@@ -1010,6 +1047,7 @@ function BillRow({
     snoozed: t("bills.quick.snoozed"),
   };
   const quick = paid && bill.status !== "paid" && bill.status !== "cancelled" ? { labels: quickLabels, members: paid.payers ?? [], currency: paid.markPaid.currency } : null;
+  const nameOfMember = (memberId: string) => paid?.payers?.find((member) => member.id === memberId)?.name ?? memberNames?.get(memberId) ?? "—";
   // How it repeats, in words (11-022), and the usual amount as an estimate when this month's isn't in.
   const repeat = repeatOf(bill.recurrence ?? null, bill.dueOn);
   const repeatWords = repeat
@@ -1110,6 +1148,34 @@ function BillRow({
         </dl>
         {bill.status !== "paid" && bill.status !== "cancelled" ? (
           <SnoozeBillReminder householdId={householdId} obligationId={bill.id} today={new Intl.DateTimeFormat("en-CA", { timeZone: timezone }).format(new Date())} labels={quickLabels} />
+        ) : null}
+        {split && split.length > 0 ? (
+          <p className="text-sm">
+            <span className="font-medium">{t("bills.split.label")}: </span>
+            {(bill.amountMinor !== null && bill.currency
+              ? splitAmount(bill.amountMinor, split).map((part) => `${nameOfMember(part.memberId)} ${formatMoney(part.minor, bill.currency!)}`)
+              : split.map((share) => `${nameOfMember(share.memberId)} ${(share.basisPoints / 100).toFixed(2)}%`)
+            ).join(" · ")}
+          </p>
+        ) : null}
+        {quick && quick.members.length > 1 ? (
+          <BillSplitControl
+            householdId={householdId}
+            obligationId={bill.id}
+            billName={bill.name}
+            adults={quick.members}
+            current={split ?? []}
+            labels={{
+              button: t("bills.split.button"),
+              title: t("bills.split.title"),
+              description: t("bills.split.description"),
+              percent: t("bills.split.percent"),
+              total: t("bills.split.total"),
+              save: t("bills.quick.save"),
+              remove: t("bills.split.remove"),
+              failed: t("bills.markPaid.failed"),
+            }}
+          />
         ) : null}
         {canRepeat && repeat && monthOf && bill.status !== "paid" ? (
           <BillRepeatControls
