@@ -33,6 +33,7 @@
       "memories"
     ],
     "bills-and-money": [
+      "bill_attachments",
       "budgets",
       "merchant_offers",
       "obligation_history",

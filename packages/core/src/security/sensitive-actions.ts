@@ -393,6 +393,36 @@ export const SENSITIVE_ACTIONS: readonly SensitiveAction[] = [
     recordedIn: "packages/core/src/finance/remove-bills.ts",
   },
   {
+    event: "finance.bill_added",
+    because: "An Admin added a bill by hand. A bill's full record (11-021) shows who added it and when.",
+    recordedIn: "apps/web/app/(auth)/finance-actions.ts",
+  },
+  {
+    event: "finance.bill_changed",
+    because: "An Admin edited a bill's name, amount, due date, payee or who handles it; the bill's record lists each change and by whom (11-021).",
+    recordedIn: "apps/web/app/(auth)/finance-actions.ts",
+  },
+  {
+    event: "finance.bill_marked_paid",
+    because: "Someone recorded a payment made elsewhere (in full or in part). Money settled without WonderHome paying is what a family asks about afterwards.",
+    recordedIn: "apps/web/app/(auth)/finance-actions.ts",
+  },
+  {
+    event: "finance.bill_marked_unpaid",
+    because: "A settled bill was put back to waiting and its payment taken out of the totals.",
+    recordedIn: "apps/web/app/(auth)/finance-actions.ts",
+  },
+  {
+    event: "finance.bill_file_added",
+    because: "A photo or PDF of a bill or receipt was attached to the bill's record (11-021).",
+    recordedIn: "packages/core/src/finance/bill-attachments.ts",
+  },
+  {
+    event: "finance.bill_file_removed",
+    because: "A file attached to a bill was taken off its record; it is kept, not deleted.",
+    recordedIn: "packages/core/src/finance/bill-attachments.ts",
+  },
+  {
     event: "homesend.deleted",
     because: "An archived HomeSend item and its stored file were deleted for good. Only the id is kept; what it held is gone and cannot be restored.",
     recordedIn: "apps/web/app/(auth)/home-send-remove-actions.ts",
@@ -903,6 +933,18 @@ export function describeAuditEvent(
       return { title: "A HomeSend item was removed", detail: typeof metadata.entries === "number" && metadata.entries > 0 ? "Its entry was undone with it. It is kept and can be restored." : "It is kept and can be restored." };
     case "finance.bill_removed":
       return { title: "A bill was removed from the list", detail: "Its recorded payments stay on Transactions." };
+    case "finance.bill_added":
+      return { title: "A bill was added", detail: stringOr(metadata.name, null) };
+    case "finance.bill_changed":
+      return { title: "A bill was edited", detail: stringOr(metadata.name, null) };
+    case "finance.bill_marked_paid":
+      return { title: metadata.partial === true ? "Part of a bill was marked paid" : "A bill was marked paid", detail: stringOr(metadata.period, null) };
+    case "finance.bill_marked_unpaid":
+      return { title: "A bill was marked as unpaid", detail: "Its payment came out of the totals." };
+    case "finance.bill_file_added":
+      return { title: "A file was attached to a bill", detail: null };
+    case "finance.bill_file_removed":
+      return { title: "A file was taken off a bill", detail: "It is kept, not deleted." };
     case "homesend.deleted":
       return { title: "A HomeSend item was deleted for good", detail: null };
     case "homesend.added_all_anyway":

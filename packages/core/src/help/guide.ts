@@ -136,7 +136,7 @@ const SECTIONS: readonly SectionShape[] = [
     id: "bills",
     group: "Everyday use",
     updated: "2026-11-21",
-    keywords: ["part payment", "paid in part", "how it was paid", "upi", "card", "cash", "bank transfer", "overdue bills", "days overdue", "due this week", "total due", "mark paid", "mark as paid", "mark as unpaid", "paid elsewhere", "mark selected as paid", "who paid", "remove a bill", "delete a bill", "tidy up", "duplicate bill", "entered twice", "bill", "payment", "money", "finance", "due", "overdue", "budget", "anomaly", "pay", "transaction", "currency", "payee", "electricity", "rent", "emi", "earlier bills", "past bills", "coming up", "pay ahead", "next month", "paid"],
+    keywords: ["full record", "bill history", "attach a photo", "attach a pdf", "receipt", "who changed", "part payment", "paid in part", "how it was paid", "upi", "card", "cash", "bank transfer", "overdue bills", "days overdue", "due this week", "total due", "mark paid", "mark as paid", "mark as unpaid", "paid elsewhere", "mark selected as paid", "who paid", "remove a bill", "delete a bill", "tidy up", "duplicate bill", "entered twice", "bill", "payment", "money", "finance", "due", "overdue", "budget", "anomaly", "pay", "transaction", "currency", "payee", "electricity", "rent", "emi", "earlier bills", "past bills", "coming up", "pay ahead", "next month", "paid"],
   },
   {
     id: "school",

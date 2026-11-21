@@ -119,6 +119,7 @@ export const KNOWLEDGE_REGISTRY = {
   agent_tool_calls: { covered: "excluded", reason: "Each step of an agent run, kept for audit; the run itself is known." },
   ai_corrections: { covered: "excluded", reason: "Evaluation evidence about the AI, not about the household; append-only." },
   amaf_answers: { covered: "excluded", reason: "Each answer is written into its own domain record, which is what HomeBrain reads." },
+  bill_attachments: { covered: "excluded", reason: "Photos or PDFs attached to a bill (11-021): a file on record, not a fact; the bill and its payments are what HomeBrain reads." },
   approvals: { covered: "excluded", reason: "A request waiting for an adult's tap; it reaches the approver as a notification." },
   asset_service_events: {
     covered: "registry",

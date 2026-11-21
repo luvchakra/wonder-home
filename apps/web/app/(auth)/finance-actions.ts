@@ -2,8 +2,10 @@
 
 import { revalidatePath } from "next/cache";
 import { after } from "next/server";
+
 import { z } from "zod";
 
+import { auditChange } from "@wonderhome/core/api/audit";
 import { confirmByAction } from "@wonderhome/core/homesend/changes";
 import { toErrorBody } from "@wonderhome/core/api/errors";
 import { createClient } from "@wonderhome/core/db/server";
@@ -102,9 +104,9 @@ export async function createObligationAction(
   }
   try {
     const supabase = await createClient();
-    await requireHouseholdAdmin(supabase, parsed.data.householdId);
+    const admin = await requireHouseholdAdmin(supabase, parsed.data.householdId);
 
-    await createObligation(supabase, {
+    const created = await createObligation(supabase, {
       householdId: parsed.data.householdId,
       name: parsed.data.name,
       kind: parsed.data.kind,
@@ -117,6 +119,8 @@ export async function createObligationAction(
       billType: parsed.data.billType || null,
       responsibleMemberId: parsed.data.responsibleMemberId || null,
     });
+    // The bill's record says who added it (11-021).
+    after(() => auditChange({ householdId: parsed.data.householdId, actorMemberId: admin.memberId, eventType: "finance.bill_added", targetTable: "obligations", targetId: created.id, metadata: { name: parsed.data.name } }));
     revalidatePath("/bills");
     return {
       notice: "Added. Its last three months and the next one show under it, ready to fill in.",
@@ -178,6 +182,7 @@ export async function updateObligationAction(
     });
     // Editing an entry HomeSend added while Checking confirms it (decision 3, 2026-11-14).
     await confirmByAction(supabase, parsed.data.householdId, parsed.data.id, admin.memberId);
+    after(() => auditChange({ householdId: parsed.data.householdId, actorMemberId: admin.memberId, eventType: "finance.bill_changed", targetTable: "obligations", targetId: parsed.data.id, metadata: { name: parsed.data.name } }));
 
     revalidatePath("/bills");
     return { notice: "Saved." };
@@ -476,6 +481,7 @@ export async function markBillPaidAction(input: z.input<typeof markPaidSchema>):
     });
     // Marking a Checking bill paid is saying it was right (decision 3, 2026-11-14).
     await confirmByAction(supabase, parsed.data.householdId, parsed.data.obligationId, admin.memberId, "marked_paid");
+    after(() => auditChange({ householdId: parsed.data.householdId, actorMemberId: admin.memberId, eventType: "finance.bill_marked_paid", targetTable: "obligations", targetId: parsed.data.obligationId, metadata: { period: paid.periodLabel, partial: Boolean(paid.partial) } }));
     // Its reminders stop now rather than at the next scheduled reconcile.
     after(() => reconcileRemindersNow(parsed.data.householdId, { force: true }));
     revalidatePath("/bills");
@@ -549,8 +555,9 @@ export async function markBillsPaidAction(_previous: ActionState, formData: Form
     // One at a time: a recurring bill's next period depends on its own history.
     for (const obligationId of parsed.data.ids) {
       try {
-        await markObligationPaid(supabase, { householdId: parsed.data.householdId, obligationId, paidOn: parsed.data.paidOn });
+        const paid = await markObligationPaid(supabase, { householdId: parsed.data.householdId, obligationId, paidOn: parsed.data.paidOn });
         await confirmByAction(supabase, parsed.data.householdId, obligationId, admin.memberId, "marked_paid");
+        after(() => auditChange({ householdId: parsed.data.householdId, actorMemberId: admin.memberId, eventType: "finance.bill_marked_paid", targetTable: "obligations", targetId: obligationId, metadata: { period: paid.periodLabel, partial: false } }));
         marked += 1;
       } catch {
         // Already settled or removed meanwhile: the rest still go through.
@@ -571,8 +578,9 @@ export async function markBillUnpaidAction(input: { householdId: string; obligat
   if (!parsed.success) return { error: "Please try again." };
   try {
     const supabase = await createClient();
-    await requireHouseholdAdmin(supabase, parsed.data.householdId);
+    const admin = await requireHouseholdAdmin(supabase, parsed.data.householdId);
     await markObligationUnpaid(supabase, parsed.data);
+    after(() => auditChange({ householdId: parsed.data.householdId, actorMemberId: admin.memberId, eventType: "finance.bill_marked_unpaid", targetTable: "obligations", targetId: parsed.data.obligationId }));
     after(() => reconcileRemindersNow(parsed.data.householdId, { force: true }));
     revalidatePath("/bills");
     revalidatePath("/household/home");
