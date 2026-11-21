@@ -13,15 +13,17 @@ import { markObligationPaid, markObligationUnpaid } from "./repository";
 
 type Write = { table: string; op: string; values: Record<string, unknown> };
 
-function fakeDatabase(bill: Record<string, unknown>) {
+function fakeDatabase(bill: Record<string, unknown>, monthRow: Record<string, unknown> | null = null) {
   const writes: Write[] = [];
   const builder = (table: string) => {
     let op = "select";
     let values: Record<string, unknown> = {};
+    let single = false;
     const result = () => {
       if (op !== "select") writes.push({ table, op, values });
       if (op === "insert") return { data: { id: "new-bill" }, error: null };
       if (table === "obligations" && op === "select") return { data: bill, error: null };
+      if (table === "obligation_history" && op === "select" && single) return { data: monthRow, error: null };
       return { data: [], error: null };
     };
     const chain: Record<string, unknown> = {};
@@ -30,7 +32,7 @@ function fakeDatabase(bill: Record<string, unknown>) {
     chain.update = (row: Record<string, unknown>) => ((op = "update"), (values = row), chain);
     chain.upsert = (row: Record<string, unknown>) => ((op = "upsert"), (values = row), chain);
     chain.delete = () => ((op = "delete"), chain);
-    chain.maybeSingle = async () => result();
+    chain.maybeSingle = async () => ((single = true), result());
     chain.single = async () => result();
     chain.then = (resolve: (value: unknown) => unknown) => Promise.resolve(result()).then(resolve);
     return chain;
@@ -90,5 +92,32 @@ describe("marking a bill unpaid", () => {
     const { supabase, writes } = fakeDatabase(oneOff);
     await expect(markObligationUnpaid(supabase, { householdId: "h1", obligationId: "b1" })).rejects.toThrow(/isn't marked as paid/);
     expect(writes).toEqual([]);
+  });
+});
+
+describe("part payment and how it was paid (11-019)", () => {
+  it("records part of a bill and leaves the bill as it was, the rest still due", async () => {
+    const { supabase, writes } = fakeDatabase(oneOff);
+    const paid = await markObligationPaid(supabase, { householdId: "h1", obligationId: "b1", paidOn: "2026-11-21", amountMinor: 10000, currency: "INR", paidWith: "upi", part: true });
+    expect(paid.partial).toEqual({ paidMinor: 10000, leftMinor: 20000 });
+    const history = writes.find((write) => write.table === "obligation_history")!;
+    expect(history.values).toMatchObject({ amount_minor: 10000, due_minor: 30000, paid_with: "upi" });
+    expect(writes.some((write) => write.table === "obligations")).toBe(false);
+  });
+
+  it("the rest, marked paid, adds to the part and settles the bill", async () => {
+    const part = { amount_minor: 10000, currency: "INR", due_minor: 30000, parts: [{ amountMinor: 10000, paidOn: "2026-11-10", paidWith: "cash", memberId: null }], paid_on: "2026-11-10", paid_with: "cash", owner_member_id: null };
+    const { supabase, writes } = fakeDatabase(oneOff, part);
+    const paid = await markObligationPaid(supabase, { householdId: "h1", obligationId: "b1", paidOn: "2026-11-21" });
+    const history = writes.find((write) => write.table === "obligation_history")!;
+    expect(history.values).toMatchObject({ amount_minor: 30000, due_minor: null });
+    expect((history.values.parts as unknown[]).length).toBe(2);
+    expect(writes.find((write) => write.table === "obligations" && write.op === "update")!.values).toEqual({ status: "paid" });
+    expect(paid.previousRow).toMatchObject({ amountMinor: 10000, dueMinor: 30000 });
+  });
+
+  it("refuses a part payment on a bill whose amount is not in yet", async () => {
+    const { supabase } = fakeDatabase({ ...oneOff, amount_minor: null, currency: null });
+    await expect(markObligationPaid(supabase, { householdId: "h1", obligationId: "b1", paidOn: "2026-11-21", amountMinor: 500, currency: "INR", part: true })).rejects.toThrow();
   });
 });

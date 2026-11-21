@@ -56,6 +56,7 @@ import { EmptyState } from "@wonderhome/core/ui/states";
 
 import { markPaidProps } from "../_lib/mark-paid";
 import { billsTotal, daysOverdue, groupBills } from "@wonderhome/core/finance/bill-groups";
+import { isPaidWith, isPartRow, remainingMinor } from "@wonderhome/core/finance/part-payment";
 import { MarkBillPaidButton, type MarkPaidLabels } from "../_components/mark-bill-paid-button";
 import { MarkBillUnpaidButton } from "../_components/mark-bill-unpaid-button";
 import { currencyExponent } from "@wonderhome/core/billing/money";
@@ -89,6 +90,10 @@ type HistoryRow = {
   payee: string | null;
   kind: string | null;
   owner_member_id: string | null;
+  /** 11-019 columns; absent before that migration runs. */
+  paid_with?: string | null;
+  due_minor?: number | null;
+  parts?: unknown;
 };
 
 /**
@@ -157,7 +162,8 @@ export default async function BillsPage({
       ).catch(() => []),
       supabase
         .from("obligation_history")
-        .select("obligation_id, period_label, amount_minor, currency, paid_on, payee, kind, owner_member_id")
+        // `*`: the part-payment columns (11-019) come through once they exist, and nothing breaks before.
+        .select("*")
         .eq("household_id", householdId)
         .order("period_label", { ascending: false })
         .limit(120),
@@ -222,7 +228,13 @@ export default async function BillsPage({
     .sort((a, b) => (a.dueOn ?? "9999").localeCompare(b.dueOn ?? "9999"));
   const settled = obligations.filter((o) => o.status === "paid");
   // Grouped by what the reader is deciding, with one total line (the owner, 2026-11-21).
-  const total = billsTotal(upcoming, today);
+  // What is left on a bill paid in part counts, not the whole again (11-019).
+  const partRowOf = (bill: { id: string; dueOn: string | null }) =>
+    bill.dueOn ? (history.find((h) => h.obligation_id === bill.id && h.period_label === bill.dueOn!.slice(0, 7) && isPartRow(h)) ?? null) : null;
+  const total = billsTotal(
+    upcoming.map((bill) => ({ ...bill, amountMinor: remainingMinor(bill.amountMinor, partRowOf(bill)) })),
+    today,
+  );
   const sums = (rows: { minor: number; currency: string }[]) => new Intl.ListFormat(viewer.language, { type: "conjunction" }).format(rows.map((row) => formatMoney(row.minor, row.currency)));
   const totalLine = [
     total.due.length > 0 ? t("bills.total.due", { amount: sums(total.due) }) : null,
@@ -645,6 +657,7 @@ export default async function BillsPage({
                         lateBy={daysOverdue(bill, today) > 0 ? t("bills.daysOverdue", { count: daysOverdue(bill, today) }) : null}
                         key={bill.id}
                         bill={bill}
+                        partRow={partRowOf(bill)}
                         checking={checkingIds.has(bill.id) ? t("homesend.history.checking") : null}
                         owner={nameOf(bill.responsibleMemberId)}
                         timezone={timezone}
@@ -890,8 +903,11 @@ function BillRow({
   defaultCurrency,
   paid,
   lateBy,
+  partRow,
 }: {
   paid: PaidControls | null;
+  /** This month's row when only part is paid (11-019). */
+  partRow?: HistoryRow | null;
   /** "42 days overdue", said in words beside the date (rule 3); only the grouped list passes it. */
   lateBy?: string | null;
   bill: Obligation;
@@ -920,6 +936,12 @@ function BillRow({
     ? t("bills.due", { date: formatDate(timezone, new Date(bill.dueOn), "long") })
     : t("bills.noDueDate");
   const kindLabel = billKindName(t, bill.kind);
+  // "₹500 paid · ₹700 left" while only part is paid (11-019); the confirm then offers what is left.
+  const left = partRow ? remainingMinor(bill.amountMinor, partRow) : bill.amountMinor;
+  const paidLine =
+    partRow && bill.currency
+      ? t("bills.partPaid", { paid: formatMoney(Number(partRow.amount_minor), bill.currency), left: formatMoney(left ?? 0, bill.currency) })
+      : null;
   // One thing to do per row (rules 4 and 14). WonderHome can't pay a bill, so
   // the old "Pay" (which only opened HomeTalk) is now "Mark paid": recording
   // a payment made elsewhere, at once, with Undo.
@@ -934,7 +956,8 @@ function BillRow({
         obligationId={bill.id}
         billName={bill.name}
         today={paid.markPaid.today}
-        amountMinor={bill.amountMinor}
+        amountMinor={left}
+        paidLine={paidLine}
         currency={bill.currency ?? paid.markPaid.currency}
         exponent={bill.currency ? currencyExponent(bill.currency) : paid.markPaid.exponent}
         labels={paid.markPaid.labels}
@@ -967,6 +990,7 @@ function BillRow({
             <span className="block text-xs text-[var(--wh-foreground-subtle)]">
               {lateBy ? <span className="font-medium text-[var(--wh-attention)]">{lateBy} · </span> : null}
               {due} · {amount}
+              {paidLine ? ` · ${paidLine}` : ""}
               {owner ? ` · ${owner}` : ""}
             </span>
           </span>
@@ -1167,6 +1191,8 @@ function TransactionRow({
             <span className="block text-xs text-[var(--wh-foreground-subtle)]">
               {row.period_label}
               {payee ? ` · ${payee}` : ""}
+              {isPaidWith(row.paid_with) ? ` · ${t(`bills.paidWith.${row.paid_with}` as const)}` : ""}
+              {isPartRow(row) ? ` · ${t("bills.partOfBill", { amount: formatMoney(Number(row.due_minor), row.currency) })}` : ""}
             </span>
           </span>
           <span className="shrink-0">
@@ -1183,6 +1209,8 @@ function TransactionRow({
           <Fact label={t("bills.fact.payee")} value={payee} />
           <Fact label={t("bills.fact.owner")} value={owner} />
           <Fact label={t("bills.fact.paidOn")} value={row.paid_on ? formatDate(timezone, new Date(`${row.paid_on}T00:00:00.000Z`), "long") : null} />
+          <Fact label={t("bills.markPaid.paidWith")} value={isPaidWith(row.paid_with) ? t(`bills.paidWith.${row.paid_with}` as const) : null} />
+          {isPartRow(row) ? <Fact label={t("bills.fact.partOf")} value={formatMoney(Number(row.due_minor), row.currency)} /> : null}
         </dl>
         {admin && bill ? (
           <div className="flex flex-wrap gap-2">

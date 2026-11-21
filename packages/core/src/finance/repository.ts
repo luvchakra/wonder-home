@@ -17,6 +17,7 @@ import {
 } from "./payments";
 import { invalidatesContext } from "../context/invalidation";
 import { nextOpenDueDate, type GivenPeriod } from "./periods";
+import { applyPayment, isPartRow, remainingMinor, type PaidWith, type PaymentPart } from "./part-payment";
 
 /**
  * Reading bills and preparing payments (module 11).
@@ -316,22 +317,37 @@ async function recordAmountImpl(
     kind?: string | null;
     /** Whose payment it was to make; null falls back to the bill's responsible member. */
     ownerMemberId?: string | null;
+    /** How it was paid (11-019). */
+    paidWith?: PaidWith | null;
+    /** The month's whole bill while only part is paid; null once paid in full (11-019). */
+    dueMinor?: number | null;
+    parts?: PaymentPart[];
   },
 ): Promise<{ anomaly: boolean }> {
-  const { error } = await supabase.from("obligation_history").upsert(
-    {
-      household_id: input.householdId,
-      obligation_id: input.obligationId,
-      period_label: input.periodLabel,
-      amount_minor: input.amountMinor,
-      currency: input.currency,
-      paid_on: input.paidOn ?? null,
-      payee: input.payee ?? null,
-      kind: input.kind ?? null,
-      owner_member_id: input.ownerMemberId ?? null,
-    },
-    { onConflict: "obligation_id,period_label" },
-  );
+  const base = {
+    household_id: input.householdId,
+    obligation_id: input.obligationId,
+    period_label: input.periodLabel,
+    amount_minor: input.amountMinor,
+    currency: input.currency,
+    paid_on: input.paidOn ?? null,
+    payee: input.payee ?? null,
+    kind: input.kind ?? null,
+    owner_member_id: input.ownerMemberId ?? null,
+  };
+  // The 11-019 columns go only when this write is about them, so every other
+  // caller writes exactly what it did before.
+  const extra: Record<string, unknown> = {};
+  if (input.paidWith !== undefined) extra.paid_with = input.paidWith;
+  if (input.dueMinor !== undefined) extra.due_minor = input.dueMinor;
+  if (input.parts !== undefined) extra.parts = input.parts;
+  let { error } = await supabase.from("obligation_history").upsert({ ...base, ...extra }, { onConflict: "obligation_id,period_label" });
+  // Before the 11-019 migration those columns are missing: a full payment is
+  // still recorded without them; a part payment can't be, so it says so.
+  if (error && Object.keys(extra).length > 0 && (error.code === "PGRST204" || error.code === "42703")) {
+    if (input.dueMinor !== null && input.dueMinor !== undefined) throw ApiError.badRequest("Part payments aren't switched on yet. Mark it paid in full for now.");
+    ({ error } = await supabase.from("obligation_history").upsert(base, { onConflict: "obligation_id,period_label" }));
+  }
 
   if (error) {
     if (error.code === "42501")
@@ -347,6 +363,8 @@ async function recordAmountImpl(
 
   if (historyError)
     throw new Error(`recordAmount failed: ${historyError.code ?? "unknown"}`);
+  // Part of a month's bill isn't an unusual amount: the anomaly waits for the whole.
+  if (input.dueMinor !== null && input.dueMinor !== undefined) return { anomaly: false };
 
   const anomaly = detectAnomaly({
     amountMinor: input.amountMinor,
@@ -396,6 +414,10 @@ async function markObligationPaidImpl(
     currency?: string | null;
     /** Who paid, when the person says; otherwise whoever handles the bill. */
     paidByMemberId?: string | null;
+    /** How it was paid (UPI, card, cash, bank transfer), when the person says (11-019). */
+    paidWith?: PaidWith | null;
+    /** "Part of it" (11-019): the rest stays due on the bill. */
+    part?: boolean;
   },
 ): Promise<PaidBill> {
   const { data, error } = await supabase
@@ -413,20 +435,56 @@ async function markObligationPaidImpl(
 
   const dueOn = (bill.due_on as string | null) ?? null;
   const periodLabel = (dueOn ?? input.paidOn).slice(0, 7);
-  const amountMinor = input.amountMinor ?? (bill.amount_minor === null ? null : Number(bill.amount_minor));
-  const currency = input.currency ?? ((bill.currency as string | null) ?? null);
+  // What this month already has: a part paid earlier counts towards it (11-019).
+  // `*` so this read works before and after the 11-019 columns exist.
+  const { data: monthRow } = await supabase
+    .from("obligation_history")
+    .select("*")
+    .eq("obligation_id", input.obligationId)
+    .eq("period_label", periodLabel)
+    .maybeSingle();
+  const existing = (monthRow as Row | null) ?? null;
+  const partBefore = isPartRow(existing as never) ? (existing as Row) : null;
+  const billAmount = bill.amount_minor === null ? null : Number(bill.amount_minor);
+  // Unsaid, the amount is what is left of the bill, never the whole again.
+  const amountMinor = input.amountMinor ?? remainingMinor(billAmount, partBefore as never);
+  const currency = input.currency ?? ((bill.currency as string | null) ?? (partBefore?.currency as string | null) ?? null);
+  if (input.part && (amountMinor === null || amountMinor <= 0)) throw ApiError.badRequest("Say how much of it was paid.");
+  const payer = input.paidByMemberId ?? (bill.responsible_member_id as string | null) ?? null;
+  let applied: ReturnType<typeof applyPayment> | null = null;
   if (amountMinor !== null && currency) {
+    try {
+      applied = applyPayment(partBefore as never, { amountMinor, billAmountMinor: billAmount, part: Boolean(input.part), paidOn: input.paidOn, paidWith: input.paidWith ?? null, memberId: payer });
+    } catch {
+      throw ApiError.badRequest("A part payment needs the bill's amount first.");
+    }
+    const touchesParts = Boolean(input.part) || partBefore !== null;
     await recordAmountImpl(supabase, {
       householdId: input.householdId,
       obligationId: input.obligationId,
       periodLabel,
-      amountMinor,
+      amountMinor: applied.amountMinor,
       currency,
       paidOn: input.paidOn,
       payee: (bill.payee as string | null) ?? null,
       kind: (bill.kind as string | null) ?? null,
-      ownerMemberId: input.paidByMemberId ?? (bill.responsible_member_id as string | null) ?? null,
+      ownerMemberId: payer,
+      ...(input.paidWith !== undefined ? { paidWith: input.paidWith } : {}),
+      ...(touchesParts ? { dueMinor: applied.dueMinor, parts: applied.parts } : {}),
     });
+  } else if (input.part) {
+    throw ApiError.badRequest("A part payment needs the bill's amount first.");
+  }
+  // Only part of it: the bill stays as it is, with the rest still due.
+  if (applied && !applied.settled) {
+    return {
+      nextDueOn: null,
+      periodLabel,
+      recorded: true,
+      partial: { paidMinor: applied.amountMinor, leftMinor: (applied.dueMinor ?? 0) - applied.amountMinor },
+      previousRow: partBefore ? historySnapshot(partBefore) : null,
+      previous: { dueOn, status: bill.status as string, amountMinor: billAmount, currency: (bill.currency as string | null) ?? null },
+    };
   }
 
   // A recurring bill moves on to its next period not already paid ahead, and
@@ -436,10 +494,11 @@ async function markObligationPaidImpl(
   let nextAmount: { amountMinor: number; currency: string } | null = null;
   if (dueOn && recurrence && recurrence !== "one_off") {
     const [{ data: paidRows }, { data: givenRows }] = await Promise.all([
-      supabase.from("obligation_history").select("period_label").eq("obligation_id", input.obligationId).gte("period_label", periodLabel).limit(40),
+      // `*`: a month paid only in part is not paid ahead (11-019).
+      supabase.from("obligation_history").select("*").eq("obligation_id", input.obligationId).gte("period_label", periodLabel).limit(40),
       supabase.from("obligation_periods").select("period_label, amount_minor, currency").eq("obligation_id", input.obligationId).limit(40),
     ]);
-    nextDueOn = nextOpenDueDate(dueOn, recurrence, new Set(((paidRows ?? []) as Row[]).map((row) => row.period_label as string)));
+    nextDueOn = nextOpenDueDate(dueOn, recurrence, new Set(((paidRows ?? []) as Row[]).filter((row) => !isPartRow(row as never)).map((row) => row.period_label as string)));
     const given = nextDueOn ? ((givenRows ?? []) as Row[]).find((row) => row.period_label === nextDueOn!.slice(0, 7)) : undefined;
     if (given) nextAmount = { amountMinor: Number(given.amount_minor), currency: given.currency as string };
   }
@@ -472,6 +531,7 @@ async function markObligationPaidImpl(
     periodLabel,
     recorded: amountMinor !== null && Boolean(currency),
     tookAhead: nextAmount && nextDueOn ? { periodLabel: nextDueOn.slice(0, 7), ...nextAmount } : null,
+    previousRow: partBefore ? historySnapshot(partBefore) : null,
     previous: {
       dueOn,
       status: bill.status as string,
@@ -490,7 +550,25 @@ export type PaidBill = {
   /** The amount given ahead that the next period took, so an undo can give it back. */
   tookAhead?: { periodLabel: string; amountMinor: number; currency: string } | null;
   previous: { dueOn: string | null; status: string; amountMinor: number | null; currency: string | null };
+  /** Set when only part was paid (11-019): the bill itself was left as it was. */
+  partial?: { paidMinor: number; leftMinor: number } | null;
+  /** The month's part-paid row before this payment, so an undo puts it back rather than removing it. */
+  previousRow?: HistorySnapshot | null;
 };
+
+export type HistorySnapshot = { amountMinor: number; currency: string; dueMinor: number; parts: PaymentPart[]; paidOn: string | null; paidWith: PaidWith | null; ownerMemberId: string | null };
+
+function historySnapshot(row: Row): HistorySnapshot {
+  return {
+    amountMinor: Number(row.amount_minor),
+    currency: row.currency as string,
+    dueMinor: Number(row.due_minor),
+    parts: Array.isArray(row.parts) ? (row.parts as PaymentPart[]) : [],
+    paidOn: (row.paid_on as string | null) ?? null,
+    paidWith: (row.paid_with as PaidWith | null) ?? null,
+    ownerMemberId: (row.owner_member_id as string | null) ?? null,
+  };
+}
 
 /**
  * Takes back a "paid" (HomeTalk's undo, 11-010): the period's history row
@@ -501,7 +579,16 @@ async function undoBillPaymentImpl(
   supabase: SupabaseClient,
   input: { householdId: string; obligationId: string; paid: PaidBill },
 ): Promise<void> {
-  if (input.paid.recorded) await removeTransactionImpl(supabase, { householdId: input.householdId, obligationId: input.obligationId, periodLabel: input.paid.periodLabel });
+  const before = input.paid.previousRow ?? null;
+  if (before) {
+    // The part paid earlier goes back as it was (11-019).
+    const { error: restoreError } = await supabase.from("obligation_history").upsert(
+      { household_id: input.householdId, obligation_id: input.obligationId, period_label: input.paid.periodLabel, amount_minor: before.amountMinor, currency: before.currency, paid_on: before.paidOn, owner_member_id: before.ownerMemberId, paid_with: before.paidWith, due_minor: before.dueMinor, parts: before.parts },
+      { onConflict: "obligation_id,period_label" },
+    );
+    if (restoreError) throw new Error(`undoBillPayment failed: ${restoreError.code ?? "unknown"}`);
+  } else if (input.paid.recorded) await removeTransactionImpl(supabase, { householdId: input.householdId, obligationId: input.obligationId, periodLabel: input.paid.periodLabel });
+  if (input.paid.partial) return;
   const { error } = await supabase
     .from("obligations")
     .update({

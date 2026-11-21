@@ -18,6 +18,9 @@ describe("markPaidProps", () => {
 
   it("reads every word from the bills.markPaid catalogue", () => {
     const { labels } = markPaidProps(t as never, { householdId: "h", timezone: "UTC", currency: "INR" });
-    expect(Object.values(labels).every((value) => value.startsWith("bills.markPaid."))).toBe(true);
+    const { methods, ...words } = labels;
+    expect(Object.values(words).every((value) => value.startsWith("bills.markPaid."))).toBe(true);
+    // How it was paid is a picked choice (11-019), from its own catalogue.
+    expect(Object.values(methods)).toEqual(["bills.paidWith.upi", "bills.paidWith.card", "bills.paidWith.cash", "bills.paidWith.bank_transfer"]);
   });
 });
