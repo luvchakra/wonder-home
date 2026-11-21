@@ -30,6 +30,8 @@ export const settingsSearchZh: AreaCatalog<typeof settingsSearchEn> = {
   "settingsSearch.kw.ai-approval-scope": "批准, 记录, 行动, 自动, 审核",
   "settingsSearch.kw.ai-new-senders": "邮件, 发件人, 新发件人, 信任, 屏蔽",
   "settingsSearch.kw.ai-homesend-tidy": "整理, 清理, 归档, 过期, 重复, homesend",
+  "settingsSearch.kw.ai-health-filers": "健康, 医疗, 记录, 为他人, 报告, 处方",
+  "settingsSearch.kw.ai-homesend-learned": "学到, 规则, 记忆, homesend, 发件人, 忘记",
   "settingsSearch.kw.ai-key": "API 密钥, 密钥, 令牌, 提供商, 自己的密钥",
   "settingsSearch.kw.ai-provider": "anthropic, claude, gemini, openai, 模型",
   "settingsSearch.kw.ai-api-key": "密钥, api, 令牌, 密码",

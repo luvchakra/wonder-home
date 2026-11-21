@@ -30,6 +30,8 @@ export const settingsSearchAr: AreaCatalog<typeof settingsSearchEn> = {
   "settingsSearch.kw.ai-approval-scope": "موافقة، تسجيل، إجراءات، تلقائي، مراجعة",
   "settingsSearch.kw.ai-new-senders": "بريد، مرسل، مرسل جديد، ثقة، حظر",
   "settingsSearch.kw.ai-homesend-tidy": "ترتيب, تنظيف, أرشفة, قديم, منتهي, مكرر, homesend",
+  "settingsSearch.kw.ai-health-filers": "صحة, طبي, سجلات, للآخرين, تقرير, وصفة",
+  "settingsSearch.kw.ai-homesend-learned": "تعلّم, قواعد, ذاكرة, homesend, مرسل, نسيان",
   "settingsSearch.kw.ai-key": "مفتاح api، مفتاح، رمز، مزود، مفتاح خاص",
   "settingsSearch.kw.ai-provider": "أنثروبيك، كلود، جيميني، أوبن إيه آي، نموذج",
   "settingsSearch.kw.ai-api-key": "مفتاح، api، رمز، كلمة المرور",

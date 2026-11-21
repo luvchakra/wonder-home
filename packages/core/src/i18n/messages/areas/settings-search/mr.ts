@@ -30,6 +30,8 @@ export const settingsSearchMr: AreaCatalog<typeof settingsSearchEn> = {
   "settingsSearch.kw.ai-approval-scope": "मंजुरी, नोंद, कामे, आपोआप, तपासणी",
   "settingsSearch.kw.ai-new-senders": "ईमेल, पाठवणारा, नवीन पाठवणारा, विश्वास, ब्लॉक",
   "settingsSearch.kw.ai-homesend-tidy": "साफ, बाजूला, संग्रह, जुने, होऊन गेलेले, दुहेरी, homesend",
+  "settingsSearch.kw.ai-health-filers": "आरोग्य, वैद्यकीय, नोंदी, इतरांसाठी, अहवाल, प्रिस्क्रिप्शन",
+  "settingsSearch.kw.ai-homesend-learned": "शिकलेले, नियम, आठवण, homesend, पाठवणारा, विसरा",
   "settingsSearch.kw.ai-key": "एपीआय की, किल्ली, टोकन, पुरवठादार, स्वतःची की",
   "settingsSearch.kw.ai-provider": "अँथ्रोपिक, क्लॉड, जेमिनी, ओपनएआय, मॉडेल",
   "settingsSearch.kw.ai-api-key": "की, एपीआय, टोकन, पासवर्ड",
