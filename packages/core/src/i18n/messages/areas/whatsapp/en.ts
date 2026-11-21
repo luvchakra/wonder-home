@@ -52,6 +52,7 @@ export const whatsappEn = {
   "whatsapp.check.leadMany": "🔍 {count} quick ones about what you sent — first, {title}:",
   "whatsapp.check.confirmAll": "Here's what I read: {summary}. Looks right?",
   "whatsapp.check.later": "💬 I have a quick question about it — it'll come after the one I already asked.",
+  "whatsapp.keptNote": "📝 Kept *{title}* as a school note: {summary}. Nothing in it has a date, so nothing went on the calendar. See it or restore it in HomeSend: {link}",
   "whatsapp.moved": "📅 *{title}* was already on record, so I moved it to its new day instead of adding it twice. You can undo it in HomeSend.",
   "whatsapp.check.confirm": "Did I get the {label} right: {value}?",
   "whatsapp.check.confirmIt": "Did I get it right: {value}?",

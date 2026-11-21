@@ -79,6 +79,8 @@ export type AddedOnItsOwn = {
   timetable?: import("./timetable-apply").TimetableAdded;
   /** A document's several dated things, each added (2026-11-21): how many, for whom. */
   several?: { count: number; names: string[] };
+  /** Not an entry: a school notice with no dated thing, kept as a school note at once, with its one-line summary (2026-11-21). */
+  note?: { summary: string };
 };
 
 /** Something that would have been added on its own, still waiting in HomeSend, and why (`confirmation.ts` `wait`). */

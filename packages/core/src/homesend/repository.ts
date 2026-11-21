@@ -607,6 +607,25 @@ export async function archiveWaitingHomeSendItems(
 }
 
 /**
+ * A school notice with no dated thing in it, kept as a household note at once
+ * (archived `kept_as_note`, restorable, its words kept where they arrived),
+ * rather than at the next deadlines pass (2026-11-21). Only a classified item
+ * that is still waiting moves. True when it moved.
+ */
+export async function keepAsNoteNow(supabase: SupabaseClient, householdId: string, itemId: string, actorMemberId: string | null, now: Date = new Date()): Promise<boolean> {
+  const { data, error } = await supabase
+    .from("home_send_items")
+    .update({ status: "archived", archived_from: "classified", archived_at: now.toISOString(), archive_reason: "kept_as_note", retry_requested_at: null })
+    .eq("household_id", householdId)
+    .eq("id", itemId)
+    .eq("status", "classified")
+    .select("id");
+  if (error || (data ?? []).length === 0) return false;
+  await auditChange({ householdId, actorMemberId, eventType: "homesend.auto_archived", targetTable: "home_send_items", targetId: itemId, metadata: { reason: "kept_as_note", by: "rule", from: "classified", at: "once" } }).catch(() => undefined);
+  return true;
+}
+
+/**
  * The Undo after "Archive all": exactly these archived items back to where
  * each was, in one update per place. Anything no longer archived is left alone.
  */

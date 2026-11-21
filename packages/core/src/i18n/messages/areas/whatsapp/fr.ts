@@ -54,6 +54,7 @@ export const whatsappFr: AreaCatalog<typeof whatsappEn> = {
   "whatsapp.check.leadMany": "🔍 {count} petites questions sur ce que vous avez envoyé — d'abord, {title} :",
   "whatsapp.check.confirmAll": "Voici ce que j'ai lu : {summary}. C'est bien ça ?",
   "whatsapp.check.later": "💬 J'ai une petite question à ce sujet — elle viendra après celle que j'ai déjà posée.",
+  "whatsapp.keptNote": "📝 *{title}* gardé comme note de l'école : {summary}. Il n'y a aucune date dedans, donc rien n'a été ajouté au calendrier. Voyez-le ou restaurez-le dans HomeSend : {link}",
   "whatsapp.moved": "📅 *{title}* était déjà enregistré, je l'ai donc déplacé à son nouveau jour au lieu de l'ajouter deux fois. Vous pouvez l'annuler dans HomeSend.",
   "whatsapp.check.confirm": "Ai-je bien lu {label} : {value} ?",
   "whatsapp.check.confirmIt": "Ai-je bien lu : {value} ?",

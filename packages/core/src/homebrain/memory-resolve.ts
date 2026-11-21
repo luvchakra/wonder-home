@@ -1,5 +1,6 @@
 import type { HouseholdContextItem } from "../context/types";
 import { namesSchool, senderKey } from "../homesend/learned";
+import { classOf } from "../homesend/timetable";
 import type { HomeSendKind } from "../homesend/items";
 import type { IntakePerson } from "../homesend/resolve";
 import { isMixed, normalizeWords, phraseKey, placeKey, ruleFor, vendorKey, type HouseholdRule } from "./rules";
@@ -140,21 +141,19 @@ function gradesOf(item: HouseholdContextItem | undefined): string[] {
   return Array.isArray(grades) ? grades.map(str).filter((grade): grade is string => grade !== null) : [];
 }
 
-/** "5", "Class 5", "Grade 5B", "V-A" → the class words a notice would use ("5", "5b"). */
-function gradeKeys(grade: string): string[] {
-  const bare = grade.toLowerCase().replace(/\b(class|grade|std|standard|year|form)\b\.?/g, " ").replace(/[\s-]+/g, "").trim();
-  return bare.length > 0 && bare.length <= 4 ? [bare] : [];
-}
-
-/** Whether the words name this class: "Class 5", "Grade 5B", "Std 5-B", "class V". */
-function namesGrade(text: string, grade: string): boolean {
+/**
+ * Whether the words name this class: "Class 5", "Grade 5B", "Std 5-B", "class V", "Std. IV" for "4" (`classOf`,
+ * so roman and arabic numerals match either way). A section on record must match; one in the words alone is fine.
+ */
+export function namesGrade(text: string, grade: string): boolean {
+  const want = classOf(grade);
+  if (want.grade === null) return false;
   const hay = text.slice(0, 4000).toLowerCase();
-  return gradeKeys(grade).some((key) => {
-    const parts = key.match(/^(\d+|[ivx]+)([a-z]?)$/);
-    if (!parts) return false;
-    const section = parts[2] ? `\\s*-?\\s*${parts[2]}` : "";
-    return new RegExp(`\\b(class|grade|std|standard|year)\\.?\\s*${parts[1]}${section}\\b`, "u").test(hay);
-  });
+  for (const match of hay.matchAll(/\b(?:class|grade|std|standard|year)\b\.?\s?([0-9]{1,2}|[ivx]{1,4})(?:st|nd|rd|th)?(?:[ -]?([a-z]))?\b/gu)) {
+    const named = classOf(`${match[1]}${match[2] ? `-${match[2]}` : ""}`);
+    if (named.grade === want.grade && (!want.section || named.section === want.section)) return true;
+  }
+  return false;
 }
 
 /** The teachers a child has on record: timetable periods and classes outside school. */

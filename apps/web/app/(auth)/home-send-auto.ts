@@ -8,7 +8,8 @@ import { beginChecking } from "@wonderhome/core/hometalk/checking-questions";
 import { loadAutomationBar } from "@wonderhome/core/homebrain/kind-bar-repository";
 import { recordHomeSendChange, type RecordHomeSendChangeInput } from "@wonderhome/core/homesend/changes";
 import type { HomeSendExtraction, HomeSendKind } from "@wonderhome/core/homesend/items";
-import { getHomeSendItem, routeHomeSendItem } from "@wonderhome/core/homesend/repository";
+import { getHomeSendItem, keepAsNoteNow, routeHomeSendItem } from "@wonderhome/core/homesend/repository";
+import { isUndatedSchoolNotice, noteSummary } from "@wonderhome/core/homesend/school-note";
 import { keepFilledWhy } from "@wonderhome/core/homesend/sender-history";
 import type { SubjectResolution } from "@wonderhome/core/homesend/resolve";
 import type { HouseholdMembership } from "@wonderhome/core/identity/schemas";
@@ -270,6 +271,11 @@ export async function addIfAllowed(
   if (item.classifiedKind === "school_item" && item.extracted?.schedule?.kind === "exam") {
     const added = await addTimetable(supabase, { householdId: membership.household.id, item, actorMemberId: options.createdByMemberId ?? item.createdByMemberId ?? membership.memberId });
     if (added) return { title: added.title ?? "Exam timetable", where: "School", kind: "school_item", timetable: added, ...(added.checking ? { unconfirmed: true as const } : {}) };
+  }
+  // A school notice with nothing dated in it: kept as a school note at once, with its one line, never asked "When is it?" (2026-11-21).
+  if (isUndatedSchoolNotice(item)) {
+    const kept = await keepAsNoteNow(supabase, membership.household.id, item.id, options.createdByMemberId ?? membership.memberId).catch(() => false);
+    if (kept) return { title: item.extracted?.title?.trim() || "School notice", where: "Notes", kind: "school_item", note: { summary: noteSummary(item.understanding?.contentSummary, item.extracted?.title) } };
   }
   const review = await prepareReview(supabase, membership, { ...item, createdByMemberId: options.createdByMemberId ?? item.createdByMemberId });
   // A matched bill with a newer amount or date, or a document with several bills: settled at once, not at the 24-hour default.

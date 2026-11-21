@@ -12,6 +12,7 @@ decision that shapes later work each earns a note, written before moving on.
 | Date | Note |
 |---|---|
 | 2026-11-21 | [HomeSend: confirmed above the bar, whatever it was read from (14-075)](2026-11-21-confirmed-above-bar.md) |
+| 2026-11-21 | [HomeSend matches without asking; undated school notices become notes; HD set in eval (14-076)](2026-11-21-homesend-match-without-asking.md) |
 | 2026-11-21 | [WonderHome's AI key in one place: Platform admin](2026-11-21-ai-key-one-place.md) |
 | 2026-11-21 | [HomeSend understanding: never without the model, then complex messages (14-073, 14-074)](2026-11-21-homesend-understanding.md) |
 | 2026-11-21 | [Money and health entries: two choices, Auto approved by default; AI Assistant cards fold](2026-11-21-money-health-two-choices.md) |

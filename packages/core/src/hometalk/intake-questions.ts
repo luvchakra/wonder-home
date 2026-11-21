@@ -8,6 +8,7 @@ import { openSession, recordMessage, type ConversationSurface } from "../convers
 import { amountWords, sureClause, waitingWords, wasAdded, type AddedOnItsOwn, type WaitingInHomeSend } from "../homesend/auto-add";
 import { listDetails, missingDetails, nextMissingDetail, personNamed, type CompletenessReading, type DetailField } from "../homesend/completeness";
 import type { HomeSendKind } from "../homesend/items";
+import { isUndatedSchoolNotice, noteSummary } from "../homesend/school-note";
 import { en } from "../i18n/messages/en";
 import { translator, type Translate, type TranslationKey } from "../i18n/translate";
 import { amountsFor } from "./choice-amounts";
@@ -204,6 +205,8 @@ export async function openIntakeQuestion(
     admin.from("households").select("timezone").eq("id", input.householdId).maybeSingle(),
   ]);
   if (!item || item.status !== "classified" || !item.classified_kind) return null;
+  // A school notice with no dated thing is kept as a note at once, never asked "When is it?" (2026-11-21).
+  if (isUndatedSchoolNotice({ classifiedKind: item.classified_kind, extracted: item.extracted, understanding: item.understanding })) return null;
   const people = ((members ?? []) as { id: string; display_name: string; nickname: string | null; member_type: string }[]).map((row) => ({ id: row.id, displayName: row.display_name, nickname: row.nickname, memberType: row.member_type }));
   const next = intakeQuestion({ itemId: item.id, kind: item.classified_kind, extracted: (item.extracted ?? null) as CompletenessReading, asked: [], people, ambiguous: ambiguousNames(item.understanding) });
   if (!next) return null;
@@ -376,6 +379,8 @@ export function handedBackText(lead: string, outcome: { added: AddedOnItsOwn | W
   // An exam timetable (2026-11-21): what it was, each child's exam days with their dates, the one question, where to see it.
   if (added?.timetable) return `${lead} ${timetableReply(added.timetable, translator("en", en), { origin: siteOrigin(runtimeEnv()), dates: shortDay })}`;
   if (added?.several) return `${lead} 📄 Added ${added.several.count} things from **${added.title}**: ${added.several.names.join(", ")}${added.unconfirmed ? ", marked **Checking** because I wasn't sure enough of the reading" : ""}. See or undo them in HomeSend.`;
+  // A school notice with nothing dated in it: kept as a school note at once, with its one line (2026-11-21).
+  if (added?.note) return `${lead} 📝 Kept **${added.title}** as a school note: ${noteSummary(added.note.summary, added.title)}. Nothing in it has a date, so nothing went on the calendar. See it or restore it in HomeSend.`;
   // A record already on file moved to its new day, not a second copy (14-066, part 3).
   if (added?.moved) return `${lead} 📅 **${added.title}** was already on record, so I moved it to its new day instead of adding it twice. You can undo it in HomeSend.`;
   // How sure only for a Checking entry, as one short reason; a confirmed add says what and how to undo (the owner, 2026-11-21).

@@ -5,7 +5,7 @@ import { fillFromHistory } from "../homebrain/history-fill";
 import { looksLikeInstruction, normaliseTopic } from "../school/trivia";
 import { validateGeneratedCard } from "../school/trivia-generate";
 import { decideTopic, type TriviaTopicJudge } from "../school/trivia-safety";
-import { groundIntakeDate, type IntakeExtraction } from "../ai/classify-intake";
+import { acceptReading, groundIntakeDate, isClassifyFailure, type IntakeExtraction } from "../ai/classify-intake";
 import { reviewIntakeKind } from "../ai/intake-kind-check";
 import { DEFAULT_DATA_USE, minimiseContext, pseudonymiseText, reidentifyIntent, type Person } from "../ai/privacy";
 import type { AnswerComposer } from "../ai/model-client";
@@ -37,6 +37,8 @@ import { fillFromEvidence } from "../homesend/completeness";
 import { directAddAreaOf, NO_DIRECT_ADD } from "../homesend/auto-add";
 import { decideConfirmation } from "../homesend/confirmation";
 import { detectInstructionInjection } from "../homesend/injection";
+import { DOCUMENT_CASES } from "./homesend-documents/cases";
+import { BLANK_DOCUMENT_READING, DOCUMENT_CONTEXT, documentMisses } from "./homesend-documents/check";
 import { reconcileAgainstRecords, type HomeSendCandidate } from "../homesend/reconcile";
 import { adoptMatchedSubject, resolveIntakePeople } from "../homesend/resolve";
 import { buildUnderstanding } from "../homesend/understanding";
@@ -496,6 +498,7 @@ const CHANGE_DOMAIN = { bill: "bill", school_item: "school_item", activity_item:
 export async function observeHomeSend(c: HomeSendCase, models: Models = {}): Promise<Observation> {
   if (c.tidy) return observeTidy(c, c.tidy, models);
   if (c.payment) return observePayment(c, c.payment);
+  if (c.document) return observeDocument(c, c.document, models);
   if (c.ending) return observeEnding(c, c.ending);
   const household = GOLDEN_HOUSEHOLDS[c.household];
   // A date phrase is resolved against when the content was written, in the household's timezone.
@@ -786,6 +789,24 @@ function observeEnding(c: HomeSendCase, ending: NonNullable<HomeSendCase["ending
  * an approval, a PIN or a click, or tries to instruct WonderHome, is never
  * proof. Nothing is ever paid, so `executed` is always false.
  */
+/**
+ * A complex document (HD-…, 14-074): the recorded reading, or a live
+ * provider's reading of the same text, scored by the case's own expectations
+ * (`homesend-documents/check.ts`). "as_expected", or what it missed.
+ */
+async function observeDocument(c: HomeSendCase, id: string, models: Models): Promise<Observation> {
+  const doc = DOCUMENT_CASES.find((candidate) => candidate.id === id);
+  if (!doc) return { ...EMPTY, providerFailure: "unparseable", answer: "" };
+  const live = models.classify && !c.recordedReading ? await models.classify(c.source, DOCUMENT_CONTEXT) : undefined;
+  const recorded = acceptReading({ ...BLANK_DOCUMENT_READING, ...doc.reading }, DOCUMENT_CONTEXT);
+  const read = live === undefined ? (isClassifyFailure(recorded) ? null : (recorded as IntakeExtraction)) : live;
+  if (!read) return { ...EMPTY, providerFailure: "unparseable", answer: "" };
+  const misses = documentMisses(doc, read);
+  const action = misses.length === 0 ? "as_expected" : `missed:${misses.join("; ")}`;
+  const injection = detectInstructionInjection(doc.source.text, doc.source.caption);
+  return { ...EMPTY, interpretation: read.kind, action, safety: { consequential: false, executed: false, refused: false, injectionFlagged: injection.flagged }, answer: action };
+}
+
 function observePayment(c: HomeSendCase, payment: NonNullable<HomeSendCase["payment"]>): Observation {
   const injection = detectInstructionInjection(c.source.text);
   const read = injection.flagged ? { proof: null, reason: "injection" as const } : readPaymentProof(c.source.text);
