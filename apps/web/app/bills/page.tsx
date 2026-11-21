@@ -55,6 +55,9 @@ import { SegmentedControl } from "@wonderhome/core/ui/segmented-control";
 import { EmptyState } from "@wonderhome/core/ui/states";
 
 import { markPaidProps } from "../_lib/mark-paid";
+import { MarkBillPaidButton, type MarkPaidLabels } from "../_components/mark-bill-paid-button";
+import { MarkBillUnpaidButton } from "../_components/mark-bill-unpaid-button";
+import { currencyExponent } from "@wonderhome/core/billing/money";
 import { AgendaExpandableRow } from "../_components/agenda-expandable-row";
 import {
   AddBillButton,
@@ -281,6 +284,16 @@ export default async function BillsPage({
     ]),
     kindOptions: distinct(history.map((row) => row.kind)),
   };
+  // "Mark paid" on every unpaid bill and "Mark as unpaid" on a settled one
+  // (the owner, 2026-11-21), for whoever may change a bill. It records a
+  // payment made elsewhere; WonderHome never pays.
+  const paidControls: PaidControls | null = admin
+    ? {
+        markPaid: markPaidProps(t, { householdId, timezone, currency: householdCurrency }),
+        payers: transactionChoices.members.map((member) => ({ id: member.id, name: member.displayName })),
+        unpaid: { button: t("bills.markUnpaid.button"), done: t("bills.markUnpaid.done"), failed: t("bills.markPaid.failed") },
+      }
+    : null;
   // The bill form's choices: each typical bill, and its payees nearest the
   // home first (11-010). Worked out here; the browser gets only the names.
   const home = homePlaceFrom(address?.formattedAddress ?? null, membership.locale?.household.region ?? null);
@@ -407,6 +420,7 @@ export default async function BillsPage({
             <ul className="space-y-1">
               {upcoming.slice(0, 4).map((bill) => (
                 <BillRow
+                  paid={paidControls}
                   key={bill.id}
                   bill={bill}
                   checking={checkingIds.has(bill.id) ? t("homesend.history.checking") : null}
@@ -442,6 +456,7 @@ export default async function BillsPage({
             <ul className="space-y-1">
               {settled.slice(0, 4).map((bill) => (
                 <BillRow
+                  paid={paidControls}
                   key={bill.id}
                   bill={bill}
                   checking={checkingIds.has(bill.id) ? t("homesend.history.checking") : null}
@@ -567,7 +582,12 @@ export default async function BillsPage({
                             confirmDescription: t("bills.tidy.confirmDescription"),
                             noDuplicates: t("bills.tidy.noDuplicates"),
                             remove: formLabels.remove,
+                            markSelected: t("bills.tidy.markSelected", { count: "{count}" }),
+                            paidTitle: t("bills.tidy.paidTitle"),
+                            paidDescription: t("bills.tidy.paidDescription"),
+                            paidConfirm: t("bills.tidy.paidConfirm"),
                           }}
+                          today={markPaidProps(t, { householdId, timezone, currency: householdCurrency }).today}
                         />
                       ) : null}
                       <AddBillButton householdId={householdId} defaultCurrency={householdCurrency} labels={formLabels} choices={billChoices} />
@@ -587,6 +607,7 @@ export default async function BillsPage({
                   <ul className="divide-y divide-[var(--wh-border)]">
                     {upcoming.slice(0, 8).map((bill) => (
                       <BillRow
+                        paid={paidControls}
                         key={bill.id}
                         bill={bill}
                         checking={checkingIds.has(bill.id) ? t("homesend.history.checking") : null}
@@ -828,7 +849,9 @@ function BillRow({
   monthOf,
   periodLabels,
   defaultCurrency,
+  paid,
 }: {
+  paid: PaidControls | null;
   bill: Obligation;
   /** "Checking" while HomeSend's entry for it is unconfirmed (14-062); null otherwise. */
   checking?: string | null;
@@ -855,16 +878,30 @@ function BillRow({
     ? t("bills.due", { date: formatDate(timezone, new Date(bill.dueOn), "long") })
     : t("bills.noDueDate");
   const kindLabel = billKindName(t, bill.kind);
+  // One thing to do per row (rules 4 and 14). WonderHome can't pay a bill, so
+  // the old "Pay" (which only opened HomeTalk) is now "Mark paid": recording
+  // a payment made elsewhere, at once, with Undo.
   const action =
-    bill.status === "scheduled" ? (
+    bill.status === "paid" ? (
+      paid ? (
+        <MarkBillUnpaidButton householdId={householdId} obligationId={bill.id} billName={bill.name} labels={paid.unpaid} />
+      ) : null
+    ) : paid ? (
+      <MarkBillPaidButton
+        householdId={paid.markPaid.householdId}
+        obligationId={bill.id}
+        billName={bill.name}
+        today={paid.markPaid.today}
+        amountMinor={bill.amountMinor}
+        currency={bill.currency ?? paid.markPaid.currency}
+        exponent={bill.currency ? currencyExponent(bill.currency) : paid.markPaid.exponent}
+        labels={paid.markPaid.labels}
+        members={paid.payers}
+        defaultPayerId={bill.responsibleMemberId}
+        tone={needsYou || bill.status !== "scheduled" ? "primary" : "quiet"}
+      />
+    ) : bill.status === "scheduled" ? (
       <Badge tone="handled">{t("bills.arranged")}</Badge>
-    ) : needsYou ? (
-      <PillLink
-        href={`/ai?q=${encodeURIComponent(`Pay the ${bill.name.toLowerCase()}.`)}`}
-        tone="primary"
-      >
-        {t("bills.pay")}
-      </PillLink>
     ) : (
       <PillLink href="/bills?tab=transactions" tone="quiet">
         {t("bills.open")}
@@ -1023,6 +1060,12 @@ function BillRow({
 }
 
 /** A detail line opening a sentence: its first letter capital where the script has one. */
+type PaidControls = {
+  markPaid: { householdId: string; today: string; currency: string; exponent: number; labels: MarkPaidLabels };
+  payers: { id: string; name: string }[];
+  unpaid: { button: string; done: string; failed: string };
+};
+
 function sentenceStart(text: string): string {
   return text.charAt(0).toLocaleUpperCase() + text.slice(1);
 }

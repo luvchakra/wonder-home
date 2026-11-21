@@ -11,6 +11,7 @@ decision that shapes later work each earns a note, written before moving on.
 
 | Date | Note |
 |---|---|
+| 2026-11-21 | [Bills: Mark paid on every bill, Mark as unpaid, several at once (11-018)](2026-11-21-bills-mark-paid.md) |
 | 2026-11-21 | [A child's exam papers are events wherever events are listed (26-023)](2026-11-21-exam-papers-as-events.md) |
 | 2026-11-21 | [A timetable read late still becomes exam days (14-077)](2026-11-21-timetable-read-late.md) |
 | 2026-11-21 | [HomeSend: confirmed above the bar, whatever it was read from (14-075)](2026-11-21-confirmed-above-bar.md) |
