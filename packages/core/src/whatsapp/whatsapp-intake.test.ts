@@ -277,7 +277,7 @@ describe("processing into HomeSend", () => {
     expect(h.tables.home_send_items![0]).toMatchObject({ source: "whatsapp", household_id: HOUSEHOLD, created_by_member_id: MEMBER, external_id: "whatsapp:wamid.T1" });
     expect(h.tables.whatsapp_messages![0]).toMatchObject({ processing_status: "processed", homesend_item_id: h.tables.home_send_items![0]!.id });
     expect(out.sent).toHaveLength(1);
-    expect(out.sent[0]!.text).toMatch(/Got it 👍 I found a school item: \*Sports Day\*\. 🎒 I've kept it in HomeSend/);
+    expect(out.sent[0]!.text).toMatch(/Got it 👍 I found a school item: \*Sports Day\*\. 🎒 Nothing was added yet\. Open it in HomeSend/);
   });
 
   it("keeps a photo in the private bucket as a WhatsApp item, with its caption", async () => {
@@ -471,7 +471,7 @@ describe("processing into HomeSend", () => {
     h.tables.household_members = FAMILY();
     const out = replies();
     await processWhatsAppMessage(h.client, id, { config: CONFIG, fetch: out.fetchImpl, ingest: { classify } });
-    expect(out.sent[0]!.text).toBe("Got it 👍 I found a school item: *Sports Day*. 🎒 I've kept it in HomeSend, where you can see it or undo anything: https://home.wonderapps.biz/home-send");
+    expect(out.sent[0]!.text).toBe("Got it 👍 I found a school item: *Sports Day*. 🎒 Nothing was added yet. Open it in HomeSend to finish it: https://home.wonderapps.biz/home-send");
     expect(h.tables.conversation_messages ?? []).toEqual([]);
   });
 
@@ -716,7 +716,7 @@ describe("processing into HomeSend", () => {
         } else if (expected === "added") {
           expect(reply).toMatch(/^✅ Added \*Mustard oil\* to Groceries — your household lets WonderHome add these on its own\. You can undo it in HomeSend\.$/);
         } else {
-          expect(reply).toBe("Got it 👍 I found groceries: Mustard oil. 🛒 I've kept it in HomeSend, where you can see it or undo anything: https://home.wonderapps.biz/home-send");
+          expect(reply).toBe("Got it 👍 I found groceries: Mustard oil. 🛒 Nothing was added yet. Open it in HomeSend to finish it: https://home.wonderapps.biz/home-send");
         }
       });
     }
@@ -807,7 +807,7 @@ describe("processing into HomeSend", () => {
       h.tables.household_members = [{ id: MEMBER, household_id: HOUSEHOLD, language: "hi" }];
       const out = replies();
       await processWhatsAppMessage(h.client, id, { config: CONFIG, fetch: out.fetchImpl, ingest: { classify: oil } });
-      expect(out.sent[0]!.text).toBe("मिल गया 👍 मुझे किराने का सामान मिला: Mustard oil। 🛒 मैंने इसे HomeSend में रख लिया है, जहाँ आप इसे देख सकते हैं या कुछ भी वापस ले सकते हैं: https://home.wonderapps.biz/home-send");
+      expect(out.sent[0]!.text).toBe("मिल गया 👍 मुझे किराने का सामान मिला: Mustard oil। 🛒 अभी कुछ नहीं जोड़ा गया। इसे पूरा करने के लिए HomeSend में खोलें: https://home.wonderapps.biz/home-send");
     });
   });
 
@@ -1431,7 +1431,7 @@ describe("saying what it found", () => {
     expect(acknowledgementFor(outcome("activity_item", "Karate exam"), { question: "Who is it for — Asmi or Manan?" }).text).toBe(
       "Got it 👍 I found something for a class outside school: *Karate exam*. 🏅 Who is it for — Asmi or Manan?",
     );
-    expect(acknowledgementFor(outcome("event", "Riya's birthday party")).text).toBe("Got it 👍 I found an event: *Riya's birthday party*. 📅 I've kept it in HomeSend, where you can see it or undo anything: https://home.wonderapps.biz/home-send");
+    expect(acknowledgementFor(outcome("event", "Riya's birthday party")).text).toBe("Got it 👍 I found an event: *Riya's birthday party*. 📅 Nothing was added yet. Open it in HomeSend to finish it: https://home.wonderapps.biz/home-send");
   });
 });
 
@@ -1536,7 +1536,7 @@ describe("what WonderHome says back", () => {
 
   it("never echoes an amount or a health detail", () => {
     const bill = acknowledgementFor(base("bill", { title: "Electricity", amount: 2430, currency: "INR" })).text;
-    expect(bill).toBe("Got it 👍 I found a bill. 🧾 I've kept it in HomeSend, where you can see it or undo anything: https://home.wonderapps.biz/home-send");
+    expect(bill).toBe("Got it 👍 I found a bill. 🧾 Nothing was added yet. Open it in HomeSend to finish it: https://home.wonderapps.biz/home-send");
     expect(bill).not.toMatch(/2,?430|₹|INR/);
     expect(acknowledgementFor(base("health_document", { title: "HbA1c 7.9%" })).text).not.toMatch(/HbA1c|7\.9/);
   });
@@ -1546,7 +1546,7 @@ describe("what WonderHome says back", () => {
     // A name it can't place is HomeTalk's to ask too, never a HomeSend line of its own.
     const outcome = base("school_item", { title: "Sports Day" });
     outcome.item.understanding = { references: [{ text: "your child", candidates: ["Aarav", "Anya"], confidence: 0.5 }] } as never;
-    expect(acknowledgementFor(outcome).text).toBe("Got it 👍 I found a school item: *Sports Day*. 🎒 I've kept it in HomeSend, where you can see it or undo anything: https://home.wonderapps.biz/home-send");
+    expect(acknowledgementFor(outcome).text).toBe("Got it 👍 I found a school item: *Sports Day*. 🎒 Nothing was added yet. Open it in HomeSend to finish it: https://home.wonderapps.biz/home-send");
   });
 
   it("says a repeat is already there, and a failure is kept, not lost", () => {
@@ -1577,7 +1577,7 @@ describe("WonderHome's own WhatsApp words in the member's language (14-047)", ()
   it("acknowledges, says what was added, with no percentage once confirmed, in Hindi", async () => {
     const t = await translatorFor("hi");
     const outcome = { duplicate: false, state: "needs_review", itemId: "i-1", notice: "", item: { classifiedKind: "bill", extracted: { title: "Water" } } } as never;
-    expect(acknowledgementFor(outcome, { t }).text).toBe("मिल गया 👍 मुझे एक बिल मिला। 🧾 मैंने इसे HomeSend में रख लिया है, जहाँ आप इसे देख सकते हैं या कुछ भी वापस ले सकते हैं: https://home.wonderapps.biz/home-send");
+    expect(acknowledgementFor(outcome, { t }).text).toBe("मिल गया 👍 मुझे एक बिल मिला। 🧾 अभी कुछ नहीं जोड़ा गया। इसे पूरा करने के लिए HomeSend में खोलें: https://home.wonderapps.biz/home-send");
     expect(addedReply({ title: "Milk", where: "Groceries", percent: 97, why: "verified" }, undefined, t)).toBe(
       `✅ *Milk* को Groceries में जोड़ दिया — आपका परिवार WonderHome को ये अपने आप जोड़ने देता है। आप इसे HomeSend में वापस ले सकते हैं।`,
     );

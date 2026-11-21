@@ -15,7 +15,7 @@ import { timetableReply } from "../homesend/timetable-words";
 import { siteOrigin } from "../notifications/email";
 import { runtimeEnv } from "../platform/settings/runtime-env";
 import { gateTranscript, TRANSCRIPT_CONFIDENCE_FLOOR, type TranscriptGate } from "../homesend/audio";
-import { noteSummary } from "../homesend/school-note";
+import { looksLikeTimetable, noteSummary } from "../homesend/school-note";
 import { amountWords, sureClause, type AddedOnItsOwn, type WaitingInHomeSend } from "../homesend/auto-add";
 import { hearWhatsAppVoiceNote, ingestWhatsAppMedia, ingestWhatsAppText, IngestRejected, type IngestDeps, type IngestOutcome, type TranscribeResult } from "../homesend/ingest";
 import { COMPLETENESS } from "../homesend/completeness";
@@ -708,6 +708,8 @@ export function addedReply(added: AddedOnItsOwn, forName?: string, t: Translate 
     lines.push(t("whatsapp.timetable.open", { link: `${siteOrigin(runtimeEnv())}/home-send` }));
     return lines.join("\n");
   }
+  // The same thing already added from an earlier send (a re-read after a resend, 21 Nov): said once, never added twice.
+  if (added.already) return t("whatsapp.alreadyAdded", { title: shortTitle(added.title) ?? "it", where: added.where, link: `${siteOrigin(runtimeEnv())}${added.where === "Kids & School" ? "/school" : "/home-send"}` });
   // A school notice with nothing dated in it: kept as a school note at once, with its one line (2026-11-21). No numbers said back.
   if (added.note) return t("whatsapp.keptNote", { title: shortTitle(added.title) ?? "it", summary: withoutNumbers(noteSummary(added.note.summary, added.title)) ?? "", link: `${siteOrigin(runtimeEnv())}/home-send` });
   // A record already on file moved to its new day (14-066, part 3): no date or number said back.
@@ -1228,6 +1230,10 @@ export function acknowledgementFor(
   if (wait?.reason === "wait_for_approval") return { text: `${t("whatsapp.ack.gotIt")} ${found} ${t(wait.area === "school" ? "whatsapp.wait.approvalSchool" : "whatsapp.wait.approvalGroceries", { link })}`, asks: false };
   if (wait?.reason === "untraced") return { text: `${t("whatsapp.ack.gotIt")} ${found} ${t("whatsapp.wait.untraced", { link })}`, asks: false };
   if (wait?.reason === "below_bar") return { text: `${t("whatsapp.ack.gotIt")} ${found} ${t("whatsapp.wait.belowBar", { percent: wait.percent ?? 95, link })}`, asks: false };
+  // A timetable whose table couldn't be read: said plainly, never "kept" (21 Nov).
+  if (outcome.item.classifiedKind === "school_item" && !outcome.item.extracted?.schedule && looksLikeTimetable(outcome.item.extracted, outcome.item.understanding?.contentSummary)) {
+    return { text: `${t("whatsapp.ack.gotIt")} ${found} ${t("whatsapp.ack.tableUnread")}`, asks: false };
+  }
   // Read, and something HomeSend keeps track of: what it was, and where it is. A reading that is nothing it keeps says so on its own.
   if (outcome.item.classifiedKind === "unknown") return { text: `${t("whatsapp.ack.gotIt")} ${found}`, asks: false };
   return { text: `${t("whatsapp.ack.gotIt")} ${found} ${t("whatsapp.ack.waiting", { link })}`, asks: false };

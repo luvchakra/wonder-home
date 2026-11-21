@@ -45,7 +45,7 @@ export const NEEDS_YOU_SOURCES = ["homesend_check", "homesend_waiting", "homesen
  * entries still Checking"; "homesend_waiting" is no longer asked, and its open
  * rows are withdrawn (`needs-you-run.ts`).
  */
-export const ASKING_SOURCES: readonly string[] = ["sender_trust", "homesend_health_for", "homebrain_conflict", "conflict", "homesend_amount", "homesend_add", "homesend_update", "homesend_resend"];
+export const ASKING_SOURCES: readonly string[] = ["homesend_class", "sender_trust", "homesend_health_for", "homebrain_conflict", "conflict", "homesend_amount", "homesend_add", "homesend_update", "homesend_resend"];
 export type NeedsYouSource = (typeof NEEDS_YOU_SOURCES)[number];
 
 /** 3 money due soon, 2 a school deadline, 1 a dated thing, 0 the rest. */

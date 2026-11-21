@@ -791,7 +791,7 @@ describe("X01 — Invitation email", () => {
 describe("X02 — 'Got it' reply on WhatsApp", () => {
   it("is short and never echoes an amount", () => {
     const outcome = { itemId: "i1", duplicate: false, state: "needs_review", notice: "", item: { id: "i1", classifiedKind: "bill", extracted: { title: "Electricity", amount: 2430 }, understanding: null } } as unknown as IngestOutcome;
-    expect(acknowledgementFor(outcome).text).toBe("Got it 👍 I found a bill. 🧾 I've kept it in HomeSend, where you can see it or undo anything: https://home.wonderapps.biz/home-send");
+    expect(acknowledgementFor(outcome).text).toBe("Got it 👍 I found a bill. 🧾 Nothing was added yet. Open it in HomeSend to finish it: https://home.wonderapps.biz/home-send");
   });
   // Sent once, inside the 24-hour window: whatsapp/whatsapp-intake.test.ts.
 });

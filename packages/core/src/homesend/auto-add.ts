@@ -81,6 +81,8 @@ export type AddedOnItsOwn = {
   several?: { count: number; names: string[] };
   /** Not an entry: a school notice with no dated thing, kept as a school note at once, with its one-line summary (2026-11-21). */
   note?: { summary: string };
+  /** Not added again: the same thing was already added from an earlier send (21 Nov); `where` names the area it is in. */
+  already?: true;
 };
 
 /** Something that would have been added on its own, still waiting in HomeSend, and why (`confirmation.ts` `wait`). */

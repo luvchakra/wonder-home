@@ -1,6 +1,6 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 
-import { askNeedsYou } from "../hometalk/needs-you-repository";
+import { askNeedsYou, closeNeedsYou } from "../hometalk/needs-you-repository";
 import { listMembers } from "../identity/households";
 import { log } from "../observability/logger";
 import { listEnrolments, saveEnrolment } from "../school/enrolments";
@@ -103,6 +103,8 @@ export async function addTimetable(
     await routeHomeSendItem(supabase, input.householdId, input.item.id, { routedTable: "school_exams", routedId: added.children[0]!.examId }).catch(() => undefined);
   }
 
+  // One child at a time: a question per item may be open at once (`needs_you_items_one_open`), so the next child is
+  // asked as soon as this one is answered (`answerClassQuestion`). `askedAt` is required: without it nothing was asked (21 Nov).
   if (input.ask !== false) {
     for (const child of plan.needClass) {
       const asked = await askNeedsYou(supabase, {
@@ -116,8 +118,15 @@ export async function addTimetable(
         defaultAnswer: "note",
         consequence: 1,
         dueOn: null,
-      } as Parameters<typeof askNeedsYou>[1]).catch(() => null);
-      if (asked) added.asked.push(child);
+        askedAt: new Date(),
+      }).catch((thrown: unknown) => {
+        log.warn("homesend: class question not asked", { reason: thrown instanceof Error ? thrown.message.slice(0, 60) : "unknown", allow: ["reason"] });
+        return null;
+      });
+      if (asked) {
+        added.asked.push(child);
+        break;
+      }
     }
   }
   return added.children.length > 0 || added.asked.length > 0 ? added : null;
@@ -131,7 +140,7 @@ export async function addTimetable(
  */
 export async function answerClassQuestion(
   supabase: SupabaseClient,
-  input: { householdId: string; itemId: string; childMemberId: string; answer: string; actorMemberId: string | null },
+  input: { householdId: string; itemId: string; childMemberId: string; answer: string; actorMemberId: string | null; questionId?: string },
 ): Promise<boolean> {
   if (input.answer === "note") return true;
   const grade = classOf(input.answer).grade;
@@ -156,5 +165,11 @@ export async function answerClassQuestion(
     onlyChildId: input.childMemberId,
     ask: false,
   });
+  // Then the next child at the school whose class isn't on record is asked, this question closed first so it can be
+  // (one open per item); exams already added are never added twice (`addTimetable` skips them).
+  if (input.questionId) {
+    await closeNeedsYou(supabase, input.questionId, { status: "answered", answer: input.answer, memberId: input.actorMemberId }).catch(() => false);
+    await addTimetable(supabase, { householdId: input.householdId, item: { id: row.id, source: row.source, extracted: row.extracted, createdByMemberId: row.created_by_member_id, filePath: row.file_path, understanding: row.understanding }, actorMemberId: input.actorMemberId, ask: true }).catch(() => null);
+  }
   return added !== null;
 }
