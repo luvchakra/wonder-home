@@ -40,6 +40,9 @@ begin
 end;
 $$;
 
+-- A trigger function, never called directly: nobody executes it.
+revoke execute on function wh.assert_share_member_in_household() from public, anon, authenticated;
+
 drop trigger if exists obligation_shares_member_in_household on public.obligation_shares;
 create trigger obligation_shares_member_in_household
   before insert or update on public.obligation_shares
