@@ -176,6 +176,8 @@ export const helpZh: AreaCatalog<typeof helpEn> = {
 
   "help.guide.home-send.body.22":
     "HomeSend 会学习你的家庭如何处理原本没有固定位置的内容。当同一发件人的内容，或同一种新类型（比如小区通知）被以相同方式处理，并在没有任何更正或撤销的情况下确认了三次，HomeSend 就会把它记为规则，下次直接这样处理，不再询问。一次更正或撤销会暂停该规则，在再确认三次之前由 AI 重新决定。每条规则都在 设置 → AI 助手 →“HomeSend 学到了什么”中，“为什么？”会列出它从哪些内容学来；管理员可以让它忘记。规则只会创建笔记、日历日期、提醒、待购物品、任务、联系人和地点：绝不会是账单、付款、健康记录、批准或权限。",
+  "help.guide.home-send.body.23":
+    "要求提供 PIN 或 OTP 的消息，或催促你在某项服务被停之前通过链接付款的消息，会被视为疑似诈骗。WonderHome 不会记录它：它会被放到一边，标为“疑似诈骗 — 未记录”，并提醒发送者不要付款、不要提供 PIN 或 OTP，并直接向该公司核实。你仍可在 HomeSend 放到一边的项目中看到它。WonderHome 从不付款。",
   "help.guide.today-and-home.title": "首页和今天",
   "help.guide.today-and-home.summary": "现在需要你的事，以及这一天的样子。",
   "help.guide.today-and-home.body.1":

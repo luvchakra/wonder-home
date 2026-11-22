@@ -187,6 +187,8 @@ export const helpFr: AreaCatalog<typeof helpEn> = {
 
   "help.guide.home-send.body.22":
     "HomeSend apprend comment votre foyer traite ce qui n'avait pas de place prévue. Quand les envois d'un même expéditeur, ou d'un même nouveau type (un avis de copropriété, par exemple), sont traités de la même façon et confirmés trois fois sans rien de corrigé ni annulé, HomeSend en fait une règle et traite le suivant ainsi sans demander. Une correction ou une annulation met la règle en pause, et l'IA décide de nouveau jusqu'à trois nouvelles confirmations. Chaque règle figure dans Réglages → Assistant IA → « Ce que HomeSend a appris », avec « Pourquoi ? » et les envois dont elle vient ; un Admin peut l'oublier. Une règle ne crée que des notes, des jours au calendrier, des rappels, des achats, des tâches, des contacts et des lieux : jamais une facture, un paiement, un dossier de santé, une approbation ni une permission.",
+  "help.guide.home-send.body.23":
+    "Un message qui demande votre code PIN ou OTP, ou qui vous pousse à payer par un lien avant une coupure, est traité comme une arnaque présumée. WonderHome ne l'enregistre pas : il est mis de côté comme « Arnaque présumée — non enregistré », et la personne qui l'a envoyé est invitée à ne pas payer, à ne partager aucun code PIN ou OTP et à vérifier directement auprès de l'entreprise. Vous pouvez toujours le voir parmi les éléments que HomeSend a mis de côté. WonderHome ne paie jamais rien.",
   "help.guide.today-and-home.title": "Accueil et Aujourd’hui",
   "help.guide.today-and-home.summary": "Ce qui a besoin de vous maintenant, et l’allure de la journée.",
   "help.guide.today-and-home.body.1":
