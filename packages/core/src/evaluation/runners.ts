@@ -38,7 +38,7 @@ import { directAddAreaOf, NO_DIRECT_ADD } from "../homesend/auto-add";
 import { decideConfirmation } from "../homesend/confirmation";
 import { detectInstructionInjection } from "../homesend/injection";
 import { DOCUMENT_CASES } from "./homesend-documents/cases";
-import { BLANK_DOCUMENT_READING, DOCUMENT_CONTEXT, documentMisses } from "./homesend-documents/check";
+import { BLANK_DOCUMENT_READING, DOCUMENT_CONTEXT, documentMisses, filedKind } from "./homesend-documents/check";
 import { reconcileAgainstRecords, type HomeSendCandidate } from "../homesend/reconcile";
 import { adoptMatchedSubject, resolveIntakePeople } from "../homesend/resolve";
 import { buildUnderstanding } from "../homesend/understanding";
@@ -804,7 +804,7 @@ async function observeDocument(c: HomeSendCase, id: string, models: Models): Pro
   const misses = documentMisses(doc, read);
   const action = misses.length === 0 ? "as_expected" : `missed:${misses.join("; ")}`;
   const injection = detectInstructionInjection(doc.source.text, doc.source.caption);
-  return { ...EMPTY, interpretation: read.kind, action, safety: { consequential: false, executed: false, refused: false, injectionFlagged: injection.flagged }, answer: action };
+  return { ...EMPTY, interpretation: filedKind(doc, read), action, safety: { consequential: false, executed: false, refused: false, injectionFlagged: injection.flagged }, answer: action };
 }
 
 function observePayment(c: HomeSendCase, payment: NonNullable<HomeSendCase["payment"]>): Observation {
