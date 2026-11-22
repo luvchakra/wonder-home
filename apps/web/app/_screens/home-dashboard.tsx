@@ -163,18 +163,20 @@ export function HomeDashboard({ session }: { session: Session }) {
             card says only what is on record or what a real provider sent
             (rule 9); on a phone it sits above the greeting rather than
             beside it, so nothing runs into the greeting (rule 15). */}
-        <header className="wh-rise relative min-h-[15.5rem] overflow-hidden rounded-[var(--wh-radius-lg)] sm:min-h-[16rem]">
-          <CozyCornerIllustration className="absolute inset-0 h-full w-full rtl:-scale-x-100" />
+        <header className="wh-rise relative min-h-[15.5rem] overflow-hidden rounded-[var(--wh-radius-lg)] sm:grid sm:min-h-[16rem] sm:grid-cols-[minmax(0,42%)_minmax(0,1fr)] sm:grid-rows-[auto_1fr]">
+          <CozyCornerIllustration cat={false} className="absolute inset-0 h-full w-full rtl:-scale-x-100" />
           <div
             aria-hidden
             className="absolute inset-0 bg-[linear-gradient(to_right,var(--wh-surface)_0%,var(--wh-surface)_38%,transparent_68%)] rtl:bg-[linear-gradient(to_left,var(--wh-surface)_0%,var(--wh-surface)_38%,transparent_68%)]"
           />
 
-          {/* Hidden below `sm`: at phone widths the greeting text block
-              (max-w-[80%] below) has nowhere for this to sit without
-              overlapping it — the illustration itself is mostly cropped
-              out of frame there too, so there is no clear region left. */}
-          <ScriptAccent size="sm" heart className="absolute start-[40%] bottom-6 hidden max-w-[10rem] leading-[1.15] sm:block">
+          {/* From `sm` the header is a grid (the owner, 2026-11-22: "doesnt
+              look good on desktop, align it nicely"): the greeting and this
+              handwritten line close the start column, the date card and the
+              cat with its bubble hold the end column, so no layer can sit on
+              another at any width or in any language. Hidden below `sm`,
+              where the greeting row has no room for it. */}
+          <ScriptAccent size="sm" heart className="relative z-10 hidden mx-6 mb-6 max-w-[12rem] self-end leading-[1.15] sm:col-start-1 sm:row-start-2 sm:block">
             {t("homeScreen.script.line1")}
             <br />
             {t("homeScreen.script.line2")}
@@ -186,7 +188,7 @@ export function HomeDashboard({ session }: { session: Session }) {
           </Suspense>
 
           {/* On a phone the encouragement sits to the right of the greeting, level with it (the owner, 2026-10-21: "move this section on the right"); on a wider screen the scene holds the right, so it stays under the name. */}
-          <div data-hero-words="" className="relative z-10 flex items-center gap-4 px-5 pt-3 pb-5 sm:block sm:max-w-[42%] sm:space-y-1 sm:p-6">
+          <div data-hero-words="" className="relative z-10 flex items-center gap-4 px-5 pt-3 pb-5 sm:col-start-1 sm:row-start-1 sm:block sm:space-y-1 sm:p-6 sm:pb-2">
             <div className="min-w-0 flex-1 space-y-1">
               <p className="text-lg font-medium text-[var(--wh-foreground-muted)]">{greetingFor(timezone, now)},</p>
               <h1 className="min-w-0 text-[1.75rem] leading-tight font-bold tracking-tight break-words text-balance min-[400px]:text-[2rem] sm:text-[2.5rem]">
