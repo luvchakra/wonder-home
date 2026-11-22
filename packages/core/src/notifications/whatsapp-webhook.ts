@@ -51,17 +51,23 @@ const NOT_CONFIGURED_EVERY_MS = 60_000;
 let lastNotConfiguredAt = Number.NEGATIVE_INFINITY;
 
 /** Records that a message was refused because a WhatsApp setting is missing. Never throws. */
-export async function recordNotConfigured(admin: () => SupabaseClient, now = Date.now()): Promise<boolean> {
+export async function recordNotConfigured(admin: () => SupabaseClient, now = Date.now(), why: NotConfiguredWhy = {}): Promise<boolean> {
   if (now - lastNotConfiguredAt < NOT_CONFIGURED_EVERY_MS) return false;
   lastNotConfiguredAt = now;
-  log.warn("whatsapp webhook refused: not configured");
+  // Names only, never a value: the next outage says which setting and whether the saved settings were read at all.
+  const missing = (why.missing ?? []).join(",") || "unknown";
+  const store = why.store ?? "unknown";
+  log.warn("whatsapp webhook refused: not configured", { missing, store, allow: ["missing", "store"] });
   try {
-    await recordWhatsAppEvents(admin(), [{ kind: "not_configured" }]);
+    await recordWhatsAppEvents(admin(), [{ kind: "not_configured", missingSettings: why.missing, settingsStore: why.store }]);
   } catch {
     // No service role either: the log line above is all there is.
   }
   return true;
 }
+
+/** Why a delivery was refused as unconfigured: setting names and the store's state, never a value. */
+export type NotConfiguredWhy = { missing?: readonly string[]; store?: string };
 
 /** Tests only. */
 export function resetNotConfiguredClock(): void {
@@ -81,6 +87,8 @@ export async function handleWhatsAppWebhook(
     ask?: WhatsAppIntakeDeps["ask"];
     /** Adding an item on its own where the household allows it (`WhatsAppIntakeDeps.addOnItsOwn`). */
     addOnItsOwn?: WhatsAppIntakeDeps["addOnItsOwn"];
+    /** Which settings were missing, for the `not_configured` event and log line (names only). */
+    notConfigured?: NotConfiguredWhy;
   },
 ): Promise<Response> {
   const config = deps.config;
@@ -97,7 +105,7 @@ export async function handleWhatsAppWebhook(
 
   if (!config?.appSecret) {
     // Refused for a missing setting, not a bad caller: say so where staff look (2026-11-22, a day of silent refusals).
-    await recordNotConfigured(deps.admin);
+    await recordNotConfigured(deps.admin, Date.now(), deps.notConfigured);
     return unauthenticated();
   }
   const declared = Number(request.headers.get("content-length"));

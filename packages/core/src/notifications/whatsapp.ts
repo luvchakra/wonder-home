@@ -241,6 +241,14 @@ export type WhatsAppEnv = {
   verifyToken: string | null;
 };
 
+/** What the webhook needs to accept a delivery: the sending trio (else no channel) and the app secret that checks Meta's signature. */
+export const WHATSAPP_WEBHOOK_SETTINGS = ["WHATSAPP_ACCESS_TOKEN", "WHATSAPP_PHONE_NUMBER_ID", "WHATSAPP_TEMPLATE_NAME", "WHATSAPP_APP_SECRET"] as const;
+
+/** The names (never the values) of the settings the webhook needs that read as unset, for a refusal that says why. */
+export function whatsappMissingSettings(env: Record<string, string | undefined> = runtimeEnv()): string[] {
+  return WHATSAPP_WEBHOOK_SETTINGS.filter((key) => !env[key]?.trim());
+}
+
 /** The deployment's WhatsApp, or none. A half-configured channel is not a channel. */
 export function whatsappConfigFromEnv(env: Record<string, string | undefined> = runtimeEnv(), fetchImpl?: Fetch): WhatsAppEnv | null {
   const accessToken = env.WHATSAPP_ACCESS_TOKEN?.trim();
