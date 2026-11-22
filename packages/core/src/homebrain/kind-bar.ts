@@ -1,5 +1,5 @@
 import type { HomeSendKind } from "../homesend/items";
-import { DEFAULT_AUTO_ADD_PERCENT } from "../homesend/auto-add";
+import { DEFAULT_AUTO_ADD_PERCENT } from "./intake/auto-add";
 
 /**
  * Each kind's bar for adding on its own, from the household's own accuracy

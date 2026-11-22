@@ -11,6 +11,7 @@ decision that shapes later work each earns a note, written before moving on.
 
 | Date | Note |
 |---|---|
+| 2026-11-22 | [HomeBrain holds the intelligence, HomeSend moves the data](2026-11-22-homebrain-owns-intelligence.md) |
 | 2026-11-22 | [First live AI evaluation: numbers, fixes and what is open](2026-11-22-first-live-eval.md) |
 | 2026-11-22 | [Home hero: the cat's bubble gets its own place on desktop](2026-11-22-home-hero-desktop-layout.md) |
 | 2026-11-22 | [HomeSend: the model decides, part 5 — measures (14-085)](2026-11-22-homesend-ai-decides-part5.md) |

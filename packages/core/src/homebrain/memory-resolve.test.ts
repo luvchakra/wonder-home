@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 
 import type { HouseholdContextItem } from "../context/types";
-import type { IntakePerson } from "../homesend/resolve";
+import type { IntakePerson } from "./intake/resolve";
 import { resolveGaps, usable, whyFilled } from "./memory-resolve";
 import type { HouseholdRule } from "./rules";
 

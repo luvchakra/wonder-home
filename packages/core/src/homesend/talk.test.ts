@@ -2,9 +2,9 @@ import { describe, expect, it } from "vitest";
 
 import { sanitizeIntakeExtraction } from "../ai/classify-intake";
 import { applyDocumentPlan, type PlanWriter } from "./apply";
-import { buildDocumentPlan } from "./plan";
+import { buildDocumentPlan } from "../homebrain/intake/plan";
 import { answerDocumentChanges, documentReplyClasses, documentReplyText, readDocumentChangeQuestion } from "./talk";
-import { buildUnderstanding } from "./understanding";
+import { buildUnderstanding } from "../homebrain/intake/understanding";
 
 /** DDU 2.0 §31–33, §49: HomeTalk and HomeSend are one pipeline; HomeTalk speaks from what actually happened. */
 

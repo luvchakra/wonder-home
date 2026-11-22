@@ -1,9 +1,8 @@
-import type { ConfirmationDecision } from "./confirmation";
-import { missingRequired, type CompletenessReading } from "./completeness";
+import { FROM_A_FILE, missingRequired, type CompletenessReading, type ConfirmationDecision, type HomeSendReconciliation, type IntakeUnderstanding } from "../homebrain/intake-api";
 import type { HomeSendFailureReason, HomeSendKind, HomeSendStatus } from "./items";
-import type { HomeSendReconciliation } from "./reconcile";
-import type { IntakeUnderstanding } from "./understanding";
-import { FROM_A_FILE } from "./verify";
+import { daysBetween, RETRY_CAP } from "./items";
+
+export { daysBetween, RETRY_CAP };
 
 /**
  * What waits in HomeSend, and for how long (the owner, 2026-11-03: "go,
@@ -32,8 +31,6 @@ import { FROM_A_FILE } from "./verify";
 export const STALE_AFTER_DAYS = 14;
 /** Days untouched before a waiting or failed item is archived (kept, restorable). */
 export const ARCHIVE_AFTER_DAYS = 30;
-/** How many times a person may ask HomeSend to read a failed item again — the job queue's own cap. */
-export const RETRY_CAP = 5;
 /** At most this many items are added in one bulk request; the rest wait for the next. */
 export const BULK_LIMIT = 25;
 
@@ -140,17 +137,6 @@ export function bulkReady(evidence: WaitEvidence): boolean {
   return true;
 }
 
-/** Whole days between two instants, counted on the household's own calendar. */
-export function daysBetween(from: Date, to: Date, timeZone: string): number {
-  const day = (at: Date) => {
-    try {
-      return new Intl.DateTimeFormat("en-CA", { timeZone, year: "numeric", month: "2-digit", day: "2-digit" }).format(at);
-    } catch {
-      return at.toISOString().slice(0, 10);
-    }
-  };
-  return Math.round((Date.parse(day(to)) - Date.parse(day(from))) / 86_400_000);
-}
 
 /** Waiting long enough for "still want these?" (14 days, on the household's clock). */
 export function isStale(lastTouched: string, now: Date, timeZone: string): boolean {

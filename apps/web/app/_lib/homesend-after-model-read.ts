@@ -1,7 +1,7 @@
 import "server-only";
 import type { SupabaseClient } from "@supabase/supabase-js";
 
-import type { AddedOnItsOwn } from "@wonderhome/core/homesend/auto-add";
+import type { AddedOnItsOwn } from "@wonderhome/core/homebrain/intake/auto-add";
 import { findAddedTwin, getHomeSendItem, setAsideAsAlreadyRecorded } from "@wonderhome/core/homesend/repository";
 import type { AfterModelRead } from "@wonderhome/core/homesend/retry-queue";
 import { whatsappConfigFromEnv } from "@wonderhome/core/notifications/whatsapp";

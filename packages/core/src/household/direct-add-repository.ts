@@ -1,8 +1,8 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 
 import { savePolicy } from "./configuration-repository";
-import { asHealthFilers, HEALTH_FILERS_POLICY_NAME, pickableFiler, type HealthMember } from "../homesend/health-filers";
-import { directAddFrom, NO_DIRECT_ADD, type DirectAdd, type DirectAddArea } from "../homesend/auto-add";
+import { asHealthFilers, HEALTH_FILERS_POLICY_NAME, pickableFiler, type HealthMember } from "../homebrain/intake/health-filers";
+import { directAddFrom, NO_DIRECT_ADD, type DirectAdd, type DirectAddArea } from "../homebrain/intake/auto-add";
 import {
   asApprovalScope,
   asMoneyHealthMode,
@@ -14,10 +14,10 @@ import {
   type MoneyHealthMode,
   type OutsideSenderMode,
   type RecordFirstSettings,
-} from "../homesend/record-first";
+} from "../homebrain/intake/record-first";
 
 /**
- * The record-first settings (`homesend/record-first.ts`, the owner
+ * The record-first settings (`homebrain/intake/record-first.ts`, the owner
  * 2026-11-14), kept like the bar (`auto-add-repository.ts`): one versioned
  * row each in `policies`, category `ai_autonomy`, so a change is audited and
  * Admins only. Nothing to migrate: a household that never picked one gets the
@@ -107,7 +107,7 @@ export async function saveRecordFirst(
 }
 
 /**
- * "Who may file health records for others" (`homesend/health-filers.ts`, the
+ * "Who may file health records for others" (`homebrain/intake/health-filers.ts`, the
  * owner 2026-11-20): the members an Admin picked; nobody when never picked or
  * when it can't be read (the careful answer: today's question stays).
  */

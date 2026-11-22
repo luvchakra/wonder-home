@@ -1,8 +1,8 @@
 import type { HouseholdContextItem } from "../context/types";
-import { namesSchool, senderKey } from "../homesend/learned";
-import { classOf } from "../homesend/timetable";
+import { namesSchool, senderKey } from "./learning/learned";
+import { classOf } from "./school/timetable";
 import type { HomeSendKind } from "../homesend/items";
-import type { IntakePerson } from "../homesend/resolve";
+import type { IntakePerson } from "./intake/resolve";
 import { isMixed, normalizeWords, phraseKey, placeKey, ruleFor, vendorKey, type HouseholdRule } from "./rules";
 
 /**
@@ -25,7 +25,7 @@ import { isMixed, normalizeWords, phraseKey, placeKey, ruleFor, vendorKey, type 
  * owner's (2026-11-20, "for health record make it configurable on admin
  * level, so the check can be bypassed for allowed users"): for a sender an
  * Admin put on "Who may file health records for others"
- * (`homesend/health-filers.ts`), it may fill who a health document is for
+ * (`homebrain/intake/health-filers.ts`), it may fill who a health document is for
  * from the one household member the document itself names; never from a
  * learned rule, and never for anyone else.
  */

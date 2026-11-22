@@ -5,8 +5,8 @@ import type { Directory } from "./plan";
 import type { NotificationCategory } from "./policies";
 import { localMoment } from "./timing";
 import { countWaiting, isStale, type WaitingGroup } from "../homesend/waiting";
-import { questionsLeft, readCheckingState } from "../homesend/checking";
-import { countByGroup, type TidiedEntry } from "../homesend/tidy";
+import { questionsLeft, readCheckingState } from "../homebrain/intake/checking";
+import { countByGroup, type TidiedEntry } from "../homebrain/intake/tidy";
 
 /**
  * Notices (stories 27-004 to 27-014): notifications about something that
@@ -259,7 +259,7 @@ export function homesendSummaryNotices(
 
 // --- HomeSend: questions waiting about entries added as Checking (14-062; the owner, 2026-11-03) ---
 
-/** An item HomeSend added; `checking` is its `understanding.checking` (`homesend/checking.ts`). */
+/** An item HomeSend added; `checking` is its `understanding.checking` (`homebrain/intake/checking.ts`). */
 export type CheckingRow = { id: string; status: string; updated_at: string; checking: unknown };
 
 /**

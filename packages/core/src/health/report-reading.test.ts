@@ -2,7 +2,7 @@ import { deflateSync } from "node:zlib";
 
 import { describe, expect, it } from "vitest";
 
-import { detectInstructionInjection } from "../homesend/injection";
+import { detectInstructionInjection } from "../homebrain/intake/injection";
 import { outsideRange, parseRange, parseValue, validateReportReading, valueAppears, type ReportReadingOutput } from "./report-reading";
 import { extractPdfText } from "./report-text";
 

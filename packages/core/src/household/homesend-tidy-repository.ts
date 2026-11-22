@@ -4,7 +4,7 @@ import { savePolicy } from "./configuration-repository";
 
 /**
  * "Tidy up items that no longer apply" (the owner, 2026-11-03): whether
- * HomeSend's daily tidy (`homesend/tidy.ts`) may archive waiting items whose
+ * HomeSend's daily tidy (`homebrain/intake/tidy.ts`) may archive waiting items whose
  * day has passed, that are already on record, or that a newer one replaced.
  * Kept like "Add directly" (`direct-add-repository.ts`): one versioned row in
  * `policies`, category `ai_autonomy`, so a change is audited and Admins only.

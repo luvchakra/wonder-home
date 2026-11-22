@@ -7,7 +7,7 @@ import { auditChange } from "@wonderhome/core/api/audit";
 import { toErrorBody } from "@wonderhome/core/api/errors";
 import { adminClientFor, adminGrant } from "@wonderhome/core/db/admin-context";
 import { createClient } from "@wonderhome/core/db/server";
-import { DEFAULT_AUTO_ADD_PERCENT } from "@wonderhome/core/homesend/auto-add";
+import { DEFAULT_AUTO_ADD_PERCENT } from "@wonderhome/core/homebrain/intake/auto-add";
 import { addAnywayVerdict, CLEAR_ALL_LIMIT, type KeptBecause } from "@wonderhome/core/homesend/inbox-view";
 import { archiveWaitingHomeSendItems, claimWaitingHomeSendItem, listHomeSendItems, PENDING_STATUSES, restoreHomeSendItems } from "@wonderhome/core/homesend/repository";
 import { beginChecking } from "@wonderhome/core/hometalk/checking-questions";

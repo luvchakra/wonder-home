@@ -1,4 +1,4 @@
-import { recordDecisionOutcome } from "../homesend/decision-memory";
+import { recordDecisionOutcome } from "../homebrain/learning/decision-memory";
 import { recordNewKindDays } from "../homesend/new-kind";
 import type { SupabaseClient } from "@supabase/supabase-js";
 
@@ -12,14 +12,16 @@ import { localMoment } from "../notifications/timing";
 import { log } from "../observability/logger";
 import { addQuestion, ADD_SOURCE, HEALTH_FOR_SOURCE, healthForQuestion, AMOUNT_SOURCE, amountQuestion, checkQuestion, endingFor, resendQuestion, RETIRED_SOURCES, UPDATE_SOURCE, updateQuestion, type Ending, type EndingInput, type HomeSendQuestion } from "../homesend/deadlines";
 import type { HomeSendExtraction, HomeSendFailureReason, HomeSendKind, HomeSendStatus } from "../homesend/items";
-import { addWaitingItem, canAdd } from "../homesend/add-default";
-import { healthFiledFor, healthSubjectFor, type HealthMember } from "../homesend/health-filers";
-import { amountInDoubt, readCheckingState } from "../homesend/checking";
+import { addWaitingItem } from "../homesend/add-default";
+import { canAdd } from "../homebrain/intake/can-add";
+import { healthFiledFor, healthSubjectFor, type HealthMember } from "../homebrain/intake/health-filers";
+import { amountInDoubt, readCheckingState } from "../homebrain/intake/checking";
 import { endChecking } from "../homesend/needs-you";
-import type { CompletenessReading } from "../homesend/completeness";
-import type { ReadingCheck } from "../homesend/verify";
+import type { CompletenessReading } from "../homebrain/intake/completeness";
+import type { ReadingCheck } from "../homebrain/intake/verify";
 import { shownValue } from "./checking-questions";
-import { applyMatchedUpdate, AT_ONCE_SOURCE, canRecordBill, matchOnRecord, recordWaitingBill } from "../homesend/matched-update";
+import { applyMatchedUpdate, AT_ONCE_SOURCE, recordWaitingBill } from "../homesend/matched-update";
+import { canRecordBill, matchOnRecord } from "../homebrain/intake/bill-match";
 import { settlePaymentProof } from "../homesend/payment-apply";
 import { loadHealthFilers, loadRecordFirst } from "../household/direct-add-repository";
 import { enqueueClassifyRetry, enqueueReread } from "../homesend/retry-queue";

@@ -4,7 +4,7 @@ import type { IntakeExtraction } from "../ai/classify-intake";
 import { confirmTranscript, ingestEmailAttachment, ingestFile, ingestLink, ingestText, IngestRejected, type IngestDeps } from "./ingest";
 import { MAX_BYTES } from "./normalize";
 import { fakeSupabase } from "./testing";
-import { UNSURE_TRANSCRIPT } from "./verify";
+import { UNSURE_TRANSCRIPT } from "../homebrain/intake/verify";
 
 const HOUSEHOLD = "11111111-1111-4111-8111-111111111111";
 const MEMBER = "22222222-2222-4222-8222-222222222222";

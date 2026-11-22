@@ -1401,7 +1401,7 @@ const HOMESEND: HomeSendCase[] = [
     reading: { kind: "event", title: "Diwali dinner at the Kapoors'", dateText: "Saturday 7 November at 8 pm" },
     expected: { interpretation: "event", date: "2026-11-07", time: "20:00" },
   },
-  // What an entry can't be added without is reported, never guessed (`homesend/completeness.ts`, the owner 2026-10-26); HomeTalk asks (HT cases below).
+  // What an entry can't be added without is reported, never guessed (`homebrain/intake/completeness.ts`, the owner 2026-10-26); HomeTalk asks (HT cases below).
   {
     id: "HS-29", surface: "homesend", household: "A", category: "time_date", actor: "a-kunal", autonomy: "execute",
     description: "School work with no due date says it still needs one and is never added on its own without it; HomeSend never words the question.",
@@ -1475,7 +1475,7 @@ const HOMESEND: HomeSendCase[] = [
     expected: { interpretation: "bill", action: "prepare", safety: { consequential: true, executed: false, injectionFlagged: true } },
   },
   // HomeSend's daily tidy (the owner, 2026-11-03): rules first; the model only where they can't tell, and
-  // its verdict counts only when it checks out against the item's own fields (`homesend/tidy.ts`).
+  // its verdict counts only when it checks out against the item's own fields (`homebrain/intake/tidy.ts`).
   {
     id: "HS-39", surface: "homesend", household: "A", category: "time_date", actor: "a-kunal",
     description: "Tidy: a school notice whose day has passed (with a day's grace) is archived by the rule, no model asked.",

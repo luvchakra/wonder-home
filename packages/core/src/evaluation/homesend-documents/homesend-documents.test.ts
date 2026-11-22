@@ -1,9 +1,9 @@
 import { describe, expect, it } from "vitest";
 
 import { acceptReading, isClassifyFailure, type IntakeExtraction } from "../../ai/classify-intake";
-import { detectInstructionInjection } from "../../homesend/injection";
-import { readPaymentProof } from "../../homesend/payment-proof";
-import { planTimetable } from "../../homesend/timetable";
+import { detectInstructionInjection } from "../../homebrain/intake/injection";
+import { readPaymentProof } from "../../homebrain/intake/payment-proof";
+import { planTimetable } from "../../homebrain/school/timetable";
 import { DOCUMENT_CASES } from "./cases";
 import { documentMisses, filedKind } from "./check";
 

@@ -5,8 +5,8 @@ import { useActionState, useEffect, useRef, useState } from "react";
 
 import type { IntakeChangeReceipt, ReceiptAction } from "@wonderhome/core/homesend/apply";
 import { RECEIPT_ACTIONS } from "@wonderhome/core/homesend/apply";
-import type { PageReport } from "@wonderhome/core/homesend/document";
-import { PLAN_GROUPS, type DocumentPlan, type PlanEntry } from "@wonderhome/core/homesend/plan";
+import type { PageReport } from "@wonderhome/core/homebrain/intake/document";
+import { PLAN_GROUPS, type DocumentPlan, type PlanEntry } from "@wonderhome/core/homebrain/intake/plan";
 import { Alert } from "@wonderhome/core/ui/alert";
 import { Button } from "@wonderhome/core/ui/button";
 import { ExpandableRow } from "@wonderhome/core/ui/expandable-row";

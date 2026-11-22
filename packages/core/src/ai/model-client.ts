@@ -318,7 +318,7 @@ export let CLAUDE_ANSWER_MODEL = "claude-sonnet-5-5";
  * of it one call to the model above). Reading a message, photo or PDF into
  * the intake schema needs vision and care with dates and amounts, so it runs
  * on the balanced tier rather than the fast one. Nothing it returns is acted
- * on unchecked: `homesend/verify.ts` checks every detail against what was
+ * on unchecked: `homebrain/intake/verify.ts` checks every detail against what was
  * sent, and a person confirms below the household's bar. An operator moves
  * it without a deploy; `WONDERHOME_AI_MODEL`, when set, still applies to all.
  */

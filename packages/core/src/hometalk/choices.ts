@@ -3,7 +3,7 @@ import { readFocus } from "../conversation/references";
 import { bareRule } from "../commerce/bare-amount";
 import { baseOf, ladderForItem } from "../commerce/buying-sizes";
 import type { NamedItem } from "../commerce/catalog";
-import type { DetailField } from "../homesend/completeness";
+import type { DetailField } from "../homebrain/intake/completeness";
 import type { HomeSendKind } from "../homesend/items";
 import type { Translate } from "../i18n/translate";
 

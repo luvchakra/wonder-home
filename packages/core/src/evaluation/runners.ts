@@ -33,24 +33,24 @@ import { placeRequestForTurn, type PlaceRequest } from "../homeplaces/request";
 import { householdNow, suggestPlaces } from "../homeplaces/service";
 import type { PlaceResult, PlacesProvider } from "../places/provider";
 import { answerWithHomeBrain, type HomeBrainAnswer } from "../homebrain/turn";
-import { fillFromEvidence } from "../homesend/completeness";
-import { directAddAreaOf, NO_DIRECT_ADD } from "../homesend/auto-add";
-import { decideConfirmation } from "../homesend/confirmation";
-import { detectInstructionInjection } from "../homesend/injection";
+import { fillFromEvidence } from "../homebrain/intake/completeness";
+import { directAddAreaOf, NO_DIRECT_ADD } from "../homebrain/intake/auto-add";
+import { decideConfirmation } from "../homebrain/intake/confirmation";
+import { detectInstructionInjection } from "../homebrain/intake/injection";
 import { DOCUMENT_CASES } from "./homesend-documents/cases";
 import { BLANK_DOCUMENT_READING, DOCUMENT_CONTEXT, documentMisses, filedKind } from "./homesend-documents/check";
-import { reconcileAgainstRecords, type HomeSendCandidate } from "../homesend/reconcile";
-import { adoptMatchedSubject, resolveIntakePeople } from "../homesend/resolve";
-import { buildUnderstanding } from "../homesend/understanding";
+import { reconcileAgainstRecords, type HomeSendCandidate } from "../homebrain/intake/reconcile";
+import { adoptMatchedSubject, resolveIntakePeople } from "../homebrain/intake/resolve";
+import { buildUnderstanding } from "../homebrain/intake/understanding";
 import { addQuestion, amountQuestion, checkQuestion, endingFor, healthForQuestion, updateQuestion } from "../homesend/deadlines";
-import { gateHealthSubject, healthFiledFor, healthSubjectFor, mayFileForOthers } from "../homesend/health-filers";
-import { amountInDoubt } from "../homesend/checking";
-import type { CompletenessReading } from "../homesend/completeness";
-import { FROM_A_FILE } from "../homesend/verify";
-import { matchPaymentToBill, readPaymentProof } from "../homesend/payment-proof";
+import { gateHealthSubject, healthFiledFor, healthSubjectFor, mayFileForOthers } from "../homebrain/intake/health-filers";
+import { amountInDoubt } from "../homebrain/intake/checking";
+import type { CompletenessReading } from "../homebrain/intake/completeness";
+import { FROM_A_FILE } from "../homebrain/intake/verify";
+import { matchPaymentToBill, readPaymentProof } from "../homebrain/intake/payment-proof";
 import type { HomeSendKind } from "../homesend/items";
-import { checkVerdict, decideByRules, MONEY_OR_HEALTH, newerFromSameSender, tidyFacts, type TidyItem, type TidyVerdict } from "../homesend/tidy";
-import type { TidyJudge } from "../homesend/tidy-model";
+import { checkVerdict, decideByRules, MONEY_OR_HEALTH, newerFromSameSender, tidyFacts, type TidyItem, type TidyVerdict } from "../homebrain/intake/tidy";
+import type { TidyJudge } from "../homebrain/intake/tidy-model";
 import { compareStages } from "./compare";
 import { calendarFor, contextItemsFor, GOLDEN_HOUSEHOLDS, groundingEnvFor, heldForAdultsFor, memberNames, memberOf, peopleOf, viewerFor } from "./households";
 import type { CaseResult, EvalCase, Expectation, HomeBrainCase, HomeSendCase, HomeTalkCase, Observation, TriviaCase } from "./types";
@@ -624,7 +624,7 @@ export async function observeHomeSend(c: HomeSendCase, models: Models = {}): Pro
 
 /**
  * The tidy's decision on one waiting item, through the same rules and the
- * same check on a model's verdict the daily job uses (`homesend/tidy.ts`):
+ * same check on a model's verdict the daily job uses (`homebrain/intake/tidy.ts`):
  * observed as "archive:<reason>" or "keep".
  */
 async function observeTidy(c: HomeSendCase, tidy: NonNullable<HomeSendCase["tidy"]>, models: Models): Promise<Observation> {

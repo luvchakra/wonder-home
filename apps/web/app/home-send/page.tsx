@@ -12,7 +12,7 @@ import { listSetAsideLastDay, todayCounts } from "@wonderhome/core/homesend/dail
 import { ingestFile, ingestText } from "@wonderhome/core/homesend/ingest";
 import { countArchivedHomeSendItems, listArchiveReasons, listArchivedHomeSendItems, listHomeSendItems } from "@wonderhome/core/homesend/repository";
 import { loadNeedsYou } from "@wonderhome/core/hometalk/needs-you-repository";
-import { recoverWhen } from "@wonderhome/core/homesend/when";
+import { recoverWhen } from "@wonderhome/core/homebrain/intake/when";
 import { consumeShareHandoff } from "@wonderhome/core/homesend/share-handoff";
 import { isHouseholdAdmin, listMembers } from "@wonderhome/core/identity/households";
 import { childrenWithClasses, listActivities } from "@wonderhome/core/school/activities";

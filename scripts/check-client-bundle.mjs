@@ -43,7 +43,7 @@ export function sentinels(source, elsewhere = "") {
 const PROMPT_SOURCES = [
   "packages/core/src/ai/model-client.ts",
   "packages/core/src/ai/classify-intake.ts",
-  "packages/core/src/homesend/injection.ts",
+  "packages/core/src/homebrain/intake/injection.ts",
 ];
 
 /**

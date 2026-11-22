@@ -1,7 +1,7 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 
 import type { HomeSendKind } from "../homesend/items";
-import { AUTO_ADD_PERCENTS } from "../homesend/auto-add";
+import { AUTO_ADD_PERCENTS } from "./intake/auto-add";
 import { AUTO_ADD_POLICY_NAME } from "../household/auto-add-repository";
 import { BAR_KINDS, barFromHistory, effectiveBar, historyByKind, WINDOW_DAYS, type BarKind, type EffectiveBar, type KindBar } from "./kind-bar";
 

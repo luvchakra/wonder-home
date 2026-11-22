@@ -19,6 +19,7 @@ import { modelsFor, runEvaluation, type RunTarget } from "./run";
  *   npm run eval -- --cases HT-117,HS-24 [--runs 3]   only those cases, each run that many times
  *   npm run eval -- --utterance "Asmi has a test on Friday"   how one HomeTalk sentence is read
  *   npm run eval -- --set understanding [--verbose]   the wide understanding set, measured (2026-11-20)
+ *   npm run eval -- --set learning       only the unseen-kind (HS-L*) and replay measures (2026-11-22)
  *
  * The last two are for finding a defect cheaply: they never write an
  * artifact and say nothing about the release gates, which only mean
@@ -130,6 +131,12 @@ async function understandingRun(target: RunTarget, verbose: boolean): Promise<nu
 export async function main(args: readonly string[], repoRoot: string): Promise<number> {
   const target = targetFrom(args);
   if (valueOf(args, "--set") === "understanding") return understandingRun(target, args.includes("--verbose"));
+  if (valueOf(args, "--set") === "learning") {
+    const classify = modelsFor(target).models.classify;
+    const learning = await measureLearning(classify ? (source) => classify(source, { now: new Date("2026-11-22T06:00:00Z"), timezone: "Asia/Kolkata" }) : undefined);
+    console.log(`unseen kinds ${learning.unseen.pass}/${learning.unseen.of}${learning.unseen.failing.length ? ` · failing ${learning.unseen.failing.join(", ")}` : ""}`);
+    return learning.unseen.pass === learning.unseen.of ? 0 : 1;
+  }
   const utterance = valueOf(args, "--utterance");
   if (utterance) return readUtterance(target, utterance);
   const picked = valueOf(args, "--cases");

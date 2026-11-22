@@ -5,7 +5,7 @@ import { localMoment } from "../notifications/timing";
 import { listAutopayRuns, settleAutopayRun } from "../finance/autopay";
 import { cancelObligation, createObligation, listObligations, markObligationPaid, type PaidBill } from "../finance/repository";
 import { confirmByEvidence, recordHomeSendChange } from "./changes";
-import { matchPaymentToBill, paymentTitle, type OpenBill, type PaymentProof } from "./payment-proof";
+import { matchPaymentToBill, paymentTitle, type OpenBill, type PaymentProof } from "../homebrain/intake-api";
 
 /**
  * A payment proof written down (decision 2, the owner 2026-11-20). Run by

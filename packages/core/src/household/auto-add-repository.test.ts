@@ -33,7 +33,7 @@ describe("AT-K: the Admin's stored bar decides", () => {
   const medium = { readable: true, confidence: "medium" as "medium" | "high", score: 0.7, check: { verified: false, unverified: [] }, safety: { signals: [], instructionsIgnored: false } };
   const clear = { ...medium, confidence: "high" as const, score: 0.97, check: { verified: true, unverified: [] } };
   const decideUnder = async (answer: { data: unknown; error: unknown }, understanding: typeof medium) => {
-    const { decideConfirmation } = await import("../homesend/confirmation");
+    const { decideConfirmation } = await import("../homebrain/intake/confirmation");
     const bar = await loadAutoAddPercent(policies(answer), "h-1");
     const decision = decideConfirmation({ kind: "grocery_item", extracted: { title: "Milk", quantity: 1, unit: "l", needs: [], confidence: "high" } as never, understanding, reconciliation: null, subject: null, memberInitiated: true, autonomy: "execute", autoAddPercent: bar });
     // Below the bar it is added, marked Checking (the owner, 2026-11-03): "checking" here.

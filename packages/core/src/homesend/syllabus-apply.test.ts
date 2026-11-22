@@ -3,7 +3,8 @@ import { describe, expect, it } from "vitest";
 import { en } from "../i18n/messages/en";
 import { translator } from "../i18n/translate";
 import { asmiMtut2, SYLLABUS_ROWS } from "../evaluation/homesend-documents/syllabus-grade5";
-import { notesWithExtras, planSyllabus, studyText, type SyllabusAttached } from "./syllabus-apply";
+import { type SyllabusAttached } from "./syllabus-apply";
+import { notesWithExtras, planSyllabus, studyText } from "../homebrain/school/syllabus";
 import { syllabusReply } from "./timetable-words";
 
 const t = translator("en", en);

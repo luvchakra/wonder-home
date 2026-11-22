@@ -1,6 +1,6 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 
-import { readKnownCorrespondents } from "../homebrain/household-records";
+import { readKnownCorrespondents } from "../homebrain/intake-api";
 import { auditChange } from "../api/audit";
 import { activeAdultAdmin } from "../identity/active-admin";
 import { log } from "../observability/logger";

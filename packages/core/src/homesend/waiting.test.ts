@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 
-import { decideConfirmation, type ConfirmationInput } from "./confirmation";
-import { FROM_A_FILE } from "./verify";
+import { decideConfirmation, type ConfirmationInput } from "../homebrain/intake/confirmation";
+import { FROM_A_FILE } from "../homebrain/intake/verify";
 import { bulkReady, countWaiting, daysBetween, isDueForArchive, isStale, retryState, RETRY_CAP, whyItWaits, type WaitEvidence } from "./waiting";
 
 const understanding = (over: Partial<NonNullable<ConfirmationInput["understanding"]>> = {}) => ({

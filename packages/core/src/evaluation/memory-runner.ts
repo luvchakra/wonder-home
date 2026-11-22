@@ -6,7 +6,7 @@ import type { HomeSendExtraction } from "../homesend/items";
 import { lessonsFrom, type HouseholdRule, type RuleField, type RuleKind } from "../homebrain/rules";
 import { planVerification, type SourceItem, type VerifyEntry } from "../homebrain/verify-night";
 import type { HomeSendKind } from "../homesend/items";
-import type { IntakePerson } from "../homesend/resolve";
+import type { IntakePerson } from "../homebrain/intake/resolve";
 import type { Observation } from "./types";
 import { contextItemsFor, GOLDEN_HOUSEHOLDS } from "./households";
 import type { HomeBrainCase } from "./types";

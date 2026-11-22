@@ -1,5 +1,4 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
-
 import { auditChange } from "../api/audit";
 import { CONSUMABLE_CATEGORIES } from "../commerce/consumables";
 import { createConsumable, listConsumables, recordPurchase } from "../commerce/repository";
@@ -7,16 +6,12 @@ import { currencyCode, unitCostMinor } from "../commerce/receipts";
 import { createObligation } from "../finance/repository";
 import { createRecord, RECORD_TYPES, type RecordType } from "../health/records";
 import { recordHomeSendChange } from "./changes";
-import type { DocumentRecord } from "./document";
+import { billRecords, canAdd, healthSubjectFor, listPayeeBills, receiptLines, usualBill, vendorKey, type DocumentRecord } from "../homebrain/intake-api";
 import type { HomeSendChangeDomain, HomeSendExtraction } from "./items";
 import { billShape } from "./record-types";
 import type { HouseholdContextItem } from "../context/types";
-import { usualBill } from "../homebrain/history-fill";
-import { listPayeeBills } from "../homebrain/household-records";
 import { keepFilledWhy, readSenderHistory } from "./sender-history";
-import { healthSubjectFor } from "./health-filers";
 import { loadHealthMembers } from "../household/direct-add-repository";
-import { vendorKey } from "../homebrain/rules";
 
 /**
  * "Add this bill?" applied (the owner, 2026-11-20: "record"). A waiting bill,
@@ -55,24 +50,6 @@ import { vendorKey } from "../homebrain/rules";
 type Row = Record<string, unknown>;
 
 export type AddResult = "done" | "settled";
-
-/** Whether an item can be added this way at all; the deadlines step asks only about these. */
-export function canAdd(input: { kind: string | null; senderMemberId: string | null; extracted: Partial<HomeSendExtraction> | null; records: readonly unknown[] | null }): boolean {
-  const title = input.extracted?.title?.trim();
-  if (input.kind === "bill") return Boolean(title) || billRecords(input.records).length > 0;
-  if (input.kind === "receipt") return receiptLines(input.extracted).length > 0;
-  // A health record is filed for the person who sent it; with nobody (an email), there is no one to file it for.
-  if (input.kind === "health_document") return Boolean(title) && Boolean(input.senderMemberId);
-  return false;
-}
-
-function billRecords(records: readonly unknown[] | null): DocumentRecord[] {
-  return ((records ?? []) as DocumentRecord[]).filter((record) => record && record.domain === "bill" && typeof record.title === "string" && record.title.trim().length > 0);
-}
-
-function receiptLines(read: Partial<HomeSendExtraction> | null) {
-  return (read?.lines ?? []).filter((line) => typeof line?.name === "string" && line.name.trim().length > 0).slice(0, 40);
-}
 
 export async function addWaitingItem(
   client: SupabaseClient,

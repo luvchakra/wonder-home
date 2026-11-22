@@ -14,7 +14,7 @@ const TONES = { approvalScope: "primary", moneyHealth: "money", outsideSenders: 
 
 /**
  * One of the three "Record first" choices (the owner, 2026-11-14,
- * `homesend/record-first.ts`): what "Wait for Approval" holds, how money and
+ * `homebrain/intake/record-first.ts`): what "Wait for Approval" holds, how money and
  * health entries are recorded, and email from new senders. Picked, not typed
  * (rule 20), saved the moment it changes, and the one editor of each
  * (rule 23); an Admin's choice, so anyone else sees what is set.

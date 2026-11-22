@@ -1,6 +1,6 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 
-import { recordDecisionOutcome } from "../homesend/decision-memory";
+import { recordDecisionOutcome } from "./learning/decision-memory";
 import type { HomeSendKind } from "../homesend/items";
 import { lessonsFrom, mergeLesson, RULE_KINDS, type HouseholdRule, type Lesson, type RuleField, type RuleKind, type RuleSource } from "./rules";
 

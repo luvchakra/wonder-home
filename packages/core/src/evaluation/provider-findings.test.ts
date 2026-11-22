@@ -12,7 +12,7 @@ import { rulesAnswerItself, sameRuleReading } from "../conversation/rules";
 import { resolveTemporal } from "../conversation/temporal";
 import type { ModelDraft } from "../homebrain/answer";
 import { answerWithHomeBrain } from "../homebrain/turn";
-import { adoptMatchedSubject, type SubjectResolution } from "../homesend/resolve";
+import { adoptMatchedSubject, type SubjectResolution } from "../homebrain/intake/resolve";
 import { contextItemsFor, GOLDEN_HOUSEHOLDS, groundingEnvFor, memberOf, peopleOf, viewerFor } from "./households";
 import { GOLDEN_CASES } from "./cases";
 import { BLANK_READING, runCase } from "./runners";

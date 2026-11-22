@@ -1,4 +1,4 @@
-import type { ExamCandidate } from "../../homesend/exam-match";
+import type { ExamCandidate } from "../../homebrain/school/exam-match";
 
 /**
  * A synthetic copy of the owner's "Mid Term Unit Test 2 – Grade 5: Syllabus"

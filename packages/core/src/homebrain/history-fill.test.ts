@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 
 import type { HouseholdContextItem } from "../context/types";
 import type { HomeSendExtraction } from "../homesend/items";
-import type { IntakePerson } from "../homesend/resolve";
+import type { IntakePerson } from "./intake/resolve";
 import { fillFromHistory, nextOnDay, usualBill } from "./history-fill";
 import { childrenAtSchool, resolveGaps, usable } from "./memory-resolve";
 import type { HouseholdRule } from "./rules";

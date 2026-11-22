@@ -6,8 +6,8 @@ import { BLANK_DOCUMENT_READING, DOCUMENT_CONTEXT } from "../evaluation/homesend
 import { addedReply, acknowledgementFor } from "../whatsapp/intake";
 import { CLASS_OPEN, endingFor, type EndingInput } from "./deadlines";
 import { twinOf } from "./repository";
-import { isUndatedSchoolNotice, looksLikeTimetable } from "./school-note";
-import { planTimetable } from "./timetable";
+import { isUndatedSchoolNotice, looksLikeTimetable } from "../homebrain/intake/school-note";
+import { planTimetable } from "../homebrain/school/timetable";
 
 /**
  * The owner's timetable photo, 20–21 Nov: the first read came back empty (no model), he sent the photo again and

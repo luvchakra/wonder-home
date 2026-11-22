@@ -1,9 +1,9 @@
 import { describe, expect, it } from "vitest";
 
 import { groundIntakeDate, INTAKE_SYSTEM_PROMPT, sanitizeIntakeExtraction, type IntakeExtraction } from "./classify-intake";
-import { decideConfirmation } from "../homesend/confirmation";
-import { detectInstructionInjection } from "../homesend/injection";
-import { buildUnderstanding } from "../homesend/understanding";
+import { decideConfirmation } from "../homebrain/intake/confirmation";
+import { detectInstructionInjection } from "../homebrain/intake/injection";
+import { buildUnderstanding } from "../homebrain/intake/understanding";
 import { BLANK_READING } from "../evaluation/runners";
 
 /** Story 09-009: a paid receipt is purchase history — read as one, never as a bill. */

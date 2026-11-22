@@ -1,6 +1,5 @@
 import { ApiError } from "../api/errors";
-import type { EvidenceRef, PageReport } from "./document";
-import type { DocumentPlan, PlanEntry, PlanFieldChange } from "./plan";
+import type { DocumentPlan, EvidenceRef, PageReport, PlanEntry, PlanFieldChange } from "../homebrain/intake-api";
 
 /**
  * Applying a document's change plan, and the exact receipt it leaves

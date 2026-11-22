@@ -1,4 +1,4 @@
-import { recordDecisionOutcome } from "./decision-memory";
+import { recordDecisionOutcome } from "../homebrain/intake-api";
 import type { SupabaseClient } from "@supabase/supabase-js";
 
 import { auditChange } from "../api/audit";
