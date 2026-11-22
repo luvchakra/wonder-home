@@ -13,7 +13,7 @@ import { runtimeEnv } from "../platform/settings/runtime-env";
 
 export const FLAG_DEFINITIONS = {
   /** Voice capture in the conversation surface (module 04). */
-  voice_conversation: { default: false, description: "Speech input and conversational voice" },
+  voice_conversation: { default: true, description: "Speech input and conversational voice (on by default since 2026-11-22; Platform admin can turn it off)" },
   /** Proactive background agent runs (module 14). */
   proactive_agents: { default: false, description: "Background plan/execute/monitor loop" },
   /** WhatsApp as a notification channel (module 06/17). */

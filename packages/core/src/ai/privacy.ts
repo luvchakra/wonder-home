@@ -61,6 +61,13 @@ export type DataUsePolicy = {
   allowRetention: boolean;
   /** How many candidates may be sent in one turn. Smaller is better. */
   maxItems: number;
+  /**
+   * Whether what is said in a voice conversation may go to Google (Gemini
+   * Live), as the household's Admin answered it. Absent: never answered, so
+   * WonderHome's platform default applies (`voice/defaults.ts`). An explicit
+   * false always wins over a platform "on" (owner, 2026-11-22).
+   */
+  googleVoice?: boolean;
 };
 
 /**
@@ -135,6 +142,7 @@ export function dataUseFromRule(rule: unknown): DataUsePolicy {
     allowedClasses: classes,
     allowRetention: raw.allowRetention === true,
     maxItems,
+    ...(typeof raw.googleVoice === "boolean" ? { googleVoice: raw.googleVoice } : {}),
   };
 }
 

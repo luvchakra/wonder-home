@@ -8,7 +8,8 @@ import { QuoteCard } from "@wonderhome/core/ui/quote-card";
 import { EmptyState } from "@wonderhome/core/ui/states";
 import { ExpandableRow } from "@wonderhome/core/ui/expandable-row";
 import { platformSpeechKey, resolveSpeechKey } from "@wonderhome/core/voice/platform-key";
-import { loadMemberLiveEngine, loadVoiceSettings, voiceCredentialStatus } from "@wonderhome/core/voice/repository";
+import { loadHouseholdVoice, loadMemberLiveEngine, voiceCredentialStatus } from "@wonderhome/core/voice/repository";
+import { platformVoiceDefaults } from "@wonderhome/core/voice/defaults";
 import { effectiveLiveEngine } from "@wonderhome/core/voice/live-engine";
 import { AudioLines, ChevronRight, Lightbulb, MicVocal, Sparkles } from "lucide-react";
 import Link from "next/link";
@@ -47,13 +48,15 @@ export default async function VoiceSettingsPage({ searchParams }: { searchParams
   const { supabase, membership, viewer, secondary } = session;
   const householdId = membership.household.id;
 
-  const [settings, memberLiveEngine, entitlement, credential, gemini] = await Promise.all([
-    loadVoiceSettings(supabase, householdId),
+  const [voice, memberLiveEngine, entitlement, credential, gemini] = await Promise.all([
+    // The household's own answers, with WonderHome's defaults where it gave none (voice/defaults.ts).
+    loadHouseholdVoice(supabase, householdId),
     loadMemberLiveEngine(supabase, householdId, membership.memberId),
     may(supabase, householdId, "conversation.voice"),
     voiceCredentialStatus(supabase, householdId),
     geminiLiveGate(supabase, householdId),
   ]);
+  const settings = voice.settings;
   // This member's effective engine: their own saved choice, else the
   // household default — the one value the composer reads and writes too.
   const liveEngine = effectiveLiveEngine(memberLiveEngine, settings.liveEngine);
@@ -169,6 +172,13 @@ export default async function VoiceSettingsPage({ searchParams }: { searchParams
                   available: gemini.availability.available,
                   reason: gemini.availability.available ? null : gemini.availability.reason,
                   fix: geminiFix(gemini.availability, { canManage: isAdmin, returnTo: "/settings/voice", t }),
+                }}
+                defaults={{
+                  // "Default" for the engine is what this member inherits: the household's, else WonderHome's.
+                  engine: settings.liveEngine,
+                  engineChosen: memberLiveEngine !== null,
+                  provider: platformVoiceDefaults().provider,
+                  providerChosen: voice.chosen.provider !== null,
                 }}
                 labels={voiceFormLabels(t, preferences.language)}
               />

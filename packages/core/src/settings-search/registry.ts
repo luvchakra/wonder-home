@@ -93,6 +93,7 @@ export const SETTINGS_REGISTRY: RegistryEntry[] = [
   e("ai-share-allow", "ai-share", "settingsPage.dataUseForm.allow", "/settings/ai#share", "everyone", { kw: true }),
   e("ai-share-include", "ai-share", "settingsPage.dataUseForm.include", "/settings/ai#share", "everyone", { kw: true }),
   e("ai-share-retention", "ai-share", "settingsPage.dataUseForm.retention", "/settings/ai#share", "everyone", { kw: true }),
+  e("ai-share-google-voice", "ai-share", "settingsPage.dataUseForm.googleVoice", "/settings/ai#google-voice", "everyone", { kw: true }),
 
   // ── Assistant: Voice ──────────────────────────────────────────────────────
   e("voice", "assistant", "settingsPage.voice.title", "/settings/voice", "everyone", { kw: true }),

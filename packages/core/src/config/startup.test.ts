@@ -27,7 +27,7 @@ describe("startup configuration", () => {
   it("passes on a complete public configuration and logs which flags resolved", () => {
     expect(() => assertConfiguration("public")).not.toThrow();
     expect(records[0]).toMatchObject({ message: "configuration validated", scope: "public" });
-    expect(records[0]?.flags).toMatchObject({ voice_conversation: false });
+    expect(records[0]?.flags).toMatchObject({ voice_conversation: true });
   });
 
   it("does not require the service-role key for a public deployment", () => {

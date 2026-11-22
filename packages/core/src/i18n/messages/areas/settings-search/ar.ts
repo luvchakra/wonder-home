@@ -40,6 +40,7 @@ export const settingsSearchAr: AreaCatalog<typeof settingsSearchEn> = {
   "settingsSearch.kw.ai-share-allow": "مزود النموذج، إرسال البيانات، السماح، موافقة",
   "settingsSearch.kw.ai-share-include": "الأطفال، الصحة، المبالغ، الموقع، رسائل خاصة",
   "settingsSearch.kw.ai-share-retention": "الاحتفاظ، تخزين، حذف",
+  "settingsSearch.kw.ai-share-google-voice": "صوت, google, gemini, مشاركة الصوت, تحدث",
   "settingsSearch.kw.voice": "الصوت، تحدث، استماع، ميكروفون",
   "settingsSearch.kw.voice-talking": "مباشر، محادثة، محرك",
   "settingsSearch.kw.voice-engine": "مباشر، جيميني لايف، محادثة",

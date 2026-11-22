@@ -5,7 +5,7 @@ import { redirect } from "next/navigation";
 import { z } from "zod";
 
 import { CONTENT_CLASSES, DEFAULT_DATA_USE, type ContentClass } from "@wonderhome/core/ai/privacy";
-import { saveDataUse } from "@wonderhome/core/ai/privacy-repository";
+import { loadDataUse, saveDataUse } from "@wonderhome/core/ai/privacy-repository";
 import { toErrorBody } from "@wonderhome/core/api/errors";
 import { createClient, verifyUser } from "@wonderhome/core/db/server";
 import { createIsolatedClient } from "@wonderhome/core/db/isolated";
@@ -35,6 +35,8 @@ const dataUseSchema = z.object({
   allowProviderContent: z.literal(["on", "off"]).optional(),
   allowRetention: z.literal(["on", "off"]).optional(),
   maxItems: z.coerce.number().int().min(1).max(50).optional(),
+  /** Voice to Google: "default" follows WonderHome's platform default; "on"/"off" is the household's own answer. */
+  googleVoice: z.literal(["default", "on", "off"]).optional(),
 });
 
 export async function saveDataUseAction(
@@ -46,7 +48,7 @@ export async function saveDataUseAction(
     return { error: parsed.error.issues[0]?.message ?? "Please check the choices above." };
   }
 
-  const { householdId, allowProviderContent, allowRetention, maxItems } = parsed.data;
+  const { householdId, allowProviderContent, allowRetention, maxItems, googleVoice } = parsed.data;
 
   const ticked = formData
     .getAll("allowedClasses")
@@ -57,6 +59,8 @@ export async function saveDataUseAction(
   try {
     const supabase = await createClient();
     const membership = await requireHouseholdAdmin(supabase, householdId);
+    // A form without the voice choice never erases an answer the household gave (owner, 2026-11-22).
+    const voiceAnswer = googleVoice === undefined ? (await loadDataUse(supabase, householdId)).googleVoice : googleVoice === "default" ? undefined : googleVoice === "on";
 
     await saveDataUse(supabase, {
       householdId,
@@ -67,6 +71,7 @@ export async function saveDataUseAction(
         allowedClasses: ticked,
         allowRetention: allowRetention === "on",
         maxItems: maxItems ?? DEFAULT_DATA_USE.maxItems,
+        ...(typeof voiceAnswer === "boolean" ? { googleVoice: voiceAnswer } : {}),
       },
     });
 

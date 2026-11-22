@@ -40,6 +40,7 @@ export const settingsSearchZh: AreaCatalog<typeof settingsSearchEn> = {
   "settingsSearch.kw.ai-share-allow": "模型提供商, 发送数据, 允许, 同意",
   "settingsSearch.kw.ai-share-include": "孩子, 健康, 金额, 位置, 私人消息",
   "settingsSearch.kw.ai-share-retention": "保留, 存储, 删除",
+  "settingsSearch.kw.ai-share-google-voice": "语音, google, gemini, 共享语音, 说话",
   "settingsSearch.kw.voice": "语音, 说话, 聆听, 麦克风",
   "settingsSearch.kw.voice-talking": "实时, 对话, 引擎",
   "settingsSearch.kw.voice-engine": "实时, gemini live, 对话",

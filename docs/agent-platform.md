@@ -490,7 +490,7 @@ both read the effective value and both write the member's own through
 `saveMemberLiveEngine`, so the two surfaces never disagree (rules 23 and 14);
 `localStorage` is only a cache that reconciles to the server on load. A
 member flipping it in the composer never changes anyone else's, and
-availability is still re-checked when the Live token is minted.
+availability is still re-checked when the Live token is minted. **Voice is on by default** (owner, 2026-11-22, `voice/defaults.ts`): every voice setting resolves member (engine only) → household → Platform admin default or key (`WONDERHOME_GEMINI_VOICE_KEY`, `WONDERHOME_VOICE_ENGINE_DEFAULT`, `_PROVIDER_DEFAULT`, `_SHARE_GOOGLE_DEFAULT`) → built-in fallback, at read time; a default never overwrites a household's answer, and an explicit "Don't share voice with Google" (`googleVoice` in the data-use rule) always wins.
 
 **One evaluation across all three** (Wave 5, spec
 `design/AI-EVALUATION-WAVE-5.md`, `packages/core/src/evaluation/`):

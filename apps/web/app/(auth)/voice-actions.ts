@@ -5,7 +5,8 @@ import { revalidatePath } from "next/cache";
 import { toErrorBody } from "@wonderhome/core/api/errors";
 import { createClient } from "@wonderhome/core/db/server";
 import { requireHouseholdAdmin } from "@wonderhome/core/identity/households";
-import { clearVoiceKey, saveMemberLiveEngine, saveVoiceSettings, setVoiceKey } from "@wonderhome/core/voice/repository";
+import { platformVoiceDefaults } from "@wonderhome/core/voice/defaults";
+import { clearVoiceKey, loadHouseholdVoice, saveMemberLiveEngine, saveVoiceSettings, setVoiceKey } from "@wonderhome/core/voice/repository";
 import { voiceSettingsSchema } from "@wonderhome/core/voice/settings";
 
 import type { ActionState } from "./actions";
@@ -37,9 +38,11 @@ function readSettings(formData: FormData) {
     return value === "" ? undefined : value;
   };
 
+  // "default" is "Default (from WonderHome)": no answer is stored, and the schema's own default stands in.
+  const chosen = (name: string) => (text(name) === "default" ? undefined : text(name));
   return voiceSettingsSchema.safeParse({
-    provider: text("provider"),
-    liveEngine: text("liveEngine"),
+    provider: chosen("provider"),
+    liveEngine: chosen("liveEngine"),
     language: text("language"),
     // "Choose for me" posts an empty value, which means no named voice.
     voiceName: text("voiceName") ?? null,
@@ -79,11 +82,19 @@ export async function saveVoice(_previous: ActionState, formData: FormData): Pro
     const supabase = await createClient();
     const householdId = String(formData.get("householdId") ?? "");
     const membership = await requireHouseholdAdmin(supabase, householdId);
+    // The two choices with a WonderHome default (owner, 2026-11-22): "default" stores no answer; a
+    // field that did not arrive (the picker is disabled with no speech key anywhere) keeps the
+    // household's answer as it was, never turning a default into a choice or a choice into a default.
+    const providerField = formData.get("provider");
+    const current = providerField === null ? await loadHouseholdVoice(supabase, householdId) : null;
+    const chosenProvider = providerField === "default" ? null : providerField === null ? current!.chosen.provider : parsed.data.provider;
+    const settings = { ...parsed.data, provider: chosenProvider ?? platformVoiceDefaults().provider };
 
     await saveVoiceSettings(supabase, {
       householdId,
       memberId: membership.memberId,
-      settings: parsed.data,
+      settings,
+      chosenProvider,
     });
     // The engine is this member's own preference, not part of the household
     // row (rule 23: one value, one write path). The composer writes the same
@@ -92,7 +103,7 @@ export async function saveVoice(_previous: ActionState, formData: FormData): Pro
       householdId,
       memberId: membership.memberId,
       actorMemberId: membership.memberId,
-      engine: parsed.data.liveEngine,
+      engine: formData.get("liveEngine") === "default" ? null : parsed.data.liveEngine,
     });
   } catch (thrown) {
     return { error: toErrorBody(thrown, "voice").body.error.message };

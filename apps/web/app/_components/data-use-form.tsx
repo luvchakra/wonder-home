@@ -34,6 +34,12 @@ export type DataUseFormLabels = {
   classes: Record<OptionalClass, { label: string; detail: string }>;
   retention: string;
   retentionDetail: string;
+  googleVoice: string;
+  googleVoiceDetail: string;
+  /** "Default (from WonderHome): {value}" */
+  googleVoiceDefault: string;
+  googleVoiceOn: string;
+  googleVoiceOff: string;
   footer: string;
   submit: string;
   saving: string;
@@ -53,12 +59,15 @@ export function DataUseForm({
   householdId,
   policy,
   labels,
+  googleVoiceDefault,
   returnTo = null,
 }: {
   action: (state: ActionState, formData: FormData) => Promise<ActionState>;
   householdId: string;
   policy: DataUsePolicy;
   labels: DataUseFormLabels;
+  /** WonderHome's platform default for voice to Google, shown on the "Default" choice. */
+  googleVoiceDefault: boolean;
   /** Where to go back to once saved, when someone was sent here to fix something. */
   returnTo?: string | null;
 }) {
@@ -125,6 +134,31 @@ export function DataUseForm({
             <span className="block text-xs text-[var(--wh-foreground-muted)]">{labels.retentionDetail}</span>
           </span>
         </label>
+
+        {/* Voice to Google (owner, 2026-11-22): the household's own answer, or WonderHome's default
+            until an Admin picks one. A choice is picked, not typed (rule 20). */}
+        <div role="radiogroup" aria-labelledby="google-voice-label" id="google-voice" className="space-y-2">
+          <span id="google-voice-label" className="block text-sm font-medium">{labels.googleVoice}</span>
+          <span className="block text-xs text-[var(--wh-foreground-muted)]">{labels.googleVoiceDetail}</span>
+          {(["default", "on", "off"] as const).map((value) => (
+            <label key={value} className="flex min-h-11 items-center gap-3 text-sm">
+              <input
+                type="radio"
+                name="googleVoice"
+                value={value}
+                defaultChecked={value === "default" ? policy.googleVoice === undefined : policy.googleVoice === (value === "on")}
+                className="size-5 shrink-0 accent-[var(--wh-primary)]"
+              />
+              <span className="min-w-0">
+                {value === "default"
+                  ? labels.googleVoiceDefault.replace("{value}", googleVoiceDefault ? labels.googleVoiceOn : labels.googleVoiceOff)
+                  : value === "on"
+                    ? labels.googleVoiceOn
+                    : labels.googleVoiceOff}
+              </span>
+            </label>
+          ))}
+        </div>
       </fieldset>
 
       <p className="text-xs text-[var(--wh-foreground-subtle)]">{labels.footer}</p>

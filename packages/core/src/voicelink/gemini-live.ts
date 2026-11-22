@@ -7,6 +7,7 @@ import { SCREEN_KEYS, screenFor } from "../conversation/screens";
 import type { HomeTalkResponse } from "../hometalk/contract";
 import { VOICE_SCOPES, type VoiceScope } from "./scopes";
 import { runtimeEnv } from "../platform/settings/runtime-env";
+import { BUILT_IN_VOICE_DEFAULTS, resolveGoogleVoiceSharing } from "../voice/defaults";
 
 /**
  * Gemini Voice (voice integration phase 3): Gemini Live as a voice surface
@@ -364,6 +365,8 @@ export function geminiLiveAvailability(input: {
   entitled: boolean;
   key: { provider: ModelProvider | null; source: KeySource };
   policy: DataUsePolicy;
+  /** Voice may go to Google: the household's answer, else the platform default (`voice/defaults.ts` resolveGoogleVoiceSharing). */
+  shareWithGoogle?: boolean;
 }): GeminiLiveAvailability {
   if (!input.voiceEnabled) return { available: false, code: "voice_off", reason: "Voice conversation is turned off." };
   if (!input.entitled) return { available: false, code: "not_entitled", reason: "Your plan does not include voice conversation." };
@@ -372,5 +375,7 @@ export function geminiLiveAvailability(input: {
   }
   const route = routeToProvider({ provider: "google", keySource: input.key.source, policy: input.policy, hasContent: true });
   if (!route.ok) return { available: false, code: "no_consent", reason: route.reason };
+  const share = input.shareWithGoogle ?? resolveGoogleVoiceSharing({ household: input.policy.googleVoice, platform: BUILT_IN_VOICE_DEFAULTS.shareWithGoogle }).value;
+  if (!share) return { available: false, code: "no_consent", reason: "This household has chosen not to share voice conversations with Google." };
   return { available: true };
 }

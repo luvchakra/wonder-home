@@ -5,6 +5,7 @@ import { Fragment } from "react";
 import { credentialStatus, geminiVoiceKeyStatus } from "@wonderhome/core/ai/credentials";
 import { describeKeySource, platformKey, resolveModelKey } from "@wonderhome/core/ai/model-key";
 import { runtimeEnvForAi } from "@wonderhome/core/platform/settings/runtime-env";
+import { platformGeminiVoiceKey, platformVoiceDefaults, resolveGeminiVoiceKey, resolveGoogleVoiceSharing, voiceKeyHolder } from "@wonderhome/core/voice/defaults";
 import { loadDataUse } from "@wonderhome/core/ai/privacy-repository";
 import { loadConfirmRequested } from "@wonderhome/core/conversation/consent-repository";
 import { AUTO_ADD_PERCENTS } from "@wonderhome/core/homebrain/intake/auto-add";
@@ -158,18 +159,37 @@ export default async function AiAssistantSettingsPage({ searchParams }: { search
       reason: history && history.added >= MIN_HISTORY ? t("settingsPage.ai.kindBars.reason", { added: history.added, errors: history.undone + history.corrected }) : t("settingsPage.ai.kindBars.reasonNew"),
     };
   });
-  // Gemini voice runs only on Google: its own key first, else the assistant's when that is Google's.
+  // Gemini voice runs only on Google, in one order (voice/defaults.ts): the household's voice key, else its
+  // assistant key when Google's; then WonderHome's voice key, else WonderHome's assistant key when Google's.
+  // Resolved from "is one set", never from a key value: nothing here reaches the page but words.
+  const voiceKey = resolveGeminiVoiceKey({
+    householdVoice: voiceCredential.configured ? { provider: "google", key: "set" } : null,
+    householdAssistant: credential.configured && credential.provider ? { provider: credential.provider, key: "set" } : null,
+    platformVoice: platformGeminiVoiceKey(aiEnv) ? { provider: "google", key: "set" } : null,
+    platformAssistant: platformKey(aiEnv) ? { provider: platformKey(aiEnv)!.provider, key: "set" } : null,
+  });
+  const voiceHolder = voiceKeyHolder(voiceKey);
   const voiceLine = voiceCredential.configured
     ? t("settingsPage.ai.voiceKey.own", { date: voiceCredential.updatedAt ? formatDate(membership.household.timezone, voiceCredential.updatedAt, "long") : "" })
-    : key.provider === "google"
+    : voiceHolder === "own"
       ? t("settingsPage.ai.voiceKey.assistant")
-      : t("settingsPage.ai.voiceKey.none");
+      : voiceHolder === "platform"
+        ? t("settingsPage.ai.voiceKey.platform")
+        : t("settingsPage.ai.voiceKey.none");
+  // Voice to Google: the household's own answer, else WonderHome's default; said in plain words where it applies.
+  const voiceDefaults = platformVoiceDefaults(aiEnv);
+  const googleVoice = resolveGoogleVoiceSharing({ household: dataUse.googleVoice, platform: voiceDefaults.shareWithGoogle });
+  const googleVoiceLine = !dataUse.allowProviderContent || !googleVoice.value
+    ? t("settingsPage.ai.share.googleVoice.off")
+    : googleVoice.origin === "household"
+      ? t("settingsPage.ai.share.googleVoice.on")
+      : t("settingsPage.ai.share.googleVoice.default");
   // Each folded card's one line: what is set, in words (the owner, 2026-11-21).
   const recordFirstSummary = (setting: "approvalScope" | "moneyHealth" | "outsideSenders", value: string) =>
     value === "actions" ? t("settingsPage.ai.summary.actions") : value === "confirmed" ? t("settingsPage.ai.summary.confirmed") : value === "ask_once" ? t("settingsPage.ai.summary.askOnce") : t(`settingsPage.ai.recordFirst.${setting}.${value}` as TranslationKey);
   const filerChoices = members.filter((member) => member.status === "active" && (member.memberType === "adult" || member.memberType === "helper")).map((member) => ({ id: member.id, name: member.displayName, helper: member.memberType === "helper" }));
   const healthFilerNames = filerChoices.filter((member) => healthFilers.includes(member.id)).map((member) => member.name);
-  const shareLines = dataUseLines(t, dataUse);
+  const shareLines = [...dataUseLines(t, dataUse), googleVoiceLine];
   // The environment variable's name keeps its own code styling wherever the sentence puts it.
 
   return (
@@ -391,7 +411,13 @@ export default async function AiAssistantSettingsPage({ searchParams }: { search
         </section>
 
         <CollapsibleSection id="voice-key" icon={Mic} tone="ai" title={t("settingsPage.ai.voiceKey.title")} intro={voiceLine}>
+          {voiceHolder !== "none" ? (
+            <Badge tone="handled">{t(voiceKey.source === "household" ? "settingsPage.ai.voiceKey.holder.own" : "settingsPage.ai.voiceKey.holder.platform")}</Badge>
+          ) : null}
           <p className="text-sm text-[var(--wh-foreground-muted)]">{t("settingsPage.ai.voiceKey.intro")}</p>
+          {voiceCredential.configured && (platformGeminiVoiceKey(aiEnv) || platformKey(aiEnv)?.provider === "google") ? (
+            <p className="text-xs text-[var(--wh-foreground-muted)]">{t("settingsPage.ai.voiceKey.removeFallsBack")}</p>
+          ) : null}
           {manages ? (
             <AiKeyForm
               householdId={householdId}
@@ -415,7 +441,7 @@ export default async function AiAssistantSettingsPage({ searchParams }: { search
             ))}
           </ul>
           {manages ? (
-            <DataUseForm action={saveDataUseAction} householdId={householdId} policy={dataUse} labels={dataUseFormLabels(t)} returnTo={returnTo} />
+            <DataUseForm action={saveDataUseAction} householdId={householdId} policy={dataUse} labels={dataUseFormLabels(t)} googleVoiceDefault={voiceDefaults.shareWithGoogle} returnTo={returnTo} />
           ) : (
             <p className="text-xs text-[var(--wh-foreground-subtle)]">{t("settingsPage.adminDecides")}</p>
           )}
