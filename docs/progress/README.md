@@ -11,6 +11,7 @@ decision that shapes later work each earns a note, written before moving on.
 
 | Date | Note |
 |---|---|
+| 2026-11-22 | [Reusing HomeBrain's intelligence outside HomeSend (analysis)](../design/2026-11-22-homebrain-reuse.md) |
 | 2026-11-22 | [HomeBrain holds the intelligence, HomeSend moves the data](2026-11-22-homebrain-owns-intelligence.md) |
 | 2026-11-22 | [First live AI evaluation: numbers, fixes and what is open](2026-11-22-first-live-eval.md) |
 | 2026-11-22 | [Home hero: the cat's bubble gets its own place on desktop](2026-11-22-home-hero-desktop-layout.md) |
