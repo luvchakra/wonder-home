@@ -14,6 +14,7 @@ import { checkApproval, proposalFingerprint } from "./approval";
 import { salienceOf } from "../homebrain/sleep/salience";
 import { PROPOSAL_EXPIRY_HOURS } from "./proposal-window";
 import { supersedeOlderProposals } from "./proposal-supersede";
+import { resolveNotifications } from "../notifications/resolve";
 
 /** How long a proposal's card can be approved on screen: 48 hours, then it expires as not done (`proposal-expiry.ts`). A spoken "yes" counts only within the engine's PROPOSAL_TTL_MINUTES. */
 const APPROVAL_TTL_MINUTES = PROPOSAL_EXPIRY_HOURS * 60;
@@ -706,6 +707,7 @@ export async function decideAction(
         .eq("approval_status", "proposed")
         .select("id, action_type, approval_status, payload, created_at, approval_fingerprint")
         .maybeSingle();
+      if (closed) await resolveNotifications(admin, { householdId: input.householdId, sourceType: "approval", sourceIds: [input.actionId] }, "expired");
       return closed ? { ...toAction(closed as Row), refused: check.reason } : null;
     }
   }
@@ -724,6 +726,8 @@ export async function decideAction(
     .maybeSingle();
 
   if (error) throw new Error(`decideAction failed: ${error.code ?? "unknown"}`);
+  // Decided, by anyone, anywhere: its waiting reminder clears at once (owner, 2026-11-22).
+  if (data) await resolveNotifications(admin, { householdId: input.householdId, sourceType: "approval", sourceIds: [input.actionId] }, "decided");
   return data ? toAction(data as Row) : null;
 }
 

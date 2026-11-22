@@ -11,6 +11,7 @@ decision that shapes later work each earns a note, written before moving on.
 
 | Date | Note |
 |---|---|
+| 2026-11-22 | [Notifications clear themselves when decided or stale](2026-11-22-clear-stale-notifications.md) |
 | 2026-11-22 | [Needs you moves from Home to Notifications; a newer proposal supersedes the older](2026-11-22-needs-you-on-notifications.md) |
 | 2026-11-22 | [Voice: birthdays and "next month" answered from the whole calendar](2026-11-22-voice-calendar-grounding.md) |
 | 2026-11-22 | [A reminder for a dated thing puts it on the Calendar; your own reminders there too](2026-11-22-reminder-dated-thing.md) |
