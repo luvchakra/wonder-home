@@ -3,7 +3,9 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 
 const requirePlatformAdmin = vi.hoisted(() => vi.fn());
 vi.mock("server-only", () => ({}));
-vi.mock("@wonderhome/core/db/server", () => ({ createClient: async () => ({}) }));
+const applyVariable = vi.hoisted(() => vi.fn(async () => ({ kind: "none" })));
+vi.mock("@wonderhome/core/db/server", () => ({ createClient: async () => ({}), getVerifiedUser: async () => ({ id: "p", email: null }) }));
+vi.mock("@wonderhome/core/platform/admins-variable", () => ({ applyPlatformAdminsVariable: applyVariable }));
 vi.mock("@wonderhome/core/platform/admin", async (orig) => ({
   ...(await orig<typeof import("@wonderhome/core/platform/admin")>()),
   requirePlatformAdmin,
@@ -25,6 +27,12 @@ describe("isPlatformStaff (the avatar menu's Platform admin row)", () => {
     requirePlatformAdmin.mockImplementation(async () => { throw new Error("not found"); });
     expect(await platformStaff("operations.read")).toBeNull();
     expect(await isPlatformStaff()).toBe(false);
+  });
+
+  it("applies WONDERHOME_PLATFORM_ADMINS for the signed-in person before reading their row", async () => {
+    requirePlatformAdmin.mockResolvedValue({ profileId: "p", role: "operator" });
+    await platformStaff("operations.read");
+    expect(applyVariable).toHaveBeenCalledWith("p");
   });
 
   it("is false when signed out", async () => {

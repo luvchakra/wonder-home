@@ -284,6 +284,21 @@ export const SENSITIVE_ACTIONS: readonly SensitiveAction[] = [
     recordedIn: "packages/core/src/billing/provider-plans.ts",
   },
   {
+    event: "platform_admin.granted",
+    because: "Someone was made platform staff from WONDERHOME_PLATFORM_ADMINS. It belongs to no household; the platform audit log reads it, with the email only as a fingerprint.",
+    recordedIn: "packages/core/src/platform/admins-variable.ts",
+  },
+  {
+    event: "platform_admin.role_changed",
+    because: "A staff member's role changed, or a suspended one came back, because WONDERHOME_PLATFORM_ADMINS changed. The platform audit log reads it.",
+    recordedIn: "packages/core/src/platform/admins-variable.ts",
+  },
+  {
+    event: "platform_admin.suspended",
+    because: "A staff member's email left WONDERHOME_PLATFORM_ADMINS, so their access ended. The platform audit log reads it.",
+    recordedIn: "packages/core/src/platform/admins-variable.ts",
+  },
+  {
     event: "feature_flag.changed",
     because: "Staff turned an experimental capability on or off for this household. The family can read this row.",
     recordedIn: "packages/core/src/platform/feature-flags.ts",
@@ -888,6 +903,12 @@ export function describeAuditEvent(
       return { title: "A plan was changed", detail: stringOr(metadata.planKey, null) };
     case "platform.price_linked":
       return { title: "A price was linked to a payment provider", detail: stringOr(metadata.planKey, null) };
+    case "platform_admin.granted":
+      return { title: "Someone was made platform staff", detail: stringOr(metadata.role, null) };
+    case "platform_admin.role_changed":
+      return { title: "A platform staff role changed", detail: [stringOr(metadata.from, null), stringOr(metadata.role, null)].filter(Boolean).join(" → ") || null };
+    case "platform_admin.suspended":
+      return { title: "Platform staff access ended", detail: stringOr(metadata.role, null) };
     case "feature_flag.changed":
       return {
         title: "A feature was turned " + (metadata.enabled ? "on" : "off"),

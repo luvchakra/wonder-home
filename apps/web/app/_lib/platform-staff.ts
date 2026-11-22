@@ -1,12 +1,16 @@
 import "server-only";
 import { cache } from "react";
 
-import { createClient } from "@wonderhome/core/db/server";
+import { createClient, getVerifiedUser } from "@wonderhome/core/db/server";
+import { applyPlatformAdminsVariable } from "@wonderhome/core/platform/admins-variable";
 import { platformCan, requirePlatformAdmin, type PlatformAdmin } from "@wonderhome/core/platform/admin";
 
 /** A signed-in platform staff member who holds `capability`, or null for anyone else (signed out included). */
 export async function platformStaff(capability: string): Promise<PlatformAdmin | null> {
   try {
+    // WONDERHOME_PLATFORM_ADMINS, once per person per server start (no query after that).
+    const user = await getVerifiedUser();
+    if (user) await applyPlatformAdminsVariable(user.id);
     const admin = await requirePlatformAdmin(await createClient());
     return platformCan(admin, capability) ? admin : null;
   } catch {

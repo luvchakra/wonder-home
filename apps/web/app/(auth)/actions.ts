@@ -15,6 +15,7 @@ import { createHousehold } from "@wonderhome/core/identity/households";
 import { createHouseholdSchema } from "@wonderhome/core/identity/schemas";
 import { signOut as sharedSignOut } from "@wonderhome/core/identity/session-actions";
 import { log } from "@wonderhome/core/observability/logger";
+import { applyPlatformAdminsVariable } from "@wonderhome/core/platform/admins-variable";
 import { hitRateLimit, rateLimitMessage } from "@wonderhome/core/security/rate-limit";
 import { sameSitePath } from "@wonderhome/core/security/same-site-path";
 
@@ -70,7 +71,7 @@ export async function signIn(_previous: ActionState, formData: FormData): Promis
   if (!(await authAttemptAllowed())) return { error: AUTH_PAUSED };
 
   const supabase = await createClient();
-  const { error } = await supabase.auth.signInWithPassword(parsed.data);
+  const { data: signedIn, error } = await supabase.auth.signInWithPassword(parsed.data);
 
   if (error) {
     log.warn("sign-in rejected", { reason: error.code ?? "unknown" });
@@ -79,6 +80,8 @@ export async function signIn(_previous: ActionState, formData: FormData): Promis
 
   // A family member the household recorded with this email becomes that member now.
   await claimMembers(supabase);
+  // Platform staff listed in WONDERHOME_PLATFORM_ADMINS (a confirmed email only).
+  if (signedIn.user) await applyPlatformAdminsVariable(signedIn.user.id, { force: true });
   redirect(safeNext(formData.get("next")));
 }
 

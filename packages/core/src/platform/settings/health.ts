@@ -1,3 +1,4 @@
+import { PLATFORM_ADMINS_VARIABLE, parsePlatformAdmins, platformAdminsHealth } from "../admins-variable";
 import type { SettingStatus } from "./store";
 
 /**
@@ -25,6 +26,12 @@ const RULES: readonly Rule[] = [
 
 const isSet = (status: SettingStatus | undefined) => status !== undefined && (status.source === "saved" || status.source === "environment");
 
-export function configurationHealth(statuses: ReadonlyMap<string, SettingStatus>): ConfigurationGap[] {
-  return RULES.filter((rule) => rule.when.some((key) => isSet(statuses.get(key))) && !isSet(statuses.get(rule.key))).map(({ key, words }) => ({ key, words }));
+export function configurationHealth(
+  statuses: ReadonlyMap<string, SettingStatus>,
+  env: Readonly<Record<string, string | undefined>> = process.env,
+): ConfigurationGap[] {
+  const gaps = RULES.filter((rule) => rule.when.some((key) => isSet(statuses.get(key))) && !isSet(statuses.get(rule.key))).map(({ key, words }) => ({ key, words }));
+  // Deployment-only (STAYS_IN_VERCEL): set but empty or partly not understood.
+  const staffWords = platformAdminsHealth(parsePlatformAdmins(env[PLATFORM_ADMINS_VARIABLE]));
+  return staffWords ? [...gaps, { key: PLATFORM_ADMINS_VARIABLE, words: staffWords }] : gaps;
 }

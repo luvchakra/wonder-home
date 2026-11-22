@@ -15,7 +15,7 @@ New deployment URLs end in `-kunals-projects-9f64757f.vercel.app`. Deployments m
 
 ## Configuration lives in Platform admin
 
-Since 2026-11-22 Vercel holds only `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY`, `SUPABASE_SERVICE_ROLE_KEY`, `CRON_SECRET`, and optionally `SUPABASE_ACCESS_TOKEN`, `CSP_MODE`, `LOG_LEVEL`, `NEXT_PUBLIC_SITE_URL`. Everything else, webhook secrets included, is saved in Platform admin; a variable left in Vercel is only a fallback until the value is saved there. A redeploy that loses variables then breaks nothing but the four bootstrap ones. Inventory: `docs/progress/2026-11-22-platform-config-one-place.md`.
+Since 2026-11-22 Vercel holds only `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY`, `SUPABASE_SERVICE_ROLE_KEY`, `CRON_SECRET`, and optionally `SUPABASE_ACCESS_TOKEN`, `CSP_MODE`, `LOG_LEVEL`, `NEXT_PUBLIC_SITE_URL`, `WONDERHOME_PLATFORM_ADMINS`. Everything else, webhook secrets included, is saved in Platform admin; a variable left in Vercel is only a fallback until the value is saved there. A redeploy that loses variables then breaks nothing but the four bootstrap ones. Inventory: `docs/progress/2026-11-22-platform-config-one-place.md`.
 
 ## AI settings are not Vercel variables
 
@@ -23,3 +23,11 @@ WonderHome's AI key, provider and model names live only in Platform admin → AI
 
 ## Background jobs
 Scheduled and batch work runs on GitHub Actions (`.github/workflows/background-jobs.yml`, since 2026-11-07), not on Vercel. Vercel keeps the 5-minute delivery tick (pg_cron → `/api/v1/notifications/dispatch`), the retry queue, the daily sweeps that send notifications, inbound webhooks and everything a person waits on. It takes any moved step back by itself when GitHub's heartbeat (`platform_job_heartbeats`) goes stale. The map, the reasons and the cut-over steps are in `docs/background-jobs.md`.
+
+## Platform staff from `WONDERHOME_PLATFORM_ADMINS` (owner, 2026-11-22)
+
+Who may open Platform admin is set in Vercel, never in Platform admin (that would let anyone who can write the settings store make themselves staff). Value: comma-separated `email` or `email:role`, role `support`, `operator` or `owner` (no role = `operator`; `owner` is full control), e.g. `you@example.com:owner, helper@example.com:support`. Redeploy after changing it.
+
+- Only a verified email counts: a Google sign-in, or an email-and-password account with a confirmed email. Phone-only accounts never match; two accounts sharing an email are judged separately. The email is read from the auth server, never the browser, and no account is ever created.
+- Applied at sign-in, and on each person's first request after a server start (`platform/admins-variable.ts`; once per person per server, no query after that). It grants, changes the role, reactivates and, once an email is removed, suspends — only rows it made (`platform_admins.source = 'variable'`). A row added by hand (`manual`) is never touched.
+- Every change is audited (`platform_admin.granted`, `.role_changed`, `.suspended`) with the email only as a fingerprint and a masked form. Entries that aren't understood are ignored, logged once without the email, and shown under Configuration health. Platform admin → Security lists staff read-only: name, masked email, role, status and source.

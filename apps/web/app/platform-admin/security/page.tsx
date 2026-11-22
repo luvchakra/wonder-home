@@ -1,6 +1,7 @@
 import { notFound } from "next/navigation";
 
 import { adminClientFor, adminGrant } from "@wonderhome/core/db/admin-context";
+import { PLATFORM_ADMINS_VARIABLE, maskEmail } from "@wonderhome/core/platform/admins-variable";
 import { recentSettingChanges } from "@wonderhome/core/platform/settings/store";
 import { cspModeFromEnv } from "@wonderhome/core/security/headers";
 import { Badge } from "@wonderhome/core/ui/pill";
@@ -26,7 +27,8 @@ export default async function PlatformSecurityPage() {
   const admin = adminClientFor(adminGrant.platformAdmin(staff, "show the staff list and staff audit"));
 
   const [members, changes, perf] = await Promise.all([
-    admin.from("platform_admins").select("profile_id, role, status, created_at").order("created_at").limit(100),
+    // `*`, not a column list: `source` arrives with a migration that may land after this code.
+    admin.from("platform_admins").select("*").order("created_at").limit(100),
     recentSettingChanges(admin, 25),
     admin
       .from("audit_events")
@@ -36,7 +38,16 @@ export default async function PlatformSecurityPage() {
       .order("created_at", { ascending: false })
       .limit(10),
   ]);
-  const staffRows = (members.data ?? []) as { profile_id: string; role: string; status: string; created_at: string }[];
+  const staffRows = (members.data ?? []) as { profile_id: string; role: string; status: string; created_at: string; source?: string }[];
+  // Staff are a handful of people: one auth lookup each, for the masked email.
+  const emails = new Map(
+    await Promise.all(
+      staffRows.map(async (row) => {
+        const { data } = await admin.auth.admin.getUserById(row.profile_id);
+        return [row.profile_id, data.user?.email ? maskEmail(data.user.email) : null] as const;
+      }),
+    ),
+  );
   const actorIds = [...new Set([...staffRows.map((row) => row.profile_id), ...changes.map((c) => c.actorProfileId), ...((perf.data ?? []) as { actor_profile_id: string | null }[]).map((p) => p.actor_profile_id)].filter((id): id is string => !!id))];
   const { data: profiles } = actorIds.length
     ? await admin.from("profiles").select("id, display_name").in("id", actorIds)
@@ -49,7 +60,10 @@ export default async function PlatformSecurityPage() {
     <PageBody>
       <PageTitle title="Security" subtitle="Who runs WonderHome, what each role can do, and every change staff made. Nothing here shows a household's own data." />
 
-      <Panel title="Staff" description="Being an Admin of a household grants nothing here, and being staff grants no way into a household by itself.">
+      <Panel
+        title="Staff"
+        description={`Being an Admin of a household grants nothing here, and being staff grants no way into a household by itself. Staff are added in Vercel with ${PLATFORM_ADMINS_VARIABLE} (email or email:role), applied at each person's next sign-in; there is nothing to edit here.`}
+      >
         <ul className="space-y-2">
           {staffRows.map((row) => (
             <li key={row.profile_id} className="flex flex-wrap items-center justify-between gap-2 text-sm">
@@ -57,6 +71,9 @@ export default async function PlatformSecurityPage() {
               <span className="flex flex-wrap items-center gap-2">
                 <Badge tone={row.role === "owner" ? "handled" : "neutral"}>{row.role}</Badge>
                 {row.status !== "active" ? <Badge tone="risk">{row.status}</Badge> : null}
+              </span>
+              <span className="w-full break-words text-xs text-[var(--wh-foreground-muted)]">
+                {emails.get(row.profile_id) ?? "No email"} · {row.source === "variable" ? `from ${PLATFORM_ADMINS_VARIABLE}` : "added by hand"}
               </span>
               <span className="w-full text-xs text-[var(--wh-foreground-muted)]">{ROLE_WORDS[row.role] ?? ""}</span>
             </li>
