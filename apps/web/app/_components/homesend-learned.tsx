@@ -15,6 +15,8 @@ export type LearnedRow = {
   name: string;
   /** "Learned when Simran said so · 3 Nov" or "Asked again now: sent for two children". */
   reason: string;
+  /** "Why?" for a rule promoted from confirmations (14-084): the household's own decisions, never a model. */
+  why?: string;
 };
 
 /**
@@ -33,7 +35,7 @@ export function HomeSendLearned({
   householdId: string;
   rows: LearnedRow[];
   manages: boolean;
-  labels: { title: string; intro: string; empty: string; forget: string; forgetAll: string; forgotten: string; adminDecides: string };
+  labels: { title: string; intro: string; empty: string; forget: string; forgetAll: string; forgotten: string; adminDecides: string; why?: string };
   /** Inside a folding card (`CollapsibleSection`), which shows the tile and title itself. */
   folded?: boolean;
 }) {
@@ -55,6 +57,12 @@ export function HomeSendLearned({
               <div className="min-w-0 flex-1">
                 <p className="text-sm font-medium break-words">{row.name}</p>
                 <p className="text-xs text-[var(--wh-foreground-subtle)]">{row.reason}</p>
+                {row.why ? (
+                  <details className="mt-1 text-xs text-[var(--wh-foreground-muted)]">
+                    <summary className="cursor-pointer font-medium text-[var(--wh-primary)]">{labels.why ?? "Why?"}</summary>
+                    <p className="mt-1 break-words">{row.why}</p>
+                  </details>
+                ) : null}
               </div>
               {manages ? (
                 <form action={forget}>

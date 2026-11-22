@@ -15,6 +15,8 @@ import type { HomeSendKind } from "../homesend/items";
  *   vendor_category  "bescom"                → electricity
  *   phrase_item      "atta"                  → Atta (wheat flour)
  *   place_alias      "nani's"                → Nani's house
+ *   decision_pattern "pattern:newkind:society notice" → note.create event.create
+ *                    (14-084: promoted after three confirmations, `homesend/decision-rules.ts`)
  *
  * What a rule never is: across households (a member value is checked against
  * the household on write), money (an amount is refused here and by the
@@ -24,13 +26,13 @@ import type { HomeSendKind } from "../homesend/items";
  * "which child" always was.
  */
 
-export const RULE_KINDS = ["sender_child", "sender_person", "sender_area", "vendor_category", "phrase_item", "place_alias"] as const;
+export const RULE_KINDS = ["sender_child", "sender_person", "sender_area", "vendor_category", "phrase_item", "place_alias", "decision_pattern"] as const;
 export type RuleKind = (typeof RULE_KINDS)[number];
 
 /** Kinds whose value is a household member; the rest are a word. */
 export const MEMBER_RULE_KINDS: ReadonlySet<RuleKind> = new Set(["sender_child", "sender_person"]);
 
-export type RuleSource = "answer" | "pick" | "correction";
+export type RuleSource = "answer" | "pick" | "correction" | "confirmations";
 
 export type HouseholdRule = {
   id: string;
@@ -94,7 +96,7 @@ export function placeKey(alias: string | null | undefined): string | null {
 
 /** A key as a person reads it: "notices@greenwood.edu", "atta". */
 export function ruleKeyLabel(key: string): string {
-  return key.replace(/^(sender|vendor|phrase|place):/, "");
+  return key.replace(/^pattern:(sender|newkind):/, "").replace(/^(sender|vendor|phrase|place):/, "");
 }
 
 /**

@@ -1,4 +1,6 @@
 import { examplesText, rememberDecision, similarDecisions } from "./decision-memory";
+import { applyLearnedRule, learnedRuleFor, learnedRuleLine } from "./decision-rules";
+import { listHouseholdRules } from "../homebrain/rules-repository";
 import { senderKey } from "./learned";
 import type { Embedder } from "../homebrain/sleep/embeddings";
 import { decisionFromModel, decisionFromReading, newKindSentence, validateDecision } from "./decision";
@@ -341,13 +343,17 @@ export async function understand(
   // The household's own most similar past decisions, as worked examples (14-083); none is no help, never an error.
   const senderMemberId = input.senderMemberId ?? null;
   const memoryQuery = { text: [input.context?.subject, input.context?.filename, sentText0(input)].filter(Boolean).join(" ").slice(0, 600), senderMemberId, senderKey: senderKey(input.context?.from) };
-  const [timezone, children, exams, similar] = await Promise.all([
+  const [timezone, children, exams, similar, rules] = await Promise.all([
     input.context?.timezone ?? householdTimezone(supabase, householdId),
     input.context?.children ?? enrolments.then((rows) => rows.map((row) => ({ school: row.schoolName ?? null, grade: row.grade ?? null }))),
     input.context?.exams ?? examsForReading(supabase, householdId, enrolments),
     input.context?.pastDecisions !== undefined || !memoryQuery.text ? Promise.resolve([]) : similarDecisions(supabase, householdId, memoryQuery, deps.embedder),
+    // The household's learned rules (14-084), applied before the model: a sender's rule is handed over with the examples.
+    listHouseholdRules(supabase, householdId).catch(() => []),
   ]);
-  const pastDecisions = input.context?.pastDecisions ?? (similar.length > 0 ? examplesText(similar) : undefined);
+  const senderRule = learnedRuleFor(rules, { senderKey: memoryQuery.senderKey, newKind: null });
+  const pastDecisions =
+    input.context?.pastDecisions ?? ([learnedRuleLine(senderRule), similar.length > 0 ? examplesText(similar) : null].filter(Boolean).join("\n") || undefined);
   const context: IntakeContext = { ...input.context, now: input.context?.now ?? new Date(), timezone, children, exams, ...(pastDecisions ? { pastDecisions } : {}) };
 
   let result: ClassifyResult;
@@ -435,7 +441,9 @@ export async function understand(
   // The one decision over the capability registry (14-081), behind today's behaviour: stored for "Why?", learning and metrics.
   // A kind nobody anticipated (14-082): the model's own decision, its days grounded by WonderHome.
   const groundDay = (dateText: string) => (context.timezone ? dayFromDateText(dateText, { timezone: context.timezone, now: context.now ?? new Date() }) : null);
-  const decided = (!paid && decisionFromModel(reading, groundDay)) || decisionFromReading(reading, paid);
+  const fromModel = paid ? null : decisionFromModel(reading, groundDay);
+  // Held to the household's learned rule for its sender or its new kind (14-084); recorded as the rule's decision.
+  const decided = (fromModel && applyLearnedRule(fromModel, senderRule ?? learnedRuleFor(rules, { senderKey: null, newKind: fromModel.newKind }))) || decisionFromReading(reading, paid);
   const decision = validateDecision(decided, { sourceText: sentText, knownRecordIds: new Set(), injectionFlagged: injection.flagged, healthFiler: false });
   const understanding: IntakeUnderstanding = { ...(paid ? { ...built, kind: "receipt" as const, contentSummary: paymentTitle(paid), payment: paid } : built), decision };
   // Its day and time, from its own words, whatever kind it was read as — so moving it to an event at review keeps them.

@@ -153,7 +153,7 @@ export async function confirmHomeSendEntry(
     });
   }
   // A person said it is right, or their answers raised it (14-083): remembered with its decision.
-  if (rows.length > 0) await recordDecisionOutcome(supabase, householdId, intakeId, by.how === "person" ? "confirmed" : "answered");
+  if (rows.length > 0) await recordDecisionOutcome(supabase, householdId, intakeId, by.how === "person" ? "confirmed" : "answered", undefined, by.memberId ?? null);
   return rows.length;
 }
 
@@ -276,7 +276,7 @@ export async function undoHomeSendChange(
 
   // The household undid what HomeSend decided (14-083): its next similar item learns not to.
   const { data: undone } = await supabase.from("homesend_changes").select("intake_id").eq("household_id", householdId).eq("id", changeId).maybeSingle();
-  if (undone?.intake_id) await recordDecisionOutcome(supabase, householdId, undone.intake_id as string, "undone");
+  if (undone?.intake_id) await recordDecisionOutcome(supabase, householdId, undone.intake_id as string, "undone", undefined, actorMemberId);
 
   await auditChange({
     householdId,

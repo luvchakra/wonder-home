@@ -185,6 +185,8 @@ export const helpEs: AreaCatalog<typeof helpEn> = {
   "help.guide.home-send.body.21":
     "Algo para lo que WonderHome aún no tiene sitio — un aviso de la comunidad, una tarjeta de garantía, una renovación de seguro, una invitación de boda — también se entiende. Un modelo de IA dice qué es y encuentra cada fecha que contiene; WonderHome comprueba cada una con las palabras que enviaste, la pone en el calendario con Deshacer, guarda el mensaje como nota del hogar y lo dice: «Parece un aviso de mantenimiento de la comunidad. Añadiré el corte de agua del 30 nov al calendario y guardaré el aviso como nota». Solo registra: nunca paga, pide, escribe a nadie ni reserva nada.",
 
+  "help.guide.home-send.body.22":
+    "HomeSend aprende cómo tu hogar gestiona lo que no tenía un lugar propio. Cuando los envíos de un mismo remitente, o de un mismo tipo nuevo (un aviso de la comunidad, por ejemplo), se gestionan igual y se confirman tres veces sin nada corregido ni deshecho, HomeSend lo guarda como regla y gestiona el siguiente así sin preguntar. Una corrección o un Deshacer pausa la regla, y la IA vuelve a decidir hasta que se confirme tres veces más. Cada regla está en Ajustes → Asistente de IA → “Lo que HomeSend ha aprendido”, con “¿Por qué?” y los envíos de los que se aprendió; un Admin puede olvidarla. Una regla solo crea notas, días en el calendario, recordatorios, cosas por comprar, tareas, contactos y lugares: nunca una factura, un pago, un registro de salud, una aprobación ni un permiso.",
   "help.guide.today-and-home.title": "Inicio y Hoy",
   "help.guide.today-and-home.summary": "Lo que te necesita ahora y la forma del día.",
   "help.guide.today-and-home.body.1":
