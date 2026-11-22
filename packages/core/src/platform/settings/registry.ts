@@ -858,6 +858,7 @@ export const STAYS_IN_VERCEL: readonly { key: string; why: string }[] = [
   { key: "SUPABASE_SERVICE_ROLE_KEY", why: "The server reads the settings store with it." },
   { key: "SUPABASE_ACCESS_TOKEN", why: "It controls the whole database project, so it is never kept inside that database." },
   { key: "CRON_SECRET", why: "Checks that scheduled calls really come from the scheduler." },
+  { key: "WONDERHOME_PLATFORM_ADMINS", why: "Who may open Platform admin. It can't be decided inside Platform admin, or anyone who could write the settings store could make themselves staff. Optional." },
   { key: "CSP_MODE", why: "Read by the request proxy on every page, which can run before this server has read the store." },
   { key: "LOG_LEVEL", why: "Read by the logger before anything else, including the store's own reads. Optional: unset means info." },
   { key: "NEXT_PUBLIC_SITE_URL", why: "The site's own address for sign-in origin checks and page metadata, needed before the store is read. Optional on Vercel: its production address is used." },

@@ -181,3 +181,30 @@ test("staff cannot be provisioned from a browser session", () => {
 test("a household member cannot see the staff roster", () => {
   assert.equal(asProfile(HEAD, `select count(*) from public.platform_admins;`, options), "0");
 });
+
+test("nobody can promote or re-source a staff row from a browser session (WONDERHOME_PLATFORM_ADMINS)", () => {
+  psql(`update public.platform_admins set status = 'suspended', source = 'variable' where profile_id = '${STAFF}';`, options);
+  // A suspended staff member, and a household member, both try to rewrite the row.
+  for (const who of [STAFF, HEAD]) {
+    try {
+      asProfile(who, `update public.platform_admins set status = 'active', role = 'owner', source = 'manual' where profile_id = '${STAFF}';`, options);
+    } catch {
+      // A refusal is as good as a silent no-op; the row is checked below.
+    }
+    try {
+      asProfile(who, `delete from public.platform_admins where profile_id = '${STAFF}';`, options);
+    } catch {
+      // as above
+    }
+  }
+  assert.equal(psql(`select status || ':' || role || ':' || source from public.platform_admins where profile_id = '${STAFF}';`, options), "suspended:support:variable");
+  assert.ok(
+    deniedForProfile(HEAD, `insert into public.platform_admins (profile_id, role, source) values ('${HEAD}', 'operator', 'variable');`, options),
+    "a household member made themselves staff by claiming the variable as source",
+  );
+});
+
+test("a staff row's source is only 'variable' or 'manual', and defaults to manual", () => {
+  assert.equal(psql(`select source from public.platform_admins where profile_id = '${OTHER_STAFF}';`, options), "manual");
+  assert.throws(() => psql(`update public.platform_admins set source = 'browser' where profile_id = '${OTHER_STAFF}';`, options));
+});

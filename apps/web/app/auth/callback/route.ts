@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 
 import { createClient } from "@wonderhome/core/db/server";
 import { claimMembers } from "@wonderhome/core/identity/member-phone";
+import { applyPlatformAdminsVariable } from "@wonderhome/core/platform/admins-variable";
 import { log } from "@wonderhome/core/observability/logger";
 import { sameSitePath } from "@wonderhome/core/security/same-site-path";
 
@@ -30,7 +31,7 @@ export async function GET(request: Request) {
   }
 
   const supabase = await createClient();
-  const { error } = await supabase.auth.exchangeCodeForSession(code);
+  const { data, error } = await supabase.auth.exchangeCodeForSession(code);
 
   if (error) {
     log.warn("auth callback could not exchange the code", { reason: error.code ?? "unknown" });
@@ -40,6 +41,8 @@ export async function GET(request: Request) {
   // Google, a confirmed email, any provider: a family member the household
   // recorded with this verified email becomes that member here.
   await claimMembers(supabase);
+  // Platform staff listed in WONDERHOME_PLATFORM_ADMINS by a verified email.
+  if (data.user) await applyPlatformAdminsVariable(data.user.id, { force: true });
   return NextResponse.redirect(new URL(next, url.origin));
 }
 
