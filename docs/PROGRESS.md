@@ -11,11 +11,11 @@ in `docs/progress/`; for the running log of what changed when, `tracking/PROGRES
 
 ## The whole picture
 
-**462 of 509 stories done — 90.8%**
+**463 of 510 stories done — 90.8%**
 
 | Status | Stories |
 |---|---:|
-| Done | 462 |
+| Done | 463 |
 | In Progress | 14 |
 | Blocked | 1 |
 | Not Started | 28 |
@@ -51,7 +51,7 @@ in `docs/progress/`; for the running log of what changed when, `tracking/PROGRES
 | 23 Smart Notifications | `██████████` | 13 | 13 | — |
 | 24 HomePlaces | `██████████` | 15 | 15 | — |
 | 25 HomeFood | `████████░░` | 41 | 49 | 8 not started |
-| 26 HomeEvents | `███████░░░` | 18 | 23 | 2 in progress, 3 not started |
+| 26 HomeEvents | `███████░░░` | 19 | 24 | 2 in progress, 3 not started |
 | 27 Notification Channels and Events | `█████████░` | 24 | 25 | 1 blocked |
 
 ## What is left
@@ -753,7 +753,7 @@ in `docs/progress/`; for the running log of what changed when, `tracking/PROGRES
 
 ### 26 — HomeEvents
 
-18 of 23 done `███████░░░`
+19 of 24 done `███████░░░`
 
 | Story | Priority | Status | Notes |
 |---|---|---|---|
@@ -780,6 +780,7 @@ in `docs/progress/`; for the running log of what changed when, `tracking/PROGRES
 | `26-023` A child's exam papers are events wherever events are listed | P0 | Done | The owner, 2026-11-21: "it doesn't create an event for science on 3rd dec, fix this issue with all subjects". Each paper was already on the Calendar's Month/Week/Day/Year views (26-002 `examEntries`), in clash checks, HomeTalk's calendar spans and the exam reminders, but not where screens list `family_events`: Home (upcoming, today's focus, the next card), a child's home, the Day view's Today plan, the Family page and HomeTalk's "what's going on" fallback. Now `listEvents(…, { exams: { timeZone } })` and `familyAgenda(…, { timeZone })` add each paper as the child's all-day (or timed) school event (`school/exams.ts` `examPaperEvents`), read live from the exam: one thing, shown once, one editor (rule 23), opening the exam in Kids & School (`eventHref`), with the first line of what to study as its detail. Chosen over a copied `family_events` row: no second copy to keep in step, no duplicate reminders, and the owner's existing eight papers appear the moment it deploys with no backfill. The "Only those going" chip is now an invited event's only: a child's exam or class is seen by the child, their guardians and Admins (`may_see_child`) and reminded to the child's guardians as before. Not wired: the REST `GET …/family` (its contract is `family_events`), HomeSend's matching, the chat picker and HomeBrain's calendar domain (exams reach HomeBrain through the school domain). No outbound calendar sync exists to carry them. Help: Calendar ¶9 in 8 languages. |
 | `26-024` A reminder for a dated thing puts the thing on the Calendar | P0 | Done | The owner, 2026-11-22: "i don't see the reminder set on calendar" — "add a reminder for asmis music exam on 24th" on WhatsApp set only a private notification. HomeBrain now reads the dated thing in a reminder request (`homebrain/dated-reminder.ts`); the executor files it through HomeSend (`ingestText`, as `file_with_homesend` does: school exam or event, bar, Checking, Undo) and ties the speaker's reminder to it, whose derived reminder then skips them (`reconcile.ts` `ownRemindersAbout`). Reply: "📅 Added … to the calendar" + "⏰ I'll remind you …"; "undo" takes back both. Same on WhatsApp and in the app ("set reminder …"/"reminder …" route to HomeTalk). Eval HU-101–104, parity test. Not backfilled: the owner's 22 Nov reminder stays a plain reminder. Help: Talk to WonderHome ¶5 in 8 languages. |
 | `26-025` Your own reminders on the Calendar, private to you | P1 | Done | The owner, 2026-11-22, with 26-024: a plain reminder ("remind me to call mum at 6") stays a reminder and shows on its day in the Calendar to the person who set it only, as a reminder row they can remove. Design inventory already lists reminders as a calendar source, "Recipient only" (`design/FAMILY-CALENDAR-PHASE0.md` §1.2). Done 2026-11-22: a `reminder` calendar source (`calendar/projection.ts` `reminderEntries`) read in `calendarRange`'s one wave through the member's own session (RLS `notifications_select_own`, recipient named too, range-bounded, `.limit(200)`, `notifications_recipient_open_idx`), on the screen's and HomeTalk span's reads only (a moment never clashes). Only the viewer's own rows, statuses generated/delivered/seen (a done, dismissed or undone reminder leaves, as it leaves Notifications); one tied to a recorded entry (`decision_factors.about`, 26-024) is skipped, the entry already shows. Row: bell tile, "Reminder · Just you", at its time, opens Notifications; Remove (bin, `removeCalendarReminderAction`) dismisses it through `dismissNotification` after checking id, household, recipient and kind. HomeBrain parity: `CALENDAR_SOURCE_RECORDS.reminder = ["notifications"]`; the context read adds the asker's own reminders due ahead (up to 10) and says each with its day and time. HomeTalk "what's on" says "(your reminder)" with its time. Help (Calendar, 8 languages). |
+| `26-026` Voice and typed answers never hide a birthday | P0 | Done | The owner's voice conversation, 2026-11-22 (Gemini Live): "which family member's birthday is coming up?" and "for the next month?" were both answered "none" while Asmi's (9 Dec) and Kunal's (11 Dec) birthdays were on the calendar. Causes: the Gemini tool `get_upcoming_events` dropped the topic ("What is happening this week?"); "this week" said on a Sunday was that Sunday only; December was cut at a dozen entries (through 7 Dec). Fixed: the tool carries `about` (birthdays, holidays) and keeps it on follow-ups; "this week" on a Sunday is the week ahead (`conversation/temporal.ts`); a long month's answer always lists its birthdays and holidays under "Also in …", and a question naming birthdays or holidays answers only that kind (`calendar/answer.ts` `calendarKindIn`, `isBirthday` — never a public holiday called a birthday); Hinglish "aane wala", "agle", "janamdin". Gemini is told never to claim absence unless the tool said so. Eval HT-197–HT-202. One reader serves typed, WhatsApp and voice (`hometalk-turn.ts`). |
 
 ### 27 — Notification Channels and Events
 

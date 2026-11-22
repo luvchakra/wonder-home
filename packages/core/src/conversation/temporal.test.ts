@@ -51,6 +51,11 @@ describe("temporal grounding (Wave 4 §7) — the phrase is the model's, the dat
     expect(at("this weekend", sunday)).toMatchObject({ date: "2026-09-27", endDate: "2026-09-27" });
   });
 
+  it("this week, said on a Sunday, is the week ahead, not the one day left (2026-11-22)", () => {
+    const sunday = { timezone: "Asia/Kolkata", now: new Date("2026-11-22T17:14:00Z") };
+    expect(at("this week", sunday)).toMatchObject({ date: "2026-11-22", endDate: "2026-11-29" });
+  });
+
   it("after school and before dinner are windows, on today or on the day named", () => {
     expect(at("after school")).toMatchObject({ date: "2026-09-23", precision: "part_of_day", window: { from: "15:30", to: "18:00" } });
     expect(at("tomorrow after school")).toMatchObject({ date: "2026-09-24", window: { from: "15:30", to: "18:00" } });

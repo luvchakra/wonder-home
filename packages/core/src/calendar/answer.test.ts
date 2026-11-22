@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 
 import { resolveCalendarSpan } from "../conversation/temporal";
-import { asksTheCalendar, calendarSpanReply, lookAheadReply, lookAheadSpan, MAX_LISTED, readLookAhead } from "./answer";
+import { asksTheCalendar, calendarKindIn, calendarSpanReply, lookAheadReply, lookAheadSpan, MAX_LISTED, readLookAhead } from "./answer";
 import { atLocal } from "./dates";
 import { eventEntries, holidayEntries, mergeEntries, occasionEntries, type CalendarViewer } from "./projection";
 
@@ -41,13 +41,66 @@ describe("calendarSpanReply", () => {
   });
 
   it("lists at most a dozen and points to the Calendar for the rest", () => {
-    const many = holidayEntries(
-      Array.from({ length: MAX_LISTED + 3 }, (_, index) => ({ id: `h${index}`, onDate: `2026-12-${String(index + 1).padStart(2, "0")}`, name: `Day ${index + 1}`, source: "x" })),
+    const many = eventEntries(
+      Array.from({ length: MAX_LISTED + 3 }, (_, index) => ({
+        id: `e${index}`, title: `Day ${index + 1}`, kind: "event", category: null,
+        startsAt: atLocal(`2026-12-${String(index + 1).padStart(2, "0")}`, 9 * 60, TZ), endsAt: atLocal(`2026-12-${String(index + 1).padStart(2, "0")}`, 10 * 60, TZ),
+        allDay: false, timeZone: null, visibility: "household", recurrence: null, status: "confirmed", ownerMemberId: "m1", protected: false, location: null, participantMemberIds: [], exceptions: [],
+      })) as Parameters<typeof eventEntries>[0],
       viewer,
+      range,
     );
     const text = calendarSpanReply({ span: december, entries: many, failedSources: [], timeZone: TZ });
     expect(text.split("\n").filter((line) => line.startsWith("- "))).toHaveLength(MAX_LISTED);
     expect(text).toContain("…and 3 more. The Calendar has them all.");
+  });
+
+  // The owner's voice conversation, 2026-11-22: December cut at 7 Dec hid
+  // Asmi's birthday on the 9th and Kunal's on the 11th, and "none" was said.
+  const busyDecember = () =>
+    mergeEntries(
+      eventEntries(
+        Array.from({ length: 14 }, (_, index) => ({
+          id: `c${index}`, title: `Class ${index + 1}`, kind: "event", category: null,
+          startsAt: atLocal(`2026-12-${String(index + 1).padStart(2, "0")}`, 18 * 60, TZ), endsAt: atLocal(`2026-12-${String(index + 1).padStart(2, "0")}`, 19 * 60, TZ),
+          allDay: false, timeZone: null, visibility: "household", recurrence: null, status: "confirmed", ownerMemberId: "m1", protected: false, location: null, participantMemberIds: [], exceptions: [],
+        })) as Parameters<typeof eventEntries>[0],
+        viewer,
+        range,
+      ),
+      occasionEntries(
+        [
+          { id: "m2", displayName: "Asmi Chakraborty", dateOfBirth: "2016-12-09", specialOccasionDate: null, specialOccasionLabel: null },
+          { id: "m3", displayName: "Kunal Chakraborty", dateOfBirth: "1985-12-11", specialOccasionDate: null, specialOccasionLabel: null },
+        ],
+        viewer,
+        range,
+        { birthday: (name) => `${name}'s birthday`, occasion: (name) => name },
+      ),
+      holidayEntries([{ id: "h1", onDate: "2026-12-25", name: "Christmas Day", source: "DoP&T" }], viewer),
+    );
+
+  it("never cuts a birthday or a holiday from a long month", () => {
+    const text = calendarSpanReply({ span: december, entries: busyDecember(), failedSources: [], timeZone: TZ });
+    expect(text).toContain("Also in December 2026:");
+    expect(text).toContain("Fri 11 Dec — Kunal Chakraborty's birthday");
+    expect(text).toContain("Fri 25 Dec — Christmas Day (public holiday)");
+    expect(text).toContain("Asmi Chakraborty's birthday");
+  });
+
+  it("answers only the kind asked: birthdays, never a holiday called a birthday", () => {
+    const withGuruNanak = mergeEntries(busyDecember(), holidayEntries([{ id: "h2", onDate: "2026-12-01", name: "Guru Nanak's Birthday", source: "x" }], viewer));
+    const text = calendarSpanReply({ span: december, entries: withGuruNanak, failedSources: [], timeZone: TZ, only: calendarKindIn("Which birthdays are in December?") });
+    expect(text).toBe("Birthdays on the calendar for December 2026:\n\n- Wed 9 Dec — Asmi Chakraborty's birthday\n- Fri 11 Dec — Kunal Chakraborty's birthday");
+    expect(calendarSpanReply({ span: december, entries: [], failedSources: [], timeZone: TZ, only: "birthday" })).toContain("No birthdays are on the calendar for December 2026.");
+  });
+
+  it("reads the kind a question names, in English and Hinglish", () => {
+    expect(calendarKindIn("which family member's birthday is coming up?")).toBe("birthday");
+    expect(calendarKindIn("agle mahine kiska janamdin hai")).toBe("birthday");
+    expect(calendarKindIn("any public holidays in December?")).toBe("holiday");
+    expect(calendarKindIn("what is happening next month?")).toBeNull();
+    expect(readLookAhead("Kiska birthday aane wala hai?")).toEqual({ only: "birthday" });
   });
 });
 

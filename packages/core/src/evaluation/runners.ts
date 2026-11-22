@@ -10,7 +10,7 @@ import { reviewIntakeKind } from "../ai/intake-kind-check";
 import { DEFAULT_DATA_USE, minimiseContext, pseudonymiseText, reidentifyIntent, type Person } from "../ai/privacy";
 import type { AnswerComposer } from "../ai/model-client";
 import { decideChannelMessage, fileFromTalk, type ChannelDecider } from "../homebrain/intake/channel-decide";
-import { asksTheCalendar, asksWhatIsOn, calendarSpanReply, lookAheadReply, lookAheadSpan, memberNamedIn, readLookAhead, scheduleReply, scheduleSpanOf } from "../calendar/answer";
+import { asksTheCalendar, asksWhatIsOn, calendarKindIn, calendarSpanReply, lookAheadReply, lookAheadSpan, memberNamedIn, readLookAhead, scheduleReply, scheduleSpanOf } from "../calendar/answer";
 import type { PendingClarification } from "../conversation/clarify";
 import { applyCorrection, describeCorrection, readCorrection, type CorrectableAction } from "../conversation/corrections";
 import { readPlainCorrection } from "../conversation/plain-corrections";
@@ -426,7 +426,7 @@ async function composedAnswer(
     const span = typeof when === "string" && when.trim() && asksTheCalendar(utterance) ? resolveCalendarSpan(when, { timezone: household.timezone, now: household.now }) : null;
     if (span) {
       const entries = calendarFor(household, who.id, { from: span.from, to: span.to });
-      return { text: calendarSpanReply({ span, entries, failedSources: [], timeZone: household.timezone }) };
+      return { text: calendarSpanReply({ span, entries, failedSources: [], timeZone: household.timezone, only: calendarKindIn(utterance) }) };
     }
     // "Why?" is answered from recorded evidence the route reads at the time; not composed here.
     if (typeof intent.parameters.explain === "string") return null;
@@ -464,6 +464,7 @@ function schedule(household: (typeof GOLDEN_HOUSEHOLDS)[HomeTalkCase["household"
     timeZone: household.timezone,
     names: new Map(firstNames.map((person) => [person.id, person.firstName])),
     forMemberId: memberNamedIn(utterance, firstNames),
+    only: calendarKindIn(utterance),
   });
 }
 

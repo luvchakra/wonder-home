@@ -19,8 +19,8 @@
  *     coincide, and that is fine: they genuinely mean the same day then.
  *   - "This weekend" is the Saturday–Sunday of this week (from today if it
  *     is already the weekend); "next weekend" is the one after.
- *   - "This week" runs from today to Sunday; "next week" is next Monday to
- *     Sunday.
+ *   - "This week" runs from today to Sunday (on a Sunday, to the next
+ *     Sunday); "next week" is next Monday to Sunday.
  *   - Parts of the day are windows, not guesses at an exact time:
  *     tonight 18:00–23:00, this evening 17:00–21:00, this morning
  *     06:00–12:00, this afternoon 12:00–17:00, after school 15:30–18:00,
@@ -257,7 +257,9 @@ function dayFrom(text: string, today: string, smallHours = false): Day | null {
   const weekdayOfToday = weekdayOf(today);
   const mondayThisWeek = addDays(today, -((weekdayOfToday + 6) % 7));
 
-  if (text === "this week") return range(today, addDays(mondayThisWeek, 6), "this week");
+  // Said on a Sunday, "this week" is the week ahead, not the one day left of it
+  // (the owner's report, 2026-11-22: "Sun 22 Nov – Sun 22 Nov" hid Monday's Kathak).
+  if (text === "this week") return range(today, addDays(mondayThisWeek, weekdayOfToday === 0 ? 13 : 6), "this week");
   if (text === "next week") return range(addDays(mondayThisWeek, 7), addDays(mondayThisWeek, 13), "next week");
   if (text === "this weekend" || text === "weekend" || text === "the weekend") {
     const saturday = addDays(mondayThisWeek, 5);
