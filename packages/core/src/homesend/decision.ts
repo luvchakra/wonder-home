@@ -129,7 +129,9 @@ export function validateDecision(decision: HomeSendDecision, context: DecisionCo
     const records = op.evidence.filter((evidence) => evidence.recordId);
     const groundedQuotes = quotes.every((evidence) => quoted(evidence.quote ?? "", context.sourceText));
     const groundedRecords = records.every((evidence) => context.knownRecordIds.has(evidence.recordId ?? ""));
-    const unevidenced = decision.source === "model" && quotes.length === 0 && records.length === 0 && context.sourceText !== null;
+    // The item kept as itself (a new kind's note, 14-082) records only what was sent: it needs no quote (14-085 found it rejected).
+    const itself = op.capability === "note" && op.op === "create";
+    const unevidenced = decision.source !== "reading" && !itself && quotes.length === 0 && records.length === 0 && context.sourceText !== null;
     if (!groundedQuotes || !groundedRecords || unevidenced) {
       verdicts.push({ status: "rejected", reason: "not_in_what_was_sent" });
       continue;
@@ -261,8 +263,9 @@ export function decidedCapabilities(decision: ValidatedDecision): CapabilityId[]
  * Null when the model named no new kind; today's reading then speaks for it (`decisionFromReading`).
  */
 export function decisionFromModel(reading: IntakeExtraction, groundDay: (dateText: string) => string | null): HomeSendDecision | null {
-  if (reading.kind !== "unknown" || !reading.newKind || !reading.operations || reading.operations.length === 0) return null;
-  const operations: DecisionOperation[] = reading.operations.map((op) => ({
+  // A new kind with nothing dated in it (a bank statement) is still its new kind: kept as a note (14-085).
+  if (reading.kind !== "unknown" || !reading.newKind) return null;
+  const operations: DecisionOperation[] = (reading.operations ?? []).map((op) => ({
     op: "create",
     capability: op.capability,
     ref: null,

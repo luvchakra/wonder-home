@@ -6,8 +6,9 @@ import { allowAiSettingsFromEnvironment } from "../platform/settings/runtime-env
 import { GOLDEN_CASES } from "./cases";
 import { UNDERSTANDING_SET } from "./cases-understanding";
 import { formatLatency, formatRatio, measure } from "./metrics";
+import { measureLearning } from "./learning";
 import { releasable, releaseArtifact, releaseGates } from "./report";
-import { runEvaluation, type RunTarget } from "./run";
+import { modelsFor, runEvaluation, type RunTarget } from "./run";
 
 /**
  * `npm run eval` (Wave 5 §11, §12, §21, §22).
@@ -136,7 +137,11 @@ export async function main(args: readonly string[], repoRoot: string): Promise<n
 
   const run = await runEvaluation(target);
   const metrics = measure(run.results);
-  const gates = releaseGates(run, GOLDEN_CASES, OPERATIONS);
+  // The unseen-kind set is read by the provider on a provider run (14-085); replay readings stay recorded.
+  const { models } = modelsFor(target);
+  const classify = models.classify;
+  const learning = await measureLearning(classify ? (source) => classify(source, { now: new Date("2026-11-22T06:00:00Z"), timezone: "Asia/Kolkata" }) : undefined);
+  const gates = releaseGates(run, GOLDEN_CASES, OPERATIONS, undefined, learning);
 
   console.log(`WonderHome AI evaluation — ${run.provider} (${run.model})`);
   console.log(`prompt ${run.promptVersion} · context ${run.contextVersion} · dataset ${run.datasetVersion}`);

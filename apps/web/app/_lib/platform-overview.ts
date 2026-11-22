@@ -2,7 +2,7 @@ import "server-only";
 
 import { adminClientFor, adminGrant } from "@wonderhome/core/db/admin-context";
 import type { PlatformAdmin } from "@wonderhome/core/platform/admin";
-import { parseNothingWaits, type NothingWaitsMetrics } from "@wonderhome/core/homesend/metrics";
+import { parseHomeSendDecisions, parseNothingWaits, type HomeSendDecisionMetrics, type NothingWaitsMetrics } from "@wonderhome/core/homesend/metrics";
 import { parseOverview, type AdvisorSignal, type OverviewSnapshot } from "@wonderhome/core/platform/overview";
 
 import { advisorCounts } from "./platform-performance";
@@ -15,7 +15,7 @@ import { advisorCounts } from "./platform-performance";
  */
 const TTL_MS = 60_000;
 
-export type OverviewData = { snapshot: OverviewSnapshot | null; advisor: AdvisorSignal | null; nothingWaits: NothingWaitsMetrics | null };
+export type OverviewData = { snapshot: OverviewSnapshot | null; advisor: AdvisorSignal | null; nothingWaits: NothingWaitsMetrics | null; decisions: HomeSendDecisionMetrics | null };
 
 let kept: { at: number; value: Promise<OverviewData> } | null = null;
 
@@ -39,11 +39,21 @@ async function load(staff: PlatformAdmin): Promise<OverviewData> {
       return null;
     }
   })();
+  // HomeSend's decisions (14-085): decided by AI, learned rule applied, new kinds seen; "not measured" while missing.
+  const decisions = (async () => {
+    try {
+      const admin = adminClientFor(adminGrant.platformAdmin(staff, "read the HomeSend decision aggregates"));
+      const { data, error } = await admin.rpc("platform_homesend_decisions", { p_staff_profile_id: staff.profileId });
+      return error ? null : parseHomeSendDecisions(data);
+    } catch {
+      return null;
+    }
+  })();
   const advisor = advisorCounts()
     .then((a): AdvisorSignal => ({ source: a.source === "live" ? "live" : "baseline", gated: a.gated, accepted: a.accepted }))
     .catch(() => null);
-  const [s, a, n] = await Promise.all([snapshot, advisor, nothingWaits]);
-  return { snapshot: s, advisor: a, nothingWaits: n };
+  const [s, a, n, d] = await Promise.all([snapshot, advisor, nothingWaits, decisions]);
+  return { snapshot: s, advisor: a, nothingWaits: n, decisions: d };
 }
 
 /** The aggregates, at most a minute old. A failed read is not kept, so the next request tries again. */

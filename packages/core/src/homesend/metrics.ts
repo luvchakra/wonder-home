@@ -292,3 +292,33 @@ export function nothingWaitsOnTarget(metrics: NothingWaitsMetrics): { neededPers
     undone: metrics.undoneWithin7d.of === 0 || metrics.undoneWithin7d.count * 20 < metrics.undoneWithin7d.of,
   };
 }
+
+// --- HomeSend decisions (14-085): the model decides, and learns --------------
+
+/** From `public.platform_homesend_decisions`, last 30 days, aggregate only. */
+export type HomeSendDecisionMetrics = {
+  decidedByAi: Ratio;
+  learnedRuleApplied: number;
+  newKindItems: number;
+  /** New kinds by name (seen in 2+ households; the rest "other"), most first. */
+  newKinds: { kind: string; items: number; households: number }[];
+};
+
+/** Reads the function's answer; null when missing or not the shape expected ("not measured"). */
+export function parseHomeSendDecisions(raw: unknown): HomeSendDecisionMetrics | null {
+  if (!raw || typeof raw !== "object") return null;
+  const value = raw as Record<string, unknown>;
+  if (!("decidedByAi" in value)) return null;
+  return {
+    decidedByAi: ratio(value.decidedByAi),
+    learnedRuleApplied: count(value.learnedRuleApplied),
+    newKindItems: count(value.newKindItems),
+    newKinds: Array.isArray(value.newKinds)
+      ? (value.newKinds as { kind?: unknown; items?: unknown; households?: unknown }[]).slice(0, 12).map((row) => ({
+          kind: typeof row.kind === "string" ? row.kind.slice(0, 60) : "other",
+          items: count(row.items),
+          households: count(row.households),
+        }))
+      : [],
+  };
+}
