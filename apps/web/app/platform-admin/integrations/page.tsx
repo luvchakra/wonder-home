@@ -9,6 +9,7 @@ import { RazorpayCard } from "../_ui/razorpay-card";
 import { ConfigurationHealth } from "../_ui/configuration-health";
 import { SettingGroups } from "../_ui/setting-groups";
 import { WebhookAddress } from "../_ui/webhook-address";
+import { WhatsAppTest } from "../_ui/whatsapp-test";
 
 /** The Razorpay key id and secret have one editor: the Razorpay card (rule 23). */
 const ON_THE_CARD = ["RAZORPAY_KEY_ID", "RAZORPAY_KEY_SECRET"] as const;
@@ -60,7 +61,12 @@ export default async function PlatformIntegrationsPage() {
         hide={ON_THE_CARD}
         before={{
           billing: <RazorpayCard view={card} stepUp={stepUp} />,
-          whatsapp: <WebhookAddress url={`${origin}/api/v1/whatsapp/webhook`} hint="Paste it into Meta → WhatsApp → Configuration → Webhook with the verify token below, and subscribe to messages." />,
+          whatsapp: (
+            <div className="space-y-4">
+              <WebhookAddress url={`${origin}/api/v1/whatsapp/webhook`} hint="Paste it into Meta → WhatsApp → Configuration → Webhook with the verify token below, and subscribe to messages." />
+              <WhatsAppTest />
+            </div>
+          ),
         }}
       />
     </PageBody>

@@ -38,6 +38,7 @@ Per-household buckets marked ★ were added by SEC-06; they sit beside the membe
 | `notification.test` | member | 8 / 10 min |
 | `trivia.topic` | member | 20 / hour |
 | `weather.search` | member | 30 / 10 min |
+| `platform.whatsapp_test` | platform staff | 6 / 10 min |
 | `places.search` | member | 120 / 10 min |
 | `places.find` | household | 30 / 1 h |
 | `event.reply` | hashed IP | 20 / 10 min |

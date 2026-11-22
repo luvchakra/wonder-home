@@ -5,6 +5,7 @@ import type { IngestDeps } from "../homesend/ingest";
 import { log } from "../observability/logger";
 import { recordWhatsAppEvents } from "../whatsapp/events";
 import { readInboundMessages } from "../whatsapp/inbound";
+import { isWhatsAppSelfTest } from "../whatsapp/self-check";
 import { receiveWhatsAppMessages, WHATSAPP_PROCESS_KIND, whatsappJobHandler, type WhatsAppIntakeDeps } from "../whatsapp/intake";
 import {
   isOptOut,
@@ -124,6 +125,10 @@ export async function handleWhatsAppWebhook(
   } catch {
     return json(400, { error: "unreadable" });
   }
+
+  // Platform admin's "Test WhatsApp" (2026-11-22): a correctly signed delivery marked as a self-test proves the
+  // live webhook sees the saved app secret, and is dropped here: no event, message, HomeSend item or reply.
+  if (isWhatsAppSelfTest(payload)) return json(200, { ok: true, selfTest: true });
 
   const { statuses, messages } = readWhatsAppWebhook(payload);
   const admin = deps.admin();
