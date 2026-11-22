@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 
 import type { IntakeExtraction } from "../ai/classify-intake";
 import { CAPABILITIES, CAPABILITY_IDS, capabilityLines } from "./capabilities";
-import { decisionFromReading, validateDecision, type DecisionContext, type HomeSendDecision } from "./decision";
+import { datedOperations, decisionFromModel, decisionFromReading, newKindSentence, validateDecision, type DecisionContext, type HomeSendDecision } from "./decision";
 
 const reading = (overrides: Partial<IntakeExtraction>): IntakeExtraction => ({
   readable: true, kind: "unknown", title: null, notes: null, billKind: null, payee: null, amount: null, currency: null, dueDate: null,
@@ -128,5 +128,42 @@ describe("validateDecision (the guardrails after the model decides)", () => {
   it("content that tried to instruct WonderHome caps every confidence", () => {
     const decision = modelDecision([{ op: "create", capability: "note", ref: null, fields: { title: "Notice" }, forPerson: null, evidence: [{ field: "title", quote: "Splendora", recordId: null }], confidence: 0.99 }]);
     expect(validateDecision(decision, context({ sourceText: NOTICE, injectionFlagged: true })).operations[0]?.confidence).toBe(0.6);
+  });
+});
+
+describe("a kind nobody anticipated (14-082)", () => {
+  const society = reading({
+    title: "Water supply shutdown", whatIs: "a society maintenance notice", newKind: "society notice",
+    operations: [
+      { capability: "event", title: "Water shutdown", notes: "10 am to 4 pm, tank cleaning", dateText: "30 Nov 2026", person: null, quote: "water supply will be shut on 30 Nov 2026", confidence: "high" },
+      { capability: "reminder", title: "Pay maintenance", notes: null, dateText: "5 Dec", person: null, quote: "Maintenance due Rs 4,500 by 5 Dec", confidence: "high" },
+    ],
+  });
+  const ground = (text: string) => (text.startsWith("30 Nov") ? "2026-11-30" : text === "5 Dec" ? "2026-12-05" : null);
+
+  it("the model's decision keeps the notice as a note and grounds each day itself", () => {
+    const decision = decisionFromModel(society, ground);
+    expect(decision?.source).toBe("model");
+    expect(decision?.operations.map((op) => op.capability)).toEqual(["note", "event", "reminder"]);
+    expect(decision?.operations[1]?.fields.dueDate).toBe("2026-11-30");
+    expect(decision?.operations[0]?.fields.kindName).toBe("society notice");
+  });
+
+  it("only for a new kind: a known kind keeps today's path", () => {
+    expect(decisionFromModel({ ...society, kind: "bill" }, ground)).toBeNull();
+    expect(decisionFromModel({ ...society, newKind: null }, ground)).toBeNull();
+  });
+
+  it("its dated things, once validated, are said plainly", () => {
+    const validated = validateDecision(decisionFromModel(society, ground)!, context({ sourceText: NOTICE }));
+    expect(datedOperations(validated).map((op) => op.day)).toEqual(["2026-11-30", "2026-12-05"]);
+    expect(newKindSentence(validated, "did")).toBe("This looks like a society maintenance notice. I added the 30 Nov water shutdown and the 5 Dec reminder to pay maintenance to the calendar and kept the society notice as a note.");
+  });
+
+  it("a day the model made up is not in what was sent, so nothing is added for it", () => {
+    const made = reading({ ...society, operations: [{ ...society.operations![0]!, quote: "shutdown on 2 Dec" }] });
+    const validated = validateDecision(decisionFromModel(made, () => "2026-12-02")!, context({ sourceText: NOTICE }));
+    expect(datedOperations(validated)).toEqual([]);
+    expect(newKindSentence(validated, "will")).toBe("This looks like a society maintenance notice. I'll keep the society notice as a note.");
   });
 });

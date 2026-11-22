@@ -11,6 +11,7 @@ decision that shapes later work each earns a note, written before moving on.
 
 | Date | Note |
 |---|---|
+| 2026-11-22 | [HomeSend: the model decides, part 2 — kinds nobody anticipated (14-082)](2026-11-22-homesend-ai-decides-part2.md) |
 | 2026-11-22 | [HomeSend: the model decides, part 1 — registry and one validated decision (14-081)](2026-11-22-homesend-ai-decides-part1.md) |
 | 2026-11-21 | [HomeSend finds the record a document is about: a syllabus updates its exam (14-078)](2026-11-21-syllabus-finds-its-exam.md) |
 | 2026-11-21 | [Bills: usually paid by autopay (11-024)](2026-11-21-bills-autopay.md) |

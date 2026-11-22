@@ -1,3 +1,4 @@
+import { recordNewKindDays } from "../homesend/new-kind";
 import type { SupabaseClient } from "@supabase/supabase-js";
 
 import { auditChange } from "../api/audit";
@@ -370,6 +371,8 @@ async function endHouseholdItems(admin: SupabaseClient, householdId: string, now
     const title = (row.title as string | null) ?? null;
     if (ending.action === "set_aside" || ending.action === "note" || ending.action === "already_recorded") {
       const reason = ending.action === "note" ? "kept_as_note" : ending.action === "already_recorded" ? "already_recorded" : ending.reason;
+      // A kind nobody anticipated (14-082): its dated things go on the calendar, with Undo, before the notice is kept as a note.
+      if (ending.action === "note") await recordNewKindDays(admin, householdId, id, timeZone).catch(() => null);
       if (await archive(admin, householdId, row, reason, now)) {
         changed = true;
         if (ending.action === "note") result.notes += 1;

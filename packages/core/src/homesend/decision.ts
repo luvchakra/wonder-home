@@ -253,3 +253,63 @@ export function decisionFromReading(reading: IntakeExtraction, payment?: Payment
 export function decidedCapabilities(decision: ValidatedDecision): CapabilityId[] {
   return [...new Set(decision.accepted.map((index) => decision.operations[index]?.capability as CapabilityId))].filter((id) => id in CAPABILITIES);
 }
+
+/**
+ * The model's own decision for an item of a kind the registry has no place for (14-082): the
+ * notice kept as a household note, and each dated thing it names as an event or reminder. Its day
+ * is WonderHome's, from the words the model copied (`groundDay`), never the model's arithmetic.
+ * Null when the model named no new kind; today's reading then speaks for it (`decisionFromReading`).
+ */
+export function decisionFromModel(reading: IntakeExtraction, groundDay: (dateText: string) => string | null): HomeSendDecision | null {
+  if (reading.kind !== "unknown" || !reading.newKind || !reading.operations || reading.operations.length === 0) return null;
+  const operations: DecisionOperation[] = reading.operations.map((op) => ({
+    op: "create",
+    capability: op.capability,
+    ref: null,
+    fields: compact({
+      title: op.title,
+      notes: op.notes,
+      dateText: op.dateText,
+      dueDate: op.dateText && (op.capability === "event" || op.capability === "reminder" || op.capability === "task") ? groundDay(op.dateText) : null,
+      kindName: op.capability === "note" ? reading.newKind : null,
+    }),
+    forPerson: op.person,
+    evidence: [{ field: "title", quote: op.quote, recordId: null }],
+    confidence: CONFIDENCE[op.confidence],
+  }));
+  // The item itself is always kept, as a note of its new kind.
+  if (!operations.some((op) => op.capability === "note")) {
+    const title = reading.title ?? reading.whatIs ?? reading.newKind;
+    operations.unshift({ op: "create", capability: "note", ref: null, fields: compact({ title, notes: reading.notes, kindName: reading.newKind }), forPerson: null, evidence: [], confidence: CONFIDENCE[reading.confidence] });
+  }
+  return { whatIs: reading.whatIs ?? reading.summary ?? reading.newKind, nearestKind: "note", newKind: reading.newKind, operations, question: null, source: "model" };
+}
+
+/** The dated things a validated new-kind decision puts on the calendar: accepted event and reminder operations with a grounded day. */
+export function datedOperations(decision: ValidatedDecision | null | undefined): { index: number; title: string; day: string; reminder: boolean }[] {
+  if (!decision || !decision.newKind) return [];
+  return decision.accepted.flatMap((index) => {
+    const op = decision.operations[index];
+    const day = op?.fields.dueDate;
+    if (!op || (op.capability !== "event" && op.capability !== "reminder") || typeof day !== "string") return [];
+    return [{ index, title: String(op.fields.title), day, reminder: op.capability === "reminder" }];
+  });
+}
+
+/** "Water shutdown" reads "water shutdown" mid-sentence; "PTM" or "Diwali" stay as written. */
+const softCase = (title: string) => (/^[A-Z][a-z]/.test(title) && !/^[A-Z][a-z]+(\s+[A-Z]|$)/.test(title) ? title.charAt(0).toLowerCase() + title.slice(1) : title);
+
+const DAY_WORDS = new Intl.DateTimeFormat("en-GB", { day: "numeric", month: "short", timeZone: "UTC" });
+
+/**
+ * What HomeSend says it did with a new kind, plainly (owner, 2026-11-22): "This looks like a society
+ * maintenance notice. I added the 30 Nov water shutdown to the calendar and kept the notice as a note."
+ */
+export function newKindSentence(decision: ValidatedDecision, done: "will" | "did"): string {
+  const what = decision.whatIs.replace(/^(a|an|the)\s+/i, "");
+  const article = /^[aeiou]/i.test(what) ? "an" : "a";
+  const dated = datedOperations(decision).map((op) => `the ${DAY_WORDS.format(new Date(`${op.day}T00:00:00Z`))} ${op.reminder ? "reminder to " : ""}${softCase(op.title)}`);
+  const calendar = dated.length > 0 ? `${done === "did" ? "I added" : "I'll add"} ${dated.join(" and ")} to the calendar and ${done === "did" ? "kept" : "keep"}` : done === "did" ? "I kept" : "I'll keep";
+  const noun = decision.newKind ?? "item";
+  return `This looks like ${article} ${what}. ${calendar} the ${noun} as a note.`;
+}
