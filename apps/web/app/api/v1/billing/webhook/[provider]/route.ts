@@ -1,6 +1,7 @@
 import { billingProviderNamed } from "@wonderhome/core/billing/router";
 import { handleBillingWebhook } from "@wonderhome/core/billing/webhook";
 import { createAdminClient } from "@wonderhome/core/db/admin";
+import { settledSettingsEnv } from "@wonderhome/core/platform/settings/runtime-env";
 
 /**
  * One payment provider's webhook (story 20-009): `/api/v1/billing/webhook/razorpay`
@@ -16,7 +17,7 @@ type Params = { params: Promise<{ provider: string }> };
 
 export async function POST(request: Request, { params }: Params): Promise<Response> {
   const { provider } = await params;
-  return handleBillingWebhook(request, { provider: billingProviderNamed(provider), admin: createAdminClient });
+  return handleBillingWebhook(request, { provider: billingProviderNamed(provider, await settledSettingsEnv()), admin: createAdminClient });
 }
 
 export const dynamic = "force-dynamic";

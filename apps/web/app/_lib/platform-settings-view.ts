@@ -3,6 +3,7 @@ import { cache } from "react";
 
 import { adminClientFor, adminGrant } from "@wonderhome/core/db/admin-context";
 import type { PlatformAdmin } from "@wonderhome/core/platform/admin";
+import { configurationHealth } from "@wonderhome/core/platform/settings/health";
 import { PLATFORM_SETTINGS, mayEdit, settingsForPage, type SettingDefinition, type SettingPage } from "@wonderhome/core/platform/settings/registry";
 import { settingStatuses, type SettingStatus } from "@wonderhome/core/platform/settings/store";
 
@@ -85,7 +86,8 @@ export type RazorpayCardView = {
   secretLast4: string | null;
   switchedOn: boolean;
   webhookUrl: string;
-  webhookSecretInVercel: boolean;
+  webhookSecretSource: SettingStatus["source"];
+  webhookSecretLast4: string | null;
   canEdit: boolean;
 };
 
@@ -102,7 +104,14 @@ export async function razorpayCard(staff: PlatformAdmin, origin: string): Promis
     secretLast4: secret?.last4 ?? null,
     switchedOn: providers.split(",").includes("razorpay"),
     webhookUrl: `${origin}/api/v1/billing/webhook/razorpay`,
-    webhookSecretInVercel: Boolean(process.env.RAZORPAY_WEBHOOK_SECRET?.trim()),
+    webhookSecretSource: statuses.get("RAZORPAY_WEBHOOK_SECRET")?.source ?? "unset",
+    webhookSecretLast4: statuses.get("RAZORPAY_WEBHOOK_SECRET")?.last4 ?? null,
     canEdit: staff.role === "owner" && entries.every((entry) => entry && mayEdit(entry, staff.role)),
   };
+}
+
+/** Every required setting that is missing, in words (Overview and Integrations). */
+export async function configurationGaps(staff: PlatformAdmin) {
+  const { statuses, storeReady } = await platformSettingStatuses(staff);
+  return storeReady ? configurationHealth(statuses) : [];
 }

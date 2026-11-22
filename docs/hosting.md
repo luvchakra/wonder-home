@@ -13,6 +13,10 @@ Since October 2026 WonderHome lives in the Vercel account **Kunal** (team `kunal
 New deployment URLs end in `-kunals-projects-9f64757f.vercel.app`. Deployments made before the move still end in `-wonder-team4.vercel.app`; that is the old team's URL slug, not a second team. Call the Vercel connector **without** a `teamId`/`slug` — it then works against this team, the account's default; naming the team explicitly is refused with 403 until the connector is re-authorized for that scope. The live database is Supabase project `wonderhome` (`kqxndableyysxqhxiorz`, ap-south-1).
 
 
+## Configuration lives in Platform admin
+
+Since 2026-11-22 Vercel holds only `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY`, `SUPABASE_SERVICE_ROLE_KEY`, `CRON_SECRET`, and optionally `SUPABASE_ACCESS_TOKEN`, `CSP_MODE`, `LOG_LEVEL`, `NEXT_PUBLIC_SITE_URL`. Everything else, webhook secrets included, is saved in Platform admin; a variable left in Vercel is only a fallback until the value is saved there. A redeploy that loses variables then breaks nothing but the four bootstrap ones. Inventory: `docs/progress/2026-11-22-platform-config-one-place.md`.
+
 ## AI settings are not Vercel variables
 
 WonderHome's AI key, provider and model names live only in Platform admin → AI & providers (owner, 2026-11-21). Vercel variables and GitHub secrets named `WONDERHOME_AI_*`, `WONDERHOME_SPEECH_KEY` or `WONDERHOME_GEMINI_*_MODEL` are ignored by the code and can be deleted; see `docs/external-providers.md` and `docs/progress/2026-11-21-ai-key-one-place.md`.

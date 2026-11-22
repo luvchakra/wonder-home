@@ -18,6 +18,9 @@ export const metadata = { title: "Terms and privacy", robots: { index: true, fol
  * does with a household's data today — which is the part a family can check
  * against the product and the source.
  */
+/** The contact email is a Platform admin setting: re-read every five minutes, not frozen at build. */
+export const revalidate = 300;
+
 export default function LegalPage() {
   const mailTo = contactEmail();
   return (

@@ -3,6 +3,7 @@ import { after } from "next/server";
 import { createAdminClient } from "@wonderhome/core/db/admin";
 import { platformResendConfig } from "@wonderhome/core/homesend/email-gateway";
 import { handleEmailWebhook } from "@wonderhome/core/homesend/email-webhook";
+import { settledSettingsEnv } from "@wonderhome/core/platform/settings/runtime-env";
 
 import { trustedEmailAutoAdd } from "@/app/_lib/homesend-trusted-email";
 
@@ -23,7 +24,7 @@ import { trustedEmailAutoAdd } from "@/app/_lib/homesend-trusted-email";
  * 401 an anonymous caller gets anywhere else.
  */
 export async function POST(request: Request): Promise<Response> {
-  const config = platformResendConfig();
+  const config = platformResendConfig(await settledSettingsEnv());
   const supabase = config ? createAdminClient() : null;
   return handleEmailWebhook(request, { config, supabase: supabase ?? (null as never), defer: (work) => after(work), ...(supabase ? { addTrusted: trustedEmailAutoAdd(supabase) } : {}) });
 }

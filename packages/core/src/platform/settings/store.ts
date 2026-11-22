@@ -1,7 +1,7 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 
 import { log } from "../../observability/logger";
-import { PLATFORM_SETTINGS, lastFourOf, settingDefinition, validateSetting, type SettingDefinition } from "./registry";
+import { PLATFORM_SETTINGS, environmentValueOf, lastFourOf, settingDefinition, validateSetting, type SettingDefinition } from "./registry";
 import { STORE_ONLY_KEYS, type Env, type StoredSettings } from "./runtime-env";
 
 /**
@@ -52,7 +52,7 @@ export async function loadStoredSettings(admin: SupabaseClient): Promise<StoredS
 
 /** Pure: a status for one entry from its saved row (if any) and the environment. */
 export function statusFor(entry: SettingDefinition, row: StatusRow | undefined, env: Env): SettingStatus {
-  const fromEnv = env[entry.key]?.trim() ?? "";
+  const fromEnv = environmentValueOf(entry, env);
   const inEnvironment = fromEnv !== "";
   const storeOnly = STORE_ONLY_KEYS.includes(entry.key);
   if (row) {

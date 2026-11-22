@@ -64,7 +64,11 @@ export function RazorpayCard({ view, stepUp }: { view: RazorpayCardView; stepUp:
         </dd>
         <dt className="text-[var(--wh-foreground-muted)]">Webhook secret</dt>
         <dd>
-          Stays in Vercel (<code className="text-xs">RAZORPAY_WEBHOOK_SECRET</code>) · {view.webhookSecretInVercel ? "set" : "not set yet"}
+          {view.webhookSecretSource === "saved"
+            ? `Saved here${view.webhookSecretLast4 ? `, ending in ${view.webhookSecretLast4}` : ""}`
+            : view.webhookSecretSource === "environment"
+              ? "Using Vercel's value — save it in the row below to manage it"
+              : "Not set — enter it in the row below; Razorpay stays off until it is"}
         </dd>
       </dl>
 

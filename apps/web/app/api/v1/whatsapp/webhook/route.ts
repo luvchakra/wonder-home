@@ -2,6 +2,7 @@ import { after } from "next/server";
 
 import { createAdminClient } from "@wonderhome/core/db/admin";
 import { whatsappConfigFromEnv } from "@wonderhome/core/notifications/whatsapp";
+import { settledSettingsEnv } from "@wonderhome/core/platform/settings/runtime-env";
 import { handleWhatsAppWebhook } from "@wonderhome/core/notifications/whatsapp-webhook";
 
 import { whatsappAsk, whatsappAutoAdd } from "@/app/_lib/whatsapp-hometalk";
@@ -22,7 +23,9 @@ async function handle(request: Request): Promise<Response> {
   // request where the service role is unset, and the unconfigured route answered 500 instead of its 401.
   const ask = (input: Parameters<ReturnType<typeof whatsappAsk>>[0]) => whatsappAsk(createAdminClient())(input);
   const addOnItsOwn = (input: Parameters<ReturnType<typeof whatsappAutoAdd>>[0]) => whatsappAutoAdd(createAdminClient())(input);
-  return handleWhatsAppWebhook(request, { config: whatsappConfigFromEnv(), admin: createAdminClient, defer: (work) => after(work), ask, addOnItsOwn });
+  // A cold server waits (bounded) for the saved settings: the app secret and verify token live in Platform admin.
+  const env = await settledSettingsEnv();
+  return handleWhatsAppWebhook(request, { config: whatsappConfigFromEnv(env), admin: createAdminClient, defer: (work) => after(work), ask, addOnItsOwn });
 }
 
 export const GET = handle;
