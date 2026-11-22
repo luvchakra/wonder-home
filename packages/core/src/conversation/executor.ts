@@ -860,7 +860,7 @@ async function setReminder(intent: HouseholdIntent, context: ExecutionContext): 
   }
   return {
     ok: true,
-    text: `I will remind you ${whenText} to **${what}**. It will show under ${linkTo("/notifications", "Notifications")} then — only you will see it.${assumed}`,
+    text: `I will remind you ${whenText} to **${what}**. It will show under ${linkTo("/notifications", "Notifications")} then, and on your ${linkTo("/calendar", "Calendar")} that day — only you will see it.${assumed}`,
     result: { notificationId, what, remindAt: due.toISOString() },
   };
 }
