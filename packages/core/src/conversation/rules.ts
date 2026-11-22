@@ -295,7 +295,7 @@ const RULES: readonly Rule[] = [
   {
     // A hello in each language WonderHome speaks (story 22-005), so a
     // household answered by the rules alone is still greeted, not puzzled.
-    pattern: /^(?:hi|hello|hey|hiya|good (?:morning|afternoon|evening|night)|namaste|namaskar|नमस्ते|नमस्कार|हैलो|hola|buenos días|buenas tardes|bonjour|bonsoir|salut|hallo|guten (?:morgen|tag|abend)|مرحبا|أهلا|السلام عليكم)(?:\s+(?:there|wonderhome))?$/i,
+    pattern: /^(?:hi|hello|hey|hiya|there|wonderhome|good (?:morning|afternoon|evening|night)|namaste|namaskar|नमस्ते|नमस्कार|हैलो|hola|buenos días|buenas tardes|bonjour|bonsoir|salut|hallo|guten (?:morgen|tag|abend)|مرحبا|أهلا|السلام عليكم)(?:\s+(?:there|wonderhome))?$/i,
     read: () => ({ action: "greet", target: { kind: "unspecified" }, parameters: { kind: "greeting" }, confidence: 0.99 }),
   },
   {
@@ -424,6 +424,15 @@ const RULES: readonly Rule[] = [
     pattern: /^(?:what|anything|is there anything)(?: that)? (?:needs?|requires?) (?:my |our )?(?:attention|doing|looking at|me)(?: (?:today|now|this week))?$|^(?:what|anything|is there anything)(?: that)? (?:do )?(?:i|we) (?:need|should|have) to (?:do|know|look at|handle)(?: (?:today|now|this week|tomorrow))?$|^what are you (?:handling|doing|working on|taking care of)$|^(?:catch me up|update me|status|summary|brief me|how(?:'s| is| are) (?:everything|things|it going|the (?:house|home|family)))$/i,
     read: () => ({ action: "ask_status", target: { kind: "unspecified" }, parameters: { scope: "home" }, confidence: 0.95 }),
   },
+  {
+    // "What's the plan", "what's coming up", "whats are the upcoming stuff",
+    // "what's next" (the owner on WhatsApp, 2026-11-22): the days ahead,
+    // asked with no span. Answered as "what's on this week" is, from the
+    // calendar; a span or a day said is kept by the rules above.
+    pattern: /^(?:so\s+|ok(?:ay)?\s+|and\s+)?(?:what(?:'s|s| is| are)?|whats are|wat'?s?)\s+(?:is\s+|are\s+)?(?:the\s+|our\s+|my\s+)?(?:plans?|upcoming(?:\s+(?:stuff|things|events|plans?))?|coming up|up next|next|lined up|happening|on)(?:\s+(?:stuff|things|events))?(?:\s+(?:for\s+(?:us|me|the family|the house|the week|the coming days)|then|now|ahead))?[\s?.!]*$/i,
+    read: () => ({ action: "ask_status", target: { kind: "unspecified" }, parameters: { scope: "schedule", when: "this week" }, confidence: 0.9 }),
+  },
+
   {
     pattern: new RegExp(`^(?:show me |what(?:'s| is|s) (?:on )?|tell me )?(?:my |our |the )?(?:schedule|plan|plans|agenda|calendar|day)(?: (?:for |on ))?(${WHEN_WORDS})?$|^what(?:'s| is|s) (?:on|happening) (${WHEN_WORDS})$|^(?:show me |what(?:'s| is|s) )(${WHEN_WORDS})(?:'s)? (?:schedule|plan|plans|agenda)$`, "i"),
     read: (match) => ({

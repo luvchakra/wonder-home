@@ -9,6 +9,33 @@ import type { HomeTalkCase } from "./types";
  * HT-300 onwards.
  */
 export const UNDERSTANDING: HomeTalkCase[] = [
+  // WhatsApp as a door into HomeTalk (the owner's chat, 2026-11-22: "hello" was answered "I kept that.
+  // WonderHome couldn't read anything in it"). Small talk and plain questions are HomeTalk's, by rules, with
+  // no model; a forward or a document is still HomeSend's.
+  ...(<[string, string, HomeTalkCase["expected"]][]>[
+    ["HT-310", "hello", { interpretation: "greet", action: "answer", answer: { includes: ["Send me anything", "coming up"], excludes: ["I kept that", "Failed safely"] } }],
+    ["HT-311", "hi", { interpretation: "greet", action: "answer", answer: { excludes: ["I kept that"] } }],
+    ["HT-312", "thanks", { interpretation: "greet", action: "answer", answer: { excludes: ["I kept that"] } }],
+    ["HT-313", "whats the plan", { interpretation: "ask_status", action: "answer", answer: { includes: ["this week"], excludes: ["I kept that", "I did not follow"] } }],
+    ["HT-314", "whats are the upcoming stuff", { interpretation: "ask_status", action: "answer", answer: { includes: ["this week"], excludes: ["I kept that", "I did not follow"] } }],
+    ["HT-315", "anything due this week", { interpretation: "ask_status", action: "answer", answer: { excludes: ["I kept that", "I did not follow"] } }],
+  ]).map(([id, utterance, expected]): HomeTalkCase => ({
+    id, surface: "hometalk", household: "A", category: "cross_domain", actor: "a-kunal", door: { channel: "whatsapp" },
+    description: `WhatsApp "${utterance}": HomeTalk answers it, never a HomeSend item.`,
+    utterance, expected,
+  })),
+  {
+    id: "HT-316", surface: "hometalk", household: "A", category: "cross_domain", actor: "a-kunal", door: { channel: "whatsapp", forwarded: true },
+    description: "A forwarded school notice on WhatsApp is kept in HomeSend, not answered.",
+    utterance: "Dear parents, Sports Day is on Saturday at 9am. Please send a water bottle.",
+    expected: { interpretation: "homesend" },
+  },
+  {
+    id: "HT-317", surface: "hometalk", household: "A", category: "cross_domain", actor: "a-kunal", door: { channel: "whatsapp", media: true },
+    description: "A document sent on WhatsApp with a question as its caption is kept in HomeSend.",
+    utterance: "what's this?",
+    expected: { interpretation: "homesend" },
+  },
   {
     id: "HT-300", surface: "hometalk", household: "A", category: "time_date", actor: "a-kunal",
     description: "The owner's sentence, word for word: a doctor's appointment tomorrow at 1pm, recorded in Health with its own reminders, never \"what time?\".",

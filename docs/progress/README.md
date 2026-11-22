@@ -11,6 +11,7 @@ decision that shapes later work each earns a note, written before moving on.
 
 | Date | Note |
 |---|---|
+| 2026-11-22 | [WhatsApp: "hello" and "what's the plan" go to HomeTalk, never Failed safely](2026-11-22-whatsapp-greetings-to-hometalk.md) |
 | 2026-11-22 | [Platform admin: Test WhatsApp](2026-11-22-whatsapp-test-button.md) |
 | 2026-11-22 | [WhatsApp outage: saved settings never reached the webhook](2026-11-22-whatsapp-saved-settings-reach-routes.md) |
 | 2026-11-22 | [Platform staff from WONDERHOME_PLATFORM_ADMINS](2026-11-22-platform-admins-variable.md) |

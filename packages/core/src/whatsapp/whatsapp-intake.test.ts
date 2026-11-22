@@ -336,6 +336,37 @@ describe("processing into HomeSend", () => {
     expect(h.tables.whatsapp_events!.map((event) => event.kind)).toContain("question_answered");
   });
 
+  // 2026-11-22: the owner's "hello" was read by the model as nothing and answered "I kept that. WonderHome
+  // couldn't read anything in it". Greetings and plain questions reach HomeTalk with no model at all.
+  it.each(["hello", "hi", "Thanks!", "whats the plan", "whats are the upcoming stuff", "anything due this week"])(
+    "has HomeTalk answer %s without reading it as HomeSend content, even with no model",
+    async (text) => {
+      const { h, id } = await received("text");
+      h.tables.whatsapp_messages![0]!.text_content = text;
+      const out = replies();
+      const noModel: IngestDeps["classify"] = async () => {
+        throw new Error("no model may be asked");
+      };
+      const ask = async () => "Hello! Send me anything — a bill, a school notice, a reminder — or ask what's coming up.";
+      expect(await processWhatsAppMessage(h.client, id, { config: CONFIG, fetch: out.fetchImpl, ingest: { classify: noModel }, ask })).toBe("read");
+      expect(h.tables.home_send_items).toEqual([]);
+      expect(out.sent[0]!.text).not.toMatch(/I kept that|Failed safely/);
+      expect(h.tables.whatsapp_events!.map((event) => event.kind)).toContain("question_answered");
+    },
+  );
+
+  it("never leaves a short line the reading found nothing in under Failed safely: HomeTalk answers it", async () => {
+    const { h, id } = await received("text");
+    h.tables.whatsapp_messages![0]!.text_content = "blue sky today";
+    const out = replies();
+    const nothing: IngestDeps["classify"] = async () => extraction({ readable: false, kind: "unknown", confidence: "low" });
+    const ask = async () => "I did not follow that. What would you like?";
+    expect(await processWhatsAppMessage(h.client, id, { config: CONFIG, fetch: out.fetchImpl, ingest: { classify: nothing }, ask })).toBe("read");
+    expect(h.tables.home_send_items!.every((item) => item.status === "archived")).toBe(true);
+    expect(out.sent.map((m) => m.text).join("\n")).not.toMatch(/I kept that|Failed safely/);
+    expect(out.sent.at(-1)!.text).toBe("I did not follow that. What would you like?");
+  });
+
   it("says where to ask when HomeTalk could not answer", async () => {
     const { h, id } = await received("text");
     h.tables.whatsapp_messages![0]!.text_content = "what's on tomorrow?";
