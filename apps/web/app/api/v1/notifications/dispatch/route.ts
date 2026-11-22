@@ -16,6 +16,7 @@ import { notificationJobHandlers } from "@wonderhome/core/notifications/retry-ha
 import { sendDueDigests } from "@wonderhome/core/notifications/digest";
 import { householdsWithNoticeChanges, sweepNotices } from "@wonderhome/core/notifications/notices-sweep";
 import { tellPlatformAdmins } from "@wonderhome/core/ai/platform-key-alert";
+import { runtimeEnvForAi } from "@wonderhome/core/platform/settings/runtime-env";
 import { ranOnGitHub } from "@wonderhome/core/jobs/heartbeat";
 import { runTriviaRefill } from "@wonderhome/core/school/trivia-refill";
 import { JOBS } from "@wonderhome/core/jobs/runner";
@@ -126,7 +127,9 @@ async function dispatch(request: Request): Promise<Response> {
   // New email senders nobody answered about in 3 days: their mail is set aside (decision 5).
   await expireUnansweredSenders(admin, now);
   // An alert on WonderHome's own AI key goes to the platform admins, once (14-048).
-  await tellPlatformAdmins(admin, platformMailer(), now);
+  // With the saved settings read first (2026-11-22): on a cold server the platform key read as unset, and
+  // `supersedeStaleKeyAlerts` then closed nothing, so an alert for a key replaced in Platform admin stayed open.
+  await tellPlatformAdmins(admin, platformMailer(), now, await runtimeEnvForAi());
   // Morning digests (story 27-008): each one whose time has come on its household's clock.
   let digests = 0;
   try {

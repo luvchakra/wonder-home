@@ -143,7 +143,8 @@ export function greetingFor(intent: HouseholdIntent): string {
     case "help":
       return `Here is what I can do today. ${WHAT_I_CAN_DO} Anything that spends money or changes who can act always waits for your OK. The ${linkTo("/help", "user guide")} has the longer version.`;
     default:
-      return `Hello! ${WHAT_I_CAN_DO} What would you like?`;
+      // Short, with the one line on what to do (the owner, 2026-11-22: "hello" on WhatsApp).
+      return "Hello! Send me anything — a bill, a school notice, a reminder — or ask what's coming up.";
   }
 }
 

@@ -15,13 +15,14 @@ import { syllabusReply, timetableReply } from "../homesend/timetable-words";
 import { siteOrigin } from "../notifications/email";
 import { runtimeEnv } from "../platform/settings/runtime-env";
 import { gateTranscript, TRANSCRIPT_CONFIDENCE_FLOOR, type TranscriptGate } from "../homebrain/intake/audio";
+import { shortLine } from "../homebrain/intake/channel-route";
 import { looksLikeTimetable, noteSummary } from "../homebrain/intake/school-note";
 import { amountWords, sureClause, type AddedOnItsOwn, type WaitingInHomeSend } from "../homebrain/intake/auto-add";
 import { hearWhatsAppVoiceNote, ingestWhatsAppMedia, ingestWhatsAppText, IngestRejected, type IngestDeps, type IngestOutcome, type TranscribeResult } from "../homesend/ingest";
 import { COMPLETENESS } from "../homebrain/intake/completeness";
 import { FAILURE_REASON_COPY, type HomeSendKind } from "../homesend/items";
 import { contentHash, normalizeText } from "../homesend/normalize";
-import { PENDING_STATUSES } from "../homesend/repository";
+import { PENDING_STATUSES, setAsideAsConversation } from "../homesend/repository";
 import { readDetailAnswer } from "../hometalk/detail-answers";
 import { sendWhatsAppChoices, sendWhatsAppText, showWhatsAppTyping, type WhatsAppChoice, type WhatsAppConfig } from "../notifications/whatsapp";
 import { log } from "../observability/logger";
@@ -534,6 +535,27 @@ async function readMessage(admin: SupabaseClient, messageId: string, deps: Whats
     events.push({ kind: "retry_queued", householdId: row.household_id });
     await recordWhatsAppEvents(admin, events);
     return "failed";
+  }
+
+  // One short typed line the reading found nothing in ("hello", 2026-11-22, answered "I kept that. WonderHome
+  // couldn't read anything in it") was said to WonderHome, not sent to keep: set aside, never left in Failed
+  // safely, and HomeTalk answers it. "Couldn't read" stays only for a file that truly can't be read.
+  if (
+    outcome.state === "failed" &&
+    outcome.failureReason === "unreadable" &&
+    !outcome.duplicate &&
+    !together &&
+    !row.forwarded &&
+    row.message_type === "text" &&
+    shortLine(row.text_content) !== null
+  ) {
+    await setAsideAsConversation(admin, row.household_id, outcome.itemId, now).catch(() => false);
+    const answer = deps.ask ? await deps.ask({ householdId: row.household_id, memberId: row.member_id, text: row.text_content!.trim(), requestId: row.provider_message_id }).catch(() => null) : null;
+    events.push({ kind: answer ? "question_answered" : "question_redirected", householdId: row.household_id, latencyMs: elapsed() });
+    await settle({ processing_status: "ignored" });
+    await (answer ? sayHomeTalk(answer) : say((await words())("whatsapp.questionReply")));
+    await recordWhatsAppEvents(admin, events);
+    return "read";
   }
 
   // Not read for want of a model (2026-11-21): queued to be read as soon as one answers; the sender is told then.

@@ -1,5 +1,6 @@
 import { isUndo } from "../conversation/consent";
 import { isLeaveIt } from "../conversation/leave-it";
+import { isQuestionLine, isSmallTalk, routeChannelMessage, shortLine } from "../homebrain/intake/channel-route";
 import type { HomeTalkResponse } from "../hometalk/contract";
 
 /**
@@ -19,12 +20,6 @@ export const WHATSAPP_APP_ORIGIN = "https://home.wonderapps.biz";
 /** The longest reply sent in one message; WhatsApp's own limit is 4,096. */
 export const MAX_WHATSAPP_REPLY = 1500;
 
-const QUESTION_OPENING =
-  /^(?:what|what's|whats|when|when's|where|where's|who|who's|whose|which|how|how's|why|is|are|am|was|were|do|does|did|can|could|should|shall|will|would|has|have|any|tell me|show me|give me)\b/i;
-
-/** An everyday request HomeTalk does on its own: the list, a reminder, something to remember. */
-const REQUEST_OPENING = /^(?:add|remove|put|take|remind me|set a reminder|remember)\b/i;
-
 /**
  * A reply to what HomeTalk just said: "undo" after "Say undo to take it
  * back", or a yes or no to its question. It means nothing to HomeSend — on
@@ -34,20 +29,20 @@ const REQUEST_OPENING = /^(?:add|remove|put|take|remind me|set a reminder|rememb
 const REPLY_TO_HOMETALK = /^(?:yes|yeah|yep|yup|no|nope|ok|okay|sure|go ahead|do it|don't|do not|cancel)[.!]?$/i;
 
 /**
- * Whether a WhatsApp text is a question for WonderHome rather than something
- * to keep: one short line that asks ("what's the plan for the morning",
- * "is there milk?"). A forwarded notice, a list or anything with a link is
- * content, however it begins.
+ * Whether a WhatsApp text is said to WonderHome rather than something to
+ * keep: one short line that asks ("what's the plan", "anything due this
+ * week?") or greets, thanks or says goodbye ("hello", "thanks"). A forwarded
+ * notice, a list or anything with a link is content, however it begins.
+ * HomeBrain decides (`homebrain/intake/channel-route.ts`), with no model.
  */
 export function isQuestionForWonderHome(text: string): boolean {
-  const line = shortLine(text);
-  return line !== null && (line.endsWith("?") || QUESTION_OPENING.test(line));
+  return isQuestionLine(text) || isSmallTalk(text);
 }
 
-/** A question, a one-line everyday request ("add milk to the list", "remind me to call the plumber at 5"), or a reply to HomeTalk ("undo", "yes", "skip"). */
+/** A question or small talk, a one-line everyday request ("add milk to the list", "remind me to call the plumber at 5"), or a reply to HomeTalk ("undo", "yes", "skip"). */
 export function isForHomeTalk(text: string): boolean {
   const line = shortLine(text);
-  return line !== null && (isQuestionForWonderHome(line) || REQUEST_OPENING.test(line) || isUndo(line) || REPLY_TO_HOMETALK.test(line) || isLeaveIt(line));
+  return line !== null && (routeChannelMessage({ text: line }) === "hometalk" || isUndo(line) || REPLY_TO_HOMETALK.test(line) || isLeaveIt(line));
 }
 
 /**
@@ -74,12 +69,6 @@ export function namesTheSameThing(typed: string, catalogName: string): boolean {
   const have = new Set(words(catalogName));
   const want = words(typed);
   return want.length > 0 && want.every((word) => have.has(word));
-}
-
-function shortLine(text: string): string | null {
-  const line = text.trim();
-  if (!line || line.length > 160 || /\n/.test(line) || /https?:\/\/|www\./i.test(line)) return null;
-  return line;
 }
 
 /**

@@ -9,6 +9,7 @@ import { acceptReading, groundIntakeDate, isClassifyFailure, type IntakeExtracti
 import { reviewIntakeKind } from "../ai/intake-kind-check";
 import { DEFAULT_DATA_USE, minimiseContext, pseudonymiseText, reidentifyIntent, type Person } from "../ai/privacy";
 import type { AnswerComposer } from "../ai/model-client";
+import { routeChannelMessage } from "../homebrain/intake/channel-route";
 import { asksTheCalendar, asksWhatIsOn, calendarSpanReply, lookAheadReply, lookAheadSpan, memberNamedIn, readLookAhead, scheduleReply, scheduleSpanOf } from "../calendar/answer";
 import type { PendingClarification } from "../conversation/clarify";
 import { applyCorrection, describeCorrection, readCorrection, type CorrectableAction } from "../conversation/corrections";
@@ -232,6 +233,8 @@ async function talkTurn(c: HomeTalkCase, utterance: string, carried: Carried, mo
   const household = GOLDEN_HOUSEHOLDS[c.household];
   const who = memberOf(household, c.actor);
   const first = carried === FRESH;
+  // Through WhatsApp, the door decides talk or keep first, by rules (2026-11-22: "hello" became a failed HomeSend item).
+  if (first && c.door && routeChannelMessage({ text: utterance, forwarded: c.door.forwarded, media: c.door.media }) === "homesend") return { observed: { ...EMPTY, interpretation: "homesend" }, next: carried };
   const references = first ? c.references : undefined;
   // A correction ("actually, make that Friday", "not bread, eggs") is read against the request in
   // hand and becomes an ordinary intent, exactly as the conversation route does it.

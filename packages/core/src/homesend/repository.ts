@@ -688,6 +688,24 @@ export async function setAsideAsSuspectedScam(supabase: SupabaseClient, househol
   return true;
 }
 
+/**
+ * A short line said to WonderHome, not sent to keep ("hello", read as nothing,
+ * 2026-11-22): its failed item is set aside as `unreadable` — never left in
+ * Failed safely — and the words go to HomeTalk instead. Only a failed item moves.
+ */
+export async function setAsideAsConversation(supabase: SupabaseClient, householdId: string, itemId: string, now: Date = new Date()): Promise<boolean> {
+  const { data, error } = await supabase
+    .from("home_send_items")
+    .update({ status: "archived", archived_from: "failed", archived_at: now.toISOString(), archive_reason: "unreadable", retry_requested_at: null })
+    .eq("household_id", householdId)
+    .eq("id", itemId)
+    .eq("status", "failed")
+    .select("id");
+  if (error || (data ?? []).length === 0) return false;
+  await auditChange({ householdId, eventType: "homesend.auto_archived", targetTable: "home_send_items", targetId: itemId, metadata: { reason: "conversation", by: "rule", from: "failed" } }).catch(() => undefined);
+  return true;
+}
+
 export async function setAsideAsAlreadyRecorded(supabase: SupabaseClient, householdId: string, itemId: string, twinId: string, now: Date = new Date()): Promise<boolean> {
   const { data, error } = await supabase
     .from("home_send_items")
