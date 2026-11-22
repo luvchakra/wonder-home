@@ -631,6 +631,7 @@ export const homesendEs: AreaCatalog<typeof homesendEn> = {
   "homesend.archived.reason.kept_as_note": "Guardado como nota del hogar: pregúntale a HomeTalk",
   "homesend.archived.reason.not_resent": "No se pudo leer y no se volvió a enviar",
   "homesend.archived.reason.health_not_claimed": "Un documento de salud que nadie dijo que fuera suyo: restáuralo para archivarlo",
+  "homesend.archived.reason.suspected_scam": "Parecía una estafa (pedía un PIN u OTP, o pagar desde un enlace): no se registró nada",
   "homesend.setAside.title": "Apartado",
   "homesend.setAside.lede": "Todo lo enviado acaba en algo: una entrada, una nota o apartado aquí con su motivo. Restaurar devuelve cualquiera.",
   "homesend.setAside.all": "Ver todo lo apartado ({count})",

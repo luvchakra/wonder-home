@@ -1,6 +1,7 @@
 import { examplesText, rememberDecision, similarDecisions } from "./decision-memory";
 import { applyLearnedRule, learnedRuleFor, learnedRuleLine } from "./decision-rules";
 import { listHouseholdRules } from "../homebrain/rules-repository";
+import { suspectedScam } from "../homebrain/scam";
 import { senderKey } from "./learned";
 import type { Embedder } from "../homebrain/sleep/embeddings";
 import { decisionFromModel, decisionFromReading, newKindSentence, validateDecision } from "./decision";
@@ -24,7 +25,7 @@ import { fetchLinkSafely, LINK_FAILURE_COPY, type LinkContent } from "./link-fet
 import { platformMalwareScanConfig, scanForMalware, type MalwareScanOutcome } from "./malware-scan";
 import { paymentTitle, readPaymentProof, type PaymentProof } from "./payment-proof";
 import { asLoneUrl, audioDurationSeconds, contentHash, decodeTextFile, detectIntakeFile, MAX_AUDIO_SECONDS, MAX_BYTES, MAX_PDF_PAGES, normalizeText, pdfPageCount, type IntakeFileType } from "./normalize";
-import { createHomeSendItem, findByExternalId, findPendingByContentHash, markHomeSendFailed, setHomeSendClassification } from "./repository";
+import { createHomeSendItem, findByExternalId, findPendingByContentHash, markHomeSendFailed, setAsideAsSuspectedScam, setHomeSendClassification } from "./repository";
 import { recordModelUnavailable } from "./model-unavailable";
 import { buildUnderstanding, unreadableUnderstanding, type IntakeUnderstanding, type UnderstandingMeta } from "./understanding";
 
@@ -81,6 +82,8 @@ export type IngestOutcome = {
   notice: string;
   item: { id: string; classifiedKind: HomeSendKind; extracted: HomeSendExtraction | null; understanding: IntakeUnderstanding | null };
   failureReason?: HomeSendFailureReason;
+  /** Set aside at once as a suspected scam (owner, 2026-11-22): nothing recorded; the sender is warned not to pay or share a PIN. */
+  setAside?: "suspected_scam";
   /** For a voice note WonderHome is not sure it heard right (§17). */
   heard?: { text: string; confidence: number; prompt: string };
 };
@@ -367,6 +370,7 @@ export async function understand(
   // Why there is no reading, when there is none (2026-11-21): an older stand-in's null means the provider failed.
   const failure = result === null ? ({ failed: "unreachable" } as const) : isClassifyFailure(result) ? result : null;
   if (result === "no_provider" || failure) {
+    if (suspectedScam(input.context?.subject, sentText)) return scamOutcome(supabase, householdId, itemId, input.text ?? null, meta(inputScan));
     // A bank, card or UPI message needs no model: read on its own words (decision 2).
     const paidText = inputScan.flagged ? null : readPaymentProof(input.context?.subject, sentText).proof;
     if (paidText) {
@@ -433,6 +437,8 @@ export async function understand(
   const reading = fillFromEvidence(result.kind, result, sentText);
   // A bank, card or UPI message saying it was paid (decision 2): read from what was sent, or what the reading quoted off a
   // screenshot. Never from content that tried to instruct WonderHome, and never from one asking for a payment.
+  // Asks for a PIN or OTP, or demands payment through a link under a threat: never a bill (owner, 2026-11-22).
+  if (suspectedScam(input.context?.subject, sentText, reading.title, reading.summary, reading.notes)) return scamOutcome(supabase, householdId, itemId, input.text ?? null, meta(injection));
   const paid = injection.flagged || (result.kind !== "receipt" && result.kind !== "bill" && result.kind !== "unknown")
     ? null
     : readPaymentProof(input.context?.subject, sentText, reading.title, reading.summary, reading.notes, ...reading.facts.map((fact) => fact.evidence)).proof;
@@ -470,6 +476,26 @@ export async function understand(
     item: { id: itemId, classifiedKind: kind, extracted, understanding },
   };
 }
+
+/**
+ * A suspected scam (owner, 2026-11-22): kept as "unknown" with nothing read out of it (no amount, no link),
+ * then set aside as `suspected_scam`, so nothing is added from it, now or by a later pass.
+ */
+async function scamOutcome(supabase: SupabaseClient, householdId: string, itemId: string, text: string | null, about: UnderstandingMeta): Promise<IngestOutcome> {
+  const extracted = { ...emptyExtraction(), title: SCAM_NOTICE_TITLE };
+  const understanding: IntakeUnderstanding = { ...unreadableUnderstanding(about), readable: true, kind: "unknown", contentSummary: SCAM_NOTICE_TITLE };
+  await setHomeSendClassification(supabase, householdId, itemId, { classifiedKind: "unknown", extracted, understanding, rawText: text ? text.slice(0, MAX_STORED_TEXT) : null });
+  await setAsideAsSuspectedScam(supabase, householdId, itemId);
+  return {
+    itemId,
+    duplicate: false,
+    state: "failed",
+    setAside: "suspected_scam",
+    notice: "This looks like a scam, so WonderHome didn't record it. Don't pay or share your PIN or OTP — check with the company directly.",
+    item: { id: itemId, classifiedKind: "unknown", extracted, understanding },
+  };
+}
+const SCAM_NOTICE_TITLE = "Suspected scam — not recorded";
 
 /** What was sent, as text, for finding similar past decisions. */
 function sentText0(input: UnderstandInput): string | null {

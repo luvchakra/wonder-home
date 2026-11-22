@@ -15,6 +15,7 @@ export const whatsappMr: AreaCatalog<typeof whatsappEn> = {
   "whatsapp.ack.checkTranscript": "मिळालं 👍 तो व्हॉइस नोट मी बरोबर ऐकला याची खात्री नाही — कृपया HomeSend मध्ये त्यात काय आहे ते तपासा. 🎙️",
   "whatsapp.ack.modelUnavailable": "मिळालं 👍 मी हे ठेवून घेतलं आहे. आत्ता मला ते वाचता येत नाही; वाचता येताच वाचून मी काय केलं ते सांगेन.",
   "whatsapp.ack.readAgain": "मिळालं 👍 मी हे ठेवून घेतलं आहे. मी ते वाचलं, पण अजून त्यातून नोंदी करता आल्या नाहीत, म्हणून ते पुन्हा नीट वाचतोय आणि मी काय केलं ते सांगेन.",
+  "whatsapp.ack.suspectedScam": "⚠️ हे फसवणुकीसारखं दिसतंय, म्हणून मी हे नोंदवलं नाही.\n💡 त्याच्या लिंकवरून पैसे भरू नका आणि तुमचा PIN किंवा OTP कधीही शेअर करू नका. शंका असल्यास थेट कंपनीकडे चौकशी करा.",
   "whatsapp.timetable.lead": "📚 परीक्षा वेळापत्रक: *{title}*.",
   "whatsapp.timetable.untitled": "एक परीक्षा वेळापत्रक",
   "whatsapp.timetable.added": "मी {name} ({column}) साठी {count} परीक्षा दिवस जोडले.",

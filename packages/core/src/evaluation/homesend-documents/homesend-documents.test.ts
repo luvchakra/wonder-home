@@ -5,7 +5,7 @@ import { detectInstructionInjection } from "../../homesend/injection";
 import { readPaymentProof } from "../../homesend/payment-proof";
 import { planTimetable } from "../../homesend/timetable";
 import { DOCUMENT_CASES } from "./cases";
-import { documentMisses } from "./check";
+import { documentMisses, filedKind } from "./check";
 
 /** An empty reading, so each case records only what its model said. */
 const BLANK = {
@@ -34,7 +34,8 @@ describe("HomeSend regression set: complex messages become the right entries (14
       expect(isClassifyFailure(reading), "the reading survives the schema").toBe(false);
       const read = reading as IntakeExtraction;
       expect(read.readable).toBe(testCase.expected.readable);
-      expect(read.kind).toBe(testCase.expected.kind);
+      // As HomeSend files it: a payment proof is a receipt, a suspected scam is "unknown" and set aside.
+      expect(filedKind(testCase, read)).toBe(testCase.expected.kind);
 
       if (testCase.expected.exams) {
         const plan = planTimetable(read.schedule!, testCase.children ?? []);

@@ -645,6 +645,7 @@ export const homesendEn = {
   "homesend.archived.reason.kept_as_note": "Kept as a household note — ask HomeTalk about it",
   "homesend.archived.reason.not_resent": "Couldn't be read, and it wasn't sent again",
   "homesend.archived.reason.health_not_claimed": "A health document nobody said was theirs — restore it to file it",
+  "homesend.archived.reason.suspected_scam": "Looked like a scam (asked for a PIN or OTP, or to pay through a link) — nothing was recorded",
   "homesend.setAside.title": "Set aside",
   "homesend.setAside.lede": "Everything sent ends as something: an entry, a note, or set aside here with its reason. Restore puts any of it back.",
   "homesend.setAside.all": "See everything set aside ({count})",

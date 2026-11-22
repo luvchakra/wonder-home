@@ -631,6 +631,7 @@ export const homesendDe: AreaCatalog<typeof homesendEn> = {
   "homesend.archived.reason.kept_as_note": "Als Haushaltsnotiz behalten — frag HomeTalk danach",
   "homesend.archived.reason.not_resent": "Nicht lesbar und nicht noch einmal geschickt",
   "homesend.archived.reason.health_not_claimed": "Ein Gesundheitsdokument, das niemand als seines angegeben hat — wiederherstellen, um es abzulegen",
+  "homesend.archived.reason.suspected_scam": "Sah nach Betrug aus (fragte nach PIN oder OTP oder nach Zahlung über einen Link) — nichts wurde eingetragen",
   "homesend.setAside.title": "Beiseitegelegt",
   "homesend.setAside.lede": "Alles Gesendete wird zu etwas: einem Eintrag, einer Notiz oder hier beiseitegelegt, mit Grund. Wiederherstellen holt alles zurück.",
   "homesend.setAside.all": "Alles Beiseitegelegte ansehen ({count})",

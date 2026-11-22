@@ -631,6 +631,7 @@ export const homesendMr: AreaCatalog<typeof homesendEn> = {
   "homesend.archived.reason.kept_as_note": "घराची नोंद म्हणून ठेवले — HomeTalk ला विचारा",
   "homesend.archived.reason.not_resent": "वाचता आले नाही, आणि पुन्हा पाठवले नाही",
   "homesend.archived.reason.health_not_claimed": "आरोग्य दस्तऐवज जो कोणीही आपला म्हटला नाही — नोंदवण्यासाठी परत आणा",
+  "homesend.archived.reason.suspected_scam": "फसवणुकीसारखं वाटलं (PIN किंवा OTP मागितला, किंवा लिंकवरून पैसे भरायला सांगितलं) — काहीही नोंदवलं नाही",
   "homesend.setAside.title": "बाजूला ठेवलेले",
   "homesend.setAside.lede": "पाठवलेली प्रत्येक गोष्ट काहीतरी बनते: एक नोंद, एक टीप, किंवा कारणासह इथे बाजूला ठेवलेली. परत आणा ने कोणतीही परत येते.",
   "homesend.setAside.all": "बाजूला ठेवलेले सर्व पाहा ({count})",

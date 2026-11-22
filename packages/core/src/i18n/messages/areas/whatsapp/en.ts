@@ -13,6 +13,7 @@ export const whatsappEn = {
   "whatsapp.ack.checkTranscript": "Got it 👍 I'm not sure I heard that voice note right — please check what it says in HomeSend. 🎙️",
   "whatsapp.ack.modelUnavailable": "Got it 👍 I've kept it. I can't read it right now, and I'll read it as soon as I can and tell you what I did.",
   "whatsapp.ack.readAgain": "Got it 👍 I've kept it. I read it but couldn't turn it into entries yet, so I'm reading it again more closely and I'll tell you what I did.",
+  "whatsapp.ack.suspectedScam": "⚠️ This looks like a scam, so I haven't recorded it.\n💡 Don't pay through its link and never share your PIN or OTP. If you're unsure, check with the company directly.",
   "whatsapp.timetable.lead": "📚 Exam timetable: *{title}*.",
   "whatsapp.timetable.untitled": "an exam timetable",
   "whatsapp.timetable.added": "I added {count} exam days for {name} ({column}).",

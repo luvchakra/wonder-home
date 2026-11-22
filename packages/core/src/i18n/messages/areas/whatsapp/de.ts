@@ -15,6 +15,7 @@ export const whatsappDe: AreaCatalog<typeof whatsappEn> = {
   "whatsapp.ack.checkTranscript": "Angekommen 👍 Ich bin nicht sicher, ob ich die Sprachnachricht richtig verstanden habe – bitte prüfe in HomeSend, was sie sagt. 🎙️",
   "whatsapp.ack.modelUnavailable": "Verstanden 👍 Ich habe es aufbewahrt. Ich kann es gerade nicht lesen – sobald ich kann, lese ich es und sage dir, was ich gemacht habe.",
   "whatsapp.ack.readAgain": "Verstanden 👍 Ich habe es aufbewahrt. Ich habe es gelesen, konnte daraus aber noch keine Einträge machen – ich lese es noch einmal genauer und sage dir, was ich gemacht habe.",
+  "whatsapp.ack.suspectedScam": "⚠️ Das sieht nach Betrug aus, deshalb habe ich es nicht eingetragen.\n💡 Zahle nicht über den Link und gib niemals deine PIN oder OTP weiter. Wenn du unsicher bist, frag direkt beim Unternehmen nach.",
   "whatsapp.timetable.lead": "📚 Prüfungsplan: *{title}*.",
   "whatsapp.timetable.untitled": "ein Prüfungsplan",
   "whatsapp.timetable.added": "Ich habe {count} Prüfungstage für {name} ({column}) eingetragen.",

@@ -631,6 +631,7 @@ export const homesendHi: AreaCatalog<typeof homesendEn> = {
   "homesend.archived.reason.kept_as_note": "घर के नोट के रूप में रखा गया — HomeTalk से पूछें",
   "homesend.archived.reason.not_resent": "पढ़ा नहीं जा सका, और दोबारा नहीं भेजा गया",
   "homesend.archived.reason.health_not_claimed": "स्वास्थ्य दस्तावेज़ जिसे किसी ने अपना नहीं बताया — दर्ज करने के लिए वापस लाएँ",
+  "homesend.archived.reason.suspected_scam": "धोखाधड़ी जैसा लगा (PIN या OTP माँगा, या लिंक से भुगतान करने को कहा) — कुछ दर्ज नहीं किया गया",
   "homesend.setAside.title": "अलग रखा गया",
   "homesend.setAside.lede": "भेजी गई हर चीज़ कुछ न कुछ बनती है: एक एंट्री, एक नोट, या कारण के साथ यहाँ अलग रखी गई। वापस लाएँ से कोई भी लौट आती है।",
   "homesend.setAside.all": "अलग रखी सभी चीज़ें देखें ({count})",

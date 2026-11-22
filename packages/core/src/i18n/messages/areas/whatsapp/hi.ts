@@ -15,6 +15,7 @@ export const whatsappHi: AreaCatalog<typeof whatsappEn> = {
   "whatsapp.ack.checkTranscript": "मिल गया 👍 मुझे पक्का नहीं कि मैंने वह वॉइस नोट सही सुना — कृपया HomeSend में देख लें कि उसमें क्या है। 🎙️",
   "whatsapp.ack.modelUnavailable": "मिल गया 👍 मैंने इसे रख लिया है। अभी मैं इसे पढ़ नहीं पा रहा, जैसे ही पढ़ पाऊँगा, पढ़कर बताऊँगा कि मैंने क्या किया।",
   "whatsapp.ack.readAgain": "मिल गया 👍 मैंने इसे रख लिया है। मैंने इसे पढ़ा, पर अभी इससे एंट्री नहीं बना पाया, इसलिए इसे फिर से ध्यान से पढ़ रहा हूँ और बताऊँगा कि मैंने क्या किया।",
+  "whatsapp.ack.suspectedScam": "⚠️ यह धोखाधड़ी जैसा लगता है, इसलिए मैंने इसे दर्ज नहीं किया।\n💡 इसके लिंक से भुगतान न करें और अपना PIN या OTP कभी साझा न करें। संदेह हो तो सीधे कंपनी से पूछें।",
   "whatsapp.timetable.lead": "📚 परीक्षा समय-सारणी: *{title}*।",
   "whatsapp.timetable.untitled": "एक परीक्षा समय-सारणी",
   "whatsapp.timetable.added": "मैंने {name} ({column}) के लिए {count} परीक्षा दिन जोड़े।",

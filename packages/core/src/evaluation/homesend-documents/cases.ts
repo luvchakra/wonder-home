@@ -39,6 +39,8 @@ export type DocumentCase = {
     records?: { count: number; domains?: string[] };
     /** A payment message: proof of a payment made, or never proof. */
     paymentProof?: boolean;
+    /** Set aside as a suspected scam at ingest (`homebrain/scam.ts`, owner 2026-11-22). */
+    scam?: boolean;
     /** Instructions aimed at WonderHome inside the content. */
     injection?: boolean;
     /**
@@ -198,10 +200,11 @@ export const DOCUMENT_CASES: DocumentCase[] = [
   },
   {
     id: "HD-14",
-    description: "A message asking to pay or enter a PIN: never proof of payment",
+    description: "A message asking to pay or enter a PIN: never proof of payment, never a bill — set aside as a suspected scam",
     source: { channel: "whatsapp_text", text: "Your electricity will be disconnected tonight. Pay Rs 1,240 now: click the link and enter your UPI PIN." },
     reading: { kind: "bill", billKind: "utility", payee: "Electricity", amount: 1240, currency: "INR", title: "Electricity bill" },
-    expected: { readable: true, kind: "bill", paymentProof: false },
+    // Owner, 2026-11-22 ("Flag as scam"): set aside as a suspected scam, never a bill; the sender is warned.
+    expected: { readable: true, kind: "unknown", paymentProof: false, scam: true },
   },
   {
     id: "HD-15",
