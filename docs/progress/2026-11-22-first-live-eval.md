@@ -27,7 +27,9 @@ The full run took 19 minutes. The eval prints no token counts, so cost is not me
 - HU-021, HU-056 (wrong date + needless question), HU-063, HU-100 (interpretation), HU-077 (needless question), HU-060, HU-087 (privacy, likely the same placeholder cause, not re-run).
 - HS-13, HS-32, HS-34, HS-50, HS-52, HS-53 (HomeSend matching and interpretation).
 - HD-04, HD-08: their text holds no timetable or date list, so they can be scored only on the recorded reading.
-- HS-L02, HS-L12: unseen kinds read as `event`.
+- HS-L02, HS-L12: unseen kinds read as `event`. **Needs the owner:** the reading prompt itself lists a wedding, a family function and a society meeting under `event` (`ai/classify-intake.ts`, the `event` line), while these two unseen-kind cases expect a new kind (note + event). One of the two must change; that is a product choice, not a model bug (2026-11-22, after the HomeBrain move).
+- Re-run live on 2026-11-22 after the HomeBrain move: HT-65 still drops "Karate" and "5:00pm" on "And Manan?"; HT-118 is still read as `plan_event` with a question. Not yet traced.
+- Help guide: the suspected-scam warning is now described in HomeSend's section in all eight languages (`help.guide.home-send.body.23`).
 - One intermittent schema rejection on HD-14; logs now name the field.
 
 No Supabase or owner data was touched; the eval uses its own fixtures.

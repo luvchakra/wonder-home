@@ -187,6 +187,8 @@ export const helpDe: AreaCatalog<typeof helpEn> = {
 
   "help.guide.home-send.body.22":
     "HomeSend lernt, wie Ihr Haushalt mit Dingen umgeht, für die es keinen festen Platz gab. Werden Sendungen desselben Absenders oder derselben neuen Art (etwa ein Aushang der Wohnanlage) gleich behandelt und dreimal bestätigt, ohne dass etwas korrigiert oder rückgängig gemacht wurde, behält HomeSend das als Regel und behandelt die nächste ohne Nachfrage genauso. Eine Korrektur oder ein Rückgängig pausiert die Regel, und die KI entscheidet wieder, bis sie dreimal neu bestätigt ist. Jede Regel steht unter Einstellungen → KI-Assistent → „Was HomeSend gelernt hat“, mit „Warum?“ und den Einträgen, aus denen sie gelernt wurde; ein Admin kann sie vergessen. Eine Regel legt nur Notizen, Kalendertage, Erinnerungen, Einkäufe, Aufgaben, Kontakte und Orte an: nie eine Rechnung, eine Zahlung, einen Gesundheitseintrag, eine Freigabe oder eine Berechtigung.",
+  "help.guide.home-send.body.23":
+    "Eine Nachricht, die nach Ihrer PIN oder OTP fragt oder Sie drängt, über einen Link zu zahlen, bevor etwas gesperrt wird, gilt als vermuteter Betrug. WonderHome erfasst sie nicht: Sie wird als „Vermuteter Betrug — nicht erfasst“ beiseitegelegt, und wer sie geschickt hat, erfährt, nicht zu zahlen, keine PIN oder OTP weiterzugeben und direkt beim Unternehmen nachzufragen. Sie sehen sie weiterhin bei den Dingen, die HomeSend beiseitegelegt hat. WonderHome bezahlt nie etwas.",
   "help.guide.today-and-home.title": "Start und Heute",
   "help.guide.today-and-home.summary": "Was dich jetzt braucht, und wie der Tag aussieht.",
   "help.guide.today-and-home.body.1":

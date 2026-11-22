@@ -187,6 +187,8 @@ export const helpEs: AreaCatalog<typeof helpEn> = {
 
   "help.guide.home-send.body.22":
     "HomeSend aprende cómo tu hogar gestiona lo que no tenía un lugar propio. Cuando los envíos de un mismo remitente, o de un mismo tipo nuevo (un aviso de la comunidad, por ejemplo), se gestionan igual y se confirman tres veces sin nada corregido ni deshecho, HomeSend lo guarda como regla y gestiona el siguiente así sin preguntar. Una corrección o un Deshacer pausa la regla, y la IA vuelve a decidir hasta que se confirme tres veces más. Cada regla está en Ajustes → Asistente de IA → “Lo que HomeSend ha aprendido”, con “¿Por qué?” y los envíos de los que se aprendió; un Admin puede olvidarla. Una regla solo crea notas, días en el calendario, recordatorios, cosas por comprar, tareas, contactos y lugares: nunca una factura, un pago, un registro de salud, una aprobación ni un permiso.",
+  "help.guide.home-send.body.23":
+    "Un mensaje que pide tu PIN u OTP, o que te presiona para pagar mediante un enlace antes de que se corte algo, se trata como una posible estafa. WonderHome no lo registra: se aparta como \"Posible estafa — no registrado\", y a quien lo envió se le dice que no pague ni comparta un PIN u OTP y que lo compruebe directamente con la empresa. Puedes seguir viéndolo entre lo que HomeSend apartó. WonderHome nunca paga nada.",
   "help.guide.today-and-home.title": "Inicio y Hoy",
   "help.guide.today-and-home.summary": "Lo que te necesita ahora y la forma del día.",
   "help.guide.today-and-home.body.1":
