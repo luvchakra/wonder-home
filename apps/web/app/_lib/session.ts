@@ -13,6 +13,7 @@ import { requestFormat, requestFormatIn, requestT, setRequestLocale } from "@won
 import { translatorFor, type Translate } from "@wonderhome/core/i18n/translate";
 import { PRIMARY_NAVIGATION } from "@wonderhome/core/navigation/primary-navigation";
 import { chatReady } from "@wonderhome/core/chat/repository";
+import { countNeedsYou } from "@wonderhome/core/hometalk/needs-you-repository";
 import { secondaryNavigationFor, SECONDARY_GROUP_ORDER, type SecondaryNavItem } from "@wonderhome/core/navigation/secondary-navigation";
 import { installBannerLabels } from "@wonderhome/core/pwa/install-labels";
 import { childStarCount } from "@wonderhome/core/school/goal-repository";
@@ -97,7 +98,7 @@ export async function buildSession(
   const preferences = preferencesOf(membership.locale, membership.household.timezone);
   const isChild = membership.memberType === "child";
   const [unread, , t, avatarUrl, stars, chatOn, staff, signedIn] = await Promise.all([
-    countUnread(supabase, membership.memberId).catch(() => 0),
+    countUnread(supabase, membership.memberId, membership.household.id).catch(() => 0),
     markFirstSeen(supabase, membership),
     translatorFor(preferences.language),
     ownAvatarUrl(supabase, membership.avatarPath ?? null),
@@ -178,15 +179,20 @@ async function markFirstSeen(supabase: SupabaseClient, membership: HouseholdMemb
   }
 }
 
-async function countUnread(supabase: SupabaseClient, memberId: string): Promise<number> {
-  const { count } = await supabase
-    .from("notifications")
-    .select("id", { count: "exact", head: true })
-    .eq("recipient_member_id", memberId)
-    .in("status", ["generated", "delivered"])
-    // Held for later (a reminder for tomorrow) is not unread yet.
-    .lte("scheduled_for", new Date().toISOString());
-  return count ?? 0;
+async function countUnread(supabase: SupabaseClient, memberId: string, householdId: string): Promise<number> {
+  // The bell counts new reminders and open "Needs you" items, which live at
+  // the top of Notifications (owner, 2026-11-22), so neither is missed.
+  const [{ count }, needsYou] = await Promise.all([
+    supabase
+      .from("notifications")
+      .select("id", { count: "exact", head: true })
+      .eq("recipient_member_id", memberId)
+      .in("status", ["generated", "delivered"])
+      // Held for later (a reminder for tomorrow) is not unread yet.
+      .lte("scheduled_for", new Date().toISOString()),
+    countNeedsYou(supabase, householdId).catch(() => 0),
+  ]);
+  return (count ?? 0) + needsYou;
 }
 
 /** The date as the household reads it, in the household's own time zone and the person's own language. */

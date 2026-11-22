@@ -4,6 +4,8 @@ import type { ReactNode } from "react";
 
 import { createAdminClient } from "@wonderhome/core/db/admin";
 import { isHouseholdAdmin } from "@wonderhome/core/identity/households";
+import { SHOWN_AT_ONCE } from "@wonderhome/core/hometalk/needs-you";
+import { loadNeedsYou } from "@wonderhome/core/hometalk/needs-you-repository";
 import { markNotificationsSeen } from "@wonderhome/core/notifications/actions";
 import { localizeReminder } from "@wonderhome/core/notifications/message";
 import { NOTIFICATION_CATEGORIES, type NotificationCategory } from "@wonderhome/core/notifications/policies";
@@ -18,6 +20,7 @@ import { EmptyState } from "@wonderhome/core/ui/states";
 import { IconTile } from "@wonderhome/core/ui/icon-tile";
 import { cn } from "@wonderhome/core/lib/cn";
 
+import { NeedsYou } from "../_components/needs-you";
 import { PushNudge } from "../_components/push-nudge";
 import { ReminderRow, type ReminderRowLabels } from "../_components/reminder-row";
 import { RequestAnswer } from "../_components/request-answer";
@@ -41,6 +44,9 @@ export const dynamic = "force-dynamic";
  * The notification center (stories 23-005, 23-009), redesigned to be read at
  * a glance and acted on in place (the owner, 2026-10-23):
  *
+ * - Needs you: the one shared list (hometalk/needs-you-repository.ts), on
+ *   top, with its tap answers and defaults (owner, 2026-11-22: moved off Home;
+ *   HomeTalk keeps it too).
  * - Requests: what a child or helper is waiting on this adult to approve.
  * - Needs you now: what is due and still open, most pressing first, each
  *   card carrying its facts and its actions without opening anything.
@@ -64,7 +70,7 @@ export default async function NotificationsPage({ searchParams }: { searchParams
 
   const endOfTomorrow = atLocal(shiftDate(localMoment(now, timeZone).dateKey, 2), 0, timeZone);
   const weekAgo = new Date(now.getTime() - 7 * 86_400_000).toISOString();
-  const [{ data: openData }, { data: closedData }, { data: digestPref }, requests, { data: deviceRows }] = await Promise.all([
+  const [{ data: openData }, { data: closedData }, { data: digestPref }, requests, { data: deviceRows }, needsYouAll] = await Promise.all([
     supabase
       .from("notifications")
       .select(REMINDER_COLUMNS)
@@ -93,9 +99,14 @@ export default async function NotificationsPage({ searchParams }: { searchParams
       : Promise.resolve([]),
     // This member's push devices, so the nudge below knows whether this one is already on.
     supabase.from("push_subscriptions").select("endpoint").eq("member_id", membership.memberId),
+    // The one "Needs you" list (bounded in the repository: 100 questions, 10 proposals, 10 approvals).
+    loadNeedsYou(supabase, membership.household.id, { now, limit: 100 }).catch(() => ({ shown: [], total: 0 })),
   ]);
   const myEndpoints = ((deviceRows ?? []) as { endpoint: string }[]).map((row) => row.endpoint);
   const asked = new Set(requests.map((request) => request.id));
+  // A request shown below with its own Approve and Decline is not on "Needs you" too (rule 14).
+  const needsYouOpen = needsYouAll.shown.filter((item) => !(item.source === "approval" && asked.has(item.subjectId)));
+  const needsYou = { shown: needsYouOpen.slice(0, SHOWN_AT_ONCE), total: needsYouOpen.length };
 
   // Each reminder in the viewer's own language; the stored English when it has no message this build can read.
   const inTheirLanguage = (row: ReminderRowData) => localizeReminder(row, locale.t, format);
@@ -127,7 +138,7 @@ export default async function NotificationsPage({ searchParams }: { searchParams
     requests.length > 0 && !grouped.some((entry) => entry.section === "approve")
       ? SECTION_ORDER.flatMap((section) => (section === "approve" ? [{ section, groups: [] }] : grouped.filter((entry) => entry.section === section)))
       : grouped;
-  const rowCount = sections.reduce((total, entry) => total + entry.groups.length, 0) + requests.length;
+  const rowCount = sections.reduce((total, entry) => total + entry.groups.length, 0) + requests.length + needsYou.total;
   const sectionTitle: Record<ReminderSection, TranslationKey> = {
     overdue: "notifications.section.overdue",
     approve: "notifications.section.approve",
@@ -215,6 +226,9 @@ export default async function NotificationsPage({ searchParams }: { searchParams
 
         {confirmation ? <Alert tone="info">{confirmation}</Alert> : null}
 
+        {/* The one "Needs you" list (owner, 2026-11-22: here, not on Home): three at most, each with its tap answers and what happens if nobody answers. */}
+        <NeedsYou supabase={supabase} householdId={membership.household.id} timeZone={timeZone} language={locale.preferences.language} t={t} list={needsYou} />
+
         {/* Push on this phone, offered where reminders are read; nothing when it would not work or is already on. */}
         <PushNudge
           householdId={membership.household.id}
@@ -240,7 +254,7 @@ export default async function NotificationsPage({ searchParams }: { searchParams
           </nav>
         ) : null}
 
-        {sections.length === 0 && requests.length === 0 ? (
+        {sections.length === 0 && requests.length === 0 && needsYou.total === 0 ? (
           <EmptyState icon={BellOff} title={t("notifications.empty.none.title")} description={t("notifications.empty.body")} />
         ) : null}
 

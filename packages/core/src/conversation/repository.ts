@@ -13,6 +13,7 @@ import type { ActionPreview, Proposal } from "./proposal";
 import { checkApproval, proposalFingerprint } from "./approval";
 import { salienceOf } from "../homebrain/sleep/salience";
 import { PROPOSAL_EXPIRY_HOURS } from "./proposal-window";
+import { supersedeOlderProposals } from "./proposal-supersede";
 
 /** How long a proposal's card can be approved on screen: 48 hours, then it expires as not done (`proposal-expiry.ts`). A spoken "yes" counts only within the engine's PROPOSAL_TTL_MINUTES. */
 const APPROVAL_TTL_MINUTES = PROPOSAL_EXPIRY_HOURS * 60;
@@ -647,6 +648,17 @@ export async function recordProposal(
     .single();
 
   if (error) throw new Error(`recordProposal failed: ${error.code ?? "unknown"}`);
+  // A newer proposal for the same thing replaces the older one still waiting (owner, 2026-11-22).
+  if (status === "proposed") {
+    await supersedeOlderProposals(admin, {
+      id: (data as Row).id as string,
+      household_id: input.householdId,
+      session_id: input.sessionId,
+      action_type: input.intent.action,
+      outcome_key: input.intent.target.reference ?? null,
+      payload: ((data as Row).payload as Record<string, unknown> | null) ?? null,
+    });
+  }
   return toAction(data as Row);
 }
 
