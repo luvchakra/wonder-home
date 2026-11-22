@@ -63,6 +63,36 @@ export async function dismissReminderAction(_previous: ActionState, formData: Fo
   redirect("/notifications?done=dismissed");
 }
 
+/**
+ * "Remove" on a person's own reminder on the Calendar (26-025): it is dismissed,
+ * exactly as "Not needed" in Notifications, and leaves both. Only the
+ * recipient's own plain reminder in this household is touched — checked here by
+ * id, household, recipient and kind, and again by the recipient guard (RLS).
+ */
+export async function removeCalendarReminderAction(input: { householdId: string; notificationId: string }): Promise<{ error?: string }> {
+  const parsed = idSchema.safeParse(input);
+  if (!parsed.success) return { error: "That reminder could not be found." };
+  try {
+    const supabase = await createClient();
+    const membership = await requireMembership(supabase, parsed.data.householdId);
+    const { data } = await supabase
+      .from("notifications")
+      .select("id")
+      .eq("id", parsed.data.notificationId)
+      .eq("household_id", parsed.data.householdId)
+      .eq("recipient_member_id", membership.memberId)
+      .eq("source_type", "reminder")
+      .maybeSingle();
+    if (!data) return { error: "That reminder could not be found." };
+    await dismissNotification(supabase, parsed.data.notificationId);
+  } catch (thrown) {
+    return { error: toErrorBody(thrown, "notifications").body.error.message };
+  }
+  revalidatePath("/calendar");
+  revalidateReminders();
+  return {};
+}
+
 const snoozeSchema = idsSchema.extend({
   preset: z.enum([...SNOOZE_PRESETS, "custom"]),
   date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).optional(),

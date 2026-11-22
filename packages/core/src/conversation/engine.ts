@@ -1,3 +1,4 @@
+import { datedThingInReminder } from "../homebrain/dated-reminder";
 import { appointmentFromReminder, settleAppointment } from "./appointment-reading";
 import { isRecording } from "./consent";
 import { normaliseUtterance } from "./normalise";
@@ -306,6 +307,9 @@ export async function converse(raw: TurnInput): Promise<TurnResult> {
   // A doctor's appointment said as a reminder is the appointment, recorded where appointments live (2026-11-20).
   if (!answered || answered.action === "set_reminder") intent = appointmentFromReminder(intent);
   intent = settleAppointment(intent);
+  // A reminder for a dated thing ("a reminder for Asmi's music exam on 24th") records the thing too (2026-11-22):
+  // HomeBrain reads whether it names one; the executor files it through HomeSend and ties the reminder to it.
+  intent = withDatedThing(intent);
 
   // A link, a map or directions is never a thing to buy, whoever read it as one: "add maps link" is never
   // put on the list or asked "how much" (the owner, 2026-10-27).
@@ -496,4 +500,12 @@ export function missingForRecording(intent: HouseholdIntent): string {
 export function asksAboutAThing(utterance: string): boolean {
   const line = utterance.trim();
   return /^[\p{L}][\p{L}'’ -]{0,40}\?+$/u.test(line) && line.replace(/\?+$/, "").trim().split(/\s+/).length <= 3 && !/^(?:add|buy|get|order|pay|remind|remove|cancel|book|plan|put|set)\b/i.test(line);
+}
+
+/** Marks a reminder whose subject is a dated thing (HomeBrain's `datedThingInReminder`), so the thing is recorded with it. */
+function withDatedThing(intent: HouseholdIntent): HouseholdIntent {
+  if (intent.action !== "set_reminder" || intent.parameters.recordsThing !== undefined) return intent;
+  const what = typeof intent.parameters.what === "string" ? intent.parameters.what : "";
+  const when = typeof intent.parameters.when === "string" && intent.parameters.when.trim() ? intent.parameters.when : null;
+  return datedThingInReminder({ what, when, utterance: intent.utterance ?? "" }) ? { ...intent, parameters: { ...intent.parameters, recordsThing: true } } : intent;
 }

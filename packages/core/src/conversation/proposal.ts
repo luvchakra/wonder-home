@@ -285,6 +285,8 @@ function summarize(intent: HouseholdIntent): string {
       {
         const at = intent.parameters.remindAtResolved as { day?: string; time?: string } | undefined;
         const when = at?.day && at.time ? `${at.day} at ${at.time}` : `${groundedWhen(intent, "when")}${typeof intent.parameters.time === "string" ? ` at ${intent.parameters.time}` : ""}`;
+        // A dated thing named in it is recorded too (2026-11-22, `homebrain/dated-reminder.ts`).
+        if (intent.parameters.recordsThing === true) return `Add ${String(intent.parameters.what ?? "it")} to the calendar and remind you ${when}`.replace(/\s+/g, " ");
         return `Remind you ${when} to ${String(intent.parameters.what ?? "do that")}`.replace(/\s+/g, " ");
       }
     case "plan_event":
@@ -351,7 +353,9 @@ function describeChanges(intent: HouseholdIntent): string[] {
     case "plan_meal":
       return ["Put the meal on the household's plan", "Copy its recipe's ingredients onto it, where there is a recipe"];
     case "set_reminder":
-      return ["Show you a reminder under Notifications at that time — only you see it"];
+      return intent.parameters.recordsThing === true
+        ? ["Record it where it belongs — the Calendar or Kids & School", "Show you a reminder under Notifications at that time — only you see it"]
+        : ["Show you a reminder under Notifications at that time — only you see it"];
     case "remove_from_list":
       return ["Take it off the shopping list — what is at home stays as it is"];
     case "set_stock":

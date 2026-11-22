@@ -105,6 +105,10 @@ export type NotificationRecord = {
   body: string;
   status: string;
   createdAt: string;
+  /** "reminder" for a person's own plain reminder (26-025), which the Calendar also shows on its day. */
+  sourceType?: string | null;
+  /** When it is due to reach the person. */
+  scheduledFor?: string | null;
 };
 
 export type ProposalRecord = {
@@ -251,6 +255,8 @@ export const CALENDAR_SOURCE_RECORDS: Record<CalendarSource, readonly (keyof Con
   upkeep: ["serviceRequests"],
   outcome: ["outcomes"],
   order: ["orders"],
+  // The asker's own reminders, read with their notices (26-025): due ones by moment, so the Calendar's day and HomeBrain agree.
+  reminder: ["notifications"],
 };
 
 export type BuildOptions = {
@@ -1298,6 +1304,27 @@ export function buildContextItems(records: ContextRecords, options: BuildOptions
   if (records.notifications) {
     for (const notice of cap(records.notifications, MAX_PER_LIST)) {
       const open = notice.status !== "acted" && notice.status !== "resolved" && notice.status !== "expired";
+      // A person's own reminder still standing (26-025): said with its moment, as the Calendar shows it on that day.
+      if (notice.sourceType === "reminder" && notice.scheduledFor && ["generated", "delivered", "seen"].includes(notice.status)) {
+        const at = new Date(notice.scheduledFor);
+        const what = notice.title.replace(/^reminder:\s*/i, "").trim() || notice.title;
+        add({
+          domain: "notifications",
+          entityType: "notification",
+          entityId: notice.id,
+          summary: `The person asking set a reminder: ${what}, on ${formatDate(at, options.timezone)} at ${formatTime(at, options.timezone)}. Only they see it, in Notifications and on their Calendar.`,
+          need: "what the person asking set themselves to be reminded of",
+          privacyClass: classForSubject(notice.threadKey),
+          subjectMemberIds: [options.viewerMemberId],
+          attributes: { title: what, date: isoDateIn(at, options.timezone), at: notice.scheduledFor, status: notice.status },
+          source: { type: "notifications", capturedAt: notice.createdAt },
+          freshnessAt: notice.createdAt,
+          freshness: "current",
+          tier: 2,
+          aliases: [what, notice.title],
+        });
+        continue;
+      }
       add({
         domain: "notifications",
         entityType: "notification",

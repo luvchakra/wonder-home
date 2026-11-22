@@ -12,7 +12,7 @@
 import { atLocal, daysBetween, localMoment, partsOf, shiftDate, dateKeyOf, isRealDate } from "./dates";
 import { expandSeries, type OccurrenceException, type RecurrenceRule } from "./recurrence";
 
-export const CALENDAR_SOURCES = ["event", "occasion", "holiday", "school", "activity", "meal", "bill", "health", "helper", "upkeep", "outcome", "order"] as const;
+export const CALENDAR_SOURCES = ["event", "occasion", "holiday", "school", "activity", "meal", "bill", "health", "helper", "upkeep", "outcome", "order", "reminder"] as const;
 export type CalendarSource = (typeof CALENDAR_SOURCES)[number];
 
 export const CALENDAR_CATEGORIES = ["family", "school", "meals", "health", "personal", "work", "household", "holiday"] as const;
@@ -251,6 +251,73 @@ export function holidayEntries(holidays: readonly HolidayRecord[], viewer: Calen
     href: null,
     can: { edit: false },
   }));
+}
+
+// --- A person's own reminders (26-025) ---------------------------------------
+
+/**
+ * A plain reminder a person set ("remind me to call mum at 6"), as its
+ * `notifications` row reads (`source_type = 'reminder'`). `about` is set when
+ * the reminder is tied to a recorded entry (26-024): that entry already shows
+ * on its day, so it never gets a second row here.
+ */
+export type ReminderRecord = {
+  id: string;
+  recipientMemberId: string;
+  title: string;
+  scheduledFor: Date;
+  status: string;
+  about: { sourceType: string; sourceId: string } | null;
+};
+
+/** The statuses of a reminder still standing: not yet due, delivered, or seen. Done, dismissed or undone ones leave the Calendar. */
+export const CALENDAR_REMINDER_STATUSES = ["generated", "delivered", "seen"] as const;
+
+const REMINDER_PREFIX = /^reminder:\s*/i;
+
+/**
+ * Only the viewer's own reminders, on their moment within the range — never
+ * anyone else's, whatever rows are passed in (RLS already keeps a reminder to
+ * its recipient; this holds even without it). A point in time, not a booked
+ * block, so it never clashes with anything.
+ */
+export function reminderEntries(
+  reminders: readonly ReminderRecord[],
+  viewer: CalendarViewer,
+  range: { from: string; to: string },
+): CalendarEntry[] {
+  const entries: CalendarEntry[] = [];
+  for (const reminder of reminders) {
+    if (reminder.recipientMemberId !== viewer.memberId) continue;
+    if (reminder.about) continue;
+    if (!(CALENDAR_REMINDER_STATUSES as readonly string[]).includes(reminder.status)) continue;
+    const day = localMoment(reminder.scheduledFor, viewer.timeZone).dateKey;
+    if (day < range.from || day > range.to) continue;
+    const title = reminder.title.replace(REMINDER_PREFIX, "").trim() || reminder.title;
+    entries.push({
+      id: `reminder:${reminder.id}`,
+      source: "reminder",
+      sourceId: reminder.id,
+      title,
+      detail: null,
+      start: reminder.scheduledFor,
+      end: null,
+      allDay: false,
+      timeZone: viewer.timeZone,
+      kind: "marker",
+      category: "personal",
+      memberIds: [viewer.memberId],
+      ownerMemberId: viewer.memberId,
+      status: "confirmed",
+      visibility: "private",
+      occurrenceDate: null,
+      repeats: false,
+      protected: false,
+      href: "/notifications",
+      can: { edit: false },
+    });
+  }
+  return entries;
 }
 
 // --- Putting entries together ---------------------------------------------

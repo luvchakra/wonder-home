@@ -83,13 +83,16 @@ export function whenOn(entry: CalendarEntry, day: string, words: EntryWords): st
 }
 
 export function whoOf(entry: CalendarEntry, words: EntryWords): string | null {
-  if (entry.source === "holiday" || entry.memberIds.length === 0) return null;
+  // A reminder is only ever the viewer's own: "Just you" says it, not their name.
+  if (entry.source === "holiday" || entry.source === "reminder" || entry.memberIds.length === 0) return null;
   const names = entry.memberIds.map(words.nameOf).filter((name): name is string => Boolean(name));
   return names.length > 0 ? names.join(", ") : null;
 }
 
 export function badgesOf(entry: CalendarEntry, t: Translate): string[] {
   const badges: string[] = [];
+  // A person's own reminder (26-025) says what it is and that nobody else sees it.
+  if (entry.source === "reminder") return [t("calendar.entry.reminder"), t("calendar.entry.private")];
   // A due date is said in words, so it is never mistaken for a booked time.
   if (entry.kind === "due") badges.push(t("calendar.entry.due"));
   if (entry.status === "proposed") badges.push(t("calendar.entry.proposed"));
@@ -118,6 +121,7 @@ export function entryRow(entry: CalendarEntry, day: string, words: EntryWords): 
     badges: badgesOf(entry, words.t),
     proposed: entry.status === "proposed",
     href: hrefOf(entry, day),
+    reminder: entry.source === "reminder",
   };
 }
 

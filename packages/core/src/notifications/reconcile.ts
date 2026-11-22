@@ -106,7 +106,24 @@ export type OpenRow = {
   expires_at: string | null;
   reminder_policy: string | null;
   delivered_at: string | null;
+  decision_factors?: unknown;
 };
+
+/**
+ * Who already has their own reminder about a record (2026-11-22: "a reminder for Asmi's music exam on 24th"
+ * records the exam and sets the reminder the person asked for, tied to it, `executor.ts` `recordDatedThing`).
+ * The record's own derived reminder then skips that person, so they are not reminded twice; anyone else it
+ * goes to still hears. Keys are `recipient|sourceType:sourceId`.
+ */
+export function ownRemindersAbout(rows: readonly Pick<OpenRow, "recipient_member_id" | "source_type" | "decision_factors">[]): Set<string> {
+  const covered = new Set<string>();
+  for (const row of rows) {
+    if (row.source_type !== "reminder" || !row.decision_factors || typeof row.decision_factors !== "object") continue;
+    const about = (row.decision_factors as { about?: { sourceType?: unknown; sourceId?: unknown } }).about;
+    if (about && typeof about.sourceType === "string" && typeof about.sourceId === "string") covered.add(`${row.recipient_member_id}|${about.sourceType}:${about.sourceId}`);
+  }
+  return covered;
+}
 
 export async function reconcileHouseholdReminders(
   admin: SupabaseClient,
@@ -250,7 +267,7 @@ async function reconcile(
       admin
         .from("notifications")
         .select(
-          "id, recipient_member_id, thread_key, source_type, reminder_seq, scheduled_for, snooze_count, status, title, body, message, priority, earliest_at, latest_at, expires_at, reminder_policy, delivered_at",
+          "id, recipient_member_id, thread_key, source_type, reminder_seq, scheduled_for, snooze_count, status, title, body, message, priority, earliest_at, latest_at, expires_at, reminder_policy, delivered_at, decision_factors",
         )
         .eq("household_id", householdId)
         .in("status", ["generated", "delivered", "seen"]),
@@ -369,9 +386,11 @@ async function reconcile(
   // Each subject's one responsible person; then a child's school things due
   // the same day, going to the same person, become one reminder (23-008).
   const routed: { subject: ReminderSubject; recipient: ChosenRecipient }[] = [];
+  const ownReminder = ownRemindersAbout((open.data ?? []) as OpenRow[]);
   for (const subject of subjects) {
     const recipient = chooseReminderRecipient(subject, directory);
-    if (recipient) routed.push({ subject, recipient });
+    // Someone who set their own reminder about it hears that one, not this one too.
+    if (recipient && !ownReminder.has(`${recipient.memberId}|${subject.sourceType}:${subject.sourceId}`)) routed.push({ subject, recipient });
   }
   const assignments = REMINDER_POLICIES.school.batching ? batchSchoolDays(routed, schoolRows, displayNames, context) : routed;
 

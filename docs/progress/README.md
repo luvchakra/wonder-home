@@ -11,6 +11,7 @@ decision that shapes later work each earns a note, written before moving on.
 
 | Date | Note |
 |---|---|
+| 2026-11-22 | [A reminder for a dated thing puts it on the Calendar; your own reminders there too](2026-11-22-reminder-dated-thing.md) |
 | 2026-11-22 | [Voice on by default, with platform defaults a household can override](2026-11-22-voice-platform-defaults.md) |
 | 2026-11-22 | [WhatsApp replies laid out like HomeTalk in the app](2026-11-22-whatsapp-reply-layout.md) |
 | 2026-11-22 | [HomeTalk in the app on the same HomeBrain decision as WhatsApp](2026-11-22-hometalk-shared-decision.md) |

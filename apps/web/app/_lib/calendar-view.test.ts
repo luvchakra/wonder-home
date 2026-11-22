@@ -61,6 +61,13 @@ describe("calendar words", () => {
     expect(holiday.href).toBeNull();
   });
 
+  it("draws a person's own reminder as a reminder, just theirs, at its time (26-025)", () => {
+    const reminder = entry({ source: "reminder", sourceId: "r1", title: "Call mum", end: null, kind: "marker", memberIds: ["a"], ownerMemberId: "a", visibility: "private", href: "/notifications", can: { edit: false } });
+    const row = entryRow(reminder, "2026-10-20", words);
+    expect(row).toMatchObject({ title: "Call mum", when: "19:00", who: null, reminder: true, href: "/notifications", badges: ["calendar.entry.reminder", "calendar.entry.private"] });
+    expect(entryRow(entry({}), "2026-10-20", words).reminder).toBe(false);
+  });
+
   it("opens an event on the day it was tapped, and a repeating one on its occurrence", () => {
     expect(hrefOf(entry({}), "2026-10-20")).toBe("/calendar/events/e1?on=2026-10-20");
     expect(hrefOf(entry({ occurrenceDate: "2026-10-27", repeats: true }), "2026-10-27")).toBe("/calendar/events/e1?on=2026-10-27");
