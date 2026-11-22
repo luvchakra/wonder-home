@@ -303,6 +303,11 @@ const RULES: readonly Rule[] = [
     read: () => ({ action: "greet", target: { kind: "unspecified" }, parameters: { kind: "thanks" }, confidence: 0.99 }),
   },
   {
+    // An emoji on its own ("👍", "🙏", "❤️") is a thank-you or a nod, never content (WhatsApp, 2026-11-22).
+    pattern: /^(?:[\p{Extended_Pictographic}\u{FE0F}\u{200D}\u{1F3FB}-\u{1F3FF}]\s*){1,6}$/u,
+    read: () => ({ action: "greet", target: { kind: "unspecified" }, parameters: { kind: "thanks" }, confidence: 0.95 }),
+  },
+  {
     pattern: /^(?:help(?: me)?|what can you do(?: for me)?|what do you do|how do (?:you|i) (?:work|use this)|what can i (?:ask|say)(?: you)?|what are you|who are you)$/i,
     read: () => ({ action: "greet", target: { kind: "unspecified" }, parameters: { kind: "help" }, confidence: 0.99 }),
   },
@@ -423,6 +428,11 @@ const RULES: readonly Rule[] = [
   {
     pattern: /^(?:what|anything|is there anything)(?: that)? (?:needs?|requires?) (?:my |our )?(?:attention|doing|looking at|me)(?: (?:today|now|this week))?$|^(?:what|anything|is there anything)(?: that)? (?:do )?(?:i|we) (?:need|should|have) to (?:do|know|look at|handle)(?: (?:today|now|this week|tomorrow))?$|^what are you (?:handling|doing|working on|taking care of)$|^(?:catch me up|update me|status|summary|brief me|how(?:'s| is| are) (?:everything|things|it going|the (?:house|home|family)))$/i,
     read: () => ({ action: "ask_status", target: { kind: "unspecified" }, parameters: { scope: "home" }, confidence: 0.95 }),
+  },
+  {
+    // Hinglish (2026-11-22): "kal ka plan kya hai", "aaj kya hai", "is hafte ka schedule kya hai".
+    pattern: /^(aaj|today|kal|tomorrow|is hafte|iss hafte|this week)(?:\s+(?:ka|ki|ke))?(?:\s+(?:plan|schedule|program|programme))?\s+kya\s+(?:hai|h)[\s?]*$/i,
+    read: (match) => ({ action: "ask_status", target: { kind: "unspecified" }, parameters: { scope: "schedule", when: /^(?:aaj|today)/i.test(match[1]!) ? "today" : /^(?:kal|tomorrow)/i.test(match[1]!) ? "tomorrow" : "this week" }, confidence: 0.85 }),
   },
   {
     // "What's the plan", "what's coming up", "whats are the upcoming stuff",

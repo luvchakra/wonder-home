@@ -275,7 +275,12 @@ export async function converse(raw: TurnInput): Promise<TurnResult> {
     // the model did say is overwritten, and nothing is added that the
     // household's own words do not carry.
     const rules = resolveRuleIntent(input.utterance, context);
-    if (rulesAnswerItself(rules) && !sameRuleReading(rules, intent)) {
+    if (asksAboutAThing(input.utterance) && intent.action !== "ask_status" && intent.action !== "greet") {
+      // "milk?" asks; it never adds (WhatsApp, 2026-11-22: a real model read it as "add milk to the
+      // groceries"). A lone thing with a question mark is a question, not a request: the rules' reading
+      // (what is on record about it, and one question) stands over any change the model would make.
+      intent = rules;
+    } else if (rulesAnswerItself(rules) && !sameRuleReading(rules, intent)) {
       // A question the rules answer from the whole record — who is in the
       // family, how they are related, who likes what, where to go — keeps the
       // rules' reading. A real model (Anthropic, 21 Oct 2026) read "who is in
@@ -485,4 +490,10 @@ export function missingForRecording(intent: HouseholdIntent): string {
   if (intent.action === "record_health_appointment" && !has("time")) return "What time is the appointment?";
   if (intent.action === "set_reminder" && !has("what")) return "What should I remind you about?";
   return "I couldn't write that down as I read it. Could you say it once more, with what it is and when?";
+}
+
+/** A lone thing asked about: "milk?", "school fees??", "Asmi's bus?". One to three words, a question mark, no verb of a request. */
+export function asksAboutAThing(utterance: string): boolean {
+  const line = utterance.trim();
+  return /^[\p{L}][\p{L}'’ -]{0,40}\?+$/u.test(line) && line.replace(/\?+$/, "").trim().split(/\s+/).length <= 3 && !/^(?:add|buy|get|order|pay|remind|remove|cancel|book|plan|put|set)\b/i.test(line);
 }

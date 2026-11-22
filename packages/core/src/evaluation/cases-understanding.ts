@@ -24,6 +24,23 @@ export const UNDERSTANDING: HomeTalkCase[] = [
     description: `WhatsApp "${utterance}": HomeTalk answers it, never a HomeSend item.`,
     utterance, expected,
   })),
+  // Mixed and edge kinds on WhatsApp (the owner, 2026-11-22: "any kind of message should be analysed by ai and
+  // proper response should be given"). The model decides; each case also holds with no model (the rules).
+  ...(<[string, string, HomeTalkCase["expected"], Partial<HomeTalkCase>?][]>[
+    ["HT-318", "👍", { interpretation: "greet", action: "answer", answer: { excludes: ["I kept that", "I did not follow"] } }],
+    ["HT-319", "what's on tomorrow", { interpretation: "ask_status", action: "answer", answer: { includes: ["tomorrow"], excludes: ["I kept that"] } }, { channel: "voice" }],
+    ["HT-320", "milk?", { action: "clarify", answer: { includes: ["Milk"], excludes: ["I kept that", "Failed safely"] } }],
+    ["HT-321", "kal ka plan kya hai", { interpretation: "ask_status", action: "answer", answer: { includes: ["tomorrow"], excludes: ["I kept that", "I did not follow"] } }],
+    ["HT-322", "remind me tomorrow at 1 to call the bank", { interpretation: "set_reminder", date: "2026-09-24", time: "13:00" }, { followUps: [{ utterance: "no, it's on the 12th", expected: { interpretation: "set_reminder", date: "2026-10-12" } }] }],
+    ["HT-323", "what's this about?", { interpretation: "homesend+hometalk" }, { door: { channel: "whatsapp", forwarded: true, media: true } }],
+    ["HT-324", "remind me about this", { interpretation: "homesend+hometalk" }, { door: { channel: "whatsapp", media: true } }],
+    ["HT-325", "URGENT: your electricity will be disconnected tonight. Pay Rs 500 now at http://bit.ly/pay-now to avoid it", { interpretation: "homesend" }, { door: { channel: "whatsapp", forwarded: true } }],
+    ["HT-326", "hello", { interpretation: "greet", action: "answer", answer: { includes: ["Send me anything"] } }, { simulate: "provider_error" }],
+  ]).map(([id, utterance, expected, extra]): HomeTalkCase => ({
+    id, surface: "hometalk", household: "A", category: "cross_domain", actor: "a-kunal", door: { channel: "whatsapp" },
+    description: `WhatsApp "${utterance}"${extra?.door?.media ? " with a file" : ""}${extra?.door?.forwarded ? ", forwarded" : ""}${extra?.simulate ? ", no model" : ""}: answered as it should be, never "I kept that".`,
+    utterance, expected, ...extra,
+  })),
   {
     id: "HT-316", surface: "hometalk", household: "A", category: "cross_domain", actor: "a-kunal", door: { channel: "whatsapp", forwarded: true },
     description: "A forwarded school notice on WhatsApp is kept in HomeSend, not answered.",
@@ -32,9 +49,9 @@ export const UNDERSTANDING: HomeTalkCase[] = [
   },
   {
     id: "HT-317", surface: "hometalk", household: "A", category: "cross_domain", actor: "a-kunal", door: { channel: "whatsapp", media: true },
-    description: "A document sent on WhatsApp with a question as its caption is kept in HomeSend.",
+    description: "A document sent on WhatsApp with a question as its caption is kept in HomeSend, and the question answered too.",
     utterance: "what's this?",
-    expected: { interpretation: "homesend" },
+    expected: { interpretation: "homesend+hometalk" },
   },
   {
     id: "HT-300", surface: "hometalk", household: "A", category: "time_date", actor: "a-kunal",
