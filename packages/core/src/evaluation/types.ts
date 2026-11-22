@@ -131,7 +131,7 @@ export type HomeTalkCase = CaseBase & {
    * talk-or-keep route runs first, with no model (`homebrain/intake/channel-route.ts`).
    * Routed to HomeSend, the turn is observed as interpretation "homesend".
    */
-  door?: { channel: "whatsapp"; forwarded?: boolean; media?: boolean };
+  door?: { channel: "whatsapp" | "app"; forwarded?: boolean; media?: boolean };
   transcriptConfidence?: number;
   /** The household's autonomy for the outcome the turn touches; "prepare" when unset. */
   autonomy?: "prepare" | "execute";

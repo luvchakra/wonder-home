@@ -6,7 +6,7 @@ import { CLAUDE_ANSWER_MODEL, GEMINI_MODEL, OPENAI_MODEL } from "../../ai/model-
 import type { ModelProvider } from "../../ai/model-key";
 import { anthropicClient, geminiClient, openaiClient } from "../../ai/provider-clients";
 import { log } from "../../observability/logger";
-import { routeChannelMessage, type ChannelMessage, type ChannelRoute } from "./channel-route";
+import { routeChannelMessage, shortLine, type ChannelMessage, type ChannelRoute } from "./channel-route";
 
 /**
  * What a message that arrived on a channel (WhatsApp) is, and what to do with
@@ -44,7 +44,8 @@ export const CHANNEL_SYSTEM_PROMPT = [
   "  request: asks the assistant to do something (add milk, remind me to call mom at 6, plan dinner).",
   "  correction: fixes something the assistant just did (no, it's on the 12th).",
   "  answer: answers a question the assistant asked (yes, Asmi, 2 litres).",
-  "  content: something to keep on record: a forwarded notice, a bill, a receipt, a school circular, a document or photo, a news-like statement of a dated event.",
+  "  content: material from outside the family to keep on record: a forwarded or pasted notice, a bill, a receipt, a school circular, a document or photo.",
+  "  What a family member tells the assistant in their own words (someone is away, a preference, a plan, a dated thing to remember) is a request, not content: the assistant files it itself.",
   "  content_with_request: something to keep together with a request or question about it (a bill with 'remind me to pay this', a document with 'what is this?').",
   "Choose the route: hometalk for greeting, thanks, small_talk, question, request, correction and answer; homesend for content; both for content_with_request.",
   "A single word or a short phrase with nothing to keep is never content. When unsure between hometalk and homesend for a short typed line, choose hometalk.",
@@ -101,6 +102,27 @@ export async function decideChannelMessage(input: ChannelInput, decider: Channel
   const attached = Boolean(input.media || input.forwarded);
   if (attached) return { route: input.text && routeChannelMessage({ text: input.text }) === "hometalk" ? "both" : "homesend", kind: null, source: "rules" };
   return { route: routeChannelMessage(input), kind: null, source: "rules" };
+}
+
+/**
+ * Whether a turn typed in the app is filed straight through HomeSend, as the same words sent on WhatsApp would
+ * be: the model read them as something to keep, or (no model) they are a pasted notice — several lines or a link.
+ * A short line the rules alone can't place stays HomeTalk's, which still files a dated thing through HomeSend
+ * (`file_with_homesend`) and answers everything else.
+ */
+export function fileInHomeSend(text: string, decision: ChannelDecision): boolean {
+  if (decision.route !== "homesend") return false;
+  return decision.source === "model" || shortLine(text) === null;
+}
+
+/**
+ * The app's question to the shared decision: should this typed or spoken turn be filed through HomeSend? Words the
+ * rules plainly read as said to WonderHome (a hello, a question, a request) are answered without a second model
+ * call — the model would only agree; anything else is the model's to decide (`fileInHomeSend`).
+ */
+export async function fileFromTalk(text: string, decider: ChannelDecider | null): Promise<boolean> {
+  if (routeChannelMessage({ text }) === "hometalk") return false;
+  return fileInHomeSend(text, await decideChannelMessage({ text }, decider));
 }
 
 function askerFor(provider: ModelProvider, apiKey: string): (prompt: string) => Promise<Parsed | null> {
