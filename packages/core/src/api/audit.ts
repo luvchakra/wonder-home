@@ -70,6 +70,7 @@ export const AUDIT_EVENTS = [
   "support.access_granted",
   "platform.plan_updated",
   "platform.price_linked",
+  "platform.whatsapp_tested",
   "platform_admin.granted",
   "platform_admin.role_changed",
   "platform_admin.suspended",

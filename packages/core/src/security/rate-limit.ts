@@ -71,6 +71,8 @@ export const RATE_LIMITS = {
   "notification.test": { max: 8, windowSeconds: 600 },
   /** Area searches for weather, per member (story 17-007): each is an outbound geocoding call. */
   "weather.search": { max: 30, windowSeconds: 600 },
+  /** Platform admin's "Test WhatsApp", per staff member: each run makes four calls to Meta and one to the webhook. */
+  "platform.whatsapp_test": { max: 6, windowSeconds: 600 },
   /** Address and school searches, per member: typing, debounced, each a provider call. */
   "places.search": { max: 120, windowSeconds: 600 },
   /** Replies through an event's invite link, per hashed client address: a guest list, not a flood. */
@@ -101,7 +103,7 @@ export const RATE_LIMITS = {
 export type RateLimitBucket = keyof typeof RATE_LIMITS;
 
 /** Who a bucket counts, for the logs and docs/security/rate-limits.md. */
-type Scope = "member" | "household" | "ip" | "key" | "link" | "session" | "phone" | "client";
+type Scope = "staff" | "member" | "household" | "ip" | "key" | "link" | "session" | "phone" | "client";
 
 export const RATE_LIMIT_SCOPES: Record<RateLimitBucket, Scope> = {
   "hometalk.turn": "member",
@@ -128,6 +130,7 @@ export const RATE_LIMIT_SCOPES: Record<RateLimitBucket, Scope> = {
   "notification.test": "member",
   "trivia.topic": "member",
   "weather.search": "member",
+  "platform.whatsapp_test": "staff",
   "places.search": "member",
   "event.reply": "ip",
   "household.export": "member",

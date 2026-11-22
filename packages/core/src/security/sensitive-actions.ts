@@ -284,6 +284,11 @@ export const SENSITIVE_ACTIONS: readonly SensitiveAction[] = [
     recordedIn: "packages/core/src/billing/provider-plans.ts",
   },
   {
+    event: "platform.whatsapp_tested",
+    because: "Platform staff ran \"Test WhatsApp\": calls to Meta with the saved token and a signed delivery to the live webhook. It belongs to no household; the platform audit log reads it, with each check's result and never a secret.",
+    recordedIn: "apps/web/app/platform-admin/whatsapp-test-actions.ts",
+  },
+  {
     event: "platform_admin.granted",
     because: "Someone was made platform staff from WONDERHOME_PLATFORM_ADMINS. It belongs to no household; the platform audit log reads it, with the email only as a fingerprint.",
     recordedIn: "packages/core/src/platform/admins-variable.ts",
@@ -903,6 +908,8 @@ export function describeAuditEvent(
       return { title: "A plan was changed", detail: stringOr(metadata.planKey, null) };
     case "platform.price_linked":
       return { title: "A price was linked to a payment provider", detail: stringOr(metadata.planKey, null) };
+    case "platform.whatsapp_tested":
+      return { title: "WhatsApp was tested", detail: stringOr(metadata.summary, null) };
     case "platform_admin.granted":
       return { title: "Someone was made platform staff", detail: stringOr(metadata.role, null) };
     case "platform_admin.role_changed":
