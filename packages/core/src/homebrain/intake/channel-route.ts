@@ -24,7 +24,9 @@ const QUESTION_OPENING =
   /^(?:what|what's|whats|wat|when|when's|where|where's|who|who's|whose|which|how|how's|why|is|are|am|was|were|do|does|did|can|could|should|shall|will|would|has|have|any|anything|anyone|anybody|upcoming|tell me|show me|give me)\b/i;
 
 /** An everyday request HomeTalk does on its own: the list, a reminder, something to remember. */
-const REQUEST_OPENING = /^(?:add|remove|put|take|remind me|set a reminder|remember)\b/i;
+// "set reminder for Asmi's PTM tomorrow", "reminder kal Asmi ka music exam" are reminders too (2026-11-22): HomeTalk
+// sets them (and records the dated thing they name), on WhatsApp as in the app.
+const REQUEST_OPENING = /^(?:add|remove|put|take|remind me|(?:set|create|make)(?: me)?(?: an?)? reminder|reminder|remember)\b/i;
 
 /**
  * A hello, a thank-you, a goodbye, "how are you", "help": said to WonderHome,

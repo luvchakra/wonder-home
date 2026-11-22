@@ -11,12 +11,12 @@ in `docs/progress/`; for the running log of what changed when, `tracking/PROGRES
 
 ## The whole picture
 
-**460 of 507 stories done — 90.7%**
+**461 of 509 stories done — 90.6%**
 
 | Status | Stories |
 |---|---:|
-| Done | 460 |
-| In Progress | 14 |
+| Done | 461 |
+| In Progress | 15 |
 | Blocked | 1 |
 | Not Started | 28 |
 | Deferred | 4 |
@@ -51,7 +51,7 @@ in `docs/progress/`; for the running log of what changed when, `tracking/PROGRES
 | 23 Smart Notifications | `██████████` | 13 | 13 | — |
 | 24 HomePlaces | `██████████` | 15 | 15 | — |
 | 25 HomeFood | `████████░░` | 41 | 49 | 8 not started |
-| 26 HomeEvents | `███████░░░` | 16 | 21 | 2 in progress, 3 not started |
+| 26 HomeEvents | `███████░░░` | 17 | 23 | 3 in progress, 3 not started |
 | 27 Notification Channels and Events | `█████████░` | 24 | 25 | 1 blocked |
 
 ## What is left
@@ -104,6 +104,7 @@ in `docs/progress/`; for the running log of what changed when, `tracking/PROGRES
 | `26-005` Calendar notices over WhatsApp | 26 HomeEvents | P2 | Not Started |
 | `26-006` Google and Outlook calendars (phase 2 of calendar subscriptions: account sign-in / OAuth) | 26 HomeEvents | P2 | Not Started |
 | `26-022` Subscribe to any calendar by its share link (ICS/webcal) | 26 HomeEvents | P1 | In Progress |
+| `26-025` Your own reminders on the Calendar, private to you | 26 HomeEvents | P1 | In Progress |
 | `27-011` WhatsApp goes live | 27 Notification Channels and Events | P1 | Blocked |
 
 ## Every story
@@ -753,7 +754,7 @@ in `docs/progress/`; for the running log of what changed when, `tracking/PROGRES
 
 ### 26 — HomeEvents
 
-16 of 21 done `███████░░░`
+17 of 23 done `███████░░░`
 
 | Story | Priority | Status | Notes |
 |---|---|---|---|
@@ -778,6 +779,8 @@ in `docs/progress/`; for the running log of what changed when, `tracking/PROGRES
 | `26-022` Subscribe to any calendar by its share link (ICS/webcal) | P1 | In Progress | The owner, 2026-10-29 (Settings → Connections: "add feature to subscribe to any kind of calendar"), phase 1 of two (design `docs/calendar-subscriptions.md`; phase 2 = OAuth, 26-006). A person adds any calendar by its `https`/`webcal://` ICS share link (Google, Outlook, Apple, a school, a team, public holidays); WonderHome fetches it SSRF-safely (the audited `homesend/link-fetch.ts` path, `text/calendar`, size/time-bounded), parses the ICS defensively (untrusted text, ≤1000 events, bounded recurrence expansion), and imports its events **read-only** into `family_events` (new `source_subscription_id`, read-only write policies), each marked as from that feed. Visibility is chosen per feed (household or personal); the person can name, colour, re-sync and remove it (remove cascades its events). Re-sync is idempotent (UID dedup) on the delivery clock (pg_cron → `/api/v1/calendar/subscriptions/sync`), initial sync via `after()`. New `calendar_subscriptions` table; adults add in phase 1 (a child's via guardian is a follow-up). Distinct from the free/busy Calendar connector (17-002), which never imports titles |
 | `26-021` An event from HomeSend is filed like the calendar's own Add | P1 | Done | The owner, 2026-10-25. An event confirmed in HomeSend was always a "gathering" with no category and its place lost in the notes. It now gets the calendar's kind and category from its words (`homesend/record-types.ts` `eventShape`: birthday, special occasion, travel, appointment/health — a blood-test camp —, school event, outing, household gathering; otherwise a family gathering) and its Where: the AI reads the place into `location`, the review shows a Where field, and it is saved to `family_events.location`. Still through `addFamilyEvent`, so the duplicate check holds. PR #329. |
 | `26-023` A child's exam papers are events wherever events are listed | P0 | Done | The owner, 2026-11-21: "it doesn't create an event for science on 3rd dec, fix this issue with all subjects". Each paper was already on the Calendar's Month/Week/Day/Year views (26-002 `examEntries`), in clash checks, HomeTalk's calendar spans and the exam reminders, but not where screens list `family_events`: Home (upcoming, today's focus, the next card), a child's home, the Day view's Today plan, the Family page and HomeTalk's "what's going on" fallback. Now `listEvents(…, { exams: { timeZone } })` and `familyAgenda(…, { timeZone })` add each paper as the child's all-day (or timed) school event (`school/exams.ts` `examPaperEvents`), read live from the exam: one thing, shown once, one editor (rule 23), opening the exam in Kids & School (`eventHref`), with the first line of what to study as its detail. Chosen over a copied `family_events` row: no second copy to keep in step, no duplicate reminders, and the owner's existing eight papers appear the moment it deploys with no backfill. The "Only those going" chip is now an invited event's only: a child's exam or class is seen by the child, their guardians and Admins (`may_see_child`) and reminded to the child's guardians as before. Not wired: the REST `GET …/family` (its contract is `family_events`), HomeSend's matching, the chat picker and HomeBrain's calendar domain (exams reach HomeBrain through the school domain). No outbound calendar sync exists to carry them. Help: Calendar ¶9 in 8 languages. |
+| `26-024` A reminder for a dated thing puts the thing on the Calendar | P0 | Done | The owner, 2026-11-22: "i don't see the reminder set on calendar" — "add a reminder for asmis music exam on 24th" on WhatsApp set only a private notification. HomeBrain now reads the dated thing in a reminder request (`homebrain/dated-reminder.ts`); the executor files it through HomeSend (`ingestText`, as `file_with_homesend` does: school exam or event, bar, Checking, Undo) and ties the speaker's reminder to it, whose derived reminder then skips them (`reconcile.ts` `ownRemindersAbout`). Reply: "📅 Added … to the calendar" + "⏰ I'll remind you …"; "undo" takes back both. Same on WhatsApp and in the app ("set reminder …"/"reminder …" route to HomeTalk). Eval HU-101–104, parity test. Not backfilled: the owner's 22 Nov reminder stays a plain reminder. Help: Talk to WonderHome ¶5 in 8 languages. |
+| `26-025` Your own reminders on the Calendar, private to you | P1 | In Progress | The owner, 2026-11-22, with 26-024: a plain reminder ("remind me to call mum at 6") stays a reminder and shows on its day in the Calendar to the person who set it only, as a reminder row they can remove. Design inventory already lists reminders as a calendar source, "Recipient only" (`design/FAMILY-CALENDAR-PHASE0.md` §1.2). |
 
 ### 27 — Notification Channels and Events
 

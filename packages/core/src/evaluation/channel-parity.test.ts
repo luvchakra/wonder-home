@@ -26,6 +26,9 @@ const MESSAGES = [
   "add 2 litres milk to the list",
   "remind me tomorrow at 1 to call the bank",
   "add a reminder for tomorrow doctor appointment at 1 o'clock",
+  "add a reminder for asmis music exam on 24th",
+  "set reminder for Asmi's PTM tomorrow",
+  "reminder kal Asmi ka music exam",
   "we prefer dinner at 8",
   "Sunita is off tomorrow",
   "what's for dinner?",
@@ -50,6 +53,15 @@ describe("one decision, one answer, on WhatsApp and in the app", () => {
     const [onWhatsApp] = await observeConversation(caseFor(message, "whatsapp", index));
     const [inTheApp] = await observeConversation(caseFor(message, "app", index));
     expect(outcome(onWhatsApp!)).toEqual(outcome(inTheApp!));
+  });
+
+  it("records the dated thing a reminder names, at both doors (the owner, 2026-11-22)", async () => {
+    for (const channel of ["whatsapp", "app"] as const) {
+      const [observed] = await observeConversation(caseFor("add a reminder for asmis music exam on 24th", channel, 99));
+      expect(observed!.interpretation).toBe("set_reminder");
+      expect(observed!.kept).toContain('"recordsThing":true');
+      expect(observed!.answer).toMatch(/calendar/i);
+    }
   });
 
   it("is about real answers, not two empty ones", async () => {

@@ -515,6 +515,15 @@ async function undoForCorrection(
       if (typeof result.notificationId !== "string") return { ok: false, reason: "I could not find the reminder I set earlier, so I left it as it was." };
       const { error } = await context.supabase.from("notifications").update({ status: "expired" }).eq("id", result.notificationId).eq("household_id", context.householdId);
       if (error) return { ok: false, reason: "I could not cancel the earlier reminder, so I left everything as it was." };
+      // The dated thing recorded with it goes too (2026-11-22), through HomeSend's own Undo services.
+      if (typeof result.homeSendItemId === "string") {
+        const { undoRecordedThing } = await import("../homesend/undo-dated");
+        const gone = await undoRecordedThing(context.supabase, { householdId: context.householdId, memberId: context.actorMemberId, itemId: result.homeSendItemId }).catch(() => false);
+        const what = typeof result.what === "string" ? `**${result.what}**` : "it";
+        return gone
+          ? { ok: true, text: `Cancelled the reminder and took ${what} back off the ${linkTo("/calendar", "calendar")}.` }
+          : { ok: true, text: `Cancelled the reminder. ${what.charAt(0).toUpperCase()}${what.slice(1)} is still recorded — you can remove it from ${linkTo("/home-send", "HomeSend")}.` };
+      }
       return { ok: true, text: "Cancelled the earlier reminder." };
     }
     case "record_health_appointment": {
@@ -807,7 +816,11 @@ async function setReminder(intent: HouseholdIntent, context: ExecutionContext): 
   if (!moment.ok) return { ok: false, reason: moment.question };
   const due = moment.at;
 
-  const what = String(intent.parameters.what ?? "").trim().replace(/[.!]+$/, "");
+  // A dated thing named in it ("a reminder for Asmi's music exam on 24th") is recorded first, through
+  // HomeSend's own reading and write, and the reminder is tied to what it became (2026-11-22).
+  const thing = intent.parameters.recordsThing === true ? await recordDatedThing(intent, context, moment) : null;
+  const said = String(intent.parameters.what ?? "").trim().replace(/[.!]+$/, "");
+  const what = thing?.title ?? said;
   const title = `Reminder: ${what.charAt(0).toUpperCase()}${what.slice(1)}`.slice(0, 160);
   const { data, error } = await context.admin
     .from("notifications")
@@ -820,7 +833,7 @@ async function setReminder(intent: HouseholdIntent, context: ExecutionContext): 
       title,
       body: `You asked HomeTalk to remind you ${onDay(moment.day.replace(/\s*\(.*\)$/, ""))} at ${moment.time}.`.slice(0, 500),
       action: null,
-      decision_factors: { source: "home_talk", requestedBy: context.actorMemberId, phrase: when },
+      decision_factors: { source: "home_talk", requestedBy: context.actorMemberId, phrase: when, ...(thing?.about ? { about: thing.about } : {}) },
       scheduled_for: due.toISOString(),
       // A person's own reminder: snoozed, dismissed and delivered like any
       // other (module 23), with no record behind it to resolve it.
@@ -832,10 +845,82 @@ async function setReminder(intent: HouseholdIntent, context: ExecutionContext): 
   if (error || !data) return { ok: false, reason: "I could not set that reminder just now, and nothing was saved." };
 
   const whenText = `${onDay(moment.day)} at ${moment.time}`;
+  const assumed = moment.assumedFrom ? `\nI took "${moment.assumedFrom}" as ${moment.time} — say "${moment.otherTime}" if not.` : "";
+  const notificationId = (data as { id: string }).id;
+  if (thing) {
+    // Both halves said, each on its own line: what was recorded (or why it waits), then the reminder.
+    const recorded = thing.added
+      ? `📅 Added **${thing.title}** on ${thing.day} to the ${thing.where}.${thing.checking ? " It's marked Checking until it's confirmed." : ""}`
+      : `📥 ${thing.text}`;
+    return {
+      ok: true,
+      text: `${recorded}\n⏰ I'll remind you ${whenText}. It will show under ${linkTo("/notifications", "Notifications")} — only you will see it.${assumed}`,
+      result: { notificationId, what, remindAt: due.toISOString(), ...(thing.homeSendItemId ? { homeSendItemId: thing.homeSendItemId } : {}), ...(thing.about ? { about: thing.about } : {}) },
+    };
+  }
   return {
     ok: true,
-    text: `I will remind you ${whenText} to **${what}**. It will show under ${linkTo("/notifications", "Notifications")} then — only you will see it.${moment.assumedFrom ? `\nI took "${moment.assumedFrom}" as ${moment.time} — say "${moment.otherTime}" if not.` : ""}`,
-    result: { notificationId: (data as { id: string }).id, what, remindAt: due.toISOString() },
+    text: `I will remind you ${whenText} to **${what}**. It will show under ${linkTo("/notifications", "Notifications")} then — only you will see it.${assumed}`,
+    result: { notificationId, what, remindAt: due.toISOString() },
+  };
+}
+
+/** A HomeSend change's domain, as the reminder source that reminds about it (`notifications/sources.ts`). */
+const REMINDED_AS: Record<string, string> = { school_item: "school_item", event: "family_event" };
+
+type RecordedThing = {
+  title: string;
+  /** The day as the reply says it: "Tue 24 Nov". */
+  day: string;
+  added: boolean;
+  /** "calendar" for an event; the screen's name otherwise. */
+  where: string;
+  checking: boolean;
+  /** What HomeSend said when it did not add it (a question, or why it waits). */
+  text: string;
+  homeSendItemId: string | null;
+  /** The record the reminder is about, so its own derived reminder does not repeat this one (`reconcile.ts`). */
+  about: { sourceType: string; sourceId: string } | null;
+};
+
+/**
+ * Files the dated thing a reminder names through HomeSend — `ingestText`, the
+ * reading, the household's bar, Undo — exactly as being told about it does
+ * (`file_with_homesend`). Never a direct table write. Null when HomeBrain finds
+ * no dated thing in it after all, or it could not be filed: the reminder is
+ * still set.
+ */
+async function recordDatedThing(intent: HouseholdIntent, context: ExecutionContext, moment: { at: Date; time: string }): Promise<RecordedThing | null> {
+  const { datedThingInReminder, datedThingSentence } = await import("../homebrain/dated-reminder");
+  const found = datedThingInReminder(
+    { what: String(intent.parameters.what ?? ""), when: typeof intent.parameters.when === "string" ? intent.parameters.when : null, utterance: intent.utterance },
+    context.members.map((member) => member.displayName),
+  );
+  if (!found) return null;
+  const local = (options: Intl.DateTimeFormatOptions) => new Intl.DateTimeFormat("en-GB", { timeZone: context.timezone, ...options }).format(moment.at);
+  const time = typeof intent.parameters.time === "string" && intent.parameters.time.trim() ? moment.time : null;
+  const sentence = datedThingSentence(found, local({ weekday: "long", day: "numeric", month: "long", year: "numeric" }), time);
+  const filed = await fileWithHomeSend({ ...intent, action: "file_with_homesend", parameters: {}, utterance: sentence }, context).catch(() => null);
+  if (!filed || !filed.ok) return null;
+  const result = (filed.result ?? {}) as { homeSendItemId?: string; added?: string };
+  const homeSendItemId = typeof result.homeSendItemId === "string" ? result.homeSendItemId : null;
+  let about: RecordedThing["about"] = null;
+  if (homeSendItemId && result.added) {
+    const { data } = await context.supabase.from("homesend_changes").select("domain, entity_id").eq("household_id", context.householdId).eq("intake_id", homeSendItemId).is("undone_at", null).limit(1).maybeSingle();
+    const row = data as { domain: string; entity_id: string } | null;
+    const sourceType = row ? REMINDED_AS[row.domain] : undefined;
+    if (sourceType && row) about = { sourceType, sourceId: row.entity_id };
+  }
+  const where = !result.added ? "" : /calendar|event/i.test(result.added) || about?.sourceType === "family_event" ? "calendar" : result.added;
+  return {
+    title: found.title,
+    day: local({ weekday: "short", day: "numeric", month: "short" }),
+    added: Boolean(result.added),
+    where,
+    checking: /checking/i.test(filed.text),
+    text: filed.text,
+    homeSendItemId,
+    about,
   };
 }
 
