@@ -13,6 +13,7 @@ import { SENDER_TRUST_SOURCE } from "@wonderhome/core/homesend/sender-trust";
 import { closeNeedsYou, getNeedsYou } from "@wonderhome/core/hometalk/needs-you-repository";
 import { requireMembership } from "@wonderhome/core/identity/households";
 import { log } from "@wonderhome/core/observability/logger";
+import { sweepStaleNotifications } from "@wonderhome/core/notifications/stale";
 import { undoHomeSendDocumentAction } from "./home-send-actions";
 import { reconcileRemindersNow } from "../_lib/reminders";
 
@@ -67,6 +68,8 @@ export async function answerNeedsYouAction(_previous: NeedsYouState, formData: F
     }
     // A confirmed entry's reminders lose "not yet confirmed" now, not at the next clock pass.
     if (item.source === "homesend_check" || item.source === "homesend_update" || item.source === "homesend_add" || item.source === "homesend_health_for") after(() => reconcileRemindersNow(householdId, { force: true }));
+    // Whatever this answer settled leaves everyone's bell now, not at the next clock pass (owner, 2026-11-22).
+    if (closed) after(() => sweepStaleNotifications(adminClientFor(adminGrant.member(membership, "clear notifications this answer settled"), householdId), new Date(), { householdId }).then(() => undefined));
     // No revalidatePath: any revalidation in an action re-draws the page the tap came from, which would take the
     // row (and its "Done") away before it is read. The row says the outcome; every page showing the list renders
     // per request, so it is fresh on the next visit.

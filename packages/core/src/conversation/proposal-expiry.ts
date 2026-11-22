@@ -4,6 +4,7 @@ import { formatterFor } from "../i18n/format";
 import { DEFAULT_PREFERENCES } from "../i18n/preferences";
 import { log } from "../observability/logger";
 import { createNotification } from "../notifications/create";
+import { resolveNotifications } from "../notifications/resolve";
 import { msg } from "../notifications/message";
 import { reminderText } from "../notifications/sources";
 import { PROPOSAL_EXPIRY_HOURS, PROPOSAL_REMIND_AFTER_HOURS } from "./proposal-window";
@@ -116,13 +117,7 @@ export async function sweepStaleProposals(admin: SupabaseClient, now: Date = new
       result.expired += 1;
       const approvalId = referralOf(row.payload)?.approvalId;
       await admin.from("approvals").update({ status: "expired", decided_at: now.toISOString() }).eq("household_id", row.household_id).eq("conversation_action_id", row.id).eq("status", "pending");
-      await admin
-        .from("notifications")
-        .update({ status: "resolved", resolved_at: now.toISOString() })
-        .eq("household_id", row.household_id)
-        .eq("source_type", "approval")
-        .in("source_id", approvalId ? [row.id, approvalId] : [row.id])
-        .in("status", ["generated", "delivered", "seen"]);
+      await resolveNotifications(admin, { householdId: row.household_id, sourceType: "approval", sourceIds: approvalId ? [row.id, approvalId] : [row.id] }, "expired", now);
     }
 
     for (const { row, recipientMemberId, summary } of plan.remind) {

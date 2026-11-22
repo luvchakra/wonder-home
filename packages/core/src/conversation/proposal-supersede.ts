@@ -1,6 +1,7 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 
 import { log } from "../observability/logger";
+import { resolveNotifications } from "../notifications/resolve";
 
 /**
  * A newer proposal for the same thing replaces the older one (owner,
@@ -87,13 +88,7 @@ export async function supersedeOlderProposals(
       if (!row) continue;
       closed.push(id);
       await admin.from("approvals").update({ status: "expired", decided_at: now.toISOString() }).eq("household_id", fresh.household_id).eq("conversation_action_id", id).eq("status", "pending");
-      await admin
-        .from("notifications")
-        .update({ status: "resolved", resolved_at: now.toISOString() })
-        .eq("household_id", fresh.household_id)
-        .eq("source_type", "approval")
-        .eq("source_id", id)
-        .in("status", ["generated", "delivered", "seen"]);
+      await resolveNotifications(admin, { householdId: fresh.household_id, sourceType: "approval", sourceIds: [id] }, "superseded", now);
     }
     return closed;
   } catch (thrown) {

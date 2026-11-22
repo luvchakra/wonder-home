@@ -36,6 +36,16 @@ reminders about real records, never lines of text fired and forgotten.
   bell's badge adds `countNeedsYou` (head-only counts) to the unread
   reminders. These are not `notifications` rows: answering one goes through
   `(auth)/needs-you-actions.ts`, never a notification write.
+- **Cleared when decided or stale** (owner, 2026-11-22). One resolver,
+  `notifications/resolve.ts` `resolveNotifications`, sets `resolved` with
+  `resolved_reason` (`decided`, `superseded`, `source_gone`, `settled`, `past`,
+  `expired`, `duplicate`; migration `20261122230000`), never deletes. A
+  decision clears its reminder at once (`decideAction`, `closeApproval`,
+  supersede, proposal expiry; a Needs-you answer runs the sweep in `after()`);
+  `stale.ts` `sweepStaleNotifications` runs on the delivery clock for what
+  `reconcile.ts` and `notices-sweep.ts` don't cover. Money and health are
+  never cleared for `past` or `expired`, only when the record shows them
+  settled; anything still waiting for a person stays.
 - **On the Calendar** (26-025, 2026-11-22). A person's own plain reminder
   (`source_type = 'reminder'`, set in HomeTalk) also shows on its day in the
   Calendar, to its recipient only (`calendar/projection.ts` `reminderEntries`),

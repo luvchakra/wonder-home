@@ -2,6 +2,7 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 
 import { createNotification } from "../notifications/create";
 import { decideNotification, type HouseholdEvent } from "../notifications/decide";
+import { resolveNotifications } from "../notifications/resolve";
 
 /**
  * A child's or helper's request goes to an adult for the final OK (the owner,
@@ -215,11 +216,5 @@ export async function closeApproval(admin: SupabaseClient, input: { householdId:
     .eq("id", input.approvalId)
     .eq("household_id", input.householdId)
     .eq("status", "pending");
-  await admin
-    .from("notifications")
-    .update({ status: "resolved", resolved_at: new Date().toISOString() })
-    .eq("household_id", input.householdId)
-    .eq("source_type", "approval")
-    .eq("source_id", input.approvalId)
-    .in("status", ["generated", "delivered", "seen"]);
+  await resolveNotifications(admin, { householdId: input.householdId, sourceType: "approval", sourceIds: [input.approvalId] }, input.status === "expired" ? "expired" : "decided");
 }
