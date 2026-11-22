@@ -4,6 +4,7 @@
 
 ## What it does
 Platform admin → Integrations → WhatsApp → **Test WhatsApp**. One run; one line per check, ✓, ✗ or – (couldn't run) and what to do:
+0. (sixth line) **Graph API version** and Meta's end date for it.
 1. **Settings present**: the nine WhatsApp settings and where each comes from (saved here / Vercel / default / missing).
 2. **Access token valid**: `GET /{phone-number-id}?fields=display_phone_number,verified_name,quality_rating`. Shows Meta's number and verified name, and whether they match the saved business number. Error 190 (subcodes 463/467) reads as "Access token expired or invalid — generate a permanent system-user token".
 3. **Webhook address**: `GET /{app-id}/subscriptions` with the app access token. Reports a different callback URL, an inactive webhook, or an unticked `messages` field. Meta's reference says WhatsApp webhooks are set in the App Dashboard, so if Meta reports none, the line reads "can't confirm" and says what to set.
@@ -20,7 +21,7 @@ New settings: `WHATSAPP_APP_ID` and `WHATSAPP_BUSINESS_ACCOUNT_ID` (plain). Only
 
 ## Not done
 - "Send a test message" to the admin's own linked number (optional in the ask) is left for a follow-up. Checks 2 and 5 cover the outage.
-- The sender and the test use Graph `v21.0`. Meta's latest is `v27.0`, and v21.0 (Oct 2024) is near or past its two-year life. If check 2 fails with a version error, upgrading `GRAPH` in `notifications/whatsapp.ts` is the fix.
+- Graph API version: one constant, `whatsapp/graph-version.ts`, now used by sending, typing, media download and the test (a test fails if any WhatsApp file names its own). It stays `v21.0`: Meta's versions table says it is usable until **2027-01-21** (latest is v27.0), so it was not the cause, and an untested version change to a live sender is avoided today. After that date Meta silently routes calls to another version, and it exposes no header that says so. The test's sixth line therefore shows the version and its end date, warns within 90 days (it warns now: 60 days left), and fails after it. Upgrading before January is a follow-up.
 
 ## Verified
 `self-check.test.ts` (10 tests) plus the related settings, security, audit and webhook tests: 48 files, 639 tests. Typecheck clean; `next build` passes.

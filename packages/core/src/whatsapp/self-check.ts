@@ -19,8 +19,7 @@
 
 export const WHATSAPP_SELF_TEST_OBJECT = "wonderhome_self_test";
 export const WHATSAPP_CHECK_TIMEOUT_MS = 8_000;
-/** The version the sender uses (`notifications/whatsapp.ts`), so the test sees what sending sees. */
-export const WHATSAPP_GRAPH_VERSION = "v21.0";
+import { WHATSAPP_GRAPH, WHATSAPP_GRAPH_LATEST_KNOWN, WHATSAPP_GRAPH_VERSION, WHATSAPP_GRAPH_VERSION_EXPIRES, daysUntilGraphExpiry } from "./graph-version";
 
 type Fetch = typeof fetch;
 
@@ -74,7 +73,7 @@ type GraphAnswer<T> = { ok: true; body: T } | { ok: false; status: number; error
 
 async function graphGet<T>(fetchImpl: Fetch, path: string, token: string, timeoutMs: number): Promise<GraphAnswer<T>> {
   try {
-    const response = await fetchImpl(`https://graph.facebook.com/${WHATSAPP_GRAPH_VERSION}/${path}`, {
+    const response = await fetchImpl(`${WHATSAPP_GRAPH}/${path}`, {
       headers: { authorization: `Bearer ${token}` },
       signal: AbortSignal.timeout(timeoutMs),
       cache: "no-store",
@@ -197,6 +196,18 @@ export async function checkWebhookSelfTest(input: { webhookUrl: string; appSecre
   } catch {
     return { id, ok: false, title: "Webhook not reached", detail: `${input.webhookUrl} didn't answer in time.` };
   }
+}
+
+// ---------------------------------------------------------------------------
+// The Graph API version every WhatsApp call uses, against Meta's published end date.
+// ---------------------------------------------------------------------------
+
+export function graphVersionLine(now: Date = new Date()): CheckLine {
+  const days = daysUntilGraphExpiry(now);
+  const base = `WonderHome calls Meta's Graph API ${WHATSAPP_GRAPH_VERSION} (sending, media and this test). Meta's latest known is ${WHATSAPP_GRAPH_LATEST_KNOWN}.`;
+  if (days < 0) return { id: "graph_version", ok: false, title: `Graph API ${WHATSAPP_GRAPH_VERSION} has expired`, detail: `${base} Meta ended it on ${WHATSAPP_GRAPH_VERSION_EXPIRES} and now routes calls to another version. Upgrade WHATSAPP_GRAPH_VERSION (whatsapp/graph-version.ts).` };
+  if (days <= 90) return { id: "graph_version", ok: true, title: `Graph API ${WHATSAPP_GRAPH_VERSION}: ends in ${days} day${days === 1 ? "" : "s"}`, detail: `${base} Meta ends it on ${WHATSAPP_GRAPH_VERSION_EXPIRES}: upgrade before then.` };
+  return { id: "graph_version", ok: true, title: `Graph API ${WHATSAPP_GRAPH_VERSION}: supported`, detail: `${base} Meta supports it until ${WHATSAPP_GRAPH_VERSION_EXPIRES}.` };
 }
 
 export function summaryLine(lines: readonly CheckLine[]): { ok: boolean; text: string } {

@@ -1,5 +1,6 @@
 import type { ChannelAdapter, ChannelError, ChannelNotification, ChannelSendResult } from "./channels";
 import { runtimeEnv } from "../platform/settings/runtime-env";
+import { WHATSAPP_GRAPH } from "../whatsapp/graph-version";
 
 /**
  * WhatsApp as a delivery channel (story 17-006), through Meta's WhatsApp
@@ -19,7 +20,7 @@ import { runtimeEnv } from "../platform/settings/runtime-env";
  * parameters, and nothing else about a household ever leaves in it.
  */
 
-const GRAPH = "https://graph.facebook.com/v21.0";
+const GRAPH = WHATSAPP_GRAPH;
 export const WHATSAPP_TIMEOUT_MS = 8_000;
 
 type Fetch = typeof fetch;

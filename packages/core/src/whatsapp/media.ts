@@ -1,4 +1,5 @@
 import type { WhatsAppConfig } from "../notifications/whatsapp";
+import { WHATSAPP_GRAPH } from "./graph-version";
 
 /**
  * Fetching a file someone sent on WhatsApp (the WhatsApp HomeSend spec §14).
@@ -10,7 +11,7 @@ import type { WhatsAppConfig } from "../notifications/whatsapp";
  * after their type is decided from the bytes themselves.
  */
 
-const GRAPH = "https://graph.facebook.com/v21.0";
+const GRAPH = WHATSAPP_GRAPH;
 const MEDIA_TIMEOUT_MS = 15_000;
 /** The largest file HomeSend takes in (a voice note, 10MB). */
 export const MAX_WHATSAPP_MEDIA_BYTES = 10 * 1024 * 1024;

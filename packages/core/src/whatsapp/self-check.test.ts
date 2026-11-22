@@ -116,3 +116,22 @@ describe("Test WhatsApp: the checks", () => {
     expect(line.detail).toMatch(/didn't answer in time/);
   });
 });
+
+describe("Test WhatsApp: the Graph API version", () => {
+  it("is one version for every call, and warns as Meta's end date nears", async () => {
+    const { graphVersionLine } = await import("./self-check");
+    const { WHATSAPP_GRAPH_VERSION } = await import("./graph-version");
+    expect(graphVersionLine(new Date("2026-06-01T00:00:00Z")).title).toBe(`Graph API ${WHATSAPP_GRAPH_VERSION}: supported`);
+    expect(graphVersionLine(new Date("2026-11-22T00:00:00Z")).title).toMatch(/ends in 60 days/);
+    expect(graphVersionLine(new Date("2027-02-01T00:00:00Z")).ok).toBe(false);
+  });
+
+  it("no WhatsApp code names a Graph version of its own", async () => {
+    const { readFileSync, readdirSync } = await import("node:fs");
+    const { join } = await import("node:path");
+    const roots = [join(__dirname), join(__dirname, "../notifications")];
+    for (const root of roots)
+      for (const file of readdirSync(root).filter((name) => name.endsWith(".ts") && !name.endsWith(".test.ts") && name !== "graph-version.ts"))
+        expect(readFileSync(join(root, file), "utf8"), file).not.toMatch(/graph\.facebook\.com\/v\d/);
+  });
+});

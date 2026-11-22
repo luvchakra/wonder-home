@@ -13,6 +13,7 @@ import {
   checkAppSubscription,
   checkWabaSubscription,
   checkWebhookSelfTest,
+  graphVersionLine,
   settingsLine,
   summaryLine,
   type CheckLine,
@@ -71,7 +72,7 @@ export async function testWhatsAppAction(): Promise<WhatsAppTestState> {
     checkWabaSubscription({ wabaId: value("WHATSAPP_BUSINESS_ACCOUNT_ID"), appId: value("WHATSAPP_APP_ID"), accessToken: value("WHATSAPP_ACCESS_TOKEN"), expectedUrl: url }),
     checkWebhookSelfTest({ webhookUrl: url, appSecret: value("WHATSAPP_APP_SECRET") }),
   ]);
-  const lines = [settingsLine(sources), token, appSubscription, waba, selfTest];
+  const lines = [settingsLine(sources), token, appSubscription, waba, selfTest, graphVersionLine()];
   const summary = summaryLine(lines);
 
   await recordAuditEvent(admin, {
