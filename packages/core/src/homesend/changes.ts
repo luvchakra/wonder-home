@@ -1,3 +1,4 @@
+import { recordDecisionOutcome } from "./decision-memory";
 import type { SupabaseClient } from "@supabase/supabase-js";
 
 import { auditChange } from "../api/audit";
@@ -151,6 +152,8 @@ export async function confirmHomeSendEntry(
       metadata: { intakeId, how: by.how, ...(by.how === "answers" ? { confidence: by.confidence } : {}) },
     });
   }
+  // A person said it is right, or their answers raised it (14-083): remembered with its decision.
+  if (rows.length > 0) await recordDecisionOutcome(supabase, householdId, intakeId, by.how === "person" ? "confirmed" : "answered");
   return rows.length;
 }
 
@@ -270,6 +273,10 @@ export async function undoHomeSendChange(
     .eq("id", changeId);
 
   if (error) throw new Error(`undoHomeSendChange failed: ${error.code ?? "unknown"}`);
+
+  // The household undid what HomeSend decided (14-083): its next similar item learns not to.
+  const { data: undone } = await supabase.from("homesend_changes").select("intake_id").eq("household_id", householdId).eq("id", changeId).maybeSingle();
+  if (undone?.intake_id) await recordDecisionOutcome(supabase, householdId, undone.intake_id as string, "undone");
 
   await auditChange({
     householdId,
