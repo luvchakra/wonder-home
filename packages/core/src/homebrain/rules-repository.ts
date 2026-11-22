@@ -1,5 +1,6 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 
+import { recordDecisionOutcome } from "../homesend/decision-memory";
 import type { HomeSendKind } from "../homesend/items";
 import { lessonsFrom, mergeLesson, RULE_KINDS, type HouseholdRule, type Lesson, type RuleField, type RuleKind, type RuleSource } from "./rules";
 
@@ -45,7 +46,7 @@ function toRule(row: Row): HouseholdRule | null {
     learnedFromItemId: row.learned_from_item_id,
     learnedAt: row.learned_at,
     mixed: row.mixed === true,
-    source: row.source === "pick" || row.source === "correction" ? row.source : "answer",
+    source: row.source === "pick" || row.source === "correction" || row.source === "confirmations" ? row.source : "answer",
     times: typeof row.times === "number" && row.times > 0 ? row.times : 1,
   };
 }
@@ -145,6 +146,12 @@ export async function learnFromCorrection(client: SupabaseClient, input: TeachIn
     } catch {
       // A correction that can't be counted still corrects the entry.
     }
+  }
+  // The item's decision memory is marked corrected, with the field (14-084): it demotes any learned rule of its pattern,
+  // and the next similar item is shown the fix. Never a person's id or an amount: the field, and words only.
+  if (input.itemId) {
+    const to = input.field === "person" ? "someone else" : input.field === "amount" ? "a different amount" : String(input.to.text ?? "").slice(0, 120);
+    await recordDecisionOutcome(client, input.householdId, input.itemId, "corrected", { field: input.field, to }, input.memberId);
   }
   let kept = 0;
   for (const lesson of lessonsFrom(input)) {

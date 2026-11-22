@@ -16,6 +16,8 @@ import { BAR_KINDS, effectiveBar, MIN_HISTORY } from "@wonderhome/core/homebrain
 import { listKindBars, loadChosenAutoAddPercent } from "@wonderhome/core/homebrain/kind-bar-repository";
 import { MEMBER_RULE_KINDS, ruleKeyLabel, type RuleKind } from "@wonderhome/core/homebrain/rules";
 import { listHouseholdRules } from "@wonderhome/core/homebrain/rules-repository";
+import { recentDecisions } from "@wonderhome/core/homesend/decision-memory";
+import { ruleEvidence, valueCapabilities } from "@wonderhome/core/homesend/decision-rules";
 import { listMembers } from "@wonderhome/core/identity/households";
 import { AppShell } from "@wonderhome/core/shell/app-shell";
 import { Card } from "@wonderhome/core/ui/card";
@@ -64,7 +66,7 @@ export default async function AiAssistantSettingsPage({ searchParams }: { search
   const returnTo = safeReturnTo(query.returnTo);
   const { supabase, membership, view, viewer, secondary } = session;
   const householdId = membership.household.id;
-  const [credential, voiceCredential, dataUse, confirmRequested, chosenPercent, recordFirst, keyAlerts, homesendTidy, nothingWaits, learned, members, kindBars, healthFilers, aiEnv] = await Promise.all([
+  const [credential, voiceCredential, dataUse, confirmRequested, chosenPercent, recordFirst, keyAlerts, homesendTidy, nothingWaits, learned, members, kindBars, healthFilers, aiEnv, decisionMemories] = await Promise.all([
     credentialStatus(supabase, householdId).catch(() => ({ configured: false, provider: null, updatedAt: null })),
     geminiVoiceKeyStatus(supabase, householdId).catch(() => ({ configured: false, provider: null, updatedAt: null })),
     loadDataUse(supabase, householdId),
@@ -80,6 +82,8 @@ export default async function AiAssistantSettingsPage({ searchParams }: { search
     loadHealthFilers(supabase, householdId),
     // The saved settings, waited for (bounded) on a server that hasn't read them yet, so "which key answers" is never a guess.
     runtimeEnvForAi(),
+    // HomeSend's recent decisions, for each learned rule's "Why?" (14-084): from the household's own rows, never a model.
+    recentDecisions(supabase, householdId).catch(() => []),
   ]);
 
   // Which key actually answers, decided in one place so the screen can never
@@ -93,13 +97,32 @@ export default async function AiAssistantSettingsPage({ searchParams }: { search
   const keyWords = keySourceWords(t, key.source);
   // What HomeSend learned (14-066, and HomeBrain's household rules): "class2@lakeside.edu → Tara", what kind of rule, who taught it when.
   const nameOf = new Map(members.map((member) => [member.id, member.displayName]));
-  const ruleType: Record<RuleKind, "person" | "area" | "category" | "item" | "place"> = {
+  const ruleType: Record<RuleKind, "person" | "area" | "category" | "item" | "place" | "pattern"> = {
     sender_child: "person",
     sender_person: "person",
     sender_area: "area",
     vendor_category: "category",
     phrase_item: "item",
     place_alias: "place",
+    decision_pattern: "pattern",
+  };
+  // A rule promoted from three confirmations (14-084): "From secretary@society.in → Household note + Calendar", and "Why?" from the memory rows.
+  const patternRow = (row: (typeof learned)[number], date: string) => {
+    const value = valueCapabilities(row.valueText)
+      .map((id) => t(`settingsPage.ai.learned.pattern.op.${id}`))
+      .join(" + ");
+    const key = row.key.startsWith("pattern:sender:") ? t("settingsPage.ai.learned.pattern.from", { sender: ruleKeyLabel(row.key) }) : `“${ruleKeyLabel(row.key)}”`;
+    const evidence = ruleEvidence(decisionMemories, row);
+    const day = (iso: string) => formatDate(membership.household.timezone, new Date(iso));
+    const why = row.mixed
+      ? evidence.broken
+        ? t("settingsPage.ai.learned.pattern.whyDemoted", { title: evidence.broken.title, date: day(evidence.broken.createdAt) })
+        : t("settingsPage.ai.learned.pattern.demoted")
+      : evidence.confirmed.length > 0
+        ? t("settingsPage.ai.learned.pattern.why", { count: row.times, items: evidence.confirmed.map((memory) => `“${memory.title}” (${day(memory.createdAt)})`).join(", ") })
+        : undefined;
+    const taught = row.mixed ? t("settingsPage.ai.learned.pattern.demoted") : t("settingsPage.ai.learned.pattern.confirmed", { count: row.times, date });
+    return { id: row.id, name: `${key} → ${value}`, reason: `${t("settingsPage.ai.learned.type.pattern")} · ${taught}`, ...(why ? { why } : {}) };
   };
   const learnedRows = learned
     // A rule naming someone the household no longer has is not shown (and not used).
@@ -107,6 +130,7 @@ export default async function AiAssistantSettingsPage({ searchParams }: { search
     .map((row) => {
       const date = formatDate(membership.household.timezone, new Date(row.learnedAt));
       const by = row.learnedByMemberId ? nameOf.get(row.learnedByMemberId) : undefined;
+      if (row.kind === "decision_pattern") return patternRow(row, date);
       const value = MEMBER_RULE_KINDS.has(row.kind)
         ? nameOf.get(row.valueMemberId!)!
         : row.kind === "sender_area" && (BAR_KINDS as readonly string[]).includes(row.valueText ?? "")
@@ -321,6 +345,7 @@ export default async function AiAssistantSettingsPage({ searchParams }: { search
                 forgetAll: t("settingsPage.ai.learned.forgetAll"),
                 forgotten: t("settingsPage.ai.learned.forgotten"),
                 adminDecides: t("settingsPage.adminDecides"),
+                why: t("settingsPage.ai.learned.why"),
               }}
             />
           </CollapsibleSection>

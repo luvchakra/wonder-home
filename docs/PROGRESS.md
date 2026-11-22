@@ -11,14 +11,14 @@ in `docs/progress/`; for the running log of what changed when, `tracking/PROGRES
 
 ## The whole picture
 
-**458 of 507 stories done — 90.3%**
+**459 of 507 stories done — 90.5%**
 
 | Status | Stories |
 |---|---:|
-| Done | 458 |
+| Done | 459 |
 | In Progress | 14 |
 | Blocked | 1 |
-| Not Started | 30 |
+| Not Started | 29 |
 | Deferred | 4 |
 
 ## By module
@@ -39,7 +39,7 @@ in `docs/progress/`; for the running log of what changed when, `tracking/PROGRES
 | 11 Bills, Fees & Finance | `█████████░` | 24 | 26 | 2 not started |
 | 12 Family Time & Social Activities | `██████████` | 9 | 9 | — |
 | 13 Maintenance, Laundry & Pet Care | `█████████░` | 10 | 11 | 1 in progress |
-| 14 AI Orchestration & Learning | `████████░░` | 70 | 82 | 1 in progress, 8 not started, 3 deferred |
+| 14 AI Orchestration & Learning | `████████░░` | 71 | 82 | 1 in progress, 7 not started, 3 deferred |
 | 15 Privacy, Security & Governance | `████████░░` | 12 | 14 | 2 not started |
 | 16 Platform Admin & Operations | `███████░░░` | 11 | 14 | 3 not started |
 | 17 External Integrations | `█████████░` | 10 | 11 | 1 not started |
@@ -83,7 +83,6 @@ in `docs/progress/`; for the running log of what changed when, `tracking/PROGRES
 | `14-057` HomeBrain 4.0 phase 3c — the reply streamed to the person | 14 AI Orchestration & Learning | P0 | Not Started |
 | `14-079` "Is this for Asmi's Mid-Term Unit Test 2?" when two exams of one child both fit | 14 AI Orchestration & Learning | P1 | Not Started |
 | `14-080` Other documents attach to the record they are about | 14 AI Orchestration & Learning | P1 | Not Started |
-| `14-084` HomeSend: the model decides, part 4: learned rules promoted after N confirmations, demoted on one correction; Admin view with Why? and Remove | 14 AI Orchestration & Learning | P0 | Not Started |
 | `14-085` HomeSend: the model decides, part 5: unseen-kind and learning replay eval cases; before/after numbers; Platform admin measures | 14 AI Orchestration & Learning | P0 | Not Started |
 | `15-013` Data retention phase 2b: notifications (household window) + HomeSend + enable real purge | 15 Privacy, Security & Governance | P1 | Not Started |
 | `15-012` Data retention phase 3: school items (household window) + "recently cleaned" view | 15 Privacy, Security & Governance | P2 | Not Started |
@@ -426,7 +425,7 @@ in `docs/progress/`; for the running log of what changed when, `tracking/PROGRES
 
 ### 14 — AI Orchestration & Learning
 
-70 of 82 done `████████░░`
+71 of 82 done `████████░░`
 
 | Story | Priority | Status | Notes |
 |---|---|---|---|
@@ -506,7 +505,7 @@ in `docs/progress/`; for the running log of what changed when, `tracking/PROGRES
 | `14-081` HomeSend: the model decides, part 1: capability registry and one validated decision behind today's behaviour | P0 | Done | The owner, 2026-11-22 ("it should be able to decide what to do with incoming info by applying ai algorithms and take decisions"). Design `docs/design/2026-11-22-homesend-ai-decides.md`. `homesend/capabilities.ts` (19 capabilities with owner, safety class, fields, governed write), `homesend/decision.ts` (`HomeSendDecision`, `decisionFromReading`, `validateDecision`: schema, grounding against what was sent and records on file, actions wait for a yes, money and health keep their rules, who a health record is for never a model's, injected content capped). Every item stores its validated decision on `understanding.decision`. No visible change; deterministic eval 489/489, unsafe 0/82. Not verified live (no model key in the container) |
 | `14-082` HomeSend: the model decides, part 2: the model returns the decision; unseen kinds become a note plus dated things, said plainly, grouped by new kind | P0 | Done | The classifier tool gains `whatIs`, `newKind` and, for a new kind only, `operations` (note, event, reminder, to_buy, task, contact, place; each with a quote; no ids, no pay/order/message). `decisionFromModel` turns them into the decision, days grounded by WonderHome from the copied words (`dayFromDateText`), never the model's. `validateDecision` drops any whose quote isn't in what was sent. Before the notice is kept as a note, `homesend/new-kind.ts` `recordNewKindDays` (called by the Nothing-waits runner) puts each accepted event or reminder on the calendar through `addFamilyEvent`, with a `homesend_changes` row for Undo, confirmed above the event bar, else Checking. The notice says plainly what it will do (`newKindSentence`). The new kind's name is kept on `understanding.decision.newKind` (grouping and Platform admin's candidates come with 14-085). Help "HomeSend" ¶21 in eight languages. Known kinds unchanged: deterministic eval 489/489, unsafe 0/82. Not verified live (no model key) |
 | `14-083` HomeSend: the model decides, part 3: decision memory with outcomes, and the household's similar past decisions as worked examples | P0 | Done | Table `homesend_decision_memories` (migration `20261122090000`, safe in either order: missing table = no memory): one row per decided item (title, what it is, nearest and new kind, accepted operations as capability/op/title/confidence only, sender, optional 768-d embedding) and its outcome (kept, confirmed, answered, corrected, undone; an undo or correction is never overwritten by a later keep). `homesend/decision-memory.ts`: written by `understand` after every decision; before reading, the household's 5 most similar past decisions (meaning when embeddings exist, else words; same sender ranks first; floor so nothing unrelated) go to the model fenced as worked examples (`pastDecisionsLine`). Outcomes from Undo (`undoHomeSendChange`), confirm (`confirmHomeSendEntry`) and the note kept by the Nothing-waits runner. RLS: the member's own households only. reset-tables and knowledge registry updated. Not verified live (no model key; SQL to be run by the owner) |
-| `14-084` HomeSend: the model decides, part 4: learned rules promoted after N confirmations, demoted on one correction; Admin view with Why? and Remove | P0 | Not Started | Follows 14-083 |
+| `14-084` HomeSend: the model decides, part 4: learned rules promoted after N confirmations, demoted on one correction; Admin view with Why? and Remove | P0 | Done | `homesend_learned_defaults` gains kind `decision_pattern` and source `confirmations` (migration `20261122120000`, safe in either order). `homesend/decision-rules.ts`: a pattern is an outside sender or a new kind; its value is record capabilities only (note, event, reminder, to_buy, task, contact, place; never money, health, an action or a person). Three confirmations (confirmed or answered) of the same handling since the last correction or Undo promote it (`recordDecisionOutcome`); one correction or Undo demotes it (`mixed`), three fresh confirmations promote it again. Applied before the model: a sender's rule goes to the model with the worked examples, and a new-kind decision is held to the rule (`applyLearnedRule`, `source: "learned_rule"`), validation unchanged. Plain corrections (`learnFromCorrection`) mark the item's memory corrected with the field (never a person id or amount). Settings → AI Assistant → "What HomeSend has learned": each rule with "Why?" from the memory rows and Forget. Help home-send body.22 in 8 languages. Not verified live (no model key; SQL to be run by the owner) |
 | `14-085` HomeSend: the model decides, part 5: unseen-kind and learning replay eval cases; before/after numbers; Platform admin measures | P0 | Not Started | Follows 14-084 |
 | `14-066` HomeSend zero touch: infer who a child's notice is for before asking, never ask the same thing twice, one-tap sending, moved dates in place, one tap for a photo, batched questions | P0 | Done | The owner, 2026-11-07 ("design and implement HomeSend in a more user friendly and intuitive way; least input from user should be expected"). Design note `docs/progress/2026-11-07-homesend-zero-touch.md` (tap budget per path). Part 1: `homesend/learned.ts` `inferSubject` fills "Who is this for?" from the school the notice names, what the household told HomeSend about that sender (`homesend_learned_defaults`, learned on HomeTalk/WhatsApp answers and review picks; a sender sent for two children is `mixed` and asked again), or the one child at school; a name in the notice always wins; never another household, never money/approval. Settings → AI Assistant "What HomeSend has learned" (Admin forgets, audited `homesend.learned_forgotten`). Eval HS-48–52, RLS tests, help body.13 + FAQ in eight languages. Migration `20261107233000_homesend_learned_defaults.sql`. Part 2: a share is added on arrival (`addIfAllowed`) and lands on "Got it" with Undo; paste anywhere on the page; email "Add to contacts" vCard; first-time explainer while nothing was ever sent; help body.14. Part 3: a clear moved date (same name, same person, only the day, nothing else like it; `reconcile.ts` `clearMove`) moves the record on file in place with Undo where the area is Pre Approved and the reading is over the bar with words of its own, never an amount (`confirmation.ts` `update`, eval HS-53/54); a photo/file in Checking gets one "Looks right?" (`checking.ts` `confirm_all`), details only after a no, three questions at most; waiting questions run one after another (`checking-questions.ts` `withNextWaiting`, "N quick ones"); WhatsApp starts at most one question an hour per person (`hometalk/question-cadence.ts`); help body.15 + FAQ. No migration. |
 | `14-068` Record first: HomeTalk records straight away, waiting actions expire after 48 h, Wait for Approval holds actions only, money and health recorded as Checking, new email senders trusted once, plain corrections | P0 | Done | The owner, 2026-11-14 ("think of redesign of HomeBrain, HomeSend and HomeTalk as a cohesive unit so that minimum intervention is required … ensure its not stuck in review"; then "implement"). Plan "Nothing stuck in review", phase 2, decisions 1, 2 and 5. Design and verification: `docs/progress/2026-11-14-record-first.md`. Migration `20261114181700_record_first_sender_trust.sql`. Eval HT-01/18/72/105/122/131 (updated), HT-190–195, HS-80–89; NSR-20–39. #550; follow-up PR: events and classes recorded first (HS-86–89), a trusted sender's email added on arrival (`homesend/trusted-arrival.ts`), `docs/progress/2026-11-14-record-first-events-email.md`. |

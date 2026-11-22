@@ -2,6 +2,7 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 
 import { embedderFor, fromVectorLiteral, toVectorLiteral, type Embedder } from "../homebrain/sleep/embeddings";
 import type { ValidatedDecision } from "./decision";
+import { learnFromOutcome } from "./decision-rules";
 
 /**
  * HomeSend's decision memory (14-083, owner 2026-11-22: "learnt over time to
@@ -221,9 +222,21 @@ export function strongerOutcome(current: DecisionOutcome, next: DecisionOutcome)
 }
 
 /** What people did with an item's decision. Never throws. */
-export async function recordDecisionOutcome(client: SupabaseClient, householdId: string, intakeId: string, outcome: DecisionOutcome, correction?: DecisionCorrection): Promise<void> {
+export async function recordDecisionOutcome(
+  client: SupabaseClient,
+  householdId: string,
+  intakeId: string,
+  outcome: DecisionOutcome,
+  correction?: DecisionCorrection,
+  byMemberId: string | null = null,
+): Promise<void> {
   try {
-    const { data, error } = await client.from("homesend_decision_memories").select("id, outcome, corrections").eq("household_id", householdId).eq("intake_id", intakeId).maybeSingle();
+    const { data, error } = await client
+      .from("homesend_decision_memories")
+      .select("id, outcome, corrections, sender_key, new_kind")
+      .eq("household_id", householdId)
+      .eq("intake_id", intakeId)
+      .maybeSingle();
     if (error || !data) return;
     const corrections = Array.isArray(data.corrections) ? (data.corrections as DecisionCorrection[]) : [];
     const next = strongerOutcome(data.outcome as DecisionOutcome, outcome);
@@ -236,6 +249,17 @@ export async function recordDecisionOutcome(client: SupabaseClient, householdId:
       })
       .eq("household_id", householdId)
       .eq("id", data.id as string);
+    // Learned rules (14-084): three confirmations promote the pattern, one correction or Undo demotes it.
+    if (next === outcome && (outcome === "confirmed" || outcome === "answered" || outcome === "corrected" || outcome === "undone")) {
+      const memories = outcome === "corrected" || outcome === "undone" ? [] : await recentDecisions(client, householdId);
+      await learnFromOutcome(
+        client,
+        memories,
+        { senderKey: (data.sender_key as string | null) ?? null, newKind: (data.new_kind as string | null) ?? null, intakeId },
+        outcome,
+        { householdId, byMemberId, itemId: intakeId },
+      );
+    }
   } catch {
     // Learning is best-effort; the person's action already happened.
   }
