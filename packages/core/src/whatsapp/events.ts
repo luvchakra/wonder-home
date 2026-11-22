@@ -34,7 +34,7 @@ export const WHATSAPP_EVENT_KINDS = [
 ] as const;
 /**
  * Kinds whose migration may land after the code that writes them
- * (`20261026200000_whatsapp_typing_events.sql`, `20261122150000_whatsapp_not_configured_event.sql`): until it does, a batch that
+ * (`20261026200000_whatsapp_typing_events.sql`, `20261122180000_whatsapp_not_configured_event.sql`): until it does, a batch that
  * the database refuses is written again without them.
  */
 const NEWEST_KINDS: readonly WhatsAppEventKind[] = ["typing_shown", "typing_failed", "not_configured"];

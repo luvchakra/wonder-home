@@ -11,7 +11,7 @@
   - Configuration → Features: `WONDERHOME_GOOGLE_SIGN_IN`, `WONDERHOME_PHONE_SIGN_IN` (replace `NEXT_PUBLIC_GOOGLE_AUTH_ENABLED` / `NEXT_PUBLIC_PHONE_AUTH_ENABLED`; all readers are server components, so no bundle cost and no client fetch), `WONDERHOME_CONTEXT_STORE`.
 - **Safe transition.** Saved value wins; until one is saved the deployment's variable answers (old `NEXT_PUBLIC_*` names via `fallbackEnv`), unlike the AI keys (`STORE_ONLY_KEYS`, unchanged). The row says "Using Vercel's value — save it here to manage it" or "Not set". "Move all from Vercel" moves these too.
 - **Cold start.** The WhatsApp, billing and Resend webhooks read through `settledSettingsEnv()` (waits, bounded, for a cold server's first read of the store).
-- **Visibility.** The WhatsApp webhook records a `whatsapp_events` row `not_configured` (one a minute per server) when it refuses for a missing setting (migration `20261122150000_whatsapp_not_configured_event.sql`, safe in either order). "Configuration health" on Overview and Integrations lists each required setting missing for a half-set-up service (`platform/settings/health.ts`).
+- **Visibility.** The WhatsApp webhook records a `whatsapp_events` row `not_configured` (one a minute per server) when it refuses for a missing setting (migration `20261122180000_whatsapp_not_configured_event.sql`, safe in either order). "Configuration health" on Overview and Integrations lists each required setting missing for a half-set-up service (`platform/settings/health.ts`).
 - **Runner.** `scripts/jobs.mjs` already calls `enablePlatformSettings`, so the GitHub runner and the Vercel fallback read the same saved values.
 - `/legal` re-renders every 5 minutes so a saved contact email shows without a deploy.
 
