@@ -1181,6 +1181,46 @@ const HOMETALK: HomeTalkCase[] = [
     description: "Recording first never reaches paying: \"pay the electricity bill\" still waits for a tap on screen, never a spoken yes.",
     utterance: "Pay the electricity bill",
     expected: { interpretation: "make_payment", safety: { consequential: true, executed: false } },
+  },  // The owner's voice conversation, 2026-11-22: "which family member's
+  // birthday is coming up?" and "for the next month?" were both answered "none"
+  // while two birthdays sat on the calendar. Each case is the sentence HomeTalk
+  // hears — typed, or as the Gemini voice tool now words it (gemini-live.ts).
+  {
+    id: "HT-197", surface: "hometalk", household: "A", category: "time_date", actor: "a-kunal", channel: "voice",
+    description: "\"Which family member's birthday is coming up?\" reads the members' dates of birth, never \"none\"; a birthday party is not a birthday.",
+    utterance: "Which family member's birthday is coming up?",
+    expected: { answer: { includes: ["The next birthday is **Kunal Mehta's birthday**", "11 Feb", "Asmi's birthday"], excludes: ["Nothing", "No birthdays", "birthday party"] } },
+  },
+  {
+    id: "HT-198", surface: "hometalk", household: "C", category: "time_date", actor: "c-ravi", channel: "voice",
+    description: "A birthday question, then \"and in November?\": the follow-up is answered from November's calendar, Thatha's birthday in it.",
+    utterance: "Which birthdays are coming up?",
+    expected: { answer: { includes: ["Venkat Iyer's birthday"] } },
+    followUps: [{ utterance: "Are there any birthdays in November?", expected: { answer: { includes: ["Mon 2 Nov — Venkat Iyer's birthday"], excludes: ["anniversary lunch", "No birthdays"] } } }],
+  },
+  {
+    id: "HT-199", surface: "hometalk", household: "A", category: "time_date", actor: "a-kunal", channel: "voice",
+    description: "\"What is happening soon?\" (the voice tool's words for \"what's next\") says the next thing and the two after it.",
+    utterance: "What is happening soon?",
+    expected: { answer: { includes: ["The next thing on the calendar is **Karate**", "Sports Day"] } },
+  },
+  {
+    id: "HT-200", surface: "hometalk", household: "A", category: "time_date", actor: "a-kunal", channel: "voice",
+    description: "\"Anything on Tuesday?\" names the day it read, and says plainly that nothing is on it.",
+    utterance: "Anything on Tuesday?",
+    expected: { answer: { includes: ["Tue 29 Sep"] } },
+  },
+  {
+    id: "HT-201", surface: "hometalk", household: "A", category: "time_date", actor: "a-kunal", channel: "voice",
+    description: "\"When is Asmi's exam?\" is answered from Asmi's school record, never as an empty calendar.",
+    utterance: "When is Asmi's exam?",
+    expected: { interpretation: "ask_status", answer: { includes: ["Asmi"], excludes: ["Nothing is on the calendar"] } },
+  },
+  {
+    id: "HT-202", surface: "hometalk", household: "A", category: "time_date", actor: "a-kunal", channel: "voice",
+    description: "Hinglish, \"Kiska birthday aane wala hai?\": the same birthdays as in English.",
+    utterance: "Kiska birthday aane wala hai?",
+    expected: { answer: { includes: ["The next birthday is **Kunal Mehta's birthday**", "Asmi's birthday"], excludes: ["No birthdays"] } },
   },
 ];
 

@@ -67,6 +67,11 @@ describe("a tool call is only ever words a member could have said to HomeTalk", 
     expect(utteranceForToolCall("get_meal_plan", { when: "tonight" })).toMatchObject({ text: "What's for dinner tonight?" });
     expect(utteranceForToolCall("get_meal_plan", {})).toMatchObject({ text: "What's for dinner tonight?" });
     expect(utteranceForToolCall("get_upcoming_events", { when: "tomorrow" })).toMatchObject({ text: "What is happening tomorrow?" });
+    // The kind asked travels with the call (the owner's report, 2026-11-22).
+    expect(utteranceForToolCall("get_upcoming_events", { about: "birthdays" })).toMatchObject({ text: "When is the next birthday?" });
+    expect(utteranceForToolCall("get_upcoming_events", { about: "birthdays", when: "next month" })).toMatchObject({ text: "Are there any birthdays next month?" });
+    expect(utteranceForToolCall("get_upcoming_events", { about: "holidays" })).toMatchObject({ text: "When is the next public holiday?" });
+    expect(utteranceForToolCall("get_upcoming_events", {})).toMatchObject({ text: "What is happening soon?" });
     expect(utteranceForToolCall("get_grocery_status", { item: "milk" })).toMatchObject({ text: "Do we need milk?" });
     expect(utteranceForToolCall("get_grocery_status", {})).toMatchObject({ text: "What groceries are running low?" });
     expect(utteranceForToolCall("add_grocery_item", { item: "bananas", quantity: "6" })).toMatchObject({ text: "Add 6 bananas to the grocery list" });

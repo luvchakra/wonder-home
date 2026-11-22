@@ -28,16 +28,51 @@ export function asksTheCalendar(utterance: string): boolean {
   return !ANOTHER_PART.test(utterance);
 }
 
+/** The kind of entry a calendar question asks about, when it names one: "which birthdays are in December?". */
+export type CalendarKind = "birthday" | "holiday";
+
+/**
+ * A birthday on the calendar: a member's date of birth (an occasion), or an
+ * event titled as someone's birthday ("Nani's birthday"). A birthday party or
+ * dinner is an event, not the birthday itself. Never a public holiday — "Guru
+ * Nanak's Birthday" is a holiday, not someone in the family.
+ */
+export function isBirthday(entry: CalendarEntry): boolean {
+  if (entry.source === "holiday") return false;
+  return entry.source === "occasion" || /\bbirthday$/i.test(entry.title.trim());
+}
+
+function ofKind(entry: CalendarEntry, kind: CalendarKind | null): boolean {
+  return kind === "birthday" ? isBirthday(entry) : kind === "holiday" ? entry.source === "holiday" : true;
+}
+
+/** The kind a question names, if any: birthdays, or public holidays. */
+export function calendarKindIn(utterance: string): CalendarKind | null {
+  if (BIRTHDAY.test(utterance) || /\b(?:janamdin|janmdin|janmadin|bday|b'day)\b/i.test(utterance)) return "birthday";
+  if (HOLIDAY.test(utterance) || /\b(?:chhutti|chutti)\b/i.test(utterance)) return "holiday";
+  return null;
+}
+
 export function calendarSpanReply(input: {
   span: CalendarSpan;
   entries: readonly CalendarEntry[];
   failedSources: readonly CalendarSource[];
   timeZone: string;
+  /** Only this kind, when the question named one ("which birthdays are in December?"). */
+  only?: CalendarKind | null;
 }): string {
-  const { span, entries, timeZone } = input;
+  const { span, timeZone } = input;
+  const only = input.only ?? null;
+  const entries = input.entries.filter((entry) => ofKind(entry, only));
   const incomplete = input.failedSources.length > 0 ? "Part of the calendar could not be read just now, so this may not be everything." : null;
   if (entries.length === 0) {
-    return [`Nothing is on the calendar for ${span.label}.`, incomplete].filter(Boolean).join(" ");
+    const none =
+      only === "birthday"
+        ? `No birthdays are on the calendar for ${span.label}. A birthday appears once a date of birth is added in Family.`
+        : only === "holiday"
+          ? `No public holidays are on the calendar for ${span.label}.`
+          : `Nothing is on the calendar for ${span.label}.`;
+    return [none, incomplete].filter(Boolean).join(" ");
   }
   // By day first; within a day, all-day before timed, then by time.
   const byDay = [...entries].sort((a, b) => {
@@ -48,10 +83,17 @@ export function calendarSpanReply(input: {
   });
   const lines = byDay.slice(0, MAX_LISTED).map((entry) => `- ${when(entry, timeZone)} — ${entry.title}${note(entry)}`);
   const rest = entries.length - MAX_LISTED;
+  // A long month is cut at a dozen, but its birthdays and holidays are never
+  // cut: "…and 41 more" once hid two birthdays from a voice answer, which then
+  // said there were none (the owner's report, 2026-11-22).
+  const notable = byDay.slice(MAX_LISTED).filter((entry) => isBirthday(entry) || entry.source === "holiday");
+  const heading =
+    only === "birthday" ? `Birthdays on the calendar for ${span.label}:` : only === "holiday" ? `Public holidays on the calendar for ${span.label}:` : `Here's what's on the calendar for ${span.label}:`;
   return [
-    `Here's what's on the calendar for ${span.label}:`,
+    heading,
     lines.join("\n"),
-    [rest > 0 ? `…and ${rest} more. The Calendar has them all.` : null, incomplete].filter(Boolean).join(" ") || null,
+    notable.length > 0 ? `Also in ${span.label}:\n${notable.map((entry) => `- ${when(entry, timeZone)} — ${entry.title}${note(entry)}`).join("\n")}` : null,
+    [rest - notable.length > 0 ? `…and ${rest - notable.length} more. The Calendar has them all.` : null, incomplete].filter(Boolean).join(" ") || null,
   ]
     .filter(Boolean)
     .join("\n\n");
@@ -86,7 +128,7 @@ export type LookAhead = {
 
 const HOLIDAY = /\b(?:public |bank |national |government )?holidays?\b/i;
 const BIRTHDAY = /\bbirthdays?\b/i;
-const AHEAD = /\b(?:next|upcoming|coming(?: up)?|soon|nearest|after this)\b/i;
+const AHEAD = /\b(?:next|upcoming|coming(?: up)?|soon|nearest|after this|aane\s+wal[aei]|agl[aei]|jald(?:i)?)\b/i;
 const ON_THE_CALENDAR = /\b(?:events?|plans?|happening|scheduled|calendar|on)\b/i;
 /**
  * Who is coming to one event — its guests, their replies — is that event's
@@ -107,9 +149,10 @@ const ATTENDANCE = /\b(?:who(?:'s|\s+is|\s+are|\s+all)?\s+(?:coming|invited|atte
 export function readLookAhead(utterance: string): LookAhead | null {
   if (!asksTheCalendar(utterance)) return null;
   if (ATTENDANCE.test(utterance)) return null;
-  if (HOLIDAY.test(utterance)) return { only: "holiday" };
+  const kind = calendarKindIn(utterance);
+  if (kind === "holiday") return { only: "holiday" };
   if (!AHEAD.test(utterance)) return null;
-  if (BIRTHDAY.test(utterance)) return { only: "birthday" };
+  if (kind === "birthday") return { only: "birthday" };
   if (ON_THE_CALENDAR.test(utterance)) return { only: null };
   return null;
 }
@@ -118,7 +161,7 @@ export function readLookAhead(utterance: string): LookAhead | null {
 export function aheadOf(entries: readonly CalendarEntry[], lookAhead: LookAhead, now: Date, timeZone: string): CalendarEntry[] {
   const today = localMoment(now, timeZone).dateKey;
   return entries
-    .filter((entry) => (lookAhead.only === "holiday" ? entry.source === "holiday" : lookAhead.only === "birthday" ? entry.source === "occasion" : true))
+    .filter((entry) => (lookAhead.only === "holiday" ? entry.source === "holiday" : lookAhead.only === "birthday" ? isBirthday(entry) : true))
     .filter((entry) => (entry.allDay || entry.kind !== "block" ? localMoment(entry.start, timeZone).dateKey >= today : (entry.end ?? entry.start).getTime() > now.getTime()))
     .sort((a, b) => a.start.getTime() - b.start.getTime());
 }
@@ -207,17 +250,21 @@ export function scheduleReply(input: {
   names: ScheduleNames;
   /** Only this person's entries, when the question named them. */
   forMemberId?: string | null;
+  /** Only this kind, when the question named one ("any birthdays this week?"). */
+  only?: CalendarKind | null;
 }): string {
   const { span, timeZone, names } = input;
   const forName = input.forMemberId ? (names.get(input.forMemberId) ?? null) : null;
   const incomplete = input.failedSources.length > 0 ? "Part of the calendar could not be read just now, so this may not be everything." : null;
   const entries = input.entries
     .filter((entry) => !input.forMemberId || entry.memberIds.includes(input.forMemberId) || entry.source === "holiday")
-    .filter((entry) => inWindow(entry, span.window, timeZone));
+    .filter((entry) => inWindow(entry, span.window, timeZone))
+    .filter((entry) => ofKind(entry, input.only ?? null));
   const oneDay = span.from === span.to;
   const who = forName ? ` for ${forName}` : "";
   if (entries.length === 0) {
-    return [`Nothing is on the calendar${who} ${span.label}.`, incomplete].filter(Boolean).join(" ");
+    const nothing = input.only === "birthday" ? "No birthdays are" : input.only === "holiday" ? "No public holidays are" : "Nothing is";
+    return [`${nothing} on the calendar${who} ${span.label}.`, incomplete].filter(Boolean).join(" ");
   }
   const byDay = new Map<string, CalendarEntry[]>();
   for (const entry of [...entries].sort(inDayOrder(timeZone))) {

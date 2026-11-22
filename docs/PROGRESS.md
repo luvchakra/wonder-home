@@ -11,11 +11,11 @@ in `docs/progress/`; for the running log of what changed when, `tracking/PROGRES
 
 ## The whole picture
 
-**460 of 507 stories done — 90.7%**
+**461 of 508 stories done — 90.7%**
 
 | Status | Stories |
 |---|---:|
-| Done | 460 |
+| Done | 461 |
 | In Progress | 14 |
 | Blocked | 1 |
 | Not Started | 28 |
@@ -51,7 +51,7 @@ in `docs/progress/`; for the running log of what changed when, `tracking/PROGRES
 | 23 Smart Notifications | `██████████` | 13 | 13 | — |
 | 24 HomePlaces | `██████████` | 15 | 15 | — |
 | 25 HomeFood | `████████░░` | 41 | 49 | 8 not started |
-| 26 HomeEvents | `███████░░░` | 16 | 21 | 2 in progress, 3 not started |
+| 26 HomeEvents | `███████░░░` | 17 | 22 | 2 in progress, 3 not started |
 | 27 Notification Channels and Events | `█████████░` | 24 | 25 | 1 blocked |
 
 ## What is left
@@ -753,7 +753,7 @@ in `docs/progress/`; for the running log of what changed when, `tracking/PROGRES
 
 ### 26 — HomeEvents
 
-16 of 21 done `███████░░░`
+17 of 22 done `███████░░░`
 
 | Story | Priority | Status | Notes |
 |---|---|---|---|
@@ -778,6 +778,7 @@ in `docs/progress/`; for the running log of what changed when, `tracking/PROGRES
 | `26-022` Subscribe to any calendar by its share link (ICS/webcal) | P1 | In Progress | The owner, 2026-10-29 (Settings → Connections: "add feature to subscribe to any kind of calendar"), phase 1 of two (design `docs/calendar-subscriptions.md`; phase 2 = OAuth, 26-006). A person adds any calendar by its `https`/`webcal://` ICS share link (Google, Outlook, Apple, a school, a team, public holidays); WonderHome fetches it SSRF-safely (the audited `homesend/link-fetch.ts` path, `text/calendar`, size/time-bounded), parses the ICS defensively (untrusted text, ≤1000 events, bounded recurrence expansion), and imports its events **read-only** into `family_events` (new `source_subscription_id`, read-only write policies), each marked as from that feed. Visibility is chosen per feed (household or personal); the person can name, colour, re-sync and remove it (remove cascades its events). Re-sync is idempotent (UID dedup) on the delivery clock (pg_cron → `/api/v1/calendar/subscriptions/sync`), initial sync via `after()`. New `calendar_subscriptions` table; adults add in phase 1 (a child's via guardian is a follow-up). Distinct from the free/busy Calendar connector (17-002), which never imports titles |
 | `26-021` An event from HomeSend is filed like the calendar's own Add | P1 | Done | The owner, 2026-10-25. An event confirmed in HomeSend was always a "gathering" with no category and its place lost in the notes. It now gets the calendar's kind and category from its words (`homesend/record-types.ts` `eventShape`: birthday, special occasion, travel, appointment/health — a blood-test camp —, school event, outing, household gathering; otherwise a family gathering) and its Where: the AI reads the place into `location`, the review shows a Where field, and it is saved to `family_events.location`. Still through `addFamilyEvent`, so the duplicate check holds. PR #329. |
 | `26-023` A child's exam papers are events wherever events are listed | P0 | Done | The owner, 2026-11-21: "it doesn't create an event for science on 3rd dec, fix this issue with all subjects". Each paper was already on the Calendar's Month/Week/Day/Year views (26-002 `examEntries`), in clash checks, HomeTalk's calendar spans and the exam reminders, but not where screens list `family_events`: Home (upcoming, today's focus, the next card), a child's home, the Day view's Today plan, the Family page and HomeTalk's "what's going on" fallback. Now `listEvents(…, { exams: { timeZone } })` and `familyAgenda(…, { timeZone })` add each paper as the child's all-day (or timed) school event (`school/exams.ts` `examPaperEvents`), read live from the exam: one thing, shown once, one editor (rule 23), opening the exam in Kids & School (`eventHref`), with the first line of what to study as its detail. Chosen over a copied `family_events` row: no second copy to keep in step, no duplicate reminders, and the owner's existing eight papers appear the moment it deploys with no backfill. The "Only those going" chip is now an invited event's only: a child's exam or class is seen by the child, their guardians and Admins (`may_see_child`) and reminded to the child's guardians as before. Not wired: the REST `GET …/family` (its contract is `family_events`), HomeSend's matching, the chat picker and HomeBrain's calendar domain (exams reach HomeBrain through the school domain). No outbound calendar sync exists to carry them. Help: Calendar ¶9 in 8 languages. |
+| `26-024` Voice and typed answers never hide a birthday | P0 | Done | The owner's voice conversation, 2026-11-22 (Gemini Live): "which family member's birthday is coming up?" and "for the next month?" were both answered "none" while Asmi's (9 Dec) and Kunal's (11 Dec) birthdays were on the calendar. Causes: the Gemini tool `get_upcoming_events` dropped the topic ("What is happening this week?"); "this week" said on a Sunday was that Sunday only; December was cut at a dozen entries (through 7 Dec). Fixed: the tool carries `about` (birthdays, holidays) and keeps it on follow-ups; "this week" on a Sunday is the week ahead (`conversation/temporal.ts`); a long month's answer always lists its birthdays and holidays under "Also in …", and a question naming birthdays or holidays answers only that kind (`calendar/answer.ts` `calendarKindIn`, `isBirthday` — never a public holiday called a birthday); Hinglish "aane wala", "agle", "janamdin". Gemini is told never to claim absence unless the tool said so. Eval HT-197–HT-202. One reader serves typed, WhatsApp and voice (`hometalk-turn.ts`). |
 
 ### 27 — Notification Channels and Events
 

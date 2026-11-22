@@ -105,7 +105,7 @@ import { placeRequestForTurn, placeRequestFrom, type PlaceRequest } from "@wonde
 import { tripDestinationRequest, withDestinations } from "@wonderhome/core/homeplaces/trip";
 import { minuteOf } from "@wonderhome/core/household/day-hours";
 import { householdNow, suggestPlaces, type PlaceSuggestion, type PlacesOutcome } from "@wonderhome/core/homeplaces/service";
-import { asksTheCalendar, asksWhatIsOn, calendarSpanReply, lookAheadReply, lookAheadSpan, memberNamedIn, readLookAhead, scheduleReply, scheduleSpanOf } from "@wonderhome/core/calendar/answer";
+import { asksTheCalendar, asksWhatIsOn, calendarKindIn, calendarSpanReply, lookAheadReply, lookAheadSpan, memberNamedIn, readLookAhead, scheduleReply, scheduleSpanOf } from "@wonderhome/core/calendar/answer";
 import { calendarRange, readCalendarPreferences } from "@wonderhome/core/calendar/repository";
 import { resolveCalendarSpan } from "@wonderhome/core/conversation/temporal";
 import { listWorkPlaces } from "@wonderhome/core/household/work-place";
@@ -1071,7 +1071,7 @@ async function turnInEnglish(input: HomeTalkInput, speaking: Speaking) {
     const span = calendarSpanOf(result.intent.parameters.when, membership.household.timezone)!;
     const read = await readCalendarSpan(supabase, membership, span);
     composedAt = Date.now();
-    text = calendarSpanReply({ span, entries: read.entries, failedSources: read.failedSources, timeZone: membership.household.timezone });
+    text = calendarSpanReply({ span, entries: read.entries, failedSources: read.failedSources, timeZone: membership.household.timezone, only: calendarKindIn(body.utterance) });
     carry(speaking, people.some((person) => person.memberType === "child") ? ["child"] : []);
     brain = { source: "deterministic", factsSent: 0 };
   } else if (
@@ -1097,6 +1097,7 @@ async function turnInEnglish(input: HomeTalkInput, speaking: Speaking) {
       timeZone: membership.household.timezone,
       names: new Map(firstNames.map((person) => [person.id, person.firstName])),
       forMemberId: memberNamedIn(body.utterance, firstNames),
+      only: calendarKindIn(body.utterance),
     });
     carry(speaking, people.some((person) => person.memberType === "child") ? ["child"] : []);
     brain = { source: "deterministic", factsSent: 0 };
