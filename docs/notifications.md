@@ -28,6 +28,12 @@ reminders about real records, never lines of text fired and forgotten.
   in Overdue / Waiting for your OK / Today, each with one thing to do and the
   rest behind a tap and a ⋯. Grouping is display only: every reminder keeps its
   own row, state and recipient.
+- **On the Calendar** (26-025, 2026-11-22). A person's own plain reminder
+  (`source_type = 'reminder'`, set in HomeTalk) also shows on its day in the
+  Calendar, to its recipient only (`calendar/projection.ts` `reminderEntries`),
+  while generated, delivered or seen; one tied to a recorded entry
+  (`decision_factors.about`) shows as that entry instead. Remove there
+  dismisses it, the same state change as "Not needed".
 - **Timing.** `policies.ts` defines when each kind lands, as per-category
   presets a person picks from (`reminder_preferences`). Every time is on
   the household's clock (`timing.ts`); never read `getUTCHours()` for a

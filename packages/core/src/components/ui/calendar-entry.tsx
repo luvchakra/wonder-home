@@ -1,4 +1,5 @@
 import {
+  Bell,
   Briefcase,
   CalendarHeart,
   GraduationCap,
@@ -10,6 +11,7 @@ import {
   type LucideIcon,
 } from "lucide-react";
 import Link from "next/link";
+import type { ReactNode } from "react";
 
 import type { CalendarCategory } from "../../calendar/projection";
 import { cn } from "../../lib/cn";
@@ -51,15 +53,21 @@ export type CalendarEntryRowProps = {
   proposed?: boolean;
   /** The owning screen. A row with nowhere to go is not a link. */
   href: string | null;
+  /** A person's own reminder (26-025): drawn with a bell, whatever its category. */
+  reminder?: boolean;
+  /** The single thing to do on the row (rule 4), beside it rather than inside its link: an icon button with its own label. */
+  action?: ReactNode;
 };
+
+const REMINDER_LOOK = { icon: Bell, tone: "primary" as IconTone };
 
 /**
  * One calendar entry as a row (rule 4): tinted tile, the title in full (never
  * cut — rule 11), then when, who and where. It opens the record's own screen;
  * the calendar never edits a copy.
  */
-export function CalendarEntryRow({ title, category, when, who, detail, badges = [], proposed = false, href }: CalendarEntryRowProps) {
-  const look = CATEGORY_LOOK[category];
+export function CalendarEntryRow({ title, category, when, who, detail, badges = [], proposed = false, href, reminder = false, action }: CalendarEntryRowProps) {
+  const look = reminder ? REMINDER_LOOK : CATEGORY_LOOK[category];
   const body = (
     <>
       <IconTile icon={look.icon} tone={look.tone} size="sm" />
@@ -81,15 +89,12 @@ export function CalendarEntryRow({ title, category, when, who, detail, badges = 
     "flex min-h-14 items-start gap-3 rounded-[var(--wh-radius-sm)] px-2 py-2.5",
     proposed && "border border-dashed border-[var(--wh-border-strong)]",
   );
-  return (
-    <li>
-      {href ? (
-        <Link href={href} className={cn(frame, "transition-colors hover:bg-[var(--wh-surface-muted)] focus-visible:outline-2 focus-visible:outline-[var(--wh-primary)]")}>
-          {body}
-        </Link>
-      ) : (
-        <div className={frame}>{body}</div>
-      )}
-    </li>
+  const main = href ? (
+    <Link href={href} className={cn(frame, action && "min-w-0 flex-1", "transition-colors hover:bg-[var(--wh-surface-muted)] focus-visible:outline-2 focus-visible:outline-[var(--wh-primary)]")}>
+      {body}
+    </Link>
+  ) : (
+    <div className={cn(frame, action && "min-w-0 flex-1")}>{body}</div>
   );
+  return <li>{action ? <div className="flex items-start gap-1">{main}<span className="shrink-0 pt-1.5">{action}</span></div> : main}</li>;
 }

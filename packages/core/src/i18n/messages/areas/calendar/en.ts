@@ -58,6 +58,9 @@ export const calendarEn = {
   "calendar.entry.busy": "Busy",
   "calendar.entry.helperAway": "{name} away",
   "calendar.entry.delivery": "Delivery · {provider}",
+  "calendar.entry.reminder": "Reminder",
+  "calendar.entry.removeReminder": "Remove reminder",
+  "calendar.entry.removeReminderFailed": "That reminder could not be removed. Try again.",
 
   "calendar.year.legend": "A darker day has more on.",
   "calendar.year.month": "Open {month}",
@@ -86,6 +89,7 @@ export const calendarEn = {
   "calendar.source.upkeep": "Service visits",
   "calendar.source.outcome": "Responsibilities due",
   "calendar.source.order": "Deliveries",
+  "calendar.source.reminder": "Your reminders",
   "calendar.filters.people": "People",
   "calendar.filters.peopleHint": "Pick nobody to see everyone.",
   "calendar.filters.onlyMine": "Only things I'm part of",

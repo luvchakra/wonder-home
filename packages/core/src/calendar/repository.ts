@@ -43,6 +43,8 @@ import {
   holidayEntries,
   mergeEntries,
   occasionEntries,
+  reminderEntries,
+  CALENDAR_REMINDER_STATUSES,
   type CalendarEntry,
   type CalendarEventRecord,
   type CalendarSource,
@@ -52,6 +54,7 @@ import {
   type HolidayRecord,
   type OccasionMember,
   type OccasionWords,
+  type ReminderRecord,
 } from "./projection";
 import { parseRecurrence, type OccurrenceException } from "./recurrence";
 
@@ -149,7 +152,7 @@ export async function calendarRange(supabase: SupabaseClient, input: CalendarRan
     });
   };
 
-  const [events, members, holidays, activities, exams, schoolItems, meals, bills, appointments, guardianOf, absences, visits, outcomes, orders] = await Promise.all([
+  const [events, members, holidays, activities, exams, schoolItems, meals, bills, appointments, guardianOf, absences, visits, outcomes, orders, reminders] = await Promise.all([
     settle("event", () => readEvents(supabase, input.householdId, range, viewer.timeZone)),
     settle("occasion", () => readOccasionMembers(supabase, input.householdId)),
     region ? settle("holiday", () => readHolidays(supabase, region, range)) : Promise.resolve([] as HolidayRecord[]),
@@ -166,6 +169,8 @@ export async function calendarRange(supabase: SupabaseClient, input: CalendarRan
     fromModule("upkeep", () => readServiceVisits(supabase, input.householdId, range, viewer.timeZone)),
     fromModule("outcome", () => readOutcomes(supabase, input.householdId, range, viewer.timeZone)),
     fromModule("order", () => readOrders(supabase, input.householdId, range, viewer.timeZone)),
+    // The viewer's own plain reminders (26-025), on the screen's read only: a point in time never clashes with a plan.
+    modules && !modules.hidden.includes("reminder") ? settle("reminder", () => readOwnReminders(supabase, input.householdId, viewer.memberId, range, viewer.timeZone)) : Promise.resolve([] as ReminderRecord[]),
   ]);
 
   const eventList = eventEntries(events, viewer, range);
@@ -188,6 +193,7 @@ export async function calendarRange(supabase: SupabaseClient, input: CalendarRan
       upkeepEntries(visits, moduleViewer, range),
       outcomeEntries(outcomes, moduleViewer, range),
       words ? orderEntries(orders, moduleViewer, range, words) : [],
+      reminderEntries(reminders, viewer, range),
     ),
     failedSources,
     offeredSources: (await Promise.all(MODULE_SOURCES.map(async (source) => ((await allowedFor.get(source)) ? source : null)))).filter(
@@ -541,6 +547,51 @@ async function readOrders(supabase: SupabaseClient, householdId: string, range: 
     .limit(200);
   if (error) failed("orders", error);
   return ((data as Row[] | null) ?? []).map((row) => ({ id: row.id as string, provider: row.provider as string, status: row.status as string, expectedAt: date(row.expected_at) }));
+}
+
+/**
+ * The viewer's own reminders in the range (26-025). A notification is read only
+ * by its recipient (RLS `notifications_select_own`); the recipient is also named
+ * here, so nothing else could ever be asked for. Still standing only: a done,
+ * dismissed ("Remove") or undone reminder leaves the Calendar as it leaves
+ * Notifications. Served by `notifications_recipient_open_idx`.
+ */
+async function readOwnReminders(
+  supabase: SupabaseClient,
+  householdId: string,
+  memberId: string,
+  range: { from: string; to: string },
+  timeZone: string,
+): Promise<ReminderRecord[]> {
+  const { from, to } = widened(range, timeZone);
+  const { data, error } = await supabase
+    .from("notifications")
+    .select("id, recipient_member_id, title, scheduled_for, status, decision_factors")
+    .eq("household_id", householdId)
+    .eq("recipient_member_id", memberId)
+    .eq("source_type", "reminder")
+    .in("status", [...CALENDAR_REMINDER_STATUSES])
+    .gte("scheduled_for", from)
+    .lt("scheduled_for", to)
+    .order("scheduled_for", { ascending: true })
+    .limit(200);
+  if (error) failed("reminders", error);
+  return ((data as Row[] | null) ?? []).map((row) => ({
+    id: row.id as string,
+    recipientMemberId: row.recipient_member_id as string,
+    title: row.title as string,
+    scheduledFor: new Date(row.scheduled_for as string),
+    status: row.status as string,
+    about: reminderAbout(row.decision_factors),
+  }));
+}
+
+/** The recorded entry a reminder is tied to (26-024), if any. */
+function reminderAbout(factors: unknown): ReminderRecord["about"] {
+  const about = factors && typeof factors === "object" ? (factors as { about?: unknown }).about : null;
+  if (!about || typeof about !== "object") return null;
+  const { sourceType, sourceId } = about as { sourceType?: unknown; sourceId?: unknown };
+  return typeof sourceType === "string" && typeof sourceId === "string" ? { sourceType, sourceId } : null;
 }
 
 /** How long this server keeps the list of holiday regions: it changes only when a new list is loaded. */

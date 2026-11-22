@@ -525,18 +525,39 @@ async function listOpenOutcomes(supabase: Supabase, scope: ContextScope): Promis
   }));
 }
 
-/** Notifications are recipient-specific (RLS: `notifications_select_own`) — only the asker's own. */
+/**
+ * Notifications are recipient-specific (RLS: `notifications_select_own`) — only the asker's own.
+ * The latest twenty, plus up to ten of the asker's own reminders still due ahead (26-025), so
+ * a reminder the Calendar shows next week is never pushed out by newer notices.
+ */
 async function listOwnNotifications(supabase: Supabase, scope: ContextScope): Promise<NotificationRecord[]> {
-  const { data, error } = await supabase
-    .from("notifications")
-    .select("id, type, priority, thread_key, title, body, status, created_at")
-    .eq("household_id", scope.householdId)
-    .eq("recipient_member_id", scope.viewer.memberId)
-    .neq("status", "expired")
-    .order("created_at", { ascending: false })
-    .limit(20);
-  if (error) throw new Error(`listOwnNotifications failed: ${error.code ?? "unknown"}`);
-  return ((data as Row[] | null) ?? []).map((row) => ({
+  const columns = "id, type, priority, thread_key, title, body, status, created_at, source_type, scheduled_for";
+  const [latest, reminders] = await Promise.all([
+    supabase
+      .from("notifications")
+      .select(columns)
+      .eq("household_id", scope.householdId)
+      .eq("recipient_member_id", scope.viewer.memberId)
+      .neq("status", "expired")
+      .order("created_at", { ascending: false })
+      .limit(20),
+    supabase
+      .from("notifications")
+      .select(columns)
+      .eq("household_id", scope.householdId)
+      .eq("recipient_member_id", scope.viewer.memberId)
+      .eq("source_type", "reminder")
+      .in("status", ["generated", "delivered", "seen"])
+      .gte("scheduled_for", new Date(scope.now.getTime() - 86_400_000).toISOString())
+      .order("scheduled_for", { ascending: true })
+      .limit(10),
+  ]);
+  if (latest.error) throw new Error(`listOwnNotifications failed: ${latest.error.code ?? "unknown"}`);
+  // Reminders due ahead first, so a capped list keeps them; a reminder read that fails leaves only the latest notices.
+  const rows: Row[] = reminders.error ? [] : [...((reminders.data as Row[] | null) ?? [])];
+  const seen = new Set(rows.map((row) => row.id as string));
+  for (const row of (latest.data as Row[] | null) ?? []) if (!seen.has(row.id as string)) rows.push(row);
+  return rows.map((row) => ({
     id: row.id as string,
     type: row.type as string,
     priority: row.priority as string,
@@ -545,6 +566,8 @@ async function listOwnNotifications(supabase: Supabase, scope: ContextScope): Pr
     body: row.body as string,
     status: row.status as string,
     createdAt: row.created_at as string,
+    sourceType: (row.source_type as string | null) ?? null,
+    scheduledFor: (row.scheduled_for as string | null) ?? null,
   }));
 }
 

@@ -11,7 +11,9 @@ import {
   holidayEntries,
   mergeEntries,
   occasionEntries,
+  reminderEntries,
   type CalendarEventRecord,
+  type ReminderRecord,
   type CalendarViewer,
 } from "./projection";
 
@@ -93,6 +95,67 @@ describe("holidays", () => {
   it("are all-day, belong to nobody, and say where the date comes from", () => {
     const [entry] = holidayEntries([{ id: "h1", onDate: "2026-11-08", name: "Diwali", source: "Government of India, DoP&T holiday list 2026" }], viewer);
     expect(entry).toMatchObject({ category: "holiday", allDay: true, memberIds: [], detail: "Government of India, DoP&T holiday list 2026", can: { edit: false } });
+  });
+});
+
+describe("a person's own reminders (26-025)", () => {
+  const range = { from: "2026-11-23", to: "2026-11-29" };
+  const reminder = (partial: Partial<ReminderRecord>): ReminderRecord => ({
+    id: "r1",
+    recipientMemberId: ME,
+    title: "Reminder: Call mum",
+    // 6 pm on Tue 24 Nov in Kolkata.
+    scheduledFor: new Date("2026-11-24T12:30:00Z"),
+    status: "generated",
+    about: null,
+    ...partial,
+  });
+
+  it("shows the viewer's own reminder at its moment, private and read as a reminder", () => {
+    const [entry] = reminderEntries([reminder({})], viewer, range);
+    expect(entry).toMatchObject({
+      id: "reminder:r1",
+      source: "reminder",
+      sourceId: "r1",
+      title: "Call mum",
+      start: new Date("2026-11-24T12:30:00Z"),
+      end: null,
+      allDay: false,
+      kind: "marker",
+      category: "personal",
+      memberIds: [ME],
+      ownerMemberId: ME,
+      visibility: "private",
+      href: "/notifications",
+      can: { edit: false },
+    });
+    expect(entriesByDay([entry!], TZ).has("2026-11-24")).toBe(true);
+  });
+
+  it("never shows anyone else's reminder, whatever rows it is given", () => {
+    expect(reminderEntries([reminder({ recipientMemberId: ASHA })], viewer, range)).toEqual([]);
+    expect(reminderEntries([reminder({ recipientMemberId: ASHA })], { ...viewer, isAdmin: true }, range)).toEqual([]);
+  });
+
+  it("skips a reminder tied to a recorded entry, which already shows on its day", () => {
+    expect(reminderEntries([reminder({ about: { sourceType: "school_item", sourceId: "s1" } })], viewer, range)).toEqual([]);
+  });
+
+  it("keeps to the range, on the household's clock", () => {
+    // 11:30 pm on Sun 29 Nov in Kolkata is still in range; 12:30 am on Mon 30 Nov is not.
+    expect(reminderEntries([reminder({ scheduledFor: new Date("2026-11-29T18:00:00Z") })], viewer, range)).toHaveLength(1);
+    expect(reminderEntries([reminder({ scheduledFor: new Date("2026-11-29T19:00:00Z") })], viewer, range)).toEqual([]);
+    expect(reminderEntries([reminder({ scheduledFor: new Date("2026-11-22T18:00:00Z") })], viewer, range)).toEqual([]);
+  });
+
+  it("leaves once done, dismissed or undone; stays once delivered or seen", () => {
+    for (const status of ["acted", "dismissed", "expired", "resolved"]) expect(reminderEntries([reminder({ status })], viewer, range), status).toEqual([]);
+    for (const status of ["delivered", "seen"]) expect(reminderEntries([reminder({ status })], viewer, range), status).toHaveLength(1);
+  });
+
+  it("is a moment, never a clash", () => {
+    const entries = reminderEntries([reminder({})], viewer, range);
+    expect(clashesWith(entries, { start: new Date("2026-11-24T12:00:00Z"), end: new Date("2026-11-24T13:00:00Z"), memberIds: [ME], allDay: false })).toEqual([]);
   });
 });
 
