@@ -1,3 +1,6 @@
+import { examplesText, rememberDecision, similarDecisions } from "./decision-memory";
+import { senderKey } from "./learned";
+import type { Embedder } from "../homebrain/sleep/embeddings";
 import { decisionFromModel, decisionFromReading, newKindSentence, validateDecision } from "./decision";
 import type { SupabaseClient } from "@supabase/supabase-js";
 
@@ -56,6 +59,8 @@ export type IngestDeps = {
   scan?: (bytes: Uint8Array, contentType: string) => Promise<MalwareScanOutcome>;
   /** Counts one outbound link fetch against the member's limit (Wave 5 §15); false means over it. */
   limit?: (bucket: "homesend.link") => Promise<boolean>;
+  /** Makes meaning vectors for decision memory (14-083); null for none, absent for the household's own. */
+  embedder?: Embedder | null;
 };
 
 export type IngestState = "needs_review" | "check_transcript" | "failed";
@@ -282,6 +287,8 @@ export type UnderstandInput = {
   contentType?: string | null;
   /** How many pages the file has, from its bytes (a PDF). */
   pageCount?: number | null;
+  /** Who sent it, when a member did: their own past decisions rank first (14-083). */
+  senderMemberId?: string | null;
 };
 
 /** The longest text kept with an item — the table's own limit. */
@@ -331,12 +338,17 @@ export async function understand(
   // The children at school (school and class only, no names) so a timetable or notice matches a class without asking.
   // The household's open exams (name, class, days, subjects; no names or notes) so a syllabus can point at its exam (2026-11-21).
   const enrolments = listEnrolments(supabase, householdId).catch(() => []);
-  const [timezone, children, exams] = await Promise.all([
+  // The household's own most similar past decisions, as worked examples (14-083); none is no help, never an error.
+  const senderMemberId = input.senderMemberId ?? null;
+  const memoryQuery = { text: [input.context?.subject, input.context?.filename, sentText0(input)].filter(Boolean).join(" ").slice(0, 600), senderMemberId, senderKey: senderKey(input.context?.from) };
+  const [timezone, children, exams, similar] = await Promise.all([
     input.context?.timezone ?? householdTimezone(supabase, householdId),
     input.context?.children ?? enrolments.then((rows) => rows.map((row) => ({ school: row.schoolName ?? null, grade: row.grade ?? null }))),
     input.context?.exams ?? examsForReading(supabase, householdId, enrolments),
+    input.context?.pastDecisions !== undefined || !memoryQuery.text ? Promise.resolve([]) : similarDecisions(supabase, householdId, memoryQuery, deps.embedder),
   ]);
-  const context: IntakeContext = { ...input.context, now: input.context?.now ?? new Date(), timezone, children, exams };
+  const pastDecisions = input.context?.pastDecisions ?? (similar.length > 0 ? examplesText(similar) : undefined);
+  const context: IntakeContext = { ...input.context, now: input.context?.now ?? new Date(), timezone, children, exams, ...(pastDecisions ? { pastDecisions } : {}) };
 
   let result: ClassifyResult;
   try {
@@ -436,6 +448,8 @@ export async function understand(
     rawText: input.text ? input.text.slice(0, MAX_STORED_TEXT) : null,
     transcriptConfidence: input.transcriptConfidence ?? undefined,
   });
+  // Remembered with what people do next (14-083): the household's next similar item learns from it.
+  await rememberDecision(supabase, householdId, { intakeId: itemId, senderMemberId, senderKey: memoryQuery.senderKey, title: reading.title ?? decision.whatIs, decision }, deps.embedder);
   return {
     itemId,
     duplicate: false,
@@ -447,6 +461,11 @@ export async function understand(
         : "Filled in from what you sent — check it over before adding.",
     item: { id: itemId, classifiedKind: kind, extracted, understanding },
   };
+}
+
+/** What was sent, as text, for finding similar past decisions. */
+function sentText0(input: UnderstandInput): string | null {
+  return "text" in input.source ? input.source.text.slice(0, 400) : null;
 }
 
 /** The item's failure reason for why a provider gave no reading. */
@@ -584,7 +603,7 @@ export async function ingestWhatsAppText(
     contentHash: hash,
     externalId: input.externalId,
   });
-  return understand(supabase, input.householdId, itemId, { source: { text }, channel: "whatsapp", context: WHATSAPP_CONTEXT, text }, deps);
+  return understand(supabase, input.householdId, itemId, { source: { text }, channel: "whatsapp", context: WHATSAPP_CONTEXT, text, senderMemberId: input.memberId }, deps);
 }
 
 /** A photo, document or voice note a linked member sent on WhatsApp, with its caption. */
@@ -732,16 +751,16 @@ async function ingestFileFor(supabase: SupabaseClient, owner: FileOwner, input: 
 
   switch (detected.family) {
     case "image":
-      return understand(supabase, actor.householdId, itemId, { source: { image: { mediaType: detected.type as "image/jpeg" | "image/png" | "image/webp", base64: base64() } }, channel, context, contentType: detected.type, pageCount: 1 }, deps);
+      return understand(supabase, actor.householdId, itemId, { source: { image: { mediaType: detected.type as "image/jpeg" | "image/png" | "image/webp", base64: base64() } }, channel, context, contentType: detected.type, pageCount: 1, senderMemberId: owner.memberId }, deps);
     case "document":
-      return understand(supabase, actor.householdId, itemId, { source: { document: { mediaType: "application/pdf", base64: base64() } }, channel, context, contentType: detected.type, pageCount: pdfPageCount(input.bytes) || null }, deps);
+      return understand(supabase, actor.householdId, itemId, { source: { document: { mediaType: "application/pdf", base64: base64() } }, channel, context, contentType: detected.type, pageCount: pdfPageCount(input.bytes) || null, senderMemberId: owner.memberId }, deps);
     case "text": {
       const text = normalizeText(decodeTextFile(input.bytes) ?? "");
       if (!text) {
         await markHomeSendFailed(supabase, actor.householdId, itemId, "unreadable");
         return failedOutcome(itemId, "unreadable");
       }
-      return understand(supabase, actor.householdId, itemId, { source: { text }, channel, context, text, contentType: detected.type }, deps);
+      return understand(supabase, actor.householdId, itemId, { source: { text }, channel, context, text, contentType: detected.type, senderMemberId: owner.memberId }, deps);
     }
     case "audio":
       // A voice note forwarded by email is still a voice note: heard, gated
@@ -858,7 +877,7 @@ export async function ingestText(
     contentType: "text/plain",
     contentHash: hash,
   });
-  return understand(supabase, actor.householdId, itemId, { source: { text }, channel: "pasted_text", context: { channel: "pasted or forwarded text" }, text }, deps);
+  return understand(supabase, actor.householdId, itemId, { source: { text }, channel: "pasted_text", context: { channel: "pasted or forwarded text" }, text, senderMemberId: actor.memberId }, deps);
 }
 
 /**
@@ -907,7 +926,7 @@ export async function ingestLink(
     );
   }
   const text = [fetched.title, fetched.text].filter(Boolean).join("\n\n");
-  return understand(supabase, actor.householdId, itemId, { source: { text }, channel: "link", context: { channel: "a shared web page", url: fetched.finalUrl }, text }, deps);
+  return understand(supabase, actor.householdId, itemId, { source: { text }, channel: "link", context: { channel: "a shared web page", url: fetched.finalUrl }, text, senderMemberId: actor.memberId }, deps);
 }
 
 /**

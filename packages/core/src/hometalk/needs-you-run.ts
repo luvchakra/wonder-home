@@ -1,3 +1,4 @@
+import { recordDecisionOutcome } from "../homesend/decision-memory";
 import { recordNewKindDays } from "../homesend/new-kind";
 import type { SupabaseClient } from "@supabase/supabase-js";
 
@@ -374,6 +375,7 @@ async function endHouseholdItems(admin: SupabaseClient, householdId: string, now
       // A kind nobody anticipated (14-082): its dated things go on the calendar, with Undo, before the notice is kept as a note.
       if (ending.action === "note") await recordNewKindDays(admin, householdId, id, timeZone).catch(() => null);
       if (await archive(admin, householdId, row, reason, now)) {
+        if (ending.action === "note") await recordDecisionOutcome(admin, householdId, id, "kept");
         changed = true;
         if (ending.action === "note") result.notes += 1;
         else result.setAside += 1;

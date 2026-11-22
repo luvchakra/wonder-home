@@ -115,6 +115,7 @@
       "home_send_items",
       "homesend_addresses",
       "homesend_changes",
+      "homesend_decision_memories",
       "homesend_email_allowlist",
       "homesend_email_events",
       "homesend_email_senders",

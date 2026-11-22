@@ -1265,7 +1265,8 @@ describe("processing into HomeSend", () => {
     // The instruction was noticed and ignored, and says so.
     expect((item.understanding as { safety: { instructionsIgnored: boolean } }).safety.instructionsIgnored).toBe(true);
     const written = Object.entries(h.tables).filter(([, rows]) => rows.length > 0).map(([table]) => table).sort();
-    expect(written).toEqual(["home_send_items", "jobs", "whatsapp_events", "whatsapp_identities", "whatsapp_messages"]);
+    // HomeSend's own decision memory (14-083) remembers it too; no household record is written.
+    expect(written).toEqual(["home_send_items", "homesend_decision_memories", "jobs", "whatsapp_events", "whatsapp_identities", "whatsapp_messages"]);
   });
 });
 

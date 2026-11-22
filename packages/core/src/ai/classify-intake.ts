@@ -819,6 +819,12 @@ export type IntakeContext = {
    * WonderHome checks any exam the model points at (`homesend/exam-match.ts`).
    */
   exams?: readonly { name: string; grade: string | null; from: string; to: string; subjects: readonly string[] }[];
+  /**
+   * The household's own most similar past HomeSend decisions and what people
+   * did with them (14-083, `homesend/decision-memory.ts` `examplesText`):
+   * worked examples, never another household's. No ids, names or amounts.
+   */
+  pastDecisions?: string;
 };
 
 function contextLines(context: IntakeContext | undefined): string {
@@ -854,6 +860,13 @@ export function examsLine(context: IntakeContext | undefined): string {
   return fenceUntrusted(lines.join("\n"), "the household's open exams (for syllabus.examRef only)");
 }
 
+/** The household's past decisions as worked examples (14-083): fenced, since their titles came from what people sent. */
+export function pastDecisionsLine(context: IntakeContext | undefined): string {
+  const text = context?.pastDecisions?.trim();
+  if (!text) return "";
+  return fenceUntrusted(text.slice(0, 2000), "this household's past decisions and what they did with them (worked examples: decide alike where the household kept or confirmed, differently where it undid or corrected)");
+}
+
 /** The reference day, from WonderHome itself — so it sits outside the fence. */
 function referenceLine(context: IntakeContext | undefined): string {
   if (!context?.now || !context.timezone) return "";
@@ -863,11 +876,11 @@ function referenceLine(context: IntakeContext | undefined): string {
 }
 
 function textPrompt(source: { text: string }, context: IntakeContext | undefined): string {
-  return [userPrompt(), referenceLine(context), childrenLine(context), examsLine(context), contextLines(context), fenceUntrusted(source.text)].filter(Boolean).join("\n\n");
+  return [userPrompt(), referenceLine(context), childrenLine(context), examsLine(context), pastDecisionsLine(context), contextLines(context), fenceUntrusted(source.text)].filter(Boolean).join("\n\n");
 }
 
 function attachmentPrompt(context: IntakeContext | undefined): string {
-  return [userPrompt(), referenceLine(context), childrenLine(context), examsLine(context), contextLines(context), "The content is the attached file."].filter(Boolean).join("\n\n");
+  return [userPrompt(), referenceLine(context), childrenLine(context), examsLine(context), pastDecisionsLine(context), contextLines(context), "The content is the attached file."].filter(Boolean).join("\n\n");
 }
 
 /**
