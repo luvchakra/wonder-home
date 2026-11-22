@@ -12,8 +12,8 @@ import { cleanRazorpayKeyId, cleanRazorpayKeySecret, type CleanedKey } from "./r
  * did before. The inventory and what must stay in Vercel, with the reason for
  * each, are in docs/progress/2026-11-07-admin-portal.md.
  *
- * Nothing here is a bootstrap value: the database URL and keys, the cron and
- * webhook signing secrets, build-time `NEXT_PUBLIC_*` values and anything
+ * Nothing here is a bootstrap value: the database URL and keys, the cron
+ * secret, build-time `NEXT_PUBLIC_*` values and anything
  * read before the database can be are deliberately absent, and
  * `registry.test.ts` fails if one is added.
  */
@@ -56,6 +56,13 @@ export type SettingDefinition = {
   editableBy: SettingEditor;
   /** A saved value the reader would misread as "on"; it reaches the reader as empty instead. */
   emptyWhen?: string;
+  /**
+   * The deployment variable this setting used to be (a build-time `NEXT_PUBLIC_*`
+   * name): read only while nothing is saved, so the switch-over breaks nothing.
+   */
+  fallbackEnv?: string;
+  /** What the old variable said for "on" (e.g. "true"). */
+  legacyOn?: string;
 };
 
 const text = (max = 200) => z.string().trim().min(1).max(max);
@@ -212,6 +219,17 @@ const entries = [
     editableBy: "operator",
   },
   {
+    key: "ALEXA_OAUTH_CLIENT_SECRET",
+    label: "Alexa account-linking client secret",
+    group: "voice",
+    kind: "secret",
+    input: { type: "text" },
+    schema: secret(16),
+    defaultValue: null,
+    description: "The client secret entered in the Alexa console. Checks Alexa's account-linking calls coming in.",
+    editableBy: "owner",
+  },
+  {
     key: "ALEXA_OAUTH_REDIRECT_URIS",
     label: "Alexa redirect addresses",
     group: "voice",
@@ -235,7 +253,29 @@ const entries = [
     input: { type: "text" },
     schema: secret(20),
     defaultValue: null,
-    description: "Meta's system-user token for sending messages. The app secret and verify token stay in Vercel: they check Meta's calls in.",
+    description: "Meta's system-user token for sending messages.",
+    editableBy: "owner",
+  },
+  {
+    key: "WHATSAPP_APP_SECRET",
+    label: "WhatsApp app secret",
+    group: "whatsapp",
+    kind: "secret",
+    input: { type: "text" },
+    schema: secret(8),
+    defaultValue: null,
+    description: "Meta app's secret (App settings → Basic). Every message coming in is checked with it; without it WhatsApp messages are refused.",
+    editableBy: "owner",
+  },
+  {
+    key: "WHATSAPP_VERIFY_TOKEN",
+    label: "WhatsApp verify token",
+    group: "whatsapp",
+    kind: "secret",
+    input: { type: "text" },
+    schema: secret(8),
+    defaultValue: null,
+    description: "Any long random word you also type into Meta's webhook settings, with the webhook address below. Meta's handshake checks it.",
     editableBy: "owner",
   },
   {
@@ -337,6 +377,29 @@ const entries = [
     defaultValue: null,
     description: 'Who mail says it is from, like "WonderHome <connect@wonderapps.biz>". Empty: "WonderHome <mailbox>".',
     editableBy: "operator",
+  },
+  {
+    key: "WONDERHOME_LINK_SECRET",
+    label: "Unsubscribe link secret",
+    group: "email",
+    kind: "secret",
+    input: { type: "text" },
+    schema: secret(16),
+    defaultValue: null,
+    description: "Signs the 'stop these emails' links. Enter the value Vercel has: a new one makes every link already sent stop working.",
+    editableBy: "owner",
+  },
+  {
+    key: "WONDERHOME_CONTACT_EMAIL",
+    label: "Public contact email",
+    group: "email",
+    kind: "config",
+    input: { type: "text" },
+    schema: z.string().trim().email("must be an email address").max(200),
+    defaultValue: null,
+    description: "Shown on the landing page and Terms. Until saved here, NEXT_PUBLIC_CONTACT_EMAIL in Vercel is used.",
+    editableBy: "operator",
+    fallbackEnv: "NEXT_PUBLIC_CONTACT_EMAIL",
   },
   // Push
   {
@@ -440,6 +503,17 @@ const entries = [
     schema: secret(16),
     defaultValue: null,
     description: "Reads the mail sent to HomeSend addresses. The webhook secret stays in Vercel.",
+    editableBy: "owner",
+  },
+  {
+    key: "RESEND_WEBHOOK_SECRET",
+    label: "Resend webhook secret",
+    group: "homesend",
+    kind: "secret",
+    input: { type: "text" },
+    schema: secret(8),
+    defaultValue: null,
+    description: "The signing secret of Resend's inbound webhook. Without it emails to HomeSend addresses are refused.",
     editableBy: "owner",
   },
   {
@@ -602,6 +676,17 @@ const entries = [
     editableBy: "owner",
   },
   {
+    key: "RAZORPAY_WEBHOOK_SECRET",
+    label: "Razorpay webhook secret",
+    group: "billing",
+    kind: "secret",
+    input: { type: "text" },
+    schema: secret(8),
+    defaultValue: null,
+    description: "The secret set on the Razorpay webhook. Payment events coming in are checked with it; without it Razorpay is off.",
+    editableBy: "owner",
+  },
+  {
     key: "STRIPE_SECRET_KEY",
     label: "Stripe secret key",
     group: "billing",
@@ -610,6 +695,17 @@ const entries = [
     schema: secret(20).regex(/^(sk|rk)_(live|test)_/, "starts with sk_ or rk_"),
     defaultValue: null,
     description: "Stripe's secret or restricted key. The webhook secret stays in Vercel.",
+    editableBy: "owner",
+  },
+  {
+    key: "STRIPE_WEBHOOK_SECRET",
+    label: "Stripe webhook secret",
+    group: "billing",
+    kind: "secret",
+    input: { type: "text" },
+    schema: secret(8),
+    defaultValue: null,
+    description: "The signing secret of the Stripe webhook (whsec_…). Without it Stripe is off.",
     editableBy: "owner",
   },
   // Features
@@ -655,6 +751,43 @@ const entries = [
     schema: choice("on", "off"),
     defaultValue: "off",
     description: "Lets households make partner keys for /api/v1/partner.",
+    editableBy: "operator",
+  },
+  {
+    key: "WONDERHOME_GOOGLE_SIGN_IN",
+    label: "Sign in with Google",
+    group: "features",
+    kind: "config",
+    input: { type: "choice", options: onOff },
+    schema: choice("on", "off"),
+    defaultValue: "off",
+    description: "Shows the Google button on sign-in and sign-up. Turn on only once Google is set up in Supabase Auth.",
+    editableBy: "operator",
+    fallbackEnv: "NEXT_PUBLIC_GOOGLE_AUTH_ENABLED",
+    legacyOn: "true",
+  },
+  {
+    key: "WONDERHOME_PHONE_SIGN_IN",
+    label: "Sign in with a phone number",
+    group: "features",
+    kind: "config",
+    input: { type: "choice", options: onOff },
+    schema: choice("on", "off"),
+    defaultValue: "off",
+    description: "Offers sign-in by a code sent to a phone. Turn on only once an SMS provider is set up in Supabase Auth.",
+    editableBy: "operator",
+    fallbackEnv: "NEXT_PUBLIC_PHONE_AUTH_ENABLED",
+    legacyOn: "true",
+  },
+  {
+    key: "WONDERHOME_CONTEXT_STORE",
+    label: "Household memory store",
+    group: "features",
+    kind: "config",
+    input: { type: "choice", options: onOff },
+    schema: choice("on", "off"),
+    defaultValue: "on",
+    description: "Kill-switch for HomeBrain's kept household context. Off makes every turn read the records afresh.",
     editableBy: "operator",
   },
 ] as const satisfies readonly SettingDefinition[];
@@ -725,19 +858,25 @@ export const STAYS_IN_VERCEL: readonly { key: string; why: string }[] = [
   { key: "SUPABASE_SERVICE_ROLE_KEY", why: "The server reads the settings store with it." },
   { key: "SUPABASE_ACCESS_TOKEN", why: "It controls the whole database project, so it is never kept inside that database." },
   { key: "CRON_SECRET", why: "Checks that scheduled calls really come from the scheduler." },
-  { key: "WHATSAPP_APP_SECRET", why: "Checks that WhatsApp messages coming in are really from Meta." },
-  { key: "WHATSAPP_VERIFY_TOKEN", why: "Meta's webhook handshake." },
-  { key: "ALEXA_OAUTH_CLIENT_SECRET", why: "Checks Alexa's account-linking calls coming in." },
-  { key: "RAZORPAY_WEBHOOK_SECRET", why: "Checks that payment events really come from Razorpay." },
-  { key: "STRIPE_WEBHOOK_SECRET", why: "Checks that payment events really come from Stripe." },
-  { key: "RESEND_WEBHOOK_SECRET", why: "Checks that email events really come from Resend." },
-  { key: "WONDERHOME_LINK_SECRET", why: "Signs unsubscribe links; changing it breaks every link already sent." },
-  { key: "CSP_MODE", why: "Read on every request, before the database is." },
-  { key: "LOG_LEVEL", why: "Read on every request, before the database is." },
-  { key: "WONDERHOME_CONTEXT_STORE", why: "Read once when the server starts, as a kill-switch." },
-  { key: "NEXT_PUBLIC_GOOGLE_AUTH_ENABLED", why: "Built into the pages browsers load (the Google sign-in button)." },
-  { key: "NEXT_PUBLIC_CONTACT_EMAIL", why: "Built into the pages browsers load (landing page, Terms)." },
+  { key: "CSP_MODE", why: "Read by the request proxy on every page, which can run before this server has read the store." },
+  { key: "LOG_LEVEL", why: "Read by the logger before anything else, including the store's own reads. Optional: unset means info." },
+  { key: "NEXT_PUBLIC_SITE_URL", why: "The site's own address for sign-in origin checks and page metadata, needed before the store is read. Optional on Vercel: its production address is used." },
 ];
 
 /** Variables no code reads any more: safe to delete in Vercel with nothing to move. */
 export const UNUSED_IN_VERCEL: readonly string[] = ["SECRET_ENCRYPTION_KEY"];
+
+/**
+ * What the deployment's environment says for a setting: its own variable, else
+ * (during the switch-over) the old name it replaced, in the setting's words.
+ */
+export function environmentValueOf(entry: SettingDefinition, env: Readonly<Record<string, string | undefined>>): string {
+  const own = env[entry.key]?.trim() ?? "";
+  if (own || !entry.fallbackEnv) return own;
+  const old = env[entry.fallbackEnv]?.trim() ?? "";
+  if (!old || entry.legacyOn === undefined) return old;
+  return old === entry.legacyOn ? "on" : "off";
+}
+
+/** The old build-time names a setting falls back to until it is saved: delete them in Vercel once it is. */
+export const FALLBACK_NAMES: readonly string[] = PLATFORM_SETTINGS.flatMap((entry) => (entry.fallbackEnv ? [entry.fallbackEnv] : []));

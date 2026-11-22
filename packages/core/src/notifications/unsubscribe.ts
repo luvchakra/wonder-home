@@ -1,4 +1,5 @@
 import { createHmac, timingSafeEqual } from "node:crypto";
+import { runtimeEnv } from "../platform/settings/runtime-env";
 
 /**
  * The one-tap link in every notification email that turns email off (story 27-009).
@@ -10,13 +11,13 @@ import { createHmac, timingSafeEqual } from "node:crypto";
  * can do is the thing the person wanted. Turning email back on is a signed-in
  * act in Settings.
  *
- * The secret is `WONDERHOME_LINK_SECRET`, or the deployment's cron secret when
+ * The secret is `WONDERHOME_LINK_SECRET` (Platform admin → Integrations → Email), or the deployment's cron secret when
  * that is not set. With neither, there is no link and the message points to
  * Settings instead; the link is never signed with an empty key.
  */
 const PURPOSE = "email-off:";
 
-export function unsubscribeSecret(env: Record<string, string | undefined> = process.env): string | null {
+export function unsubscribeSecret(env: Record<string, string | undefined> = runtimeEnv()): string | null {
   const secret = env.WONDERHOME_LINK_SECRET?.trim() || env.CRON_SECRET?.trim();
   return secret ? secret : null;
 }

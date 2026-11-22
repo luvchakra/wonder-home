@@ -166,6 +166,16 @@ export async function runtimeEnvForAi(waitMs = 2_500, now = Date.now()): Promise
   return runtimeEnv(now);
 }
 
+/**
+ * For a webhook checking a caller with a secret saved in Platform admin (the
+ * WhatsApp app secret, the payment and email webhook secrets): a cold server
+ * waits, bounded, for its first read of the store, so a secret saved there is
+ * never missed for the deployment's (possibly absent) variable.
+ */
+export function settledSettingsEnv(waitMs = 2_500): Promise<Env> {
+  return runtimeEnvForAi(waitMs);
+}
+
 /** The same, after waiting for a refresh if the copy is stale: for a request that must see a save just made. */
 export async function freshRuntimeEnv(now = Date.now()): Promise<Env> {
   if (loader && now - loadedAt >= TTL_MS) await refreshRuntimeEnv(now);

@@ -1,12 +1,14 @@
 import { headers } from "next/headers";
 import Link from "next/link";
 
-import { razorpayCard, settingGroupsFor } from "../../_lib/platform-settings-view";
+import { configurationGaps, razorpayCard, settingGroupsFor } from "../../_lib/platform-settings-view";
 import { staffStepUp } from "../../_lib/platform-step-up";
 import { platformStaff } from "../../_lib/platform-staff";
 import { PageBody, PageTitle } from "../_ui/page-title";
 import { RazorpayCard } from "../_ui/razorpay-card";
+import { ConfigurationHealth } from "../_ui/configuration-health";
 import { SettingGroups } from "../_ui/setting-groups";
+import { WebhookAddress } from "../_ui/webhook-address";
 
 /** The Razorpay key id and secret have one editor: the Razorpay card (rule 23). */
 const ON_THE_CARD = ["RAZORPAY_KEY_ID", "RAZORPAY_KEY_SECRET"] as const;
@@ -23,7 +25,12 @@ export const metadata = { title: "Integrations · Platform admin", robots: { ind
 export default async function PlatformIntegrationsPage() {
   const staff = await platformStaff("operations.read");
   if (!staff) return null; // the layout has already answered 404
-  const [{ groups, storeReady }, card, stepUp] = await Promise.all([settingGroupsFor(staff, "integrations"), siteOrigin().then((origin) => razorpayCard(staff, origin)), staffStepUp()]);
+  const [{ groups, storeReady }, [origin, card], stepUp, gaps] = await Promise.all([
+    settingGroupsFor(staff, "integrations"),
+    siteOrigin().then(async (origin) => [origin, await razorpayCard(staff, origin)] as const),
+    staffStepUp(),
+    configurationGaps(staff),
+  ]);
 
   return (
     <PageBody>
@@ -44,13 +51,17 @@ export default async function PlatformIntegrationsPage() {
           </Link>
         }
       />
+      <ConfigurationHealth gaps={gaps} />
       <SettingGroups
         groups={groups}
         storeReady={storeReady}
         stepUp={stepUp}
         next="/platform-admin/integrations"
         hide={ON_THE_CARD}
-        before={{ billing: <RazorpayCard view={card} stepUp={stepUp} /> }}
+        before={{
+          billing: <RazorpayCard view={card} stepUp={stepUp} />,
+          whatsapp: <WebhookAddress url={`${origin}/api/v1/whatsapp/webhook`} hint="Paste it into Meta → WhatsApp → Configuration → Webhook with the verify token below, and subscribe to messages." />,
+        }}
       />
     </PageBody>
   );

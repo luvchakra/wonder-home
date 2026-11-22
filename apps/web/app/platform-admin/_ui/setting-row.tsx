@@ -36,7 +36,7 @@ const IDLE: SettingActionState = { tone: null, message: null, key: null };
 
 const SOURCE: Record<SettingRowView["source"], { label: string; tone: BadgeTone }> = {
   saved: { label: "Saved here", tone: "handled" },
-  environment: { label: "From Vercel", tone: "attention" },
+  environment: { label: "Using Vercel's value", tone: "attention" },
   default: { label: "Default", tone: "neutral" },
   unset: { label: "Not set", tone: "neutral" },
 };
@@ -50,7 +50,7 @@ export function vercelCopyWords(view: Pick<SettingRowView, "storeOnly" | "source
   }
   return view.source === "saved"
     ? "Vercel still has this variable. The saved value is used; Vercel's is read only while a server is first loading saved settings. It can be deleted there."
-    : "Save it here to manage it in one place.";
+    : "Using Vercel's value — save it here to manage it.";
 }
 
 /** Rule 4 for a setting: its name, one line of what it does, where it comes from, then the one thing to do. */

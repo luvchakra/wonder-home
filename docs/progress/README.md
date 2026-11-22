@@ -11,6 +11,7 @@ decision that shapes later work each earns a note, written before moving on.
 
 | Date | Note |
 |---|---|
+| 2026-11-22 | [Configuration in one place: webhook secrets and switches move to Platform admin](2026-11-22-platform-config-one-place.md) |
 | 2026-11-22 | [Reusing HomeBrain's intelligence outside HomeSend (analysis)](../design/2026-11-22-homebrain-reuse.md) |
 | 2026-11-22 | [HomeBrain holds the intelligence, HomeSend moves the data](2026-11-22-homebrain-owns-intelligence.md) |
 | 2026-11-22 | [First live AI evaluation: numbers, fixes and what is open](2026-11-22-first-live-eval.md) |

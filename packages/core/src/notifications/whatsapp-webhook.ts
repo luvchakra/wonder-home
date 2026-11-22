@@ -46,6 +46,28 @@ export const MAX_WHATSAPP_WEBHOOK_BYTES = 256 * 1024;
  * member's own session); anything else becomes a HomeSend item, reviewed and
  * confirmed under the same gates as any other.
  */
+/** At most one `not_configured` event a minute per server: Meta retries, and the outage needs one line, not thousands. */
+const NOT_CONFIGURED_EVERY_MS = 60_000;
+let lastNotConfiguredAt = Number.NEGATIVE_INFINITY;
+
+/** Records that a message was refused because a WhatsApp setting is missing. Never throws. */
+export async function recordNotConfigured(admin: () => SupabaseClient, now = Date.now()): Promise<boolean> {
+  if (now - lastNotConfiguredAt < NOT_CONFIGURED_EVERY_MS) return false;
+  lastNotConfiguredAt = now;
+  log.warn("whatsapp webhook refused: not configured");
+  try {
+    await recordWhatsAppEvents(admin(), [{ kind: "not_configured" }]);
+  } catch {
+    // No service role either: the log line above is all there is.
+  }
+  return true;
+}
+
+/** Tests only. */
+export function resetNotConfiguredClock(): void {
+  lastNotConfiguredAt = Number.NEGATIVE_INFINITY;
+}
+
 export async function handleWhatsAppWebhook(
   request: Request,
   deps: {
@@ -73,7 +95,11 @@ export async function handleWhatsAppWebhook(
     return unauthenticated();
   }
 
-  if (!config?.appSecret) return unauthenticated();
+  if (!config?.appSecret) {
+    // Refused for a missing setting, not a bad caller: say so where staff look (2026-11-22, a day of silent refusals).
+    await recordNotConfigured(deps.admin);
+    return unauthenticated();
+  }
   const declared = Number(request.headers.get("content-length"));
   if (Number.isFinite(declared) && declared > MAX_WHATSAPP_WEBHOOK_BYTES) return json(413, { error: "too_large" });
   const rawBody = await request.text();

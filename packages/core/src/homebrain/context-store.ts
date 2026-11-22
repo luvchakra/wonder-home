@@ -6,6 +6,7 @@ import { listEvents } from "../family/repository";
 import type { HomeSendChange } from "../homesend/items";
 import { listMeals } from "../meals/repository";
 import { log } from "../observability/logger";
+import { runtimeEnv } from "../platform/settings/runtime-env";
 import { buildContextItems, type ContextRecords } from "../context/builders";
 import { isoDateIn } from "../context/format";
 import { applyFreshness } from "../context/freshness";
@@ -486,7 +487,7 @@ export async function readContextThroughStore(supabase: SupabaseClient, scope: C
  * keeps every read live, as before.
  */
 export function enableContextStore(options: { schedule?: Schedule | null } = {}): boolean {
-  if (process.env.WONDERHOME_CONTEXT_STORE === "off") return false;
+  if (runtimeEnv().WONDERHOME_CONTEXT_STORE === "off") return false;
   const schedule = options.schedule ?? null;
   afterResponse = schedule;
   setContextStoreReader((supabase, scope, gather) =>

@@ -1991,7 +1991,7 @@ export function buildOpenApiDocument(): Json {
         get: {
           summary: "WhatsApp webhook verification (story 17-006)",
           description:
-            "Meta's one-time handshake: echoes hub.challenge only when hub.verify_token matches the deployment's WHATSAPP_VERIFY_TOKEN. Anything else — including a deployment with no WhatsApp configured — is the standard 401.",
+            "Meta's one-time handshake: echoes hub.challenge only when hub.verify_token matches the WhatsApp verify token saved in Platform admin (WHATSAPP_VERIFY_TOKEN). Anything else — including a deployment with no WhatsApp configured — is the standard 401.",
           responses: {
             "200": { description: "The challenge, as plain text" },
             "401": { $ref: "#/components/responses/Unauthenticated" },

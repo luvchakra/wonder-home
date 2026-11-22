@@ -1,3 +1,5 @@
+import { runtimeEnv, type Env } from "../platform/settings/runtime-env";
+
 /**
  * How people can reach the team behind this deployment.
  *
@@ -7,9 +9,10 @@
  * absent the contact section offers the in-product routes instead of a dead
  * mailto.
  *
- * Set NEXT_PUBLIC_CONTACT_EMAIL on the deployment to switch it on.
+ * Set "Public contact email" in Platform admin → Integrations → Email to
+ * switch it on (until saved there, NEXT_PUBLIC_CONTACT_EMAIL in Vercel).
  */
-export function contactEmail(): string | null {
-  const email = process.env.NEXT_PUBLIC_CONTACT_EMAIL?.trim();
+export function contactEmail(env: Env = runtimeEnv()): string | null {
+  const email = (env.WONDERHOME_CONTACT_EMAIL?.trim() || env.NEXT_PUBLIC_CONTACT_EMAIL?.trim());
   return email && email.includes("@") ? email : null;
 }

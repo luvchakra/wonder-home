@@ -1,6 +1,7 @@
 import { billingProviderNamed } from "@wonderhome/core/billing/router";
 import { handleBillingWebhook } from "@wonderhome/core/billing/webhook";
 import { createAdminClient } from "@wonderhome/core/db/admin";
+import { settledSettingsEnv } from "@wonderhome/core/platform/settings/runtime-env";
 
 /**
  * Stripe's webhook at its original address (story 20-006), kept so an endpoint
@@ -14,7 +15,7 @@ import { createAdminClient } from "@wonderhome/core/db/admin";
  * code can make up. Unconfigured, it refuses with the same 401 as a bad signature.
  */
 export async function POST(request: Request): Promise<Response> {
-  return handleBillingWebhook(request, { provider: billingProviderNamed("stripe"), admin: createAdminClient });
+  return handleBillingWebhook(request, { provider: billingProviderNamed("stripe", await settledSettingsEnv()), admin: createAdminClient });
 }
 
 export const dynamic = "force-dynamic";

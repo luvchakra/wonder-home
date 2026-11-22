@@ -1,7 +1,10 @@
+import { configurationHealth } from "@wonderhome/core/platform/settings/health";
+
 import { platformKeyHealth } from "../_lib/platform-ai-key";
 import { platformOverview } from "../_lib/platform-overview";
 import { settingTotals } from "../_lib/platform-settings-view";
 import { platformStaff } from "../_lib/platform-staff";
+import { ConfigurationHealth } from "./_ui/configuration-health";
 import { OverviewView } from "./_ui/overview-view";
 
 export const dynamic = "force-dynamic";
@@ -38,16 +41,23 @@ export default async function PlatformAdminPage({ searchParams }: { searchParams
   };
 
   return (
-    <OverviewView
-      snapshot={snapshot}
-      advisor={advisor}
-      nothingWaits={nothingWaits}
-      decisions={decisions}
-      settings={{ saved: totals.saved, environment: totals.environment, stillInVercel: totals.stillInVercel, storeReady }}
-      services={SERVICES.map((service) => ({ name: service.name, href: service.href, ready: service.needs.every(isOn) }))}
-      period={period === "30" ? 30 : 7}
-      role={staff.role}
-      aiKeyAlert={aiKey.alertLine}
-    />
+    <>
+      {storeReady ? (
+        <div className="mx-auto max-w-6xl px-4 pt-4">
+          <ConfigurationHealth gaps={configurationHealth(statuses)} />
+        </div>
+      ) : null}
+      <OverviewView
+        snapshot={snapshot}
+        advisor={advisor}
+        nothingWaits={nothingWaits}
+        decisions={decisions}
+        settings={{ saved: totals.saved, environment: totals.environment, stillInVercel: totals.stillInVercel, storeReady }}
+        services={SERVICES.map((service) => ({ name: service.name, href: service.href, ready: service.needs.every(isOn) }))}
+        period={period === "30" ? 30 : 7}
+        role={staff.role}
+        aiKeyAlert={aiKey.alertLine}
+      />
+    </>
   );
 }
