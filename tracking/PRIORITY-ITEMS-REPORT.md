@@ -24,6 +24,7 @@ Last updated: 2026-10-20 (25-003c, 25-005, H-1, H-2, H-3 done; 25-004 waits, as 
 
 | # | Module | Story | What it is | Status | Needs |
 |---|---|---|---|---|---|
+| 0 | HomeSend | 14-081 to 14-085 (P0) | The owner's ask (2026-11-22): HomeSend's model decides what an item is and which records to create, update or attach, handles kinds nobody anticipated, and learns from what the household does, with every guardrail enforced after it decides (`docs/design/2026-11-22-homesend-ai-decides.md`) | 14-081 Done; 14-082 Next | A model key for live evals |
 | 1 | HomeFood | 25-003a | Meal shortfalls: each planned meal's ingredients, scaled to servings, minus stock and minus what is already to buy (units-safe). The meal sheet's **Add n to the list** (design §3.5) | Done — 2026-10-18, browser-checked | — |
 | 2 | HomeFood | 25-003b | Receipts into stock: each kept receipt line gets a unit, **add to stock** (on by default) and **clears list entry**. The review shows stock before → after. Duplicate receipts are caught (design §3.8) | Done — 2026-10-18, browser-checked | — |
 | 2a | HomeFood | 25-006 (P0) | The owner's ask: a shared grocery catalog (one platform table for every household) behind **Add an item**, searched like a quick-commerce app, with pictures, pack sizes and nutrients from a licensed source | Done — 2026-10-18, browser-checked | — |

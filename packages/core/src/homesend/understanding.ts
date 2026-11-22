@@ -82,6 +82,12 @@ export type IntakeUnderstanding = {
    * owner 2026-11-20; `payment-proof.ts`): stored as a receipt-kind item,
    * settled by the deadlines pass (`payment-apply.ts`). Absent otherwise.
    */
+  /**
+   * HomeSend's one decision over the capability registry, validated
+   * (`decision.ts`, 14-081): what it is, the operations it calls for, and
+   * each operation's verdict. Absent on items read before 2026-11-22.
+   */
+  decision?: import("./decision").ValidatedDecision;
   payment?: import("./payment-proof").PaymentProof & { outcome?: "paid" | "recorded" | "conflict"; billId?: string; billName?: string };
   safety: {
     /** The content addressed WonderHome with instructions; they were ignored (§16). */
