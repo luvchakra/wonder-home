@@ -28,6 +28,14 @@ reminders about real records, never lines of text fired and forgotten.
   in Overdue / Waiting for your OK / Today, each with one thing to do and the
   rest behind a tap and a ⋯. Grouping is display only: every reminder keeps its
   own row, state and recipient.
+- **Needs you on the bell** (owner, 2026-11-22). The one "Needs you" list
+  (`hometalk/needs-you-repository.ts` `loadNeedsYou`) sits at the top of
+  `/notifications`, read in the page's one wave, and no longer on Home;
+  HomeTalk keeps it too. A child's or helper's request already shown under
+  "Waiting for your OK" with its own Approve and Decline is left off it. The
+  bell's badge adds `countNeedsYou` (head-only counts) to the unread
+  reminders. These are not `notifications` rows: answering one goes through
+  `(auth)/needs-you-actions.ts`, never a notification write.
 - **On the Calendar** (26-025, 2026-11-22). A person's own plain reminder
   (`source_type = 'reminder'`, set in HomeTalk) also shows on its day in the
   Calendar, to its recipient only (`calendar/projection.ts` `reminderEntries`),

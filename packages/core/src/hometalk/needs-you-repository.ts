@@ -208,6 +208,28 @@ export async function loadNeedsYou(client: SupabaseClient, householdId: string, 
   return rankNeedsYou([...questions, ...proposals, ...approvals], options.limit);
 }
 
+/**
+ * How many things are open on the "Needs you" list, for the bell's badge
+ * (owner, 2026-11-22: the list lives on Notifications, so the bell counts it).
+ * The same three parts and filters as `loadNeedsYou`, as head-only counts in
+ * one wave; a part that can't be counted counts as none. Never throws.
+ */
+export async function countNeedsYou(client: SupabaseClient, householdId: string, now: Date = new Date()): Promise<number> {
+  const since = new Date(now.getTime() - EXPIRE_AFTER_HOURS * 3_600_000).toISOString();
+  const counted = (query: PromiseLike<{ count: number | null; error: unknown }>) =>
+    Promise.resolve(query).then(
+      ({ count, error }) => (error ? 0 : (count ?? 0)),
+      () => 0,
+    );
+  const [questions, proposals, approvals] = await Promise.all([
+    counted(client.from("needs_you_items").select("id", { count: "exact", head: true }).eq("household_id", householdId).eq("status", "open")),
+    // `pendingProposals` reads at most 10, so the count is bounded the same way.
+    counted(client.from("conversation_actions").select("id", { count: "exact", head: true }).eq("household_id", householdId).eq("approval_status", "proposed").gte("created_at", since)).then((n) => Math.min(n, 10)),
+    counted(client.from("approvals").select("id", { count: "exact", head: true }).eq("household_id", householdId).eq("status", "pending").gt("expires_at", now.toISOString())).then((n) => Math.min(n, 10)),
+  ]);
+  return Math.min(questions, 100) + proposals + approvals;
+}
+
 // --- Handlers: what an answer or a default does, per source ----------------
 
 export type NeedsYouActor = { householdId: string; memberId: string | null };

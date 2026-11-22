@@ -2,7 +2,7 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 
 import type { Translate } from "@wonderhome/core/i18n/translate";
 import type { NeedsYouItem } from "@wonderhome/core/hometalk/needs-you";
-import { loadNeedsYou } from "@wonderhome/core/hometalk/needs-you-repository";
+import { loadNeedsYou, type NeedsYouList } from "@wonderhome/core/hometalk/needs-you-repository";
 import { GraduationCap, HeartPulse, Inbox, MessageCircle, ReceiptText, ShoppingBasket } from "lucide-react";
 
 import { ButtonLink } from "@wonderhome/core/ui/button";
@@ -33,7 +33,7 @@ function iconFor(kind: string | null): { icon: typeof Inbox; tone: IconTone } {
 
 /**
  * The one "Needs you" list (2026-11-14, decision 4), at the top of HomeTalk
- * and on Home: at most three, most consequential first, each with its tap
+ * and of Notifications (owner, 2026-11-22: off Home): at most three, most consequential first, each with its tap
  * answers and what happens if nobody answers, and when. Shows nothing when
  * nothing needs this person (rule 4: nothing to do, no row).
  */
@@ -44,6 +44,7 @@ export async function NeedsYou({
   language,
   t,
   className,
+  list: given,
 }: {
   supabase: SupabaseClient;
   householdId: string;
@@ -51,8 +52,10 @@ export async function NeedsYou({
   language: string;
   t: Translate;
   className?: string;
+  /** Already read in the page's own wave (Notifications); otherwise read here. */
+  list?: NeedsYouList;
 }) {
-  const list = await loadNeedsYou(supabase, householdId).catch(() => ({ shown: [] as NeedsYouItem[], total: 0 }));
+  const list = given ?? (await loadNeedsYou(supabase, householdId).catch(() => ({ shown: [] as NeedsYouItem[], total: 0 })));
   if (list.shown.length === 0) return null;
   const when = whenFormatter(language, timeZone);
   const rows: NeedsYouRow[] = list.shown.map((item) => ({
