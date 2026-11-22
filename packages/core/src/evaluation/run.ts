@@ -1,4 +1,7 @@
-import { classifyIntake } from "../ai/classify-intake";
+import { existsSync, readFileSync } from "node:fs";
+import { dirname, join } from "node:path";
+import { fileURLToPath } from "node:url";
+import { classifyIntake, type IntakeSource } from "../ai/classify-intake";
 import { CLAUDE_ANSWER_MODEL, CLAUDE_INTAKE_MODEL, CLAUDE_UNDERSTANDING_MODEL, createAnswerComposer, createClaudeUnderstanding, createGeminiUnderstanding, createOpenAIUnderstanding, GEMINI_MODEL, OPENAI_MODEL } from "../ai/model-client";
 import type { ModelKey } from "../ai/model-key";
 import { createTidyJudge } from "../homesend/tidy-model";
@@ -41,7 +44,7 @@ export function modelsFor(target: RunTarget): { models: Models; model: string } 
         classifyIntake(
           target.provider,
           target.key,
-          { text: source.text },
+          liveSource(source),
           { channel: source.channel, subject: source.subject ?? null, filename: source.attachment ?? null, now: reference.now, timezone: reference.timezone },
         ),
       compose: createAnswerComposer(target.provider, target.key),
@@ -49,6 +52,18 @@ export function modelsFor(target: RunTarget): { models: Models; model: string } 
       triviaCheck: createTriviaTopicJudge(target.provider, target.key),
     },
   };
+}
+
+/**
+ * What a live provider reads (2026-11-22 live check): a case whose attachment is a real fixture
+ * image (the HD exam timetable) is sent as that image, as HomeSend sends a photo; every other
+ * case as its text. Before this the photo cases were read from a one-line description only.
+ */
+const FIXTURES = join(dirname(fileURLToPath(import.meta.url)), "homesend-documents");
+function liveSource(source: { text: string; attachment?: string }): IntakeSource {
+  const file = source.attachment && /\.(jpe?g|png)$/i.test(source.attachment) ? join(FIXTURES, source.attachment) : null;
+  if (!file || !existsSync(file)) return { text: source.text };
+  return { image: { mediaType: /\.png$/i.test(file) ? "image/png" : "image/jpeg", base64: readFileSync(file).toString("base64") } };
 }
 
 export async function runEvaluation(target: RunTarget, cases: readonly EvalCase[] = GOLDEN_CASES, now: Date = new Date()): Promise<EvaluationRun> {

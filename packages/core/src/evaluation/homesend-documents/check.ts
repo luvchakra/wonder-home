@@ -27,6 +27,14 @@ export function writtenDays(text: string): string[] {
   return days;
 }
 
+/** The kind as HomeSend files it (`ingest.ts`): a bill, receipt or unknown that is proof of a payment made is filed as a receipt. */
+export function filedKind(testCase: DocumentCase, read: IntakeExtraction): IntakeExtraction["kind"] {
+  if (read.kind !== "receipt" && read.kind !== "bill" && read.kind !== "unknown") return read.kind;
+  if (detectInstructionInjection(testCase.source.text, testCase.source.caption).flagged) return read.kind;
+  const proof = readPaymentProof(testCase.source.caption, testCase.source.text, read.title, read.summary, read.notes, ...read.facts.map((fact) => fact.evidence)).proof;
+  return proof ? "receipt" : read.kind;
+}
+
 /**
  * What WonderHome makes of one HD case's reading, against the case's own
  * expectations (the product's, never relaxed): every way it falls short, or
@@ -38,7 +46,8 @@ export function documentMisses(testCase: DocumentCase, read: IntakeExtraction): 
   const misses: string[] = [];
   const expected = testCase.expected;
   if (read.readable !== expected.readable) misses.push(`readable ${read.readable}`);
-  if (read.kind !== expected.kind) misses.push(`kind ${read.kind}`);
+  const kind = filedKind(testCase, read);
+  if (kind !== expected.kind) misses.push(`kind ${kind}`);
   if (expected.exams) {
     if (!read.schedule) misses.push("no timetable");
     else {
