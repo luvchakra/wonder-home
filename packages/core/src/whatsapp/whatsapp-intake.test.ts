@@ -1568,21 +1568,21 @@ describe("an everyday request goes to HomeTalk too", () => {
 });
 
 describe("HomeTalk's answer as a WhatsApp message", () => {
-  it("uses WhatsApp's bold, writes links in full and adds the screen it opens", () => {
+  it("uses WhatsApp's bold, keeps a link's short label and writes each screen once at the end", () => {
     const text = whatsappReplyText({ displayText: "**Tomorrow**\n- Piano at 5 pm\n- [Groceries](/groceries) has 3 things", navigate: "/calendar" });
-    expect(text).toBe("*Tomorrow*\n• Piano at 5 pm\n• Groceries (https://home.wonderapps.biz/groceries) has 3 things\n\nhttps://home.wonderapps.biz/calendar");
+    expect(text).toBe("*Tomorrow*\n\n• Piano at 5 pm\n• Groceries has 3 things\n\nGroceries: https://home.wonderapps.biz/groceries\nCalendar: https://home.wonderapps.biz/calendar");
   });
 
   it("shows HomeTalk's how-much question as a list, one item a line, with the hint below (the owner, 2026-10-26)", () => {
     const asked = quantityQuestion(["milk", "eggs"], []);
     const shown = whatsappReplyText({ displayText: warmReply(asked, { action: "add_to_list", proposal: "clarify", ok: true }) });
-    expect(shown).toMatch(/^🛒 How much of each should I add\?\n• \*Milk\*\n• \*Eggs\*\n💡 For example [^\n]+\.$/);
+    expect(shown).toMatch(/^🛒 How much of each should I add\?\n\n• \*Milk\*\n• \*Eggs\*\n\n💡 For example [^\n]+\.$/);
   });
 
   it("ends a long answer at a sentence and says the rest is in the app", () => {
     const text = whatsappReplyText({ displayText: "This is one sentence. ".repeat(120) });
     expect(text.length).toBeLessThanOrEqual(1500);
-    expect(text).toMatch(/\. ?\n\nThe rest is in the WonderHome app\.$/);
+    expect(text).toMatch(/\.\nThe rest is in the WonderHome app\.$/);
   });
 });
 
