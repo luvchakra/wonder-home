@@ -1,7 +1,8 @@
 import { describe, expect, it } from "vitest";
 import { observeConversation } from "./runners";
 import type { HomeTalkCase, Observation } from "./types";
-import { whatsappReplyText } from "../whatsapp/hometalk";
+import { MAX_WHATSAPP_REPLY, whatsappReplyText } from "../whatsapp/hometalk";
+import { plainText } from "../conversation/reply-format";
 
 /**
  * The same message, the same decision and the same answer, whether it is typed on WhatsApp or in HomeTalk in the
@@ -54,5 +55,64 @@ describe("one decision, one answer, on WhatsApp and in the app", () => {
   it("is about real answers, not two empty ones", async () => {
     const [hello] = await observeConversation(caseFor("hello", "app", 0));
     expect(hello!.answer).toMatch(/Send me anything/);
+  });
+});
+
+/** The owner's "so what's cooking", 22 Nov 9:54 PM IST, as HomeTalk composed it in the app. */
+const WHATS_COOKING =
+  "🍽️ Nothing is planned: no meals are on the plan from today onwards.\n" +
+  "- **Meal plan** — empty from today; the weekly template lists Idli for Saturday breakfast and Kanda poha for Monday breakfast → [Meals](/meals)\n" +
+  "- **Idli batter** — on the grocery list, but no purchase is recorded, so I can't say if there is any at home → [Groceries](/groceries)\n" +
+  "- **Eggs, Brown** and **Bread, White** — on the list too, with no purchase recorded → [Groceries](/groceries)\n" +
+  "I can't see who is cooking or what is for dinner tonight.";
+
+/** The words a person reads, without either door's markup or the link footer. */
+const words = (text: string) =>
+  text
+    .split("\n")
+    .filter((line) => !/^[A-Za-z &]+: https:\/\//.test(line))
+    .join(" ")
+    .replace(/[*•]/g, "")
+    .replace(/\s+/g, " ")
+    .trim();
+
+describe("the same reply, laid out for WhatsApp (the owner, 2026-11-22: \"make it same as HomeTalk message formatting\")", () => {
+  it("says the app's words, item for item, closing line included", () => {
+    expect(words(whatsappReplyText({ displayText: WHATS_COOKING }))).toBe(words(plainText(WHATS_COOKING)));
+  });
+
+  it("puts a blank line between items, keeps the short labels and writes each screen once at the end", () => {
+    expect(whatsappReplyText({ displayText: WHATS_COOKING })).toBe(
+      "🍽️ Nothing is planned: no meals are on the plan from today onwards.\n\n" +
+        "• *Meal plan* — empty from today; the weekly template lists Idli for Saturday breakfast and Kanda poha for Monday breakfast → Meals\n\n" +
+        "• *Idli batter* — on the grocery list, but no purchase is recorded, so I can't say if there is any at home → Groceries\n\n" +
+        "• *Eggs, Brown* and *Bread, White* — on the list too, with no purchase recorded → Groceries\n\n" +
+        "I can't see who is cooking or what is for dinner tonight.\n\n" +
+        "Meals: https://home.wonderapps.biz/meals\nGroceries: https://home.wonderapps.biz/groceries",
+    );
+  });
+
+  it("folds a wrapped line back into its item, as the app does", () => {
+    const wrapped = "🍽️ Nothing is planned.\n- **Meal plan** — empty from today.\nThe weekly template lists Idli → [Meals](/meals)\n- **Groceries** — Idli batter is on the list → [Groceries](/groceries)";
+    const text = whatsappReplyText({ displayText: wrapped });
+    expect(text).toContain("• *Meal plan* — empty from today. The weekly template lists Idli → Meals\n\n• *Groceries*");
+    expect(words(text)).toBe(words(plainText(wrapped)));
+  });
+
+  it("keeps a short list compact, one item a line", () => {
+    expect(whatsappReplyText({ displayText: "🛒 On the list:\n- **Milk**\n- **Eggs**" })).toBe("🛒 On the list:\n\n• *Milk*\n• *Eggs*");
+  });
+
+  it("writes a link out of the app in full where it stands", () => {
+    expect(whatsappReplyText({ displayText: "📍 **Riverside Park** · [Map](https://www.google.com/maps/place/x)" })).toBe("📍 *Riverside Park* · Map (https://www.google.com/maps/place/x)");
+  });
+
+  it("drops whole items when too long, and keeps the opening and closing lines", () => {
+    const items = Array.from({ length: 30 }, (_, index) => `- **Item ${index + 1}** — something on the list with a little more said about it → [Groceries](/groceries)`);
+    const text = whatsappReplyText({ displayText: ["🛒 Thirty things on the list.", ...items, "Nothing else is due today."].join("\n") });
+    expect(text.length).toBeLessThanOrEqual(MAX_WHATSAPP_REPLY);
+    expect(text.startsWith("🛒 Thirty things on the list.\n\n• *Item 1*")).toBe(true);
+    expect(text).toMatch(/→ Groceries\n\nNothing else is due today\.\nThe rest is in the WonderHome app\.\n\nGroceries: https:\/\/home\.wonderapps\.biz\/groceries$/);
+    expect(text).not.toContain("Item 30");
   });
 });

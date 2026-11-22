@@ -41,6 +41,21 @@ describe("the reply format", () => {
     ]);
   });
 
+  it("folds a line wrapped between two bullets into its item, and keeps a line after the last one as the closing line (2026-11-22)", () => {
+    const text = "Nothing planned.\n- **Meal plan** — empty from today.\nThe template lists Idli → [Meals](/meals)\n- **Idli batter** — on the list\nI can't see who is cooking.";
+    expect(parseReply(text)).toEqual([
+      { kind: "paragraph", inlines: [{ kind: "text", text: "Nothing planned." }] },
+      {
+        kind: "list",
+        items: [
+          [{ kind: "bold", text: "Meal plan" }, { kind: "text", text: " — empty from today. The template lists Idli → " }, { kind: "link", label: "Meals", href: "/meals" }],
+          [{ kind: "bold", text: "Idli batter" }, { kind: "text", text: " — on the list" }],
+        ],
+      },
+      { kind: "paragraph", inlines: [{ kind: "text", text: "I can't see who is cooking." }] },
+    ]);
+  });
+
   it("writes a link only for a known place", () => {
     expect(linkTo("/bills")).toBe("[Bills](/bills)");
     expect(linkTo("/groceries?tab=list", "the list")).toBe("[the list](/groceries?tab=list)");

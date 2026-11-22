@@ -80,15 +80,31 @@ export function parseReply(text: string): Block[] {
     list = null;
   };
 
-  for (const raw of text.replace(/\r\n?/g, "\n").split("\n")) {
-    const line = raw.trim();
-    const bullet = line.match(/^(?:[-*•◦]|\d+[.)])\s+(.*)$/);
+  const lines = text.replace(/\r\n?/g, "\n").split("\n").map((raw) => raw.trim());
+  const items: string[] = [];
+  const flushItems = () => {
+    if (items.length === 0) return;
+    list ??= [];
+    list.push(parseInlines(items.join(" ")));
+    items.length = 0;
+  };
+  for (const [index, line] of lines.entries()) {
+    const bullet = line.match(BULLET);
     if (bullet) {
       flushParagraph();
-      list ??= [];
-      list.push(parseInlines(bullet[1] ?? ""));
+      flushItems();
+      items.push(bullet[1] ?? "");
       continue;
     }
+    // A line sitting between two bullets, with no blank line, is the rest of
+    // the item above it (a model wrapped the item, 2026-11-22: "Meal plan —
+    // empty from today.\nThe weekly template lists …"). After the last bullet
+    // it is the closing line, its own paragraph.
+    if (items.length > 0 && line !== "" && BULLET.test(lines[index + 1] ?? "")) {
+      items.push(line);
+      continue;
+    }
+    flushItems();
     if (line === "") {
       flushParagraph();
       flushList();
@@ -101,10 +117,13 @@ export function parseReply(text: string): Block[] {
     paragraph.push(line);
     flushParagraph();
   }
+  flushItems();
   flushParagraph();
   flushList();
   return blocks;
 }
+
+const BULLET = /^(?:[-*•◦]|\d+[.)])\s+(.*)$/;
 
 const INLINE = /\*\*([^*]+)\*\*|\[([^\]]+)\]\(([^)\s]+)\)/g;
 

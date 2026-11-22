@@ -11,6 +11,7 @@ decision that shapes later work each earns a note, written before moving on.
 
 | Date | Note |
 |---|---|
+| 2026-11-22 | [WhatsApp replies laid out like HomeTalk in the app](2026-11-22-whatsapp-reply-layout.md) |
 | 2026-11-22 | [HomeTalk in the app on the same HomeBrain decision as WhatsApp](2026-11-22-hometalk-shared-decision.md) |
 | 2026-11-22 | [WhatsApp: HomeBrain's model decides what each message is](2026-11-22-whatsapp-ai-routing.md) |
 | 2026-11-22 | [WhatsApp: "hello" and "what's the plan" go to HomeTalk, never Failed safely](2026-11-22-whatsapp-greetings-to-hometalk.md) |
