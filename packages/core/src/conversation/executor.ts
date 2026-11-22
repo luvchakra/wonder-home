@@ -195,6 +195,17 @@ async function fileWithHomeSend(intent: HouseholdIntent, context: ExecutionConte
   const outcome = await ingestText(context.supabase, { householdId: context.householdId, memberId: context.actorMemberId }, { text: intent.utterance });
   const review = linkTo("/home-send", "HomeSend");
   if (outcome.duplicate) return { ok: true, text: `That's already waiting in ${review} for you to check.`, result: { homeSendItemId: outcome.itemId } };
+  if (outcome.state === "failed" && outcome.failureReason === "unreadable" && !outcome.duplicate) {
+    // A short line the reading found nothing in was said, not sent to keep — as on WhatsApp (2026-11-22): set
+    // aside, never left in Failed safely, and answered as HomeTalk answers what it did not follow.
+    const { shortLine } = await import("../homebrain/intake/channel-route");
+    if (shortLine(intent.utterance) !== null) {
+      const { setAsideAsConversation } = await import("../homesend/repository");
+      await setAsideAsConversation(context.supabase, context.householdId, outcome.itemId).catch(() => false);
+      const { WHAT_I_CAN_DO } = await import("./intent");
+      return { ok: true, text: `I did not follow that. ${WHAT_I_CAN_DO} What would you like?`, result: { setAside: outcome.itemId } };
+    }
+  }
   if (outcome.state === "failed") return { ok: true, text: `I kept that in ${review} under Failed safely: ${outcome.notice}`, result: { homeSendItemId: outcome.itemId } };
   const title = outcome.item.extracted?.title?.trim();
   const kind = HOMESEND_KIND_WORDS[outcome.item.classifiedKind];

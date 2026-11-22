@@ -1,5 +1,6 @@
 import { isUndo } from "../../conversation/consent";
 import { isLeaveIt } from "../../conversation/leave-it";
+import { resolveRuleIntent } from "../../conversation/rules";
 
 /**
  * Talk or keep: whether a message that arrived on a channel (WhatsApp, a
@@ -96,8 +97,16 @@ export function routeChannelMessage(message: ChannelMessage): ChannelRoute {
   if (message.media || message.forwarded) return "homesend";
   const line = shortLine(message.text);
   if (!line) return "homesend";
-  return isSmallTalk(line) || isQuestionLine(line) || isRequestLine(line) || CORRECTION_OPENING.test(line) || isUndo(line) || REPLY_TO_HOMETALK.test(line) || isLeaveIt(line) ? "hometalk" : "homesend";
+  if (isSmallTalk(line) || isQuestionLine(line) || isRequestLine(line) || CORRECTION_OPENING.test(line) || isUndo(line) || REPLY_TO_HOMETALK.test(line) || isLeaveIt(line)) return "hometalk";
+  // Told to WonderHome in the family's own words ("we prefer dinner at 8", "Sunita is off tomorrow"): HomeTalk
+  // records it, on WhatsApp as in the app (the parity test, 2026-11-22).
+  // Only what HomeTalk records about the family itself: a bare "2 litres mustard oil" or a notice stays HomeSend's
+  // (design §3.1, AT-D15), and a short note still joins the message before it.
+  return TOLD_TO_HOMETALK.has(resolveRuleIntent(line, { actorMemberId: "speaker", channel: "text" }).action) ? "hometalk" : "homesend";
 }
+
+/** What HomeTalk records from the family's own words, which HomeSend has no kind for. */
+const TOLD_TO_HOMETALK: ReadonlySet<string> = new Set(["set_preference", "record_absence"]);
 
 /**
  * A reply to what HomeTalk just said: "undo" after "Say undo to take it

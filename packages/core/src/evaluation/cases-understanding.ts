@@ -41,6 +41,17 @@ export const UNDERSTANDING: HomeTalkCase[] = [
     description: `WhatsApp "${utterance}"${extra?.door?.media ? " with a file" : ""}${extra?.door?.forwarded ? ", forwarded" : ""}${extra?.simulate ? ", no model" : ""}: answered as it should be, never "I kept that".`,
     utterance, expected, ...extra,
   })),
+  // The same decision in the app (the owner, 2026-11-22): a pasted notice is filed through HomeSend, as a WhatsApp
+  // forward is; a hello or a family statement is HomeTalk's, as on WhatsApp.
+  ...(<[string, string, HomeTalkCase["expected"]][]>[
+    ["HT-327", "Dear parents,\nSports Day is on Saturday 26 Sep at 9am.\nPlease send a water bottle and a cap.", { interpretation: "homesend" }],
+    ["HT-328", "hello", { interpretation: "greet", action: "answer", answer: { includes: ["Send me anything"] } }],
+    ["HT-329", "Sunita is off tomorrow", { interpretation: "record_absence", action: "executed" }],
+  ]).map(([id, utterance, expected]): HomeTalkCase => ({
+    id, surface: "hometalk", household: "A", category: "cross_domain", actor: "a-kunal", door: { channel: "app" },
+    description: `In the app, "${utterance.split("\n")[0]}": the same decision as on WhatsApp.`,
+    utterance, expected,
+  })),
   {
     id: "HT-316", surface: "hometalk", household: "A", category: "cross_domain", actor: "a-kunal", door: { channel: "whatsapp", forwarded: true },
     description: "A forwarded school notice on WhatsApp is kept in HomeSend, not answered.",

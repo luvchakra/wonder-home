@@ -6,6 +6,7 @@ import { z } from "zod";
 import { readHouseholdKey } from "@wonderhome/core/ai/credentials";
 import { createAnswerComposer, createClaudeUnderstanding, createGeminiUnderstanding, createOpenAIUnderstanding, createReplyTranslator, type AnswerComposer } from "@wonderhome/core/ai/model-client";
 import { currentPlatformKey, resolveModelKey } from "@wonderhome/core/ai/model-key";
+import { createChannelDecider, fileFromTalk, type ChannelDecider } from "@wonderhome/core/homebrain/intake/channel-decide";
 import { minimiseContext, reidentifyIntent, routeToProvider, type ContentClass, type ContextCandidate, type DataUsePolicy, type Person } from "@wonderhome/core/ai/privacy";
 import { loadDataUse } from "@wonderhome/core/ai/privacy-repository";
 import { ApiError } from "@wonderhome/core/api/errors";
@@ -512,7 +513,16 @@ async function turnInEnglish(input: HomeTalkInput, speaking: Speaking) {
     });
   // A request with several parts (Wave 4 §10) is carried out part by part
   // below; a correction is always one request about one earlier one.
-  const parts = readCorrection(body.utterance) ? [body.utterance] : splitRequest(body.utterance);
+  // One HomeBrain decision for every channel (the owner, 2026-11-22: "experience on HomeBrain or HomeTalk should
+  // be similar"): what WhatsApp asks of `decideChannelMessage` is asked here too, from the words as they may leave.
+  // Something to keep — a pasted notice, a bill's text — goes through the same HomeSend path as a WhatsApp forward
+  // (`file_with_homesend` → `ingestText`: the same reading, memory, scam rule and bar). A WhatsApp turn was
+  // decided before it arrived; an answer to an open question is HomeTalk's.
+  const keep =
+    !pending && !clarifying && (source === "web" || source === "app")
+      ? await fileFromTalk(routing.sentUtterance ?? body.utterance, routing.channel ?? null)
+      : false;
+  const parts = keep || readCorrection(body.utterance) ? [body.utterance] : splitRequest(body.utterance);
   const mayBeQuestion = parts.length === 1 && (routing.compose !== undefined || quick.action === "ask_status" || quick.action === "unknown");
   // When the household's facts were in hand, for the turn's timings (14-027).
   let storeReadAt: number | null = null;
@@ -837,6 +847,9 @@ async function turnInEnglish(input: HomeTalkInput, speaking: Speaking) {
     };
   }
 
+  const filed: HouseholdIntent | null = keep && !corrected
+    ? { action: "file_with_homesend", actorMemberId: membership.memberId, target: { kind: "unspecified" }, parameters: {}, confidence: 0.95, channel: body.channel, utterance: body.utterance, understanding: { source: routing.channel ? "model" : "rules" } }
+    : null;
   const result = await converse({
     utterance: body.utterance,
     channel: body.channel,
@@ -853,7 +866,7 @@ async function turnInEnglish(input: HomeTalkInput, speaking: Speaking) {
     confirmRequestedChanges,
     moneyHealthReview,
     sessionId,
-    understand: corrected ? () => corrected : plainQuestion || rulesRead ? undefined : routing.understand,
+    understand: corrected ? () => corrected : filed ? () => filed : plainQuestion || rulesRead ? undefined : routing.understand,
     history: routing.history,
     clarifying: corrected ? null : clarifying,
     ground: (intent) => groundIntent(intent, groundingEnv(references)),
@@ -1852,6 +1865,8 @@ async function decideProviderRouting(
   sentUtterance?: string;
   /** Drafts an answer from grounded facts. Absent when nothing may be sent or no provider is wired. */
   compose?: AnswerComposer;
+  /** HomeBrain's model for what a message is (answer, keep, or both), shared with WhatsApp. Absent: the rules decide. */
+  channel?: ChannelDecider;
 }> {
   const [policy, householdKey] = await Promise.all([
     loadDataUse(supabase, householdId),
@@ -1971,6 +1986,7 @@ async function decideProviderRouting(
     policy,
     sentUtterance,
     compose: provider.compose,
+    channel: createChannelDecider(decision.provider, key.key!),
   };
 }
 

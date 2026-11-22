@@ -9,7 +9,7 @@ import { acceptReading, groundIntakeDate, isClassifyFailure, type IntakeExtracti
 import { reviewIntakeKind } from "../ai/intake-kind-check";
 import { DEFAULT_DATA_USE, minimiseContext, pseudonymiseText, reidentifyIntent, type Person } from "../ai/privacy";
 import type { AnswerComposer } from "../ai/model-client";
-import { decideChannelMessage, type ChannelDecider } from "../homebrain/intake/channel-decide";
+import { decideChannelMessage, fileFromTalk, type ChannelDecider } from "../homebrain/intake/channel-decide";
 import { asksTheCalendar, asksWhatIsOn, calendarSpanReply, lookAheadReply, lookAheadSpan, memberNamedIn, readLookAhead, scheduleReply, scheduleSpanOf } from "../calendar/answer";
 import type { PendingClarification } from "../conversation/clarify";
 import { applyCorrection, describeCorrection, readCorrection, type CorrectableAction } from "../conversation/corrections";
@@ -238,7 +238,11 @@ async function talkTurn(c: HomeTalkCase, utterance: string, carried: Carried, mo
   // Through WhatsApp, the door decides talk or keep first, by rules (2026-11-22: "hello" became a failed HomeSend item).
   // The model decides when there is one (the owner, 2026-11-22); the rules otherwise. "both" is kept and answered:
   // observed as "homesend" here, the kept half being what a door case is about.
-  if (c.door) {
+  // In the app (2026-11-22), the same decision: a turn HomeBrain keeps is filed through HomeSend, as on WhatsApp.
+  if (c.door?.channel === "app" && !carried.pending && !carried.clarifying && (await fileFromTalk(utterance, c.simulate ? null : (models.channel ?? null)))) {
+    return { observed: { ...EMPTY, interpretation: "homesend" }, next: carried };
+  }
+  if (c.door?.channel === "whatsapp" && !carried.clarifying) {
     // Every message comes through the door; the file or forward only with the first.
     const attached = first ? { forwarded: c.door.forwarded, media: c.door.media } : {};
     const decided = await decideChannelMessage({ text: utterance, ...attached, mediaType: attached.media ? "document" : null }, c.simulate ? null : (models.channel ?? null));
