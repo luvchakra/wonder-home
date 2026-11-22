@@ -463,8 +463,15 @@ export function restoreNames(
  * booleans and nulls pass through untouched.
  */
 export function restoreParameterNames<T extends Record<string, unknown>>(parameters: T, pseudonyms: Record<string, string>, people: readonly Person[]): T {
+  // Every depth (live check, 2026-11-22): a model nests readings in lists of objects, and a placeholder there is stored too.
   const restore = (value: unknown): unknown =>
-    typeof value === "string" ? restoreNames(value, pseudonyms, people) : Array.isArray(value) ? value.map(restore) : value;
+    typeof value === "string"
+      ? restoreNames(value, pseudonyms, people)
+      : Array.isArray(value)
+        ? value.map(restore)
+        : value && typeof value === "object"
+          ? Object.fromEntries(Object.entries(value as Record<string, unknown>).map(([key, inner]) => [key, restore(inner)]))
+          : value;
   return Object.fromEntries(Object.entries(parameters).map(([key, value]) => [key, restore(value)])) as T;
 }
 
@@ -501,6 +508,8 @@ export function reidentifyIntent<I extends { utterance: string; parameters: Reco
       parameters: mapped.memberId ? { ...intent.parameters, memberId: mapped.memberId } : intent.parameters,
     };
   }
+  // Any other target ("Child A's birthday party", live check 2026-11-22) names people by placeholder too.
+  if (intent.target.reference) return { ...intent, target: { ...intent.target, reference: restoreNames(intent.target.reference, pseudonyms, people) } };
   return intent;
 }
 
