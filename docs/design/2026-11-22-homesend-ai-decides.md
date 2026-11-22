@@ -27,7 +27,7 @@
 | PR | Story | What |
 |---|---|---|
 | 1 | 14-081 | This note; registry; `decisionFromReading` expresses today's reading as a decision, validated and stored on the item (`understanding.decision`). No visible change; every eval case green. |
-| 2 | 14-082 | The model returns the decision itself (classifier tool gains `whatIs`, `newKind`, `operations`); unseen kinds become a note plus dated things; plain reply; new kinds grouped. |
+| 2 | 14-082 | The model returns the decision for a new kind (`whatIs`, `newKind`, `operations`); it becomes a note plus dated things on the calendar with Undo; plain reply. (Done) |
 | 3 | 14-083 | Decision memory (table, outcomes from undo, correction and answers) and retrieval of similar past decisions as worked examples. |
 | 4 | 14-084 | Promotion and demotion of learned rules; Admin view with "Why?" and Remove. |
 | 5 | 14-085 | Measures: unseen-kind eval cases, replay cases for learning, before/after report, Platform admin "decided by AI", "learned rule applied", "new kinds seen". |

@@ -1,4 +1,4 @@
-import { decisionFromReading, validateDecision } from "./decision";
+import { decisionFromModel, decisionFromReading, newKindSentence, validateDecision } from "./decision";
 import type { SupabaseClient } from "@supabase/supabase-js";
 
 import { listEnrolments, type Enrolment } from "../school/enrolments";
@@ -9,6 +9,7 @@ import { fillFromEvidence } from "./completeness";
 import { recoverWhen } from "./when";
 import type { ClassifyFailure, IntakeContext, IntakeExtraction, IntakeSource } from "../ai/classify-intake";
 import { isClassifyFailure } from "../ai/classify-intake-failure";
+import { dayFromDateText } from "../ai/classify-intake";
 import type { AudioClip } from "../voice/provider";
 import { gateTranscript, GEMINI_TRANSCRIPT_CONFIDENCE, geminiMayTranscribe, recordsWhatWasHeard, uncertainTranscriptPrompt } from "./audio";
 import { detectInstructionInjection, type InjectionScan } from "./injection";
@@ -420,7 +421,10 @@ export async function understand(
   const kind = paid ? "receipt" : result.kind;
   const built = buildUnderstanding(reading, meta(injection));
   // The one decision over the capability registry (14-081), behind today's behaviour: stored for "Why?", learning and metrics.
-  const decision = validateDecision(decisionFromReading(reading, paid), { sourceText: sentText, knownRecordIds: new Set(), injectionFlagged: injection.flagged, healthFiler: false });
+  // A kind nobody anticipated (14-082): the model's own decision, its days grounded by WonderHome.
+  const groundDay = (dateText: string) => (context.timezone ? dayFromDateText(dateText, { timezone: context.timezone, now: context.now ?? new Date() }) : null);
+  const decided = (!paid && decisionFromModel(reading, groundDay)) || decisionFromReading(reading, paid);
+  const decision = validateDecision(decided, { sourceText: sentText, knownRecordIds: new Set(), injectionFlagged: injection.flagged, healthFiler: false });
   const understanding: IntakeUnderstanding = { ...(paid ? { ...built, kind: "receipt" as const, contentSummary: paymentTitle(paid), payment: paid } : built), decision };
   // Its day and time, from its own words, whatever kind it was read as — so moving it to an event at review keeps them.
   const recovered = recoverWhen(toStoredExtraction(reading), { timezone: context.timezone ?? null, now: context.now ?? new Date() });
@@ -438,7 +442,9 @@ export async function understand(
     state: "needs_review",
     notice: injection.flagged
       ? "Filled in from what you sent. It also contained instructions aimed at WonderHome — those were ignored. Check it over before adding."
-      : "Filled in from what you sent — check it over before adding.",
+      : decision.newKind
+        ? newKindSentence(decision, "will")
+        : "Filled in from what you sent — check it over before adding.",
     item: { id: itemId, classifiedKind: kind, extracted, understanding },
   };
 }
