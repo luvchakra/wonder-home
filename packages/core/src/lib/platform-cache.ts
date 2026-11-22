@@ -26,7 +26,10 @@ export const PLATFORM_DATA = {
 export type PlatformDataKey = keyof typeof PLATFORM_DATA;
 
 type Entry = { at: number; value: Promise<unknown> };
-const kept = new Map<PlatformDataKey, Entry>();
+/** On `globalThis` for the reason in `runtime-env.ts`: one map per process, however many copies of this module Next bundles. */
+const KEPT_KEY = Symbol.for("wonderhome.platform-cache.kept");
+const kept: Map<PlatformDataKey, Entry> = ((globalThis as Record<symbol, unknown>)[KEPT_KEY] as Map<PlatformDataKey, Entry> | undefined) ??
+  ((globalThis as Record<symbol, unknown>)[KEPT_KEY] = new Map<PlatformDataKey, Entry>()) as Map<PlatformDataKey, Entry>;
 
 /** What `load` hands back: the value, and whether it is complete enough to keep for everyone. */
 export type Loaded<T> = { value: T; keep: boolean };

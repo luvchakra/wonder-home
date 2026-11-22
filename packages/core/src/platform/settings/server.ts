@@ -1,7 +1,7 @@
 import { adminClientFor, adminGrant } from "../../db/admin-context";
 import { overlayOf } from "./overlay";
 import { loadStoredSettings } from "./store";
-import { refreshRuntimeEnv, useSettingsLoader } from "./runtime-env";
+import { refreshRuntimeEnv, settingsStoreState, useSettingsLoader } from "./runtime-env";
 
 /**
  * Server start (`apps/web/instrumentation.ts`, Node only): lay the settings
@@ -11,6 +11,21 @@ import { refreshRuntimeEnv, useSettingsLoader } from "./runtime-env";
  * the read lands.
  */
 export async function enablePlatformSettings(waitMs = 3_000): Promise<void> {
-  useSettingsLoader(() => loadStoredSettings(adminClientFor(adminGrant.worker("platform-settings", "read saved platform settings"))), overlayOf);
+  registerLoader();
   await Promise.race([refreshRuntimeEnv(), new Promise<void>((resolve) => setTimeout(resolve, waitMs).unref?.())]);
 }
+
+function registerLoader(): void {
+  useSettingsLoader(() => loadStoredSettings(adminClientFor(adminGrant.worker("platform-settings", "read saved platform settings"))), overlayOf);
+}
+
+/**
+ * For a route that must see saved settings (the WhatsApp webhook): registers
+ * the loader if this server has none yet, without resetting one already
+ * there. Instrumentation normally has; this keeps a route working if it
+ * has not run, or ran in a module graph this route cannot see.
+ */
+export function ensurePlatformSettings(): void {
+  if (settingsStoreState() === "no_loader") registerLoader();
+}
+

@@ -37,3 +37,13 @@ describe("WhatsApp webhook without its settings", () => {
     expect(await recordNotConfigured(throwing, 61_001)).toBe(true);
   });
 });
+
+describe("a not_configured refusal says which setting", () => {
+  it("records the missing names and the store's state, never a value", async () => {
+    const { inserted, admin } = fakeAdmin();
+    const post = new Request("https://home.example/api/v1/whatsapp/webhook", { method: "POST", body: "{}" });
+    const response = await handleWhatsAppWebhook(post, { config: null, admin, notConfigured: { missing: ["WHATSAPP_APP_SECRET", "not a name; drop table"], store: "no_loader" } });
+    expect(response.status).toBe(401);
+    expect(inserted).toEqual([{ kind: "not_configured", household_id: null, latency_ms: null, missing_settings: ["WHATSAPP_APP_SECRET"], settings_store: "no_loader" }]);
+  });
+});

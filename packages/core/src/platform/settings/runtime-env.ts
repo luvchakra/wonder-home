@@ -48,15 +48,53 @@ export const STORE_ONLY_KEYS: readonly string[] = [
   "WONDERHOME_GEMINI_LIVE_MODEL",
 ];
 
-let toolingOptIn = false;
+export type StoredSettings = Readonly<Record<string, string>>;
+
+/**
+ * This server's copy of the saved settings. It lives on `globalThis`, not in
+ * this module: Next compiles `instrumentation.ts` (which registers the loader)
+ * and each route into separate module graphs, so a module-level `let` gave
+ * every route its own copy with no loader, and a route read the deployment's
+ * variables only, never a value saved in Platform admin (the WhatsApp outage,
+ * 2026-11-22: the app secret saved there, absent from Vercel, never reached
+ * the webhook). One object per process, whichever copy of this module asks.
+ */
+type RuntimeEnvState = {
+  toolingOptIn: boolean;
+  listeners: Set<() => void>;
+  withoutAi: Env | null;
+  loader: (() => Promise<StoredSettings>) | null;
+  overlay: (rows: StoredSettings) => StoredSettings;
+  stored: StoredSettings;
+  merged: Env | null;
+  loadedAt: number;
+  /** Whether this server has read the saved values at least once (a cold server has not). */
+  everLoaded: boolean;
+  refreshing: Promise<void> | null;
+  lastForcedAt: number;
+};
+const STATE_KEY = Symbol.for("wonderhome.platform-settings.runtime-env");
+const state: RuntimeEnvState = ((globalThis as Record<symbol, unknown>)[STATE_KEY] as RuntimeEnvState | undefined) ??
+  ((globalThis as Record<symbol, unknown>)[STATE_KEY] = {
+    toolingOptIn: false,
+    listeners: new Set(),
+    withoutAi: null,
+    loader: null,
+    overlay: () => ({}),
+    stored: {},
+    merged: null,
+    loadedAt: Number.NEGATIVE_INFINITY,
+    everLoaded: false,
+    refreshing: null,
+    lastForcedAt: Number.NEGATIVE_INFINITY,
+  } satisfies RuntimeEnvState) as RuntimeEnvState;
 
 /** Readers that keep a value derived from these settings (the model names) and must re-derive it when they change. */
-const listeners = new Set<() => void>();
 export function whenSettingsChange(listener: () => void): void {
-  listeners.add(listener);
+  state.listeners.add(listener);
 }
 function settingsChanged(): void {
-  for (const listener of listeners) {
+  for (const listener of state.listeners) {
     try {
       listener();
     } catch {
@@ -67,89 +105,80 @@ function settingsChanged(): void {
 
 /** Tooling only (`evaluation/cli.ts`): the AI settings may come from this process's environment. Refused on Vercel. */
 export function allowAiSettingsFromEnvironment(): void {
-  toolingOptIn = true;
-  withoutAi = null;
-  merged = null;
+  state.toolingOptIn = true;
+  state.withoutAi = null;
+  state.merged = null;
   settingsChanged();
 }
 
 /** Whether this process is tooling that may read AI settings from its environment. Never on a deployment. */
 export function aiSettingsFromEnvironmentAllowed(env: Env = process.env): boolean {
   if (env.VERCEL) return false;
-  return toolingOptIn || env.NODE_ENV === "development" || Boolean(env.VITEST);
+  return state.toolingOptIn || env.NODE_ENV === "development" || Boolean(env.VITEST);
 }
 
 /** The process environment without the store-only names, unless this is tooling. */
 function deploymentEnv(): Env {
   if (aiSettingsFromEnvironmentAllowed()) return process.env;
-  withoutAi ??= Object.fromEntries(Object.entries(process.env).filter(([key]) => !STORE_ONLY_KEYS.includes(key)));
-  return withoutAi;
+  state.withoutAi ??= Object.fromEntries(Object.entries(process.env).filter(([key]) => !STORE_ONLY_KEYS.includes(key)));
+  return state.withoutAi;
 }
-let withoutAi: Env | null = null;
-export type StoredSettings = Readonly<Record<string, string>>;
-
-let loader: (() => Promise<StoredSettings>) | null = null;
-let overlay: (rows: StoredSettings) => StoredSettings = () => ({});
-let stored: StoredSettings = {};
-let merged: Env | null = null;
-let loadedAt = Number.NEGATIVE_INFINITY;
-/** Whether this server has read the saved values at least once (a cold server has not). */
-let everLoaded = false;
-let refreshing: Promise<void> | null = null;
 
 const TTL_MS = 60_000;
 
 /** Server start: how to read the saved values (the service-role RPC), and which of them to lay over. */
 export function useSettingsLoader(load: (() => Promise<StoredSettings>) | null, keep: (rows: StoredSettings) => StoredSettings = () => ({})): void {
-  loader = load;
-  overlay = keep;
-  stored = {};
-  merged = null;
-  loadedAt = Number.NEGATIVE_INFINITY;
-  everLoaded = false;
-  refreshing = null;
-  withoutAi = null;
+  state.loader = load;
+  state.overlay = keep;
+  state.stored = {};
+  state.merged = null;
+  state.loadedAt = Number.NEGATIVE_INFINITY;
+  state.everLoaded = false;
+  state.refreshing = null;
+  state.withoutAi = null;
+  state.lastForcedAt = Number.NEGATIVE_INFINITY;
   settingsChanged();
 }
 
 /** Loads the saved values now (shared by concurrent callers). A failed read keeps what was there. */
 export function refreshRuntimeEnv(now = Date.now()): Promise<void> {
-  if (!loader) return Promise.resolve();
-  if (refreshing) return refreshing;
-  const load = loader;
-  refreshing = keptPerServer("platform_config", async () => ({ value: await load(), keep: true }), now)
+  if (!state.loader) return Promise.resolve();
+  if (state.refreshing) return state.refreshing;
+  const load = state.loader;
+  const keep = state.overlay;
+  state.refreshing = keptPerServer("platform_config", async () => ({ value: await load(), keep: true }), now)
     .then(
       (rows) => {
-        stored = overlay(rows);
-        merged = null;
-        loadedAt = now;
-        everLoaded = true;
+        state.stored = keep(rows);
+        state.merged = null;
+        state.loadedAt = now;
+        state.everLoaded = true;
         settingsChanged();
       },
       () => {
         // The store could not be read: keep the last values (or the plain
         // environment) and try again on the next read after a short pause.
-        loadedAt = now - TTL_MS + 5_000;
+        state.loadedAt = now - TTL_MS + 5_000;
       },
     )
     .finally(() => {
-      refreshing = null;
+      state.refreshing = null;
     });
-  return refreshing;
+  return state.refreshing;
 }
 
 /** The environment to read a setting from, now. Never waits; refreshes behind itself when stale. */
 export function runtimeEnv(now = Date.now()): Env {
-  if (loader && now - loadedAt >= TTL_MS) void refreshRuntimeEnv(now);
+  if (state.loader && now - state.loadedAt >= TTL_MS) void refreshRuntimeEnv(now);
   const base = deploymentEnv();
-  if (Object.keys(stored).length === 0) return base;
-  merged ??= { ...base, ...stored };
-  return merged;
+  if (Object.keys(state.stored).length === 0) return base;
+  state.merged ??= { ...base, ...state.stored };
+  return state.merged;
 }
 
 /** Whether the saved settings have been read on this server (else the AI settings read as unset). */
 export function savedSettingsLoaded(): boolean {
-  return everLoaded;
+  return state.everLoaded;
 }
 
 /**
@@ -158,8 +187,8 @@ export function savedSettingsLoaded(): boolean {
  * A store that still can't be read leaves the AI settings unset: no key.
  */
 export async function runtimeEnvForAi(waitMs = 2_500, now = Date.now()): Promise<Env> {
-  if (loader && !everLoaded) {
-    for (let attempt = 0; attempt < 2 && !everLoaded; attempt += 1) {
+  if (state.loader && !state.everLoaded) {
+    for (let attempt = 0; attempt < 2 && !state.everLoaded; attempt += 1) {
       await Promise.race([refreshRuntimeEnv(Date.now()), new Promise<void>((resolve) => setTimeout(resolve, waitMs).unref?.())]);
     }
   }
@@ -178,7 +207,7 @@ export function settledSettingsEnv(waitMs = 2_500): Promise<Env> {
 
 /** The same, after waiting for a refresh if the copy is stale: for a request that must see a save just made. */
 export async function freshRuntimeEnv(now = Date.now()): Promise<Env> {
-  if (loader && now - loadedAt >= TTL_MS) await refreshRuntimeEnv(now);
+  if (state.loader && now - state.loadedAt >= TTL_MS) await refreshRuntimeEnv(now);
   return runtimeEnv(now);
 }
 
@@ -196,13 +225,35 @@ export async function settledRuntimeEnv(waitMs = 5_000, now = Date.now()): Promi
   return runtimeEnvForAi(waitMs / 2, now);
 }
 
+/** Where this server's saved settings stand, for a refusal that must say why (never a value). */
+export type SettingsStoreState = "loaded" | "not_loaded" | "no_loader";
+export function settingsStoreState(): SettingsStoreState {
+  if (!state.loader) return "no_loader";
+  return state.everLoaded ? "loaded" : "not_loaded";
+}
+
+/**
+ * For a webhook about to refuse a caller for a missing setting: read the store
+ * again now (bounded) rather than answer from a copy that may predate a save
+ * on another server. At most once every ten seconds per server, so a caller
+ * retrying a refused delivery cannot turn into a read per request.
+ */
+export async function reloadedSettingsEnv(waitMs = 2_500, now = Date.now()): Promise<Env> {
+  if (state.loader && now - state.lastForcedAt >= 10_000) {
+    state.lastForcedAt = now;
+    forgetRuntimeEnv();
+    await Promise.race([refreshRuntimeEnv(now), new Promise<void>((resolve) => setTimeout(resolve, waitMs).unref?.())]);
+  }
+  return runtimeEnv(now);
+}
+
 /** After a save on this server: drop the kept copy so the next read loads the new value. */
 export function forgetRuntimeEnv(): void {
   forgetPlatformData("platform_config");
-  loadedAt = Number.NEGATIVE_INFINITY;
+  state.loadedAt = Number.NEGATIVE_INFINITY;
 }
 
 /** Which keys have a saved value laid over the environment, for the admin screens. */
 export function savedKeys(): readonly string[] {
-  return Object.keys(stored);
+  return Object.keys(state.stored);
 }
