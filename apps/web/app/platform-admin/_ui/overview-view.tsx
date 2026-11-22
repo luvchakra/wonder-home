@@ -38,7 +38,7 @@ import {
   type Period,
   type AdvisorSignal,
 } from "@wonderhome/core/platform/overview";
-import { nothingWaitsOnTarget, questionsPerTen, type NothingWaitsMetrics } from "@wonderhome/core/homesend/metrics";
+import { nothingWaitsOnTarget, questionsPerTen, type HomeSendDecisionMetrics, type NothingWaitsMetrics } from "@wonderhome/core/homesend/metrics";
 import { Alert } from "@wonderhome/core/ui/alert";
 import { ButtonLink } from "@wonderhome/core/ui/button";
 import type { IconTone } from "@wonderhome/core/ui/icon-tile";
@@ -104,6 +104,8 @@ export type OverviewViewProps = {
   advisor: AdvisorSignal | null;
   /** "Nothing waits" measures (2026-11-14); null when not measured. */
   nothingWaits?: NothingWaitsMetrics | null;
+  /** HomeSend's decisions (14-085); null when not measured. */
+  decisions?: HomeSendDecisionMetrics | null;
   settings: { saved: number; environment: number; stillInVercel: number; storeReady: boolean };
   services: readonly ServiceState[];
   period: Period;
@@ -116,7 +118,7 @@ export type OverviewViewProps = {
  * The Overview, drawn from figures already read (the page does the reading):
  * what needs the admin first, then growth and use, then health (rule 17).
  */
-export function OverviewView({ snapshot, advisor, nothingWaits = null, settings, services, period, role, aiKeyAlert = null }: OverviewViewProps) {
+export function OverviewView({ snapshot, advisor, nothingWaits = null, decisions = null, settings, services, period, role, aiKeyAlert = null }: OverviewViewProps) {
   // Every age on the page is measured from when the figures were read, so they agree with each other.
   const nowMs = snapshot ? Date.parse(snapshot.takenAt) : 0;
   const now = new Date(nowMs);
@@ -245,7 +247,7 @@ export function OverviewView({ snapshot, advisor, nothingWaits = null, settings,
             <div className="grid gap-3 sm:grid-cols-2">
               <PlansBreakdown snapshot={snapshot} linkPlans={isOwner} />
               <HomeSendSplit snapshot={snapshot} period={period} />
-              <NothingWaitsPanel metrics={nothingWaits} />
+              <NothingWaitsPanel metrics={nothingWaits} decisions={decisions} />
             </div>
           </>
         ) : null}
@@ -423,7 +425,7 @@ const BASIS_WORDS: Record<string, string> = {
 };
 
 /** The four "Nothing waits" measures (2026-11-14), each beside its target, counts out of totals (principle 9). */
-function NothingWaitsPanel({ metrics }: { metrics: NothingWaitsMetrics | null }) {
+function NothingWaitsPanel({ metrics, decisions = null }: { metrics: NothingWaitsMetrics | null; decisions?: HomeSendDecisionMetrics | null }) {
   if (!metrics) {
     return (
       <div className="space-y-2 rounded-[var(--wh-radius)] border border-[var(--wh-border)] px-3.5 py-3">
@@ -476,6 +478,22 @@ function NothingWaitsPanel({ metrics }: { metrics: NothingWaitsMetrics | null })
           {confirmed.length === 0 ? "none yet" : confirmed.map((row) => `${row.count} ${BASIS_WORDS[row.basis] ?? row.basis.replace(/_/g, " ")}`).join(", ")}
         </p>
       ) : null}
+      {decisions ? (
+        <ul className="space-y-1.5 text-sm">
+          <li>
+            <span className="font-medium">Decided by AI (30 days):</span> {decisions.decidedByAi.count} of {decisions.decidedByAi.of}
+          </li>
+          <li>
+            <span className="font-medium">Learned rule applied (30 days):</span> {decisions.learnedRuleApplied}
+          </li>
+          <li className="break-words">
+            <span className="font-medium">New kinds seen (30 days):</span>{" "}
+            {decisions.newKinds.length === 0 ? "none yet" : `${decisions.newKindItems}: ${decisions.newKinds.map((row) => `${row.kind} ${row.items}`).join(", ")}`}
+          </li>
+        </ul>
+      ) : (
+        <p className="text-sm text-[var(--wh-foreground-muted)]">Decided by AI, learned rules and new kinds: not measured yet.</p>
+      )}
       <p className="text-xs text-[var(--wh-foreground-subtle)]">Aggregate only, across every household. Per household figures carry no name.</p>
     </div>
   );

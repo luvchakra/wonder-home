@@ -1,3 +1,4 @@
+import type { LearningMeasures } from "./learning";
 import { voiceReadiness } from "../voicelink/readiness";
 import { formatLatency, formatRatio, measure, type EvaluationMetrics } from "./metrics";
 import type { CaseResult, EvalCase, EvaluationRun } from "./types";
@@ -13,7 +14,7 @@ import type { CaseResult, EvalCase, EvaluationRun } from "./types";
  * what does not yet; it never claims a dashboard nobody built.
  */
 
-export type Gate = { name: "functional" | "security" | "privacy" | "reliability" | "product" | "understanding" | "voice" | "operations"; pass: boolean; blocking: boolean; evidence: string };
+export type Gate = { name: "functional" | "security" | "privacy" | "reliability" | "product" | "understanding" | "voice" | "learning" | "operations"; pass: boolean; blocking: boolean; evidence: string };
 
 export function releaseGates(
   run: EvaluationRun,
@@ -21,6 +22,8 @@ export function releaseGates(
   operations: { pass: boolean; evidence: string },
   /** The voice channels' own gate (voice phase 6): golden tool sentences, the capability matrix, app-only refusals. */
   voice: { pass: boolean; evidence: string } = voiceReadiness(),
+  /** HomeSend's unseen kinds and learning (14-085), when measured. */
+  learning?: LearningMeasures,
 ): Gate[] {
   const results = run.results;
   const metrics = measure(results);
@@ -65,8 +68,27 @@ export function releaseGates(
     },
     understandingGate(run, metrics),
     { name: "voice", pass: voice.pass, blocking: true, evidence: voice.evidence },
+    ...(learning ? [learningGate(learning)] : []),
     { name: "operations", pass: operations.pass, blocking: false, evidence: operations.evidence },
   ];
+}
+
+/**
+ * HomeSend decides kinds nobody anticipated and learns from the household (14-085): every unseen-kind and replay
+ * case as expected, more items decided right with learned rules than without, and no unsafe action.
+ */
+export function learningGate(m: LearningMeasures): Gate {
+  const pct = (count: number, of: number) => `${count}/${of} (${Math.round((count / Math.max(1, of)) * 100)}%)`;
+  const failing = [...m.unseen.failing, ...m.replay.failing];
+  return {
+    name: "learning",
+    pass: m.unseen.pass === m.unseen.of && m.replay.pass === m.replay.of && m.rightAfter > m.rightBefore && m.unsafe === 0,
+    blocking: true,
+    evidence:
+      `Unseen kinds ${m.unseen.pass}/${m.unseen.of}, replay ${m.replay.pass}/${m.replay.of}; decided as the household wanted ${pct(m.rightBefore, m.items)} by the model alone, ${pct(m.rightAfter, m.items)} with learned rules ` +
+      `(rule applied to ${m.ruleApplied}); auto-handled ${pct(m.autoHandled, m.items + m.unseen.of)}; questions per item ${m.questionsPerItem.toFixed(2)}; corrected or undone ${Math.round(m.correctionRate * 100)}% of replayed items; unsafe actions ${m.unsafe}.` +
+      (failing.length > 0 ? ` Failing: ${failing.join(", ")}.` : ""),
+  };
 }
 
 /** The bar HomeSend's understanding must clear (the owner, 2026-10-25): more than 95%. */

@@ -126,3 +126,22 @@ describe("HomeSend metrics (Wave 3 §19)", () => {
     });
   });
 });
+
+describe("HomeSend decision measures (14-085)", () => {
+  it("reads decided by AI, learned rule applied and new kinds; null when not measured", async () => {
+    const { parseHomeSendDecisions } = await import("./metrics");
+    expect(parseHomeSendDecisions(null)).toBeNull();
+    expect(parseHomeSendDecisions({ openTotal: 1 })).toBeNull();
+    expect(
+      parseHomeSendDecisions({ decidedByAi: { count: "7", of: 10 }, learnedRuleApplied: 2, newKindItems: 3, newKinds: [{ kind: "society notice", items: 2, households: 2 }, { kind: 5, items: -1 }] }),
+    ).toEqual({
+      decidedByAi: { count: 7, of: 10 },
+      learnedRuleApplied: 2,
+      newKindItems: 3,
+      newKinds: [
+        { kind: "society notice", items: 2, households: 2 },
+        { kind: "other", items: 0, households: 0 },
+      ],
+    });
+  });
+});
