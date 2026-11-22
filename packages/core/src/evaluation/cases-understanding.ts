@@ -252,6 +252,12 @@ const WIDE: Wide[] = [
   ["HU-098", "remind me tomorrow at 1 to call the bank", R("2026-09-24", "13:00"), { followUps: [{ utterance: "no, 1 am", expected: R("2026-09-24", "01:00") }] }],
   ["HU-099", "dentist appointment on friday at 4 pm", APPT("2026-09-25", "16:00"), { followUps: [{ utterance: "no, it's on the 2nd", expected: { interpretation: "record_health_appointment", date: "2026-10-02" } }] }],
   ["HU-100", "add a reminder for tomorrow doctor appointment", IS("set_reminder"), { followUps: [{ utterance: "at 1 o'clock", expected: APPT("2026-09-24", "13:00") }] }],
+  // A reminder that names a dated thing records the thing too (the owner, 2026-11-22: "i don't see the reminder set
+  // on calendar"): `recordsThing` makes the executor file it through HomeSend and tie the reminder to it.
+  ["HU-101", "add a reminder for asmis music exam on 24th", { ...R("2026-09-24", "09:00"), kept: { includes: ['"recordsThing":true'] } }],
+  ["HU-102", "remind me to call mum at 6", { ...R("2026-09-23", "18:00"), kept: { excludes: ["recordsThing"] } }],
+  ["HU-103", "reminder kal Asmi ka music exam", { ...R("2026-09-24", "09:00"), kept: { includes: ['"recordsThing":true'] } }],
+  ["HU-104", "set reminder for Asmi's PTM tomorrow", { ...R("2026-09-24", "09:00"), kept: { includes: ['"recordsThing":true'] } }],
 ];
 
 /**

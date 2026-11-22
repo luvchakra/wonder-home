@@ -46,9 +46,13 @@ import { eventPlaceSearch } from "../_lib/places";
 import { formatTime, requireSession } from "../_lib/session";
 import { CalendarFilters } from "./_components/calendar-filters";
 import { CalendarGestures } from "./_components/calendar-gestures";
+import { RemoveReminder } from "./_components/remove-reminder";
 
 export const metadata = { title: "Calendar" };
 export const dynamic = "force-dynamic";
+
+/** The row words, plus the one action a row may carry beside it. */
+type RowWords = EntryWords & { actionFor: (entry: CalendarEntry) => ReactNode };
 
 const VIEW_ORDER: CalendarView[] = ["month", "week", "day", "year"];
 
@@ -123,7 +127,16 @@ export default async function CalendarPage({ searchParams }: { searchParams: Pro
   const offeredSources = (result.offeredSources ?? []).filter((source) => hasChildren || (source !== "school" && source !== "activity"));
   const nameOf = (id: string) => active.find((member) => member.id === id)?.displayName ?? null;
   const entries = applyFilters(result.entries, preferences.filters, membership.memberId);
-  const entryWords: EntryWords = { t, time: (at) => formatTime(timeZone, at), shortDate: words.shortDate, nameOf, timeZone };
+  // A person's own reminder (26-025) carries its one thing to do: Remove.
+  const removeLabels = { remove: t("calendar.entry.removeReminder"), failed: t("calendar.entry.removeReminderFailed") };
+  const entryWords: RowWords = {
+    t,
+    time: (at) => formatTime(timeZone, at),
+    shortDate: words.shortDate,
+    nameOf,
+    timeZone,
+    actionFor: (entry) => (entry.source === "reminder" ? <RemoveReminder householdId={householdId} notificationId={entry.sourceId} labels={{ ...removeLabels, remove: `${removeLabels.remove}: ${entry.title}` }} /> : null),
+  };
   const byDay = entriesByDay(entries, timeZone);
 
   const href = (target: CalendarView, date: string) => calendarHref(target, date);
@@ -338,7 +351,7 @@ function yearMonths({
   });
 }
 
-function DayAgenda({ day, entries, today, words, entryWords, t }: { day: string; entries: CalendarEntry[]; today: string; words: DateWords; entryWords: EntryWords; t: Translate }) {
+function DayAgenda({ day, entries, today, words, entryWords, t }: { day: string; entries: CalendarEntry[]; today: string; words: DateWords; entryWords: RowWords; t: Translate }) {
   return (
     <section aria-label={words.dayTitle(day)} className="space-y-2">
       <SectionHeader title={words.dayTitle(day)} />
@@ -357,7 +370,7 @@ function DayAgenda({ day, entries, today, words, entryWords, t }: { day: string;
           <ul className="divide-y divide-[var(--wh-border)]">
             {entries.map((entry) => {
               const { key, ...row } = entryRow(entry, day, entryWords);
-              return <CalendarEntryRow key={key} {...row} />;
+              return <CalendarEntryRow key={key} {...row} action={entryWords.actionFor(entry)} />;
             })}
           </ul>
         </Card>
@@ -427,7 +440,7 @@ function DayView({
   byDay: Map<string, CalendarEntry[]>;
   timeZone: string;
   words: DateWords;
-  entryWords: EntryWords;
+  entryWords: RowWords;
   t: Translate;
   now: Date;
   todayPlan: ReactNode;
@@ -457,7 +470,7 @@ function DayView({
           <ul className="divide-y divide-[var(--wh-border)]" aria-label={t("calendar.agenda.allDay")}>
             {lane.map((entry) => {
               const { key, ...row } = entryRow(entry, focus, entryWords);
-              return <CalendarEntryRow key={key} {...row} />;
+              return <CalendarEntryRow key={key} {...row} action={entryWords.actionFor(entry)} />;
             })}
           </ul>
         </Card>
@@ -491,7 +504,7 @@ function WeekView({
   today: string;
   timeZone: string;
   words: DateWords;
-  entryWords: EntryWords;
+  entryWords: RowWords;
   t: Translate;
   now: Date;
 }) {
@@ -522,7 +535,7 @@ function WeekView({
                   <ul className="divide-y divide-[var(--wh-border)]">
                     {list.map((entry) => {
                       const { key, ...row } = entryRow(entry, day, entryWords);
-                      return <CalendarEntryRow key={key} {...row} />;
+                      return <CalendarEntryRow key={key} {...row} action={entryWords.actionFor(entry)} />;
                     })}
                   </ul>
                 </Card>

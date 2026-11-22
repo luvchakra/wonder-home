@@ -1,6 +1,6 @@
 # Voice: birthdays and "next month" answered from the whole calendar
 
-**Date:** 2026-11-22 · **Story:** 26-024 (`backlogs/26-HomeEvents.md`)
+**Date:** 2026-11-22 · **Story:** 26-026 (`backlogs/26-HomeEvents.md`)
 
 ## What happened
 In a live voice conversation at 10:43 pm IST, the owner asked "which family member's birthday is coming up?" and then "for the next month?". Both times the answer was that there were no birthdays, though Asmi's birthday (Wed 9 Dec) and Kunal's (Fri 11 Dec) were on the calendar.

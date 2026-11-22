@@ -106,12 +106,14 @@ const TIME = (timeZone: string) => new Intl.DateTimeFormat("en-US", { hour: "num
 function when(entry: CalendarEntry, timeZone: string): string {
   // en-GB writes September "Sept"; every other date WonderHome says is "Sep".
   const day = DATE(timeZone).format(entry.start).replace(",", "").replace(/\bSept\b/, "Sep");
-  if (entry.allDay || entry.kind !== "block") return day;
+  // A reminder is a moment, so its time is said too.
+  if (entry.allDay || (entry.kind !== "block" && entry.source !== "reminder")) return day;
   return `${day}, ${TIME(timeZone).format(entry.start).replace(" AM", " am").replace(" PM", " pm")}`;
 }
 
 function note(entry: CalendarEntry): string {
   if (entry.source === "holiday") return " (public holiday)";
+  if (entry.source === "reminder") return " (your reminder)";
   if (entry.status === "proposed") return " (proposed)";
   return "";
 }

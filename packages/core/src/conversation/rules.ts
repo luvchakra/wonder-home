@@ -230,7 +230,7 @@ const RULES: readonly Rule[] = [
     // Being told about a dated thing without "is on" (2026-11-20): "Riya's birthday party on Saturday at 4",
     // "tomorrow 5pm cricket coaching for Manan", "tomorrow Manan ki school mein PTM hai 11 o'clock",
     // "Manan's science project is due next monday", "note that the plumber comes on monday".
-    pattern: /^(?!(?:what|when|where|who|whom|which|how|why|is|are|am|was|were|do|does|did|can|could|will|would|should|any|move|shift|reschedule|change|push|remind|plan|add|set|track|show|tell|give|list|open|log|record|mark|pay|paid|book|cancel|order|buy|get|need)\b)(.+)$/i,
+    pattern: /^(?!(?:what|when|where|who|whom|which|how|why|is|are|am|was|were|do|does|did|can|could|will|would|should|any|move|shift|reschedule|change|push|remind(?:er)?|plan|add|set|track|show|tell|give|list|open|log|record|mark|pay|paid|book|cancel|order|buy|get|need)\b)(.+)$/i,
     read: (_match, utterance) =>
       !/\?\s*$/.test(utterance) &&
       SAYS_A_DAY.test(utterance) &&

@@ -64,6 +64,38 @@ describe("every calendar source is something HomeBrain reads", () => {
   });
 });
 
+describe("a person's own reminder is a HomeBrain fact on the day the Calendar shows it (26-025)", () => {
+  const notice = (partial: Record<string, unknown>) => ({
+    id: "r1",
+    type: "action",
+    priority: "normal",
+    threadKey: "reminder:1",
+    title: "Reminder: Call mum",
+    body: "You asked HomeTalk to remind you tomorrow at 6:00 pm.",
+    status: "generated",
+    createdAt: "2026-10-23T14:00:00Z",
+    sourceType: "reminder",
+    // 6 pm on Sat 24 Oct in Kolkata.
+    scheduledFor: "2026-10-24T12:30:00Z",
+    ...partial,
+  });
+  const read = (notifications: ReturnType<typeof notice>[]) =>
+    buildContextItems({ members: [ASMI], notifications }, { householdId: "hh", householdName: "Chakraborty Home", timezone: TZ, now: NOW, viewerMemberId: "asmi", limitLists: false });
+
+  it("says what and when, for the person who set it", () => {
+    const item = read([notice({})]).find((entry) => entry.entityId === "r1");
+    expect(item?.attributes).toMatchObject({ title: "Call mum", date: "2026-10-24" });
+    expect(item?.summary).toContain("Call mum");
+    expect(item?.summary).toContain("6:00pm");
+    expect(item?.subjectMemberIds).toEqual(["asmi"]);
+  });
+
+  it("is an earlier notice once dismissed, as it leaves the Calendar", () => {
+    const item = read([notice({ status: "dismissed" })]).find((entry) => entry.entityId === "r1");
+    expect(item?.attributes.date).toBeUndefined();
+  });
+});
+
 describe("a child's classes outside school are HomeBrain facts", () => {
   const items = build([
     activity("vocal", "Vocal", [6], "10:00", "11:00", "Solus building"),
