@@ -160,7 +160,7 @@ async function dispatch(request: Request): Promise<Response> {
       await drainJobs(admin, {
         limit: 10,
         workerId: "dispatch",
-        handlers: { ...notificationJobHandlers(), ...(whatsapp ? { [WHATSAPP_PROCESS_KIND]: whatsappJobHandler({ config: whatsapp.adapter, ask: whatsappAsk(createAdminClient()), addOnItsOwn: whatsappAutoAdd(createAdminClient()), decider: whatsappDecider(createAdminClient()) }) } : {}) },
+        handlers: { ...notificationJobHandlers(), ...(whatsapp ? { [WHATSAPP_PROCESS_KIND]: whatsappJobHandler({ config: whatsapp.adapter, ask: whatsappAsk(createAdminClient()), addOnItsOwn: whatsappAutoAdd(createAdminClient()), decider: whatsappDecider() }) } : {}) },
         // An email read on the queue (held until "Trust this sender?") is added on its own when its sender is trusted.
         addTrusted: trustedEmailAutoAdd(admin),
         // Something kept until a model could read it: added and told once it is read (2026-11-21).

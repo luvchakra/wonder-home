@@ -8,6 +8,7 @@ import { withMemberSession } from "@wonderhome/core/voicelink/member-session";
 import { whatsappReplyText } from "@wonderhome/core/whatsapp/hometalk";
 import type { ChannelDecider } from "@wonderhome/core/homebrain/intake/channel-decide";
 import { channelDeciderForHousehold } from "@wonderhome/core/homebrain/intake/channel-decider";
+import { adminClientFor, adminGrant } from "@wonderhome/core/db/admin-context";
 import type { WhatsAppIntakeDeps } from "@wonderhome/core/whatsapp/intake";
 
 import { requireMembership } from "@wonderhome/core/identity/households";
@@ -72,6 +73,13 @@ export function whatsappAutoAdd(admin: SupabaseClient): NonNullable<WhatsAppInta
 
 
 /** HomeBrain's model for what a WhatsApp message is, per household (null: the rules decide). */
-export function whatsappDecider(admin: SupabaseClient): (householdId: string) => Promise<ChannelDecider | null> {
-  return (householdId) => channelDeciderForHousehold(admin, householdId).catch(() => null);
+export function whatsappDecider(): (householdId: string) => Promise<ChannelDecider | null> {
+  return async (householdId) => {
+    try {
+      const admin = adminClientFor(adminGrant.signedRequest("whatsapp", "read the household's AI key and data-use policy to decide what a message is", householdId), householdId);
+      return await channelDeciderForHousehold(admin, householdId);
+    } catch {
+      return null;
+    }
+  };
 }
