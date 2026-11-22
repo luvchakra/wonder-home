@@ -189,15 +189,17 @@ async function loadFacts(admin: SupabaseClient, rows: readonly OpenNotification[
 
 /** What a pass would clear, without writing: the sweep's own read and plan (also a dry run). */
 export async function findStaleNotifications(admin: SupabaseClient, now: Date = new Date(), options: { householdId?: string; limit?: number } = {}) {
-  let query = admin
-    .from("notifications")
-    .select(COLUMNS)
-    .in("status", ["generated", "delivered", "seen"])
-    .or(`source_type.in.(${STALE_SOURCE_TYPES.join(",")}),expires_at.lt.${now.toISOString()}`)
-    .order("created_at", { ascending: true })
-    .limit(options.limit ?? 500);
-  if (options.householdId) query = query.eq("household_id", options.householdId);
-  const rows = await rowsOf<OpenNotification>(query);
+  const limit = options.limit ?? 500;
+  // Two parameterised reads (never an interpolated filter expression), merged by id.
+  const open = () => {
+    const query = admin.from("notifications").select(COLUMNS).in("status", ["generated", "delivered", "seen"]);
+    return options.householdId ? query.eq("household_id", options.householdId) : query;
+  };
+  const [bySource, byExpiry] = await Promise.all([
+    rowsOf<OpenNotification>(open().in("source_type", [...STALE_SOURCE_TYPES]).order("created_at", { ascending: true }).limit(limit)),
+    rowsOf<OpenNotification>(open().lt("expires_at", now.toISOString()).order("created_at", { ascending: true }).limit(limit)),
+  ]);
+  const rows = [...new Map([...bySource, ...byExpiry].map((row) => [row.id, row])).values()];
   if (rows.length === 0) return [];
   const facts = await loadFacts(admin, rows);
   const governed = rows.filter((row) => !STALE_SOURCE_TYPES.includes(row.source_type as (typeof STALE_SOURCE_TYPES)[number]) || facts.complete.has(row.source_type!));
