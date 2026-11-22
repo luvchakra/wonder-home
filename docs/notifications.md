@@ -45,7 +45,11 @@ reminders about real records, never lines of text fired and forgotten.
   `stale.ts` `sweepStaleNotifications` runs on the delivery clock for what
   `reconcile.ts` and `notices-sweep.ts` don't cover. Money and health are
   never cleared for `past` or `expired`, only when the record shows them
-  settled; anything still waiting for a person stays.
+  settled; anything still waiting for a person stays. One exception (owner,
+  2026-11-22: "clear past health"): a health appointment's reminders clear as
+  `past` once the appointment's day has ended on the household's clock; the
+  appointment record is untouched, and measurements and medical bills keep
+  the rule.
 - **On the Calendar** (26-025, 2026-11-22). A person's own plain reminder
   (`source_type = 'reminder'`, set in HomeTalk) also shows on its day in the
   Calendar, to its recipient only (`calendar/projection.ts` `reminderEntries`),

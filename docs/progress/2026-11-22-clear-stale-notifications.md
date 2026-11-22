@@ -11,7 +11,7 @@ Owner, 2026-11-22 (via the coordinator): "keep clearing notifications as decisio
 - `notifications/resolve.ts` `resolveNotifications`: the one way WonderHome clears a notification, `resolved` with `resolved_reason` (`decided`, `superseded`, `source_gone`, `settled`, `past`, `expired`, `duplicate`), kept in history. Migration `20261122230000_notification_resolved_reason.sql` adds the column; the writer retries without it, so either order is safe.
 - Decisions clear at once: `decideAction` (decided / expired), `closeApproval`, `proposal-supersede.ts` (superseded), `proposal-expiry.ts` (expired); a Needs-you answer runs the household's sweep in `after()`.
 - `notifications/stale.ts` `sweepStaleNotifications` on the delivery clock (`/api/v1/notifications/dispatch`): proposals/approvals no longer waiting; appointments completed, cancelled or removed; routines moved on, paused or removed; event replies/changes for an ended event; anything past its own `expires_at`; the older of two open about the same thing for the same person. Bounded (500 a pass); a failed read clears nothing of its kind.
-- Never cleared: money and health for `past` or `expired` (only when the record shows them settled); a proposal or approval still waiting; Needs-you questions (their own default and deadline).
+- Never cleared: money and health for `past` or `expired` (only when the record shows them settled); a proposal or approval still waiting; Needs-you questions (their own default and deadline). Exception (owner, 2026-11-22: "clear past health", follow-up PR): a health appointment's reminders clear as `past` once the appointment's day has ended on the household's clock; the appointment record is untouched; measurements and medical bills keep the rule.
 - Docs: `docs/notifications.md`. Help: Notifications body 17 in all eight languages.
 
 ## Verified
@@ -20,4 +20,4 @@ Owner, 2026-11-22 (via the coordinator): "keep clearing notifications as decisio
 
 ## Open / needs a person
 - Migration `20261122230000` must be applied to the live project; until then reasons are not stored (clearing still works).
-- Whether a health appointment reminder should clear once the appointment is a day past is the owner's call; today it stays until the appointment is marked done or cancelled.
+- Answered by the owner ("clear past health") and done in the follow-up PR: the owner's two past appointment reminders clear on the next delivery-clock run.

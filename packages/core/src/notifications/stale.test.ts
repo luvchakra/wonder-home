@@ -57,6 +57,11 @@ describe("planStale: each reason (owner, 2026-11-22)", () => {
     expect(reasons([row("n", { source_type: "health_routine", source_id: "r", thread_key: "health_routine:r:2026-10-24" })], facts({ routines: new Map([["r", { status: "active", reminderEnabled: true, nextDueOn: "2026-10-31" }]]) }))).toEqual({ n: "settled" });
   });
 
+  it("past: a health appointment's reminders once its day has ended (owner, 2026-11-22)", () => {
+    expect(reasons([row("n", { source_type: "health_appointment", source_id: "x", category: "appointments" })], facts({ appointments: new Map([["x", { status: "confirmed", startsAt: "2026-11-21T07:30:00Z", timeZone: "Asia/Kolkata" }]]) }))).toEqual({ n: "past" });
+    expect(reasons([row("n", { source_type: "health_appointment", source_id: "x" })], facts({ appointments: new Map([["x", { status: "proposed", startsAt: "2026-10-23T15:03:00Z", timeZone: "Asia/Kolkata" }]]) }))).toEqual({ n: "past" });
+  });
+
   it("past: replies to an event that has ended", () => {
     expect(reasons([row("n", { source_type: "event_replies", source_id: "e" })], facts({ events: new Map([["e", { startsAt: "2026-11-01T10:00:00Z", endsAt: "2026-11-01T12:00:00Z", status: "confirmed" }]]) }))).toEqual({ n: "past" });
   });
@@ -74,12 +79,25 @@ describe("planStale: never cleared while it still needs a person", () => {
     expect(reasons([row("n")], facts({ approvals: new Map([["a1", { status: "pending" }]]) }))).toEqual({});
   });
 
-  it("a past health appointment whose record is not settled stays", () => {
+  it("a health appointment's reminder stays on the appointment's own day", () => {
+    // 18:00Z on 22 Nov is 23:30 in Kolkata: still the appointment's day there.
+    expect(reasons([row("n", { source_type: "health_appointment", source_id: "x" })], facts({ appointments: new Map([["x", { status: "confirmed", startsAt: "2026-11-22T04:30:00Z", timeZone: "Asia/Kolkata" }]]) }))).toEqual({});
+  });
+
+  it("a health appointment with no time on record is never cleared for time", () => {
     expect(reasons([row("n", { source_type: "health_appointment", source_id: "x", expires_at: "2026-10-24T00:00:00Z" })], facts({ appointments: new Map([["x", { status: "confirmed" }]]) }))).toEqual({});
   });
 
   it("a measurement not yet logged stays, however late", () => {
     expect(reasons([row("n", { source_type: "health_routine", source_id: "r", thread_key: "health_routine:r:2026-10-24" })], facts({ routines: new Map([["r", { status: "active", reminderEnabled: true, nextDueOn: "2026-10-24" }]]) }))).toEqual({});
+  });
+
+  it("a bill is never cleared for time, a day past its due date or not", () => {
+    expect(reasons([row("n", { source_type: "obligation", source_id: "b", category: "bills", thread_key: "bill:b:2026-11-20", scheduled_for: "2026-11-20T04:30:00Z", expires_at: "2026-11-21T00:00:00Z" })], facts())).toEqual({});
+  });
+
+  it("a missed measurement is not an appointment: it stays", () => {
+    expect(reasons([row("n", { source_type: "health_routine", source_id: "r", thread_key: "health_routine:r:2026-11-20" })], facts({ routines: new Map([["r", { status: "active", reminderEnabled: true, nextDueOn: "2026-11-20" }]]) }))).toEqual({});
   });
 
   it("a bill or 'check before paying' is never cleared because its expiry passed", () => {

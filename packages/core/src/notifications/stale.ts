@@ -2,6 +2,7 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 
 import { log } from "../observability/logger";
 import { resolveNotifications, type ResolveReason } from "./resolve";
+import { localMoment } from "./timing";
 
 /**
  * Clearing what no longer applies (owner, 2026-11-22: "keep clearing
@@ -24,8 +25,10 @@ import { resolveNotifications, type ResolveReason } from "./resolve";
  *   same person (`duplicate`).
  *
  * Never cleared just because time passed: money and health. A bill, a
- * "check before paying", a health appointment or a measurement stays until
- * its record shows it settled. A proposal or approval still waiting stays
+ * "check before paying" or a measurement stays until its record shows it
+ * settled. The one exception (owner, 2026-11-22: "clear past health"): a
+ * health appointment's reminders clear as `past` once the appointment's day
+ * has ended on the household's clock; the appointment itself is untouched. A proposal or approval still waiting stays
  * (it has its own reminder and 48-hour expiry). Needs-you questions are not
  * notifications and keep their own default and deadline.
  *
@@ -52,7 +55,7 @@ export type StaleFacts = {
   /** approvals by id. */
   approvals: Map<string, { status: string }>;
   /** health_appointments by id. */
-  appointments: Map<string, { status: string }>;
+  appointments: Map<string, { status: string; startsAt?: string | null; timeZone?: string | null }>;
   /** health_measurement_routines by id. */
   routines: Map<string, { status: string; reminderEnabled: boolean; nextDueOn: string | null }>;
   /** family_events by id. */
@@ -94,7 +97,14 @@ function sourceReason(row: OpenNotification, facts: StaleFacts, now: Date): Reso
       if (!id) return null;
       const appointment = facts.appointments.get(id);
       if (!appointment) return "source_gone";
-      return LIVE_APPOINTMENT.has(appointment.status) ? null : "settled";
+      if (!LIVE_APPOINTMENT.has(appointment.status)) return "settled";
+      // Once the appointment's day has ended on the household's clock, its reminders have nothing left to say
+      // (owner, 2026-11-22: "clear past health"). The appointment itself is left exactly as it is.
+      if (appointment.startsAt) {
+        const zone = appointment.timeZone ?? "Asia/Kolkata";
+        if (localMoment(now, zone).dateKey > localMoment(new Date(appointment.startsAt), zone).dateKey) return "past";
+      }
+      return null;
     }
     case "health_routine": {
       if (!id) return null;
@@ -121,7 +131,9 @@ function sourceReason(row: OpenNotification, facts: StaleFacts, now: Date): Reso
 /** What to clear, and why. Pure. */
 export function planStale(rows: readonly OpenNotification[], facts: StaleFacts, now: Date): { id: string; householdId: string; reason: ResolveReason }[] {
   const out = new Map<string, { id: string; householdId: string; reason: ResolveReason }>();
-  const allowed = (row: OpenNotification, reason: ResolveReason) => !(TIME_ONLY.has(reason) && isMoneyOrHealth(row));
+  // The one time-based clear health allows: an appointment reminder once its day has ended. Never money, never a measurement.
+  const allowed = (row: OpenNotification, reason: ResolveReason) =>
+    !(TIME_ONLY.has(reason) && isMoneyOrHealth(row)) || (reason === "past" && row.source_type === "health_appointment" && row.category !== "bills");
 
   for (const row of rows) {
     const reason = sourceReason(row, facts, now) ?? (row.expires_at && Date.parse(row.expires_at) < now.getTime() ? "expired" : null);
@@ -165,7 +177,7 @@ async function loadFacts(admin: SupabaseClient, rows: readonly OpenNotification[
   const [actionsRead, approvalsRead, appointmentsRead, routinesRead, eventsRead] = await Promise.all([
     approvalIds.length ? Promise.resolve(admin.from("conversation_actions").select("id, approval_status, result").in("id", approvalIds)).then((r) => r, () => ({ data: null, error: true })) : none,
     approvalIds.length ? Promise.resolve(admin.from("approvals").select("id, status").in("id", approvalIds)).then((r) => r, () => ({ data: null, error: true })) : none,
-    appointmentIds.length ? Promise.resolve(admin.from("health_appointments").select("id, status").in("id", appointmentIds)).then((r) => r, () => ({ data: null, error: true })) : none,
+    appointmentIds.length ? Promise.resolve(admin.from("health_appointments").select("id, status, starts_at, households(timezone)").in("id", appointmentIds)).then((r) => r, () => ({ data: null, error: true })) : none,
     routineIds.length ? Promise.resolve(admin.from("health_measurement_routines").select("id, status, reminder_enabled, next_due_on").in("id", routineIds)).then((r) => r, () => ({ data: null, error: true })) : none,
     eventIds.length ? Promise.resolve(admin.from("family_events").select("id, starts_at, ends_at, status").in("id", eventIds)).then((r) => r, () => ({ data: null, error: true })) : none,
   ]);
@@ -181,7 +193,12 @@ async function loadFacts(admin: SupabaseClient, rows: readonly OpenNotification[
     complete,
     actions: new Map(list(actionsRead).map((row) => [row.id as string, { status: row.approval_status as string, reason: ((row.result as R | null)?.reason as string | undefined) ?? null }])),
     approvals: new Map(list(approvalsRead).map((row) => [row.id as string, { status: row.status as string }])),
-    appointments: new Map(list(appointmentsRead).map((row) => [row.id as string, { status: row.status as string }])),
+    appointments: new Map(
+      list(appointmentsRead).map((row) => {
+        const household = (Array.isArray(row.households) ? row.households[0] : row.households) as { timezone?: string | null } | null;
+        return [row.id as string, { status: row.status as string, startsAt: (row.starts_at as string | null) ?? null, timeZone: household?.timezone ?? null }];
+      }),
+    ),
     routines: new Map(list(routinesRead).map((row) => [row.id as string, { status: row.status as string, reminderEnabled: row.reminder_enabled !== false, nextDueOn: (row.next_due_on as string | null) ?? null }])),
     events: new Map(list(eventsRead).map((row) => [row.id as string, { startsAt: (row.starts_at as string | null) ?? null, endsAt: (row.ends_at as string | null) ?? null, status: (row.status as string | null) ?? null }])),
   };
