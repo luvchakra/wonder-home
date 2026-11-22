@@ -631,6 +631,7 @@ export const homesendFr: AreaCatalog<typeof homesendEn> = {
   "homesend.archived.reason.kept_as_note": "Gardé comme note du foyer — demandez à HomeTalk",
   "homesend.archived.reason.not_resent": "Illisible, et pas renvoyé",
   "homesend.archived.reason.health_not_claimed": "Un document de santé que personne n'a dit être le sien — restaure-le pour le classer",
+  "homesend.archived.reason.suspected_scam": "Ressemblait à une arnaque (demandait un code PIN ou OTP, ou de payer via un lien) — rien n’a été enregistré",
   "homesend.setAside.title": "Mis de côté",
   "homesend.setAside.lede": "Tout ce qui est envoyé devient quelque chose : une entrée, une note, ou mis de côté ici avec sa raison. Restaurer remet n'importe lequel.",
   "homesend.setAside.all": "Voir tout ce qui est mis de côté ({count})",

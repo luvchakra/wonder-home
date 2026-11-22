@@ -11,6 +11,7 @@ const TIDY_REASON_WORDS: Record<string, string> = {
   kept_as_note: "Kept as a household note",
   not_resent: "Couldn't be read and wasn't sent again",
   health_not_claimed: "A health document nobody said was theirs",
+  suspected_scam: "Looked like a scam (asked for a PIN or OTP, or to pay through a link), so nothing was recorded",
   removed_by_person: "Set aside by a person",
 };
 

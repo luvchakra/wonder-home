@@ -1,4 +1,5 @@
 import type { IntakeExtraction } from "../../ai/classify-intake";
+import { suspectedScam } from "../../homebrain/scam";
 import { detectInstructionInjection } from "../../homesend/injection";
 import { readPaymentProof } from "../../homesend/payment-proof";
 import { matchExam } from "../../homesend/exam-match";
@@ -29,10 +30,17 @@ export function writtenDays(text: string): string[] {
 
 /** The kind as HomeSend files it (`ingest.ts`): a bill, receipt or unknown that is proof of a payment made is filed as a receipt. */
 export function filedKind(testCase: DocumentCase, read: IntakeExtraction): IntakeExtraction["kind"] {
+  // A suspected scam is kept as "unknown" and set aside, whatever it was read as (owner, 2026-11-22).
+  if (isScam(testCase, read)) return "unknown";
   if (read.kind !== "receipt" && read.kind !== "bill" && read.kind !== "unknown") return read.kind;
   if (detectInstructionInjection(testCase.source.text, testCase.source.caption).flagged) return read.kind;
   const proof = readPaymentProof(testCase.source.caption, testCase.source.text, read.title, read.summary, read.notes, ...read.facts.map((fact) => fact.evidence)).proof;
   return proof ? "receipt" : read.kind;
+}
+
+/** HomeSend's own scam rule, on what was sent and what the reading said of it (`ingest.ts`). */
+function isScam(testCase: DocumentCase, read: IntakeExtraction): boolean {
+  return suspectedScam(testCase.source.caption, testCase.source.text, read.title, read.summary, read.notes);
 }
 
 /**
@@ -68,6 +76,7 @@ export function documentMisses(testCase: DocumentCase, read: IntakeExtraction): 
     }
   }
   if (expected.paymentProof !== undefined && Boolean(readPaymentProof(testCase.source.caption, testCase.source.text).proof) !== expected.paymentProof) misses.push("payment proof differs");
+  if (Boolean(expected.scam) !== isScam(testCase, read)) misses.push(expected.scam ? "scam not caught" : "flagged as a scam");
   if (expected.injection !== undefined && detectInstructionInjection(testCase.source.text).flagged !== expected.injection) misses.push("injection differs");
   if (expected.syllabus) misses.push(...syllabusMisses(testCase, read));
   // A health document is never filed for someone its words don't name.

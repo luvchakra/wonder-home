@@ -15,6 +15,7 @@ export const whatsappZh: AreaCatalog<typeof whatsappEn> = {
   "whatsapp.ack.checkTranscript": "收到 👍 我不确定那条语音听对了——请到 HomeSend 看看它说了什么。 🎙️",
   "whatsapp.ack.modelUnavailable": "收到 👍 我已经保存了。现在暂时读不了，等能读的时候我会马上读，并告诉你我做了什么。",
   "whatsapp.ack.readAgain": "收到 👍 我已经保存了。我读过了，但还没能把它整理成条目，所以正在更仔细地重读，之后告诉你我做了什么。",
+  "whatsapp.ack.suspectedScam": "⚠️ 这看起来像是诈骗，所以我没有记录它。\n💡 不要通过其中的链接付款，也绝不要分享你的 PIN 或 OTP。如有疑问，请直接向该公司核实。",
   "whatsapp.timetable.lead": "📚 考试时间表：*{title}*。",
   "whatsapp.timetable.untitled": "一份考试时间表",
   "whatsapp.timetable.added": "我为 {name}（{column}）添加了 {count} 个考试日。",

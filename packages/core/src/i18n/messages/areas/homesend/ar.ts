@@ -653,6 +653,7 @@ export const homesendAr: AreaCatalog<typeof homesendEn> = {
   "homesend.archived.reason.kept_as_note": "حُفظ كملاحظة للمنزل — اسأل HomeTalk عنه",
   "homesend.archived.reason.not_resent": "تعذّرت قراءته ولم يُرسَل مرة أخرى",
   "homesend.archived.reason.health_not_claimed": "مستند صحي لم يقل أحد إنه له — استعده لحفظه",
+  "homesend.archived.reason.suspected_scam": "بدا احتيالًا (طلب رمز PIN أو OTP، أو الدفع عبر رابط) — لم يُسجَّل شيء",
   "homesend.setAside.title": "موضوع جانبًا",
   "homesend.setAside.lede": "كل ما يُرسَل يصبح شيئًا: إدخالًا أو ملاحظة أو يوضع جانبًا هنا مع سببه. الاستعادة تعيد أيًّا منها.",
   "homesend.setAside.all": "عرض كل ما وُضع جانبًا ({count})",

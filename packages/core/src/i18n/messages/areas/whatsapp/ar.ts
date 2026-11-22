@@ -15,6 +15,7 @@ export const whatsappAr: AreaCatalog<typeof whatsappEn> = {
   "whatsapp.ack.checkTranscript": "وصلني 👍 لست متأكدًا أنني سمعت تلك الرسالة الصوتية جيدًا — يُرجى التحقق مما تقوله في HomeSend. 🎙️",
   "whatsapp.ack.modelUnavailable": "تم 👍 احتفظت به. لا أستطيع قراءته الآن، وسأقرؤه بمجرد أن أستطيع وأخبرك بما فعلت.",
   "whatsapp.ack.readAgain": "تم 👍 احتفظت به. قرأته لكنني لم أتمكن بعد من تحويله إلى إدخالات، لذا أعيد قراءته بعناية أكبر وسأخبرك بما فعلت.",
+  "whatsapp.ack.suspectedScam": "⚠️ يبدو هذا احتيالًا، لذلك لم أسجّله.\n💡 لا تدفع عبر رابطه ولا تشارك رمز PIN أو OTP أبدًا. إن لم تكن متأكدًا، فتحقّق من الشركة مباشرة.",
   "whatsapp.timetable.lead": "📚 جدول الامتحانات: *{title}*.",
   "whatsapp.timetable.untitled": "جدول امتحانات",
   "whatsapp.timetable.added": "أضفت {count} أيام امتحان لـ {name} ({column}).",

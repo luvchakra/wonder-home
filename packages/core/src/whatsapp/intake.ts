@@ -1175,6 +1175,8 @@ export function acknowledgementFor(
 ): { text: string; asks: boolean } {
   const t = options.t ?? ENGLISH;
   if (outcome.duplicate) return { text: t("whatsapp.ack.duplicate"), asks: false };
+  // A suspected scam (owner, 2026-11-22): a fixed warning, never its amount or its link.
+  if (outcome.setAside === "suspected_scam") return { text: t("whatsapp.ack.suspectedScam"), asks: false };
   // The model couldn't be reached: the truth, and a promise the retry keeps (`homesend/model-unavailable.ts`).
   if (outcome.failureReason === "model_unavailable") return { text: t("whatsapp.ack.modelUnavailable"), asks: false };
   if (outcome.failureReason === "output_rejected") return { text: t("whatsapp.ack.readAgain"), asks: false };

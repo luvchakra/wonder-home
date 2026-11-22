@@ -631,6 +631,7 @@ export const homesendZh: AreaCatalog<typeof homesendEn> = {
   "homesend.archived.reason.kept_as_note": "已保存为家庭笔记——可以问 HomeTalk",
   "homesend.archived.reason.not_resent": "无法读取，且没有重新发送",
   "homesend.archived.reason.health_not_claimed": "没有人说是自己的健康文件——恢复后即可归档",
+  "homesend.archived.reason.suspected_scam": "看起来像诈骗（索要 PIN 或 OTP，或要求通过链接付款）——未记录任何内容",
   "homesend.setAside.title": "已放到一边",
   "homesend.setAside.lede": "发来的每样东西都会有个去处：一条记录、一条笔记，或带着原因放在这里。恢复可以放回任何一项。",
   "homesend.setAside.all": "查看所有放到一边的（{count}）",

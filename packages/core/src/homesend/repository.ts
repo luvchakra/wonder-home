@@ -671,6 +671,24 @@ export async function findAddedTwin(
 }
 
 /** A classified item set aside at once as "already on record" (restorable), with an audit row. True when it moved. */
+/**
+ * A suspected scam, set aside the moment it is read (owner, 2026-11-22). Before the
+ * `suspected_scam` reason is live the update is refused and the item stays classified
+ * as "unknown", which nothing ever adds; the next tidy sets it aside.
+ */
+export async function setAsideAsSuspectedScam(supabase: SupabaseClient, householdId: string, itemId: string, now: Date = new Date()): Promise<boolean> {
+  const { data, error } = await supabase
+    .from("home_send_items")
+    .update({ status: "archived", archived_from: "classified", archived_at: now.toISOString(), archive_reason: "suspected_scam", retry_requested_at: null })
+    .eq("household_id", householdId)
+    .eq("id", itemId)
+    .eq("status", "classified")
+    .select("id");
+  if (error || (data ?? []).length === 0) return false;
+  await auditChange({ householdId, eventType: "homesend.auto_archived", targetTable: "home_send_items", targetId: itemId, metadata: { reason: "suspected_scam", by: "rule", from: "classified" } }).catch(() => undefined);
+  return true;
+}
+
 export async function setAsideAsAlreadyRecorded(supabase: SupabaseClient, householdId: string, itemId: string, twinId: string, now: Date = new Date()): Promise<boolean> {
   const { data, error } = await supabase
     .from("home_send_items")
