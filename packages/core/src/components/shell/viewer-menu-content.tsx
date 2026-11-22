@@ -3,7 +3,7 @@
 import { Download, Info, LifeBuoy, LogOut, ShieldCheck, UserRound } from "lucide-react";
 import Link from "next/link";
 import { DropdownMenu } from "radix-ui";
-import { useRef, useState } from "react";
+import { useRef, useState, useTransition } from "react";
 
 import { signOut } from "../../identity/session-actions";
 import { cn } from "../../lib/cn";
@@ -56,6 +56,7 @@ export default function ViewerMenuContent({
 }) {
   const install = useInstallPrompt();
   const [guide, setGuide] = useState(false);
+  const [signingOut, startSignOut] = useTransition();
   // Back to the avatar on close, also when the menu first opened by itself
   // (a tap before this code arrived, `defaultOpen`) and Radix never saw it.
   const trigger = useRef<HTMLButtonElement>(null);
@@ -144,16 +145,25 @@ export default function ViewerMenuContent({
 
           <DropdownMenu.Separator className="my-1 h-px bg-[var(--wh-border)]" />
 
-          {/* A real sign-out, not a link: this is a POST, so nothing that
-              merely lands on this page can trigger it (rule from the
-              session-cookie tests). */}
-          <DropdownMenu.Item asChild>
-            <form action={signOut}>
-              <button type="submit" className={cn(ITEM_CLASS, "text-[var(--wh-risk)]")}>
-                <LogOut aria-hidden className="size-4" />
-                {viewer.labels?.logout ?? "Log out"}
-              </button>
-            </form>
+          {/* A real sign-out, not a link: the server action is a POST, so nothing
+              that merely lands on this page can trigger it (rule from the
+              session-cookie tests). It runs from onSelect, never as a form
+              inside the item: Radix closes the menu on select and unmounts the
+              form before the browser submits it, so a detached form never posts
+              (the 2026-11-22 "Log out does nothing" defect). The menu stays open
+              until the redirect lands. */}
+          <DropdownMenu.Item
+            className={cn(ITEM_CLASS, "text-[var(--wh-risk)]")}
+            disabled={signingOut}
+            onSelect={(event) => {
+              event.preventDefault();
+              startSignOut(async () => {
+                await signOut();
+              });
+            }}
+          >
+            <LogOut aria-hidden className="size-4" />
+            {viewer.labels?.logout ?? "Log out"}
           </DropdownMenu.Item>
         </DropdownMenu.Content>
       </DropdownMenu.Portal>
