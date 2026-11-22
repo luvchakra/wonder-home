@@ -37,7 +37,6 @@ create table if not exists public.homesend_decision_memories (
   decision jsonb not null default '[]'::jsonb,
   outcome text not null default 'pending' check (outcome in ('pending', 'kept', 'confirmed', 'corrected', 'undone', 'answered')),
   corrections jsonb not null default '[]'::jsonb,
-  embedding extensions.vector(768),
   embedding_model text,
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now(),
@@ -70,3 +69,14 @@ create policy homesend_decision_memories_update_member on public.homesend_decisi
   with check (household_id in (select wh.member_households()));
 
 grant select, insert, update on public.homesend_decision_memories to authenticated;
+
+-- Meaning, only where the database offers pgvector (the hosted project does; a plain
+-- test database does not). Without it, similar decisions are found by their words.
+do $vector$
+begin
+  if exists (select 1 from pg_available_extensions where name = 'vector') then
+    create extension if not exists vector with schema extensions;
+    execute 'alter table public.homesend_decision_memories add column if not exists embedding extensions.vector(768)';
+  end if;
+end
+$vector$;

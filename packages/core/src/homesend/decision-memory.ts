@@ -137,12 +137,15 @@ const COLUMNS = "id, intake_id, sender_member_id, sender_key, title, what_is, ne
 
 /** The household's recent decisions, newest first, bounded. */
 export async function recentDecisions(client: SupabaseClient, householdId: string): Promise<DecisionMemory[]> {
-  const { data, error } = await client.from("homesend_decision_memories").select(COLUMNS).eq("household_id", householdId).order("created_at", { ascending: false }).limit(READ_LIMIT);
+  const read = (columns: string) => client.from("homesend_decision_memories").select(columns).eq("household_id", householdId).order("created_at", { ascending: false }).limit(READ_LIMIT);
+  let { data, error } = await read(COLUMNS);
+  // A database without pgvector has no embedding column: words only.
+  if (error && (error.code === "42703" || error.code === "PGRST204")) ({ data, error } = await read(COLUMNS.replace(", embedding", "")));
   if (error) {
     if (missingTable(error)) return [];
     throw new Error(`recentDecisions failed: ${error.code ?? "unknown"}`);
   }
-  return ((data ?? []) as Record<string, unknown>[]).map(asMemory);
+  return ((data ?? []) as unknown as Record<string, unknown>[]).map(asMemory);
 }
 
 async function embed(householdId: string, text: string, purpose: "document" | "query", embedder?: Embedder | null): Promise<{ vector: number[]; model: string } | null> {
@@ -183,8 +186,7 @@ export async function rememberDecision(
   try {
     const text = memoryText(input.title, input.decision.whatIs);
     const embedded = await embed(householdId, text, "document", embedder);
-    const { error } = await client.from("homesend_decision_memories").upsert(
-      {
+    const row = {
         household_id: householdId,
         intake_id: input.intakeId,
         sender_member_id: input.senderMemberId,
@@ -197,9 +199,14 @@ export async function rememberDecision(
         decision: compactDecision(input.decision),
         ...(embedded ? { embedding: toVectorLiteral(embedded.vector), embedding_model: embedded.model } : {}),
         updated_at: new Date().toISOString(),
-      },
-      { onConflict: "household_id,intake_id" },
-    );
+    };
+    const write = (values: Record<string, unknown>) => client.from("homesend_decision_memories").upsert(values, { onConflict: "household_id,intake_id" });
+    let { error } = await write(row);
+    // No embedding column without pgvector: kept by its words.
+    if (error && embedded && (error.code === "42703" || error.code === "PGRST204")) {
+      const { embedding: _embedding, embedding_model: _model, ...plain } = row as Record<string, unknown>;
+      ({ error } = await write(plain));
+    }
     if (error && !missingTable(error)) console.warn(`rememberDecision failed: ${error.code ?? "unknown"}`);
   } catch {
     // A memory is a help, never a reason an item fails.
