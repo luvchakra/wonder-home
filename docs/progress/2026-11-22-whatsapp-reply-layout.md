@@ -17,3 +17,6 @@ The owner: "WhatsApp message formatting can be better, make it same as HomeTalk 
 
 ## Open
 - A live two-run comparison of "so what's cooking" needs a provider key; run `npm run eval -- --utterance "so what's cooking"` twice where one is configured.
+
+## Decision recorded
+- CodeQL `js/insufficient-password-hash` at `packages/core/src/ai/key-alerts.ts:45` (`keyFingerprint`) is a false positive (owner, 2026-11-22, choice "a"): it fingerprints a high-entropy provider API key with SHA-256 to match key alerts, not a password, and stays server-only. The owner dismisses it in GitHub; don't change the hashing if it is flagged again.
