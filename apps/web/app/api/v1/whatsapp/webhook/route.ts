@@ -6,7 +6,7 @@ import { reloadedSettingsEnv, settingsStoreState, settledSettingsEnv } from "@wo
 import { ensurePlatformSettings } from "@wonderhome/core/platform/settings/server";
 import { handleWhatsAppWebhook } from "@wonderhome/core/notifications/whatsapp-webhook";
 
-import { whatsappAsk, whatsappAutoAdd } from "@/app/_lib/whatsapp-hometalk";
+import { whatsappAsk, whatsappAutoAdd, whatsappDecider } from "@/app/_lib/whatsapp-hometalk";
 
 /**
  * WhatsApp's webhook (story 17-006; inbound HomeSend intake, 14-015/14-016). Everything it does is
@@ -24,6 +24,7 @@ async function handle(request: Request): Promise<Response> {
   // request where the service role is unset, and the unconfigured route answered 500 instead of its 401.
   const ask = (input: Parameters<ReturnType<typeof whatsappAsk>>[0]) => whatsappAsk(createAdminClient())(input);
   const addOnItsOwn = (input: Parameters<ReturnType<typeof whatsappAutoAdd>>[0]) => whatsappAutoAdd(createAdminClient())(input);
+  const decider = (householdId: string) => whatsappDecider(createAdminClient())(householdId);
   // A cold server waits (bounded) for the saved settings: the app secret and verify token live in Platform admin.
   // The route registers the store's loader itself if this server has none (2026-11-22 outage: the route never saw
   // what Platform admin saved), and before refusing for a missing setting reads the store again, so a value saved a
@@ -36,7 +37,7 @@ async function handle(request: Request): Promise<Response> {
     config = whatsappConfigFromEnv(env);
   }
   const notConfigured = { missing: whatsappMissingSettings(env), store: settingsStoreState() };
-  return handleWhatsAppWebhook(request, { config, admin: createAdminClient, defer: (work) => after(work), ask, addOnItsOwn, notConfigured });
+  return handleWhatsAppWebhook(request, { config, admin: createAdminClient, defer: (work) => after(work), ask, addOnItsOwn, decider, notConfigured });
 }
 
 export const GET = handle;

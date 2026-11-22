@@ -88,6 +88,8 @@ export async function handleWhatsAppWebhook(
     ask?: WhatsAppIntakeDeps["ask"];
     /** Adding an item on its own where the household allows it (`WhatsAppIntakeDeps.addOnItsOwn`). */
     addOnItsOwn?: WhatsAppIntakeDeps["addOnItsOwn"];
+    /** HomeBrain's model for what a message is (`WhatsAppIntakeDeps.decider`). */
+    decider?: WhatsAppIntakeDeps["decider"];
     /** Which settings were missing, for the `not_configured` event and log line (names only). */
     notConfigured?: NotConfiguredWhy;
   },
@@ -186,7 +188,7 @@ export async function handleWhatsAppWebhook(
 
   // Intake: everything that isn't a STOP. A failure to record is a 500, so
   // WhatsApp delivers again; recording is idempotent by message id.
-  const intakeDeps = { config: config.adapter, fetch: deps.fetch, ingest: deps.ingest, ask: deps.ask, addOnItsOwn: deps.addOnItsOwn };
+  const intakeDeps = { config: config.adapter, fetch: deps.fetch, ingest: deps.ingest, ask: deps.ask, addOnItsOwn: deps.addOnItsOwn, decider: deps.decider };
   const inbound = readInboundMessages(payload).filter((message) => !(message.type === "text" && isOptOut(message.text ?? "")));
   let queued = 0;
   if (inbound.length > 0) {

@@ -171,7 +171,7 @@ export const SCHEDULE_MAX_DAYS = 14;
  * notices as well, which are not on the calendar.
  */
 const ASKS_WHAT_IS_ON =
-  /\b(?:what(?:'s|\s+is|\s+are|\s+all)?\s+(?:happening|on|planned|scheduled|going\s+on|lined\s+up|up)|what(?:'s|\s+is|\s+are)\s+(?:we|they|\w+)\s+(?:doing|up\s+to)|(?:anything|something)\s+(?:on|planned|happening|scheduled)|any\s+(?:events?|plans?)|(?:my|our|the|family'?s?)\s+(?:schedule|agenda|calendar|day|plans?)|events?|schedule|agenda|calendar|plans?\s+for|coming\s+up|upcoming|up\s+next|lined\s+up)\b/i;
+  /\b(?:what(?:'s|\s+is|\s+are|\s+all)?\s+(?:happening|on|planned|scheduled|going\s+on|lined\s+up|up)|what(?:'s|\s+is|\s+are)\s+(?:we|they|\w+)\s+(?:doing|up\s+to)|(?:anything|something)\s+(?:on|planned|happening|scheduled)|any\s+(?:events?|plans?)|(?:my|our|the|family'?s?)\s+(?:schedule|agenda|calendar|day|plans?)|events?|schedule|agenda|calendar|plans?\s+for|coming\s+up|upcoming|up\s+next|lined\s+up|(?:ka|ki|ke)\s+(?:plan|schedule|program(?:me)?))\b/i;
 
 /** Whether a question asks what is on a day or a week, read by rules. */
 export function asksWhatIsOn(utterance: string): boolean {

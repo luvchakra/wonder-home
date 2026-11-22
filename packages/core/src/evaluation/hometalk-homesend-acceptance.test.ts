@@ -16,7 +16,7 @@ import { handedBackText, secondAsk } from "../hometalk/intake-questions";
 import { en } from "../i18n/messages/en";
 import { loadCatalog, translatorFor } from "../i18n/translate";
 import { LANGUAGE_CODES } from "../i18n/locales";
-import { groceryListNames, isForHomeTalk, namesTheSameThing } from "../whatsapp/hometalk";
+import { groceryListNames, isForHomeTalk, namesTheSameThing } from "../homebrain/intake/channel-route";
 import { acknowledgementFor, addedReply } from "../whatsapp/intake";
 
 /**

@@ -9,7 +9,7 @@ import { acceptReading, groundIntakeDate, isClassifyFailure, type IntakeExtracti
 import { reviewIntakeKind } from "../ai/intake-kind-check";
 import { DEFAULT_DATA_USE, minimiseContext, pseudonymiseText, reidentifyIntent, type Person } from "../ai/privacy";
 import type { AnswerComposer } from "../ai/model-client";
-import { routeChannelMessage } from "../homebrain/intake/channel-route";
+import { decideChannelMessage, type ChannelDecider } from "../homebrain/intake/channel-decide";
 import { asksTheCalendar, asksWhatIsOn, calendarSpanReply, lookAheadReply, lookAheadSpan, memberNamedIn, readLookAhead, scheduleReply, scheduleSpanOf } from "../calendar/answer";
 import type { PendingClarification } from "../conversation/clarify";
 import { applyCorrection, describeCorrection, readCorrection, type CorrectableAction } from "../conversation/corrections";
@@ -78,6 +78,8 @@ export type Models = {
   tidy?: TidyJudge;
   /** Kids Trivia's topic check. Absent: the rules alone. */
   triviaCheck?: TriviaTopicJudge;
+  /** HomeBrain's talk-or-keep decision for a channel message (WhatsApp). Absent: the rules alone. */
+  channel?: ChannelDecider;
 };
 
 const EMPTY: Observation = {
@@ -234,7 +236,14 @@ async function talkTurn(c: HomeTalkCase, utterance: string, carried: Carried, mo
   const who = memberOf(household, c.actor);
   const first = carried === FRESH;
   // Through WhatsApp, the door decides talk or keep first, by rules (2026-11-22: "hello" became a failed HomeSend item).
-  if (first && c.door && routeChannelMessage({ text: utterance, forwarded: c.door.forwarded, media: c.door.media }) === "homesend") return { observed: { ...EMPTY, interpretation: "homesend" }, next: carried };
+  // The model decides when there is one (the owner, 2026-11-22); the rules otherwise. "both" is kept and answered:
+  // observed as "homesend" here, the kept half being what a door case is about.
+  if (c.door) {
+    // Every message comes through the door; the file or forward only with the first.
+    const attached = first ? { forwarded: c.door.forwarded, media: c.door.media } : {};
+    const decided = await decideChannelMessage({ text: utterance, ...attached, mediaType: attached.media ? "document" : null }, c.simulate ? null : (models.channel ?? null));
+    if (decided.route !== "hometalk") return { observed: { ...EMPTY, interpretation: decided.route === "both" ? "homesend+hometalk" : "homesend" }, next: carried };
+  }
   const references = first ? c.references : undefined;
   // A correction ("actually, make that Friday", "not bread, eggs") is read against the request in
   // hand and becomes an ordinary intent, exactly as the conversation route does it.

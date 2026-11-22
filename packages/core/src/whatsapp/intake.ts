@@ -14,8 +14,9 @@ import { queueModelRead } from "../homesend/model-unavailable";
 import { syllabusReply, timetableReply } from "../homesend/timetable-words";
 import { siteOrigin } from "../notifications/email";
 import { runtimeEnv } from "../platform/settings/runtime-env";
+import { decideChannelMessage, type ChannelDecider, type ChannelDecisionRoute } from "../homebrain/intake/channel-decide";
 import { gateTranscript, TRANSCRIPT_CONFIDENCE_FLOOR, type TranscriptGate } from "../homebrain/intake/audio";
-import { shortLine } from "../homebrain/intake/channel-route";
+import { groceryListNames, isBareDetail, isForHomeTalk, isQuestionForWonderHome, isShortNote, namesTheSameThing, NOTE_MAX_WORDS, shortLine } from "../homebrain/intake/channel-route";
 import { looksLikeTimetable, noteSummary } from "../homebrain/intake/school-note";
 import { amountWords, sureClause, type AddedOnItsOwn, type WaitingInHomeSend } from "../homebrain/intake/auto-add";
 import { hearWhatsAppVoiceNote, ingestWhatsAppMedia, ingestWhatsAppText, IngestRejected, type IngestDeps, type IngestOutcome, type TranscribeResult } from "../homesend/ingest";
@@ -28,7 +29,6 @@ import { sendWhatsAppChoices, sendWhatsAppText, showWhatsAppTyping, type WhatsAp
 import { log } from "../observability/logger";
 import { hitRateLimit, hitRateLimitFair } from "../security/rate-limit";
 import { recordWhatsAppEvents, type WhatsAppEvent } from "./events";
-import { groceryListNames, isForHomeTalk, isQuestionForWonderHome, namesTheSameThing } from "./hometalk";
 import type { WhatsAppInboundMessage, WhatsAppMessageType } from "./inbound";
 import { completeLink, findActiveIdentity, LINK_REPLIES, readConnectCode, UNKNOWN_SENDER_REPLY } from "./linking";
 import { downloadWhatsAppMedia, type MediaDownload } from "./media";
@@ -82,6 +82,12 @@ export type WhatsAppIntakeDeps = {
    * advance (the owner, 2026-10-26).
    */
   addOnItsOwn?: (input: { householdId: string; memberId: string; itemId: string }) => Promise<AddedOnItsOwn | WaitingInHomeSend | null>;
+  /**
+   * HomeBrain's model for what a message is (`homebrain/intake/channel-decider.ts`): it decides whether a
+   * message is answered in HomeTalk, kept in HomeSend, or both (the owner, 2026-11-22). Absent or null, the
+   * rules decide (`homebrain/intake/channel-route.ts`).
+   */
+  decider?: (householdId: string) => Promise<ChannelDecider | null>;
   /** When "typing…" is shown once more while the work is still running; replaceable in tests. */
   typingRefreshMs?: number;
 };
@@ -353,12 +359,20 @@ async function readMessage(admin: SupabaseClient, messageId: string, deps: Whats
     }
   }
 
-  // A question or an everyday request is asked of WonderHome, not handed to
-  // it to keep: HomeTalk answers it (through `deps.ask`, the same gateway as
-  // Alexa), and it is never a HomeSend item. Without HomeTalk wired in, the
+  // What the message is, and where it goes, is HomeBrain's to decide (the owner, 2026-11-22: "any kind of
+  // message should be analysed by ai and proper response should be given"): the model first, the rules when no
+  // model answers. Said to WonderHome — a hello, a question, a request — HomeTalk answers it (through
+  // `deps.ask`, the same gateway as Alexa), and it is never a HomeSend item. Without HomeTalk wired in, the
   // reply says where to ask.
   const text = row.message_type === "text" ? (row.text_content ?? "") : "";
-  if (!together && text && (deps.ask ? isForHomeTalk(text) : isQuestionForWonderHome(text))) {
+  const caption = row.message_type !== "text" && row.message_type !== "audio" ? (row.text_content ?? "").trim() : "";
+  const decider = deps.ask && deps.decider ? await deps.decider(row.household_id).catch(() => null) : null;
+  const decide = (words: string, media: boolean): Promise<{ route: ChannelDecisionRoute }> =>
+    decideChannelMessage({ text: words, forwarded: Boolean(row.forwarded), media, mediaType: media ? row.message_type : null }, decider);
+  const route = !together && text ? (deps.ask ? (await decide(text, false)).route : isQuestionForWonderHome(text) ? "hometalk" : "homesend") : null;
+  // A file with words of its own ("remind me to pay this", "what is this?"): kept, and the words answered too.
+  const asked = route === "both" ? text.trim() : !together && caption && deps.ask && (await decide(caption, true)).route === "both" ? caption : "";
+  if (route === "hometalk") {
     const answer = deps.ask
       ? await deps.ask({ householdId: row.household_id, memberId: row.member_id, text, requestId: row.provider_message_id }).catch(() => null)
       : null;
@@ -417,7 +431,7 @@ async function readMessage(admin: SupabaseClient, messageId: string, deps: Whats
       const sure = gate ? heardForHomeTalk(gate) : null;
       if (sure) {
         const spoken = sure.text;
-        const forHomeTalk = deps.ask ? isForHomeTalk(spoken) : isQuestionForWonderHome(spoken);
+        const forHomeTalk = deps.ask ? (await decide(spoken, false)).route === "hometalk" : isQuestionForWonderHome(spoken);
         const awaited =
           !forHomeTalk && deps.ask && spoken.length <= 160 && (await answersHomeTalk(admin, row)) ? await homeTalkAwaitsAnswer(admin, row, now).catch(() => false) : false;
         if (forHomeTalk || awaited) {
@@ -601,6 +615,14 @@ async function readMessage(admin: SupabaseClient, messageId: string, deps: Whats
       // Held: one question is already out this hour; this one's turn comes after it.
       await say(`${addedReply(decided, undefined, t)}\n${t("whatsapp.check.later")}`);
     } else await (decided ? say(addedReply(decided, undefined, t)) : ack.asks ? sayHomeTalk(ack.text) : say(ack.text));
+  }
+  // Kept and answered: the words that came with the file go to HomeTalk too (HomeBrain said "both").
+  if (asked && deps.ask && !ack.asks) {
+    const answer = await deps.ask({ householdId: row.household_id, memberId: row.member_id, text: asked, requestId: `${row.provider_message_id}:caption` }).catch(() => null);
+    if (answer) {
+      events.push({ kind: "question_answered", householdId: row.household_id, latencyMs: elapsed() });
+      await sayHomeTalk(answer);
+    }
   }
   await recordWhatsAppEvents(admin, events);
   return "read";
@@ -1100,45 +1122,6 @@ function isTypedMessage(entry: Pick<MessageRow, "message_type" | "forwarded" | "
 
 function isNoteEntry(entry: Pick<MessageRow, "message_type" | "forwarded" | "text_content" | "reply_to_provider_message_id">, names: readonly string[]): boolean {
   return entry.message_type === "text" && !entry.forwarded && !entry.reply_to_provider_message_id && isShortNote(entry.text_content ?? "", names);
-}
-
-/** The longest a note on the message before it is ("it's for Asmi on Sunday"). */
-const NOTE_MAX_WORDS = 6;
-const NOTE_DAY_OR_TIME =
-  /\b(?:today|tonight|tomorrow|tmrw|yesterday|morning|afternoon|evening|night|noon|midnight|weekend|week|month|due|am|pm|(?:mon|tues?|wed(?:nes)?|thu(?:rs?)?|fri|sat(?:ur)?|sun)(?:day)?|jan(?:uary)?|feb(?:ruary)?|april|apr|june?|july?|aug(?:ust)?|sept?(?:ember)?|oct(?:ober)?|nov(?:ember)?|dec(?:ember)?)\b/i;
-const NOTE_AMOUNT = /\d|\b(?:litres?|liters?|kgs?|grams?|ml|dozen|packets?|packs?|pieces?|pcs|bottles?|boxes?)\b/i;
-
-/**
- * A short note on the message sent just before it: up to six words naming a
- * household member, a day or time, or an amount, with no request or question
- * of its own ("for Manan", "Asmi Sunday", "due Friday", "2 litres"). Pure.
- */
-export function isShortNote(text: string, names: readonly string[]): boolean {
-  const line = text.trim();
-  if (!line || /\n/.test(line) || line.includes("?") || isForHomeTalk(line)) return false;
-  const words = line.split(/\s+/);
-  if (words.length > NOTE_MAX_WORDS) return false;
-  const said = new Set(words.map((word) => word.toLowerCase().replace(/['’]s$/, "").replace(/[^\p{L}]/gu, "")));
-  const names_ = names.map((name) => name.toLowerCase()).filter((name) => name.length >= 2);
-  return names_.some((name) => said.has(name)) || NOTE_DAY_OR_TIME.test(line) || NOTE_AMOUNT.test(line);
-}
-
-const NOTE_FILLER = /^(?:for|it|its|it's|is|this|that|that's|on|at|by|the|a|an|and|&|next|of|to|in)$/i;
-
-/**
- * Whether a short note says nothing but who, when or how much ("for Manan",
- * "Asmi Sunday", "due Friday"): alone, it is about something not sent, never
- * content of its own ("2 litres mustard oil" is content). Pure.
- */
-export function isBareDetail(text: string, names: readonly string[]): boolean {
-  if (!isShortNote(text, names)) return false;
-  const known = new Set(names.map((name) => name.toLowerCase()));
-  return text
-    .trim()
-    .split(/\s+/)
-    .map((word) => word.replace(/['’]s$/, "").replace(/[.,!]+$/, ""))
-    .filter(Boolean)
-    .every((word) => NOTE_FILLER.test(word) || known.has(word.toLowerCase()) || NOTE_DAY_OR_TIME.test(word) || NOTE_AMOUNT.test(word));
 }
 
 /**

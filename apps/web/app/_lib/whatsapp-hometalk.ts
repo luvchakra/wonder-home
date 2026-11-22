@@ -6,6 +6,8 @@ import { log } from "@wonderhome/core/observability/logger";
 import { WHATSAPP_SCOPES } from "@wonderhome/core/voicelink/scopes";
 import { withMemberSession } from "@wonderhome/core/voicelink/member-session";
 import { whatsappReplyText } from "@wonderhome/core/whatsapp/hometalk";
+import type { ChannelDecider } from "@wonderhome/core/homebrain/intake/channel-decide";
+import { channelDeciderForHousehold } from "@wonderhome/core/homebrain/intake/channel-decider";
 import type { WhatsAppIntakeDeps } from "@wonderhome/core/whatsapp/intake";
 
 import { requireMembership } from "@wonderhome/core/identity/households";
@@ -68,3 +70,8 @@ export function whatsappAutoAdd(admin: SupabaseClient): NonNullable<WhatsAppInta
   };
 }
 
+
+/** HomeBrain's model for what a WhatsApp message is, per household (null: the rules decide). */
+export function whatsappDecider(admin: SupabaseClient): (householdId: string) => Promise<ChannelDecider | null> {
+  return (householdId) => channelDeciderForHousehold(admin, householdId).catch(() => null);
+}

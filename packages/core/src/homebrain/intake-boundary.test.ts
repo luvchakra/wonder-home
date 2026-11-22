@@ -59,6 +59,18 @@ describe("HomeBrain holds the intelligence, HomeSend moves the data (owner, 2026
     expect(offenders).toEqual([]);
   });
 
+  // The owner, 2026-11-22: "all intelligence code should be in HomeBrain". What a channel message is — talk
+  // or keep, a greeting, a question, a note — is decided in homebrain/; WhatsApp only moves words in and out.
+  it("no channel file decides what a message is: no routing rules or patterns of its own", () => {
+    const ROUTING = /\bfunction\s+(?:is(?:For|Question|SmallTalk|Greeting|Request|ShortNote|BareDetail)\w*|groceryListNames|route\w*Message|decide\w*)\b|\bconst\s+(?:QUESTION_OPENING|REQUEST_OPENING|SMALL_TALK|REPLY_TO_HOMETALK|NOTE_(?:MAX_WORDS|DAY_OR_TIME|AMOUNT|FILLER))\b/;
+    const offenders = [...sources(join(SRC, "whatsapp")), ...sources(join(SRC, "homesend"))].filter((file) => ROUTING.test(readFileSync(file, "utf8"))).map((file) => relative(SRC, file));
+    expect(offenders).toEqual([]);
+  });
+
+  it("WhatsApp asks HomeBrain's one entry point what a message is", () => {
+    expect(readFileSync(join(SRC, "whatsapp", "intake.ts"), "utf8")).toMatch(/decideChannelMessage\(/);
+  });
+
   it("the rule bites: a model client import in HomeSend is caught", () => {
     expect(MODEL_CODE.some((rule) => rule.test("../ai/provider-clients"))).toBe(true);
     expect(MODEL_CODE.some((rule) => rule.test("../homebrain/sleep/embeddings"))).toBe(true);

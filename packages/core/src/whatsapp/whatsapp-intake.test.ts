@@ -6,7 +6,8 @@ import { fakeSupabase } from "../homesend/testing";
 import { contentHash, normalizeText } from "../homesend/normalize";
 import { handleWhatsAppWebhook } from "../notifications/whatsapp-webhook";
 import { readInboundMessages } from "./inbound";
-import { groceryListNames, isForHomeTalk, isQuestionForWonderHome, namesTheSameThing, whatsappReplyText } from "./hometalk";
+import { groceryListNames, isBareDetail, isForHomeTalk, isQuestionForWonderHome, isShortNote, namesTheSameThing } from "../homebrain/intake/channel-route";
+import { whatsappReplyText } from "./hometalk";
 import { quantityQuestion } from "../conversation/grocery-actions";
 import { warmReply } from "../conversation/warmth";
 import { intakeQuestion, memberNamedInReply, questionIn } from "../hometalk/intake-questions";
@@ -20,7 +21,7 @@ import { groundIntent } from "../conversation/grounding";
 import { readItemAmount } from "../conversation/quantity";
 import { readBareNumber } from "../commerce/bare-amount";
 import { NO_REFERENCES } from "../conversation/references";
-import { acknowledgementFor, addedReply, isBareDetail, isShortNote, leadOf, processWhatsAppMessage, QUESTION_REPLY, receiveWhatsAppMessages, WHATSAPP_PROCESS_KIND, withAdded, type WhatsAppIntakeDeps } from "./intake";
+import { acknowledgementFor, addedReply, leadOf, processWhatsAppMessage, QUESTION_REPLY, receiveWhatsAppMessages, WHATSAPP_PROCESS_KIND, withAdded, type WhatsAppIntakeDeps } from "./intake";
 import { CONNECT_CODE_LENGTH, LINK_REPLIES, connectMessage, generateConnectCode, hashConnectCode, readConnectCode, whatsappBusinessNumber, whatsappChatLink } from "./linking";
 
 /** The WhatsApp HomeSend spec: WhatsApp as an intake channel, never an authorization channel. */
@@ -354,6 +355,29 @@ describe("processing into HomeSend", () => {
       expect(h.tables.whatsapp_events!.map((event) => event.kind)).toContain("question_answered");
     },
   );
+
+  it("lets HomeBrain's model decide: small talk the rules would keep is answered, never kept", async () => {
+    const { h, id } = await received("text");
+    h.tables.whatsapp_messages![0]!.text_content = "lovely weather today";
+    const out = replies();
+    const decider = async () => ({ provider: "anthropic" as const, read: async () => ({ kind: "small_talk" as const, route: "hometalk" as const }) });
+    expect(await processWhatsAppMessage(h.client, id, { config: CONFIG, fetch: out.fetchImpl, ingest: { classify }, ask: async () => "It is! 🌤️", decider })).toBe("read");
+    expect(h.tables.home_send_items).toEqual([]);
+    expect(out.sent[0]!.text).toBe("It is! 🌤️");
+  });
+
+  it("keeps a forward and answers its question too, with no model", async () => {
+    const { h, id } = await received("text");
+    h.tables.whatsapp_messages![0]!.text_content = "anything due this week?";
+    h.tables.whatsapp_messages![0]!.forwarded = true;
+    const out = replies();
+    const asked: string[] = [];
+    const ask = async (input: { text: string }) => ((asked.push(input.text), "Here is what is on record this week."));
+    expect(await processWhatsAppMessage(h.client, id, { config: CONFIG, fetch: out.fetchImpl, ingest: { classify }, ask, decider: async () => null })).toBe("read");
+    expect(h.tables.home_send_items!.length).toBe(1);
+    expect(asked).toEqual(["anything due this week?"]);
+    expect(out.sent.at(-1)!.text).toBe("Here is what is on record this week.");
+  });
 
   it("never leaves a short line the reading found nothing in under Failed safely: HomeTalk answers it", async () => {
     const { h, id } = await received("text");

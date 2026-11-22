@@ -29,7 +29,7 @@ import { log } from "@wonderhome/core/observability/logger";
 
 import { homesendAfterModelRead } from "@/app/_lib/homesend-after-model-read";
 import { trustedEmailAutoAdd } from "@/app/_lib/homesend-trusted-email";
-import { whatsappAsk, whatsappAutoAdd } from "@/app/_lib/whatsapp-hometalk";
+import { whatsappAsk, whatsappAutoAdd, whatsappDecider } from "@/app/_lib/whatsapp-hometalk";
 
 /**
  * The delivery clock (story 23-015): every five minutes the database calls
@@ -160,7 +160,7 @@ async function dispatch(request: Request): Promise<Response> {
       await drainJobs(admin, {
         limit: 10,
         workerId: "dispatch",
-        handlers: { ...notificationJobHandlers(), ...(whatsapp ? { [WHATSAPP_PROCESS_KIND]: whatsappJobHandler({ config: whatsapp.adapter, ask: whatsappAsk(createAdminClient()), addOnItsOwn: whatsappAutoAdd(createAdminClient()) }) } : {}) },
+        handlers: { ...notificationJobHandlers(), ...(whatsapp ? { [WHATSAPP_PROCESS_KIND]: whatsappJobHandler({ config: whatsapp.adapter, ask: whatsappAsk(createAdminClient()), addOnItsOwn: whatsappAutoAdd(createAdminClient()), decider: whatsappDecider(createAdminClient()) }) } : {}) },
         // An email read on the queue (held until "Trust this sender?") is added on its own when its sender is trusted.
         addTrusted: trustedEmailAutoAdd(admin),
         // Something kept until a model could read it: added and told once it is read (2026-11-21).
