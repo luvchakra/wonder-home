@@ -78,7 +78,7 @@ export async function TodayCard({ session, now, date }: { session: Session; now:
   const rainy = Boolean(today?.rainAt);
 
   return (
-    <div data-today-card="" className="relative z-10 mx-4 mt-4 rounded-[var(--wh-radius)] bg-[var(--wh-surface)]/92 p-3 shadow-[var(--wh-shadow-card)] backdrop-blur-sm sm:absolute sm:end-4 sm:top-4 sm:m-0 sm:w-[21rem]">
+    <div data-today-card="" className="relative z-10 mx-4 mt-4 rounded-[var(--wh-radius)] bg-[var(--wh-surface)]/92 p-3 shadow-[var(--wh-shadow-card)] backdrop-blur-sm sm:col-start-2 sm:row-start-1 sm:m-4 sm:ms-0 sm:w-[21rem] sm:max-w-[calc(100%-1rem)] sm:self-start sm:justify-self-end">
       <div className="flex items-start gap-2.5">
         {rainy ? (
           <CloudRain aria-hidden className="mt-0.5 size-6 shrink-0 text-[var(--wh-tone-home)]" />
@@ -130,7 +130,7 @@ export async function TodayCard({ session, now, date }: { session: Session; now:
 /** What shows while the weather and films are on their way: the day and the household, as before. */
 export function TodayCardFallback({ date, household }: { date: string; household: string }) {
   return (
-    <div data-today-card="" className="relative z-10 mx-4 mt-4 flex items-start gap-2.5 rounded-[var(--wh-radius)] bg-[var(--wh-surface)]/92 p-3 shadow-[var(--wh-shadow-card)] sm:absolute sm:end-4 sm:top-4 sm:m-0 sm:w-[21rem]">
+    <div data-today-card="" className="relative z-10 mx-4 mt-4 flex items-start gap-2.5 rounded-[var(--wh-radius)] bg-[var(--wh-surface)]/92 p-3 shadow-[var(--wh-shadow-card)] sm:col-start-2 sm:row-start-1 sm:m-4 sm:ms-0 sm:w-[21rem] sm:max-w-[calc(100%-1rem)] sm:self-start sm:justify-self-end">
       <Sun aria-hidden className="mt-0.5 size-6 shrink-0 text-[var(--wh-tone-money)]" />
       <DateLine date={date} household={household} />
     </div>

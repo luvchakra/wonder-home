@@ -15,7 +15,12 @@
  * — a narrower container crops from the right (into the busier half of the
  * scene) rather than symmetrically, which would eat into the clear side.
  */
-export function CozyCornerIllustration({ className }: { className?: string }) {
+/**
+ * `cat={false}` leaves the scene's cat out, for a screen that lays the cat out
+ * itself (Home draws `HeroCat` in its own grid cell, so its thought bubble can
+ * sit beside it in the layout rather than be placed over the scene).
+ */
+export function CozyCornerIllustration({ className, cat = true }: { className?: string; cat?: boolean }) {
   return (
     <svg viewBox="0 0 900 300" preserveAspectRatio="xMinYMid slice" className={className} aria-hidden>
       <defs>
@@ -61,9 +66,11 @@ export function CozyCornerIllustration({ className }: { className?: string }) {
           under prefers-reduced-motion, leaving the cat simply sitting there.
           On a phone the wide scene is cropped to its left edge, so this cat
           would be a sliver; `HeroCat` draws the same cat whole there instead. */}
-      <g className="wh-cat-sneak max-sm:hidden">
-        <CozyCat />
-      </g>
+      {cat ? (
+        <g className="wh-cat-sneak max-sm:hidden">
+          <CozyCat />
+        </g>
+      ) : null}
     </svg>
   );
 }

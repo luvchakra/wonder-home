@@ -84,20 +84,22 @@ export async function HeroCatThought({ session, now }: { session: Session; now: 
 
 /**
  * The cat and its bubble, in the room the header has (the owner, 2026-10-21:
- * "show a think bubble over the cat in available area"). On a phone the
- * scene's cat is cropped away, so the cat is drawn whole in its own row under
- * the greeting with the bubble beside it, never over any words. On a wider
- * screen the scene draws the cat, and the bubble finds the cat's head and sits
- * just above it, clear of the date card (`follow`).
+ * "show a think bubble over the cat in available area"). The cat is drawn
+ * whole in its own grid cell, with the bubble beside it pointing at it, never
+ * over any words: on a phone a row under the greeting with the cat at the end;
+ * from `sm` the end column's bottom, under the date card, with the cat first
+ * and the bubble after it (the owner, 2026-11-22: "align it nicely"). The
+ * bubble wraps inside its own width, so a longer language only makes the row
+ * taller.
  */
 export function HeroCatFigure({ facts = [], thoughts = [], voices = [] }: { facts?: string[]; thoughts?: string[]; voices?: string[] }) {
   return (
-    <>
-      <div aria-hidden className="pointer-events-none relative z-10 -mt-2 flex items-end justify-end gap-1 px-4 pb-3 sm:hidden">
-        <CatThoughtBubble facts={facts} thoughts={thoughts} voices={voices} className="mb-6 max-w-[13rem] min-w-0 flex-1" trail="toward-end" />
-        <HeroCat className="h-auto w-[6.5rem] shrink-0" />
-      </div>
-      <CatThoughtBubble facts={facts} thoughts={thoughts} voices={voices} follow trail="start" className="pointer-events-none absolute z-0 hidden w-[13rem] sm:block" />
-    </>
+    <div
+      aria-hidden
+      className="pointer-events-none relative z-10 -mt-2 flex items-end justify-end gap-1 px-4 pb-3 sm:col-start-2 sm:row-start-2 sm:mt-0 sm:flex-row-reverse sm:gap-2 sm:self-end sm:pb-4"
+    >
+      <CatThoughtBubble facts={facts} thoughts={thoughts} voices={voices} className="mb-6 max-w-[13rem] min-w-0 flex-1 sm:mb-14" trail="beside" />
+      <HeroCat className="h-auto w-[6.5rem] shrink-0 sm:w-[7.5rem]" />
+    </div>
   );
 }
