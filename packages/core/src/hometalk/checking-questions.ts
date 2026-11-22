@@ -20,12 +20,12 @@ import {
   type CheckingState,
   type CheckMode,
   type CheckOutcome,
-} from "../homesend/checking";
-import type { CompletenessReading, DetailField } from "../homesend/completeness";
-import { detectInstructionInjection } from "../homesend/injection";
+} from "../homebrain/intake/checking";
+import type { CompletenessReading, DetailField } from "../homebrain/intake/completeness";
+import { detectInstructionInjection } from "../homebrain/intake/injection";
 import type { HomeSendKind } from "../homesend/items";
-import { shortDate } from "../homesend/reconcile";
-import type { ReadingCheck } from "../homesend/verify";
+import { shortDate } from "../homebrain/intake/reconcile";
+import type { ReadingCheck } from "../homebrain/intake/verify";
 import { en } from "../i18n/messages/en";
 import { translator, type Translate, type TranslationKey } from "../i18n/translate";
 import { updateSchoolItem } from "../school/repository";
@@ -39,7 +39,7 @@ import type { QuestionCadence } from "./question-cadence";
 /**
  * HomeTalk's questions about an entry HomeSend added as "Checking" (the
  * owner, 2026-11-03; story 14-061). HomeSend plans them from evidence
- * (`homesend/checking.ts`); HomeTalk, the one door (rule 13), asks them, one
+ * (`homebrain/intake/checking.ts`); HomeTalk, the one door (rule 13), asks them, one
  * at a time, in the app and on WhatsApp, and reads each answer through the
  * conversation engine's own clarify machinery (action `check_homesend_entry`).
  *

@@ -1,10 +1,10 @@
 import type { IntakeExtraction } from "../../ai/classify-intake";
 import { suspectedScam } from "../../homebrain/scam";
-import { detectInstructionInjection } from "../../homesend/injection";
-import { readPaymentProof } from "../../homesend/payment-proof";
-import { matchExam } from "../../homesend/exam-match";
-import { planSyllabus, studyText } from "../../homesend/syllabus-apply";
-import { planTimetable } from "../../homesend/timetable";
+import { detectInstructionInjection } from "../../homebrain/intake/injection";
+import { readPaymentProof } from "../../homebrain/intake/payment-proof";
+import { matchExam } from "../../homebrain/school/exam-match";
+import { planSyllabus, studyText } from "../../homebrain/school/syllabus";
+import { planTimetable } from "../../homebrain/school/timetable";
 import type { DocumentCase } from "./cases";
 
 /** An empty reading, so each case records only what its model said. */

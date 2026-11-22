@@ -1,4 +1,4 @@
-import { senderKey } from "../homesend/learned";
+import { senderKey } from "./learning/learned";
 import { kindOfDomain, type BarKind } from "./kind-bar";
 import { normalizeWords, ruleFor, vendorKey, type HouseholdRule } from "./rules";
 

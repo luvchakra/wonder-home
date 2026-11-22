@@ -11,7 +11,7 @@ import type { ModelProvider } from "./model-key";
 import { reviewIntakeKind } from "./intake-kind-check";
 import { isClassifyFailure, type ClassifyFailure, type ClassifyFailureReason } from "./classify-intake-failure";
 import { anthropicClient, geminiClient, openaiClient } from "./provider-clients";
-import { fenceUntrusted, UNTRUSTED_CONTENT_RULE } from "../homesend/injection";
+import { fenceUntrusted, UNTRUSTED_CONTENT_RULE } from "../homebrain/intake/injection";
 import { isoDateIn } from "../context/format";
 import { resolveDay, TEMPORAL_PHRASE } from "../conversation/temporal";
 
@@ -123,7 +123,7 @@ const PagesSchema = z.object({
  * A dated table with one column per class (2026-11-21: the owner's exam
  * timetable, Std. III–VII side by side). Read as written: the column
  * headings, then one row per dated line with each column's cell. WonderHome,
- * not the model, decides which column is a child's (`homesend/timetable.ts`),
+ * not the model, decides which column is a child's (`homebrain/school/timetable.ts`),
  * from the class on record; a row with no subject in any column (a weekend,
  * a holiday) adds nothing. Never filled in for a table that isn't there.
  */
@@ -157,7 +157,7 @@ export type IntakeSchedule = z.infer<typeof ScheduleSchema>;
  * the owner's "Mid Term Unit Test 2 – Grade 5: Syllabus"). Copied, never
  * summarised: each row's text exactly as written, in its own script. Which
  * exam and which paper it updates is decided by WonderHome
- * (`homesend/exam-match.ts`); `examRef` is only the model pointing at one of
+ * (`homebrain/school/exam-match.ts`); `examRef` is only the model pointing at one of
  * the household's open exams it was shown, and is checked before use.
  */
 const SyllabusSchema = z.object({
@@ -816,12 +816,12 @@ export type IntakeContext = {
    * and paper subjects, never a child's name, a note or anything health, so
    * a syllabus or a revised timetable can point at the exam it is about. The
    * names were read from what was sent, so they travel inside the fence;
-   * WonderHome checks any exam the model points at (`homesend/exam-match.ts`).
+   * WonderHome checks any exam the model points at (`homebrain/school/exam-match.ts`).
    */
   exams?: readonly { name: string; grade: string | null; from: string; to: string; subjects: readonly string[] }[];
   /**
    * The household's own most similar past HomeSend decisions and what people
-   * did with them (14-083, `homesend/decision-memory.ts` `examplesText`):
+   * did with them (14-083, `homebrain/learning/decision-memory.ts` `examplesText`):
    * worked examples, never another household's. No ids, names or amounts.
    */
   pastDecisions?: string;
@@ -1224,7 +1224,7 @@ function cutAt(root: unknown, path: readonly (string | number)[], maximum: numbe
  * becomes null (its dateText still gives the day), an empty column heading is
  * named by its place, a number in a cell becomes text. If the schedule still
  * doesn't fit, the reading is kept without it and the reply says the table
- * couldn't be read (`homesend/school-note.ts` `looksLikeTimetable`).
+ * couldn't be read (`homebrain/intake/school-note.ts` `looksLikeTimetable`).
  */
 export function repairSchedule(raw: unknown): unknown {
   if (!raw || typeof raw !== "object") return raw;

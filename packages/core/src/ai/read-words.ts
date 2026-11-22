@@ -2,7 +2,7 @@ import { SECOND_READ_MODEL } from "./model-client";
 import type { ModelProvider } from "./model-key";
 import { anthropicClient, geminiClient, openaiClient } from "./provider-clients";
 import type { IntakeSource } from "./classify-intake";
-import { UNTRUSTED_CONTENT_RULE } from "../homesend/injection";
+import { UNTRUSTED_CONTENT_RULE } from "../homebrain/intake/injection";
 
 /**
  * The words on a photo or PDF, written down before anything is read from

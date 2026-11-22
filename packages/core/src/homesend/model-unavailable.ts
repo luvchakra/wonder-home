@@ -1,7 +1,7 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 
 import { log } from "../observability/logger";
-import type { IntakeUnderstanding } from "./understanding";
+import type { IntakeUnderstanding } from "../homebrain/intake-api";
 
 /**
  * The assistant never quietly runs without its model (2026-11-21).

@@ -15,10 +15,9 @@ import type {
   HomeSendStatus,
 } from "./items";
 import type { IntakeChangeReceipt } from "./apply";
-import type { DocumentPlan } from "./plan";
+import type { DocumentPlan, IntakeUnderstanding } from "../homebrain/intake-api";
 import { ARCHIVE_REASONS, type ArchiveReason } from "./archive-reasons";
 import { mayRemoveHomeSendItem, type RemoveActor } from "./remove";
-import type { IntakeUnderstanding } from "./understanding";
 
 /**
  * Reading and writing HomeSend intake (Phase C).

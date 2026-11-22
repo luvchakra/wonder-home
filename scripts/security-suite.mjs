@@ -137,7 +137,7 @@ const AREAS = [
     why: "Everything a household forwards is someone else's content: its type is decided from its bytes, its links are fetched safely, its instructions are ignored, its emails are signature-checked, and none of it runs anything.",
     unit: [
       "packages/core/src/homesend/security.test.ts",
-      "packages/core/src/homesend/injection.test.ts",
+      "packages/core/src/homebrain/intake/injection.test.ts",
       "packages/core/src/homesend/link-fetch.test.ts",
       "packages/core/src/homesend/malware-scan.test.ts",
       "packages/core/src/homesend/email-gateway.test.ts",

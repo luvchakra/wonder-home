@@ -5,13 +5,11 @@ import { listMembers } from "../identity/households";
 import { log } from "../observability/logger";
 import { listEnrolments, saveEnrolment } from "../school/enrolments";
 import { listExams, saveExam, savePaper, type Exam } from "../school/exams";
-import { readsAboveTheBar } from "./above-bar";
+import { classOf, examKey, paperFor, planTimetable, readsAboveTheBar, type TimetableChild, type TimetablePaper, type TimetablePlan } from "../homebrain/intake-api";
 import { recordHomeSendChange } from "./changes";
 import type { HomeSendItem } from "./items";
 import { routeHomeSendItem } from "./repository";
-import { examKey, paperFor } from "./exam-match";
 import { attachKeptSyllabi, type SyllabusAttached } from "./syllabus-apply";
-import { classOf, planTimetable, type TimetableChild, type TimetablePaper, type TimetablePlan } from "./timetable";
 
 /**
  * An exam timetable read from what was sent becomes each child's exam, at

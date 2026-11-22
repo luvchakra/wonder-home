@@ -3,7 +3,7 @@ import { z } from "zod";
 
 import { INTAKE_SYSTEM_PROMPT } from "../ai/classify-intake";
 import { ANSWER_SYSTEM_PROMPT, INTENT_OUTPUT_SCHEMA, languageLine, systemFor, translationSystemFor } from "../ai/model-client";
-import { TIDY_SYSTEM_PROMPT, TidySchema } from "../homesend/tidy-model";
+import { TIDY_SYSTEM_PROMPT, TidySchema } from "../homebrain/intake/tidy-model";
 
 /**
  * The prompt version (Wave 5 §12): a hash of every prompt a model is given

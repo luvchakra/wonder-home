@@ -15,16 +15,16 @@ import { createClient } from "@wonderhome/core/db/server";
 import { homesendCorrectionEvidence, recordCorrectionEvidence } from "@wonderhome/core/evaluation/evidence";
 import { archiveRecord } from "@wonderhome/core/health/records";
 import { adminClientFor, adminGrant } from "@wonderhome/core/db/admin-context";
-import { scorePercent, sureClause, sureWhy } from "@wonderhome/core/homesend/auto-add";
+import { scorePercent, sureClause, sureWhy } from "@wonderhome/core/homebrain/intake/auto-add";
 import { confirmHomeSendEntry, getHomeSendChange, hasActiveHomeSendChanges, listHomeSendChanges, recordHomeSendChange, undoHomeSendChange } from "@wonderhome/core/homesend/changes";
-import type { ConfirmationDecision } from "@wonderhome/core/homesend/confirmation";
-import type { DocumentPlan } from "@wonderhome/core/homesend/plan";
+import type { ConfirmationDecision } from "@wonderhome/core/homebrain/intake/confirmation";
+import type { DocumentPlan } from "@wonderhome/core/homebrain/intake/plan";
 import { type HomeSendChange, type HomeSendExtraction, type HomeSendItem, type HomeSendKind, type HomeSendReviewOutcome } from "@wonderhome/core/homesend/items";
-import { reconcileHomeSend, shortDate, type HomeSendReconciliation } from "@wonderhome/core/homesend/reconcile";
-import type { SubjectResolution } from "@wonderhome/core/homesend/resolve";
+import { reconcileHomeSend, shortDate, type HomeSendReconciliation } from "@wonderhome/core/homebrain/intake/reconcile";
+import type { SubjectResolution } from "@wonderhome/core/homebrain/intake/resolve";
 import { confirmTranscript, ingestFile, ingestText, IngestRejected, type IngestOutcome, type IngestState } from "@wonderhome/core/homesend/ingest";
 import { dismissHomeSendItem, getHomeSendItem, listRecordedReceipts, markHomeSendUndone, routeHomeSendItem } from "@wonderhome/core/homesend/repository";
-import type { IntakeUnderstanding } from "@wonderhome/core/homesend/understanding";
+import type { IntakeUnderstanding } from "@wonderhome/core/homebrain/intake/understanding";
 import { requireMembership } from "@wonderhome/core/identity/households";
 import { log } from "@wonderhome/core/observability/logger";
 import { hitRateLimitFair, rateLimitMessage } from "@wonderhome/core/security/rate-limit";
@@ -32,7 +32,7 @@ import { cancelSchoolItem, restoreSchoolItem, updateSchoolItem } from "@wonderho
 import { standDownActivity, standDownActivityNote } from "@wonderhome/core/school/activities";
 import { setEventCancelled } from "@wonderhome/core/family/event-detail";
 
-import { learnSubject } from "@wonderhome/core/homesend/learned-repository";
+import { learnSubject } from "@wonderhome/core/homebrain/learning/learned-repository";
 import { learnFromAnswer } from "@wonderhome/core/homebrain/rules-repository";
 import { prepareReview } from "./home-send-review";
 import { autoApplyHomeSendItem } from "./home-send-auto";
@@ -271,7 +271,7 @@ function wasCorrected(intake: HomeSendItem | null, input: RouteInput): boolean |
 const receiptSchema = z.object({
   householdId: z.uuid(),
   itemId: z.uuid(),
-  // A receipt is complete with its shop and its day (`homesend/completeness.ts`).
+  // A receipt is complete with its shop and its day (`homebrain/intake/completeness.ts`).
   merchant: z.string({ error: "Which shop is it from?" }).trim().min(1, { error: "Which shop is it from?" }).max(120),
   purchasedOn: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, { error: "When was it bought?" }),
   currency: z.string().trim().max(8).optional(),

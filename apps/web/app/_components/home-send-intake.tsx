@@ -3,11 +3,11 @@
 import { GraduationCap, HeartPulse, Medal, Mic, PartyPopper, ReceiptText, ShieldCheck, ShoppingBasket, Sparkles, Wallet } from "lucide-react";
 import { useCallback, useEffect, useRef, useState, type ReactNode } from "react";
 
-import { isConsequentialInstruction } from "@wonderhome/core/homesend/audio";
-import { scorePercent, sureWhy } from "@wonderhome/core/homesend/auto-add";
-import { COMPLETENESS, type DetailSpec } from "@wonderhome/core/homesend/completeness";
-import type { DocumentPlan } from "@wonderhome/core/homesend/plan";
-import type { IntakeUnderstanding } from "@wonderhome/core/homesend/understanding";
+import { isConsequentialInstruction } from "@wonderhome/core/homebrain/intake/audio";
+import { scorePercent, sureWhy } from "@wonderhome/core/homebrain/intake/auto-add";
+import { COMPLETENESS, type DetailSpec } from "@wonderhome/core/homebrain/intake/completeness";
+import type { DocumentPlan } from "@wonderhome/core/homebrain/intake/plan";
+import type { IntakeUnderstanding } from "@wonderhome/core/homebrain/intake/understanding";
 import { Alert } from "@wonderhome/core/ui/alert";
 import { Button } from "@wonderhome/core/ui/button";
 import { UNIT_CHOICES } from "@wonderhome/core/commerce/units";
@@ -57,7 +57,7 @@ const RECORD_TYPE_VALUES = [
   "other",
 ];
 
-/** What the review step shows of a reconciliation (`homesend/reconcile.ts`). */
+/** What the review step shows of a reconciliation (`homebrain/intake/reconcile.ts`). */
 export type ReviewReconciliation = {
   verdict: string;
   message: string;
@@ -65,14 +65,14 @@ export type ReviewReconciliation = {
   proposal?: { type: "duplicate" | "update" | "cancellation" | "conflict" };
 };
 
-/** How the item is confirmed (`homesend/confirmation.ts`, Wave 3 §12). */
+/** How the item is confirmed (`homebrain/intake/confirmation.ts`, Wave 3 §12). */
 export type ReviewConfirmation = {
   mode: "auto_apply" | "prepare" | "ask" | "govern";
   reason: string;
   question: string | null;
 };
 
-/** Who it is for (`homesend/resolve.ts`). */
+/** Who it is for (`homebrain/intake/resolve.ts`). */
 export type ReviewSubject = {
   said: string | null;
   selected: { memberId: string; displayName: string } | null;
@@ -156,7 +156,7 @@ export function describeSource(
 export function percentSure(understanding: Pick<IntakeUnderstanding, "readable" | "score" | "check" | "confidence"> | null | undefined, words: HomeSendReviewLabels["found"]): string | null {
   const percent = understanding?.readable ? scorePercent(understanding.score) : null;
   if (percent === null) return null;
-  // Why that number, in a few words (the owner, 2026-10-26): what the reading was checked against (`homesend/verify.ts`).
+  // Why that number, in a few words (the owner, 2026-10-26): what the reading was checked against (`homebrain/intake/verify.ts`).
   const reason = sureWhy(understanding);
   const why = reason ? words.why[reason] : null;
   return [fillIn(words.percentSure, { percent }), why].filter(Boolean).join(" · ");
@@ -334,7 +334,7 @@ export function HomeSendConfirmStep({
   const words = labels.confirm;
   const primaryLabel = prefill?.title ?? labels.options.kind[kind] ?? words.this;
 
-  // What the entry still lacks (`homesend/completeness.ts`, the owner
+  // What the entry still lacks (`homebrain/intake/completeness.ts`, the owner
   // 2026-10-26), read from the form as it stands: said above the fields,
   // each one marked, and Add stays off while a required one is empty.
   const formRef = useRef<HTMLFormElement>(null);

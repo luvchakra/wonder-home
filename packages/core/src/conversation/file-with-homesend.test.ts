@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
-import { decideConfirmation } from "../homesend/confirmation";
+import { decideConfirmation } from "../homebrain/intake/confirmation";
 import { intentFromModelOutput } from "../ai/model-client";
 import { minimiseContext, reidentifyIntent, type DataUsePolicy, type Person } from "../ai/privacy";
 import type { HouseholdIntent } from "./intent";

@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { NO_DIRECT_ADD } from "./auto-add";
+import { NO_DIRECT_ADD } from "../homebrain/intake/auto-add";
 import { addAnywayCounts, addAnywayVerdict, failedTitleKey, groupIdentical, sameKey, sentenceCase, setAsideName } from "./inbox-view";
 
 const item = (id: string, title: string | null, kind: string | null = "unknown") => ({

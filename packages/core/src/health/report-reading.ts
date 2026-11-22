@@ -1,6 +1,6 @@
 import { z } from "zod";
 
-import { UNTRUSTED_CONTENT_RULE, fenceUntrusted } from "../homesend/injection";
+import { UNTRUSTED_CONTENT_RULE, fenceUntrusted } from "../homebrain/intake/injection";
 
 /**
  * Reading an attached health report (story 21-012) — what the report itself

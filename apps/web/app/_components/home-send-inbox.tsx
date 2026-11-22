@@ -5,13 +5,13 @@ import Link from "next/link";
 import { startTransition, useActionState, useEffect, useRef, useState } from "react";
 
 import { suggestedIntakeKind } from "@wonderhome/core/ai/intake-kind-check";
-import { gateTranscript } from "@wonderhome/core/homesend/audio";
-import { questionsLeft } from "@wonderhome/core/homesend/checking";
+import { gateTranscript } from "@wonderhome/core/homebrain/intake/audio";
+import { questionsLeft } from "@wonderhome/core/homebrain/intake/checking";
 import { failedTitleKey, groupIdentical, sentenceCase } from "@wonderhome/core/homesend/inbox-view";
 import type { HomeSendChange } from "@wonderhome/core/homesend/items";
 import { ACCEPTED_UPLOAD_TYPES } from "@wonderhome/core/homesend/normalize";
-import type { DocumentPlan } from "@wonderhome/core/homesend/plan";
-import type { IntakeUnderstanding } from "@wonderhome/core/homesend/understanding";
+import type { DocumentPlan } from "@wonderhome/core/homebrain/intake/plan";
+import type { IntakeUnderstanding } from "@wonderhome/core/homebrain/intake/understanding";
 import { cn } from "@wonderhome/core/lib/cn";
 import { Alert } from "@wonderhome/core/ui/alert";
 import { Card } from "@wonderhome/core/ui/card";

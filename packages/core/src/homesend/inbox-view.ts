@@ -1,4 +1,4 @@
-import type { DirectAdd } from "./auto-add";
+import type { DirectAdd } from "../homebrain/intake-api";
 import type { HomeSendItem, HomeSendSource } from "./items";
 
 /**

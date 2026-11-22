@@ -1,6 +1,6 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { TIDY_REASONS } from "../homesend/archive-reasons";
-import type { TidiedEntry } from "../homesend/tidy";
+import type { TidiedEntry } from "../homebrain/intake/tidy";
 
 import { formatterFor } from "../i18n/format";
 import { NO_MEMBER_CHOICES, parseHouseholdSettings, resolvePreferences } from "../i18n/preferences";

@@ -2,8 +2,8 @@ import type { ReceiptAction } from "@wonderhome/core/homesend/apply";
 import { ARCHIVE_REASONS, type ArchiveReason } from "@wonderhome/core/homesend/archive-reasons";
 import { FAILED_TITLES, type FailedTitle } from "@wonderhome/core/homesend/inbox-view";
 import type { HomeSendFailureReason } from "@wonderhome/core/homesend/items";
-import type { PlanAction, PlanGroup } from "@wonderhome/core/homesend/plan";
-import type { IntakeUnderstanding } from "@wonderhome/core/homesend/understanding";
+import type { PlanAction, PlanGroup } from "@wonderhome/core/homebrain/intake/plan";
+import type { IntakeUnderstanding } from "@wonderhome/core/homebrain/intake/understanding";
 import type { Translate, TranslationKey, TranslationParams } from "@wonderhome/core/i18n/translate";
 
 import { groceryWords } from "./grocery-words";
@@ -149,7 +149,7 @@ export type HomeSendReviewLabels = {
     addAsNew: string;
     addAnyway: string;
     recordPurchases: string;
-    /** "Still needed: {list}" — what the entry lacks (`homesend/completeness.ts`). */
+    /** "Still needed: {list}" — what the entry lacks (`homebrain/intake/completeness.ts`). */
     stillNeeded: string;
     /** The child picker's detail, named in "Still needed". */
     whoFor: string;

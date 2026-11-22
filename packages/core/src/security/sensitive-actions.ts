@@ -1,6 +1,6 @@
 import type { AuditEventType } from "../api/audit";
 
-/** How the daily tidy's reasons read in the activity log (`homesend/tidy.ts`). */
+/** How the daily tidy's reasons read in the activity log (`homebrain/intake/tidy.ts`). */
 const TIDY_REASON_WORDS: Record<string, string> = {
   past_date: "Its day has passed",
   already_recorded: "Already on record",

@@ -1,10 +1,10 @@
 import type { IntakeExtraction, ModelOperation } from "../ai/classify-intake";
 import type { HouseholdRule } from "../homebrain/rules";
-import { CAPABILITIES, type CapabilityId } from "../homesend/capabilities";
-import { decidedCapabilities, decisionFromModel, decisionFromReading, validateDecision, type ValidatedDecision } from "../homesend/decision";
-import type { DecisionMemory, DecisionOutcome } from "../homesend/decision-memory";
-import { applyLearnedRule, learnedRuleFor, patternKeys, patternValue, promotionFor } from "../homesend/decision-rules";
-import { senderKey } from "../homesend/learned";
+import { CAPABILITIES, type CapabilityId } from "../homebrain/intake/capabilities";
+import { decidedCapabilities, decisionFromModel, decisionFromReading, validateDecision, type ValidatedDecision } from "../homebrain/intake/decision";
+import type { DecisionMemory, DecisionOutcome } from "../homebrain/learning/decision-memory";
+import { applyLearnedRule, learnedRuleFor, patternKeys, patternValue, promotionFor } from "../homebrain/learning/decision-rules";
+import { senderKey } from "../homebrain/learning/learned";
 import { BLANK_READING } from "./runners";
 import type { HomeSendCase } from "./types";
 

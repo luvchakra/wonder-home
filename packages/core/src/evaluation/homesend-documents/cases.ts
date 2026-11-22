@@ -1,5 +1,5 @@
 import type { IntakeSchedule } from "../../ai/classify-intake";
-import type { TimetableChild } from "../../homesend/timetable";
+import type { TimetableChild } from "../../homebrain/school/timetable";
 import { EXAM_TIMETABLE_STD_3_7, STD_IV_PAPERS } from "./exam-timetable";
 import { asmiMtut2, SYLLABUS_ROWS, SYLLABUS_TEXT, syllabusReading, type RecordedExam } from "./syllabus-grade5";
 

@@ -15,7 +15,7 @@ vi.mock("../household/nothing-waits-repository", () => ({ loadNothingWaits: asyn
 vi.mock("../homesend/changes", () => ({ confirmHomeSendEntry: async (...args: unknown[]) => (calls.push({ fn: "confirm", args }), 1) }));
 
 const { answerCheckQuestion, beginChecking, currentCheckQuestion } = await import("./checking-questions");
-const { FROM_A_FILE } = await import("../homesend/verify");
+const { FROM_A_FILE } = await import("../homebrain/intake/verify");
 
 type Row = Record<string, unknown>;
 

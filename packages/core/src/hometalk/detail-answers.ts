@@ -1,7 +1,7 @@
 import { isLeaveIt } from "../conversation/leave-it";
 import { dayFromDateText, timeFromDateText } from "../ai/classify-intake";
 import { RECORD_TYPES, type RecordType } from "../health/records";
-import { COMPLETENESS, readQuantity, type DetailField } from "../homesend/completeness";
+import { COMPLETENESS, readQuantity, type DetailField } from "../homebrain/intake/completeness";
 import type { HomeSendExtraction, HomeSendKind } from "../homesend/items";
 
 /**

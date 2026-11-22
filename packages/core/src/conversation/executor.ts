@@ -8,7 +8,7 @@ import { createAppointment, listAppointments, setAppointmentStatus, type Appoint
 import { createFitnessGoal, FITNESS_ACTIVITY_LABEL, type FitnessActivityType, type FitnessFrequencyPeriod } from "../health/fitness";
 import { createIssue, listIssues, setIssueStatus } from "../health/issues";
 import { addFamilyEvent } from "../calendar/add-event";
-import { waitingWords, wasAdded, type AddedOnItsOwn, type WaitingInHomeSend } from "../homesend/auto-add";
+import { waitingWords, wasAdded, type AddedOnItsOwn, type WaitingInHomeSend } from "../homebrain/intake/auto-add";
 import { setEventCancelled } from "../family/event-detail";
 import { createServiceRequest } from "../home/repository";
 import { attachIngredients, createMeal, removeMeal } from "../meals/repository";

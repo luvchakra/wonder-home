@@ -7,7 +7,7 @@ import { toErrorBody } from "@wonderhome/core/api/errors";
 import { createAdminClient } from "@wonderhome/core/db/admin";
 import { homesendCorrectionEvidence, recordCorrectionEvidence } from "@wonderhome/core/evaluation/evidence";
 import { applyDocumentPlan, type IntakeChangeReceipt } from "@wonderhome/core/homesend/apply";
-import type { DocumentRecord } from "@wonderhome/core/homesend/document";
+import type { DocumentRecord } from "@wonderhome/core/homebrain/intake/document";
 import { getHomeSendItem, recordDocumentApplied } from "@wonderhome/core/homesend/repository";
 import { requireMembership } from "@wonderhome/core/identity/households";
 import { log } from "@wonderhome/core/observability/logger";

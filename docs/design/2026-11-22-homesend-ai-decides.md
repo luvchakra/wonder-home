@@ -6,8 +6,8 @@
 
 ## What changes
 
-1. **One decision, model-led** (`homesend/decision.ts`). For each item the model returns: what it is in free words and the nearest known kind (new kinds allowed); a list of operations (create, update or attach-to a record found by reference), each with fields, who it is for, evidence per field (a quote from what was sent or a record id) and a confidence; and at most one question, only when a wrong guess would matter.
-2. **A capability registry** (`homesend/capabilities.ts`) is the whole of what it may pick: bills, payments, receipts, school items, exams, exam portions, classes, calendar events, reminders, To Buy, meals, recipes, tasks, routines, household notes, health records, places, contacts, and action requests. Each names its owner module, safety class, fields and the governed write a person's confirm uses. The special cases (timetable, syllabus, payment proof, matched bill update) become capabilities or validators, not pipelines.
+1. **One decision, model-led** (`homebrain/intake/decision.ts`). For each item the model returns: what it is in free words and the nearest known kind (new kinds allowed); a list of operations (create, update or attach-to a record found by reference), each with fields, who it is for, evidence per field (a quote from what was sent or a record id) and a confidence; and at most one question, only when a wrong guess would matter.
+2. **A capability registry** (`homebrain/intake/capabilities.ts`) is the whole of what it may pick: bills, payments, receipts, school items, exams, exam portions, classes, calendar events, reminders, To Buy, meals, recipes, tasks, routines, household notes, health records, places, contacts, and action requests. Each names its owner module, safety class, fields and the governed write a person's confirm uses. The special cases (timetable, syllabus, payment proof, matched bill update) become capabilities or validators, not pipelines.
 3. **Unseen kinds** map to the nearest capability, usually a household note with its fields plus any dated thing as an event or reminder; the new kind's name is kept, grouped, and shown to Platform admin as a candidate capability. The reply says plainly what was done.
 4. **Learning per household.** Every decision and what people did next (kept, confirmed, corrected which field to what, undone, answered) is a decision memory. The k most similar past decisions of the same household (embedding plus sender and kind) are given to the model as worked examples. A pattern confirmed N times with no correction becomes a learned rule in `homesend_learned_defaults`, applied before the model; one correction demotes it. The per-kind bar keeps following the undo and correction rate (`homebrain/kind-bar.ts`), new kinds included.
 
@@ -21,6 +21,10 @@
 - **money and health** keep "Money and health entries"; a default never confirms them; who a health record is for is never taken from a model, except a named member for a sender on "Who may file health records for others";
 - content that tries to instruct WonderHome (`injection.ts`) caps every confidence below the bar;
 - record first, with Undo; the Admin's bar decides confirmed or Checking. A learned rule never crosses households and never carries money, approval or permission. Unsafe Action Rate stays zero. WhatsApp is never an authorization channel.
+
+## Where the code lives (owner, 2026-11-22, later the same day)
+
+"HomeBrain is supposed to have the intelligence related algorithms, homesend is supposed to have the data transfer related features." The decision, the registry, decision memory, learned rules and every other piece of judgement in this note now live in `homebrain/intake/`, `homebrain/learning/` and `homebrain/school/`; HomeSend calls them only through `homebrain/intake-api.ts` (`docs/agent-platform.md`, "Where the code lives"; `docs/progress/2026-11-22-homebrain-owns-intelligence.md`). Behaviour did not change.
 
 ## Order of work (each PR merged and deployed before the next)
 

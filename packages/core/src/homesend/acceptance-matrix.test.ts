@@ -9,15 +9,15 @@ import type { Obligation } from "../finance/payments";
 import type { HouseholdMember } from "../identity/households";
 import type { SchoolItem } from "../school/items";
 import { resolveRecipientHouseholds } from "./addresses";
-import { decideConfirmation } from "./confirmation";
+import { decideConfirmation } from "../homebrain/intake/confirmation";
 import { toEmailSource } from "./email-gateway";
 import { confirmTranscript, ingestEmailAttachment, ingestFile, ingestLink, ingestText, understand, type IngestDeps } from "./ingest";
 import { fetchLinkSafely, type Resolver, type Transport, type TransportResponse } from "./link-fetch";
-import { proposalFor, type HomeSendCandidate } from "./reconcile";
+import { proposalFor, type HomeSendCandidate } from "../homebrain/intake/reconcile";
 import { createEmailHomeSendItem } from "./repository";
-import { resolveIntakePeople } from "./resolve";
+import { resolveIntakePeople } from "../homebrain/intake/resolve";
 import { fakeSupabase } from "./testing";
-import { UNSURE_TRANSCRIPT } from "./verify";
+import { UNSURE_TRANSCRIPT } from "../homebrain/intake/verify";
 
 /**
  * The Wave 3 §20 acceptance test matrix — one test per row, each driving

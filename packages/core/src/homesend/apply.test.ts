@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 
 import { ApiError } from "../api/errors";
 import { applyDocumentPlan, receiptHeadline, receiptText, type PlanWriter, type WriteResult } from "./apply";
-import type { DocumentPlan, PlanEntry } from "./plan";
+import type { DocumentPlan, PlanEntry } from "../homebrain/intake/plan";
 
 /** Deep Document Understanding 2.0 §22–27, §42–44: applying a plan, and the exact receipt it leaves. */
 

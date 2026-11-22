@@ -1,5 +1,5 @@
 import type { IntakeChangeReceipt } from "./apply";
-import type { IntakeUnderstanding } from "./understanding";
+import type { IntakeUnderstanding } from "../homebrain/intake-api";
 
 /**
  * HomeSend as WonderHome models it (Phase C).
@@ -220,3 +220,18 @@ export type HomeSendChange = {
 /** Whether an entry HomeSend added is still being checked (the owner, 2026-11-03). */
 export const HOME_SEND_CONFIRMATION_STATES = ["unconfirmed", "confirmed"] as const;
 export type HomeSendConfirmationState = (typeof HOME_SEND_CONFIRMATION_STATES)[number];
+
+/** How many times a person may ask HomeSend to read a failed item again — the job queue's own cap. */
+export const RETRY_CAP = 5;
+
+/** Whole days between two instants, counted on the household's own calendar. */
+export function daysBetween(from: Date, to: Date, timeZone: string): number {
+  const day = (at: Date) => {
+    try {
+      return new Intl.DateTimeFormat("en-CA", { timeZone, year: "numeric", month: "2-digit", day: "2-digit" }).format(at);
+    } catch {
+      return at.toISOString().slice(0, 10);
+    }
+  };
+  return Math.round((Date.parse(day(to)) - Date.parse(day(from))) / 86_400_000);
+}

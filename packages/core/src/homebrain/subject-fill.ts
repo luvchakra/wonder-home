@@ -1,9 +1,9 @@
 import type { HouseholdContextItem } from "../context/types";
-import { inferSubject, type InferredSubject, type LearnedDefault } from "../homesend/learned";
+import { inferSubject, type InferredSubject, type LearnedDefault } from "./learning/learned";
 import type { HomeSendKind } from "../homesend/items";
-import type { SubjectResolution } from "../homesend/resolve";
+import type { SubjectResolution } from "./intake/resolve";
 import { childrenAtSchool, resolveGaps, usable, whyFilled, type SenderHistory } from "./memory-resolve";
-import type { IntakePerson } from "../homesend/resolve";
+import type { IntakePerson } from "./intake/resolve";
 import type { HouseholdRule } from "./rules";
 
 /**

@@ -14,11 +14,11 @@ import { queueModelRead } from "../homesend/model-unavailable";
 import { syllabusReply, timetableReply } from "../homesend/timetable-words";
 import { siteOrigin } from "../notifications/email";
 import { runtimeEnv } from "../platform/settings/runtime-env";
-import { gateTranscript, TRANSCRIPT_CONFIDENCE_FLOOR, type TranscriptGate } from "../homesend/audio";
-import { looksLikeTimetable, noteSummary } from "../homesend/school-note";
-import { amountWords, sureClause, type AddedOnItsOwn, type WaitingInHomeSend } from "../homesend/auto-add";
+import { gateTranscript, TRANSCRIPT_CONFIDENCE_FLOOR, type TranscriptGate } from "../homebrain/intake/audio";
+import { looksLikeTimetable, noteSummary } from "../homebrain/intake/school-note";
+import { amountWords, sureClause, type AddedOnItsOwn, type WaitingInHomeSend } from "../homebrain/intake/auto-add";
 import { hearWhatsAppVoiceNote, ingestWhatsAppMedia, ingestWhatsAppText, IngestRejected, type IngestDeps, type IngestOutcome, type TranscribeResult } from "../homesend/ingest";
-import { COMPLETENESS } from "../homesend/completeness";
+import { COMPLETENESS } from "../homebrain/intake/completeness";
 import { FAILURE_REASON_COPY, type HomeSendKind } from "../homesend/items";
 import { contentHash, normalizeText } from "../homesend/normalize";
 import { PENDING_STATUSES } from "../homesend/repository";
@@ -1052,7 +1052,7 @@ async function noteOnItem(admin: SupabaseClient, householdId: string, item: Item
   }
   if (name) patch = { ...patch, subjectMemberName: name, people: [name] };
   if (Object.keys(patch).length === 0) return { name: null, filled: false };
-  // The review reads who an item is for from its understanding's references (`homesend/resolve.ts`), as an answer to HomeTalk does.
+  // The review reads who an item is for from its understanding's references (`homebrain/intake/resolve.ts`), as an answer to HomeTalk does.
   const understanding = name && item.understanding ? { ...item.understanding, references: [{ text: name, candidates: [], confidence: 0 }] } : item.understanding;
   const { data: updated } = await admin
     .from("home_send_items")

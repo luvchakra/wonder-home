@@ -5,7 +5,7 @@ const audits: { eventType: string; targetId?: string | null; metadata?: Record<s
 vi.mock("../api/audit", () => ({ auditChange: async (entry: (typeof audits)[number]) => void audits.push(entry) }));
 // What is on record: a title listed here is "already on record".
 const onRecord = new Set<string>();
-vi.mock("./reconcile", () => ({
+vi.mock("../homebrain/intake/reconcile", () => ({
   reconcileHomeSend: async (_client: unknown, _household: string, candidate: { title: string }) =>
     onRecord.has(candidate.title) ? { proposal: { type: "duplicate" }, existingId: "rec-1", existing: {}, verdict: "exact_match", message: "" } : null,
 }));
@@ -14,8 +14,8 @@ vi.mock("../identity/households", () => ({ listMembers: async () => [{ displayNa
 
 import { restoreHomeSendItem } from "./repository";
 import { runHomeSendTidy } from "./tidy-run";
-import type { TidyJudge } from "./tidy-model";
-import type { TidyVerdict } from "./tidy";
+import type { TidyJudge } from "../homebrain/intake/tidy-model";
+import type { TidyVerdict } from "../homebrain/intake/tidy";
 
 type Row = Record<string, unknown>;
 

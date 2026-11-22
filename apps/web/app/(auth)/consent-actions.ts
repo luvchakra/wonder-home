@@ -5,12 +5,12 @@ import { z } from "zod";
 
 import { auditChange } from "@wonderhome/core/api/audit";
 import { toErrorBody } from "@wonderhome/core/api/errors";
-import { forgetLearnedDefaults } from "@wonderhome/core/homesend/learned-repository";
+import { forgetLearnedDefaults } from "@wonderhome/core/homebrain/learning/learned-repository";
 import { saveConfirmRequested } from "@wonderhome/core/conversation/consent-repository";
-import { asAutoAddPercent, AUTO_ADD_PERCENTS } from "@wonderhome/core/homesend/auto-add";
+import { asAutoAddPercent, AUTO_ADD_PERCENTS } from "@wonderhome/core/homebrain/intake/auto-add";
 import { saveAutoAddPercent } from "@wonderhome/core/household/auto-add-repository";
 import { saveHealthFilers, saveRecordFirst } from "@wonderhome/core/household/direct-add-repository";
-import { APPROVAL_SCOPES, MONEY_HEALTH_MODES, OUTSIDE_SENDER_MODES } from "@wonderhome/core/homesend/record-first";
+import { APPROVAL_SCOPES, MONEY_HEALTH_MODES, OUTSIDE_SENDER_MODES } from "@wonderhome/core/homebrain/intake/record-first";
 import { saveHomeSendTidy } from "@wonderhome/core/household/homesend-tidy-repository";
 import { saveNothingWaits } from "@wonderhome/core/household/nothing-waits-repository";
 import { RETENTION_WINDOW_CHOICES, saveRetentionWindow } from "@wonderhome/core/privacy/retention-window-repository";
@@ -87,7 +87,7 @@ export async function saveRetentionWindowAction(_previous: ActionState, formData
 }
 
 /**
- * Record first (the owner, 2026-11-14, `homesend/record-first.ts`): an Admin
+ * Record first (the owner, 2026-11-14, `homebrain/intake/record-first.ts`): an Admin
  * picks what "Wait for Approval" holds, how money and health entries are
  * recorded, and what happens to email from a new sender. Each one reversible
  * on its own.
@@ -137,7 +137,7 @@ export async function saveHealthFilersAction(_previous: ActionState, formData: F
 /**
  * "Tidy up items that no longer apply" (the owner, 2026-11-03): an Admin
  * decides whether HomeSend's daily tidy may archive waiting items that no
- * longer apply (`homesend/tidy.ts`). On unless turned off.
+ * longer apply (`homebrain/intake/tidy.ts`). On unless turned off.
  */
 const homesendTidySchema = z.object({ householdId: z.uuid(), on: z.enum(["on", "off"]) });
 

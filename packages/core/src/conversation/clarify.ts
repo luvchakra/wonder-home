@@ -1,6 +1,6 @@
 import { picksSwitch } from "../commerce/pack-amount";
 import { carriesPlaceDetail } from "../homeplaces/request";
-import type { DetailField } from "../homesend/completeness";
+import type { DetailField } from "../homebrain/intake/completeness";
 import type { HomeSendKind } from "../homesend/items";
 import { readDetailAnswer } from "../hometalk/detail-answers";
 import type { HouseholdIntent, IntentTarget } from "./intent";

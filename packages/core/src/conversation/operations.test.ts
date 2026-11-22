@@ -33,7 +33,7 @@ import { canExecute, executeIntent, type ExecutionContext } from "./executor";
 import type { HouseholdIntent } from "./intent";
 import { focusFromResult } from "./references";
 import { unchangedResult } from "./repository";
-import { reconcileHomeSend } from "../homesend/reconcile";
+import { reconcileHomeSend } from "../homebrain/intake/reconcile";
 
 // Wednesday 23 September 2026, 10:00 in Kolkata.
 const NOW = new Date("2026-09-23T04:30:00Z");

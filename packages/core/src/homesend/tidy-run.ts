@@ -1,33 +1,12 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
-
 import { auditChange } from "../api/audit";
-import { readHouseholdKey } from "../ai/credentials";
-import { currentPlatformKey, resolveModelKey } from "../ai/model-key";
-import { routeToProvider } from "../ai/privacy";
-import { loadDataUse } from "../ai/privacy-repository";
-import { withoutNames } from "../homebrain/sleep/embeddings";
+import { AI_ITEMS_PER_RUN, checkVerdict, decideByRules, isPastWithGrace, itemDays, judgeForHousehold, MONEY_OR_HEALTH, newerFromSameSender, reconcileHomeSend, tidyFacts, withoutNames, type HomeSendCandidate, type HomeSendReconciliation, type IntakeUnderstanding, type ReconcilableDomain, type TidiedEntry, type TidyDecision, type TidyItem, type TidyJudge, type TidyQuestion } from "../homebrain/intake-api";
 import { loadHomeSendTidy } from "../household/homesend-tidy-repository";
 import { listMembers } from "../identity/households";
 import { sweepNotices } from "../notifications/notices-sweep";
 import { localMoment, shiftDate } from "../notifications/timing";
 import { log } from "../observability/logger";
 import type { HomeSendExtraction, HomeSendFailureReason, HomeSendKind, HomeSendStatus } from "./items";
-import { reconcileHomeSend, type HomeSendCandidate, type HomeSendReconciliation, type ReconcilableDomain } from "./reconcile";
-import {
-  AI_ITEMS_PER_RUN,
-  checkVerdict,
-  decideByRules,
-  isPastWithGrace,
-  itemDays,
-  MONEY_OR_HEALTH,
-  newerFromSameSender,
-  tidyFacts,
-  type TidiedEntry,
-  type TidyDecision,
-  type TidyItem,
-} from "./tidy";
-import { createTidyJudge, type TidyJudge, type TidyQuestion } from "./tidy-model";
-import type { IntakeUnderstanding } from "./understanding";
 
 /**
  * HomeSend's daily tidy, run (the owner, 2026-11-03). The rules and the check
@@ -195,13 +174,6 @@ function toItem(row: Row): TidyItem {
     retryRequestedAt: (row.retry_requested_at as string | null) ?? null,
     checking: row.checking ?? null,
   };
-}
-
-async function judgeForHousehold(admin: SupabaseClient, householdId: string): Promise<TidyJudge | null> {
-  const [policy, householdKey] = await Promise.all([loadDataUse(admin, householdId), readHouseholdKey(householdId).catch(() => null)]);
-  const key = resolveModelKey(householdKey, (await currentPlatformKey()));
-  const route = routeToProvider({ provider: key.provider, keySource: key.source, policy, hasContent: true });
-  return route.ok && key.provider && key.key ? createTidyJudge(key.provider, key.key) : null;
 }
 
 /** Whether a reading needs the records looked up: only where "already on record" could change the answer. */

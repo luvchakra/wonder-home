@@ -16,7 +16,7 @@ import { extractPdfText } from "@wonderhome/core/health/report-text";
 import { checkReportUpload, HEALTH_REPORT_BUCKET } from "@wonderhome/core/health/report-upload";
 import { getRecord } from "@wonderhome/core/health/records";
 import { getHealthProfile, listGuardedChildIds } from "@wonderhome/core/health/repository";
-import { detectInstructionInjection } from "@wonderhome/core/homesend/injection";
+import { detectInstructionInjection } from "@wonderhome/core/homebrain/intake/injection";
 import { requireMembership } from "@wonderhome/core/identity/households";
 import { localMoment } from "@wonderhome/core/notifications/timing";
 

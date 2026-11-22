@@ -186,10 +186,10 @@ export type HomeSendCase = CaseBase & {
   /** What this sender's earlier items became (`homesend/sender-history.ts`, 2026-11-20). */
   senderHistory?: import("../homebrain/memory-resolve").SenderHistory;
   autonomy?: "prepare" | "execute";
-  /** What HomeSend may record of money and health (`homesend/auto-add.ts`); both "Wait for review" when unset, the 3 Nov behaviour. */
-  directAdd?: Partial<import("../homesend/auto-add").DirectAdd>;
+  /** What HomeSend may record of money and health (`homebrain/intake/auto-add.ts`); both "Wait for review" when unset, the 3 Nov behaviour. */
+  directAdd?: Partial<import("../homebrain/intake/auto-add").DirectAdd>;
   /** Decision 1 (2026-11-14): what "Wait for Approval" holds; "everything" (the 3 Nov behaviour) when unset. */
-  approvalScope?: import("../homesend/record-first").ApprovalScope;
+  approvalScope?: import("../homebrain/intake/record-first").ApprovalScope;
   /** Decision 5: an email from a sender the household trusts. */
   trustedSender?: boolean;
   transcriptConfidence?: number;
@@ -245,12 +245,12 @@ export type HomeSendCase = CaseBase & {
    */
   /** One of the complex-document regression set (`homesend-documents/cases.ts`, HD-…), scored by its own expectations. */
   document?: string;
-  payment?: { today: string; bills: readonly import("../homesend/payment-proof").OpenBill[] };
+  payment?: { today: string; bills: readonly import("../homebrain/intake/payment-proof").OpenBill[] };
   tidy?: {
     today: string;
     sentAt: string;
     newer?: readonly { title: string; sentAt: string }[];
-    verdict?: Omit<import("../homesend/tidy").TidyVerdict, "item">;
+    verdict?: Omit<import("../homebrain/intake/tidy").TidyVerdict, "item">;
     recordedVerdict?: boolean;
   };
 };

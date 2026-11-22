@@ -1,4 +1,4 @@
-import { senderKey } from "../homesend/learned";
+import { senderKey } from "./learning/learned";
 import type { HomeSendKind } from "../homesend/items";
 
 /**
@@ -16,7 +16,7 @@ import type { HomeSendKind } from "../homesend/items";
  *   phrase_item      "atta"                  → Atta (wheat flour)
  *   place_alias      "nani's"                → Nani's house
  *   decision_pattern "pattern:newkind:society notice" → note.create event.create
- *                    (14-084: promoted after three confirmations, `homesend/decision-rules.ts`)
+ *                    (14-084: promoted after three confirmations, `homebrain/learning/decision-rules.ts`)
  *
  * What a rule never is: across households (a member value is checked against
  * the household on write), money (an amount is refused here and by the

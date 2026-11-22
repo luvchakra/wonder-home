@@ -4,7 +4,7 @@ import { fileURLToPath } from "node:url";
 import { classifyIntake, type IntakeSource } from "../ai/classify-intake";
 import { CLAUDE_ANSWER_MODEL, CLAUDE_INTAKE_MODEL, CLAUDE_UNDERSTANDING_MODEL, createAnswerComposer, createClaudeUnderstanding, createGeminiUnderstanding, createOpenAIUnderstanding, GEMINI_MODEL, OPENAI_MODEL } from "../ai/model-client";
 import type { ModelKey } from "../ai/model-key";
-import { createTidyJudge } from "../homesend/tidy-model";
+import { createTidyJudge } from "../homebrain/intake/tidy-model";
 import { createTriviaTopicJudge } from "../school/trivia-safety";
 import { GOLDEN_CASES } from "./cases";
 import { runCase, type Models } from "./runners";

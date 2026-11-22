@@ -1,7 +1,6 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 
-import { childrenOfSchoolItems, listPayeeBills } from "../homebrain/household-records";
-import type { SenderHistory } from "../homebrain/memory-resolve";
+import { childrenOfSchoolItems, listPayeeBills, type SenderHistory } from "../homebrain/intake-api";
 
 /**
  * What an outside sender's earlier items became in this household (knowing

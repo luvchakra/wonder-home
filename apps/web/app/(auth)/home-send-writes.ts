@@ -21,8 +21,8 @@ import { createRecord, RECORD_TYPES } from "@wonderhome/core/health/records";
 import { auditChange } from "@wonderhome/core/api/audit";
 import { adminClientFor, adminGrant } from "@wonderhome/core/db/admin-context";
 import { loadHealthFilers } from "@wonderhome/core/household/direct-add-repository";
-import { mayFileForOthers } from "@wonderhome/core/homesend/health-filers";
-import { listDetails, missingRequired } from "@wonderhome/core/homesend/completeness";
+import { mayFileForOthers } from "@wonderhome/core/homebrain/intake/health-filers";
+import { listDetails, missingRequired } from "@wonderhome/core/homebrain/intake/completeness";
 import { HOME_SEND_REVIEW_PROPOSALS, HOME_SEND_REVIEW_SUBJECTS } from "@wonderhome/core/homesend/items";
 import { getHomeSendItem } from "@wonderhome/core/homesend/repository";
 import { createChildMember } from "@wonderhome/core/identity/children";
@@ -248,7 +248,7 @@ export async function addGrocery(
 
 export async function createNew(supabase: Supabase, membership: Membership, input: RouteInput): Promise<Created | { error: string }> {
   const householdId = input.householdId;
-  // What it can't be added without (`homesend/completeness.ts`): the review keeps Add off, and a post that skips it is refused here.
+  // What it can't be added without (`homebrain/intake/completeness.ts`): the review keeps Add off, and a post that skips it is refused here.
   // Who it is for is checked per kind below, with its own words.
   const missing = missingRequired(
     input.kind,

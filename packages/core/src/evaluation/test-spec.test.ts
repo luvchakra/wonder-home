@@ -12,7 +12,7 @@ import { attachHomeSendEvidence, describeProvenance, explainProvenance } from ".
 import type { HealthRecord } from "../health/records";
 import type { HomeSendItem } from "../homesend/items";
 import type { FamilyEvent } from "../family/schedule";
-import { reconcileAgainstRecords } from "../homesend/reconcile";
+import { reconcileAgainstRecords } from "../homebrain/intake/reconcile";
 import type { SchoolItem } from "../school/items";
 import { percentile, summariseLatency } from "./metrics";
 import { contextItemsFor, GOLDEN_HOUSEHOLDS, memberOf, peopleOf, viewerFor, type GoldenHousehold } from "./households";
@@ -321,10 +321,12 @@ describe("X-003 — HomeSend never writes a household record itself", () => {
   it("the HomeSend pipeline and its web actions touch no table but HomeSend's own", async () => {
     const { readFileSync, readdirSync } = await import("node:fs");
     const { join } = await import("node:path");
-    const core = join(__dirname, "../homesend");
+    // HomeSend's own files, and the intake understanding that moved to
+    // HomeBrain (owner, 2026-11-22): moving code never takes it out of this check.
+    const dirs = ["../homesend", "../homebrain/intake", "../homebrain/learning", "../homebrain/school"].map((dir) => join(__dirname, dir));
     const web = join(__dirname, "../../../../apps/web/app");
     const files = [
-      ...readdirSync(core).filter((file) => file.endsWith(".ts") && !file.endsWith(".test.ts") && file !== "testing.ts").map((file) => join(core, file)),
+      ...dirs.flatMap((dir) => readdirSync(dir).filter((file) => file.endsWith(".ts") && !file.endsWith(".test.ts") && file !== "testing.ts").map((file) => join(dir, file))),
       join(web, "(auth)/home-send-actions.ts"),
       join(web, "(auth)/home-send-review.ts"),
       join(web, "api/v1/intake/share/route.ts"),

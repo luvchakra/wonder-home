@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 
-import { addQuestion, amountQuestion, HEALTH_FOR_SOURCE, healthForQuestion, checkQuestion, effectOf, endingFor, notHouseholdInformation, resendQuestion, updateQuestion, waitingQuestion, type EndingInput } from "./deadlines";
+import { notHouseholdInformation } from "../homebrain/intake/household-information";
+import { addQuestion, amountQuestion, HEALTH_FOR_SOURCE, healthForQuestion, checkQuestion, effectOf, endingFor, resendQuestion, updateQuestion, waitingQuestion, type EndingInput } from "./deadlines";
 
 const PAGE = `Home | About us | Contact us | Blog
 Accept all cookies to continue. Read our Privacy Policy and Terms of Service.

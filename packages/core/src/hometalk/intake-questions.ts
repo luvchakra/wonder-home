@@ -5,10 +5,10 @@ import { siteOrigin } from "../notifications/email";
 import { runtimeEnv } from "../platform/settings/runtime-env";
 import type { PendingClarification } from "../conversation/clarify";
 import { openSession, recordMessage, type ConversationSurface } from "../conversation/repository";
-import { amountWords, sureClause, waitingWords, wasAdded, type AddedOnItsOwn, type WaitingInHomeSend } from "../homesend/auto-add";
-import { listDetails, missingDetails, nextMissingDetail, personNamed, type CompletenessReading, type DetailField } from "../homesend/completeness";
+import { amountWords, sureClause, waitingWords, wasAdded, type AddedOnItsOwn, type WaitingInHomeSend } from "../homebrain/intake/auto-add";
+import { listDetails, missingDetails, nextMissingDetail, personNamed, type CompletenessReading, type DetailField } from "../homebrain/intake/completeness";
 import type { HomeSendKind } from "../homesend/items";
-import { isUndatedSchoolNotice, noteSummary } from "../homesend/school-note";
+import { isUndatedSchoolNotice, noteSummary } from "../homebrain/intake/school-note";
 import { en } from "../i18n/messages/en";
 import { translator, type Translate, type TranslationKey } from "../i18n/translate";
 import { amountsFor } from "./choice-amounts";
@@ -20,7 +20,7 @@ import type { QuestionCadence } from "./question-cadence";
  * HomeTalk asks what a HomeSend entry still lacks (the owner, 2026-10-26:
  * "why would HomeSend ask a question, isn't that HomeTalk's job").
  *
- * HomeSend reports what is missing (`homesend/completeness.ts`); HomeTalk is
+ * HomeSend reports what is missing (`homebrain/intake/completeness.ts`); HomeTalk is
  * the one door (rule 13), so it words every question here, asks one focused
  * question at a time — in the app's conversation and on WhatsApp — and reads
  * the answer through its own clarify machinery: the question is kept on the
@@ -182,7 +182,7 @@ async function loadItem(client: SupabaseClient, householdId: string, itemId: str
   return (data as ItemRow | null) ?? null;
 }
 
-/** Names the reading used that more than one person fits (`homesend/resolve.ts`'s references). */
+/** Names the reading used that more than one person fits (`homebrain/intake/resolve.ts`'s references). */
 function ambiguousNames(understanding: Record<string, unknown> | null): string[] {
   const references = Array.isArray(understanding?.references) ? (understanding!.references as { candidates?: unknown }[]) : [];
   const split = references.find((reference) => Array.isArray(reference.candidates) && reference.candidates.length > 1);
@@ -299,7 +299,7 @@ export async function answerIntakeQuestion(
     if (member) {
       answeredPerson = { id: member.id, memberType: (choices.length > 0 ? choices : input.people).find((person) => person.id === member.id)?.memberType ?? null };
       patch = { subjectMemberName: member.displayName, people: [member.displayName] };
-      // The review reads who an item is for from its understanding's references (`homesend/resolve.ts`).
+      // The review reads who an item is for from its understanding's references (`homebrain/intake/resolve.ts`).
       understanding = item.understanding ? { ...item.understanding, references: [{ text: member.displayName, candidates: [], confidence: 0 }] } : null;
       lead = `Got it — that's for ${member.displayName}.`;
     } else {
@@ -343,7 +343,7 @@ export async function answerIntakeQuestion(
     // Who a sender's items are for is remembered, so it is never asked again (14-066).
     const person = (field === "child" || field === "person") && typeof patch.subjectMemberName === "string" ? answeredPerson : null;
     if (person && input.memberId) {
-      const { learnSubject } = await import("../homesend/learned-repository");
+      const { learnSubject } = await import("../homebrain/learning/learned-repository");
       const provenance = item.understanding?.provenance as { sender?: unknown } | undefined;
       await learnSubject(client, {
         householdId: input.householdId,

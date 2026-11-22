@@ -3,7 +3,7 @@ import { describe, expect, it } from "vitest";
 import { applyFreshness } from "../context/freshness";
 import { buildContextItems } from "../context/builders";
 import type { HouseholdMember } from "../identity/households";
-import { resolveIntakePeople } from "./resolve";
+import { resolveIntakePeople } from "../homebrain/intake/resolve";
 
 /** Story 08-009: a school notice for a child the household has not added yet. */
 
