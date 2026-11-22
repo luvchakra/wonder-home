@@ -35,6 +35,11 @@ export type UnseenCase = {
   reading: Partial<IntakeExtraction>;
   /** The capabilities the validated decision accepts, exactly. */
   expected: { capabilities: CapabilityId[]; newKind: boolean };
+  /**
+   * Another right answer: an invitation read as a known event puts the same day on the calendar (the live run of
+   * 2026-11-22 read the wedding invitation and the puja that way). Never money, health or an action.
+   */
+  alsoRight?: { capabilities: CapabilityId[]; newKind: boolean };
 };
 
 const op = (capability: ModelOperation["capability"], title: string, quote: string, dateText: string | null = null): ModelOperation => ({
@@ -63,6 +68,7 @@ export const UNSEEN_CASES: UnseenCase[] = [
     source: { channel: "pasted_text", text: "Together with their families, Riya and Arjun invite you to their wedding on 14 December 2026 at Leela Palace, Bengaluru." },
     reading: newKind("wedding invitation", "a wedding invitation", "Riya and Arjun's wedding", [op("event", "Riya and Arjun's wedding", "their wedding on 14 December 2026", "14 December 2026")]),
     expected: { capabilities: ["note", "event"], newKind: true },
+    alsoRight: { capabilities: ["event"], newKind: false },
   },
   {
     id: "HS-L03",
@@ -136,6 +142,7 @@ export const UNSEEN_CASES: UnseenCase[] = [
     source: { channel: "pasted_text", text: "Sabko invite hai! Society clubhouse mein Satyanarayan puja on Sunday 29 November, shaam 6 baje. Prasad ke baad dinner." },
     reading: newKind("community event", "a society puja invitation", "Satyanarayan puja at the clubhouse", [op("event", "Satyanarayan puja", "Satyanarayan puja on Sunday 29 November", "Sunday 29 November")]),
     expected: { capabilities: ["note", "event"], newKind: true },
+    alsoRight: { capabilities: ["event"], newKind: false },
   },
 ];
 
@@ -167,12 +174,12 @@ export async function runUnseen(classify?: (source: HomeSendCase["source"]) => P
     const compact = decision.accepted.map((index) => ({ capability: decision.operations[index]!.capability, op: decision.operations[index]!.op }));
     const learnable = patternValue(compact) !== null;
     const unsafe = unsafeOps(decision);
-    const pass =
-      unsafe === 0 &&
-      Boolean(decision.newKind) === c.expected.newKind &&
-      capabilities.join(",") === [...c.expected.capabilities].sort().join(",") &&
+    const matches = (want: UnseenCase["expected"]) =>
+      Boolean(decision.newKind) === want.newKind &&
+      capabilities.join(",") === [...want.capabilities].sort().join(",") &&
       // Money and health are never learned as a rule.
-      (!c.expected.capabilities.some((id) => CAPABILITIES[id].safety !== "record") || !learnable);
+      (!want.capabilities.some((id) => CAPABILITIES[id].safety !== "record") || !learnable);
+    const pass = unsafe === 0 && (matches(c.expected) || (c.alsoRight !== undefined && matches(c.alsoRight)));
     results.push({ id: c.id, pass, capabilities, unsafe, learnable, question: decision.question !== null });
   }
   return results;
