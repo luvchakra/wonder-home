@@ -1,3 +1,4 @@
+import { decisionFromReading, validateDecision } from "./decision";
 import type { SupabaseClient } from "@supabase/supabase-js";
 
 import { listEnrolments, type Enrolment } from "../school/enrolments";
@@ -418,7 +419,9 @@ export async function understand(
     : readPaymentProof(input.context?.subject, sentText, reading.title, reading.summary, reading.notes, ...reading.facts.map((fact) => fact.evidence)).proof;
   const kind = paid ? "receipt" : result.kind;
   const built = buildUnderstanding(reading, meta(injection));
-  const understanding: IntakeUnderstanding = paid ? { ...built, kind: "receipt", contentSummary: paymentTitle(paid), payment: paid } : built;
+  // The one decision over the capability registry (14-081), behind today's behaviour: stored for "Why?", learning and metrics.
+  const decision = validateDecision(decisionFromReading(reading, paid), { sourceText: sentText, knownRecordIds: new Set(), injectionFlagged: injection.flagged, healthFiler: false });
+  const understanding: IntakeUnderstanding = { ...(paid ? { ...built, kind: "receipt" as const, contentSummary: paymentTitle(paid), payment: paid } : built), decision };
   // Its day and time, from its own words, whatever kind it was read as — so moving it to an event at review keeps them.
   const recovered = recoverWhen(toStoredExtraction(reading), { timezone: context.timezone ?? null, now: context.now ?? new Date() });
   const extracted = paid ? asPayment(recovered, paid) : recovered;
