@@ -1,5 +1,7 @@
 import { readHouseholdKey, readGeminiVoiceKey } from "@wonderhome/core/ai/credentials";
-import { currentPlatformKey, resolveModelKey, type ModelKey } from "@wonderhome/core/ai/model-key";
+import { platformKey, type ModelKey } from "@wonderhome/core/ai/model-key";
+import { runtimeEnvForAi } from "@wonderhome/core/platform/settings/runtime-env";
+import { platformGeminiVoiceKey, platformVoiceDefaults, resolveGeminiVoiceKey, resolveGoogleVoiceSharing, type Resolved } from "@wonderhome/core/voice/defaults";
 import type { DataUsePolicy } from "@wonderhome/core/ai/privacy";
 import { loadDataUse } from "@wonderhome/core/ai/privacy-repository";
 import { may } from "@wonderhome/core/billing/repository";
@@ -16,19 +18,23 @@ import { withReturnTo } from "./return-to";
  * fresh — on opening a session and again on every tool call, so a change
  * made in another tab takes effect on the very next thing said.
  */
-export async function geminiLiveGate(supabase: Supabase, householdId: string): Promise<{ availability: GeminiLiveAvailability; key: ModelKey; policy: DataUsePolicy }> {
-  const [entitlement, policy, voiceKey, householdKey] = await Promise.all([
+export async function geminiLiveGate(supabase: Supabase, householdId: string): Promise<{ availability: GeminiLiveAvailability; key: ModelKey; policy: DataUsePolicy; sharing: Resolved<boolean> }> {
+  const [entitlement, policy, householdVoice, householdAssistant, env] = await Promise.all([
     may(supabase, householdId, "conversation.voice"),
     loadDataUse(supabase, householdId),
     readGeminiVoiceKey(householdId).catch(() => null),
     readHouseholdKey(householdId).catch(() => null),
+    // The saved Platform admin values, waited for (bounded) on a cold server.
+    runtimeEnvForAi(),
   ]);
-  // The household's Gemini voice key first (voice only, always Google), so an
-  // assistant on Anthropic or OpenAI can still talk through Gemini; otherwise
-  // the assistant's own key, which works for voice only when it is Google's.
-  const key = resolveModelKey(voiceKey ?? householdKey, (await currentPlatformKey()));
-  const availability = geminiLiveAvailability({ voiceEnabled: flags().voice_conversation, entitled: entitlement.allowed, key, policy });
-  return { availability, key, policy };
+  // One order (voice/defaults.ts): the household's Gemini voice key, else its
+  // assistant key when that is Google's; then WonderHome's Gemini voice key,
+  // else WonderHome's assistant key when that is Google's.
+  const key = resolveGeminiVoiceKey({ householdVoice, householdAssistant, platformVoice: platformGeminiVoiceKey(env), platformAssistant: platformKey(env) });
+  // Voice to Google: the household's own answer, else WonderHome's default. An explicit "no" always wins.
+  const sharing = resolveGoogleVoiceSharing({ household: policy.googleVoice, platform: platformVoiceDefaults(env).shareWithGoogle });
+  const availability = geminiLiveAvailability({ voiceEnabled: flags().voice_conversation, entitled: entitlement.allowed, key, policy, shareWithGoogle: sharing.value });
+  return { availability, key, policy, sharing };
 }
 
 /**

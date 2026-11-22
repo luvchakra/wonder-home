@@ -5,7 +5,7 @@ import { FLAG_DEFINITIONS, flagEnvName, resolveFlags } from "./flags";
 describe("feature flags", () => {
   it("falls back to each flag's documented default", () => {
     expect(resolveFlags({})).toEqual({
-      voice_conversation: false,
+      voice_conversation: true,
       proactive_agents: false,
       whatsapp_channel: false,
     });

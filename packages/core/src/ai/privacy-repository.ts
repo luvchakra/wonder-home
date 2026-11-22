@@ -78,6 +78,8 @@ export async function saveDataUse(
       allowedClasses: [...policy.allowedClasses] satisfies ContentClass[],
       allowRetention: policy.allowRetention,
       maxItems: policy.maxItems,
+      // Only an answer the household gave is stored; silence keeps following the platform default.
+      ...(typeof policy.googleVoice === "boolean" ? { googleVoice: policy.googleVoice } : {}),
     },
   });
 }

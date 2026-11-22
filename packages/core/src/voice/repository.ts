@@ -7,7 +7,8 @@ import { googleProvider } from "./google";
 import { platformSpeechKey, resolveSpeechKey, type SpeechKeySource } from "./platform-key";
 import { browserProvider, type SpeechProvider } from "./provider";
 import { DEFAULT_VOICE_SETTINGS, voiceSettingsSchema, type VoiceSettings } from "./settings";
-import type { LiveEngine } from "./settings";
+import type { LiveEngine, VoiceProvider } from "./settings";
+import { platformVoiceDefaults, resolveVoiceEngine, resolveVoiceProvider, type VoiceOrigin, type VoicePlatformDefaults } from "./defaults";
 import { writeKeyRow } from "../ai/key-row";
 
 /**
@@ -28,31 +29,80 @@ import { writeKeyRow } from "../ai/key-row";
 
 type Row = Record<string, unknown>;
 
-/** The household's voice, or the defaults. Never throws: a voice is not worth a broken page. */
-export async function loadVoiceSettings(
+/** What the household itself chose for the two settings WonderHome has a platform default for; null = never chose. */
+export type HouseholdVoiceChoices = { provider: VoiceProvider | null; liveEngine: LiveEngine | null };
+
+export type HouseholdVoice = {
+  /** Effective settings: the household's own values, with the platform default where it never chose. */
+  settings: VoiceSettings;
+  chosen: HouseholdVoiceChoices;
+  origin: { provider: VoiceOrigin; liveEngine: VoiceOrigin };
+};
+
+/**
+ * The household's voice with WonderHome's platform defaults filling only what
+ * it never chose (owner, 2026-11-22; `defaults.ts`). Resolved at read time;
+ * no row is ever rewritten. Never throws: a voice is not worth a broken page.
+ *
+ * The household live engine has had no editor of its own since 2026-10-29 (a
+ * member's own choice is the one editor), so its column's old default,
+ * "wonderhome", is read as "never chose"; only "gemini_live", which someone
+ * must have picked, counts as the household's answer.
+ */
+export async function loadHouseholdVoice(
   supabase: SupabaseClient,
   householdId: string,
-): Promise<VoiceSettings> {
+  platform: VoicePlatformDefaults = platformVoiceDefaults(),
+): Promise<HouseholdVoice> {
   const { data, error } = await supabase
     .from("household_voice_settings")
     .select("*")
     .eq("household_id", householdId)
     .maybeSingle();
 
-  if (error || !data) return DEFAULT_VOICE_SETTINGS;
+  const row = !error && data ? (data as Row) : null;
+  const parsed = row ? voiceSettingsSchema.safeParse(fromRow(row)) : null;
+  const base = parsed?.success ? parsed.data : DEFAULT_VOICE_SETTINGS;
+  const chosen: HouseholdVoiceChoices = {
+    provider: parsed?.success && (row!.provider === "google" || row!.provider === "browser") ? row!.provider : null,
+    liveEngine: parsed?.success && row!.live_engine === "gemini_live" ? "gemini_live" : null,
+  };
+  const provider = resolveVoiceProvider({ household: chosen.provider, platform: platform.provider });
+  const liveEngine = resolveVoiceEngine({ member: null, household: chosen.liveEngine, platform: platform.engine });
+  return {
+    settings: { ...base, provider: provider.value, liveEngine: liveEngine.value },
+    chosen,
+    origin: { provider: provider.origin, liveEngine: liveEngine.origin },
+  };
+}
 
-  const parsed = voiceSettingsSchema.safeParse(fromRow(data as Row));
-  return parsed.success ? parsed.data : DEFAULT_VOICE_SETTINGS;
+/** The household's effective voice settings (`loadHouseholdVoice` without the provenance). */
+export async function loadVoiceSettings(
+  supabase: SupabaseClient,
+  householdId: string,
+): Promise<VoiceSettings> {
+  return (await loadHouseholdVoice(supabase, householdId)).settings;
 }
 
 export async function saveVoiceSettings(
   supabase: SupabaseClient,
-  input: { householdId: string; memberId: string; settings: VoiceSettings },
+  input: {
+    householdId: string;
+    memberId: string;
+    settings: VoiceSettings;
+    /** null: "Default (from WonderHome)", stored as no answer; undefined: `settings.provider` is the household's answer. */
+    chosenProvider?: VoiceProvider | null;
+  },
 ): Promise<void> {
-  const { error } = await supabase.from("household_voice_settings").upsert(
-    { household_id: input.householdId, updated_by_member_id: input.memberId, ...toRow(input.settings) },
-    { onConflict: "household_id" },
-  );
+  const write = (provider: VoiceProvider | null) =>
+    supabase.from("household_voice_settings").upsert(
+      { household_id: input.householdId, updated_by_member_id: input.memberId, ...toRow(input.settings), provider },
+      { onConflict: "household_id" },
+    );
+  let { error } = await write(input.chosenProvider === undefined ? input.settings.provider : input.chosenProvider);
+  // Before 20261122210000 makes the column nullable, "no answer" cannot be
+  // stored: keep what the household hears today (the resolved default).
+  if (error?.code === "23502" && input.chosenProvider === null) ({ error } = await write(input.settings.provider));
 
   if (error) {
     if (error.code === "42501") {
@@ -67,7 +117,7 @@ export async function saveVoiceSettings(
     eventType: "voice.settings_changed",
     targetTable: "household_voice_settings",
     targetId: input.householdId,
-    metadata: { provider: input.settings.provider, liveEngine: input.settings.liveEngine, language: input.settings.language, tier: input.settings.tier },
+    metadata: { provider: input.chosenProvider === null ? "default" : input.settings.provider, liveEngine: input.settings.liveEngine, language: input.settings.language, tier: input.settings.tier },
   });
 }
 
@@ -245,7 +295,8 @@ async function readVoiceKey(householdId: string): Promise<string | null> {
 
 function fromRow(row: Row): Record<string, unknown> {
   return {
-    provider: row.provider,
+    // Null is "Default (from WonderHome)" (20261122210000); the schema's own default stands in until resolved.
+    provider: row.provider ?? undefined,
     liveEngine: row.live_engine ?? "wonderhome",
     language: row.language,
     voiceName: row.voice_name ?? null,

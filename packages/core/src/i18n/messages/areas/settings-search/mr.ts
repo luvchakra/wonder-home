@@ -40,6 +40,7 @@ export const settingsSearchMr: AreaCatalog<typeof settingsSearchEn> = {
   "settingsSearch.kw.ai-share-allow": "मॉडेल पुरवठादार, डेटा पाठवणे, परवानगी",
   "settingsSearch.kw.ai-share-include": "मुले, आरोग्य, रक्कम, ठिकाण, खाजगी संदेश",
   "settingsSearch.kw.ai-share-retention": "ठेवणे, साठवणे, पुसणे",
+  "settingsSearch.kw.ai-share-google-voice": "आवाज, व्हॉइस, google, gemini, शेअर",
   "settingsSearch.kw.voice": "आवाज, बोलणे, ऐकणे, मायक्रोफोन",
   "settingsSearch.kw.voice-talking": "लाइव्ह, संभाषण, इंजिन",
   "settingsSearch.kw.voice-engine": "लाइव्ह, जेमिनी लाइव्ह, संभाषण",

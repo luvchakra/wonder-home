@@ -39,6 +39,7 @@ export const settingsSearchEn = {
   "settingsSearch.kw.ai-share-allow": "model provider, send data, allow, consent",
   "settingsSearch.kw.ai-share-include": "children, health, amounts, bills, location, private messages, categories",
   "settingsSearch.kw.ai-share-retention": "keep, retention, store, provider keeps, delete",
+  "settingsSearch.kw.ai-share-google-voice": "voice, google, gemini, gemini live, share voice, speech, talk",
   "settingsSearch.kw.voice": "speech, talk, speak, listen, microphone, spoken",
   "settingsSearch.kw.voice-talking": "live, conversation, engine, gemini live",
   "settingsSearch.kw.voice-engine": "live, gemini live, who runs, conversation",

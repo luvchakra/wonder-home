@@ -63,6 +63,8 @@ export type VoiceFormLabels = {
   /** "Gemini Live is not available: {reason}" — `{reason}` is the server's own. */
   geminiUnavailable: string;
   notAvailable: string;
+  /** "Default (from WonderHome): {value}" */
+  fromWonderHome: string;
   sounds: string;
   soundsGoogle: string;
   soundsBrowser: string;
@@ -179,6 +181,7 @@ export function VoiceSettingsForm({
   sourceTitle,
   sourceDetail,
   geminiLive,
+  defaults,
   labels,
 }: {
   householdId: string;
@@ -202,12 +205,21 @@ export function VoiceSettingsForm({
   sourceDetail: string;
   /** Whether Gemini Live may run for this household, and why not when it may not — the server's own check. */
   geminiLive: { available: boolean; reason: string | null; fix?: { href: string; label: string } | null };
+  /**
+   * What "Default (from WonderHome)" means for each choice, and whether this
+   * member (engine) or household (provider) has answered at all. Unanswered
+   * shows Default until someone picks (owner, 2026-11-22).
+   */
+  defaults: { engine: LiveEngine; engineChosen: boolean; provider: VoiceSettings["provider"]; providerChosen: boolean };
   labels: VoiceFormLabels;
 }) {
   const [state, action, saving] = useActionState(save, {});
   const formId = useId();
-  const [provider, setProvider] = useState(settings.provider);
-  const [engineChoice, setEngineChoice] = useState<LiveEngine>(liveEngine);
+  const [providerChoice, setProviderChoice] = useState<VoiceSettings["provider"] | "default">(defaults.providerChosen ? settings.provider : "default");
+  const [engineSelect, setEngineSelect] = useState<LiveEngine | "default">(defaults.engineChosen ? liveEngine : "default");
+  const provider = providerChoice === "default" ? defaults.provider : providerChoice;
+  const engineChoice = engineSelect === "default" ? defaults.engine : engineSelect;
+  const fromWonderHome = (value: string) => labels.fromWonderHome.replace("{value}", value);
   const [language, setLanguage] = useState(settings.language);
   const [voices, setVoices] = useState<VoiceOption[]>([]);
   const [previewError, setPreviewError] = useState<string | null>(null);
@@ -308,8 +320,8 @@ export function VoiceSettingsForm({
           <Select
             label={labels.liveEngine}
             name="liveEngine"
-            value={engineChoice}
-            onChange={(event) => setEngineChoice(event.target.value as LiveEngine)}
+            value={engineSelect}
+            onChange={(event) => setEngineSelect(event.target.value as LiveEngine | "default")}
             hint={liveEngineHint(engineChoice, {
               engines: labels.engines,
               geminiHears: labels.geminiHears,
@@ -318,6 +330,7 @@ export function VoiceSettingsForm({
               geminiReason: geminiLive.reason,
             })}
           >
+            <option value="default">{fromWonderHome(labels.engines[defaults.engine].name)}</option>
             <option value="wonderhome">{labels.engines.wonderhome.name}</option>
             <option value="gemini_live" disabled={!geminiLive.available}>
               {labels.engines.gemini_live.name}
@@ -352,15 +365,16 @@ export function VoiceSettingsForm({
           <Select
             label={labels.service}
             name="provider"
-            defaultValue={settings.provider}
+            value={providerChoice}
             disabled={!speechAvailable}
             onChange={(event) =>
-              setProvider(event.target.value as VoiceSettings["provider"])
+              setProviderChoice(event.target.value as VoiceSettings["provider"] | "default")
             }
             hint={
               speechAvailable ? labels.serviceHint : labels.serviceHintNone
             }
           >
+            <option value="default">{fromWonderHome(defaults.provider === "google" && speechAvailable ? labels.optionGoogle : labels.optionBrowser)}</option>
             <option value="browser">{labels.optionBrowser}</option>
             {speechAvailable ? (
               <option value="google">{labels.optionGoogle}</option>
