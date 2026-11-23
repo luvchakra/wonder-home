@@ -1,0 +1,109 @@
+# WonderHome's five-minute delivery clock, on this runner instead of Vercel (the owner, 2026-11-23: "i thought this
+# process is resource intensive, can we move these jobs to GitHub instead"). GitHub's own schedule is best-effort
+# (runs land hours apart), so this workflow has no schedule: Supabase pg_cron dispatches it every 5 minutes through
+# the GitHub API (`wh.trigger_delivery_clock`, migration 20261123120000, with the Vault secret
+# `github_dispatch_token`). Without that token pg_cron does nothing and Vercel keeps doing everything.
+#
+#   deliver   the delivery tick (scripts/jobs.mjs delivery → packages/core/src/jobs/delivery.ts): reminder stages,
+#             health reminders, due reminders and their pushes (deliverNotification), notices, proposals, stale
+#             clears, senders, the AI key alert, digests
+#   clock     the batch steps (background-jobs.yml's clock) and the calendar feeds, in their own concurrency group
+#             so a long night's Sleep never holds a reminder back
+#
+# Every step writes a heartbeat (platform_job_heartbeats). Vercel's dispatch tick, still called by pg_cron every 5
+# minutes, reads them once and skips each fresh step (15 min for delivery, 30 for the clock), so it does almost
+# nothing while this is healthy and takes over by itself when it is not. Claims keep a step that runs on both from
+# sending anything twice. docs/background-jobs.md has the full map.
+#
+# Secrets: the same two repository secrets as background-jobs.yml (SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY). The
+# push, mail, WhatsApp and AI keys are read from Platform admin with the service role, as the site reads them; with
+# no push keys saved there the sending steps are left to Vercel. Only workflow_dispatch: never a pull request.
+name: Delivery clock
+
+on:
+  workflow_dispatch:
+    inputs:
+      dry_run:
+        description: "Dry run: load the code, reach the database, print the plan; nothing is claimed, written or sent"
+        type: boolean
+        default: false
+  repository_dispatch:
+    types: [delivery-clock]
+
+permissions:
+  contents: read
+
+env:
+  DRY_RUN: ${{ inputs.dry_run && '--dry-run' || '' }}
+  RUNNER_READY: ${{ secrets.SUPABASE_URL != '' && secrets.SUPABASE_SERVICE_ROLE_KEY != '' }}
+
+jobs:
+  deliver:
+    name: Deliver
+    runs-on: ubuntu-latest
+    timeout-minutes: 4
+    concurrency:
+      # Runs queue rather than overlap; a newer dispatch replaces one still waiting, never the one working.
+      group: delivery-clock
+      cancel-in-progress: false
+    steps:
+      - name: Secrets present
+        if: env.RUNNER_READY != 'true'
+        run: echo "::warning::SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY aren't set as repository secrets, so nothing ran here; Vercel keeps delivering."
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        if: env.RUNNER_READY == 'true'
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        if: env.RUNNER_READY == 'true'
+        with:
+          node-version: 22
+          cache: npm
+      - name: Install
+        if: env.RUNNER_READY == 'true'
+        run: npm ci --no-audit --no-fund --silent --ignore-scripts
+        env:
+          PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD: "1"
+      - name: Deliver
+        if: env.RUNNER_READY == 'true'
+        timeout-minutes: 3
+        env:
+          NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+        run: node scripts/jobs.mjs delivery $DRY_RUN
+
+  clock:
+    name: Clock
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    concurrency:
+      # Shared with background-jobs.yml's clock, so the two never run the batch steps at once.
+      group: background-jobs-clock
+      cancel-in-progress: false
+    steps:
+      - name: Secrets present
+        if: env.RUNNER_READY != 'true'
+        run: echo "::warning::SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY aren't set as repository secrets, so nothing ran here."
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        if: env.RUNNER_READY == 'true'
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        if: env.RUNNER_READY == 'true'
+        with:
+          node-version: 22
+          cache: npm
+      - name: Install
+        if: env.RUNNER_READY == 'true'
+        run: npm ci --no-audit --no-fund --silent --ignore-scripts
+        env:
+          PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD: "1"
+      - name: Clock and calendar feeds
+        if: env.RUNNER_READY == 'true'
+        timeout-minutes: 15
+        env:
+          NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+        run: |
+          node scripts/jobs.mjs clock $DRY_RUN
+          node scripts/jobs.mjs calendar-sync $DRY_RUN

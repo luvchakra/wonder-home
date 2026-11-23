@@ -6,7 +6,7 @@
  * the repository's secrets as its environment. The site is never called.
  * Loads the TypeScript through jiti, like scripts/eval.mjs.
  *
- *   node scripts/jobs.mjs <clock|calendar-sync|webhooks|daily> [--dry-run]
+ *   node scripts/jobs.mjs <delivery|clock|calendar-sync|webhooks|daily> [--dry-run]
  *
  *   --dry-run   load the code, check the environment and the database, and
  *               print what would run; nothing is claimed, written or sent.
