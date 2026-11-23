@@ -61,13 +61,14 @@ export const maxDuration = 300;
 async function retryQueueHasWork(admin: ReturnType<typeof createAdminClient>, now: Date): Promise<boolean> {
   try {
     const iso = now.toISOString();
-    const { data, error } = await admin
-      .from("jobs")
-      .select("id")
-      .or(`and(status.eq.pending,run_after.lte.${iso}),and(status.eq.claimed,claimed_until.lt.${iso})`)
-      .limit(1);
+    // Two reads in one wave, each on its partial index (jobs_claimable_idx, jobs_reclaim_idx).
+    const [due, expired] = await Promise.all([
+      admin.from("jobs").select("id").eq("status", "pending").lte("run_after", iso).limit(1),
+      admin.from("jobs").select("id").eq("status", "claimed").lt("claimed_until", iso).limit(1),
+    ]);
     // Unreadable: drain anyway, as before.
-    return error ? true : (data ?? []).length > 0;
+    if (due.error || expired.error) return true;
+    return (due.data ?? []).length > 0 || (expired.data ?? []).length > 0;
   } catch {
     return true;
   }
