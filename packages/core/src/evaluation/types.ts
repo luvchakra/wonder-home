@@ -79,6 +79,12 @@ export type Expectation = {
   date?: string | null;
   /** The local time of day it was grounded to ("HH:MM", or "HH:MM–HH:MM" with an end), or null for all day (14-014). */
   time?: string | null;
+  /**
+   * When a proposal about one moment stops mattering, on the household's clock
+   * ("YYYY-MM-DD HH:MM"), or null when it has none (a recurring change)
+   * (owner, 2026-11-23; `homebrain/proposal-moment.ts`).
+   */
+  effectiveUntil?: string | null;
   /** The household member it lands on, or "ask" when the right answer is one question. */
   entity?: string | "ask" | null;
   /** The existing record it matches, and how. */
@@ -298,6 +304,8 @@ export type Observation = {
   interpretation: string | null;
   date: string | null;
   time: string | null;
+  /** When the proposal stops mattering, "YYYY-MM-DD HH:MM" local; absent when not read. */
+  effectiveUntil?: string | null;
   entity: string | "ask" | null;
   match: { outcome: MatchOutcome; recordId: string | null };
   conflict: boolean;

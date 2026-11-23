@@ -33,7 +33,7 @@ reminders about real records, never lines of text fired and forgotten.
   `/notifications`, read in the page's one wave, and no longer on Home;
   HomeTalk keeps it too. A child's or helper's request already shown under
   "Waiting for your OK" with its own Approve and Decline is left off it. The
-  bell's badge adds `countNeedsYou` (head-only counts) to the unread
+  bell's badge adds `countNeedsYou` (head-only counts; proposals are read, at most 10, so a passed moment is left out) to the unread
   reminders. These are not `notifications` rows: answering one goes through
   `(auth)/needs-you-actions.ts`, never a notification write.
 - **Cleared when decided or stale** (owner, 2026-11-22). One resolver,
@@ -50,6 +50,18 @@ reminders about real records, never lines of text fired and forgotten.
   `past` once the appointment's day has ended on the household's clock; the
   appointment record is untouched, and measurements and medical bills keep
   the rule.
+- **A proposal whose moment has passed** (owner, 2026-11-23). A proposal about
+  one moment (`adjust_schedule`, `plan_event`, `plan_meal`: one occurrence, a
+  one-off time) records `payload.effective_until` when it is made
+  (`homebrain/proposal-moment.ts`: the occurrence's start or the new time if
+  earlier, on the household's clock; rules first, a model only for the day when
+  the rules can't tell, checked against the calendar). Once it passes,
+  `stale.ts` `sweepMomentPassedProposals` expires it as not done
+  (`result.reason = 'moment_passed'`), clears its reminders as `past`, and adds
+  one plain line to that conversation, no push. Needs you and the bell's count
+  leave it out at read time, before the sweep. Older proposals are read again
+  from their words and the calendar. A recurring change, payments, orders and a
+  child's request waiting on a grown-up never expire this way.
 - **On the Calendar** (26-025, 2026-11-22). A person's own plain reminder
   (`source_type = 'reminder'`, set in HomeTalk) also shows on its day in the
   Calendar, to its recipient only (`calendar/projection.ts` `reminderEntries`),

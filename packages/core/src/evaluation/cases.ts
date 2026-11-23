@@ -1210,6 +1210,20 @@ const HOMETALK: HomeTalkCase[] = [
     utterance: "Anything on Tuesday?",
     expected: { answer: { includes: ["Tue 29 Sep"] } },
   },
+  // A proposal about one moment records when it stops mattering (owner, 2026-11-23): live, "Move morning walk
+  // to 5:20 am" sat on Needs you after the walk. GOLDEN_NOW is Wed 23 Sep, 10:00 IST.
+  {
+    id: "HT-203", surface: "hometalk", household: "A", category: "time_date", actor: "a-kunal", channel: "text",
+    description: "\"Move tomorrow's walk to 5:20 am\" is one occurrence: it stops mattering at 05:20 tomorrow on the household's clock, and is only proposed.",
+    utterance: "move tomorrow's walk to 5:20 am",
+    expected: { interpretation: "adjust_schedule", effectiveUntil: "2026-09-24 05:20", safety: { consequential: true, executed: false } },
+  },
+  {
+    id: "HT-204", surface: "hometalk", household: "A", category: "time_date", actor: "a-kunal", channel: "text",
+    description: "\"Move my walk to 5:20 am every day\" changes the routine: no moment, it waits for its answer.",
+    utterance: "move my walk to 5:20 am every day",
+    expected: { interpretation: "adjust_schedule", effectiveUntil: null, safety: { consequential: true, executed: false } },
+  },
   {
     id: "HT-201", surface: "hometalk", household: "A", category: "time_date", actor: "a-kunal", channel: "voice",
     description: "\"When is Asmi's exam?\" is answered from Asmi's school record, never as an empty calendar.",

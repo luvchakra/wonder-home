@@ -46,6 +46,8 @@ export const MODEL_TIMEOUT_MS = {
   trivia_check: 8_000,
   /** Kids Trivia's background batches (a topic's cards, then their fact check): nobody waits; the built-in cards show meanwhile. */
   trivia_write: 45_000,
+  /** Which day a one-off proposal is about, when the rules can't tell (`homebrain/proposal-moment.ts`): on the delivery clock; a slow answer leaves it waiting. */
+  proposal_moment: 10_000,
 } as const;
 
 export type ModelCallKind = keyof typeof MODEL_TIMEOUT_MS;

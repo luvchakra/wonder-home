@@ -1,5 +1,8 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 
+import { checkModelDay, MOMENT_ACTIONS, momentOf, momentPassedLine, momentPayload, type MomentOccurrence, type WaitingProposal } from "../homebrain/proposal-moment";
+import type { MomentDayJudge } from "../homebrain/proposal-moment-model";
+import { targetOccurrences } from "../homebrain/proposal-moment-repository";
 import { log } from "../observability/logger";
 import { resolveNotifications, type ResolveReason } from "./resolve";
 import { localMoment } from "./timing";
@@ -29,7 +32,10 @@ import { localMoment } from "./timing";
  * settled. The one exception (owner, 2026-11-22: "clear past health"): a
  * health appointment's reminders clear as `past` once the appointment's day
  * has ended on the household's clock; the appointment itself is untouched. A proposal or approval still waiting stays
- * (it has its own reminder and 48-hour expiry). Needs-you questions are not
+ * (it has its own reminder and 48-hour expiry), except one about a single
+ * moment that has passed (owner, 2026-11-23: `sweepMomentPassedProposals`
+ * below): it expires as `moment_passed`, never done, and its reminders clear
+ * as `past`. Needs-you questions are not
  * notifications and keep their own default and deadline.
  *
  * The plan is pure (`planStale`); `sweepStaleNotifications` reads, plans and
@@ -84,6 +90,7 @@ function sourceReason(row: OpenNotification, facts: StaleFacts, now: Date): Reso
       if (action) {
         if (action.status === "proposed") return null;
         if (action.reason === "superseded") return "superseded";
+        if (action.reason === "moment_passed") return "past";
         return action.status === "expired" ? "expired" : "decided";
       }
       const approval = facts.approvals.get(id);
@@ -251,4 +258,98 @@ export async function sweepStaleNotifications(
     log.warn("stale notification sweep failed", { reason: thrown instanceof Error ? thrown.name : "unknown", allow: ["reason"] });
   }
   return counts;
+}
+
+// --- A proposal whose moment has passed (owner, 2026-11-23) -------------------------------------
+
+export type MomentRow = WaitingProposal & { id: string; household_id: string; session_id: string; timezone: string };
+
+/** Which waiting proposals' moments have passed. Pure; `occurrences` are the calendar's, for proposals written before `effective_until`. */
+export function planMomentPassed(rows: readonly MomentRow[], now: Date, occurrences: ReadonlyMap<string, readonly MomentOccurrence[]> = new Map()): { row: MomentRow; until: Date }[] {
+  const out: { row: MomentRow; until: Date }[] = [];
+  for (const row of rows) {
+    const until = momentOf(row, row.timezone, occurrences.get(row.id));
+    if (until && until.getTime() <= now.getTime()) out.push({ row, until });
+  }
+  return out;
+}
+
+/** At most this many unclear proposals go to a model per tick. */
+const MODEL_ASKS_PER_TICK = 10;
+
+/**
+ * Expires every waiting proposal whose moment has passed, as not done
+ * (`result.reason = "moment_passed"`), with its approval row; clears its
+ * reminders as `past`; and adds one plain line to that conversation
+ * ("Didn't move the morning walk: 5:20 am has passed."), never a push.
+ * A proposal the rules could not place is asked of a model once, checked
+ * against the calendar (`checkModelDay`). Payments, orders and a child's
+ * request waiting on a grown-up are never touched here. Bounded; never throws.
+ */
+export async function sweepMomentPassedProposals(
+  admin: SupabaseClient,
+  now: Date = new Date(),
+  options: { householdId?: string; limit?: number; judgeFor?: (householdId: string) => Promise<MomentDayJudge | null> } = {},
+): Promise<{ expired: number; asked: number }> {
+  const result = { expired: 0, asked: 0 };
+  try {
+    let query = admin
+      .from("conversation_actions")
+      .select("id, household_id, session_id, action_type, created_at, payload, households(timezone)")
+      .eq("approval_status", "proposed")
+      .in("action_type", [...MOMENT_ACTIONS])
+      .gte("created_at", new Date(now.getTime() - 48 * 3_600_000).toISOString());
+    if (options.householdId) query = query.eq("household_id", options.householdId);
+    const rows = await rowsOf<Record<string, unknown>>(query.order("created_at", { ascending: true }).limit(options.limit ?? 200));
+    const waiting: MomentRow[] = rows.map((row) => {
+      const household = (Array.isArray(row.households) ? row.households[0] : row.households) as { timezone?: string | null } | null;
+      return { id: row.id as string, household_id: row.household_id as string, session_id: row.session_id as string, action_type: row.action_type as string, created_at: row.created_at as string, payload: (row.payload as Record<string, unknown> | null) ?? null, timezone: household?.timezone ?? "Asia/Kolkata" };
+    });
+
+    // Proposals with no `effective_until` of their own are read against the calendar, and the unclear ones asked once.
+    const occurrences = new Map<string, MomentOccurrence[]>();
+    for (const row of waiting) {
+      const payload = row.payload ?? {};
+      if (typeof payload.effective_until === "string") continue;
+      const parameters = (payload.parameters as Record<string, unknown> | undefined) ?? {};
+      const what = String(parameters.what ?? parameters.title ?? "");
+      const found = await targetOccurrences(admin, row.household_id, what, new Date(row.created_at), row.timezone);
+      occurrences.set(row.id, found);
+      const moment = payload.moment as { unclear?: unknown; checked?: unknown } | undefined;
+      if (!moment?.unclear || moment.checked || result.asked >= MODEL_ASKS_PER_TICK || !options.judgeFor) continue;
+      const judge = await options.judgeFor(row.household_id).catch(() => null);
+      if (!judge) continue;
+      result.asked += 1;
+      const at = new Date(row.created_at);
+      const day = await judge.day(localMoment(at, row.timezone).dateKey, [parameters.what, "to", parameters.to].filter(Boolean).join(" ")).catch(() => null);
+      const reading = checkModelDay(day, { actionType: row.action_type, parameters, at, timezone: row.timezone, occurrences: found });
+      const next = { ...payload, ...momentPayload(reading), moment: { ...(momentPayload(reading).moment as object | undefined), checked: true } };
+      await admin.from("conversation_actions").update({ payload: next }).eq("id", row.id).eq("household_id", row.household_id).eq("approval_status", "proposed");
+      row.payload = next;
+    }
+
+    for (const { row, until } of planMomentPassed(waiting, now, occurrences)) {
+      // Closed the way "no" would close it: compare-and-swap on the status, so an answer in the same moment wins.
+      const { data: closed } = await admin
+        .from("conversation_actions")
+        .update({ approval_status: "expired", decided_at: now.toISOString(), result: { reason: "moment_passed", effectiveUntil: until.toISOString() } })
+        .eq("id", row.id)
+        .eq("household_id", row.household_id)
+        .eq("approval_status", "proposed")
+        .select("id")
+        .maybeSingle();
+      if (!closed) continue;
+      result.expired += 1;
+      const referral = row.payload?.referral as { approvalId?: string } | undefined;
+      await admin.from("approvals").update({ status: "expired", decided_at: now.toISOString() }).eq("household_id", row.household_id).eq("conversation_action_id", row.id).eq("status", "pending");
+      await resolveNotifications(admin, { householdId: row.household_id, sourceType: "approval", sourceIds: referral?.approvalId ? [row.id, referral.approvalId] : [row.id] }, "past", now);
+      // One plain line in that conversation; no push.
+      await admin
+        .from("conversation_messages")
+        .insert({ household_id: row.household_id, session_id: row.session_id, role: "assistant", content: momentPassedLine(row), metadata: { kind: "moment_passed", actionId: row.id } });
+    }
+  } catch (thrown) {
+    log.warn("moment-passed proposal sweep failed", { reason: thrown instanceof Error ? thrown.name : "unknown", allow: ["reason"] });
+  }
+  return result;
 }
