@@ -9,7 +9,7 @@ The owner: "i thought this process is resource intensive, can we move these jobs
 **Trigger chain**
 
 1. pg_cron `wonderhome-delivery-clock-github` (`*/5 * * * *`) runs `select wh.trigger_delivery_clock();` (migration `20261123120000_delivery_clock_github.sql`).
-2. The function reads the Vault secret `github_dispatch_token` and, with pg_net, POSTs `{"ref":"main"}` to `https://api.github.com/repos/luvchakra/wonder-home/actions/workflows/delivery-clock.yml/dispatches`. Without Vault, pg_net or the token it returns `no-vault`, `no-net` or `no-token` and sends nothing.
+2. The function reads the token saved in Platform admin → Integrations → Background jobs → "GitHub delivery-clock token" (`GITHUB_DISPATCH_TOKEN`, kept in Vault by `platform_config`; migration `20261123150000`; the Vault secret `github_dispatch_token` is a fallback) and, with pg_net, POSTs `{"ref":"main"}` to `https://api.github.com/repos/luvchakra/wonder-home/actions/workflows/delivery-clock.yml/dispatches`. Without Vault, pg_net or the token it returns `no-vault`, `no-net` or `no-token` and sends nothing.
 3. `.github/workflows/delivery-clock.yml` (`workflow_dispatch`, and `repository_dispatch` type `delivery-clock`) runs two jobs:
    - **Deliver** (`node scripts/jobs.mjs delivery`, job timeout 4 min, concurrency `delivery-clock`, queued not cancelled): reminder stages, health reminders, due reminders and their pushes through `deliverNotification`, notices, waiting proposals (with the moment judge), stale clears, unanswered senders, the AI key alert, digests (`packages/core/src/jobs/delivery.ts`). Each step writes a heartbeat `delivery.*`.
    - **Clock** (`node scripts/jobs.mjs clock` then `calendar-sync`, concurrency `background-jobs-clock`, shared with `background-jobs.yml`): the batch steps and the calendar feeds, in their own group so a long night's Sleep never holds a reminder back.
@@ -22,8 +22,8 @@ The owner: "i thought this process is resource intensive, can we move these jobs
 
 | What breaks | What happens |
 |---|---|
-| No `github_dispatch_token` in Vault (the state until the owner adds it) | The function returns `no-token`; nothing runs on GitHub; Vercel delivers every 5 minutes as before |
-| Token expired or revoked, or missing Actions write | GitHub answers 401/403/404 (in `net._http_response` for 6 h); no runs; heartbeats go stale; Vercel takes over within 15 minutes |
+| No "GitHub delivery-clock token" saved in Platform admin (the state until the owner adds it; Overview and Integrations say "Delivery clock on GitHub: not set") | The function returns `no-token`; nothing runs on GitHub; Vercel delivers every 5 minutes as before |
+| Token expired or revoked, or missing Actions write | GitHub answers 401/403/404 (in `net._http_response` for 6 h); no runs; heartbeats go stale; Vercel takes over within 15 minutes; Platform admin shows "Delivery clock on GitHub: failing" in Configuration health |
 | `SUPABASE_URL` / `SUPABASE_SERVICE_ROLE_KEY` repository secrets missing | Each run warns and exits green; no heartbeats; Vercel keeps delivering |
 | A run fails or a step throws | That step's heartbeat keeps its last good time and goes stale after 15 minutes; Vercel does it |
 | Runs queue up (GitHub slow to start) | One runs, one waits, newer dispatches replace the waiting one; a reminder is at most a few minutes late |

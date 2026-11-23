@@ -32,6 +32,7 @@ export const SETTING_GROUPS = {
   school: { label: "School portals", page: "integrations" },
   careers: { label: "Careers", page: "integrations" },
   billing: { label: "Payments", page: "integrations" },
+  jobs: { label: "Background jobs", page: "integrations" },
   features: { label: "Features", page: "configuration" },
 } as const satisfies Record<string, { label: string; page: SettingPage }>;
 
@@ -512,6 +513,19 @@ const entries = [
     defaultValue: "mailto:support@wonderapps.biz",
     description: "Who the push services can contact about WonderHome's messages.",
     editableBy: "operator",
+  },
+  // Background jobs
+  {
+    key: "GITHUB_DISPATCH_TOKEN",
+    label: "GitHub delivery-clock token",
+    group: "jobs",
+    kind: "secret",
+    input: { type: "text" },
+    schema: secret(20, 255).regex(/^(github_pat_|ghp_)/, "a GitHub token (starts with github_pat_)"),
+    defaultValue: null,
+    description:
+      "Lets the database start the delivery clock on GitHub every 5 minutes, so reminders are sent from GitHub Actions instead of Vercel. Create it on GitHub → Settings → Developer settings → Fine-grained tokens: repository luvchakra/wonder-home only, permission Actions: Read and write. Without it Vercel keeps delivering. Replace it before it expires.",
+    editableBy: "owner",
   },
   // Places
   {

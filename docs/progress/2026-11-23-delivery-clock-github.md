@@ -28,3 +28,13 @@
 5. Later: once a clean week passes, the `background-jobs.yml` clock schedule is redundant (the Clock job covers it).
 
 No QA accounts or live data were created.
+
+## Follow-up: the token is a Platform admin setting (same day)
+
+The owner: "instead of create secret through query, can you create new secret entry in platform admin which i can then populate".
+
+- `GITHUB_DISPATCH_TOKEN` ("GitHub delivery-clock token") in `platform/settings/registry.ts`, new group "Background jobs" on Integrations: a secret, owner only with the password step-up, kept in Vault by the store, shown only as its last four.
+- Migration `20261123150000_delivery_clock_token_platform_admin.sql` replaces `wh.trigger_delivery_clock()` to read it from `platform_config` → `vault.decrypted_secrets`; a cleared value counts as unset; the Vault name `github_dispatch_token` stays as a fallback (two lines). Still `no-token` and nothing sent without either.
+- Configuration health on Overview and Integrations: "Delivery clock on GitHub: not set / running (last run N min ago) / failing (…)" from the `delivery.*` heartbeats with `runner = 'github'` (`jobs/delivery-clock-status.ts`). Failing is listed with the other gaps; the other two are one quiet line.
+- Settings search (rule 23) indexes household settings only; Platform admin settings are not in it, so there is no entry to add.
+- Verified: `scripts/test-delivery-clock-trigger-rls.mjs` 7 tests (Platform admin token wins; cleared falls back; neither sends nothing); `vitest packages/core/src/jobs/ packages/core/src/platform/settings/` 68 tests; typecheck, ESLint, security suite, migration and service-role lints.

@@ -3,8 +3,9 @@
  * The delivery clock's GitHub trigger (migration 20261123120000, 2026-11-23).
  *
  * Every 5 minutes pg_cron calls `wh.trigger_delivery_clock()`, which asks the
- * GitHub API to run `delivery-clock.yml` with the Vault secret
- * `github_dispatch_token`. Without the token (or without Vault or pg_net) it
+ * GitHub API to run `delivery-clock.yml` with the token saved in Platform admin
+ * (`GITHUB_DISPATCH_TOKEN`, kept in Vault by `platform_config`; migration
+ * 20261123150000), or else the Vault secret `github_dispatch_token`. Without the token (or without Vault or pg_net) it
  * must do nothing at all, so Vercel keeps delivering; with it, exactly one
  * request to the one workflow. Nobody reachable from a browser may call it.
  *
@@ -31,7 +32,7 @@ test("without Vault it answers no-vault and sends nothing", () => {
 });
 
 test("with Vault but no pg_net it answers no-net", () => {
-  psql("create schema vault; create table vault.decrypted_secrets (name text, decrypted_secret text);", options);
+  psql("create schema vault; create table vault.decrypted_secrets (id uuid primary key default gen_random_uuid(), name text, decrypted_secret text);", options);
   assert.equal(psql("select wh.trigger_delivery_clock();", options), "no-net");
 });
 
@@ -44,7 +45,7 @@ test("without the token it answers no-token and sends nothing", () => {
     options,
   );
   assert.equal(psql("select wh.trigger_delivery_clock();", options), "no-token");
-  psql("insert into vault.decrypted_secrets values ('cron_secret', 'not-this-one'), ('github_dispatch_token', '   ');", options);
+  psql("insert into vault.decrypted_secrets (name, decrypted_secret) values ('cron_secret', 'not-this-one'), ('github_dispatch_token', '   ');", options);
   assert.equal(psql("select wh.trigger_delivery_clock();", options), "no-token");
   assert.equal(psql("select count(*) from net.calls;", options), "0");
 });
@@ -61,6 +62,30 @@ test("with the token it dispatches delivery-clock.yml on main, once", () => {
   assert.equal(auth, "Bearer github_pat_test");
   assert.equal(accept, "application/vnd.github+json");
   assert.equal(psql("select count(*) from net.calls;", options), "1");
+});
+
+test("the token saved in Platform admin wins over the legacy Vault name", () => {
+  psql(
+    `with s as (insert into vault.decrypted_secrets (name, decrypted_secret) values ('wonderhome_config_GITHUB_DISPATCH_TOKEN', 'github_pat_platform') returning id)
+     insert into public.platform_config (key, secret, vault_secret_id, value_last4) select 'GITHUB_DISPATCH_TOKEN', true, id, 'form' from s;
+     delete from net.calls;`,
+    options,
+  );
+  assert.equal(psql("select wh.trigger_delivery_clock();", options), "dispatched");
+  assert.equal(psql("select headers->>'Authorization' from net.calls;", options), "Bearer github_pat_platform");
+});
+
+test("a cleared Platform admin token falls back to the legacy name, and with neither nothing is sent", () => {
+  psql(
+    `update vault.decrypted_secrets set decrypted_secret = '' where name = 'wonderhome_config_GITHUB_DISPATCH_TOKEN';
+     delete from net.calls;`,
+    options,
+  );
+  assert.equal(psql("select wh.trigger_delivery_clock();", options), "dispatched");
+  assert.equal(psql("select headers->>'Authorization' from net.calls;", options), "Bearer github_pat_test");
+  psql("update vault.decrypted_secrets set decrypted_secret = '' where name = 'github_dispatch_token'; delete from net.calls;", options);
+  assert.equal(psql("select wh.trigger_delivery_clock();", options), "no-token");
+  assert.equal(psql("select count(*) from net.calls;", options), "0");
 });
 
 test("no browser role may call it", () => {

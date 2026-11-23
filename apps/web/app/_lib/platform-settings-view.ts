@@ -4,6 +4,7 @@ import { cache } from "react";
 import { adminClientFor, adminGrant } from "@wonderhome/core/db/admin-context";
 import type { PlatformAdmin } from "@wonderhome/core/platform/admin";
 import { configurationHealth } from "@wonderhome/core/platform/settings/health";
+import { deliveryClockStatus, lastGitHubDelivery, type DeliveryClockStatus } from "@wonderhome/core/jobs/delivery-clock-status";
 import { PLATFORM_SETTINGS, mayEdit, settingsForPage, type SettingDefinition, type SettingPage } from "@wonderhome/core/platform/settings/registry";
 import { settingStatuses, type SettingStatus } from "@wonderhome/core/platform/settings/store";
 
@@ -114,4 +115,15 @@ export async function razorpayCard(staff: PlatformAdmin, origin: string): Promis
 export async function configurationGaps(staff: PlatformAdmin) {
   const { statuses, storeReady } = await platformSettingStatuses(staff);
   return storeReady ? configurationHealth(statuses) : [];
+}
+
+/**
+ * "Delivery clock on GitHub: not set / running / failing" (owner, 2026-11-23). The token counts only when saved
+ * here: the database reads it from Platform admin's store, never from Vercel.
+ */
+export async function deliveryClockLine(staff: PlatformAdmin): Promise<DeliveryClockStatus | null> {
+  const admin = adminClientFor(adminGrant.platformAdmin(staff, "read when the delivery clock last ran on GitHub"));
+  const [{ statuses, storeReady }, lastRun] = await Promise.all([platformSettingStatuses(staff), lastGitHubDelivery(admin)]);
+  if (!storeReady) return null;
+  return deliveryClockStatus(statuses.get("GITHUB_DISPATCH_TOKEN")?.source === "saved", lastRun, new Date());
 }
