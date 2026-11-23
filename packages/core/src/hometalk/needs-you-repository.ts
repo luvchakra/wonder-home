@@ -1,5 +1,6 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 
+import { momentPassed } from "../homebrain/proposal-moment";
 import {
   deadlinesFor,
   EXPIRE_AFTER_HOURS,
@@ -119,19 +120,36 @@ export async function getNeedsYou(client: SupabaseClient, householdId: string, i
   return fromRow(data as Row);
 }
 
+/**
+ * A proposal whose moment has passed is never shown or counted, even before
+ * the delivery clock's sweep expires it (owner, 2026-11-23;
+ * `homebrain/proposal-moment.ts`). Read from its own `effective_until`, or,
+ * for one written before that, from its words.
+ */
+function stillMatters(rows: readonly Row[], now: Date): Row[] {
+  return rows.filter((row) => {
+    const household = (Array.isArray(row.households) ? row.households[0] : row.households) as { timezone?: string | null } | null;
+    return !momentPassed(
+      { action_type: row.action_type as string, created_at: row.created_at as string, payload: (row.payload as Record<string, unknown> | null) ?? null },
+      household?.timezone ?? "Asia/Kolkata",
+      now,
+    );
+  });
+}
+
 /** HomeTalk proposals still waiting for a yes, made in the last 48 hours: answered in HomeTalk. */
 async function pendingProposals(client: SupabaseClient, householdId: string, now: Date): Promise<NeedsYouItem[]> {
   const since = new Date(now.getTime() - EXPIRE_AFTER_HOURS * 3_600_000).toISOString();
   const { data, error } = await client
     .from("conversation_actions")
-    .select("id, session_id, action_type, payload, created_at")
+    .select("id, session_id, action_type, payload, created_at, households(timezone)")
     .eq("household_id", householdId)
     .eq("approval_status", "proposed")
     .gte("created_at", since)
     .order("created_at", { ascending: true })
     .limit(10);
   if (error) return [];
-  return ((data ?? []) as Row[]).map((row) => {
+  return stillMatters((data ?? []) as Row[], now).map((row) => {
     const payload = (row.payload as Record<string, unknown> | null) ?? {};
     const preview = payload.preview as { summary?: unknown } | null | undefined;
     const created = new Date(row.created_at as string);
@@ -224,7 +242,13 @@ export async function countNeedsYou(client: SupabaseClient, householdId: string,
   const [questions, proposals, approvals] = await Promise.all([
     counted(client.from("needs_you_items").select("id", { count: "exact", head: true }).eq("household_id", householdId).eq("status", "open")),
     // `pendingProposals` reads at most 10, so the count is bounded the same way.
-    counted(client.from("conversation_actions").select("id", { count: "exact", head: true }).eq("household_id", householdId).eq("approval_status", "proposed").gte("created_at", since)).then((n) => Math.min(n, 10)),
+    // Read, not head-counted, so a proposal whose moment has passed is left out here too.
+    Promise.resolve(
+      client.from("conversation_actions").select("action_type, payload, created_at, households(timezone)").eq("household_id", householdId).eq("approval_status", "proposed").gte("created_at", since).order("created_at", { ascending: true }).limit(10),
+    ).then(
+      ({ data, error }) => (error ? 0 : stillMatters((data ?? []) as Row[], now).length),
+      () => 0,
+    ),
     counted(client.from("approvals").select("id", { count: "exact", head: true }).eq("household_id", householdId).eq("status", "pending").gt("expires_at", now.toISOString())).then((n) => Math.min(n, 10)),
   ]);
   return Math.min(questions, 100) + proposals + approvals;

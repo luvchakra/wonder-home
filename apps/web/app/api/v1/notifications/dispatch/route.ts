@@ -15,7 +15,8 @@ import { runNeedsYouDeadlines } from "@wonderhome/core/hometalk/needs-you-run";
 import { notificationJobHandlers } from "@wonderhome/core/notifications/retry-handler";
 import { sendDueDigests } from "@wonderhome/core/notifications/digest";
 import { householdsWithNoticeChanges, sweepNotices } from "@wonderhome/core/notifications/notices-sweep";
-import { sweepStaleNotifications } from "@wonderhome/core/notifications/stale";
+import { sweepMomentPassedProposals, sweepStaleNotifications } from "@wonderhome/core/notifications/stale";
+import { momentJudgeForHousehold } from "@wonderhome/core/homebrain/proposal-moment-model";
 import { tellPlatformAdmins } from "@wonderhome/core/ai/platform-key-alert";
 import { runtimeEnvForAi } from "@wonderhome/core/platform/settings/runtime-env";
 import { ranOnGitHub } from "@wonderhome/core/jobs/heartbeat";
@@ -125,6 +126,8 @@ async function dispatch(request: Request): Promise<Response> {
   }
   // Actions still waiting for a person get one reminder, then close as not done after 48 hours (2026-11-14).
   await sweepStaleProposals(admin, now);
+  // A proposal about one moment that has passed expires as not done (owner, 2026-11-23; `notifications/stale.ts`).
+  await sweepMomentPassedProposals(admin, now, { judgeFor: (householdId) => momentJudgeForHousehold(admin, householdId) });
   // Then what no longer applies is cleared, with its reason (owner, 2026-11-22; `notifications/stale.ts`).
   const cleared = await sweepStaleNotifications(admin, now);
   // New email senders nobody answered about in 3 days: their mail is set aside (decision 5).

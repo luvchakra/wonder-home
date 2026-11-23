@@ -819,7 +819,7 @@ async function turnInEnglish(input: HomeTalkInput, speaking: Speaking) {
       });
       let action: ConversationAction | null = null;
       if (turn.record) {
-        action = await recordProposal(admin, { householdId, sessionId, messageId: id, intent: turn.intent, proposal: turn.proposal });
+        action = await recordProposal(admin, { householdId, sessionId, messageId: id, intent: turn.intent, proposal: turn.proposal, timezone: membership.household.timezone });
         if (outcome) {
           await markActionResult(admin, { actionId: action.id, ...outcome, audit: { householdId, actorMemberId: membership.memberId, actionType: turn.intent.action, source, modality: body.channel } });
           action = { ...action, status: outcome.status, ...(unchangedResult(outcome.result) ? { unchanged: true } : {}) };
@@ -1362,7 +1362,7 @@ async function turnInEnglish(input: HomeTalkInput, speaking: Speaking) {
       await admin.from("conversation_messages").update({ content: text, metadata }).eq("id", replyId);
     }
   } else if (result.kind === "reply" && result.record) {
-    action = await recordProposal(admin, { householdId, sessionId, messageId: replyId, intent: result.intent, proposal: result.proposal });
+    action = await recordProposal(admin, { householdId, sessionId, messageId: replyId, intent: result.intent, proposal: result.proposal, timezone: membership.household.timezone });
     if (outcome) {
       await markActionResult(admin, { actionId: action.id, ...outcome, audit: { householdId, actorMemberId: membership.memberId, actionType: result.intent.action, source, modality: body.channel } });
       action = { ...action, status: outcome.status, ...(unchangedResult(outcome.result) ? { unchanged: true } : {}) };

@@ -14,6 +14,8 @@ import { checkApproval, proposalFingerprint } from "./approval";
 import { salienceOf } from "../homebrain/sleep/salience";
 import { PROPOSAL_EXPIRY_HOURS } from "./proposal-window";
 import { supersedeOlderProposals } from "./proposal-supersede";
+import { MOMENT_ACTIONS, momentPayload, readProposalMoment } from "../homebrain/proposal-moment";
+import { targetOccurrences } from "../homebrain/proposal-moment-repository";
 import { resolveNotifications } from "../notifications/resolve";
 
 /** How long a proposal's card can be approved on screen: 48 hours, then it expires as not done (`proposal-expiry.ts`). A spoken "yes" counts only within the engine's PROPOSAL_TTL_MINUTES. */
@@ -627,11 +629,22 @@ export async function recordProposal(
     messageId: string;
     intent: HouseholdIntent;
     proposal: Proposal;
+    /** The household's clock, so a proposal about one moment records when it stops mattering. */
+    timezone?: string;
+    now?: Date;
   },
 ): Promise<ConversationAction> {
   const preview = "preview" in input.proposal ? input.proposal.preview : null;
   const status: ConversationAction["status"] =
     input.proposal.kind === "executed" ? "executed" : input.proposal.kind === "refused" ? "rejected" : "proposed";
+  // When it stops mattering (owner, 2026-11-23): HomeBrain reads the moment from the words and the calendar.
+  let moment: Record<string, unknown> = {};
+  if (status === "proposed" && input.timezone && MOMENT_ACTIONS.has(input.intent.action)) {
+    const now = input.now ?? new Date();
+    const what = String(input.intent.parameters.what ?? input.intent.parameters.title ?? "");
+    const occurrences = await targetOccurrences(admin, input.householdId, what, now, input.timezone);
+    moment = momentPayload(readProposalMoment({ actionType: input.intent.action, parameters: input.intent.parameters, utterance: input.intent.utterance, at: now, timezone: input.timezone, occurrences }));
+  }
 
   const { data, error } = await admin
     .from("conversation_actions")
@@ -641,7 +654,7 @@ export async function recordProposal(
       message_id: input.messageId,
       action_type: input.intent.action,
       outcome_key: input.intent.target.reference ?? null,
-      payload: { preview, parameters: input.intent.parameters, kind: input.proposal.kind },
+      payload: { preview, parameters: input.intent.parameters, kind: input.proposal.kind, ...moment },
       approval_status: status,
       approval_fingerprint: proposalFingerprint({ actionType: input.intent.action, outcomeKey: input.intent.target.reference ?? null, parameters: input.intent.parameters }),
     })

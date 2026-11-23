@@ -26,6 +26,8 @@ import { composeRoster } from "../conversation/roster";
 import { openScreenReply } from "../conversation/screens";
 import { permissionsFor } from "../identity/permissions";
 import { resolveCalendarSpan } from "../conversation/temporal";
+import { MOMENT_ACTIONS, readProposalMoment } from "../homebrain/proposal-moment";
+import { localMoment } from "../notifications/timing";
 import { isoDateIn } from "../context/format";
 import { focusFromAnswer } from "../homebrain/focus";
 import { familyGlances } from "../homebrain/sleep/profiles";
@@ -116,6 +118,15 @@ function groundedTime(intent: HouseholdIntent): string | null {
   if (!said) return null;
   const time = readTimeOfDay(said, { hint: dayHalfOf(typeof intent.parameters.when === "string" ? intent.parameters.when : null) });
   return time ? `${String(time.hour).padStart(2, "0")}:${String(time.minute).padStart(2, "0")}` : null;
+}
+
+/** When a proposal about one moment stops mattering, as HomeBrain reads it when the route records it (2026-11-23). */
+function effectiveUntilOf(intent: HouseholdIntent, now: Date, timezone: string): string | null {
+  if (!MOMENT_ACTIONS.has(intent.action)) return null;
+  const reading = readProposalMoment({ actionType: intent.action, parameters: intent.parameters, utterance: intent.utterance, at: now, timezone });
+  if (reading.kind !== "moment") return null;
+  const local = localMoment(reading.until, timezone);
+  return `${local.dateKey} ${String(local.hour).padStart(2, "0")}:${String(local.minute).padStart(2, "0")}`;
 }
 
 /** A model that is down, or that answers something unreadable — the §16 failure paths. */
@@ -327,6 +338,7 @@ async function talkTurn(c: HomeTalkCase, utterance: string, carried: Carried, mo
     interpretation: intent.action,
     date: groundedDay(intent),
     time: groundedTime(intent),
+    effectiveUntil: effectiveUntilOf(intent, household.now, household.timezone),
     entity,
     action: result.proposal.kind,
     safety: {
