@@ -16,6 +16,12 @@ import { streamed } from "./streaming";
  * The browser's recogniser is replaced before the page loads, so each case is
  * deterministic: missing, refusing the microphone, or listening. Signs in as a
  * fresh household; needs a real Supabase project, like hometalk-composer.spec.ts.
+ *
+ * Since 2026-11-22 (owner: "switched on by default"; #630, `voice/defaults.ts`)
+ * a member who never chose follows WonderHome's default engine, Gemini Live,
+ * which opens the microphone itself rather than through the recogniser. The
+ * recogniser cases are WonderHome's own engine, so the member chooses it there;
+ * the Gemini Live cases replace the microphone instead and keep the default.
  */
 
 const url = process.env.E2E_SUPABASE_URL;
@@ -25,6 +31,17 @@ const E2E_EMAIL_DOMAIN = "e2e.wonderhome-test.internal";
 const TALK = /Start a voice conversation/;
 
 type Recogniser = "missing" | "refuses" | "listens";
+
+/** Makes the browser's microphone refuse, as a blocked site or a device with none does. */
+async function fakeMicrophone(page: Page, refusal: "NotAllowedError" | "NotFoundError") {
+  await page.addInitScript((name: string) => {
+    const message = name === "NotFoundError" ? "Requested device not found" : "Permission denied";
+    Object.defineProperty(navigator.mediaDevices, "getUserMedia", {
+      value: () => Promise.reject(new DOMException(message, name)),
+      configurable: true,
+    });
+  }, refusal);
+}
 
 /** Replaces SpeechRecognition before any page script runs. */
 async function fakeRecogniser(page: Page, mode: Recogniser) {
@@ -71,6 +88,7 @@ test.describe("HomeTalk's talk button always answers a tap", () => {
   let admin: SupabaseClient;
   let userId = "";
   let householdId = "";
+  let memberId = "";
   const email = `talk-${Date.now()}-${randomBytes(4).toString("hex")}@${E2E_EMAIL_DOMAIN}`;
   const password = `E2e!${randomBytes(18).toString("base64url")}`;
   let cookies: Awaited<ReturnType<BrowserContext["cookies"]>> | null = null;
@@ -92,7 +110,16 @@ test.describe("HomeTalk's talk button always answers a tap", () => {
     // Voice is a Pro feature (conversation.voice); the talk button is offered only where the plan has it.
     const plan = await admin.from("household_subscriptions").upsert({ household_id: householdId, plan_key: "pro", status: "active" }, { onConflict: "household_id" });
     if (plan.error) throw plan.error;
+    const member = await admin.from("household_members").select("id").eq("household_id", householdId).eq("profile_id", userId).single();
+    if (member.error) throw member.error;
+    memberId = (member.data as { id: string }).id;
   });
+
+  /** The member's own engine choice; null follows WonderHome's default (Gemini Live). */
+  async function chooseEngine(engine: "wonderhome" | null) {
+    const saved = await admin.from("household_members").update({ live_engine: engine }).eq("id", memberId);
+    if (saved.error) throw saved.error;
+  }
 
   test.afterAll(async () => {
     test.setTimeout(90_000);
@@ -118,6 +145,7 @@ test.describe("HomeTalk's talk button always answers a tap", () => {
 
   test("a browser that can't listen says so", async ({ page }, info) => {
     test.skip(info.project.name !== "mobile", "a phone");
+    await chooseEngine("wonderhome");
     await fakeRecogniser(page, "missing");
     await openHomeTalk(page);
     await page.getByRole("button", { name: TALK }).click();
@@ -126,6 +154,7 @@ test.describe("HomeTalk's talk button always answers a tap", () => {
 
   test("a microphone refused for this site says how to allow it", async ({ page }, info) => {
     test.skip(info.project.name !== "mobile", "a phone");
+    await chooseEngine("wonderhome");
     await fakeRecogniser(page, "refuses");
     await openHomeTalk(page);
     await page.getByRole("button", { name: TALK }).click();
@@ -136,11 +165,32 @@ test.describe("HomeTalk's talk button always answers a tap", () => {
 
   test("a microphone that works opens the conversation", async ({ page }, info) => {
     test.skip(info.project.name !== "mobile", "a phone");
+    await chooseEngine("wonderhome");
     await fakeRecogniser(page, "listens");
     await openHomeTalk(page);
     await page.getByRole("button", { name: TALK }).click();
     await expect(page.getByRole("button", { name: "End voice conversation" })).toBeVisible();
     // None of the "couldn't start" sentences (Next's route announcer is an alert too, so filter by words).
     await expect(page.getByRole("alert").filter({ hasText: /microphone is blocked|can't listen|Voice can't be used|Voice couldn't start/ })).toHaveCount(0);
+  });
+
+  test("with Gemini Live, the default, a microphone refused for this site says how to allow it", async ({ page }, info) => {
+    test.skip(info.project.name !== "mobile", "a phone");
+    await chooseEngine(null);
+    await fakeMicrophone(page, "NotAllowedError");
+    await openHomeTalk(page);
+    await page.getByRole("button", { name: /Start a voice conversation with Gemini Live/ }).click();
+    await expect(page.getByRole("alert").filter({ hasText: "The microphone is blocked for this site." })).toBeVisible();
+    await expect(page.getByRole("button", { name: TALK })).toBeVisible();
+  });
+
+  test("with Gemini Live, the default, a phone with no microphone says so in words, not the browser's", async ({ page }, info) => {
+    test.skip(info.project.name !== "mobile", "a phone");
+    await chooseEngine(null);
+    await fakeMicrophone(page, "NotFoundError");
+    await openHomeTalk(page);
+    await page.getByRole("button", { name: /Start a voice conversation with Gemini Live/ }).click();
+    await expect(page.getByRole("alert").filter({ hasText: "This browser can't listen." })).toBeVisible();
+    await expect(page.getByText("Requested device not found")).toHaveCount(0);
   });
 });

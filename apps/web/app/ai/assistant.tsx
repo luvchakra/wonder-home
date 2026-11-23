@@ -445,10 +445,17 @@ export function Assistant({
     setComposerState(next);
     // Starting to talk clears a half-finished reword: the two are
     // different intentions and one should not silently ride on the other.
-    if (next === "live") {
-      setEditing(null);
-      setError(null);
-    }
+    if (next === "live") setEditing(null);
+  }, []);
+
+  /**
+   * The tap that starts a live conversation clears the last message, before
+   * the engine runs: a microphone the browser refuses at once reports back
+   * before the composer turns "live", and clearing then erased the reason.
+   */
+  const onLiveStart = useCallback(() => {
+    setEditing(null);
+    setError(null);
   }, []);
 
   /** The composer's own submit — routed through whichever message, if any, is being reworded. */
@@ -779,6 +786,7 @@ export function Assistant({
           onLiveTurn={handleLiveUtterance}
           onLiveEnd={() => void endLiveSession()}
           onError={(message) => setError(message)}
+          onLiveStart={onLiveStart}
           onStateChange={onComposerState}
           onAttach={() => {
             fetchHomeSend();

@@ -183,6 +183,7 @@ export function TalkComposer({
   onLiveTurn,
   onLiveEnd,
   onError,
+  onLiveStart,
   onStateChange,
   onAttach,
   householdId,
@@ -212,6 +213,13 @@ export function TalkComposer({
   /** The live conversation ended — the caller posts the recap. */
   onLiveEnd?: () => void;
   onError?: (message: string) => void;
+  /**
+   * The person tapped to start a live conversation, before any engine runs:
+   * the moment to clear an old message. Clearing when the state turns "live"
+   * instead erased a refusal the browser gave at once (a site whose microphone
+   * is already blocked), and the tap said nothing (owner, 2026-11-20).
+   */
+  onLiveStart?: () => void;
   /** What the composer is doing now, so the screen around it can react. */
   onStateChange?: (state: TalkComposerState) => void;
   /**
@@ -353,7 +361,10 @@ export function TalkComposer({
   const shared = talk?.view(engine) ?? { state: "idle" as const, active: false, paused: false };
   const live = {
     ...shared,
-    start: () => talk?.start(engine),
+    start: () => {
+      onLiveStart?.();
+      talk?.start(engine);
+    },
     pause: () => talk?.pause(),
     resume: () => talk?.resume(),
     stop: () => talk?.stop(),

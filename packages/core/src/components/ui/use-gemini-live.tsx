@@ -5,6 +5,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { appPath } from "../../navigation/app-path";
 import { base64ToBytes, bytesToBase64, downsample, floatToPcm16, LIVE_INPUT_RATE, LIVE_OUTPUT_RATE, pcm16ToFloat } from "../../voice/pcm";
 import { LIVE_TRANSCRIBE_MAX_BYTES, LiveTranscript, readLiveMessage, type LiveToolCall } from "../../voicelink/live-messages";
+import { liveFailureKind, type LiveFailureKind } from "../../voice/live-failure";
 
 /**
  * Live conversation through Gemini Live (voice integration phase 3): the
@@ -64,8 +65,13 @@ export function useGeminiLive(input: {
    * the page replaces the line with this id. Never sent when nothing better came back.
    */
   onTranscriptRevised?: (entry: { id: string; text: string }) => void;
-  /** A problem worth telling the person (no microphone, no session, the session ended) — never thrown. */
-  onError?: (message: string) => void;
+  /**
+   * A problem worth telling the person (no microphone, no session, the session ended) — never thrown.
+   * `kind` is set when the browser itself stopped the start (no microphone, a refused one, no
+   * recording at all), so the page says it in the person's language, exactly as for
+   * WonderHome's own loop (`voice/live-failure.ts`); Gemini's own messages come without one.
+   */
+  onError?: (message: string, kind?: LiveFailureKind) => void;
   /** A tool answer that opens a screen ("take me to the grocery list"): the app follows it. */
   onNavigate?: (href: string) => void;
   /** A tool call changed something and opened no screen: the page shows the change (the owner, 2026-10-20). */
@@ -269,7 +275,7 @@ export function useGeminiLive(input: {
   const start = useCallback(async () => {
     if (sessionRef.current || state === "connecting") return;
     if (!navigator.mediaDevices?.getUserMedia || typeof AudioContext === "undefined") {
-      callbacks.current.onError?.("This browser cannot hold a live conversation. You can still type or use the microphone.");
+      callbacks.current.onError?.("This browser cannot hold a live conversation. You can still type or use the microphone.", "unsupported");
       return;
     }
     closingRef.current = false;
@@ -281,7 +287,14 @@ export function useGeminiLive(input: {
 
     try {
       // The microphone first: asking for a token nobody can use is waste.
-      const stream = await navigator.mediaDevices.getUserMedia({ audio: { channelCount: 1, echoCancellation: true, noiseSuppression: true, autoGainControl: true } });
+      // A microphone the browser can't open is the browser's answer, not Gemini's:
+      // sorted into the kinds the composer words for itself (no raw
+      // "Requested device not found"; owner, 2026-11-20 "talk button not working").
+      const stream = await navigator.mediaDevices
+        .getUserMedia({ audio: { channelCount: 1, echoCancellation: true, noiseSuppression: true, autoGainControl: true } })
+        .catch((thrown: unknown) => {
+          throw new MicrophoneError(thrown);
+        });
       if (stale()) {
         stream.getTracks().forEach((track) => track.stop());
         return;
@@ -396,14 +409,19 @@ export function useGeminiLive(input: {
       sendingRef.current = true;
       setState("listening");
     } catch (caught) {
-      const denied = caught instanceof DOMException && (caught.name === "NotAllowedError" || caught.name === "SecurityError");
       // An attempt that already ended (and said why), or was stopped, needs nothing more.
       if (stale()) return;
       closingRef.current = true;
       teardown();
-      callbacks.current.onError?.(
-        denied ? "WonderHome needs the microphone for a live conversation. Allow it in the browser's settings and try again." : caught instanceof Error ? caught.message : "Gemini voice could not start just now.",
-      );
+      if (caught instanceof MicrophoneError) {
+        const kind = liveFailureKind(caught.thrown);
+        callbacks.current.onError?.(
+          kind === "denied" ? "WonderHome needs the microphone for a live conversation. Allow it in the browser's settings and try again." : "Gemini voice could not start just now.",
+          kind,
+        );
+        return;
+      }
+      callbacks.current.onError?.(caught instanceof Error ? caught.message : "Gemini voice could not start just now.");
     }
   }, [answerTools, householdId, keepTurnAudio, play, reviseLine, settle, silence, state, teardown]);
 
@@ -454,4 +472,12 @@ export function useGeminiLive(input: {
   }, []);
 
   return { state, active, paused, start: () => void start(), pause, resume, stop, voiceStream, releaseVoice };
+}
+
+/** `getUserMedia` refused: what the browser threw, kept apart from Gemini's own errors. */
+class MicrophoneError extends Error {
+  constructor(readonly thrown: unknown) {
+    super(thrown instanceof Error ? thrown.message : "The microphone could not be opened.");
+    this.name = "MicrophoneError";
+  }
 }
