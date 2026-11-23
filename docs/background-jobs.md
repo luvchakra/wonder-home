@@ -2,6 +2,38 @@
 
 Since 2026-11-07, scheduled and batch work runs on **GitHub Actions** where it can (`.github/workflows/background-jobs.yml`). This follows the WonderWorks pattern (`luvchakra/wonder-jobs`, `gateway-collect.yml`). The workflow runs the app's own core code in Node (`scripts/jobs.mjs` loads `packages/core/src/jobs/runner.ts` through jiti) straight against Supabase with the service-role key. It never calls the site. Vercel keeps what people wait on, the inbound webhooks, and the five-minute delivery tick.
 
+## The delivery clock on GitHub (2026-11-23)
+
+The owner: "i thought this process is resource intensive, can we move these jobs to GitHub instead" (Vercel Hobby was paused this month for Fluid Active CPU). GitHub's own scheduler can't keep a 5-minute beat: on 2026-11-22/23 the 10-minute `background-jobs.yml` schedule actually ran at 16:29, 18:03, 21:58, 23:51, 02:30, 08:16, 10:54 and 11:10 UTC. So the database keeps the time and GitHub does the work.
+
+**Trigger chain**
+
+1. pg_cron `wonderhome-delivery-clock-github` (`*/5 * * * *`) runs `select wh.trigger_delivery_clock();` (migration `20261123120000_delivery_clock_github.sql`).
+2. The function reads the Vault secret `github_dispatch_token` and, with pg_net, POSTs `{"ref":"main"}` to `https://api.github.com/repos/luvchakra/wonder-home/actions/workflows/delivery-clock.yml/dispatches`. Without Vault, pg_net or the token it returns `no-vault`, `no-net` or `no-token` and sends nothing.
+3. `.github/workflows/delivery-clock.yml` (`workflow_dispatch`, and `repository_dispatch` type `delivery-clock`) runs two jobs:
+   - **Deliver** (`node scripts/jobs.mjs delivery`, job timeout 4 min, concurrency `delivery-clock`, queued not cancelled): reminder stages, health reminders, due reminders and their pushes through `deliverNotification`, notices, waiting proposals (with the moment judge), stale clears, unanswered senders, the AI key alert, digests (`packages/core/src/jobs/delivery.ts`). Each step writes a heartbeat `delivery.*`.
+   - **Clock** (`node scripts/jobs.mjs clock` then `calendar-sync`, concurrency `background-jobs-clock`, shared with `background-jobs.yml`): the batch steps and the calendar feeds, in their own group so a long night's Sleep never holds a reminder back.
+4. pg_cron `wonderhome-notification-dispatch` still calls `/api/v1/notifications/dispatch` every 5 minutes. The route reads the delivery and clock heartbeats and the retry queue in one wave. All fresh → it answers (`{ ok, onGitHub, queued }`), draining the retry queue after the response only when a job is waiting. Any stale → it runs just those steps (`runDeliveryFallback`), then the stale clock steps as before.
+5. pg_cron `wonderhome-calendar-subscription-sync` still calls the calendar route every 15 minutes; it returns after one heartbeat read while `calendar-sync` is fresh, which the Clock job now keeps fresh every 5 minutes.
+
+**Keys.** The runner reads the push (VAPID), mail (SMTP), WhatsApp and AI keys from Platform admin with the service role (`scripts/jobs.mjs` → `enablePlatformSettings`), the values the site uses. With no VAPID keys saved there, the sending steps (`delivery.health`, `.due`, `.notices`, `.proposals`, `.digests`) are left to Vercel and write no heartbeat; with no mail settings, `delivery.key-alert` is. So a reminder never goes out from GitHub with less than the site would send.
+
+**Failure modes**
+
+| What breaks | What happens |
+|---|---|
+| No `github_dispatch_token` in Vault (the state until the owner adds it) | The function returns `no-token`; nothing runs on GitHub; Vercel delivers every 5 minutes as before |
+| Token expired or revoked, or missing Actions write | GitHub answers 401/403/404 (in `net._http_response` for 6 h); no runs; heartbeats go stale; Vercel takes over within 15 minutes |
+| `SUPABASE_URL` / `SUPABASE_SERVICE_ROLE_KEY` repository secrets missing | Each run warns and exits green; no heartbeats; Vercel keeps delivering |
+| A run fails or a step throws | That step's heartbeat keeps its last good time and goes stale after 15 minutes; Vercel does it |
+| Runs queue up (GitHub slow to start) | One runs, one waits, newer dispatches replace the waiting one; a reminder is at most a few minutes late |
+| GitHub Actions down | Heartbeats stale after 15 minutes; Vercel does everything again |
+| pg_cron or pg_net down | Neither side ticks (as before this change) |
+| `CRON_SECRET` drift (Vault `cron_secret` ≠ Vercel) | The Vercel fallback answers 401, so a GitHub outage then goes uncovered; fix the drift |
+| Both run a step at once | Nothing twice: due reminders are claimed by the one `generated → delivered` update that returns them, health reminders by their sent rows, digests by their day, proposals and stale clears by compare-and-set |
+
+The worst case on a GitHub failure is reminders up to about 20 minutes late (15 minutes stale, plus a tick), once, before Vercel takes over.
+
 ## How the hand-over works (no switch to flip)
 
 - **Heartbeats.** Each step the runner finishes writes a heartbeat to `platform_job_heartbeats`: one row per step, counts only, service role only.
@@ -9,6 +41,7 @@ Since 2026-11-07, scheduled and batch work runs on **GitHub Actions** where it c
 
   | Step | Fresh for |
   |---|---|
+  | Delivery steps (`delivery.*`) | 15 min |
   | Clock steps | 30 min |
   | Calendar sync | 45 min |
   | Webhooks | 3 h |
@@ -41,8 +74,8 @@ Vercel invocations per day are estimated from the schedules. Hobby keeps one hou
 
 | Process | Trigger before | Frequency | Reads / writes | Needs near real-time? | Vercel calls/day before | Now |
 |---|---|---|---|---|---|---|
-| Delivery tick: reminder stages, health reminders, due reminders and their pushes, notice sweep, digests, AI key alert | pg_cron `wonderhome-notification-dispatch` calls `/api/v1/notifications/dispatch` | 5 min | `notification_reconciliations`, `notifications`, push and mail via `deliverNotification`, `notification_preferences`, `ai_key_alerts` | **Yes** ("a reminder set for 7:30 lands at 7:30") | 288 | **Vercel** (see below) |
-| Retry queue (`drainJobs`) | inside the dispatch call, after the response | 5 min | `jobs` (lease 120 s) | Yes (WhatsApp replies) | (within the 288) | **Vercel**: the WhatsApp handler needs the app's HomeTalk |
+| Delivery tick: reminder stages, health reminders, due reminders and their pushes, notice sweep, proposals, stale clears, senders, digests, AI key alert | pg_cron `wonderhome-notification-dispatch` calls `/api/v1/notifications/dispatch` | 5 min | `notification_reconciliations`, `notifications`, push and mail via `deliverNotification`, `notification_preferences`, `ai_key_alerts`, `conversation_actions`, `homesend_email_senders` | **Yes** ("a reminder set for 7:30 lands at 7:30") | 288 | **GitHub** `delivery-clock.yml`, dispatched every 5 min by pg_cron `wonderhome-delivery-clock-github` (2026-11-23); Vercel's tick skips each fresh step and answers after one read |
+| Retry queue (`drainJobs`) | inside the dispatch call, after the response | 5 min | `jobs` (lease 120 s) | Yes (WhatsApp replies) | (within the 288) | **Vercel**: the WhatsApp handler needs the app's HomeTalk. Since 2026-11-23 drained only when a job is waiting (one indexed read) |
 | HomeBrain keep-warm (`keepStoresWarm`) | dispatch call | 5 min | `household_context` | No | (within the 288) | **GitHub** `clock`, Vercel skips while fresh |
 | Knowledge drain (`drainKnowledge`) | dispatch call | 5 min | knowledge outbox and facts | No | (within the 288) | **GitHub** `clock` |
 | HomeSend 30-day archive | dispatch call, after the response | 5 min | `home_send_items` | No | (within the 288) | **GitHub** `clock` |
@@ -60,7 +93,7 @@ Vercel invocations per day are estimated from the schedules. Hobby keeps one hou
 | Weather, films, careers | read at request time, no scheduled job | — | — | — | 0 | nothing to move |
 
 **What stays on Vercel, and why**
-- **The delivery tick.** It has to fire every 5 minutes. GitHub's cron is best-effort: runs often start 5–20 minutes late, and some are dropped under load. So reminders, pushes, digests and stages stay on pg_cron → Vercel. The tick is now short: the slow `after()` work (Sleep, tidy, archive) and the synchronous keep-warm and knowledge drain have moved.
+- **The delivery tick's fallback.** Until 2026-11-23 the delivery tick itself stayed here, because GitHub's cron is best-effort. It now runs on GitHub, dispatched by pg_cron (*The delivery clock on GitHub*, above); the route stays as the fallback.
 - **The retry queue.** WhatsApp jobs call the app's HomeTalk gateway (`apps/web/app/_lib/whatsapp-hometalk.ts`, `server-only`), and a retry is a person waiting for a reply.
 - **Everything a person triggers and waits for.**
 - **Inbound webhooks** (WhatsApp, email, payments). The sender calls our URL, so they have to stay where the URL is.
@@ -96,7 +129,14 @@ Vercel invocations per day are estimated from the schedules. Hobby keeps one hou
   order by step;
   ```
 
-- **Actions minutes:** the repository is public, so standard runners are free. About 170 runs a day; each installs from the npm cache in about a minute.
+- **Actions minutes:** the repository is public, so standard runners are free. About 170 `background-jobs.yml` runs a day plus 288 `delivery-clock.yml` runs (two jobs each); each installs from the npm cache in about a minute.
+- **Delivery clock:** Actions → Delivery clock → Run workflow (optional dry run) runs it by hand. Is pg_cron dispatching, and what did GitHub answer (204 is success)?
+
+  ```sql
+  select wh.trigger_delivery_clock();  -- 'dispatched', or why not: no-vault, no-net, no-token
+  select status_code, created from net._http_response order by created desc limit 5;
+  select jobname, schedule, active from cron.job where jobname like 'wonderhome-%';
+  ```
 
 ## Cut-over
 
@@ -106,4 +146,4 @@ Vercel invocations per day are estimated from the schedules. Hobby keeps one hou
    - Drop the pg_cron `wonderhome-calendar-subscription-sync` schedule, through a migration.
    - Remove `/api/v1/platform/webhook-delivery` from `vercel.json`. Keep the route behind `CRON_SECRET` for manual use, as WonderWorks does.
    - Keep the retention cron for its sending sweeps.
-   - The dispatch tick stays.
+   - The dispatch tick stays, as the delivery clock's fallback.

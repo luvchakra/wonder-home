@@ -1,6 +1,8 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 
 import { platformKey } from "../ai/model-key";
+import { platformMailConfig } from "../email/mailer";
+import { webPushConfigFromEnv } from "../notifications/web-push";
 import { runtimeEnv } from "../platform/settings/runtime-env";
 import { syncDueSubscriptions } from "../calendar/subscriptions/sync";
 import { keepStoresWarm } from "../homebrain/context-store";
@@ -13,7 +15,8 @@ import { runTriviaRefill } from "../school/trivia-refill";
 import { CLOCK_DRAIN_LIMIT, drainKnowledge } from "../knowledge/facts";
 import { deliverPendingWebhooks } from "../webhooks/deliver";
 import { runRetentionSweeps } from "./daily";
-import { JOB_STEPS, recordHeartbeat, type JobStep, type StepSummary } from "./heartbeat";
+import { DELIVERY_ORDER, DELIVERY_STEPS, type DeliveryContext } from "./delivery";
+import { githubHeartbeats, JOB_STEPS, recordHeartbeat, type JobStep, type StepSummary } from "./heartbeat";
 
 /**
  * The background jobs the GitHub Actions runner does
@@ -34,12 +37,19 @@ import { JOB_STEPS, recordHeartbeat, type JobStep, type StepSummary } from "./he
  *    (claimed `for update skip locked`).
  *  - webhooks: hourly, developer webhooks waiting (once a day on Vercel's plan).
  *  - daily: the retention sweeps that send nothing.
+ *  - delivery (2026-11-23): the five-minute delivery tick — stages, health,
+ *    due reminders and their pushes, notices, proposals, stale clears,
+ *    senders, the key alert, digests (`delivery.ts`). Dispatched by pg_cron
+ *    through the GitHub API (`delivery-clock.yml`), so it runs on time even
+ *    though GitHub's own schedule does not. It sends through
+ *    `deliverNotification` with the push, mail and WhatsApp keys saved in
+ *    Platform admin; without the push keys there it is left to Vercel, so a
+ *    reminder never goes out here with less than the site would send.
  *
- * Nothing here pushes, mails or sends to a person: the steps that do
- * (reminders, digests, health, the retry queue) stay on the delivery clock,
- * which already calls `deliverNotification` within minutes.
+ * The retry queue stays on Vercel: its WhatsApp replies need the app's HomeTalk.
  */
 export const JOBS = {
+  delivery: DELIVERY_ORDER,
   clock: ["clock.context-warm", "clock.knowledge", "clock.homesend-archive", "clock.homesend-tidy", "clock.homesend-deadlines", "clock.homebrain-sleep", "clock.trivia-refill"],
   "calendar-sync": ["calendar-sync"],
   webhooks: ["webhooks"],
@@ -54,11 +64,16 @@ export function isJobName(value: string): value is JobName {
 
 /** Steps that need a model: without the platform key they would run worse than Vercel does, so they are left to Vercel. */
 const NEEDS_MODEL: ReadonlySet<JobStep> = new Set(["clock.homesend-tidy", "clock.homebrain-sleep"]);
+/** Steps that push to a person: without the VAPID keys saved in Platform admin they are left to Vercel. */
+const NEEDS_PUSH: ReadonlySet<JobStep> = new Set(["delivery.health", "delivery.due", "delivery.notices", "delivery.proposals", "delivery.digests"]);
+/** Steps that only mail (the key alert): without mail settings saved they are left to Vercel. */
+const NEEDS_MAIL: ReadonlySet<JobStep> = new Set(["delivery.key-alert"]);
 
 /** What one step does, counts only. Injected in tests. */
-export type StepRunner = (admin: SupabaseClient, now: Date) => Promise<StepSummary>;
+export type StepRunner = (admin: SupabaseClient, now: Date, context: DeliveryContext) => Promise<StepSummary>;
 
 export const STEP_RUNNERS: Record<JobStep, StepRunner> = {
+  ...DELIVERY_STEPS,
   "clock.context-warm": async (admin, now) => ({ warmed: await keepStoresWarm(admin, now, 8) }),
   "clock.knowledge": async (admin, now) => {
     const result = await drainKnowledge(admin, { limit: CLOCK_DRAIN_LIMIT * 2, now });
@@ -126,10 +141,23 @@ export async function runJob(admin: SupabaseClient, job: JobName, options: RunOp
   // settings come from there only: the workflow passes no AI secret, and one left behind is ignored (2026-11-21).
   const env = options.env ?? runtimeEnv();
   const hasModel = platformKey(env) !== null;
+  const hasPush = webPushConfigFromEnv(env) !== null;
+  const hasMail = platformMailConfig(env) !== null;
   const reports: StepReport[] = [];
-  for (const step of JOBS[job]) {
+  const steps: readonly JobStep[] = JOBS[job];
+  // Each step's last clean finish, in one read: the notice sweep looks back to it.
+  const lastOkAt = options.dryRun ? new Map<JobStep, Date>() : (await githubHeartbeats(admin, steps, options.now ?? new Date())).lastOkAt;
+  for (const step of steps) {
     if (NEEDS_MODEL.has(step) && !hasModel) {
       reports.push({ step, state: "left-to-vercel", reason: "no WonderHome AI key saved in Platform admin (or it couldn't be read)" });
+      continue;
+    }
+    if (NEEDS_PUSH.has(step) && !hasPush) {
+      reports.push({ step, state: "left-to-vercel", reason: "no push (VAPID) keys saved in Platform admin (or they couldn't be read)" });
+      continue;
+    }
+    if (NEEDS_MAIL.has(step) && !hasMail) {
+      reports.push({ step, state: "left-to-vercel", reason: "no mail settings saved in Platform admin (or they couldn't be read)" });
       continue;
     }
     if (options.dryRun) {
@@ -140,7 +168,7 @@ export async function runJob(admin: SupabaseClient, job: JobName, options: RunOp
     const now = options.now ?? new Date();
     const run = options.runners?.[step] ?? STEP_RUNNERS[step];
     try {
-      const summary = await run(admin, now);
+      const summary = await run(admin, now, { lastOkAt: lastOkAt.get(step) ?? null });
       await recordHeartbeat(admin, step, { ok: true, summary }, { now: options.now ?? new Date(), runUrl: options.runUrl, runner: options.runner });
       reports.push({ step, state: "done", summary });
     } catch (thrown) {

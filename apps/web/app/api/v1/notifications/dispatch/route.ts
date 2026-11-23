@@ -1,10 +1,6 @@
-import { sweepStaleProposals } from "@wonderhome/core/conversation/proposal-expiry";
-import { expireUnansweredSenders } from "@wonderhome/core/homesend/sender-trust";
 import { after } from "next/server";
 
 import { createAdminClient } from "@wonderhome/core/db/admin";
-import { runHealthReminderSweep } from "@wonderhome/core/health/reminders";
-import { runMeasurementRoutineSweep } from "@wonderhome/core/health/routine-reminders";
 import { keepStoresWarm } from "@wonderhome/core/homebrain/context-store";
 import { CLOCK_DRAIN_LIMIT, drainKnowledge } from "@wonderhome/core/knowledge/facts";
 import { sleepDueHouseholds } from "@wonderhome/core/homebrain/sleep/run";
@@ -13,17 +9,10 @@ import { drainJobs } from "@wonderhome/core/homesend/retry-queue";
 import { runHomeSendTidy } from "@wonderhome/core/homesend/tidy-run";
 import { runNeedsYouDeadlines } from "@wonderhome/core/hometalk/needs-you-run";
 import { notificationJobHandlers } from "@wonderhome/core/notifications/retry-handler";
-import { sendDueDigests } from "@wonderhome/core/notifications/digest";
-import { householdsWithNoticeChanges, sweepNotices } from "@wonderhome/core/notifications/notices-sweep";
-import { sweepMomentPassedProposals, sweepStaleNotifications } from "@wonderhome/core/notifications/stale";
-import { momentJudgeForHousehold } from "@wonderhome/core/homebrain/proposal-moment-model";
-import { tellPlatformAdmins } from "@wonderhome/core/ai/platform-key-alert";
-import { runtimeEnvForAi } from "@wonderhome/core/platform/settings/runtime-env";
-import { ranOnGitHub } from "@wonderhome/core/jobs/heartbeat";
+import { githubHeartbeats } from "@wonderhome/core/jobs/heartbeat";
+import { runDeliveryFallback } from "@wonderhome/core/jobs/delivery";
 import { runTriviaRefill } from "@wonderhome/core/school/trivia-refill";
 import { JOBS } from "@wonderhome/core/jobs/runner";
-import { platformMailer } from "@wonderhome/core/email/mailer";
-import { advanceDueStages, deliverDueNotifications } from "@wonderhome/core/notifications/reconcile";
 import { queueModelReads } from "@wonderhome/core/homesend/model-unavailable";
 import { whatsappConfigFromEnv } from "@wonderhome/core/notifications/whatsapp";
 import { WHATSAPP_PROCESS_KIND, whatsappJobHandler } from "@wonderhome/core/whatsapp/intake";
@@ -53,16 +42,36 @@ import { whatsappAsk, whatsappAutoAdd, whatsappDecider } from "@/app/_lib/whatsa
  * night it is (2–5 am on its own clock) and which has not slept today sleeps
  * (`sleepDueHouseholds`, HomeBrain Sleep), a couple per tick.
  *
- * Those batch steps (keep-warm, the knowledge drain, HomeSend's archive and
- * tidy, Sleep) also run on GitHub Actions every ten minutes
- * (`background-jobs.yml`, 2026-11-07). While GitHub's heartbeat for a step is
- * fresh this tick skips it; once it goes stale this tick does it again. The
- * delivery itself (stages, health, due reminders, notices, digests, the key
- * alert, the retry queue) stays here: it needs its five minutes and the app.
+ * Since 2026-11-23 this route is the fallback ("can we move these jobs to
+ * GitHub instead"). pg_cron also dispatches `delivery-clock.yml` on GitHub
+ * every five minutes (`wh.trigger_delivery_clock`), which runs every delivery
+ * step (`jobs/delivery.ts`) and the batch steps (`background-jobs.yml`'s
+ * clock), each writing a heartbeat. This tick reads the heartbeats once and
+ * runs only the steps whose heartbeat is stale (15 minutes for delivery, 30
+ * for the clock steps). While GitHub is healthy that is none: one read, one
+ * look at the retry queue, and it answers. Running on both at once sends
+ * nothing twice (each step's claim, `jobs/delivery.ts`).
+ *
+ * The retry queue stays here: its WhatsApp replies need the app's HomeTalk.
  */
-const MAX_HOUSEHOLDS = 200;
-/** A night's sleep runs after the response; it may take a while for a large household. */
+/** Sleep and tidy may run after the response when GitHub's clock is stale; they can take a while for a large household. */
 export const maxDuration = 300;
+
+/** True when the retry queue holds a job that is due, or one whose lease ran out: one indexed read. */
+async function retryQueueHasWork(admin: ReturnType<typeof createAdminClient>, now: Date): Promise<boolean> {
+  try {
+    const iso = now.toISOString();
+    const { data, error } = await admin
+      .from("jobs")
+      .select("id")
+      .or(`and(status.eq.pending,run_after.lte.${iso}),and(status.eq.claimed,claimed_until.lt.${iso})`)
+      .limit(1);
+    // Unreadable: drain anyway, as before.
+    return error ? true : (data ?? []).length > 0;
+  } catch {
+    return true;
+  }
+}
 
 async function dispatch(request: Request): Promise<Response> {
   const secret = process.env.CRON_SECRET;
@@ -74,78 +83,18 @@ async function dispatch(request: Request): Promise<Response> {
   }
   const now = new Date();
   const admin = createAdminClient();
-  // Read once, beside the delivery work; any failure answers "none", so this tick does everything.
-  const githubSteps = ranOnGitHub(admin, JOBS.clock, now);
-  // Reminders whose next stage is due ("tonight" → "this morning") move on now,
-  // not when someone next opens the app; what they make due is delivered below.
-  let advanced = 0;
-  try {
-    advanced = (await advanceDueStages(admin, now)).households;
-  } catch (thrown) {
-    log.warn("reminder stage pass failed", { reason: thrown instanceof Error ? thrown.name : "unknown" });
+  // One read of the heartbeats and one look at the retry queue, together; a failed read answers "none fresh".
+  const [heartbeats, queued] = await Promise.all([githubHeartbeats(admin, [...JOBS.delivery, ...JOBS.clock], now), retryQueueHasWork(admin, now)]);
+  const onGitHub = heartbeats.fresh;
+  const allOnGitHub = [...JOBS.delivery, ...JOBS.clock].every((step) => onGitHub.has(step));
+  if (queued) after(() => drainRetryQueue(admin));
+  if (allOnGitHub) {
+    return Response.json({ ok: true, onGitHub: onGitHub.size, queued }, { headers: { "cache-control": "no-store" } });
   }
-  // Health reminders on the household's own clock (an appointment's day-of from 7:00 or two hours
-  // before; a measurement from 9:00), each sent once; the daily sweep only catches what this missed.
-  let health = 0;
-  try {
-    const [appointments, routines] = await Promise.all([runHealthReminderSweep(admin, now), runMeasurementRoutineSweep(admin, now)]);
-    health = appointments.sent + routines.sent;
-  } catch (thrown) {
-    log.warn("health reminder pass failed", { reason: thrown instanceof Error ? thrown.name : "unknown" });
-  }
-  const { data, error } = await admin
-    .from("notifications")
-    .select("household_id")
-    .eq("status", "generated")
-    .lte("scheduled_for", now.toISOString())
-    .limit(2000);
-  if (error) {
-    log.warn("dispatch read failed", { code: error.code ?? "unknown" });
-    return Response.json({ ok: false }, { status: 500, headers: { "cache-control": "no-store" } });
-  }
-  const households = [...new Set(((data ?? []) as { household_id: string }[]).map((row) => row.household_id))].slice(0, MAX_HOUSEHOLDS);
-  let delivered = 0;
-  for (const householdId of households) {
-    try {
-      delivered += await deliverDueNotifications(admin, householdId, now);
-    } catch (thrown) {
-      log.warn("dispatch failed for a household", { reason: thrown instanceof Error ? thrown.name : "unknown" });
-    }
-  }
-  // Notices (module 27): a household whose records a notice reads from changed since the last
-  // tick is swept now, so the notice lands within minutes whether or not anyone has the app open.
-  let noticed = 0;
-  try {
-    const changed = await householdsWithNoticeChanges(admin, new Date(now.getTime() - 6 * 60_000), 50);
-    for (const householdId of changed) {
-      const swept = await sweepNotices(admin, householdId, now);
-      noticed += swept.created + swept.updated + swept.resolved;
-    }
-  } catch (thrown) {
-    log.warn("notice sweep tick failed", { reason: thrown instanceof Error ? thrown.name : "unknown" });
-  }
-  // Actions still waiting for a person get one reminder, then close as not done after 48 hours (2026-11-14).
-  await sweepStaleProposals(admin, now);
-  // A proposal about one moment that has passed expires as not done (owner, 2026-11-23; `notifications/stale.ts`).
-  await sweepMomentPassedProposals(admin, now, { judgeFor: (householdId) => momentJudgeForHousehold(admin, householdId) });
-  // Then what no longer applies is cleared, with its reason (owner, 2026-11-22; `notifications/stale.ts`).
-  const cleared = await sweepStaleNotifications(admin, now);
-  // New email senders nobody answered about in 3 days: their mail is set aside (decision 5).
-  await expireUnansweredSenders(admin, now);
-  // An alert on WonderHome's own AI key goes to the platform admins, once (14-048).
-  // With the saved settings read first (2026-11-22): on a cold server the platform key read as unset, and
-  // `supersedeStaleKeyAlerts` then closed nothing, so an alert for a key replaced in Platform admin stayed open.
-  await tellPlatformAdmins(admin, platformMailer(), now, await runtimeEnvForAi());
-  // Morning digests (story 27-008): each one whose time has come on its household's clock.
-  let digests = 0;
-  try {
-    digests = await sendDueDigests(admin, now);
-  } catch (thrown) {
-    log.warn("digest tick failed", { reason: thrown instanceof Error ? thrown.name : "unknown" });
-  }
+  // GitHub has gone quiet on some step: this tick does those itself, in the order the clock always has.
+  const delivery = await runDeliveryFallback(admin, now, heartbeats);
   // The same clock keeps HomeBrain's stored household contexts whole (14-031):
   // a few that are behind or over an hour old are rebuilt per tick.
-  const onGitHub = await githubSteps;
   let warmed = 0;
   try {
     if (!onGitHub.has("clock.context-warm")) warmed = await keepStoresWarm(admin, now);
@@ -160,21 +109,6 @@ async function dispatch(request: Request): Promise<Response> {
     log.warn("knowledge drain failed", { reason: thrown instanceof Error ? thrown.name : "unknown" });
   }
   after(async () => {
-    // Deliveries that failed for a reason worth another try (story 27-010), worked by the same clock.
-    try {
-      const whatsapp = whatsappConfigFromEnv();
-      await drainJobs(admin, {
-        limit: 10,
-        workerId: "dispatch",
-        handlers: { ...notificationJobHandlers(), ...(whatsapp ? { [WHATSAPP_PROCESS_KIND]: whatsappJobHandler({ config: whatsapp.adapter, ask: whatsappAsk(createAdminClient()), addOnItsOwn: whatsappAutoAdd(createAdminClient()), decider: whatsappDecider() }) } : {}) },
-        // An email read on the queue (held until "Trust this sender?") is added on its own when its sender is trusted.
-        addTrusted: trustedEmailAutoAdd(admin),
-        // Something kept until a model could read it: added and told once it is read (2026-11-21).
-        afterModelRead: homesendAfterModelRead(admin),
-      });
-    } catch (thrown) {
-      log.warn("notification retry drain failed", { reason: thrown instanceof Error ? thrown.name : "unknown" });
-    }
     // HomeSend's 30-day archive (the owner, 2026-11-03): untouched waiting or failed items are set
     // aside — kept, restorable — on each household's own calendar. Bounded and idempotent; the next
     // notice sweep then drops them from the grouped reminder.
@@ -213,7 +147,25 @@ async function dispatch(request: Request): Promise<Response> {
       log.warn("homebrain sleep tick failed", { reason: thrown instanceof Error ? thrown.name : "unknown" });
     }
   });
-  return Response.json({ ok: true, households: households.length, delivered, advanced, health, noticed, cleared, digests, warmed, facts, onGitHub: onGitHub.size }, { headers: { "cache-control": "no-store" } });
+  return Response.json({ ok: true, onGitHub: onGitHub.size, queued, ran: delivery.ran.length, ...delivery.summary["delivery.due"], warmed, facts }, { headers: { "cache-control": "no-store" } });
+}
+
+/** Deliveries that failed for a reason worth another try (story 27-010), worked by the same clock, after the response. */
+async function drainRetryQueue(admin: ReturnType<typeof createAdminClient>): Promise<void> {
+  try {
+    const whatsapp = whatsappConfigFromEnv();
+    await drainJobs(admin, {
+      limit: 10,
+      workerId: "dispatch",
+      handlers: { ...notificationJobHandlers(), ...(whatsapp ? { [WHATSAPP_PROCESS_KIND]: whatsappJobHandler({ config: whatsapp.adapter, ask: whatsappAsk(createAdminClient()), addOnItsOwn: whatsappAutoAdd(createAdminClient()), decider: whatsappDecider() }) } : {}) },
+      // An email read on the queue (held until "Trust this sender?") is added on its own when its sender is trusted.
+      addTrusted: trustedEmailAutoAdd(admin),
+      // Something kept until a model could read it: added and told once it is read (2026-11-21).
+      afterModelRead: homesendAfterModelRead(admin),
+    });
+  } catch (thrown) {
+    log.warn("notification retry drain failed", { reason: thrown instanceof Error ? thrown.name : "unknown" });
+  }
 }
 
 export const POST = dispatch;

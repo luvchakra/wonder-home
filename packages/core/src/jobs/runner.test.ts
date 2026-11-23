@@ -168,7 +168,7 @@ describe("an irregular GitHub schedule beside the delivery clock", () => {
         const hours = (event.t - start) / 3_600_000;
         if (hours >= 30.5 && hours < 32) vercelRanDuringOutage += 1;
         if (event.t - lastGitHub <= 30 * 60_000) vercelRanWhileFresh += 1;
-        await tidy("vercel")(admin, now);
+        await tidy("vercel")(admin, now, {});
       }
     }
 
