@@ -159,11 +159,7 @@ export default function LegalPage() {
           <Card id="who-we-are" className="scroll-mt-6 space-y-3 p-5">
             <h2 id="contact" className="scroll-mt-6 text-base font-semibold tracking-tight">Who runs WonderHome, and how to reach us</h2>
             <p className="text-sm leading-relaxed text-[var(--wh-foreground-muted)]">
-              WonderHome is a product of{" "}
-              <a href="https://wonderapps.biz" className="font-medium text-[var(--wh-primary)] underline-offset-2 hover:underline">
-                WonderApps
-              </a>
-              . WonderApps builds and runs it, and is responsible for the information your household keeps in it,
+              WonderHome is a product of WonderApps. WonderApps builds and runs it, and is responsible for the information your household keeps in it,
               including what WonderHome receives on its WhatsApp number.
               {mailTo ? (
                 <>
