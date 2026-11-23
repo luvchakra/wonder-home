@@ -28,3 +28,25 @@
 5. Later: once a clean week passes, the `background-jobs.yml` clock schedule is redundant (the Clock job covers it).
 
 No QA accounts or live data were created.
+
+## Follow-up: the token is a Platform admin setting (same day)
+
+The owner: "instead of create secret through query, can you create new secret entry in platform admin which i can then populate".
+
+- `GITHUB_DISPATCH_TOKEN` ("GitHub delivery-clock token") in `platform/settings/registry.ts`, new group "Background jobs" on Integrations: a secret, owner only with the password step-up, kept in Vault by the store, shown only as its last four.
+- Migration `20261123150000_delivery_clock_token_platform_admin.sql` replaces `wh.trigger_delivery_clock()` to read it from `platform_config` → `vault.decrypted_secrets`; a cleared value counts as unset; the Vault name `github_dispatch_token` stays as a fallback (two lines). Still `no-token` and nothing sent without either.
+- Configuration health on Overview and Integrations: "Delivery clock on GitHub: not set / running (last run N min ago) / failing (…)" from the `delivery.*` heartbeats with `runner = 'github'` (`jobs/delivery-clock-status.ts`). Failing is listed with the other gaps; the other two are one quiet line.
+- Settings search (rule 23) indexes household settings only; Platform admin settings are not in it, so there is no entry to add.
+- Verified: `scripts/test-delivery-clock-trigger-rls.mjs` 7 tests (Platform admin token wins; cleared falls back; neither sends nothing); `vitest packages/core/src/jobs/ packages/core/src/platform/settings/` 68 tests; typecheck, ESLint, security suite, migration and service-role lints.
+
+## Follow-up: the scheduler key in Platform admin (same day)
+
+The owner: "also, i don't see entry for cron secret in platform admin". The Vault `cron_secret` pg_cron sends had drifted from Vercel's `CRON_SECRET`, so every dispatch and calendar call answered 401.
+
+- `CRON_SECRET` ("Scheduler key", Background jobs): owner only, password step-up, last four only, with **Generate new key** (32 random bytes made on the server after the step-up; never sent to the browser). It can be replaced, never cleared (the UI hides Clear; the database refuses).
+- Migration `20261123160000_scheduler_key_platform_admin.sql`: `platform_config_secret_set` stores CRON_SECRET in the existing Vault secret `cron_secret` (the one pg_cron sends) instead of a second copy; `platform_config_clear` refuses it. So saving here changes what the scheduler sends and what the routes accept together.
+- `security/cron-auth.ts`: all six scheduler routes (dispatch, calendar sync, retention, webhook delivery, HomeSend tidy, catalog import) accept the saved key or Vercel's `CRON_SECRET`, compared in constant time (SHA-256 digests, `timingSafeEqual`); with neither set, everything is refused. A cold server waits for its first read of the store; a miss reads the store again (at most every 10 s per server), so a key generated on another server a moment ago is accepted.
+- Unsubscribe links keep signing with the deployment's `CRON_SECRET` (when no link secret is saved), so a generated scheduler key never breaks old links.
+- Configuration health: "Scheduler key: not set here / saved here, and matches Vercel's / Vercel's CRON_SECRET differs (fine)". Not from `net._http_response` (no RPC reads it); compared on the server, never shown.
+- `CRON_SECRET` left `STAYS_IN_VERCEL`; two settings tests that used it as their example of a non-registry key now use `SUPABASE_ACCESS_TOKEN`.
+- Verified: `scripts/test-scheduler-key-rls.mjs` (3) and the trigger tests (7); `cron-auth.test.ts` (5) and the settings, jobs and unsubscribe tests (86 in all); typecheck.

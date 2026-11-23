@@ -31,10 +31,10 @@ describe("runtimeEnv: saved value → environment variable → the reader's defa
 
   it("never lets a row stand in for a value outside the registry", async () => {
     vi.stubEnv("SUPABASE_SERVICE_ROLE_KEY", "the-real-one");
-    useSettingsLoader(async () => ({ SUPABASE_SERVICE_ROLE_KEY: "planted", CRON_SECRET: "planted" }));
+    useSettingsLoader(async () => ({ SUPABASE_SERVICE_ROLE_KEY: "planted", SUPABASE_ACCESS_TOKEN: "planted" }));
     await refreshRuntimeEnv(1_000);
     expect(runtimeEnv(1_000).SUPABASE_SERVICE_ROLE_KEY).toBe("the-real-one");
-    expect(runtimeEnv(1_000).CRON_SECRET).toBe(process.env.CRON_SECRET);
+    expect(runtimeEnv(1_000).SUPABASE_ACCESS_TOKEN).toBe(process.env.SUPABASE_ACCESS_TOKEN);
   });
 
   it("hands a reader that only checks for 'set' an empty value for a saved 'off'", () => {

@@ -1,3 +1,4 @@
+import { cronAuthorized, cronRefusal } from "@wonderhome/core/security/cron-auth";
 import { z } from "zod";
 
 import { toErrorBody } from "@wonderhome/core/api/errors";
@@ -17,13 +18,7 @@ import { log } from "@wonderhome/core/observability/logger";
 const bodySchema = z.object({ queries: z.array(z.string().trim().min(2).max(40)).max(60).optional() });
 
 async function run(request: Request) {
-  const secret = process.env.CRON_SECRET;
-  if (!secret || request.headers.get("authorization") !== `Bearer ${secret}`) {
-    return Response.json(
-      { error: { code: "unauthenticated", message: "Authentication required.", requestId: "catalog" } },
-      { status: 401, headers: { "cache-control": "no-store" } },
-    );
-  }
+  if (!(await cronAuthorized(request))) return cronRefusal("catalog");
   try {
     const raw = request.method === "POST" ? await request.json().catch(() => ({})) : {};
     const parsed = bodySchema.safeParse(raw);

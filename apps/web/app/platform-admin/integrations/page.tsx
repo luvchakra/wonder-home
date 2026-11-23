@@ -1,7 +1,7 @@
 import { headers } from "next/headers";
 import Link from "next/link";
 
-import { configurationGaps, razorpayCard, settingGroupsFor } from "../../_lib/platform-settings-view";
+import { configurationGaps, deliveryClockLine, schedulerKeyLine, razorpayCard, settingGroupsFor } from "../../_lib/platform-settings-view";
 import { staffStepUp } from "../../_lib/platform-step-up";
 import { platformStaff } from "../../_lib/platform-staff";
 import { PageBody, PageTitle } from "../_ui/page-title";
@@ -26,11 +26,13 @@ export const metadata = { title: "Integrations · Platform admin", robots: { ind
 export default async function PlatformIntegrationsPage() {
   const staff = await platformStaff("operations.read");
   if (!staff) return null; // the layout has already answered 404
-  const [{ groups, storeReady }, [origin, card], stepUp, gaps] = await Promise.all([
+  const [{ groups, storeReady }, [origin, card], stepUp, gaps, clock, scheduler] = await Promise.all([
     settingGroupsFor(staff, "integrations"),
     siteOrigin().then(async (origin) => [origin, await razorpayCard(staff, origin)] as const),
     staffStepUp(),
     configurationGaps(staff),
+    deliveryClockLine(staff),
+    schedulerKeyLine(staff),
   ]);
 
   return (
@@ -52,7 +54,7 @@ export default async function PlatformIntegrationsPage() {
           </Link>
         }
       />
-      <ConfigurationHealth gaps={gaps} />
+      <ConfigurationHealth gaps={gaps} clock={clock} scheduler={scheduler} />
       <SettingGroups
         groups={groups}
         storeReady={storeReady}

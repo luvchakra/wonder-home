@@ -1,3 +1,4 @@
+import { cronAuthorized, cronRefusal } from "@wonderhome/core/security/cron-auth";
 import { createAdminClient } from "@wonderhome/core/db/admin";
 import { syncDueSubscriptions } from "@wonderhome/core/calendar/subscriptions/sync";
 import { ranOnGitHub } from "@wonderhome/core/jobs/heartbeat";
@@ -15,13 +16,7 @@ const MAX_FEEDS_PER_RUN = 25;
 export const maxDuration = 120;
 
 async function sync(request: Request): Promise<Response> {
-  const secret = process.env.CRON_SECRET;
-  if (!secret || request.headers.get("authorization") !== `Bearer ${secret}`) {
-    return Response.json(
-      { error: { code: "unauthenticated", message: "Authentication required.", requestId: "calendar-subscription-sync" } },
-      { status: 401, headers: { "cache-control": "no-store" } },
-    );
-  }
+  if (!(await cronAuthorized(request))) return cronRefusal("calendar-subscription-sync");
 
   const admin = createAdminClient();
   // The GitHub runner syncs feeds every 15 minutes (background-jobs.yml); while it does, this call has nothing to add.

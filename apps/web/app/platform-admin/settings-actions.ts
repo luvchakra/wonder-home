@@ -1,5 +1,7 @@
 "use server";
 
+import { randomBytes } from "node:crypto";
+
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
 
@@ -45,6 +47,8 @@ async function authorise(formData: FormData) {
   if (!parsed.success) return { error: "That setting isn't one WonderHome knows." } as const;
   const entry = settingDefinition(parsed.data.key);
   if (!entry) return { error: "That setting isn't one WonderHome knows." } as const;
+  const generate = field("generate") === "1";
+  if (generate && !entry.generate) return { error: "WonderHome can't make this one; paste it instead." } as const;
   const staff = await platformStaff("settings.manage");
   if (!staff || !mayEdit(entry, staff.role)) return { error: entry.kind === "secret" ? "Only the owner can change a secret." : "Your role can see this setting but not change it." } as const;
   if (entry.kind === "secret") {
@@ -54,7 +58,9 @@ async function authorise(formData: FormData) {
       return { error: stepUpRefusal(check) } as const;
     }
   }
-  return { staff, entry, value: parsed.data.value ?? "" } as const;
+  // "Generate new key": made here, on the server, after the step-up; it never reaches the browser.
+  const value = generate && entry.generate ? randomBytes(entry.generate.bytes).toString("base64url") : (parsed.data.value ?? "");
+  return { staff, entry, value } as const;
 }
 
 function done() {
@@ -142,6 +148,7 @@ export async function clearSettingAction(_previous: SettingActionState, formData
   const checked = await authorise(formData);
   if ("error" in checked) return { tone: "risk", message: checked.error ?? null, key };
   const { staff, entry } = checked;
+  if (entry.keepSaved) return { tone: "risk", message: `${entry.label} can be replaced, not cleared: clearing it would stop every scheduled call.`, key: entry.key };
   const result = await clearSetting(adminClientFor(adminGrant.platformAdmin(staff, `clear the ${entry.key} setting`)), staff.profileId, entry.key);
   if (!result.ok) return { tone: "risk", message: result.reason === "limited" ? "That's a lot of changes in a minute. Wait a moment." : "It couldn't be cleared just now. Try again.", key: entry.key };
   done();

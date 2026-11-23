@@ -1,3 +1,4 @@
+import { cronAuthorized } from "@wonderhome/core/security/cron-auth";
 import { toErrorBody } from "@wonderhome/core/api/errors";
 import { createAdminClient } from "@wonderhome/core/db/admin";
 import { ranOnGitHub } from "@wonderhome/core/jobs/heartbeat";
@@ -18,14 +19,13 @@ import { deliverPendingWebhooks, type DeliveryOutcome } from "@wonderhome/core/w
  * one-line change here once a plan that allows it is in place.
  */
 export async function POST(request: Request) {
-  const secret = process.env.CRON_SECRET;
   const refuse = () =>
     Response.json(
       { error: { code: "unauthenticated", message: "Authentication required.", requestId: "webhook-delivery" } },
       { status: 401, headers: { "cache-control": "no-store" } },
     );
 
-  if (!secret || request.headers.get("authorization") !== `Bearer ${secret}`) return refuse();
+  if (!(await cronAuthorized(request))) return refuse();
 
   try {
     const admin = createAdminClient();
