@@ -18,6 +18,10 @@ export type SettingRowView = {
   label: string;
   description: string;
   secret: boolean;
+  /** "Generate new key": WonderHome makes the value, nobody copies it. */
+  generate?: boolean;
+  /** Replaced, never cleared (the scheduler key). */
+  keepSaved?: boolean;
   options: readonly { value: string; label: string }[] | null;
   numeric: boolean;
   source: "saved" | "environment" | "default" | "unset";
@@ -114,7 +118,16 @@ export function SettingRow({ view, stepUp = { method: "password" }, next = "/pla
             {view.secret ? <StepUpPassword stepUp={stepUp} name={`password__${view.key}`} /> : null}
             <Button type="submit" disabled={saving}>{saving ? "Saving…" : "Save"}</Button>
           </form>
-          {view.source === "saved" ? (
+          {view.generate ? (
+            <form action={save} className="space-y-3" autoComplete="off">
+              <input type="hidden" name="key" value={view.key} />
+              <input type="hidden" name={`generate__${view.key}`} value="1" />
+              <p className="text-sm text-[var(--wh-foreground-muted)]">Or let WonderHome make a strong one and save it: nothing to copy.</p>
+              <StepUpPassword stepUp={stepUp} label="Your WonderHome password, to generate it" id={`generate-password__${view.key}`} name={`password__${view.key}`} />
+              <Button type="submit" variant="secondary" disabled={saving}>{saving ? "Saving…" : "Generate new key"}</Button>
+            </form>
+          ) : null}
+          {view.source === "saved" && !view.keepSaved ? (
             <form action={clear} className="space-y-3">
               <input type="hidden" name="key" value={view.key} />
               {view.secret ? <StepUpPassword stepUp={stepUp} label="Your WonderHome password, to clear it" id={`clear-password__${view.key}`} name={`password__${view.key}`} /> : null}

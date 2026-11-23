@@ -1,3 +1,4 @@
+import { cronAuthorized } from "@wonderhome/core/security/cron-auth";
 import { toErrorBody } from "@wonderhome/core/api/errors";
 import { reconcileAllProviders, type ReconciliationSummary } from "@wonderhome/core/billing/reconcile";
 import { createAdminClient } from "@wonderhome/core/db/admin";
@@ -34,7 +35,6 @@ import { whatsappAsk, whatsappAutoAdd, whatsappDecider } from "@/app/_lib/whatsa
  * household's history on demand.
  */
 export async function POST(request: Request) {
-  const secret = process.env.CRON_SECRET;
   // 401 rather than 403: the credential is the Authorization header itself, so
   // a missing or wrong one is a failure to authenticate, not a permission this
   // caller lacks. It is also the answer every other endpoint here gives an
@@ -48,7 +48,7 @@ export async function POST(request: Request) {
 
   // Never says which part was wrong, and never says whether a secret is set
   // at all: both answers are information somebody probing would want.
-  if (!secret || request.headers.get("authorization") !== `Bearer ${secret}`) return refuse();
+  if (!(await cronAuthorized(request))) return refuse();
 
   try {
     const admin = createAdminClient();

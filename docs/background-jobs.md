@@ -29,7 +29,7 @@ The owner: "i thought this process is resource intensive, can we move these jobs
 | Runs queue up (GitHub slow to start) | One runs, one waits, newer dispatches replace the waiting one; a reminder is at most a few minutes late |
 | GitHub Actions down | Heartbeats stale after 15 minutes; Vercel does everything again |
 | pg_cron or pg_net down | Neither side ticks (as before this change) |
-| `CRON_SECRET` drift (Vault `cron_secret` ≠ Vercel) | The Vercel fallback answers 401, so a GitHub outage then goes uncovered; fix the drift |
+| `CRON_SECRET` drift (Vault `cron_secret` ≠ Vercel) | Fixed 2026-11-23: the "Scheduler key" in Platform admin is the Vault secret pg_cron sends, and the routes accept it as well as Vercel's `CRON_SECRET`. Use Generate new key once; Configuration health says whether it matches Vercel's |
 | Both run a step at once | Nothing twice: due reminders are claimed by the one `generated → delivered` update that returns them, health reminders by their sent rows, digests by their day, proposals and stale clears by compare-and-set |
 
 The worst case on a GitHub failure is reminders up to about 20 minutes late (15 minutes stale, plus a tick), once, before Vercel takes over.

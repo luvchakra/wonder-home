@@ -1,3 +1,4 @@
+import { cronAuthorized, cronRefusal } from "@wonderhome/core/security/cron-auth";
 import { after } from "next/server";
 
 import { createAdminClient } from "@wonderhome/core/db/admin";
@@ -75,13 +76,7 @@ async function retryQueueHasWork(admin: ReturnType<typeof createAdminClient>, no
 }
 
 async function dispatch(request: Request): Promise<Response> {
-  const secret = process.env.CRON_SECRET;
-  if (!secret || request.headers.get("authorization") !== `Bearer ${secret}`) {
-    return Response.json(
-      { error: { code: "unauthenticated", message: "Authentication required.", requestId: "dispatch" } },
-      { status: 401, headers: { "cache-control": "no-store" } },
-    );
-  }
+  if (!(await cronAuthorized(request))) return cronRefusal("dispatch");
   const now = new Date();
   const admin = createAdminClient();
   // One read of the heartbeats and one look at the retry queue, together; a failed read answers "none fresh".

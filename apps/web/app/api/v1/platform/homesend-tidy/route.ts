@@ -1,3 +1,4 @@
+import { cronAuthorized, cronRefusal } from "@wonderhome/core/security/cron-auth";
 import { adminClientFor, adminGrant } from "@wonderhome/core/db/admin-context";
 import { runHomeSendTidy, type TidyRunResult } from "@wonderhome/core/homesend/tidy-run";
 import { log } from "@wonderhome/core/observability/logger";
@@ -21,13 +22,7 @@ export const maxDuration = 300;
 const LIMIT = 500;
 
 export async function POST(request: Request) {
-  const secret = process.env.CRON_SECRET;
-  if (!secret || request.headers.get("authorization") !== `Bearer ${secret}`) {
-    return Response.json(
-      { error: { code: "unauthenticated", message: "Authentication required.", requestId: "homesend-tidy" } },
-      { status: 401, headers: { "cache-control": "no-store" } },
-    );
-  }
+  if (!(await cronAuthorized(request))) return cronRefusal("homesend-tidy");
   let result: TidyRunResult;
   try {
     result = await runHomeSendTidy(adminClientFor(adminGrant.worker("homesend-tidy", "archive HomeSend items that no longer apply, every household")), { limit: LIMIT, anyHour: true });

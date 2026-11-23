@@ -12,8 +12,7 @@ import { cleanRazorpayKeyId, cleanRazorpayKeySecret, type CleanedKey } from "./r
  * did before. The inventory and what must stay in Vercel, with the reason for
  * each, are in docs/progress/2026-11-07-admin-portal.md.
  *
- * Nothing here is a bootstrap value: the database URL and keys, the cron
- * secret, build-time `NEXT_PUBLIC_*` values and anything
+ * Nothing here is a bootstrap value: the database URL and keys, build-time `NEXT_PUBLIC_*` values and anything
  * read before the database can be are deliberately absent, and
  * `registry.test.ts` fails if one is added.
  */
@@ -57,6 +56,10 @@ export type SettingDefinition = {
   editableBy: SettingEditor;
   /** A saved value the reader would misread as "on"; it reaches the reader as empty instead. */
   emptyWhen?: string;
+  /** A secret WonderHome can make itself ("Generate new key"): this many random bytes, base64url. */
+  generate?: { bytes: number };
+  /** Replaced, never cleared: clearing would stop something that has no other value to fall back to. */
+  keepSaved?: true;
   /**
    * The deployment variable this setting used to be (a build-time `NEXT_PUBLIC_*`
    * name): read only while nothing is saved, so the switch-over breaks nothing.
@@ -527,6 +530,20 @@ const entries = [
       "Lets the database start the delivery clock on GitHub every 5 minutes, so reminders are sent from GitHub Actions instead of Vercel. Create it on GitHub → Settings → Developer settings → Fine-grained tokens: repository luvchakra/wonder-home only, permission Actions: Read and write. Without it Vercel keeps delivering. Replace it before it expires.",
     editableBy: "owner",
   },
+  {
+    key: "CRON_SECRET",
+    label: "Scheduler key",
+    group: "jobs",
+    kind: "secret",
+    input: { type: "text" },
+    schema: secret(32, 256),
+    defaultValue: null,
+    description:
+      "The key the database's scheduler sends with every 5-minute delivery tick and calendar sync. Saved here it is the scheduler's own copy too (Vault cron_secret), so the two can't drift; use Generate new key. Vercel's CRON_SECRET is still accepted for Vercel's own crons.",
+    editableBy: "owner",
+    generate: { bytes: 32 },
+    keepSaved: true,
+  },
   // Places
   {
     key: "GOOGLE_MAPS_API_KEY",
@@ -949,7 +966,6 @@ export const STAYS_IN_VERCEL: readonly { key: string; why: string }[] = [
   { key: "NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY", why: "Needed to reach the database the portal's settings live in, and built into the pages." },
   { key: "SUPABASE_SERVICE_ROLE_KEY", why: "The server reads the settings store with it." },
   { key: "SUPABASE_ACCESS_TOKEN", why: "It controls the whole database project, so it is never kept inside that database." },
-  { key: "CRON_SECRET", why: "Checks that scheduled calls really come from the scheduler." },
   { key: "WONDERHOME_PLATFORM_ADMINS", why: "Who may open Platform admin. It can't be decided inside Platform admin, or anyone who could write the settings store could make themselves staff. Optional." },
   { key: "CSP_MODE", why: "Read by the request proxy on every page, which can run before this server has read the store." },
   { key: "LOG_LEVEL", why: "Read by the logger before anything else, including the store's own reads. Optional: unset means info." },

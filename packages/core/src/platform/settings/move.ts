@@ -60,7 +60,18 @@ const item = (entry: SettingDefinition, outcome: MoveOutcome): MoveItem => ({
 
 const fromEnv = (env: Env, key: string) => env[key]?.trim() ?? "";
 
-const STAYS = new Set(STAYS_IN_VERCEL.map((stay) => stay.key));
+/**
+ * What stays in Vercel: the bootstrap variables, and a setting that is replaced in Platform admin, never copied
+ * (the scheduler key, 2026-11-23: Vercel's own crons send Vercel's value; the one here comes from Generate new key).
+ */
+const MUST_STAY: readonly { key: string; why: string }[] = [
+  ...STAYS_IN_VERCEL,
+  ...PLATFORM_SETTINGS.filter((entry) => entry.keepSaved).map((entry) => ({
+    key: entry.key,
+    why: `Vercel's own crons send it. ${entry.label} in Platform admin is made with Generate new key, never copied from here; both are accepted.`,
+  })),
+];
+const STAYS = new Set(MUST_STAY.map((stay) => stay.key));
 
 /** Pure: which settings would move, which are already here, invalid, or not set. */
 export function planMove(statuses: ReadonlyMap<string, SettingStatus>, env: Env) {
@@ -152,7 +163,7 @@ export async function moveAllFromEnvironment(admin: SupabaseClient, actorProfile
     ...items.filter((row) => row.outcome === "moved" || row.outcome === "already").map((row) => row.key),
     ...UNUSED_IN_VERCEL.filter((key) => fromEnv(env, key) !== ""),
   ];
-  const mustStay = STAYS_IN_VERCEL.filter((stay) => fromEnv(env, stay.key) !== "");
+  const mustStay = MUST_STAY.filter((stay) => fromEnv(env, stay.key) !== "");
   const report: MoveReport = {
     counts: {
       moved: count("moved"),

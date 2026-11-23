@@ -1,5 +1,5 @@
 import { createHmac, timingSafeEqual } from "node:crypto";
-import { runtimeEnv } from "../platform/settings/runtime-env";
+import { runtimeEnv, savedKeys } from "../platform/settings/runtime-env";
 
 /**
  * The one-tap link in every notification email that turns email off (story 27-009).
@@ -18,7 +18,10 @@ import { runtimeEnv } from "../platform/settings/runtime-env";
 const PURPOSE = "email-off:";
 
 export function unsubscribeSecret(env: Record<string, string | undefined> = runtimeEnv()): string | null {
-  const secret = env.WONDERHOME_LINK_SECRET?.trim() || env.CRON_SECRET?.trim();
+  // The deployment's cron secret only: a scheduler key saved or generated in Platform admin (2026-11-23) must not
+  // change the key old unsubscribe links were signed with.
+  const cron = savedKeys().includes("CRON_SECRET") ? process.env.CRON_SECRET : env.CRON_SECRET;
+  const secret = env.WONDERHOME_LINK_SECRET?.trim() || cron?.trim();
   return secret ? secret : null;
 }
 

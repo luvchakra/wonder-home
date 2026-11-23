@@ -15,7 +15,7 @@ New deployment URLs end in `-kunals-projects-9f64757f.vercel.app`. Deployments m
 
 ## Configuration lives in Platform admin
 
-Since 2026-11-22 Vercel holds only `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY`, `SUPABASE_SERVICE_ROLE_KEY`, `CRON_SECRET`, and optionally `SUPABASE_ACCESS_TOKEN`, `CSP_MODE`, `LOG_LEVEL`, `NEXT_PUBLIC_SITE_URL`, `WONDERHOME_PLATFORM_ADMINS`. Everything else, webhook secrets included, is saved in Platform admin; a variable left in Vercel is only a fallback until the value is saved there. A redeploy that loses variables then breaks nothing but the four bootstrap ones. Inventory: `docs/progress/2026-11-22-platform-config-one-place.md`.
+Since 2026-11-22 Vercel holds only `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY`, `SUPABASE_SERVICE_ROLE_KEY`, `CRON_SECRET` (for Vercel's own crons; since 2026-11-23 the scheduler key is also saved in Platform admin → Integrations → Background jobs → "Scheduler key", which is the Vault secret `cron_secret` pg_cron sends, and every scheduler route accepts either, `security/cron-auth.ts`), and optionally `SUPABASE_ACCESS_TOKEN`, `CSP_MODE`, `LOG_LEVEL`, `NEXT_PUBLIC_SITE_URL`, `WONDERHOME_PLATFORM_ADMINS`. Everything else, webhook secrets included, is saved in Platform admin; a variable left in Vercel is only a fallback until the value is saved there. A redeploy that loses variables then breaks nothing but the four bootstrap ones. Inventory: `docs/progress/2026-11-22-platform-config-one-place.md`.
 
 ## AI settings are not Vercel variables
 

@@ -2,7 +2,7 @@ import { configurationHealth } from "@wonderhome/core/platform/settings/health";
 
 import { platformKeyHealth } from "../_lib/platform-ai-key";
 import { platformOverview } from "../_lib/platform-overview";
-import { deliveryClockLine, settingTotals } from "../_lib/platform-settings-view";
+import { deliveryClockLine, schedulerKeyLine, settingTotals } from "../_lib/platform-settings-view";
 import { platformStaff } from "../_lib/platform-staff";
 import { ConfigurationHealth } from "./_ui/configuration-health";
 import { OverviewView } from "./_ui/overview-view";
@@ -28,12 +28,13 @@ export default async function PlatformAdminPage({ searchParams }: { searchParams
   const staff = await platformStaff("operations.read");
   if (!staff) return null; // the layout has already answered 404
 
-  const [{ period }, { snapshot, advisor, nothingWaits, decisions }, { totals, storeReady, statuses }, aiKey, clock] = await Promise.all([
+  const [{ period }, { snapshot, advisor, nothingWaits, decisions }, { totals, storeReady, statuses }, aiKey, clock, scheduler] = await Promise.all([
     searchParams,
     platformOverview(staff),
     settingTotals(staff),
     platformKeyHealth(staff),
     deliveryClockLine(staff),
+    schedulerKeyLine(staff),
   ]);
   const isOn = (key: string) => {
     const status = statuses.get(key);
@@ -45,7 +46,7 @@ export default async function PlatformAdminPage({ searchParams }: { searchParams
     <>
       {storeReady ? (
         <div className="mx-auto max-w-6xl px-4 pt-4">
-          <ConfigurationHealth gaps={configurationHealth(statuses)} clock={clock} />
+          <ConfigurationHealth gaps={configurationHealth(statuses)} clock={clock} scheduler={scheduler} />
         </div>
       ) : null}
       <OverviewView

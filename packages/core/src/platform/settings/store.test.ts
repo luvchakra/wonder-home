@@ -40,7 +40,7 @@ describe("saveSetting and clearSetting", () => {
     const admin = client({});
     expect(await saveSetting(admin, "p1", "SUPABASE_SERVICE_ROLE_KEY", "x")).toEqual({ ok: false, reason: "unknown" });
     expect(await saveSetting(admin, "p1", "WONDERHOME_WEATHER_PROVIDER", "sunny")).toMatchObject({ ok: false, reason: "invalid" });
-    expect(await clearSetting(admin, "p1", "CRON_SECRET")).toEqual({ ok: false, reason: "unknown" });
+    expect(await clearSetting(admin, "p1", "SUPABASE_ACCESS_TOKEN")).toEqual({ ok: false, reason: "unknown" });
     expect(admin.rpc).not.toHaveBeenCalled();
   });
 
@@ -61,6 +61,6 @@ describe("saveSetting and clearSetting", () => {
   });
 
   it("keeps only registry keys from the store", async () => {
-    expect(await loadStoredSettings(client({ data: [{ key: "TMDB_API_KEY", value: "abc" }, { key: "CRON_SECRET", value: "x" }] }))).toEqual({ TMDB_API_KEY: "abc" });
+    expect(await loadStoredSettings(client({ data: [{ key: "TMDB_API_KEY", value: "abc" }, { key: "SUPABASE_ACCESS_TOKEN", value: "x" }] }))).toEqual({ TMDB_API_KEY: "abc" });
   });
 });

@@ -4,6 +4,8 @@ import { cache } from "react";
 import { adminClientFor, adminGrant } from "@wonderhome/core/db/admin-context";
 import type { PlatformAdmin } from "@wonderhome/core/platform/admin";
 import { configurationHealth } from "@wonderhome/core/platform/settings/health";
+import { schedulerKeyWords } from "@wonderhome/core/security/cron-auth";
+import { freshRuntimeEnv } from "@wonderhome/core/platform/settings/runtime-env";
 import { deliveryClockStatus, lastGitHubDelivery, type DeliveryClockStatus } from "@wonderhome/core/jobs/delivery-clock-status";
 import { PLATFORM_SETTINGS, mayEdit, settingsForPage, type SettingDefinition, type SettingPage } from "@wonderhome/core/platform/settings/registry";
 import { settingStatuses, type SettingStatus } from "@wonderhome/core/platform/settings/store";
@@ -32,6 +34,8 @@ export function rowView(entry: SettingDefinition, status: SettingStatus | undefi
     label: entry.label,
     description: entry.description,
     secret: entry.kind === "secret",
+    generate: entry.generate !== undefined,
+    keepSaved: entry.keepSaved === true,
     options: entry.input.type === "choice" ? entry.input.options : null,
     numeric: entry.input.type === "number",
     source,
@@ -126,4 +130,12 @@ export async function deliveryClockLine(staff: PlatformAdmin): Promise<DeliveryC
   const [{ statuses, storeReady }, lastRun] = await Promise.all([platformSettingStatuses(staff), lastGitHubDelivery(admin)]);
   if (!storeReady) return null;
   return deliveryClockStatus(statuses.get("GITHUB_DISPATCH_TOKEN")?.source === "saved", lastRun, new Date());
+}
+
+/** "Scheduler key: not set / matches Vercel's / differs (fine)" (owner, 2026-11-23). Compared on the server; never shown. */
+export async function schedulerKeyLine(staff: PlatformAdmin): Promise<string | null> {
+  const [{ statuses, storeReady }, env] = await Promise.all([platformSettingStatuses(staff), freshRuntimeEnv()]);
+  if (!storeReady) return null;
+  const saved = statuses.get("CRON_SECRET")?.source === "saved" ? env.CRON_SECRET : null;
+  return schedulerKeyWords(saved, process.env.CRON_SECRET);
 }
