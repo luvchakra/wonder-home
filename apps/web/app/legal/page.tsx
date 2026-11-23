@@ -1,6 +1,6 @@
 import Link from "next/link";
 
-import { contactEmail } from "@wonderhome/core/config/contact";
+import { companySiteUrl, contactEmail } from "@wonderhome/core/config/contact";
 import { englishInstallBannerLabels } from "@wonderhome/core/pwa/install-labels";
 import { InstallBanner } from "@wonderhome/core/shell/install-banner";
 import { BrandMark, Wordmark } from "@wonderhome/core/ui/brand";
@@ -23,6 +23,8 @@ export const revalidate = 300;
 
 export default function LegalPage() {
   const mailTo = contactEmail();
+  // Empty by default: with no company site set, WonderApps is named, not linked.
+  const companySite = companySiteUrl();
   return (
     <>
       <InstallBanner labels={englishInstallBannerLabels()} />
@@ -160,9 +162,13 @@ export default function LegalPage() {
             <h2 id="contact" className="scroll-mt-6 text-base font-semibold tracking-tight">Who runs WonderHome, and how to reach us</h2>
             <p className="text-sm leading-relaxed text-[var(--wh-foreground-muted)]">
               WonderHome is a product of{" "}
-              <a href="https://wonderapps.biz" className="font-medium text-[var(--wh-primary)] underline-offset-2 hover:underline">
-                WonderApps
-              </a>
+              {companySite ? (
+                <a href={companySite} className="font-medium text-[var(--wh-primary)] underline-offset-2 hover:underline">
+                  WonderApps
+                </a>
+              ) : (
+                "WonderApps"
+              )}
               . WonderApps builds and runs it, and is responsible for the information your household keeps in it,
               including what WonderHome receives on its WhatsApp number.
               {mailTo ? (

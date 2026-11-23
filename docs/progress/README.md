@@ -11,6 +11,7 @@ decision that shapes later work each earns a note, written before moving on.
 
 | Date | Note |
 |---|---|
+| 2026-11-23 | [The company site is a Platform admin setting, empty by default](2026-11-23-company-site-setting.md) |
 | 2026-11-23 | [Nightly E2E: the talk button with Gemini Live; wonderapps.biz down](2026-11-23-nightly-e2e-talk-button.md) |
 | 2026-11-23 | [A proposal whose moment has passed closes as not done](2026-11-23-proposal-moment-passed.md) |
 | 2026-11-22 | [Notifications clear themselves when decided or stale](2026-11-22-clear-stale-notifications.md) |
