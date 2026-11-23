@@ -49,7 +49,7 @@ import { InstallBanner } from "@wonderhome/core/shell/install-banner";
 import { Wordmark } from "@wonderhome/core/ui/brand";
 import { ButtonLink } from "@wonderhome/core/ui/button";
 import { DomainCard, DomainGrid } from "@wonderhome/core/ui/domain-card";
-import { companySiteUrl, contactEmail } from "@wonderhome/core/config/contact";
+import { contactEmail } from "@wonderhome/core/config/contact";
 import { IconTile, type IconTone } from "@wonderhome/core/ui/icon-tile";
 import { LeafDecor } from "@wonderhome/core/ui/leaf-decor";
 import { ScriptAccent } from "@wonderhome/core/ui/script-accent";
@@ -141,9 +141,6 @@ export async function ClassicLanding() {
   // A contact address is configuration: where none is set, the section offers
   // the routes that do work rather than a mailto addressed to nobody.
   const mailTo = contactEmail();
-  // The company site is configuration too, empty by default: a link to a site
-  // that is down is a dead end, so the footer points at "Who runs WonderHome".
-  const companySite = companySiteUrl() ?? "/legal#who-we-are";
 
   return (
     <div id="top" className="min-h-dvh overflow-x-clip text-[var(--wh-foreground)]">
@@ -684,9 +681,10 @@ export async function ClassicLanding() {
           <div className="mt-10 flex flex-col gap-3 border-t border-[var(--wh-border)] pt-6 text-xs text-[var(--wh-foreground-subtle)] sm:flex-row sm:items-center sm:justify-between">
             <p>
               © {new Date().getFullYear()} WonderApps. WonderHome is a product of{" "}
-              <a href={companySite} className="underline-offset-2 hover:text-[var(--wh-foreground)] hover:underline">
+              {/* WonderHome's own page, never the company site (owner, 2026-11-23). */}
+              <Link href="/legal#who-we-are" className="underline-offset-2 hover:text-[var(--wh-foreground)] hover:underline">
                 WonderApps
-              </a>
+              </Link>
               . Made for families.
             </p>
             <p className="flex items-center gap-1.5">

@@ -479,17 +479,6 @@ const entries = [
     editableBy: "operator",
     fallbackEnv: "NEXT_PUBLIC_CONTACT_EMAIL",
   },
-  {
-    key: "WONDERHOME_COMPANY_SITE_URL",
-    label: "Company website",
-    group: "email",
-    kind: "config",
-    input: { type: "text" },
-    schema: https,
-    defaultValue: null,
-    description: "Where \"WonderApps\" links on the landing page and Terms. Empty: the name is shown without a link (the landing footer points at Terms → Who runs WonderHome instead).",
-    editableBy: "operator",
-  },
   // Push
   {
     key: "WONDERHOME_VAPID_PUBLIC_KEY",
