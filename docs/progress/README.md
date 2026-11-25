@@ -11,6 +11,7 @@ decision that shapes later work each earns a note, written before moving on.
 
 | Date | Note |
 |---|---|
+| 2026-11-25 | [Nightly E2E: sign-in stalls when the live project is overloaded](2026-11-25-nightly-sign-in.md) |
 | 2026-11-23 | [The delivery clock moves to GitHub Actions](2026-11-23-delivery-clock-github.md) |
 | 2026-11-23 | [Every link stays on WonderHome's own site](2026-11-23-links-on-wonderhome.md) |
 | 2026-11-23 | [Nightly E2E: the talk button with Gemini Live; wonderapps.biz down](2026-11-23-nightly-e2e-talk-button.md) |

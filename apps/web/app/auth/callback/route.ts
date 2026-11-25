@@ -38,11 +38,14 @@ export async function GET(request: Request) {
     return NextResponse.redirect(new URL("/sign-in?error=link", url.origin));
   }
 
-  // Google, a confirmed email, any provider: a family member the household
-  // recorded with this verified email becomes that member here.
-  await claimMembers(supabase);
-  // Platform staff listed in WONDERHOME_PLATFORM_ADMINS by a verified email.
-  if (data.user) await applyPlatformAdminsVariable(data.user.id, { force: true });
+  // Two independent database calls, side by side rather than one after the other.
+  await Promise.all([
+    // Google, a confirmed email, any provider: a family member the household
+    // recorded with this verified email becomes that member here.
+    claimMembers(supabase),
+    // Platform staff listed in WONDERHOME_PLATFORM_ADMINS by a verified email.
+    data.user ? applyPlatformAdminsVariable(data.user.id, { force: true }) : undefined,
+  ]);
   return NextResponse.redirect(new URL(next, url.origin));
 }
 

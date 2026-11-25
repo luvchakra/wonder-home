@@ -1,6 +1,7 @@
 import { createClient, type SupabaseClient } from "@supabase/supabase-js";
-import { expect, test, type BrowserContext, type Page } from "@playwright/test";
+import { expect, test, type Page } from "@playwright/test";
 
+import { openSignedIn } from "./sign-in";
 import { streamed } from "./streaming";
 
 /**
@@ -42,7 +43,6 @@ test.describe("HomeTalk's composer stays put", () => {
   let householdId = "";
   const email = `composer-${Date.now()}-${Math.random().toString(36).slice(2, 8)}@${E2E_EMAIL_DOMAIN}`;
   const password = `E2e!${Math.random().toString(36).slice(2, 12)}`;
-  let cookies: Awaited<ReturnType<BrowserContext["cookies"]>> | null = null;
 
   test.beforeAll(async () => {
     admin = createClient(url!, serviceKey!, { auth: { persistSession: false } });
@@ -88,16 +88,7 @@ test.describe("HomeTalk's composer stays put", () => {
   });
 
   async function openHomeTalk(page: Page) {
-    if (cookies) await page.context().addCookies(cookies);
-    await page.goto("/ai");
-    if (/\/sign-in/.test(page.url())) {
-      await streamed(page);
-      await page.locator('input[name="email"]').fill(email);
-      await page.locator('input[name="password"]').fill(password);
-      await page.getByRole("button", { name: "Sign in", exact: true }).click();
-      await expect(page).toHaveURL(/\/ai$/);
-      cookies = await page.context().cookies();
-    }
+    await openSignedIn(page, email, password, "/ai");
     await streamed(page);
     await expect(page.locator("[data-hometalk-composer] textarea")).toBeVisible();
   }

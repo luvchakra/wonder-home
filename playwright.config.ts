@@ -53,7 +53,8 @@ const supabaseUrl = process.env.E2E_SUPABASE_URL || "https://ci.placeholder.supa
 // the owner allows E2E accounts on the live project when this is set
 // explicitly. Once WonderHome launches, nothing sets it any more.
 const liveAllowed = process.env.E2E_ALLOW_LIVE_PROJECT === "1";
-if (!liveAllowed && PRODUCTION_PROJECT_REFS.some((ref) => supabaseUrl.includes(ref))) {
+const onLiveProject = PRODUCTION_PROJECT_REFS.some((ref) => supabaseUrl.includes(ref));
+if (!liveAllowed && onLiveProject) {
   throw new Error(`E2E refuses to run against the production Supabase project (${supabaseUrl}) unless E2E_ALLOW_LIVE_PROJECT=1.`);
 }
 const serverEnv = {
@@ -96,8 +97,11 @@ export default defineConfig({
   forbidOnly: !!process.env.CI,
   retries: process.env.CI ? 1 : 0,
   // Playwright defaults to half the cores; the specs are short and mostly
-  // wait on the server, so CI's four cores all get a worker.
-  workers: process.env.CI ? 4 : undefined,
+  // wait on the server, so CI's four cores all get a worker. Against the live
+  // project, two: four workers overloaded its one Supabase instance, so
+  // sign-in stalled past the tests' checks and production's own readiness
+  // check answered 503 meanwhile (owner, 2026-11-25; docs/progress/2026-11-25-nightly-sign-in.md).
+  workers: onLiveProject ? 2 : process.env.CI ? 4 : undefined,
   reporter: process.env.CI ? [["github"], ["html", { open: "never" }]] : [["list"]],
   use: {
     baseURL,

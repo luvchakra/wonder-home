@@ -1,8 +1,9 @@
 import { randomBytes } from "node:crypto";
 
 import { createClient, type SupabaseClient } from "@supabase/supabase-js";
-import { expect, test, type BrowserContext, type Page } from "@playwright/test";
+import { expect, test, type Page } from "@playwright/test";
 
+import { openSignedIn } from "./sign-in";
 import { streamed } from "./streaming";
 
 /**
@@ -91,7 +92,6 @@ test.describe("HomeTalk's talk button always answers a tap", () => {
   let memberId = "";
   const email = `talk-${Date.now()}-${randomBytes(4).toString("hex")}@${E2E_EMAIL_DOMAIN}`;
   const password = `E2e!${randomBytes(18).toString("base64url")}`;
-  let cookies: Awaited<ReturnType<BrowserContext["cookies"]>> | null = null;
 
   test.beforeAll(async () => {
     admin = createClient(url!, serviceKey!, { auth: { persistSession: false } });
@@ -129,16 +129,7 @@ test.describe("HomeTalk's talk button always answers a tap", () => {
 
   async function openHomeTalk(page: Page) {
     await page.setViewportSize({ width: 360, height: 740 });
-    if (cookies) await page.context().addCookies(cookies);
-    await page.goto("/ai");
-    if (/\/sign-in/.test(page.url())) {
-      await streamed(page);
-      await page.locator('input[name="email"]').fill(email);
-      await page.locator('input[name="password"]').fill(password);
-      await page.getByRole("button", { name: "Sign in", exact: true }).click();
-      await expect(page).toHaveURL(/\/ai$/);
-      cookies = await page.context().cookies();
-    }
+    await openSignedIn(page, email, password, "/ai");
     await streamed(page);
     await expect(page.locator("[data-hometalk-composer] textarea")).toBeVisible();
   }

@@ -105,6 +105,8 @@ Without them those specs report themselves skipped.
 
 Signed-in specs need a build made for that project. `NEXT_PUBLIC_*` values are inlined at build time, server code included. The nightly builds with them, and so does `npm run test:e2e` without `E2E_SKIP_BUILD`. A placeholder build reused with `E2E_SKIP_BUILD=1` makes every sign-in fail.
 
+A spec that only needs to be signed in uses `openSignedIn` from `e2e/sign-in.ts` (one Supabase Auth call, the app's own cookies, kept per account for the worker). Only a spec whose subject is the form signs in through it, with `signInThroughForm`, which waits for the sign-in action's answer rather than a 5 s URL check (`docs/progress/2026-11-25-nightly-sign-in.md`).
+
 **Start it by hand:**
 - GitHub → Actions → **E2E nightly** → **Run workflow**. Optionally list spec files (`e2e/auth.spec.ts e2e/session.spec.ts`) or change the split target.
 - From a session: the GitHub `run_workflow` action on `e2e-nightly.yml` with `ref: main`.

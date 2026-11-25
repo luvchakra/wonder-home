@@ -78,10 +78,14 @@ export async function signIn(_previous: ActionState, formData: FormData): Promis
     return { error: SIGN_IN_FAILED };
   }
 
-  // A family member the household recorded with this email becomes that member now.
-  await claimMembers(supabase);
-  // Platform staff listed in WONDERHOME_PLATFORM_ADMINS (a confirmed email only).
-  if (signedIn.user) await applyPlatformAdminsVariable(signedIn.user.id, { force: true });
+  // Two independent steps, side by side: each is a call to the database, and
+  // in a row they made sign-in wait for both (2026-11-25 nightly sign-in note).
+  await Promise.all([
+    // A family member the household recorded with this email becomes that member now.
+    claimMembers(supabase),
+    // Platform staff listed in WONDERHOME_PLATFORM_ADMINS (a confirmed email only).
+    signedIn.user ? applyPlatformAdminsVariable(signedIn.user.id, { force: true }) : undefined,
+  ]);
   redirect(safeNext(formData.get("next")));
 }
 
