@@ -53,25 +53,28 @@ The domain `test.home.wonderapps.biz` is assigned to branch `test` (Vercel → D
 
 ## Migrate, seed, reset
 
-The scripts need, in the session's environment: `TEST_SUPABASE_URL` (or `TEST_SUPABASE_PROJECT_REF`), `SUPABASE_ACCESS_TOKEN` (a personal access token; SQL goes through Supabase's management API, so no database password), and for seeding `TEST_SUPABASE_PUBLISHABLE_KEY` and `TEST_SUPABASE_SERVICE_ROLE_KEY`. Every script refuses the production project. From a Claude Code cloud container prefix them with `NODE_USE_ENV_PROXY=1 NODE_EXTRA_CA_CERTS=/root/.ccr/ca-bundle.crt`.
+Normally from GitHub Actions: **Test environment database** (`.github/workflows/test-env.yml`). It runs by itself when a migration lands on `main` or `test`, and by hand (Actions → Test environment database → Run workflow) with `migrate`, `dry-run`, `retarget` or `reset`, and an optional seed.
+
+Its credential is the repository secret `TEST_DATABASE_URL`: the test project's **Session pooler** connection string (Supabase → wonderhome-test → Connect; the pooler, because GitHub runners have no IPv6 for the direct host). It reaches only the test database. A Supabase personal access token is deliberately not used: it reaches every project on the account, production included (coordinator review, 2026-11-25). Seeding also uses `TEST_SUPABASE_URL`, `TEST_SUPABASE_PUBLISHABLE_KEY` and `TEST_SUPABASE_SERVICE_ROLE_KEY`. Every script refuses the production project, and the connection string must name the test project when `TEST_SUPABASE_PROJECT_REF` or `TEST_SUPABASE_URL` is set.
+
+The same scripts run anywhere with `psql` and those variables (a Claude cloud container usually cannot reach port 5432, so prefer the workflow):
 
 ```bash
-node scripts/test-env/migrate.mjs --dry-run     # what is missing
-node scripts/test-env/migrate.mjs               # apply it in order, record history, retarget pg_cron
-node scripts/test-env/migrate.mjs --retarget    # only retarget pg_cron
-node scripts/test-env/seed.mjs 2                # synthetic households; prints EMAIL / PASSWORD / USER_ID
+node scripts/test-env/migrate.mjs --dry-run       # what is missing
+node scripts/test-env/migrate.mjs                 # apply it in order, record history, retarget pg_cron
+node scripts/test-env/migrate.mjs --retarget      # only retarget pg_cron
+node scripts/test-env/seed.mjs 2                  # synthetic households; prints EMAIL / PASSWORD / USER_ID
 node scripts/test-env/reset.mjs --yes-reset-test  # empty it (then migrate and seed again)
-SUPABASE_PROJECT_REF=<test ref> node scripts/check-migrations-applied.mjs   # drift check against test
 ```
 
-- **Migrate** applies each missing file of `supabase/migrations/` in order and records it in `supabase_migrations.schema_migrations` (matched by base name, like the drift check). Extensions, Vault, pg_cron and pg_net come from the hosted project; the migrations create what they use. It stops at the first failure; re-running continues from there.
+- **Migrate** applies each missing file of `supabase/migrations/` in order, each with its history row in one transaction, into `supabase_migrations.schema_migrations` (matched by base name, like `check-migrations-applied.mjs`). Extensions, Vault, pg_cron and pg_net come from the hosted project; the migrations create what they use. It stops at the first failure; re-running continues from there. Measured on a local Postgres with the repo's shim: all 254 migrations in 12 s; a second run applies 0.
 - **Retarget** rewrites every pg_cron job to call `test.home.wonderapps.biz` instead of production, runs anything more frequent than hourly once an hour, and removes `wonderhome-delivery-clock-github`. It is part of every migrate run, because a new migration can schedule a job again.
 - **Seed** creates confirmed accounts `seed-<family>@wonderhome-test.internal` (a domain that receives no mail) and a household for each. Re-running resets their passwords.
 - **Reset** drops `wh`, everything in `public`, accounts, pg_cron jobs, WonderHome's Vault secrets, Storage objects and the history. Platform admin settings go with it.
 
 ## A new migration
 
-Test first, then production (CLAUDE.md, "Applying a migration"): `node scripts/test-env/migrate.mjs` (or the Supabase MCP `apply_migration` on the `wonderhome-test` project), load the screens on `test.home.wonderapps.biz` if `test` carries the code, then production.
+Test first, then production (CLAUDE.md, "Applying a migration"): run **Test environment database** on the PR's branch by hand (or it runs when the migration lands on `main`/`test`), load the screens on `test.home.wonderapps.biz` if `test` carries the code, then apply to production.
 
 ## QA accounts and E2E
 

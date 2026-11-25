@@ -7,14 +7,14 @@
  *   node scripts/test-env/migrate.mjs --dry-run   list what would be applied
  *   node scripts/test-env/migrate.mjs --retarget  only retarget the schedules
  *
- * Needs SUPABASE_ACCESS_TOKEN and TEST_SUPABASE_PROJECT_REF (or
- * TEST_SUPABASE_URL). Refuses the production project. A migration is applied
+ * Needs TEST_DATABASE_URL (the test project's own connection string) and
+ * psql; normally run by .github/workflows/test-env.yml. Refuses the
+ * production project. A migration is applied
  * to test first, then production (CLAUDE.md, "Applying a migration").
  *
  * History is kept where the Supabase CLI and the MCP keep it,
  * supabase_migrations.schema_migrations, matched by base name like
- * scripts/check-migrations-applied.mjs, so that check works against test too
- * (SUPABASE_PROJECT_REF=<test ref>). Re-running applies only what is missing.
+ * scripts/check-migrations-applied.mjs. Re-running applies only what is missing.
  *
  * Extensions, Vault, pg_cron and pg_net: the hosted project offers all four,
  * and the migrations create what they use themselves (each guards on
@@ -30,7 +30,7 @@
 import { readdirSync, readFileSync } from "node:fs";
 
 import { baseName } from "../check-migrations-applied.mjs";
-import { PRODUCTION_HOST, TEST_HOST, literal, query, requireTestRef, requireToken } from "./lib.mjs";
+import { PRODUCTION_HOST, TEST_HOST, exec, literal, requireDatabaseUrl, rows } from "./lib.mjs";
 
 const DIR = new URL("../../supabase/migrations/", import.meta.url);
 
@@ -72,9 +72,11 @@ begin
   end loop;
 end
 $retarget$;
-select jobname, schedule, (command like ${literal(`%${PRODUCTION_HOST}/%`)}) as still_production from cron.job order by jobname;
 `;
 }
+
+/** Every pg_cron job and whether it still calls production (only where pg_cron is installed). */
+export const JOBS_SQL = `select jobname, schedule, (command like ${literal(`%${PRODUCTION_HOST}/%`)}) as still_production from cron.job order by jobname`;
 
 export function migrationFiles() {
   return readdirSync(DIR).filter((f) => f.endsWith(".sql")).sort();
@@ -88,16 +90,15 @@ export function pending(files, appliedNames) {
 
 async function main() {
   const args = process.argv.slice(2);
-  const ref = requireTestRef();
-  const token = requireToken();
+  const url = requireDatabaseUrl();
 
   if (!args.includes("--retarget")) {
-    if (!args.includes("--dry-run")) await query(ref, token, HISTORY);
+    if (!args.includes("--dry-run")) exec(url, HISTORY);
     const applied = args.includes("--dry-run")
-      ? await query(ref, token, "select name from supabase_migrations.schema_migrations").catch(() => [])
-      : await query(ref, token, "select name from supabase_migrations.schema_migrations");
+      ? (() => { try { return rows(url, "select name from supabase_migrations.schema_migrations"); } catch { return []; } })()
+      : rows(url, "select name from supabase_migrations.schema_migrations");
     const todo = pending(migrationFiles(), applied.map((r) => r.name).filter(Boolean));
-    console.log(`${todo.length} of ${migrationFiles().length} migration(s) to apply to ${ref}.`);
+    console.log(`${todo.length} of ${migrationFiles().length} migration(s) to apply to the test database.`);
     if (args.includes("--dry-run")) {
       for (const f of todo) console.log(`  ${f}`);
       return;
@@ -106,19 +107,21 @@ async function main() {
       const sql = readFileSync(new URL(file, DIR), "utf8");
       const version = file.slice(0, 14);
       const name = file.replace(/\.sql$/, "").slice(15);
+      // The file and its history row in one transaction: a failure leaves neither.
       try {
-        await query(ref, token, sql);
+        exec(url, `begin;\n${sql}\n;\ninsert into supabase_migrations.schema_migrations (version, name) values (${literal(version)}, ${literal(name)}) on conflict (version) do nothing;\ncommit;\n`);
       } catch (error) {
         console.error(`FAILED at ${file}: ${error.message}`);
         console.error("Fix the cause and re-run; everything before it is applied and recorded.");
         process.exit(1);
       }
-      await query(ref, token, `insert into supabase_migrations.schema_migrations (version, name) values (${literal(version)}, ${literal(name)}) on conflict (version) do nothing;`);
       console.log(`applied ${file}`);
     }
   }
 
-  const jobs = await query(ref, token, retargetSql());
+  exec(url, retargetSql());
+  const hasCron = rows(url, "select to_regclass('cron.job') is not null as present")[0]?.present === true;
+  const jobs = hasCron ? rows(url, JOBS_SQL) : [];
   const bad = jobs.filter((j) => j.still_production);
   console.log(`Schedules on test: ${jobs.map((j) => `${j.jobname} (${j.schedule})`).join(", ") || "none"}.`);
   if (bad.length > 0) {

@@ -1,0 +1,90 @@
+name: Test environment database
+
+# Applies supabase/migrations to the test environment's database,
+# wonderhome-test (docs/test-environment.md), and retargets its pg_cron jobs
+# at test.home.wonderapps.biz. Never production: scripts/test-env refuses the
+# production project, and the only credential here is TEST_DATABASE_URL, the
+# test project's own Session pooler connection string, which reaches nothing
+# else (a personal access token would reach every project on the account).
+#
+# Runs when a migration lands on main or on test (test first, then production:
+# CLAUDE.md, "Applying a migration"), and by hand, with an optional seed of
+# synthetic households. Never on a pull request, so no fork ever sees the secret.
+on:
+  push:
+    branches: [main, test]
+    paths:
+      - "supabase/migrations/**"
+      - "scripts/test-env/**"
+  workflow_dispatch:
+    inputs:
+      action:
+        description: "migrate (apply what is missing), dry-run, retarget, or reset (empties the test database, then migrates)"
+        type: choice
+        options: [migrate, dry-run, retarget, reset]
+        default: migrate
+      seed:
+        description: "Also seed synthetic households (prints their sign-ins in the log)"
+        type: boolean
+        default: false
+
+concurrency:
+  group: test-env-database
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+jobs:
+  database:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    env:
+      TEST_DATABASE_URL: ${{ secrets.TEST_DATABASE_URL }}
+      TEST_SUPABASE_URL: ${{ secrets.TEST_SUPABASE_URL }}
+      TEST_SUPABASE_PUBLISHABLE_KEY: ${{ secrets.TEST_SUPABASE_PUBLISHABLE_KEY }}
+      TEST_SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.TEST_SUPABASE_SERVICE_ROLE_KEY }}
+      ACTION: ${{ inputs.action || 'migrate' }}
+    steps:
+      - name: Test database configured?
+        id: ready
+        run: |
+          if [ -z "$TEST_DATABASE_URL" ]; then
+            echo "::warning::TEST_DATABASE_URL isn't a repository secret yet, so nothing ran. See docs/test-environment.md."
+            echo "ok=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "ok=true" >> "$GITHUB_OUTPUT"
+          fi
+
+      - uses: actions/checkout@v7
+        if: steps.ready.outputs.ok == 'true'
+
+      - uses: actions/setup-node@v7
+        if: steps.ready.outputs.ok == 'true'
+        with:
+          node-version: 22
+
+      - name: psql
+        if: steps.ready.outputs.ok == 'true'
+        run: command -v psql || (sudo apt-get update -q && sudo apt-get install -y -q postgresql-client)
+
+      - name: Reset
+        if: steps.ready.outputs.ok == 'true' && env.ACTION == 'reset'
+        run: node scripts/test-env/reset.mjs --yes-reset-test
+
+      - name: Migrate and retarget
+        if: steps.ready.outputs.ok == 'true'
+        run: |
+          case "$ACTION" in
+            dry-run)  node scripts/test-env/migrate.mjs --dry-run ;;
+            retarget) node scripts/test-env/migrate.mjs --retarget ;;
+            *)        node scripts/test-env/migrate.mjs ;;
+          esac
+
+      - name: Install dependencies (seed only)
+        if: steps.ready.outputs.ok == 'true' && inputs.seed
+        run: npm ci --ignore-scripts
+
+      - name: Seed synthetic households
+        if: steps.ready.outputs.ok == 'true' && inputs.seed
+        run: node scripts/test-env/seed.mjs 2
