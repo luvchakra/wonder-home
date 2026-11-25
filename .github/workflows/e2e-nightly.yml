@@ -58,14 +58,13 @@ jobs:
         if: steps.node-modules-cache.outputs.cache-hit != 'true'
         run: npm ci
 
-      # Removes E2E accounts older than two hours from a dedicated test
-      # project, when one is configured as the E2E_SUPABASE_* secrets; with
-      # none it says so and does nothing. It refuses the production project.
+      # Removes E2E accounts older than two hours from the test
+      # environment's project (TEST_SUPABASE_* secrets, wonderhome-test);
+      # with none it says so and does nothing. It refuses production.
       - name: Clean up after earlier runs
         env:
-          E2E_SUPABASE_URL: ${{ secrets.E2E_SUPABASE_URL }}
-          E2E_SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.E2E_SUPABASE_SERVICE_ROLE_KEY }}
-          E2E_ALLOW_LIVE_PROJECT: ${{ vars.E2E_ALLOW_LIVE_PROJECT || secrets.E2E_ALLOW_LIVE_PROJECT }}
+          E2E_SUPABASE_URL: ${{ secrets.TEST_SUPABASE_URL }}
+          E2E_SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.TEST_SUPABASE_SERVICE_ROLE_KEY }}
         run: node scripts/e2e-cleanup.mjs
 
       - id: plan
@@ -78,22 +77,20 @@ jobs:
   e2e:
     needs: plan
     runs-on: ubuntu-latest
-    # With a real test project configured as secrets, the build and the specs
-    # that need a signed-in member use it (help.spec.ts creates and deletes
-    # its own account); without one, everything runs against the placeholder
-    # and those specs say they were skipped. E2E_ALLOW_LIVE_PROJECT is a
-    # repository variable (a secret of that name is read too), set only while
-    # WonderHome is pre-launch (CLAUDE.md).
+    # Runs against the test environment's own Supabase project,
+    # wonderhome-test (owner, 2026-11-25; docs/test-environment.md), never
+    # production: the nightly on the live project slowed it for everyone
+    # (#641). The TEST_SUPABASE_* secrets name it; without them everything
+    # runs against the placeholder and the signed-in specs say they skipped.
+    # playwright.config.ts and e2e-cleanup.mjs refuse the production project.
     env:
-      NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.E2E_SUPABASE_URL || 'https://ci.placeholder.supabase.co' }}
-      NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY: ${{ secrets.E2E_SUPABASE_PUBLISHABLE_KEY || 'sb_publishable_ci_placeholder_key' }}
-      E2E_SUPABASE_URL: ${{ secrets.E2E_SUPABASE_URL }}
-      E2E_SUPABASE_PUBLISHABLE_KEY: ${{ secrets.E2E_SUPABASE_PUBLISHABLE_KEY }}
-      E2E_SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.E2E_SUPABASE_SERVICE_ROLE_KEY }}
-      E2E_ALLOW_LIVE_PROJECT: ${{ vars.E2E_ALLOW_LIVE_PROJECT || secrets.E2E_ALLOW_LIVE_PROJECT }}
-      # The app server Playwright starts gets the service-role key too (owner,
-      # 2026-11-08), only here and only pre-launch; playwright.config.ts blanks
-      # it unless E2E_ALLOW_LIVE_PROJECT is also 1. Never set on PR workflows.
+      NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.TEST_SUPABASE_URL || 'https://ci.placeholder.supabase.co' }}
+      NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY: ${{ secrets.TEST_SUPABASE_PUBLISHABLE_KEY || 'sb_publishable_ci_placeholder_key' }}
+      E2E_SUPABASE_URL: ${{ secrets.TEST_SUPABASE_URL }}
+      E2E_SUPABASE_PUBLISHABLE_KEY: ${{ secrets.TEST_SUPABASE_PUBLISHABLE_KEY }}
+      E2E_SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.TEST_SUPABASE_SERVICE_ROLE_KEY }}
+      # The app server Playwright starts gets the test project's service-role
+      # key, so server actions that need it can be tested. Never on PR workflows.
       E2E_SERVER_SERVICE_KEY: "1"
     # The part's own budget (at most 60 minutes) ends the tests cleanly with a
     # summary; this is only the backstop for a hang outside Playwright.

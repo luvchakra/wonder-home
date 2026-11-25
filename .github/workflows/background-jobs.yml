@@ -20,6 +20,8 @@
 # says so and exits green; Vercel keeps doing everything.
 #
 # Only schedule and workflow_dispatch: never a pull request, so no fork ever runs with these secrets.
+#
+# Production only: the test environment has no GitHub jobs (docs/test-environment.md).
 name: Background jobs
 
 on:

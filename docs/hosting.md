@@ -10,6 +10,15 @@ Since October 2026 WonderHome lives in the Vercel account **Kunal** (team `kunal
 | `wonderhome` | `prj_wmkKrjqrezwGc8av9LEdjbcU46cO` | `home.wonderapps.biz` (this app, production from `main`) |
 | `wonder-apps` | `prj_eAN93HE8LG4URCWU0JlhBQtokWuM` | `wonderapps.biz`, `www.wonderapps.biz` |
 
+## Environments (2026-11-25)
+
+| Environment | Web | Vercel environment | Branch | Database | Settings |
+|---|---|---|---|---|---|
+| **production** | `home.wonderapps.biz` | Production | `main` | Supabase `wonderhome` (`kqxndableyysxqhxiorz`, ap-south-1) | Platform admin in that database |
+| **test** | `test.home.wonderapps.biz` | Preview (branch-scoped variables) | `test`, deployed only when pushed | Supabase `wonderhome-test` (ap-south-1) | Platform admin in that database, test credentials only |
+
+Both are the one Vercel project `wonderhome`. Test is marked `WONDERHOME_ENV=test`, shows a **TEST** badge and sends only to `WONDERHOME_TEST_RECIPIENTS`. How to migrate, seed and reset it: `docs/test-environment.md`.
+
 New deployment URLs end in `-kunals-projects-9f64757f.vercel.app`. Deployments made before the move still end in `-wonder-team4.vercel.app`; that is the old team's URL slug, not a second team. Call the Vercel connector **without** a `teamId`/`slug` — it then works against this team, the account's default; naming the team explicitly is refused with 403 until the connector is re-authorized for that scope. The live database is Supabase project `wonderhome` (`kqxndableyysxqhxiorz`, ap-south-1).
 
 

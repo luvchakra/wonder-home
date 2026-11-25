@@ -25,7 +25,7 @@
     "lint:knowledge": "node scripts/lint-knowledge-registry.mjs",
     "lint:embeds": "node scripts/lint-postgrest-embeds.mjs",
     "lint:help-links": "node scripts/lint-help-links.mjs",
-    "test:scripts": "node --test scripts/*.test.mjs",
+    "test:scripts": "node --test scripts/*.test.mjs scripts/test-env/*.test.mjs",
     "test:rls-coverage": "node scripts/setup-test-db.mjs --template && node --test scripts/test-coverage-rls.mjs",
     "test:db": "node scripts/setup-test-db.mjs --template && node --test --test-concurrency=4 scripts/test-*-rls.mjs",
     "lint:secrets": "node scripts/lint-secrets.mjs",

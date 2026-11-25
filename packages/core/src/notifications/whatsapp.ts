@@ -1,4 +1,5 @@
 import type { ChannelAdapter, ChannelError, ChannelNotification, ChannelSendResult } from "./channels";
+import { outboundAllowed } from "../platform/environment";
 import { runtimeEnv } from "../platform/settings/runtime-env";
 import { WHATSAPP_GRAPH } from "../whatsapp/graph-version";
 
@@ -45,6 +46,7 @@ export function createWhatsAppAdapter(config: WhatsAppConfig): ChannelAdapter {
     live: true,
     async send(notification: ChannelNotification, target: string | null): Promise<ChannelSendResult> {
       if (!isWhatsAppNumber(target)) return failure("no_target", false, "No WhatsApp number is on file.");
+      if (!outboundAllowed(target)) return heldOnTest();
       let response: Response;
       try {
         response = await doFetch(`${GRAPH}/${encodeURIComponent(config.phoneNumberId)}/messages`, {
@@ -109,12 +111,18 @@ function failure(code: ChannelError["code"], retryable: boolean, message: string
   return { ok: false, error: { code, retryable, message } };
 }
 
+/** A test server writes only to the numbers on its allow-list (docs/test-environment.md). */
+function heldOnTest(): ChannelSendResult {
+  return failure("rejected", false, "This test server sends WhatsApp only to allow-listed numbers.");
+}
+
 /**
  * A free-text reply, allowed only inside the 24-hour window a person opens
  * by writing to WonderHome — which every reply here is. Never used to start
  * a conversation: that is what the approved template is for.
  */
 export async function sendWhatsAppText(config: WhatsAppConfig, to: string, text: string, fetchImpl: Fetch = config.fetch ?? fetch): Promise<ChannelSendResult> {
+  if (!outboundAllowed(to)) return heldOnTest();
   try {
     const response = await fetchImpl(`${GRAPH}/${encodeURIComponent(config.phoneNumberId)}/messages`, {
       method: "POST",
@@ -185,6 +193,7 @@ export async function sendWhatsAppChoices(
   pickLabel: string,
   fetchImpl: Fetch = config.fetch ?? fetch,
 ): Promise<ChannelSendResult & { interactive?: boolean }> {
+  if (!outboundAllowed(to)) return heldOnTest();
   const message = interactiveMessage(to, text, choices, pickLabel);
   if (message) {
     try {

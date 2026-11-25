@@ -1,6 +1,7 @@
 import { createTransport } from "nodemailer";
 
 import { log } from "../observability/logger";
+import { outboundAllowed } from "../platform/environment";
 import { runtimeEnv } from "../platform/settings/runtime-env";
 
 /**
@@ -55,6 +56,11 @@ export function smtpMailer(config: MailConfig): Mailer {
   });
   return {
     async send(mail) {
+      // A test server mails only the addresses on its allow-list (docs/test-environment.md).
+      if (!outboundAllowed(mail.to)) {
+        log.info("email held: test environment, recipient not allow-listed", {});
+        return { ok: false, reason: "rejected" };
+      }
       try {
         const info = await transport.sendMail({ from: config.from, to: mail.to, subject: mail.subject, text: mail.text, html: mail.html, ...(mail.headers ? { headers: mail.headers } : {}) });
         // A server can take the message and still refuse the one recipient;
