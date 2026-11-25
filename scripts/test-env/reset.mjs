@@ -10,21 +10,23 @@
  * the migration history. Refuses the production project, and does nothing
  * without the flag. Then run migrate.mjs and seed.mjs.
  */
-import { query, requireTestRef, requireToken } from "./lib.mjs";
+import { exec, requireDatabaseUrl } from "./lib.mjs";
 
 export const RESET_SQL = `
 do $reset$
 declare j record;
 begin
-  if exists (select 1 from pg_extension where extname = 'pg_cron') then
+  if to_regclass('cron.job') is not null then
     for j in select jobid from cron.job loop perform cron.unschedule(j.jobid); end loop;
+  end if;
+  if to_regclass('storage.objects') is not null then delete from storage.objects; end if;
+  if to_regclass('storage.buckets') is not null then delete from storage.buckets; end if;
+  if to_regclass('auth.users') is not null then delete from auth.users; end if;
+  if to_regclass('vault.secrets') is not null then
+    delete from vault.secrets where name like 'wonderhome%' or name in ('cron_secret', 'github_dispatch_token');
   end if;
 end
 $reset$;
-delete from storage.objects;
-delete from storage.buckets;
-delete from auth.users;
-delete from vault.secrets where name like 'wonderhome%' or name in ('cron_secret', 'github_dispatch_token');
 drop schema if exists wh cascade;
 drop schema if exists public cascade;
 create schema public;
@@ -41,9 +43,8 @@ async function main() {
     console.error("This empties the wonderhome-test database. Re-run with --yes-reset-test.");
     process.exit(2);
   }
-  const ref = requireTestRef();
-  await query(ref, requireToken(), RESET_SQL);
-  console.log(`Reset ${ref}. Next: node scripts/test-env/migrate.mjs && node scripts/test-env/seed.mjs`);
+  exec(requireDatabaseUrl(), RESET_SQL);
+  console.log(`Reset the test database. Next: node scripts/test-env/migrate.mjs && node scripts/test-env/seed.mjs`);
 }
 
 if (import.meta.url === `file://${process.argv[1]}`) {

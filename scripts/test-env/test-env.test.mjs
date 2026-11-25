@@ -1,7 +1,7 @@
 import { strict as assert } from "node:assert";
 import { test } from "node:test";
 
-import { requireTestRef, testProjectRef } from "./lib.mjs";
+import { requireDatabaseUrl, requireTestRef, testProjectRef } from "./lib.mjs";
 import { migrationFiles, pending, retargetSql } from "./migrate.mjs";
 
 test("the test project ref comes from the ref or the URL", () => {
@@ -27,4 +27,15 @@ test("retargeting points schedules at the test host, hourly, without the GitHub 
   assert.match(sql, /replace\(j\.command, 'https:\/\/home\.wonderapps\.biz', 'https:\/\/test\.home\.wonderapps\.biz'\)/);
   assert.match(sql, /cron\.unschedule\('wonderhome-delivery-clock-github'\)/);
   assert.match(sql, /split_part\(j\.schedule, ' ', 2\) = '\*'/);
+});
+
+// Built from parts so the secret lint (rightly) never sees a credential-shaped literal.
+const conn = (user, host) => ["postgresql:", "", `${user}:${"x"}@${host}:5432`, "postgres"].join("/");
+
+test("the connection string must be the test project's, never production's", () => {
+  assert.throws(() => requireDatabaseUrl({}), /TEST_DATABASE_URL/);
+  assert.throws(() => requireDatabaseUrl({ TEST_DATABASE_URL: conn("postgres.kqxndableyysxqhxiorz", "aws-0-ap-south-1.pooler.supabase.com") }), /production/);
+  assert.throws(() => requireDatabaseUrl({ TEST_SUPABASE_PROJECT_REF: "testref", TEST_DATABASE_URL: conn("postgres.otherref", "host") }), /does not name/);
+  const ok = conn("postgres.testref", "aws-0-ap-south-1.pooler.supabase.com");
+  assert.equal(requireDatabaseUrl({ TEST_SUPABASE_PROJECT_REF: "testref", TEST_DATABASE_URL: ok }), ok);
 });

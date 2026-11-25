@@ -2,12 +2,17 @@
  * Shared by the test-environment scripts (docs/test-environment.md).
  *
  * Every one of them works on the Supabase project `wonderhome-test` only and
- * refuses the production project outright, whatever it is told. SQL goes
- * through Supabase's management API (`/v1/projects/{ref}/database/query`)
- * with a personal access token, the same way scripts/check-migrations-applied.mjs
- * reads history, so no database password and no direct Postgres connection
- * are needed. Tokens are sent only as a bearer header and never printed.
+ * refuses the production project outright, whatever it is told.
+ *
+ * SQL runs through `psql` with TEST_DATABASE_URL, the test project's own
+ * connection string, a credential that reaches only the test database
+ * (coordinator review, 2026-11-25: a personal access token reaches every
+ * project on the account, production included, so it is not used here).
+ * The usual place is GitHub Actions (`.github/workflows/test-env.yml`); a
+ * Claude cloud container usually cannot reach port 5432. Never printed.
  */
+
+import { execFileSync } from "node:child_process";
 
 export const PRODUCTION_PROJECT_REFS = ["kqxndableyysxqhxiorz"];
 export const TEST_HOST = "https://test.home.wonderapps.biz";
@@ -30,30 +35,38 @@ export function requireTestRef(env = process.env) {
   return ref;
 }
 
-export function requireToken(env = process.env) {
-  const token = (env.SUPABASE_ACCESS_TOKEN ?? "").trim();
-  if (!token) throw new Error("Set SUPABASE_ACCESS_TOKEN (a personal access token from supabase.com/dashboard/account/tokens).");
-  return token;
+/**
+ * The test database's connection string, checked to be the test project's:
+ * a Supabase string names its project (`postgres.<ref>@…pooler…` or
+ * `db.<ref>.supabase.co`), and production's is refused.
+ */
+export function requireDatabaseUrl(env = process.env) {
+  const url = (env.TEST_DATABASE_URL ?? "").trim();
+  if (!url) throw new Error("Set TEST_DATABASE_URL (the wonderhome-test project's Session pooler connection string).");
+  if (PRODUCTION_PROJECT_REFS.some((ref) => url.includes(ref))) throw new Error("Refusing: TEST_DATABASE_URL points at the production project.");
+  const ref = testProjectRef(env);
+  if (ref && !url.includes(ref)) throw new Error(`Refusing: TEST_DATABASE_URL does not name the test project ${ref}.`);
+  return url;
 }
 
-/** Runs SQL on the test project and returns its rows. A failure throws with Postgres's message, never the token. */
-export async function query(ref, token, sql) {
-  const response = await fetch(`https://api.supabase.com/v1/projects/${ref}/database/query`, {
-    method: "POST",
-    headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
-    body: JSON.stringify({ query: sql }),
-  });
-  const text = await response.text();
-  if (!response.ok) {
-    let message = text;
-    try {
-      message = JSON.parse(text).message ?? text;
-    } catch {
-      // not JSON: keep the text
-    }
-    throw new Error(`database/query HTTP ${response.status}: ${String(message).slice(0, 2000)}`);
+function psql(url, args, input) {
+  try {
+    return execFileSync("psql", ["-X", "-q", "-v", "ON_ERROR_STOP=1", ...args, url], { input, stdio: ["pipe", "pipe", "pipe"], maxBuffer: 64 * 1024 * 1024 }).toString();
+  } catch (error) {
+    const message = String(error.stderr ?? error.message).replaceAll(url, "<TEST_DATABASE_URL>");
+    throw new Error(message.trim().slice(0, 2000));
   }
-  return text ? JSON.parse(text) : [];
+}
+
+/** Runs SQL (any number of statements) on the test database. */
+export function exec(url, sql) {
+  psql(url, ["-f", "-"], sql);
+}
+
+/** Rows of one SELECT, as objects. */
+export function rows(url, select) {
+  const out = psql(url, ["-At", "-c", `select coalesce(json_agg(t), '[]'::json) from (${select}) t`]);
+  return JSON.parse(out.trim() || "[]");
 }
 
 /** SQL string literal. */
