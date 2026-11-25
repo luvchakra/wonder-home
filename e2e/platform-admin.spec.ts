@@ -3,7 +3,7 @@ import { randomBytes } from "node:crypto";
 import { createClient, type SupabaseClient } from "@supabase/supabase-js";
 import { expect, test, type Page } from "@playwright/test";
 
-import { streamed } from "./streaming";
+import { openSignedIn } from "./sign-in";
 
 /**
  * The platform admin portal (16-010).
@@ -70,12 +70,7 @@ test.describe("signed in as an operator", () => {
   });
 
   async function signIn(page: Page) {
-    await page.goto("/sign-in?next=%2Fplatform-admin");
-    await streamed(page);
-    await page.locator('input[name="email"]').fill(email);
-    await page.locator('input[name="password"]').fill(password);
-    await page.getByRole("button", { name: "Sign in", exact: true }).click();
-    await expect(page).toHaveURL(/\/platform-admin$/);
+    await openSignedIn(page, email, password, "/platform-admin");
   }
 
   test("the sidebar reaches each section the role may open, and not Secrets", async ({ page, isMobile }) => {

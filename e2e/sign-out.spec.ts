@@ -3,6 +3,7 @@ import { randomBytes } from "node:crypto";
 import { createClient, type SupabaseClient } from "@supabase/supabase-js";
 import { expect, test } from "@playwright/test";
 
+import { signInThroughForm } from "./sign-in";
 import { streamed } from "./streaming";
 
 /**
@@ -47,10 +48,7 @@ test.describe("Log out from the avatar menu", () => {
 
   test("Log out signs the member out and gated pages send them to sign in", async ({ page, context }) => {
     await page.goto("/sign-in");
-    await streamed(page);
-    await page.locator('input[name="email"]').fill(email);
-    await page.locator('input[name="password"]').fill(password);
-    await page.getByRole("button", { name: "Sign in", exact: true }).click();
+    await signInThroughForm(page, email, password);
     await expect(page).not.toHaveURL(/\/sign-in/);
 
     const made = await page.request.post("/api/v1/households", { data: { householdName: "Sign Out Home", displayName: "Sign Out" } });

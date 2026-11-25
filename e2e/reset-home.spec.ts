@@ -1,6 +1,7 @@
 import { createClient, type SupabaseClient } from "@supabase/supabase-js";
-import { expect, test, type BrowserContext, type Page } from "@playwright/test";
+import { expect, test, type Page } from "@playwright/test";
 
+import { openSignedIn } from "./sign-in";
 import { streamed } from "./streaming";
 
 /**
@@ -85,27 +86,11 @@ test.describe("the owner downloads, then resets a QA home", () => {
   });
 
   /**
-   * Each person signs in once per run and the session is reused: every password sign-in, step-ups
-   * included, counts against Supabase's per-address limit, and a run that signed in for every test
-   * could meet it.
+   * Each person signs in once per worker without the form (e2e/sign-in.ts) and the session is
+   * reused: every password sign-in, step-ups included, counts against the per-address limits.
    */
-  const sessions = new Map<string, Awaited<ReturnType<BrowserContext["cookies"]>>>();
-
   async function signIn(page: Page, email: string, next: string) {
-    const saved = sessions.get(email);
-    if (saved) {
-      await page.context().addCookies(saved);
-      await page.goto(next);
-      if (new URL(page.url()).pathname === next) return;
-    }
-    await page.goto(next);
-    await expect(page).toHaveURL(/\/sign-in\?next=/);
-    await streamed(page);
-    await page.locator('input[name="email"]').fill(email);
-    await page.locator('input[name="password"]').fill(password);
-    await page.getByRole("button", { name: "Sign in", exact: true }).click();
-    await expect(page).toHaveURL((url) => url.pathname === next && url.search === "");
-    sessions.set(email, await page.context().cookies());
+    await openSignedIn(page, email, password, next);
   }
 
   test("another Admin sees no Danger zone and the reset screen shows them nothing", async ({ page }) => {

@@ -21,7 +21,7 @@ Run 45097115782 (`e2e-nightly.yml`, head f41cba4) failed: 3 failed, 2 flaky, 2 n
 
 ## Flaky (passed on retry): seen, not fixed here
 
-`help.spec.ts` › signed-in guide not cached, and `hometalk-composer.spec.ts` › desktop composer: both stayed on `/sign-in` with the form filled after the "Sign in" click on the first try. This is a sign-in race that existed before #626–#636. It is left as an open follow-up.
+`help.spec.ts` › signed-in guide not cached, and `hometalk-composer.spec.ts` › desktop composer: both stayed on `/sign-in` with the form filled after the "Sign in" click on the first try. This is a sign-in race that existed before #626–#636. It was left as an open follow-up; root cause found on 2026-11-25 ([nightly sign-in](2026-11-25-nightly-sign-in.md)).
 
 ## Verified
 
