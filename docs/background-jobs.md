@@ -2,6 +2,9 @@
 
 Since 2026-11-07, scheduled and batch work runs on **GitHub Actions** where it can (`.github/workflows/background-jobs.yml`). This follows the WonderWorks pattern (`luvchakra/wonder-jobs`, `gateway-collect.yml`). The workflow runs the app's own core code in Node (`scripts/jobs.mjs` loads `packages/core/src/jobs/runner.ts` through jiti) straight against Supabase with the service-role key. It never calls the site. Vercel keeps what people wait on, the inbound webhooks, and the five-minute delivery tick.
 
+
+**Production only (2026-11-25).** `background-jobs.yml` and `delivery-clock.yml` run against production (their `SUPABASE_*` secrets). The test environment (`docs/test-environment.md`) has no GitHub jobs: its pg_cron calls `test.home.wonderapps.biz` at most hourly and has no GitHub delivery clock, so its own heartbeats go stale and the test server runs every step itself. Heartbeats stay per database.
+
 ## The delivery clock on GitHub (2026-11-23)
 
 The owner: "i thought this process is resource intensive, can we move these jobs to GitHub instead" (Vercel Hobby was paused this month for Fluid Active CPU). GitHub's own scheduler can't keep a 5-minute beat: on 2026-11-22/23 the 10-minute `background-jobs.yml` schedule actually ran at 16:29, 18:03, 21:58, 23:51, 02:30, 08:16, 10:54 and 11:10 UTC. So the database keeps the time and GitHub does the work.

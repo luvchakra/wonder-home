@@ -7,6 +7,7 @@ import { InstallPromptCapture } from "@wonderhome/core/shell/install-prompt-capt
 import { LiveTalkProvider } from "@wonderhome/core/ui/live-talk";
 
 import { LocationReporter } from "./_components/location-reporter";
+import { TestEnvironmentBadge } from "./_components/test-environment-badge";
 import "./globals.css";
 
 /**
@@ -136,6 +137,8 @@ export default async function RootLayout({ children }: { children: React.ReactNo
   return (
     <html lang="en" className={`${sora.variable} ${caveat.variable}`}>
       <body>
+        {/* "TEST" on every screen of the test environment; nothing in production. */}
+        <TestEnvironmentBadge />
         {/* Catches Chromium's one-time install event before any screen mounts (story 00-011). */}
         <InstallPromptCapture />
         {/* Says where this device is while the app is open, only for someone whose location sharing is on. */}

@@ -65,8 +65,8 @@ Details, budgets and how to add to them: `docs/performance-budgets.md`.
 ## Nightly E2E (`e2e-nightly.yml`)
 
 1. **Clean up** (`scripts/e2e-cleanup.mjs`). The script:
-   - removes E2E accounts left by earlier runs: emails on `@e2e.wonderhome-test.internal`, older than two hours. This happens only when a dedicated test project is configured as the `E2E_SUPABASE_URL` / `E2E_SUPABASE_SERVICE_ROLE_KEY` repository secrets;
-   - refuses the production project unless `E2E_ALLOW_LIVE_PROJECT=1` (pre-launch only).
+   - removes E2E accounts left by earlier runs: emails on `@e2e.wonderhome-test.internal`, older than two hours. This happens only when the test environment's project (`wonderhome-test`) is configured as the `TEST_SUPABASE_URL` / `TEST_SUPABASE_SERVICE_ROLE_KEY` repository secrets;
+   - refuses the production project.
 
    Today's suite needs none of this. It runs against a placeholder Supabase URL and creates nothing anywhere, so this step logs "nothing to clean". Any spec that starts creating real data must:
    - create its accounts on that email domain;
@@ -90,18 +90,19 @@ Details, budgets and how to add to them: `docs/performance-budgets.md`.
    - the night's measured seconds per spec (`timings`). Copy them into `e2e/timings.json` when the suite's shape changes.
 6. **Alert.** The repository has no chat or paging integration. A failed scheduled run alerts the way GitHub does: an email to whoever last changed the workflow's schedule.
 
-**Signed-in specs.** `help.spec.ts` signs in as a throwaway member it creates and deletes itself. It runs only when the nightly has a real project, which you configure under GitHub → Settings → Secrets and variables → Actions:
+**Signed-in specs.** `help.spec.ts` signs in as a throwaway member it creates and deletes itself. Since 2026-11-25 the nightly runs against the test environment's own Supabase project, `wonderhome-test`, never production (the nightly on the live project slowed it for every household, #641; `docs/test-environment.md`). Configure it under GitHub → Settings → Secrets and variables → Actions:
 
 | Name | Kind | Value |
 |---|---|---|
-| `E2E_SUPABASE_URL` | secret | the test project's URL |
-| `E2E_SUPABASE_PUBLISHABLE_KEY` | secret | its publishable key |
-| `E2E_SUPABASE_SERVICE_ROLE_KEY` | secret | its service-role key |
-| `E2E_ALLOW_LIVE_PROJECT` | variable | `1`. Only while WonderHome is pre-launch, and only if the test project is the live one. |
+| `TEST_SUPABASE_URL` | secret | the test project's URL |
+| `TEST_SUPABASE_PUBLISHABLE_KEY` | secret | its publishable key |
+| `TEST_SUPABASE_SERVICE_ROLE_KEY` | secret | its service-role key |
+
+The workflow hands them to Playwright as `E2E_SUPABASE_*`. The repository variable `E2E_ALLOW_LIVE_PROJECT` is no longer read by any workflow and can be deleted.
 
 Without them those specs report themselves skipped.
 
-**The app server's service-role key (owner, 2026-11-08).** The nightly sets `E2E_SERVER_SERVICE_KEY=1`, so the app server Playwright starts gets `E2E_SUPABASE_SERVICE_ROLE_KEY` as its `SUPABASE_SERVICE_ROLE_KEY`, which server actions such as HomeSend "Add all anyway" need. `playwright.config.ts` passes it only when `E2E_ALLOW_LIVE_PROJECT=1` as well; otherwise it stays blank. Pull-request workflows never set it. It ends at launch, with `E2E_ALLOW_LIVE_PROJECT`.
+**The app server's service-role key (owner, 2026-11-08).** The nightly sets `E2E_SERVER_SERVICE_KEY=1`, so the app server Playwright starts gets `E2E_SUPABASE_SERVICE_ROLE_KEY` as its `SUPABASE_SERVICE_ROLE_KEY`, which server actions such as HomeSend "Add all anyway" need. `playwright.config.ts` passes it only for a real non-production project (the test project), or production with `E2E_ALLOW_LIVE_PROJECT=1`; otherwise it stays blank. Pull-request workflows never set it.
 
 Signed-in specs need a build made for that project. `NEXT_PUBLIC_*` values are inlined at build time, server code included. The nightly builds with them, and so does `npm run test:e2e` without `E2E_SKIP_BUILD`. A placeholder build reused with `E2E_SKIP_BUILD=1` makes every sign-in fail.
 
@@ -120,10 +121,9 @@ Signed-in specs need a build made for that project. `NEXT_PUBLIC_*` values are i
 npm run test:e2e -- e2e/auth.spec.ts e2e/session.spec.ts             # build, then run these specs, mobile and desktop
 npm run test:e2e -- e2e/auth.spec.ts --project=mobile               # one viewport
 
-# The signed-in specs too, against the live project (pre-launch only):
-set -a; . apps/web/.env.local; set +a
-E2E_SUPABASE_URL=$NEXT_PUBLIC_SUPABASE_URL E2E_SUPABASE_PUBLISHABLE_KEY=$NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY \
-E2E_SUPABASE_SERVICE_ROLE_KEY=$SUPABASE_SERVICE_ROLE_KEY E2E_ALLOW_LIVE_PROJECT=1 \
+# The signed-in specs too, against the test environment's project (TEST_SUPABASE_* in the session's environment):
+E2E_SUPABASE_URL=$TEST_SUPABASE_URL E2E_SUPABASE_PUBLISHABLE_KEY=$TEST_SUPABASE_PUBLISHABLE_KEY \
+E2E_SUPABASE_SERVICE_ROLE_KEY=$TEST_SUPABASE_SERVICE_ROLE_KEY E2E_SERVER_SERVICE_KEY=1 E2E_ALLOW_LIVE_PROJECT= \
 npm run test:e2e -- e2e/help.spec.ts
 ```
 
@@ -132,7 +132,7 @@ The command:
 - serves it on port 3100;
 - runs the named specs.
 
-`playwright.config.ts` pins that server to the placeholder Supabase project and blanks `SUPABASE_SERVICE_ROLE_KEY` and `WONDERHOME_AI_KEY`. So your `apps/web/.env.local`, which points at the live project, can never turn a local E2E run into requests against production data. It refuses the production project unless `E2E_ALLOW_LIVE_PROJECT=1` is set, which the owner allows only while WonderHome is pre-launch (CLAUDE.md). If a server is already listening on 3100, Playwright reuses it, so stop your own server first.
+`playwright.config.ts` pins that server to the placeholder Supabase project and blanks `SUPABASE_SERVICE_ROLE_KEY` and `WONDERHOME_AI_KEY`. So your `apps/web/.env.local`, which points at the live project, can never turn a local E2E run into requests against production data. It refuses the production project unless `E2E_ALLOW_LIVE_PROJECT=1` is set; since 2026-11-25 nothing sets it: E2E runs on the test project. If a server is already listening on 3100, Playwright reuses it, so stop your own server first.
 
 **Run the affected specs this way before merging:**
 - sign-in or session changes (`auth`, `session`, `identity`);

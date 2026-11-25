@@ -32,6 +32,15 @@ DOCS_ONLY_PATHS=(
 build() { echo "Building: $1"; exit 1; }
 skip()  { echo "Skipping build: $1"; exit 0; }
 
+# Only main (production) and test (the test environment, a Preview deployment
+# of the same project; docs/test-environment.md) ever build. vercel.json's
+# `git.deploymentEnabled` already keeps every other branch from deploying;
+# this is the second lock, in case a deployment is created anyway.
+ref="${VERCEL_GIT_COMMIT_REF:-}"
+if [ -n "$ref" ] && [ "$ref" != "main" ] && [ "$ref" != "test" ]; then
+  skip "branch $ref is neither main nor test"
+fi
+
 # No parent commit to compare against (first commit, or a clone too shallow to
 # have one): build, because we cannot tell what changed.
 if ! git rev-parse --verify --quiet HEAD^ >/dev/null 2>&1; then

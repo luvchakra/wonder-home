@@ -53,18 +53,21 @@ const supabaseUrl = process.env.E2E_SUPABASE_URL || "https://ci.placeholder.supa
 // the owner allows E2E accounts on the live project when this is set
 // explicitly. Once WonderHome launches, nothing sets it any more.
 const liveAllowed = process.env.E2E_ALLOW_LIVE_PROJECT === "1";
-if (!liveAllowed && PRODUCTION_PROJECT_REFS.some((ref) => supabaseUrl.includes(ref))) {
+// The test environment's own project (docs/test-environment.md), never production and never the placeholder.
+const isProductionProject = PRODUCTION_PROJECT_REFS.some((ref) => supabaseUrl.includes(ref));
+const isTestProject = !isProductionProject && !supabaseUrl.includes("placeholder");
+if (!liveAllowed && isProductionProject) {
   throw new Error(`E2E refuses to run against the production Supabase project (${supabaseUrl}) unless E2E_ALLOW_LIVE_PROJECT=1.`);
 }
 const serverEnv = {
   NEXT_PUBLIC_SUPABASE_URL: supabaseUrl,
   NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY: process.env.E2E_SUPABASE_PUBLISHABLE_KEY || "sb_publishable_ci_placeholder_key",
-  // Blank unless the nightly opts in (E2E_SERVER_SERVICE_KEY=1): the owner
-  // allowed the nightly's app server the real key on 2026-11-08 so server
-  // actions that need it ("Add all anyway") can be tested pre-launch. Pull
-  // requests never set it. Ends at launch with E2E_ALLOW_LIVE_PROJECT.
+  // Blank unless the nightly opts in (E2E_SERVER_SERVICE_KEY=1), so server
+  // actions that need it ("Add all anyway") can be tested. Since 2026-11-25
+  // the nightly runs on the test environment's own project, which may hold
+  // it; production only with E2E_ALLOW_LIVE_PROJECT. Pull requests never set it.
   SUPABASE_SERVICE_ROLE_KEY:
-    process.env.E2E_SERVER_SERVICE_KEY === "1" && liveAllowed ? (process.env.E2E_SUPABASE_SERVICE_ROLE_KEY ?? "") : "",
+    process.env.E2E_SERVER_SERVICE_KEY === "1" && (isTestProject || liveAllowed) ? (process.env.E2E_SUPABASE_SERVICE_ROLE_KEY ?? "") : "",
   WONDERHOME_AI_KEY: "",
   // Voice conversation is on in production, so HomeTalk's talk button is
   // there to test (e2e/hometalk-talk-button.spec.ts). No speech key is set,

@@ -19,6 +19,8 @@
 # Secrets: the same two repository secrets as background-jobs.yml (SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY). The
 # push, mail, WhatsApp and AI keys are read from Platform admin with the service role, as the site reads them; with
 # no push keys saved there the sending steps are left to Vercel. Only workflow_dispatch: never a pull request.
+#
+# Production only: the test environment has no GitHub jobs (docs/test-environment.md).
 name: Delivery clock
 
 on:

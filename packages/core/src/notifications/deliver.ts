@@ -5,6 +5,7 @@ import { formatterFor } from "../i18n/format";
 import { parseHouseholdSettings, parseMemberChoices, resolvePreferences } from "../i18n/preferences";
 import { translatorFor } from "../i18n/translate";
 import { log } from "../observability/logger";
+import { isTestEnvironment, outboundAllowed } from "../platform/environment";
 import { renderCopy, type NotificationCopy } from "./message";
 import { channelAdaptersFromEnv, dispatchToChannels, type ChannelAdapter, type ChannelAttempt, type ChannelNotification, type ChannelPreference, type DeliveryChannel } from "./channels";
 import { parsePushTarget } from "./web-push";
@@ -102,7 +103,9 @@ export async function deliverNotification(
     const subscriptions = ((devices ?? []) as { id: string; endpoint: string; p256dh: string; auth: string }[]);
     const pushPreference = preferences.find((preference) => preference.channel === "push");
     let pushTargets: ChannelPreference[] = [];
-    if (subscriptions.length > 0 && pushPreference?.enabled !== false && allowed("push")) {
+    // A test server buzzes only devices of people on its allow-list, by their account email (docs/test-environment.md).
+    const pushHeldOnTest = subscriptions.length > 0 && isTestEnvironment() && !outboundAllowed(await emailAddressFor(admin, input.recipientMemberId));
+    if (subscriptions.length > 0 && !pushHeldOnTest && pushPreference?.enabled !== false && allowed("push")) {
       const sentToday = await sentInLastDay(admin, input.recipientMemberId, "push", now);
       if (pushWorthSending({ priority: input.notification.priority, reason: input.reason ?? "alert", sentToday })) {
         pushTargets = subscriptions.map((device) => ({

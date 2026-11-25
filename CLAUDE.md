@@ -102,10 +102,10 @@ Targets are in `TECH-STACK-AND-NFR.md`. P0 security and authorisation tests are 
 ## Verifying UI changes in a browser
 - Drive the change in a browser at 360 px and desktop before calling a story done. Types, lint and unit tests prove correctness, not that the feature works.
 - Use `node scripts/ui-check.mjs` (see Token economy) for a text-and-box check first; screenshot only when the look matters.
-- Sign in as a test household with `node scripts/qa-test-user.mjs create "Name"` (already-confirmed account, service-role key from `apps/web/.env.local`). Public sign-up rejects sandbox domains like `.test` and `example.com`; that is Supabase Auth's validation, not an app bug. Delete when done (see Cleaning up test data).
+- Sign in as a test household with `node scripts/qa-test-user.mjs create "Name"` (already-confirmed account) on the test project: set `NEXT_PUBLIC_SUPABASE_URL=$TEST_SUPABASE_URL SUPABASE_SERVICE_ROLE_KEY=$TEST_SUPABASE_SERVICE_ROLE_KEY`. Public sign-up rejects sandbox domains like `.test` and `example.com`; that is Supabase Auth's validation, not an app bug. Delete when done (see Cleaning up test data).
 
 ## Applying a migration to the live project
-- A file in `supabase/migrations/` is not shipped. Apply each migration to the live Supabase project in the same session with the Supabase MCP `apply_migration` tool (`mcp__Supabase__list_projects` for the id; `list_migrations` to check).
+- A file in `supabase/migrations/` is not shipped. **Test first, then production** (owner, 2026-11-25): `node scripts/test-env/migrate.mjs` applies it to `wonderhome-test` (`docs/test-environment.md`), then apply it to the live project in the same session with the Supabase MCP `apply_migration` tool (`mcp__Supabase__list_projects` for the id; `list_migrations` to check).
 - Then run `npm run verify:live`. A green `test:db` run (fresh local database) does not prove the live project has it.
 - **A migration that changes stored values must be safe in either order** (the 2026-10-26 Responsibilities outage). Before the code ships, every reader of those values, screens included, accepts the old and the new ones; apply the migration right after the deploy is READY, then load the screens that show them.
 - Live project: `wonderhome` (`kqxndableyysxqhxiorz`, ap-south-1).
@@ -149,10 +149,10 @@ All SQL against the Supabase project, including `mcp__Supabase__execute_sql`, `a
 Full account: `docs/CI.md`.
 - **Pull requests:** typecheck, ESLint on changed files, related unit tests, security and evaluation gates, DB tests when migrations change, a build.
 - **Pushes to `main`:** every unit test and the whole lint.
-- **Full Playwright suite:** nightly at 03:00 IST (`e2e-nightly.yml`, cron `30 21 * * *` UTC), never on a PR.
+- **Full Playwright suite:** nightly at 03:00 IST (`e2e-nightly.yml`, cron `30 21 * * *` UTC) against the test environment's project (`TEST_SUPABASE_*` secrets), never on a PR, never on production.
 - **Before merging something risky** (sign-in, permissions, migrations, payments, a cross-feature flow), run its specs locally with `npm run test:e2e -- <spec files>`. It pins the app to a placeholder project.
 - Never skip, disable or delete a test to get green. Never re-run a failed run hoping it passes.
-- **Pre-launch testing is pre-authorised:** every test, the full E2E and signed-in specs, and QA or E2E users and households on the live project (`E2E_ALLOW_LIVE_PROJECT=1` with `E2E_SUPABASE_*`). This ends the day WonderHome launches; E2E then needs its own project.
+- **Testing is pre-authorised on the test environment** (owner, 2026-11-25): every test, the full E2E and signed-in specs, and QA or E2E users and households go to `wonderhome-test` (`TEST_SUPABASE_*`; `docs/test-environment.md`), never the live project. It is synthetic data only and sends only to `WONDERHOME_TEST_RECIPIENTS`.
 
 ## Help content changes with the feature
 The user guide is for signed-in members only.
@@ -164,12 +164,13 @@ The user guide is for signed-in members only.
 
 ## Where it is hosted
 - Scheduled and batch work runs on GitHub Actions (`background-jobs.yml`); Vercel keeps delivery, people's requests and webhooks, and takes a step back when its heartbeat goes stale (`docs/background-jobs.md`).
+- Two environments: **production** (`main`, `home.wonderapps.biz`, Supabase `wonderhome`) and **test** (Preview of the same project on branch `test`, `test.home.wonderapps.biz`, Supabase `wonderhome-test`; `docs/test-environment.md`). Never "staging".
 - Vercel team `kunals-projects-9f64757f` (Hobby). Projects: `wonderhome` (`prj_wmkKrjqrezwGc8av9LEdjbcU46cO`, serves `home.wonderapps.biz`, production from `main`); `wonder-apps` (`prj_eAN93HE8LG4URCWU0JlhBQtokWuM`, `wonderapps.biz`). Table and history: `docs/hosting.md`.
 - Call the Vercel connector without `teamId`/`slug`; naming the team returns 403 until it is re-authorised.
 
 ## Build-slot budget (Vercel's daily deployment cap)
 Vercel allows 100 deployments a day, and every deployment it creates counts, including one `scripts/vercel-should-build.sh` cancels. At the cap, production is refused too.
-1. Create no deployment you don't need. `vercel.json` `git.deploymentEnabled` is off for `claude/**` and `feature/**`; keep it that way. Previews stay off unless someone will open one. Only one Vercel project may link to this repo.
+1. Create no deployment you don't need. `vercel.json` `git.deploymentEnabled` deploys only `main` and `test` (pushed by hand, never per PR); keep it that way. Previews stay off unless someone will open one. Only one Vercel project may link to this repo.
 2. One merge to `main` is one production deploy: merge in larger pieces, squash. Never open a docs-only PR while a code PR is open or about to open.
 3. Tests run on GitHub Actions or locally, never on Vercel. Don't add a check that deploys to run tests. A scheduled suite, if one is ever added, runs rarely, uses few shards and skips when `main` hasn't changed since the last green run.
 4. Verify before pushing: typecheck, lint, the touched unit tests, and `npm run build -w apps/web` when the build can change. Push once, when ready.
