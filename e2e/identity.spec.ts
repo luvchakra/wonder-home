@@ -10,7 +10,8 @@ import { expect, test } from "@playwright/test";
  */
 
 test("a signed-out visitor is offered both ways in", async ({ page }) => {
-  await page.goto("/");
+  // The classic page by name: which variant "/" serves is a platform setting in whichever database the run uses.
+  await page.goto("/?landing=classic");
 
   await expect(page.getByRole("heading", { level: 1 })).toContainText("WonderHome takes care");
   await expect(page.getByRole("link", { name: /Get Started Free/ }).first()).toBeVisible();
